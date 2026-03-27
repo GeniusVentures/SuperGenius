@@ -12,8 +12,11 @@
 namespace sgns::primitives
 {
     /**
-   * @struct BlockHeader represents header of a block
-   */
+     * @brief Header of a block in the chain.
+     *
+     * Contains parent linkage, state roots, and auxiliary digest data used for
+     * validation and consensus.
+     */
     struct BlockHeader
     {
         BlockHash     parent_hash;     ///< 32-byte Blake2s hash of parent header
@@ -50,12 +53,12 @@ namespace sgns::primitives
     };
 
     /**
-   * @brief outputs object of type BlockHeader to stream
-   * @tparam Stream output stream type
-   * @param s stream reference
-   * @param v value to output
-   * @return reference to stream
-   */
+     * @brief Outputs a BlockHeader to an encoding stream.
+     * @tparam Stream Output stream type.
+     * @param s Stream reference.
+     * @param bh Header to output.
+     * @return Reference to stream.
+     */
     template <class Stream, typename = std::enable_if_t<Stream::is_encoder_stream>>
     Stream &operator<<( Stream &s, const BlockHeader &bh )
     {
@@ -63,12 +66,12 @@ namespace sgns::primitives
     }
 
     /**
-   * @brief decodes object of type BlockHeader from stream
-   * @tparam Stream input stream type
-   * @param s stream reference
-   * @param v value to output
-   * @return reference to stream
-   */
+     * @brief Decodes a BlockHeader from a decoding stream.
+     * @tparam Stream Input stream type.
+     * @param s Stream reference.
+     * @param bh Header to populate.
+     * @return Reference to stream.
+     */
     template <class Stream, typename = std::enable_if_t<Stream::is_decoder_stream>>
     Stream &operator>>( Stream &s, BlockHeader &bh )
     {

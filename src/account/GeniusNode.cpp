@@ -5,18 +5,29 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#include <mutex>
 #include <stdexcept>
+#include <thread>
+#include <memory>
+#include <exception>
+#include <random>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
-
-#include <memory>
+#include <boost/uuid/uuid.hpp>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <WalletCore/HDWallet.h>
+#include <WalletCore/Coin.h>
+
 #include "base/sgns_version.hpp"
-#include "base/ScaledInteger.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
@@ -25,17 +36,6 @@
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
-#include <boost/uuid/uuid.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <thread>
-#include <mutex>
-#include <stdexcept>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
-#include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 #include <Generators.hpp>
 
 namespace
@@ -124,7 +124,6 @@ namespace sgns
     }
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
-                                                 const char         *eth_private_key,
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
@@ -132,22 +131,105 @@ namespace sgns
                                                  bool                use_upnp )
     {
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, eth_private_key, autodht, isprocessor, base_port, is_full_node, use_upnp ) );
+            new GeniusNode( dev_config,
+                            GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node ),
+                            autodht,
+                            isprocessor,
+                            base_port,
+                            is_full_node,
+                            use_upnp ) );
 
-        instance->BeginDBInitialization();
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
         return instance;
     }
 
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config,
-                            const char         *eth_private_key,
-                            bool                autodht,
-                            bool                isprocessor,
-                            uint16_t            base_port,
-                            bool                is_full_node,
-                            bool                use_upnp ) :
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
+                                                 const char         *eth_private_key,
+                                                 bool                autodht,
+                                                 bool                isprocessor,
+                                                 uint16_t            base_port,
+                                                 bool                is_full_node,
+                                                 bool                use_upnp )
+    {
+        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
+            dev_config,
+            GeniusAccount::New( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
+            autodht,
+            isprocessor,
+            base_port,
+            is_full_node,
+            use_upnp ) );
+
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
+        return instance;
+    }
+
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
+                                                             const std::string  &mnemonic,
+                                                             bool                autodht,
+                                                             bool                isprocessor,
+                                                             uint16_t            base_port,
+                                                             bool                is_full_node,
+                                                             bool                use_upnp )
+    {
+        try
+        {
+            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID, mnemonic, dev_config.BaseWritePath, is_full_node );
+
+            if (account == nullptr) {
+                return nullptr;
+            }
+
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
+                dev_config,
+                std::move(account),
+                autodht,
+                isprocessor,
+                base_port,
+                is_full_node,
+                use_upnp ) );
+
+            if ( instance )
+            {
+                instance->BeginDBInitialization();
+            }
+
+            return instance;
+        }
+        catch ( const std::invalid_argument &err )
+        {
+            std::cerr << "Failed to generate address from mnemonic: " << err.what() << '\n';
+        }
+        return nullptr;
+    }
+
+    GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
+                            std::shared_ptr<GeniusAccount> account,
+                            bool                           autodht,
+                            bool                           isprocessor,
+                            uint16_t                       base_port,
+                            bool                           is_full_node,
+                            bool                           use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
-        account_( GeniusAccount::New( dev_config.TokenID, eth_private_key, write_base_path_, is_full_node ) ),
-        utxo_manager_( is_full_node, account_->GetAddress() ),
+        account_( std::move( account ) ),
+        utxo_manager_(
+            is_full_node,
+            account_->GetAddress(),
+            [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
+            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
+            {
+                return GeniusAccount::VerifySignature( address,
+                                                       std::string( signature.begin(), signature.end() ),
+                                                       data );
+            } ),
         io_( std::make_shared<boost::asio::io_context>() ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
@@ -221,7 +303,7 @@ namespace sgns
                     node_logger_->error( "GlobalDB initialization error" );
                     return;
                 }
-                account_->ConfigureMessengerHandlers( tx_globaldb_ );
+                account_->ConfigureDatabaseDependencies( tx_globaldb_ );
                 tx_globaldb_->AddListenTopic( processing_channel_topic_ );
                 StateTransition( NodeState::INITIALIZING_PROCESSING );
                 break;
@@ -298,6 +380,8 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                    strong->account_->RequestHeads(
+                                        { std::string( blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
@@ -318,7 +402,24 @@ namespace sgns
                                     strong->blockchain_->SetFullNodeMode();
                                 }
 
-                                strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                // Move transaction initialization off the AccountMessenger worker thread.
+                                boost::asio::post(
+                                    *strong->io_,
+                                    [weak_self]()
+                                    {
+                                        if ( auto strong = weak_self.lock() )
+                                        {
+                                            auto current_state = strong->state_.load();
+                                            if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                            {
+                                                strong->node_logger_->debug(
+                                                    "Skipping transaction initialization, unexpected state: {}",
+                                                    NodeStateToString( current_state ) );
+                                                return;
+                                            }
+                                            strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                        }
+                                    } );
                             }
                         } );
                 }
@@ -378,7 +479,7 @@ namespace sgns
         auto result     = logging_system_->configure();
         if ( result.has_error )
         {
-            std::cout << "Logger Error" << std::endl;
+            std::cerr << "Logger Error" << std::endl;
             return false;
         }
 
@@ -393,15 +494,15 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
-        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::trace );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::trace );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::trace );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -413,8 +514,8 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
@@ -422,7 +523,8 @@ namespace sgns
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        //AsyncIOManager Loggers
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
         auto asioHttpCommon  = ConfigureLogger( "HTTPCommon", logdir, spdlog::level::err );
@@ -430,6 +532,20 @@ namespace sgns
         auto asioIpfsLoader  = ConfigureLogger( "IPFSLoader", logdir, spdlog::level::err );
         auto asioFileLoader  = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
         auto asioWSCommon    = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
+        // libp2p loggers
+        libp2p::log::setLevelOfGroup( "*", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "Gossip", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "crypto", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "identify", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "kademlia", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "libp2p", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "mplex", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "muxer", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "plaintext", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "protocols", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "secio", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "security", soralog::Level::DEBUG );
+        libp2p::log::setLevelOfGroup( "yamux", soralog::Level::DEBUG );
 #else
         // Release mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
@@ -463,6 +579,7 @@ namespace sgns
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -879,7 +996,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
@@ -941,8 +1058,8 @@ namespace sgns
             return outcome::failure( cut.error() );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( ( auto &&, result_pair ),
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto result_pair,
                      manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
         auto [tx_id, escrow_data_pair] = result_pair;
@@ -1016,6 +1133,7 @@ namespace sgns
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
                                                                               TokenID            tokenid,
+                                                                              std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
@@ -1024,9 +1142,13 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
+        if ( destination.empty() )
+        {
+            destination = account_->GetAddress();
+        }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1054,8 +1176,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
         auto transfer_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1081,8 +1203,8 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
         node_logger_->debug( "TransferFunds transaction {} sent", tx_id );
         return tx_id;
@@ -1097,8 +1219,8 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
         auto paydev_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1127,8 +1249,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1541,9 +1663,7 @@ namespace sgns
 
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
     {
-        node_logger_->info( "Transaction Manager State changed from {} to {}",
-                            TransactionManager::StateToString( old_state ),
-                            TransactionManager::StateToString( new_state ) );
+        node_logger_->info( "Transaction Manager state changed from {} to {}", old_state, new_state );
 
         switch ( new_state )
         {

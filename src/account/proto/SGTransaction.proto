@@ -36,6 +36,17 @@ message UTXOTxParams
     repeated TransferUTXOInput inputs = 1; // 
     repeated TransferOutput outputs = 2; // 
 }
+message UTXO
+{
+    uint32 output_idx = 1;
+    uint64 amount = 2;
+    bytes hash = 3;
+    bytes token = 4;
+}
+message UTXOList
+{
+    repeated UTXO utxos = 1;
+}
 message TransferTx
 {
     DAGStruct dag_struct = 1;// 
@@ -59,6 +70,14 @@ message MintTx
     bytes token_id = 3;
     uint64 amount = 4; // 
 }
+message MintTxV2
+{
+    DAGStruct dag_struct = 1;//
+    bytes chain_id = 2;
+    bytes token_id = 3;
+    uint64 amount = 4; //
+    UTXOTxParams utxo_params = 5;
+}
 message EscrowTx
 {
     DAGStruct dag_struct = 1;// 
@@ -76,5 +95,3 @@ message EscrowReleaseTx
   string escrow_source = 5; 
   string original_escrow_hash = 6; 
 }
-
-

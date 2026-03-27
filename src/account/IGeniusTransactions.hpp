@@ -10,11 +10,13 @@
 #include <utility>
 #include <vector>
 #include <string>
+#include <optional>
 
 #include <boost/format.hpp>
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "account/UTXOStructs.hpp"
 #include "GeniusAccount.hpp"
 
 #include <gsl/span>
@@ -57,32 +59,39 @@ namespace sgns
 
         virtual std::vector<uint8_t> SerializeByteVector() = 0;
 
-        virtual std::string GetTransactionSpecificPath() = 0;
-
-        static std::string GetTransactionFullPath( const std::string &address,
-                                                   const std::string &type,
-                                                   const uint64_t    &nonce )
+        /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        virtual bool HasUTXOParameters() const
         {
-            boost::format full_path( address + "/tx/" + type + "/%llu" );
-            full_path % nonce;
-
-            return full_path.str();
+            return false;
         }
 
-        std::string GetTransactionFullPath()
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        virtual std::optional<UTXOTxParameters> GetUTXOParametersOpt() const
         {
-            boost::format full_path( GetSrcAddress() + "/tx/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
-
-            return full_path.str();
+            return std::nullopt;
         }
 
-        std::string GetProofFullPath()
-        {
-            boost::format full_path( GetSrcAddress() + "/proof/" + GetTransactionSpecificPath() + "/%llu" );
-            full_path % dag_st.nonce();
+        virtual std::string GetTransactionSpecificPath() const = 0;
 
-            return full_path.str();
+        static std::string GetTransactionFullPath( const std::string &tx_hash )
+        {
+            return "tx/" + tx_hash;
+        }
+
+        std::string GetTransactionFullPath() const
+        {
+            return "tx/" + GetHash();
+        }
+
+        std::string GetProofFullPath() const
+        {
+            return "proof/" + GetHash();
         }
 
         std::string GetSrcAddress() const
@@ -90,11 +99,29 @@ namespace sgns
             return dag_st.source_addr();
         }
 
+        std::string GetHash() const;
+
         uint64_t GetTimestamp() const
         {
             return dag_st.timestamp();
         }
 
+        virtual std::unordered_set<std::string> GetTopics() const;
+
+        void FillHash();
+        bool CheckHash();
+
+        std::vector<uint8_t> MakeSignature( GeniusAccount &account );
+        bool                 CheckSignature();
+        bool                 CheckDAGSignatureLegacy();
+
+        SGTransaction::DAGStruct dag_st;
+
+    private:
+        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
+        const std::string                                                       transaction_type;
+
+    public:
         /**
          * @brief       Registers a deserializer function for a specific transaction type.
          * @param[in]   transaction_type The transaction type for which the deserializer is registered.
@@ -109,19 +136,6 @@ namespace sgns
         {
             return deserializers_map;
         }
-
-        void FillHash();
-        bool CheckHash();
-
-        std::vector<uint8_t> MakeSignature( GeniusAccount& account );
-        bool                 CheckSignature();
-        bool                 CheckDAGSignatureLegacy();
-
-        SGTransaction::DAGStruct                                                dag_st;
-        static inline std::unordered_map<std::string, TransactionDeserializeFn> deserializers_map;
-
-    private:
-        const std::string transaction_type;
     };
 }
 

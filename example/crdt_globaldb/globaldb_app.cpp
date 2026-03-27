@@ -251,7 +251,7 @@ int main( int argc, char **argv )
                     }
                     Buffer valueBuffer;
                     valueBuffer.put( value );
-                    auto setKeyResult = globalDB->Put( HierarchicalKey( key ), valueBuffer, {"test"} );
+                    auto setKeyResult = globalDB->Put( HierarchicalKey( key ), valueBuffer, { "test" } );
                     if ( setKeyResult.has_failure() )
                     {
                         std::cout << "Unable to put key-value to CRDT datastore: " << key << " " << value << std::endl;

@@ -130,7 +130,7 @@ public:
             {
                 return;
             }
-            auto db = std::move(globaldb_ret.value());
+            auto db = std::move( globaldb_ret.value() );
 
             ++currentPubsubPort;
 
@@ -146,8 +146,7 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    nodes_[i].pubsub->AddPeers(
-                        { nodes_[j].pubsub->GetInterfaceAddress() } );
+                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
             std::this_thread::sleep_for( delay );
@@ -222,7 +221,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
 
@@ -235,7 +234,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -266,7 +265,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "test_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "test_topic" ).has_error() );
         node.db->AddListenTopic( "test_topic" );
     }
 
@@ -279,7 +278,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -310,13 +309,13 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
 
-        node.db->AddBroadcastTopic( "topic_A" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_A" ).has_error() );
         node.db->AddListenTopic( "topic_A" );
 
-        node.db->AddBroadcastTopic( "topic_B" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_B" ).has_error() );
         node.db->AddListenTopic( "topic_B" );
     }
 
@@ -332,14 +331,14 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     ASSERT_NE( txA, nullptr );
     const auto putResA = txA->Put( keyA, valueA );
     ASSERT_TRUE( putResA.has_value() );
-    const auto commitResA = txA->Commit({"test"});
+    const auto commitResA = txA->Commit( { "test" } );
     ASSERT_TRUE( commitResA.has_value() );
 
     const auto txB = testNodes->getNodes()[1].db->BeginTransaction();
     ASSERT_NE( txB, nullptr );
     const auto putResB = txB->Put( keyB, valueB );
     ASSERT_TRUE( putResB.has_value() );
-    const auto commitResB = txB->Commit({"test"});
+    const auto commitResB = txB->Commit( { "test" } );
     ASSERT_TRUE( commitResB.has_value() );
 
     const bool replicated = waitForCondition(
@@ -365,7 +364,7 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" ).has_error() );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
@@ -375,9 +374,9 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
-    const auto secondCommit = tx->Commit({"test"});
+    const auto secondCommit = tx->Commit( { "test" } );
     EXPECT_FALSE( secondCommit.has_value() );
 }
 
@@ -395,7 +394,7 @@ TEST_F( GlobalDBIntegrationTest, DISABLED_CommitFailsForNonexistentTopicTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     EXPECT_FALSE( commitRes.has_value() );
 }
 
@@ -408,8 +407,8 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
-        node.db->AddBroadcastTopic( "direct_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "direct_topic" ).has_error() );
         node.db->AddListenTopic( "direct_topic" );
     }
     testNodes->connectNodes();
@@ -418,7 +417,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
     value.put( "Direct put with topic value" );
     const HierarchicalKey key( "/direct/with_topic" );
 
-    const auto putRes = testNodes->getNodes()[0].db->Put( key, value, {"topic"} );
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -449,7 +448,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
     testNodes->connectNodes();
@@ -458,7 +457,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
     value.put( "Direct put without topic value" );
     const HierarchicalKey key( "/direct/without_topic" );
 
-    const auto putRes = testNodes->getNodes()[0].db->Put( key, value,{"topic"} );
+    const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
     const bool replicated = waitForCondition(
@@ -489,11 +488,11 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "first_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "first_topic" ).has_error() );
     }
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[0].db->AddListenTopic( "test_topic" );
-    testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[1].db->AddListenTopic( "test_topic" );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
@@ -504,7 +503,7 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node0Received = waitForCondition( [&]() -> bool
@@ -534,7 +533,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "isolated_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "isolated_topic" ).has_error() );
         node.db->AddListenTopic( "isolated_topic" );
     }
 
@@ -546,7 +545,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     ASSERT_NE( tx, nullptr );
     const auto putRes = tx->Put( key, value );
     ASSERT_TRUE( putRes.has_value() );
-    const auto commitRes = tx->Commit({"test"});
+    const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
     bool node1Replicated = waitForCondition( [&]() -> bool

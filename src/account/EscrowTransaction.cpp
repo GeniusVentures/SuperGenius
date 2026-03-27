@@ -20,7 +20,7 @@ namespace sgns
                                           SGTransaction::DAGStruct dag ) :
         IGeniusTransactions( "escrow-hold", SetDAGWithType( std::move( dag ), "escrow-hold" ) ),
         utxo_params_( std::move( params ) ),
-        amount_( std::move( amount ) ),
+        amount_( amount ),
         dev_addr_( std::move( dev_addr ) ),
         peers_cut_( peers_cut )
     {
@@ -48,7 +48,7 @@ namespace sgns
             SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
             input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
             input_proto->set_output_index( output_idx_ );
-            input_proto->set_signature( signature_ );
+            input_proto->set_signature( signature_.data(), signature_.size() );
         }
         for ( const auto &[encrypted_amount, dest_address, token_id] : utxo_params_.second )
         {
@@ -63,7 +63,11 @@ namespace sgns
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
+
         return serialized_proto;
     }
 
@@ -84,7 +88,7 @@ namespace sgns
             InputUTXOInfo curr;
             curr.txid_hash_  = ( base::Hash256::fromReadableString( input_proto.tx_id_hash() ) ).value();
             curr.output_idx_ = input_proto.output_index();
-            curr.signature_  = input_proto.signature();
+            curr.signature_  = std::vector<uint8_t>( input_proto.signature().cbegin(), input_proto.signature().cend() );
             inputs.push_back( curr );
         }
         std::vector<OutputDestInfo> outputs;

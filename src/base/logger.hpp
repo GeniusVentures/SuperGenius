@@ -13,10 +13,11 @@ namespace sgns::base
     using Logger = std::shared_ptr<spdlog::logger>;
 
     /**
-   * Provide logger object
-   * @param tag - tagging name for identifying logger
-   * @return logger object
-   */
+     * @brief Create a logger instance.
+     * @param tag Tagging name for identifying logger.
+     * @param basepath Optional base path for log output (platform dependent).
+     * @return Logger object.
+     */
     Logger createLogger( const std::string &tag, const std::string &basepath = "" );
 } // namespace sgns::base
 

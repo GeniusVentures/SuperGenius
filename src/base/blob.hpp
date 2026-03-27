@@ -124,7 +124,7 @@ namespace sgns::base {
      * is in hex format
      */
     static outcome::result<Blob<size_>> fromHex(std::string_view hex) {
-      OUTCOME_TRY((auto &&, res), unhex(hex));
+      BOOST_OUTCOME_TRY( auto res, unhex(hex));
       return fromSpan(res);
     }
 
@@ -136,17 +136,17 @@ namespace sgns::base {
      */
     static outcome::result<Blob<size_>> fromHexWithPrefix(
         std::string_view hex) {
-      OUTCOME_TRY((auto &&, res), unhexWith0x(hex));
+      BOOST_OUTCOME_TRY( auto res, unhexWith0x(hex));
       return fromSpan(res);
     }
 
     /**
      * Create Blob from span of uint8_t
-     * @param buffer
-     * @return
+     * @param span input byte span
+     * @return result containing Blob object if span has proper size
      */
     static outcome::result<Blob<size_>> fromSpan(
-        const gsl::span<uint8_t> &span) {
+        gsl::span<uint8_t> span) {
       if (span.size() != size_) {
         return BlobError::INCORRECT_LENGTH;
       }

@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_AUTHORITY_HPP
 #define SUPERGENIUS_AUTHORITY_HPP
 
@@ -65,7 +63,7 @@ namespace sgns::primitives {
    * @brief outputs object of type AuthorityId to stream
    * @tparam Stream output stream type
    * @param s stream reference
-   * @param v value to output
+   * @param a value to output
    * @return reference to stream
    */
   template <class Stream,
@@ -78,7 +76,7 @@ namespace sgns::primitives {
    * @brief decodes object of type AuthorityId from stream
    * @tparam Stream input stream type
    * @param s stream reference
-   * @param v value to decode
+   * @param a value to decode
    * @return reference to stream
    */
   template <class Stream,
@@ -91,7 +89,7 @@ namespace sgns::primitives {
    * @brief outputs object of type Authority to stream
    * @tparam Stream output stream type
    * @param s stream reference
-   * @param v value to output
+   * @param a value to output
    * @return reference to stream
    */
   template <class Stream,
@@ -104,7 +102,7 @@ namespace sgns::primitives {
    * @brief decodes object of type Authority from stream
    * @tparam Stream input stream type
    * @param s stream reference
-   * @param v value to decode
+   * @param a value to decode
    * @return reference to stream
    */
   template <class Stream,

@@ -16,7 +16,7 @@ namespace sgns::scale::detail {
    * @tparam T integer type
    * @tparam S output stream type
    * @param value integer value
-   * @return byte array representation of value
+   * @param out output stream
    */
   template <class T, class S, typename I = std::decay_t<T>, typename = std::enable_if_t<std::is_integral_v<I>>>
   void encodeInteger( T value, S &out )

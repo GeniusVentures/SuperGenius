@@ -1,5 +1,3 @@
-
-
 #include "crypto/hasher/hasher_impl.hpp"
 
 #include <gsl/span>

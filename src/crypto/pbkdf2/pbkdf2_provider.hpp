@@ -10,7 +10,7 @@ namespace sgns::crypto {
   enum class Pbkdf2ProviderError { KEY_DERIVATION_FAILED = 1 };
 
   /**
-   * @class Pbkdf2Provider provides key derivation functionality
+   * @brief Interface for PBKDF2 key derivation.
    */
   class Pbkdf2Provider {
    public:

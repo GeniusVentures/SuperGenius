@@ -267,7 +267,11 @@ namespace sgns::crdt
         size_t               size = bmsg.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        bmsg.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if (!bmsg.SerializeToArray( serialized_proto.data(), serialized_proto.size() ))
+        {
+            m_logger->error("Failed to serialize broadcast message");
+            return std::errc::bad_message;
+        }
 
         for ( auto &topic : broadcastTopicsCopy )
         {

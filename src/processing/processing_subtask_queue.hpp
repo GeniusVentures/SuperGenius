@@ -11,8 +11,9 @@
 
 namespace sgns::processing
 {
-/** Distributed queue implementation
-*/
+/**
+ * @brief Distributed subtask queue implementation.
+ */
 class ProcessingSubTaskQueue
 {
 public:
@@ -25,15 +26,16 @@ public:
     */
     ProcessingSubTaskQueue(std::string localNodeId, TimestampProvider timestampProvider = nullptr);
 
-    /** Create a subtask queue by splitting the task to subtasks using the processing code
-    * @param task - task that should be split into subtasks
-    * @param enabledItemIndices - indexes of enabled items. Disabled items are considered as deleted.
+    /** Initialize a subtask queue snapshot.
+    * @param queue - Queue snapshot to initialize.
+    * @param enabledItemIndices - Indexes of enabled items; disabled items are treated as deleted.
     */
     void CreateQueue(SGProcessing::ProcessingQueue* queue, const std::vector<int>& enabledItemIndices);
 
-    /** Asynchronous getting of a subtask from the queue
-    * @param onSubTaskGrabbedCallback a callback that is called when a grapped iosubtask is locked by the local node
-    * @param timestamp the current timestamp for the queue
+    /** Attempts to grab a subtask from the queue.
+    * @param grabbedItemIndex - Index of the grabbed item if successful.
+    * @param timestamp - Current timestamp for the queue.
+    * @return true if an item was grabbed, false otherwise.
     */
     bool GrabItem(size_t& grabbedItemIndex, uint64_t timestamp);
 

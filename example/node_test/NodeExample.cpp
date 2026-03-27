@@ -9,9 +9,8 @@
 #include <cstdint>
 #include <atomic>
 #include <iomanip>
-#ifdef _WIN32
-//#include <windows.h>
-#else
+#include <random>
+#ifndef _WIN32
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -154,7 +153,10 @@ void MintTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::Gen
         std::cerr << "Invalid mint command format.\n";
         return;
     }
-    genius_node->MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    genius_node->MintTokens( std::stoull( args[1] ),
+                             "",
+                             "",
+                             sgns::TokenID::FromBytes( { 0x00 } ) );
 }
 
 void TransferTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
@@ -353,9 +355,10 @@ void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
         }
 
         auto status = genius_node->GetProcessingStatus();
-        
+
         std::string status_str;
-        switch (status.status) {
+        switch ( status.status )
+        {
             case sgns::processing::ProcessingServiceImpl::Status::DISABLED:
                 status_str = "DISABLED";
                 break;
@@ -366,10 +369,10 @@ void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
                 status_str = "PROCESSING";
                 break;
         }
-        
+
         // Simple output without terminal manipulation
-        std::cout << "[Status: " << status_str << " | Progress: " 
-                  << std::fixed << std::setprecision(2) << status.percentage << "%]" << std::endl;
+        std::cout << "[Status: " << status_str << " | Progress: " << std::fixed << std::setprecision( 2 )
+                  << status.percentage << "%]" << std::endl;
     }
 }
 
@@ -739,7 +742,7 @@ int main( int argc, char *argv[] )
     {
         input_thread.join();
     }
-    
+
     if ( status_thread.joinable() )
     {
         status_thread.join();

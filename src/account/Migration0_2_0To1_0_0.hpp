@@ -37,7 +37,6 @@ namespace sgns
     public:
         /**
          * @brief   Construct the step with all resources needed to open legacy DBs.
-         * @param   newDb         Shared pointer to the target GlobalDB.
          * @param   ioContext     Shared io_context for legacy DB access.
          * @param   pubSub        Shared GossipPubSub instance.
          * @param   graphsync     Shared GraphSync network object.
@@ -116,7 +115,7 @@ namespace sgns
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction_; ///< CRDT transaction to make it all atomic
         std::string                              writeBasePath_;    ///< Base path for writing DB files.
         std::string                              base58key_;        ///< Key to build legacy paths.
-        std::set<std::string>                    topics_;
+        std::unordered_set<std::string>          topics_;
         base::Logger m_logger = base::createLogger( "MigrationStep" ); ///< Logger for this step.
     };
 } // namespace sgns

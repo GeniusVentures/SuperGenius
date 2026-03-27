@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/impl/persistent_trie_batch_impl.hpp"
 
 #include "scale/scale.hpp"
@@ -45,7 +43,7 @@ namespace sgns::storage::trie {
   }
 
   outcome::result<Buffer> PersistentTrieBatchImpl::commit() {
-    OUTCOME_TRY((auto &&, root), serializer_->storeTrie(*trie_));
+    BOOST_OUTCOME_TRY( auto root, serializer_->storeTrie(*trie_));
     root_changed_handler_(root);
     return root;
   }

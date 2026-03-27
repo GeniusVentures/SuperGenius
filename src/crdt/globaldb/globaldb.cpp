@@ -1,5 +1,4 @@
 #include "globaldb.hpp"
-#include "pubsub_broadcaster.hpp"
 #include "pubsub_broadcaster_ext.hpp"
 #include "keypair_file_storage.hpp"
 
@@ -7,19 +6,15 @@
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/atomic_transaction.hpp"
 
-#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
 #include <rocksdb/db.h>
 
-#include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/protocol/common/asio/asio_scheduler.hpp>
-#include <libp2p/common/literals.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
-#include <boost/di/extension/scopes/shared.hpp>
 #include <boost/format.hpp>
 
 #if defined( _WIN32 )
@@ -28,9 +23,6 @@
 #pragma comment( lib, "iphlpapi.lib" )
 #pragma comment( lib, "ws2_32.lib" )
 #else
-#include <ifaddrs.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 #endif
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GlobalDB::Error, e )
@@ -85,12 +77,11 @@ namespace sgns::crdt
         auto new_instance = std::shared_ptr<GlobalDB>(
             new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&,
-                             new_instance->Init( std::move( crdtOptions ),
-                                                 std::move( graphsyncnetwork ),
-                                                 std::move( scheduler ),
-                                                 std::move( generator ),
-                                                 std::move( datastore ) ) );
+        BOOST_OUTCOME_TRY( new_instance->Init( std::move( crdtOptions ),
+                                               std::move( graphsyncnetwork ),
+                                               std::move( scheduler ),
+                                               std::move( generator ),
+                                               std::move( datastore ) ) );
         return new_instance;
     }
 
@@ -106,7 +97,7 @@ namespace sgns::crdt
 
     GlobalDB::~GlobalDB()
     {
-        m_logger->debug( "~GlobalDB CALLED" );
+        m_logger->debug( "~GlobalDB CALLED with count {} on {} ", m_datastore.use_count(), m_databasePath );
         if ( m_broadcaster )
         {
             m_broadcaster->Stop();
@@ -245,7 +236,9 @@ namespace sgns::crdt
         }
     }
 
-    outcome::result<CID> GlobalDB::Put( const HierarchicalKey &key, const Buffer &value, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const HierarchicalKey                 &key,
+                                        const Buffer                          &value,
+                                        const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -253,10 +246,11 @@ namespace sgns::crdt
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        return m_crdtDatastore->PutKey( key, value, std::move( topics ) );
+        return m_crdtDatastore->PutKey( key, value, topics );
     }
 
-    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair> &data_vector, std::set<std::string> topics )
+    outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
+                                        const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -267,7 +261,7 @@ namespace sgns::crdt
 
         for ( auto &data : data_vector )
         {
-            BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
+            BOOST_OUTCOME_TRY( batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
         return batch.Commit( topics );
@@ -278,7 +272,7 @@ namespace sgns::crdt
         return m_crdtDatastore->GetKey( key );
     }
 
-    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::set<std::string> &topics )
+    outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
         if ( !started_ )
         {
@@ -289,7 +283,7 @@ namespace sgns::crdt
         return m_crdtDatastore->DeleteKey( key, topics );
     }
 
-    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( const std::string &keyPrefix )
+    outcome::result<GlobalDB::QueryResult> GlobalDB::QueryKeyValues( std::string_view keyPrefix )
     {
         return m_crdtDatastore->QueryKeyValues( keyPrefix );
     }
@@ -335,9 +329,9 @@ namespace sgns::crdt
         return std::make_shared<AtomicTransaction>( m_crdtDatastore );
     }
 
-    void GlobalDB::AddBroadcastTopic( const std::string &topicName )
+    outcome::result<void> GlobalDB::AddBroadcastTopic( const std::string &topicName )
     {
-        m_broadcaster->AddBroadcastTopic( topicName );
+        return m_broadcaster->AddBroadcastTopic( topicName );
     }
 
     void GlobalDB::AddListenTopic( const std::string &topicName )
@@ -386,12 +380,12 @@ namespace sgns::crdt
         return m_crdtDatastore->AddHead( aCid, topic, priority );
     }
 
-    std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
+    std::shared_ptr<PubSubBroadcasterExt> GlobalDB::GetBroadcaster()
     {
         return m_broadcaster;
     }
 
-    outcome::result<crdt::CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
+    outcome::result<CrdtDatastore::JobStatus> GlobalDB::GetCIDJobStatus( const CID &cid ) const
     {
         if ( !m_crdtDatastore )
         {
@@ -418,14 +412,32 @@ namespace sgns::crdt
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
     }
 
-    outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const
+    void GlobalDB::SetBroadcastEnabled( bool enabled )
+    {
+        if ( !m_crdtDatastore )
+        {
+            m_logger->warn( "SetBroadcastEnabled: CRDT datastore not initialized" );
+            return;
+        }
+
+        m_crdtDatastore->SetBroadcastEnabled( enabled );
+        m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
+    }
+
+    outcome::result<std::unordered_set<std::string>> GlobalDB::GetMonitoredTopics() const
     {
         if ( !m_crdtDatastore )
         {
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        m_logger->debug( "{}: Forwarding request for {} topics", __func__ );
+        m_logger->debug( "{}: Forwarding request for topics", __func__ );
         return m_crdtDatastore->GetTopicNames();
     }
+
+    std::shared_ptr<crdt::CrdtDatastore> GlobalDB::GetCRDTDataStore()
+    {
+        return m_crdtDatastore;
+    }
+
 }

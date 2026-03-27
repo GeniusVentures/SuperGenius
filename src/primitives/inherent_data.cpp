@@ -1,5 +1,3 @@
-
-
 #include "primitives/inherent_data.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::primitives, InherentDataError, e) {

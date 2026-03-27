@@ -10,7 +10,7 @@
 #include "account/Migration0_2_0To1_0_0.hpp"
 #include "account/Migration1_0_0To3_4_0.hpp"
 #include "account/Migration3_4_0To3_5_0.hpp"
-#include "account/Migration3_5_0To3_5_1.hpp"
+#include "account/Migration3_5_0To3_6_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
@@ -63,7 +63,7 @@ namespace sgns
                                                                          writeBasePath,
                                                                          base58key,
                                                                          account ) );
-        instance->RegisterStep( std::make_shared<Migration3_5_0To3_5_1>( ioContext,
+        instance->RegisterStep( std::make_shared<Migration3_5_0To3_6_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,
                                                                          scheduler,
@@ -89,20 +89,20 @@ namespace sgns
         {
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
-            OUTCOME_TRY( step->Init() );
+            BOOST_OUTCOME_TRY( step->Init() );
 
-            OUTCOME_TRY( bool is_req, step->IsRequired() );
+            BOOST_OUTCOME_TRY( bool is_req, step->IsRequired() );
 
             if ( is_req )
             {
-                OUTCOME_TRY( step->Apply() );
+                BOOST_OUTCOME_TRY( step->Apply() );
                 m_logger->debug( "Completed migration step to {}", step->ToVersion() );
             }
             else
             {
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
-            OUTCOME_TRY( step->ShutDown() );
+            BOOST_OUTCOME_TRY( step->ShutDown() );
             std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 

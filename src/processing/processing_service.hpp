@@ -26,8 +26,11 @@ namespace sgns::processing
         };
 
         /** Constructs a processing service.
-         * @param gossipPubSub - pubsub service
-         * @param maximalNodesCount - maximal number of processing nodes allowed to be handled by the service
+         * @param gossipPubSub - PubSub service.
+         * @param maximalNodesCount - Max number of processing nodes handled by the service.
+         * @param subTaskEnqueuer - Subtask enqueuer used to dispatch tasks.
+         * @param subTaskResultStorage - Storage for subtask results.
+         * @param processingCore - Processing core used to execute subtasks.
          */
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
                                size_t                                     maximalNodesCount,
@@ -35,6 +38,17 @@ namespace sgns::processing
                                std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
                                std::shared_ptr<ProcessingCore>            processingCore );
 
+        /**
+         * @brief Constructs a processing service with user callbacks.
+         * @param gossipPubSub PubSub service.
+         * @param maximalNodesCount Max number of processing nodes handled by the service.
+         * @param subTaskEnqueuer Subtask enqueuer used to dispatch tasks.
+         * @param subTaskResultStorage Storage for subtask results.
+         * @param processingCore Processing core used to execute subtasks.
+         * @param userCallbackSuccess Callback invoked on successful task completion.
+         * @param userCallbackError Callback invoked on task error.
+         * @param node_address Local node address used in coordination.
+         */
         ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub>                        gossipPubSub,
                                size_t                                                            maximalNodesCount,
                                std::shared_ptr<SubTaskEnqueuer>                                  subTaskEnqueuer,
@@ -65,9 +79,8 @@ namespace sgns::processing
 
         void SendChannelListRequest();
 
-        /** Asynchronous callback to process received messages other processing services.
-        * @param message - a message structure containing the message data and its sender peer information.
-        * @return None
+        /** Asynchronous callback to process received messages from other processing services.
+        * @param message - Message data with sender peer information.
         */
         void OnMessage( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message );
         void OnQueueProcessingCompleted( const std::string              &subTaskQueueId,

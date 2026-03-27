@@ -59,7 +59,10 @@ namespace sgns
         }
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
         return serialized_proto;
     }
 

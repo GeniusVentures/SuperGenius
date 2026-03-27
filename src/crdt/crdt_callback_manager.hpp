@@ -64,12 +64,14 @@ namespace sgns::crdt
          * @brief       Executes a registered new data callback that matches the key 
          * @param[in]   key key of the CRDT
          * @param[in]   value value contained on the key
+         * @param[in]   cid content identifier associated with the value
          */
         void PutDataCallback( const std::string &key, const base::Buffer &value, const std::string &cid );
 
         /**
          * @brief       Executes a registered deleted data callback that matches the key
          * @param[in]   deleted_key key of the CRDT that was deleted
+         * @param[in]   cid content identifier associated with the deletion
          */
         void DeleteDataCallback( const std::string &deleted_key, const std::string &cid );
 

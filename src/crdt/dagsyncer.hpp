@@ -1,4 +1,3 @@
-
 #ifndef SUPERGENIUS_DAGSYNCER_HPP
 #define SUPERGENIUS_DAGSYNCER_HPP
 
@@ -20,10 +19,10 @@ namespace sgns::crdt
         using LinkInfoPair = std::pair<CID, std::string>;
         using LinkInfoSet  = std::set<LinkInfoPair>;
         /**
-        * Check if the block with {@param cid} is locally available (therefore, it
+        * Check if the block with cid is locally available (therefore, it
         * is considered processed).
         * @param cid Content identifier of the node
-        * @return true if the block is locally available or outcome::failure on error 
+        * @return true if the block is locally available or outcome::failure on error
         */
         virtual outcome::result<bool> HasBlock( const CID &cid ) const = 0;
 

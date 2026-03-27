@@ -1,5 +1,3 @@
-
-
 #include "storage/trie/supergenius_trie/trie_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3(sgns::storage::trie, TrieError, e) {

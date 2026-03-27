@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_NODE_HPP
 #define SUPERGENIUS_NODE_HPP
 

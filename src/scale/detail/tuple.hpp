@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_SCALE_DETAIL_TUPLE_HPP
 #define SUPERGENIUS_SCALE_DETAIL_TUPLE_HPP
 
@@ -66,7 +64,7 @@ namespace sgns::scale::detail {
    * @brief encodes std::tuple value
    * @tparam Stream output stream type
    * @tparam T... sequence of types of the tuple
-   * @param v variant value
+   * @param v tuple value
    * @param s encoder stream
    */
   template <class Stream, class... T>
@@ -81,6 +79,7 @@ namespace sgns::scale::detail {
    * @tparam Stream input stream type
    * @tparam T... sequence of types of the tuple
    * @param stream source stream
+   * @param result destination tuple
    * @return decoded value or error
    */
   template <class Stream, class... T>

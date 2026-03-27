@@ -25,6 +25,11 @@
 #include "crdt/globaldb/globaldb.hpp"
 #include "primitives/cid/cid.hpp"
 
+namespace sgns
+{
+    class Migration3_5_0To3_6_0;
+}
+
 namespace sgns::blockchain
 {
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
@@ -67,6 +72,7 @@ namespace sgns::blockchain
                                                               std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         outcome::result<Registry>       LoadRegistry() const;
         outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
+        outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
         bool                            RegisterFilter();
 
         outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
@@ -89,6 +95,12 @@ namespace sgns::blockchain
             return "gnus-validator-registry-cid";
         }
 
+    protected:
+        friend class sgns::Migration3_5_0To3_6_0;
+
+        static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
+                                                  const std::shared_ptr<crdt::GlobalDB> &new_db );
+
     private:
         ValidatorRegistry( std::shared_ptr<crdt::GlobalDB> db,
                            uint64_t                        quorum_numerator,
@@ -99,13 +111,13 @@ namespace sgns::blockchain
                            InitCallback                    init_callback );
 
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
-        void RegistryUpdateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
+        void RegistryUpdateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         outcome::result<std::vector<uint8_t>> ComputeUpdateSigningBytes( const RegistryUpdate &update ) const;
         bool                  VerifyUpdate( const RegistryUpdate &update, const Registry *current_registry ) const;
         const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id ) const;
         void                  InitializeCache();
-        void                  NotifyInitialized( bool success );
-        void                  PersistLocalState( const std::string &cid );
+        void                  NotifyInitialized( bool success ) const;
+        void                  PersistLocalState( const std::string &cid ) const;
         void                  RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;

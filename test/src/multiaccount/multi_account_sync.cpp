@@ -75,7 +75,7 @@ protected:
 
         if ( isGenesisAuthorized )
         {
-            auto response = sgns::GeniusAccount::GenerateGeniusAddress(  key.c_str(), outPath );
+            auto response = GeniusAccount::GenerateGeniusAddress( key.c_str(), outPath );
             if ( !response.has_value() )
             {
                 ADD_FAILURE() << "Failed to generate full-node address for authorization";
@@ -141,104 +141,64 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     auto node_full = CreateNode( "node_multi_full",
                                  "0xcafe",
                                  "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                 TokenID::FromBytes( { 0x00 } ),
                                  true, // is full node
                                  true, // is processor
                                  true );
     test::assertWaitForCondition(
         [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_full not synched" );
-    auto node_main = CreateNode( "node_multi_1",
-                                 "0xcafe",
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 false, // not full node
-                                 false  // not processor
+        "node_full not synced" );
+    auto node_original = CreateNode( "node_multi_1",
+                                     "0xcafe",
+                                     "1.0",
+                                     TokenID::FromBytes( { 0x00 } ),
+                                     false, // not full node
+                                     false  // not processor
     );
 
-    auto node_proc1 = CreateNode( "node_multi_1",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false, // not full node
-                                  true   // is processor
+    node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    test::assertWaitForCondition(
+        [&]() { return node_original->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_original not synced" );
+
+    auto balance_original_start = node_original->GetBalance();
+    // Mint some tokens
+    auto mint_result = node_original->MintTokens( 100, "", "", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
+
+    mint_result = node_original->MintTokens( 2000, "", "", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
+    mint_result = node_original->MintTokens( 30, "", "", TokenID::FromBytes( { 0x00 } ) );
+
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
+
+    std::cout << " 3 mint transactions on original node completed, Creating duplicated node..." << std::endl;
+
+    auto node_duplicated = CreateNode( "node_multi_1",
+                                       "0xcafe",
+                                       "1.0",
+                                       TokenID::FromBytes( { 0x00 } ),
+                                       false, // not full node
+                                       true   // is processor
     );
-
-    node_main->GetPubSub()->AddPeers(
-        { node_proc1->GetPubSub()->GetInterfaceAddress(), node_full->GetPubSub()->GetInterfaceAddress() } );
-
-    node_full->GetPubSub()->AddPeers( { node_proc1->GetPubSub()->GetInterfaceAddress() } );
+    node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_duplicated->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_proc1 not synched" );
+        "node_duplicated not synced" );
+
+    mint_result = node_duplicated->MintTokens( 60000, "", "", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
+
     test::assertWaitForCondition(
-        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&] { return ( balance_original_start + 60000 + 2000 + 100 + 30 ) == node_duplicated->GetBalance(); },
         std::chrono::milliseconds( 30000 ),
-        "node_main not synched" );
+        "node_duplicated balance not synced" );
 
-    // Get initial state
-    auto transcount_main_start  = node_main->GetOutTransactions().size();
-    auto transcount_node1_start = node_proc1->GetOutTransactions().size();
-    auto main_balance_start     = node_main->GetBalance();
-    auto node1_balance_start    = node_proc1->GetBalance();
-
-    // Mint tokens on each node
-    auto mint_result = node_main->MintTokens( 50000000000,
-                                              "",
-                                              "",
-                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_main";
-
-    std::cout << "Mint transaction on main node completed, waiting for sync..." << std::endl;
-
-    test::assertWaitForCondition( [&]() { return node_proc1->GetBalance() == 50000000000; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_proc1 balance not synched" );
-
-    //TODO - this is not working at the moment
-    //auto mint_received = node_proc1->WaitForTransactionOutgoing(
-    //    mint_result.value().first,
-    //    std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-    //EXPECT_EQ( mint_received, TransactionManager::TransactionStatus::CONFIRMED );
-    mint_result = node_proc1->MintTokens( 50000000000,
-                                          "",
-                                          "",
-                                          sgns::TokenID::FromBytes( { 0x00 } ),
-                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_proc1";
-
-    test::assertWaitForCondition( [&]() { return node_main->GetBalance() == 100000000000; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_main balance not synched" );
-    //TODO - this is not working at the moment
-    //auto mint_received2 = node_main->WaitForTransactionOutgoing(
-    //    mint_result.value().first,
-    //    std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-
-    // Get final state
-    auto transcount_main  = node_main->GetOutTransactions().size();
-    auto transcount_node1 = node_proc1->GetOutTransactions().size();
-
-    std::cout << "Count main: " << transcount_main << std::endl;
-    std::cout << "Count node1: " << transcount_node1 << std::endl;
-
-    double balance_main  = node_main->GetBalance();
-    double balance_node1 = node_proc1->GetBalance();
-
-    std::cout << "Balance main: " << balance_main << std::endl;
-    std::cout << "Balance node1: " << balance_node1 << std::endl;
-
-    // Verify results
-    ASSERT_EQ( transcount_main, transcount_main_start + 2 );
-    ASSERT_EQ( transcount_node1, transcount_node1_start + 2 );
-    ASSERT_EQ( balance_main, main_balance_start + 100000000000 );
-    ASSERT_EQ( balance_node1, node1_balance_start + 100000000000 );
-
-    // Nodes will be automatically destroyed when they go out of scope
+    ASSERT_EQ( node_duplicated->GetBalance(), node_original->GetBalance() );
 }
 
 TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
@@ -255,7 +215,7 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     test::assertWaitForCondition(
         [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "node_full not synched" );
+        "node_full not synced" );
     auto node_same_addr_1 = CreateNode( "duplicate_address_12345", // same self_address
                                         "0xcafe",                  // dev_addr
                                         "1.0",
@@ -279,35 +239,39 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     test::assertWaitForCondition(
         [&]() { return node_same_addr_1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_same_addr_1 not synched" );
+        "node_same_addr_1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_same_addr_2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_same_addr_2 not synched" );
+        "node_same_addr_2 not synced" );
 
     // Verify nodes have the same address (they should since they use same self_address)
     ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )
         << "Nodes with same self_address should have same address";
 
-    std::cout << "Node 1 address: " << node_same_addr_1->GetAddress() << std::endl;
-    std::cout << "Node 2 address: " << node_same_addr_2->GetAddress() << std::endl;
-    std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
+    std::cout << "Node 1 address: " << node_same_addr_1->GetAddress() << '\n';
+    std::cout << "Node 2 address: " << node_same_addr_2->GetAddress() << '\n';
+    std::cout << "Full node address: " << node_full->GetAddress() << '\n';
 
     // Get initial balances (should be 0)
     auto balance_node1_start = node_same_addr_1->GetBalance();
     auto balance_node2_start = node_same_addr_2->GetBalance();
     auto balance_full_start  = node_full->GetBalance();
 
-    std::cout << "Initial balances - Node1: " << balance_node1_start << ", Node2: " << balance_node2_start
-              << ", Full: " << balance_full_start << std::endl;
+    fmt::println( "Initial balances - Node1: {}, Node2: {}, Full: {}",
+                  balance_node1_start,
+                  balance_node2_start,
+                  balance_full_start );
 
     // Get initial transaction counts
     auto tx_count_node1_start = node_same_addr_1->GetOutTransactions().size();
     auto tx_count_node2_start = node_same_addr_2->GetOutTransactions().size();
     auto tx_count_full_start  = node_full->GetOutTransactions().size();
 
-    std::cout << "Initial tx counts - Node1: " << tx_count_node1_start << ", Node2: " << tx_count_node2_start
-              << ", Full: " << tx_count_full_start << std::endl;
+    fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
+                  tx_count_node1_start,
+                  tx_count_node2_start,
+                  tx_count_full_start );
 
     // Mint tokens on both nodes with same address BEFORE connecting them
     std::cout << "Minting tokens on isolated nodes..." << std::endl;
@@ -315,15 +279,14 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
                                                        "",
                                                        "",
-                                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                       sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == balance_node2_start + 50000000000; },
                                   std::chrono::milliseconds( 30000 ),
-                                  "node_same_addr_2 balance not synched" );
+                                  "node_same_addr_2 balance not synced" );
     //TODO - this is not working at the moment
     //auto mint_received = node_same_addr_2->WaitForTransactionOutgoing(
     //    mint_result_1.value().first,
@@ -334,8 +297,9 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     auto balance_node1_after_mint = node_same_addr_1->GetBalance();
     auto balance_node2_after_mint = node_same_addr_2->GetBalance();
 
-    std::cout << "Balances after minting (isolated) - Node1: " << balance_node1_after_mint
-              << ", Node2: " << balance_node2_after_mint << std::endl;
+    fmt::println( "Balances after minting (isolated) - Node1: {}, Node2: {}",
+                  balance_node1_after_mint,
+                  balance_node2_after_mint );
 
     // Both nodes should have their respective minted amounts since they're isolated
     ASSERT_EQ( balance_node1_after_mint, balance_node1_start + 50000000000 );
@@ -349,7 +313,6 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                                                           sgns::TokenID::FromBytes( { 0x00 } ) );
 
     ASSERT_TRUE( transfer1_res.has_value() ) << "Transfer 1 failed on node_same_addr_1";
-    //std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     auto transfer2_res = node_same_addr_2->TransferFunds( 13000000000, // 13 GNUS
                                                           "0x00",
                                                           sgns::TokenID::FromBytes( { 0x00 } ) );
@@ -363,24 +326,31 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
         transfer1_res.value(),
         std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
 
+    test::assertWaitForCondition(
+        [&]() { return node_same_addr_2->GetBalance() == ( balance_node1_after_mint - 10000000000 ); },
+        std::chrono::milliseconds( 50000 ),
+        "node_same_addr_2 balance not synced" );
     test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
                                   std::chrono::milliseconds( 50000 ),
-                                  "node_same_addr_2 balance not synched" );
+                                  "node_same_addr_2 balance not synced" );
+
+    std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
 
     // Get final balances after CRDT resolution
     auto balance_node1_final = node_same_addr_1->GetBalance();
     auto balance_node2_final = node_same_addr_2->GetBalance();
     auto balance_full_final  = node_full->GetBalance( node_same_addr_1->GetAddress() );
 
-    std::cout << "Final balances after CRDT resolution - Node1: " << balance_node1_final
-              << ", Node2: " << balance_node2_final << ", Full: " << balance_full_final << std::endl;
+    fmt::println( "Final balances after CRDT resolution - Node1: {}, Node2: {}, Full: {}",
+                  balance_node1_final,
+                  balance_node2_final,
+                  balance_full_final );
 
     // Get final transaction counts
     auto tx_count_node1_final = node_same_addr_1->GetOutTransactions().size();
     auto tx_count_node2_final = node_same_addr_2->GetOutTransactions().size();
 
-    std::cout << "Final tx counts - Node1: " << tx_count_node1_final << ", Node2: " << tx_count_node2_final
-              << std::endl;
+    fmt::println( "Final tx counts - Node1: {}, Node2: {}", tx_count_node1_final, tx_count_node2_final );
 
     // Since both nodes have the same address, they should have the same final balance
     ASSERT_EQ( balance_node1_final, balance_node2_final )

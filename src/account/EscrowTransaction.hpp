@@ -29,12 +29,30 @@ namespace sgns
         std::vector<uint8_t> SerializeByteVector() override;
         uint64_t             GetNumChunks() const;
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             return GetType();
         }
 
         UTXOTxParameters GetUTXOParameters() const
+        {
+            return utxo_params_;
+        }
+
+        /**
+         * @brief       Returns if transaction supports UTXOs
+         * @return      True if supported, false otherwise
+         */
+        bool HasUTXOParameters() const override
+        {
+            return true;
+        }
+
+        /**
+         * @brief       Returns the UTXOs
+         * @return      If exists, returns the UTXOs of the transaction
+         */
+        std::optional<UTXOTxParameters> GetUTXOParametersOpt() const override
         {
             return utxo_params_;
         }

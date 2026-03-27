@@ -22,12 +22,15 @@ public:
     }
 
     /**
-    * Send {@param buff} payload to other replicas.
+    * Send buffer payload to other replicas.
+    * @param buff Buffer containing the data to broadcast.
+    * @param topic Topic to broadcast to.
+    * @param peerInfo Optional peer info.
     * @return outcome::success on success or outcome::failure on error
     */
         outcome::result<void> Broadcast(const base::Buffer &buff, std::string topic, boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none) override;
     /**
-    * Obtain the next {@return} payload received from the network.
+    * Obtain the next payload received from the network.
     * @return buffer value or outcome::failure on error
     */
         outcome::result<base::Buffer> Next() override;

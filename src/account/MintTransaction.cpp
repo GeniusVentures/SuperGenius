@@ -6,8 +6,6 @@
  */
 #include "account/MintTransaction.hpp"
 
-#include "crypto/hasher/hasher_impl.hpp"
-
 namespace sgns
 {
     MintTransaction::MintTransaction( uint64_t                 new_amount,
@@ -31,7 +29,11 @@ namespace sgns
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
 
         return serialized_proto;
     }
@@ -49,7 +51,7 @@ namespace sgns
         TokenID     tokenid = TokenID::FromBytes( tx_struct.token_id().data(), tx_struct.token_id().size() );
 
         return std::make_shared<MintTransaction>(
-            MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) ); // Return new instance
+            MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) );
     }
 
     uint64_t MintTransaction::GetAmount() const

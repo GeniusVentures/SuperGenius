@@ -9,9 +9,20 @@
 #ifndef SUPERGENIUS_CRDT_DATASTORE_HPP
 #define SUPERGENIUS_CRDT_DATASTORE_HPP
 
+#include <shared_mutex>
+#include <future>
+#include <chrono>
+#include <queue>
+#include <unordered_set>
+#include <map>
+#include <condition_variable>
+#include <optional>
+
 #include <boost/asio/steady_timer.hpp>
-#include "base/logger.hpp"
+#include <ipfs_lite/ipld/ipld_node.hpp>
 #include <primitives/cid/cid.hpp>
+
+#include "base/logger.hpp"
 #include "crdt/crdt_set.hpp"
 #include "crdt/crdt_heads.hpp"
 #include "crdt/broadcaster.hpp"
@@ -19,16 +30,17 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
-#include <storage/rocksdb/rocksdb.hpp>
-#include <ipfs_lite/ipld/ipld_node.hpp>
-#include <shared_mutex>
-#include <future>
-#include <chrono>
-#include <queue>
-#include <set>
-#include <map>
-#include <condition_variable>
-#include <optional>
+#include "storage/rocksdb/rocksdb.hpp"
+
+namespace sgns
+{
+    class Blockchain;
+}
+
+namespace sgns::blockchain
+{
+    class ValidatorRegistry;
+}
 
 namespace sgns::crdt
 {
@@ -77,7 +89,6 @@ namespace sgns::crdt
          * @param[in]   aDagSyncer The MerkleDAG syncer to request content of CIDs
          * @param[in]   aBroadcaster The broadcaster to publish CIDs
          * @param[in]   aOptions Options to construct the object
-         * @param[in]   elem_filter_cb Filter callback to remove or not an element from a Delta
          * @return      A new instance of @ref CrdtDatastore
          */
         static std::shared_ptr<CrdtDatastore> New( std::shared_ptr<RocksDB>     aDatastore,
@@ -113,7 +124,7 @@ namespace sgns::crdt
         * @param aPrefix prefix to search, if empty string, return all
         * @return list of key-value pairs matches prefix
         */
-        outcome::result<QueryResult> QueryKeyValues( const std::string &aPrefix ) const;
+        outcome::result<QueryResult> QueryKeyValues( std::string_view aPrefix ) const;
 
         /**
          * @brief       Queries with a middle part that can be a wildcard, negated string or normal string
@@ -134,17 +145,18 @@ namespace sgns::crdt
         /** Get value suffix used in set, e.g. /v
         * @return value suffix
         */
-        std::string GetValueSuffix() const;
+        static std::string GetValueSuffix();
 
         /**
          * @brief Stores the given value in the CRDT store
          * @param aKey Hierarchical key to put
          * @param aValue Value to be stored
+         * @param topics Topics to publish to
          * @return outcome::success if stored and broadcasted successfully, or outcome::failure otherwise.
          */
-        outcome::result<CID> PutKey( const HierarchicalKey       &aKey,
-                                     const Buffer                &aValue,
-                                     const std::set<std::string> &topics );
+        outcome::result<CID> PutKey( const HierarchicalKey                 &aKey,
+                                     const Buffer                          &aValue,
+                                     const std::unordered_set<std::string> &topics );
 
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
@@ -154,17 +166,20 @@ namespace sgns::crdt
 
         /** Delete removes the value for given `key`.
         * @param aKey HierarchicalKey to delete from set
+        * @param topics Topics to publish to
         * @return outcome::failure on error or success otherwise
         */
-        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::set<std::string> &topics );
+        outcome::result<CID> DeleteKey( const HierarchicalKey &aKey, const std::unordered_set<std::string> &topics );
 
         /**
          * @brief Publishes a Delta.
          * Creates a DAG node from the given Delta, merges it into the CRDT, and broadcasts the node.
          * @param aDelta Delta to publish
+         * @param topics Topics to publish to
          * @return returns outcome::success on success or outcome::failure otherwise
          */
-        outcome::result<CID> Publish( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
+        outcome::result<CID> Publish( const std::shared_ptr<Delta>          &aDelta,
+                                      const std::unordered_set<std::string> &topics );
 
         /** PrintDAG pretty prints the current Merkle-DAG using the given printFunc
         * @return returns outcome::success on success or outcome::failure otherwise
@@ -185,7 +200,7 @@ namespace sgns::crdt
         static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &key,
                                                                          const std::string &value );
 
-        /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
+        /** Returns a new delta-set removing the given keys with prefix /namespace/s/key
         * @param key - delta key to remove from datastore
         * @return pointer to delta or outcome::failure on error
         */
@@ -226,10 +241,24 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
-        std::set<std::string> GetTopicNames() const;
+        /**
+         * @brief Enable or disable outgoing head broadcasts.
+         * @param[in] enabled True to allow broadcasts, false to suppress them.
+         */
+        void SetBroadcastEnabled( bool enabled );
+
+        /**
+         * @brief Query whether outgoing head broadcasts are enabled.
+         * @return true when broadcasts are enabled.
+         */
+        bool IsBroadcastEnabled() const;
+        
+        std::unordered_set<std::string> GetTopicNames() const;
 
     protected:
         friend class PubSubBroadcasterExt;
+        friend class ::sgns::Blockchain;
+        friend class ::sgns::blockchain::ValidatorRegistry;
 
         struct RootCIDJob
         {
@@ -339,24 +368,27 @@ namespace sgns::crdt
         */
         static outcome::result<Buffer> EncodeBroadcastStatic( const std::set<CID> &heads );
 
-        /** PutBlock add block node to DAGSyncer
+        /** CreateIPLDNode add block node to DAGSyncer
         * @param aHeads list of CIDs to add to node as IPLD links
         * @param aDelta Delta to serialize into IPLD node
+        * @param topics Topics to add as links
         * @return IPLD node or outcome::failure on error
         */
-        outcome::result<std::shared_ptr<IPLDNode>> PutBlock( const std::vector<std::pair<CID, std::string>> &aHeads,
-                                                             const std::shared_ptr<Delta>                   &aDelta,
-                                                             const std::set<std::string> &topics ) const;
+        outcome::result<std::shared_ptr<IPLDNode>> CreateIPLDNode(
+            const std::vector<std::pair<CID, std::string>> &aHeads,
+            const std::shared_ptr<Delta>                   &aDelta,
+            const std::unordered_set<std::string>          &topics ) const;
 
+        outcome::result<std::shared_ptr<IPLDNode>> CreateDAGNode( const std::shared_ptr<Delta>          &aDelta,
+                                                                  const std::unordered_set<std::string> &topics );
         /** AddDAGNode adds node to DAGSyncer and processes new blocks.
-         *  @param aDelta   Pointer to Delta used for generating node and process it
-         *  @param topics   Vector of topic names; the new block will have one link per topic
+         *  @param node   Node to add and process
          *  @return         CID or outcome::failure on error
          */
-        outcome::result<CID> AddDAGNode( const std::shared_ptr<Delta> &aDelta, const std::set<std::string> &topics );
+        outcome::result<CID> AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node );
 
         /** SyncDatastore sync heads and set datastore
-        * @param: aKeyList all heads and the set entries related to the given prefix
+        * @param aKeyList all heads and the set entries related to the given prefix
         * @return returns outcome::success on success or outcome::failure otherwise
         */
         outcome::result<void> SyncDatastore( const std::vector<HierarchicalKey> &aKeyList );
@@ -426,18 +458,19 @@ namespace sgns::crdt
         CRDTDataFilter crdt_filter_;
         bool           started_ = false;
 
-        std::mutex              rebroadcastMutex_;
-        std::mutex              dagWorkerCvMutex_;
-        std::condition_variable rebroadcastCv_;
-        std::set<std::string>   topicNames_;
-        bool                    isFullNode = false;
-        std::mutex              pendingBroadcastMutex_;
-        std::set<std::string>   pendingBroadcastTopics_;
+        std::mutex                      rebroadcastMutex_;
+        std::mutex                      dagWorkerCvMutex_;
+        std::condition_variable         rebroadcastCv_;
+        std::unordered_set<std::string> topicNames_;
+        mutable std::mutex              topicNamesMutex_;
+        std::mutex                      pendingBroadcastMutex_;
+        std::unordered_set<std::string> pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
 
         std::map<CID, JobStatus> pending_jobs_;
         bool                     has_full_node_topic_;
+        std::atomic_bool         broadcast_enabled_{ true };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );

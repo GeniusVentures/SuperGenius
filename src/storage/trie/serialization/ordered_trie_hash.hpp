@@ -1,5 +1,3 @@
-
-
 #ifndef SUPERGENIUS_ORDERED_TRIE_HASH_HPP
 #define SUPERGENIUS_ORDERED_TRIE_HASH_HPP
 
@@ -34,11 +32,11 @@ namespace sgns::storage::trie {
     It it = begin;
     scale::CompactInteger key = 0;
     while (it != end) {
-      OUTCOME_TRY((auto &&, enc), scale::encode(key++));
+      BOOST_OUTCOME_TRY( auto enc, scale::encode(key++));
       BOOST_OUTCOME_TRYV2(auto &&, trie.put(base::Buffer{enc}, *it));
       it++;
     }
-    OUTCOME_TRY((auto &&, enc), codec.encodeNode(*trie.getRoot()));
+    BOOST_OUTCOME_TRY( auto enc, codec.encodeNode(*trie.getRoot()));
     return base::Buffer{codec.hash256(enc)};
   }
 

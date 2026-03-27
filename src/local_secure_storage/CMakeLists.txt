@@ -21,7 +21,7 @@ if(ANDROID)
         PRIVATE
         ${log-lib}
     )
-elseif(LINUX)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_sources(secure_storage PRIVATE impl/Linux.cpp)
 
     find_package(PkgConfig)

@@ -74,7 +74,7 @@ namespace sgns::base {
   }
 
   outcome::result<Buffer> Buffer::fromHex(std::string_view hex) {
-    OUTCOME_TRY((auto &&, bytes), unhex(hex));
+    BOOST_OUTCOME_TRY( auto bytes, unhex(hex));
     return Buffer{std::move(bytes)};
   }
 

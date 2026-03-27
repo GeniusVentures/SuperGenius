@@ -1,25 +1,37 @@
-#ifndef SUPERGENIUS_SRC_STORAGE_DATABASE_ERROR_DATABASE_ERROR_HPP
-#define SUPERGENIUS_SRC_STORAGE_DATABASE_ERROR_DATABASE_ERROR_HPP
+#pragma once
 
 #include "outcome/outcome.hpp"
 
-namespace sgns::storage {
+#include <rocksdb/status.h>
 
-  /**
-   * @brief universal database interface error
-   */
-  enum class DatabaseError : int {
-    OK = 0,
-    NOT_FOUND = 1,
-    CORRUPTION = 2,
-    NOT_SUPPORTED = 3,
-    INVALID_ARGUMENT = 4,
-    IO_ERROR = 5,
+namespace sgns::storage
+{
+    /**
+    * @brief universal database interface error
+    */
+    enum class DatabaseError : uint8_t
+    {
+        OK,
+        NOT_FOUND,
+        CORRUPTION,
+        NOT_SUPPORTED,
+        INVALID_ARGUMENT,
+        IO_ERROR,
+        MERGE_IN_PROGRESS,
+        INCOMPLETE,
+        SHUTDOWN_IN_PROGRESS,
+        TIMED_OUT,
+        ABORTED,
+        BUSY,
+        EXPIRED,
+        TRY_AGAIN_,
+        COMPACTION_TOO_LARGE,
+        COLUMN_FAMILY_DROPPED,
+        UNITIALIZED,
+        UNKNOWN,
+    };
 
-    UNKNOWN = 1000
-  };
-}  // namespace sgns::storage
+    DatabaseError error_from_rocksdb( rocksdb::Status::Code code );
+}
 
-OUTCOME_HPP_DECLARE_ERROR_2(sgns::storage, DatabaseError);
-
-#endif  // SUPERGENIUS_SRC_STORAGE_DATABASE_ERROR_DATABASE_ERROR_HPP
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage, DatabaseError );

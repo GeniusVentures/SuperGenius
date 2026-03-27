@@ -15,7 +15,7 @@
 
 namespace sgns
 {
-    class MintTransaction : public IGeniusTransactions
+    class MintTransaction final : public IGeniusTransactions
     {
     public:
         ~MintTransaction() override = default;
@@ -33,7 +33,7 @@ namespace sgns
 
         TokenID GetTokenID() const;
 
-        std::string GetTransactionSpecificPath() override
+        std::string GetTransactionSpecificPath() const override
         {
             return GetType();
         }
@@ -49,7 +49,7 @@ namespace sgns
          * @brief       Registers the deserializer for the transfer transaction type.
          * @return      A boolean indicating successful registration.
          */
-        static inline bool Register()
+        static bool Register()
         {
             RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
             return true;

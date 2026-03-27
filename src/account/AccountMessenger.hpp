@@ -5,26 +5,29 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #pragma once
+
 #include <string>
-#include <cstdint>
 #include <memory>
 #include <functional>
 #include <vector>
-#include <cstdlib>
 #include <future>
 #include <condition_variable>
 #include <queue>
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
-#include <set>
+#include <unordered_set>
 #include <chrono>
+#include <variant>
+#include <optional>
+#include <random>
+
 #include <boost/optional.hpp>
+
 #include "base/logger.hpp"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
 #include "outcome/outcome.hpp"
 #include "account/proto/SGAccountComm.pb.h"
-#include "primitives/cid/cid.hpp"
 
 namespace sgns
 {
@@ -43,6 +46,7 @@ namespace sgns
             NO_RESPONSE_RECEIVED,      ///< No response received from network
             RESPONSE_WITHOUT_NONCE,    ///< Response received but without nonce data
             GENESIS_REQUEST_ERROR,     ///< Genesis request failed
+            UTXO_REQUEST_ERROR,        ///< UTXO request failed
         };
 
         /**
@@ -66,6 +70,15 @@ namespace sgns
 
             /// @brief Check if a CID is locally available
             std::function<outcome::result<bool>( const std::string &cid )> has_block_cid_;
+
+            /// @brief Get local UTXOs as a list of strings for a given address
+            std::function<outcome::result<std::vector<std::string>>( const std::string &address )> get_utxos_;
+
+            /// @brief Get validator weight for an address (empty if not a validator)
+            std::function<outcome::result<std::optional<uint64_t>>( const std::string &address )> get_validator_weight_;
+
+            /// @brief Get transaction CID by hash
+            std::function<outcome::result<std::string>( const std::string &tx_hash )> get_transaction_cid_;
         };
 
         // Global block response handler type
@@ -103,9 +116,8 @@ namespace sgns
          * @param[in]   callback Function to be called for each CID found (empty string if none)
          * @return      success if at least one response arrives before timeout, error otherwise
          */
-        outcome::result<void> RequestGenesis(
-            uint64_t timeout_ms,
-            std::function<void( outcome::result<std::string> )> callback = nullptr );
+        outcome::result<void> RequestGenesis( uint64_t                                            timeout_ms,
+                                              std::function<void( outcome::result<std::string> )> callback = nullptr );
 
         /**
          * @brief       Request account creation from the network and invoke callback with found CIDs
@@ -113,19 +125,43 @@ namespace sgns
          * @param[in]   callback Function to be called for each CID found (signature: void(std::string))
          * @return      success on scheduled request, error otherwise
          */
-        outcome::result<void> RequestAccountCreation(
-            uint64_t timeout_ms,
-            std::function<void( outcome::result<std::string> )> callback );
+        outcome::result<void> RequestAccountCreation( uint64_t                                            timeout_ms,
+                                                      std::function<void( outcome::result<std::string> )> callback );
 
         /**
          * @brief       Request a block by CID from the network (retries until timeout)
          * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
          * @param[in]   cid CID to request
+         * @param[in]   callback Callback invoked with the CID result (or error)
          * @return      success on scheduled request, error otherwise
          */
-        outcome::result<void> RequestRegularBlock( uint64_t                                            timeout_ms,
-                                                   std::string                                         cid,
-                                                   std::function<void( outcome::result<std::string> )> callback = nullptr );
+        outcome::result<void> RequestRegularBlock(
+            uint64_t                                            timeout_ms,
+            std::string                                         cid,
+            std::function<void( outcome::result<std::string> )> callback = nullptr );
+
+        /**
+         * @brief       Request a transaction by hash from the network (retries until timeout)
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   tx_hash Transaction hash to request
+         * @param[in]   callback Callback invoked with the CID result (or error)
+         * @return      success on scheduled request, error otherwise
+         */
+        outcome::result<void> RequestTransaction(
+            uint64_t                                            timeout_ms,
+            std::string                                         tx_hash,
+            std::function<void( outcome::result<std::string> )> callback = nullptr );
+
+        /**
+         * @brief       Request UTXOs for a specific address and return the selected response
+         * @param[in]   timeout_ms Total timeout in milliseconds to wait for responses
+         * @param[in]   address Address to request UTXOs for
+         * @param[in]   silent_time_ms Time to wait for subsequent responses after first one
+         * @return      Set of UTXO strings based on selection criteria, or error otherwise
+         */
+        outcome::result<std::unordered_set<std::string>> RequestUTXOs( uint64_t           timeout_ms,
+                                                                       const std::string &address,
+                                                                       uint64_t           silent_time_ms = 150 );
 
         /**
          * @brief       Register global block response handler
@@ -154,13 +190,30 @@ namespace sgns
          * @param[in]   topics Vector of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
-        outcome::result<void> RequestHeads( const std::set<std::string> &topics );
+        outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics );
 
     private:
         /// Basis of the account receiving topic
         static constexpr std::string_view ACCOUNT_COMM = ".comm";
         /// Basis of the global requests topic
         static constexpr std::string_view REQUESTS_COMM = "SGNUS.BC.Requests.comm";
+
+        struct BlockIndexRequest
+        {
+            uint8_t block_index{ 0 };
+        };
+
+        struct BlockCidRequest
+        {
+            std::string cid;
+        };
+
+        struct TransactionHashRequest
+        {
+            std::string tx_hash;
+        };
+
+        using BlockQuery = std::variant<BlockIndexRequest, BlockCidRequest, TransactionHashRequest>;
 
         const std::string                          address_;            ///< Own address
         const std::string                          account_comm_topic_; ///< Account receiving topic
@@ -185,6 +238,17 @@ namespace sgns
                    block_first_response_time_; ///< Timestamp of the first block response
         std::mutex block_responses_mutex_;     ///< Mutex protecting block_responses_
 
+        struct UTXOResponseData
+        {
+            std::string                     responder_address;
+            std::unordered_set<std::string> utxos;
+            bool                            has_utxos{ false };
+        };
+
+        std::unordered_map<uint64_t, std::vector<UTXOResponseData>>         utxo_responses_;
+        std::unordered_map<uint64_t, std::chrono::steady_clock::time_point> utxo_first_response_time_;
+        std::mutex                                                          utxo_responses_mutex_;
+
         InterfaceMethods methods_; ///< Interface methods
 
         std::random_device rd_; ///< Random device for request IDs
@@ -198,36 +262,42 @@ namespace sgns
         std::mutex         head_handler_mutex_;
 
         // Worker thread state
-        enum class RequestType
+        enum class RequestType : std::uint8_t
         {
             Nonce,
             Genesis,
             AccountCreation,
-            BlockByCid
+            BlockByCid,
+            UTXO,
+            Transaction
         };
 
         struct RequestTask
         {
-            RequestType                                         type;
-            uint64_t                                            timeout_ms;
-            uint64_t                                            silent_time_ms{ 150 };
-            uint8_t                                             block_index{ 0 };
-            std::string                                         cid;
-            std::function<void( outcome::result<std::string> )> callback;
-            std::shared_ptr<std::promise<outcome::result<uint64_t>>> nonce_promise;
+            RequestType                                                                     type;
+            uint64_t                                                                        timeout_ms;
+            uint64_t                                                                        silent_time_ms{ 150 };
+            uint8_t                                                                         block_index{ 0 };
+            std::string                                                                     cid;
+            std::string                                                                     utxo_address;
+            std::function<void( outcome::result<std::string> )>                             callback;
+            std::shared_ptr<std::promise<outcome::result<uint64_t>>>                        nonce_promise;
+            std::shared_ptr<std::promise<outcome::result<std::unordered_set<std::string>>>> utxo_promise;
         };
 
-        std::thread                     worker_thread_;
-        std::mutex                      queue_mutex_;
-        std::condition_variable         queue_cv_;
-        std::queue<RequestTask>         request_queue_;
-        std::atomic<bool>               stop_worker_{ false };
+        std::thread             worker_thread_;
+        std::mutex              queue_mutex_;
+        std::condition_variable queue_cv_;
+        std::queue<RequestTask> request_queue_;
+        std::atomic<bool>       stop_worker_{ false };
 
-        void WorkerLoop();
-        void EnqueueTask( RequestTask task );
-        outcome::result<uint64_t> PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
-        outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, uint8_t block_index );
-        outcome::result<std::set<std::string>> PerformBlockCidRequest( uint64_t timeout_ms, const std::string &cid );
+        void                                   WorkerLoop();
+        void                                   EnqueueTask( RequestTask task );
+        outcome::result<uint64_t>              PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms );
+        outcome::result<std::set<std::string>> PerformBlockRequest( uint64_t timeout_ms, const BlockQuery &query );
+        outcome::result<std::unordered_set<std::string>> PerformUTXORequest( uint64_t           timeout_ms,
+                                                                             const std::string &address,
+                                                                             uint64_t           silent_time_ms );
 
         /**
          * @brief       Private constructor of the Account Messenger 
@@ -247,15 +317,19 @@ namespace sgns
 
         /**
          * @brief       Request a block (by index) from the network (no callback)
+         * @param[in]   req_id Request identifier
          * @param[in]   block_index index of the requested block (0 = genesis, 1 = account, ...)
          */
         outcome::result<void> RequestBlock( uint64_t req_id, uint8_t block_index );
 
         /**
          * @brief       Request a block (by CID) from the network (no callback)
+         * @param[in]   req_id Request identifier
          * @param[in]   cid CID to request
          */
         outcome::result<void> RequestBlockByCid( uint64_t req_id, const std::string &cid );
+        outcome::result<void> RequestBlockByHash( uint64_t req_id, const std::string &tx_hash );
+        outcome::result<void> RequestUTXO( uint64_t req_id, const std::string &address );
 
         /**
          * @brief       Callback of pubsub message when a response was received
@@ -283,7 +357,7 @@ namespace sgns
         void HandleNonceRequest( const accountComm::SignedNonceRequest &req );
         /**
          * @brief       Handles the Nonce response package
-         * @param[in]   req The proto nonce response package
+         * @param[in]   resp The proto nonce response package
          */
         void HandleNonceResponse( const accountComm::SignedNonceResponse &resp );
 
@@ -302,12 +376,28 @@ namespace sgns
          * @param[in]   resp The proto block response package
          */
         void HandleBlockResponse( const accountComm::SignedBlockResponse &resp );
+        void HandleTransactionRequest( const accountComm::SignedTransactionRequest &req );
+        void HandleBlockLikeRequest( const BlockQuery  &query,
+                                     const std::string &requester_address,
+                                     uint64_t           request_id );
 
         /**
          * @brief       Handles the Head request package (calls registered handler)
          * @param[in]   req The proto head request package
          */
         void HandleHeadRequest( const accountComm::SignedHeadRequest &req );
+
+        /**
+         * @brief       Handles the UTXO request package
+         * @param[in]   req The proto UTXO request package
+         */
+        void HandleUTXORequest( const accountComm::SignedUTXORequest &req );
+
+        /**
+         * @brief       Handles the UTXO response package
+         * @param[in]   resp The proto UTXO response package
+         */
+        void HandleUTXOResponse( const accountComm::SignedUTXOResponse &resp );
 
         /// The logger instance
         base::Logger logger_ = sgns::base::createLogger( "AccountMessenger" );

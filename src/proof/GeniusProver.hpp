@@ -91,9 +91,7 @@ namespace sgns
         using ParameterType = std::vector<BlueprintFieldType::value_type>;
 
         /**
-         * @brief       Constructs a GeniusProver with component constant columns and expand factor
-         * @param[in]   component_constant_columns 
-         * @param[in]   expand_factor 
+         * @brief       Constructs a GeniusProver with default settings.
          */
         GeniusProver() {}
 

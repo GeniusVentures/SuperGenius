@@ -6,13 +6,15 @@
 
 namespace sgns::processing
 {
-    /** Handles subtask states storage
-*/
+    /**
+     * @brief Handles subtask result storage.
+     */
     class SubTaskResultStorageImpl : public SubTaskResultStorage
     {
     public:
-        /** Create a subtask storage
-        * @param db - CRDT globaldb to use
+        /** Create a subtask storage.
+        * @param db - CRDT GlobalDB to use.
+        * @param topic - Topic prefix for result keys.
         */
         SubTaskResultStorageImpl( std::shared_ptr<crdt::GlobalDB> db, std::string topic );
 
@@ -28,9 +30,8 @@ namespace sgns::processing
         */
         void RemoveSubTaskResult( const std::string &subTaskId ) override;
 
-        /** Get results for subtasks
-        * @param subTaskIds - List of subtasks IDs to get results for
-        * @param results - List of results reference.
+        /** Get results for subtasks.
+        * @param subTaskIds - List of subtask IDs to get results for.
         */
         std::vector<SGProcessing::SubTaskResult> GetSubTaskResults( const std::set<std::string> &subTaskIds ) override;
 

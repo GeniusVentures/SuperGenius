@@ -83,6 +83,7 @@ namespace sgns::blockchain {
      * @param storage - block storage for the tree to be put in
      * @param last_finalized_block - last finalized block, from which the tree
      * is going to grow
+     * @param extrinsic_observer - extrinsic observer
      * @param hasher - pointer to the hasher
      * @return ptr to the created instance or error
      */

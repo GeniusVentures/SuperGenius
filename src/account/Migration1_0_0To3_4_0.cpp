@@ -1,6 +1,6 @@
 /**
  * @file       Migration1_0_0To3_4_0.cpp
- * @brief      
+ * @brief
  * @date       2025-10-03
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -10,6 +10,14 @@
 
 namespace sgns
 {
+    namespace
+    {
+        std::string BuildLegacyProofPath_1_0_0( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
 
     Migration1_0_0To3_4_0::Migration1_0_0To3_4_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
@@ -76,11 +84,11 @@ namespace sgns
 
     outcome::result<void> Migration1_0_0To3_4_0::Init()
     {
-        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        BOOST_OUTCOME_TRY( auto legacy_db, InitLegacyDb() );
         db_1_0_0_ = std::move( legacy_db );
         if ( db_1_0_0_ )
         {
-            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            BOOST_OUTCOME_TRY( auto new_db, InitTargetDb() );
             db_3_4_0_ = std::move( new_db );
         }
         return outcome::success();
@@ -96,12 +104,12 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
         auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         const std::string BASE = "/bc-963/";
-        OUTCOME_TRY( auto &&entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
+        BOOST_OUTCOME_TRY( auto entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
         logger_->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
@@ -131,7 +139,7 @@ namespace sgns
                     continue;
                 }
             }
-            auto maybe_proof = db_1_0_0_->Get( { BASE + tx->GetProofFullPath() } );
+            auto maybe_proof = db_1_0_0_->Get( { BASE + BuildLegacyProofPath_1_0_0( *tx ) } );
 
             if ( !maybe_proof.has_value() )
             {
@@ -155,9 +163,9 @@ namespace sgns
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
 
-            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + tx->GetProofFullPath() );
+            sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath_1_0_0( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
             proof_transaction.put( maybe_proof.value() );
             BOOST_OUTCOME_TRYV2(
@@ -168,7 +176,7 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = db_3_4_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
@@ -179,7 +187,7 @@ namespace sgns
         }
         if ( migrated_count )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );
         }
 
@@ -188,7 +196,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

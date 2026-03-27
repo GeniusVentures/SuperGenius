@@ -41,16 +41,18 @@ namespace sgns::blockchain {
   enum class KeyValueRepositoryError { INVALID_KEY = 1 };
 
   /**
-   * Concatenate \param key_column with \param key
+   * Concatenate prefix with key.
+   * @param key key buffer
+   * @param key_column prefix keyspace
    * @return key_column|key
    */
   base::Buffer prependPrefix(const base::Buffer &key,
                                prefix::Prefix key_column);
 
   /**
-   * Put an entry to key space \param prefix and corresponding lookup keys to
-   * ID_TO_LOOKUP_KEY space
-   * @param map to put the entry to
+   * Put an entry to key space prefix and corresponding lookup keys to
+   * ID_TO_LOOKUP_KEY space.
+   * @param db database to put the entry to
    * @param prefix keyspace for the entry value
    * @param num block number that could be used to retrieve the value
    * @param block_hash block hash that could be used to retrieve the value
@@ -64,10 +66,10 @@ namespace sgns::blockchain {
                                       const base::Buffer &value);
 
   /**
-   * Get an entry from the database
-   * @param map to get the entry from
-   * @param prefix, with which the entry was put into
-   * @param block_id - id of the block to get entry for
+   * Get an entry from the database.
+   * @param db database to get the entry from
+   * @param prefix prefix with which the entry was put into
+   * @param block_id id of the block to get entry for
    * @return encoded entry or error
    */
   outcome::result<base::Buffer> getWithPrefix(

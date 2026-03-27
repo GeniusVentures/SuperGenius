@@ -1,18 +1,32 @@
 /**
  * @file       Migration3_4_0To3_5_0.cpp
- * @brief      
+ * @brief
  * @date       2025-11-14
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
 #include "Migration3_4_0To3_5_0.hpp"
 
+#include "account/EscrowReleaseTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TransferTransaction.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 
 namespace sgns
 {
+
+    namespace
+    {
+        std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
+        {
+            return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
+                   std::to_string( tx.dag_st.nonce() );
+        }
+    }
+
     Migration3_4_0To3_5_0::Migration3_4_0To3_5_0(
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
@@ -52,7 +66,7 @@ namespace sgns
         if ( !db_3_4_0_ )
         {
             logger_->info( "Legacy 3.4.0 DB not found; skipping migration to {}", ToVersion() );
-            return false;
+            return ret;
         }
 
         do
@@ -87,11 +101,11 @@ namespace sgns
 
     outcome::result<void> Migration3_4_0To3_5_0::Init()
     {
-        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        BOOST_OUTCOME_TRY( auto legacy_db, InitLegacyDb() );
         db_3_4_0_ = std::move( legacy_db );
         if ( db_3_4_0_ )
         {
-            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            BOOST_OUTCOME_TRY( auto new_db, InitTargetDb() );
             db_3_5_0_ = std::move( new_db );
         }
         return outcome::success();
@@ -107,9 +121,12 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        account_->ConfigureMessengerHandlers( db_3_5_0_ );
+        account_->ConfigureDatabaseDependencies( db_3_5_0_ );
 
         db_3_5_0_->Start();
+        db_3_5_0_->SetBroadcastEnabled( false );
+        logger_->info( "Broadcast suppression enabled for migration target DB" );
+
         //init blockchain
         if ( !blockchain_ )
         {
@@ -123,6 +140,8 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
+                            strong->account_->RequestHeads(
+                                { std::string( sgns::blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
@@ -218,8 +237,8 @@ namespace sgns
             return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
 
-        auto                  crdt_transaction_ = db_3_5_0_->BeginTransaction();
-        std::set<std::string> topics_;
+        auto                            crdt_transaction_ = db_3_5_0_->BeginTransaction();
+        std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
@@ -236,7 +255,7 @@ namespace sgns
         for ( const auto network_id : monitored_networks )
         {
             auto blockchain_base = TransactionManager::GetBlockChainBase( network_id );
-            OUTCOME_TRY( auto &&entries, db_3_4_0_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
+            BOOST_OUTCOME_TRY( auto entries, db_3_4_0_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
             logger_->debug( "Found {} transaction keys to migrate on network {}", entries.size(), network_id );
 
             std::vector<TransactionRecord> owned_transactions;
@@ -248,7 +267,7 @@ namespace sgns
             {
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( record.tx->SerializeByteVector() );
-                BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( record.key, std::move( data_transaction ) ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Put( record.key, std::move( data_transaction ) ) );
 
                 topics_.emplace( record.tx->GetSrcAddress() );
                 if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( record.tx ) )
@@ -267,7 +286,7 @@ namespace sgns
                 ++migrated_count;
                 if ( migrated_count >= BATCH_SIZE )
                 {
-                    OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                    BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                     crdt_transaction_ = db_3_5_0_->BeginTransaction();
                     topics_.clear();
                     topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -359,7 +378,7 @@ namespace sgns
                     logger_->info( "Synthesizing zero-value mint for missing nonce {} on network {}",
                                    nonce,
                                    network_id );
-                    auto tx_path = blockchain_base + mint_tx->GetTransactionFullPath();
+                    auto tx_path = blockchain_base + BuildLegacyTransactionPath_3_5_0( *mint_tx );
                     return TransactionRecord{ std::move( mint_tx ), std::move( tx_path ) };
                 };
 
@@ -371,12 +390,12 @@ namespace sgns
                         logger_->info( "Synthesized zero-value mint for missing nonce {} on network {}",
                                        expected_nonce,
                                        network_id );
-                        OUTCOME_TRY( persist_record( filler_record ) );
+                        BOOST_OUTCOME_TRY( persist_record( filler_record ) );
                         last_timestamp = filler_record.tx->GetTimestamp();
                         ++expected_nonce;
                     }
 
-                    OUTCOME_TRY( persist_record( record ) );
+                    BOOST_OUTCOME_TRY( persist_record( record ) );
                     last_timestamp = record.tx->GetTimestamp();
                     expected_nonce = record.tx->dag_st.nonce() + 1;
                 }
@@ -384,12 +403,12 @@ namespace sgns
 
             for ( const auto &record : other_transactions )
             {
-                OUTCOME_TRY( persist_record( record ) );
+                BOOST_OUTCOME_TRY( persist_record( record ) );
             }
         }
-        if ( migrated_count )
+        if ( migrated_count != 0 )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );
         }
 
@@ -398,7 +417,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_3_5_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_5_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();
@@ -466,6 +485,7 @@ namespace sgns
 
     outcome::result<void> Migration3_4_0To3_5_0::ShutDown()
     {
+        account_->DeconfigureDatabaseDependencies();
         db_3_4_0_.reset();
         db_3_5_0_.reset();
         blockchain_.reset();

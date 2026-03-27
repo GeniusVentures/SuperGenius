@@ -108,10 +108,10 @@ namespace sgns::crdt
     outcome::result<void> CrdtHeads::Remove( const CID &aCid, const std::string &topic )
     {
         logger_->debug( "{}: Removing {} as head for topic {}", __func__, aCid.toString().value(), topic );
-        OUTCOME_TRY( auto &&head_key, GetKey( topic, aCid ) );
+        BOOST_OUTCOME_TRY( auto head_key, GetKey( topic, aCid ) );
         Buffer keyBuffer;
         keyBuffer.put( head_key.GetKey() );
-        OUTCOME_TRY( dataStore_->remove( keyBuffer ) );
+        BOOST_OUTCOME_TRY( dataStore_->remove( keyBuffer ) );
 
         logger_->debug( "{}: Removed {} as head for topic {}", __func__, aCid.toString().value(), topic );
 
@@ -256,7 +256,7 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::set<std::string> &topics ) const
+    outcome::result<CrdtHeads::CRDTListResult> CrdtHeads::GetList( const std::unordered_set<std::string> &topics ) const
     {
         CRDTHeadList result_heads;
         uint64_t     max_value = 0;

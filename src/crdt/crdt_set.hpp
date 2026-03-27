@@ -103,25 +103,25 @@ namespace sgns::crdt
         static outcome::result<std::shared_ptr<Delta>> CreateDeltaToAdd( const std::string &aKey,
                                                                          const std::string &aValue );
 
-        /** Returns a new delta-set removing the given keys with prefix /namespace/s/<key>
+        /** Returns a new delta-set removing the given keys with prefix /namespace/s/key
         * @param aKey delta key to remove from datastore
         * @return pointer to delta or outcome::failure on error
         */
         outcome::result<std::shared_ptr<Delta>> CreateDeltaToRemove( const std::string &aKey ) const;
 
-        /** Get the value of an element from the CRDT set /namespace/k/<key>/v
+        /** Get the value of an element from the CRDT set /namespace/k/key/v
         * @param aKey Key name
         * @return buffer value or outcome::failure on error
         */
         outcome::result<Buffer> GetElement( const std::string &aKey ) const;
 
-        /** Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/<prefix>
+        /** Query datastore key-value pairs by prefix, if prefix empty return all elements /namespace/k/prefix
         * @param aPrefix prefix to search, if empty string, return all
         * @param aSuffix suffix to search
         * @return list of key-value pairs matches prefix and suffix
         * \sa QuerySuffix
         */
-        outcome::result<QueryResult> QueryElements( const std::string &aPrefix,
+        outcome::result<QueryResult> QueryElements( std::string_view   aPrefix,
                                                     const QuerySuffix &aSuffix = QuerySuffix::QUERY_ALL ) const;
 
         /**
@@ -141,7 +141,7 @@ namespace sgns::crdt
         //func (s *set) Elements(q query.Query) (query.Results, error) {
 
         /** Returns true if the key belongs to one of the elements in the
-        * /namespace/k/<key>/v set, and this element is not tombstoned.
+        * /namespace/k/key/v set, and this element is not tombstoned.
         * @param aKey key name
         * @return true if the key belongs to one of the elements and is not tombstoned or outcome::failure on error
         */
@@ -155,42 +155,42 @@ namespace sgns::crdt
         outcome::result<bool> InElemsNotTombstoned( const std::string &aKey ) const;
 
         /** Get full path prefix in namespace for a key
-        * /namespace/<key>
+        * /namespace/key
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
         HierarchicalKey KeyPrefix( const std::string &aKey ) const;
 
         /** Get elems full path prefix in namespace for a key
-        * /namespace/s/<key>
+        * /namespace/s/key
         * @param aKey key string
         * @return HierarchicalKey with elems prefix
         */
         HierarchicalKey ElemsPrefix( const std::string &aKey ) const;
 
         /** Get tombs full path prefix in namespace for a key
-        * /namespace/t/<key>
+        * /namespace/t/key
         * @param aKey key string
         * @return HierarchicalKey with tombs prefix
         */
         HierarchicalKey TombsPrefix( const std::string &aKey ) const;
 
         /** Get keys full path prefix in namespace for a key
-        * /namespace/k/<key>
+        * /namespace/k/key
         * @param aKey key string
         * @return HierarchicalKey with key prefix
         */
-        HierarchicalKey KeysKey( const std::string &aKey ) const;
+        HierarchicalKey KeysKey( std::string_view aKey ) const;
 
         /** Get value full path prefix in namespace for a key
-        * /namespace/k/<key>/v
+        * /namespace/k/key/v
         * @param aKey key string
         * @return HierarchicalKey with value prefix
         */
         HierarchicalKey ValueKey( const std::string &aKey ) const;
 
         /** Get priority full path prefix in namespace for a key
-        * /namespace/k/<key>/p
+        * /namespace/k/key/p
         * @param aKey key string
         * @return HierarchicalKey with priority prefix
         */
@@ -254,7 +254,8 @@ namespace sgns::crdt
         outcome::result<void> PutElems( std::vector<Element> &aElems, const std::string &aID, uint64_t aPriority );
 
         /** PutTombs adds items to the "tombs" set (marked as deleted)
-        * @param aElems list of elems to to into datastore
+        * @param aTombs list of tomb elements to put into datastore
+        * @param aID tomb key ID
         * @return outcome::success on success or outcome::failure otherwise
         */
         outcome::result<void> PutTombs( const std::vector<Element> &aTombs, const std::string &aID ) const;

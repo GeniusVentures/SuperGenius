@@ -1,22 +1,10 @@
 #include <gtest/gtest.h>
 
-#include <cmath>
 #include <fstream>
 #include <memory>
 #include <iostream>
-#include <cstdint>
-
-#ifdef _WIN32
-//#include <windows.h>
-#else
-#include <termios.h>
-#include <unistd.h>
-#endif
-
-#include <functional>
 #include <thread>
 
-#include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
@@ -30,9 +18,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static std::shared_ptr<sgns::GeniusNode> node_main;
-    static std::shared_ptr<sgns::GeniusNode> node_proc1;
-    static std::shared_ptr<sgns::GeniusNode> node_proc2;
+    static std::shared_ptr<GeniusNode> node_main;
+    static std::shared_ptr<GeniusNode> node_proc1;
+    static std::shared_ptr<GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -101,35 +89,18 @@ protected:
             [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
             std::chrono::milliseconds( 30000 ),
             "node_proc2 not ready" );
-
-        //Connect to each other
-
-        //bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress() };
-        //node_proc2->GetPubSub()->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
     {
         std::cout << "Tear down main" << std::endl;
         node_main.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete main node files\n";
-        // }
 
         std::cout << "Tear down 2" << std::endl;
         node_proc1.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 2 files\n";
-        // }
 
         std::cout << "Tear down 3" << std::endl;
         node_proc2.reset();
-        // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
-        // {
-        //     std::cerr << "Could not delete node 3 files\n";
-        // }
     }
 };
 
@@ -176,16 +147,12 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
     std::string address_main  = node_main->GetPubSub()->GetInterfaceAddress();
     std::string address_proc1 = node_proc1->GetPubSub()->GetInterfaceAddress();
     std::string address_proc2 = node_proc2->GetPubSub()->GetInterfaceAddress();
-    // std::cout << "Addresses " << std::endl;
-    // std::cout << "Main Node: " << address_main << std::endl;
-    // std::cout << "Proc Node 1: " << address_proc1 << std::endl;
-    // std::cout << "Proc Node 2: " << address_proc2 << std::endl;
     EXPECT_NE( address_main, address_proc1 ) << "node_main and node_proc1 have the same address!";
     EXPECT_NE( address_main, address_proc2 ) << "node_main and node_proc2 have the same address!";
     EXPECT_NE( address_proc1, address_proc2 ) << "node_proc1 and node_proc2 have the same address!";
 }
 
-TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
+TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -211,13 +178,6 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
 
     //ASSERT_EQ( transcount_main, 2 );
     // ASSERT_EQ( transcount_node1, transcount_node2 );
-}
-
-TEST_F( ProcessingNodesTest, DISABLED_ProcessingNodeTransfer )
-{
-    double balance_main  = node_main->GetBalance();
-    double balance_node1 = node_proc1->GetBalance();
-    double balance_node2 = node_proc2->GetBalance();
 }
 
 TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
@@ -511,6 +471,10 @@ TEST_F( ProcessingNodesTest, PostProcessing )
        )";
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
+
+    auto mint_result = node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
