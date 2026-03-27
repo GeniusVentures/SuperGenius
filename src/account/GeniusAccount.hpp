@@ -62,7 +62,7 @@ namespace sgns
         };
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
-        static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static constexpr int64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
          * @brief       Factory constructor of new GeniusAccount.
@@ -282,12 +282,12 @@ namespace sgns
                                                                           StorageWithAddress response_value,
                                                                           bool               full_node );
 
-        TokenID token;         ///< Token ID of the account
-        bool    is_full_node_; ///< Whether this account is a full node
+        TokenID                         token;         ///< Token ID of the account
+        std::shared_ptr<ISecureStorage> storage_;      ///< Secure storage instance
+        bool                            is_full_node_; ///< Whether this account is a full node
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
-        std::shared_ptr<ISecureStorage>                 storage_;          ///< Secure storage instance
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
