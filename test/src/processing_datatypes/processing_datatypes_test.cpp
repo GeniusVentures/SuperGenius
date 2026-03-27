@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <vector>
 #include <limits>
+#include <regex>
 #include <boost/dll.hpp>
 #include <boost/asio.hpp>
 #include <boost/optional/optional_io.hpp>
@@ -16,6 +17,55 @@
 
 namespace sgns
 {
+    // Helper function to patch relative file:// URIs in JSON to absolute paths
+    // This ensures tests work correctly regardless of working directory
+    static std::string PatchJsonUrisToAbsolute( const std::string &json_str, const std::string &bin_path )
+    {
+        std::string result;
+        std::string normalized_bin_path = bin_path;
+        
+        // Normalize backslashes to forward slashes in bin_path
+        for ( auto &c : normalized_bin_path )
+        {
+            if ( c == '\\' )
+                c = '/';
+        }
+        
+        // Pattern to match file:// URIs with relative paths (not already absolute)
+        // Matches: file://path/to/file
+        // Excludes: file:///absolute/path (triple slash) or file://C:/windows/path
+        std::regex relative_file_uri_pattern( R"delim("(file://(?!/)(?![A-Za-z]:)[^"]+)")delim" );
+        
+        // Use regex_iterator to find and replace all matches manually
+        size_t last_pos = 0;
+        std::sregex_iterator iter( json_str.begin(), json_str.end(), relative_file_uri_pattern );
+        std::sregex_iterator end;
+        
+        while ( iter != end )
+        {
+            // Add text before the match
+            result += json_str.substr( last_pos, iter->position() - last_pos );
+            
+            std::string original_uri = (*iter)[1].str();
+            // Extract the relative part after "file://"
+            std::string relative_path = original_uri.substr( 7 ); // Skip "file://"
+            
+            // Build absolute URI using bin_path
+            std::string absolute_uri = "file://" + normalized_bin_path + relative_path;
+            
+            // Add the replacement
+            result += "\"" + absolute_uri + "\"";
+            
+            last_pos = iter->position() + iter->length();
+            ++iter;
+        }
+        
+        // Add any remaining text after the last match
+        result += json_str.substr( last_pos );
+        
+        return result;
+    }
+
     class ProcessingDatatypesTest : public ::testing::Test
     {
     protected:
@@ -44,7 +94,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
-
+        
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+        
         // Create ProcessingManager and initialize with JSON
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: " 
@@ -66,7 +119,9 @@ namespace sgns
         ASSERT_EQ( inputs.size(), 1 ) << "Should have exactly 1 input";
         ASSERT_EQ( inputs[0].get_name(), "inputText" );
         ASSERT_EQ( inputs[0].get_type(), sgns::DataType::STRING );
-        ASSERT_EQ( inputs[0].get_source_uri_param(), "file://processing_datatypes/test_input.txt" );
+        // After patching, the URI should be absolute
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "file://" ) == 0 );
+        ASSERT_TRUE( inputs[0].get_source_uri_param().find( "test_input.txt" ) != std::string::npos );
 
         // Validate string input does NOT require dimensions (unlike texture2D)
         ASSERT_FALSE( inputs[0].get_dimensions().has_value() ) 
@@ -111,7 +166,10 @@ namespace sgns
         const auto model = passes[0].get_model().value();
         ASSERT_EQ( model.get_format(), sgns::ModelFormat::MNN );
         ASSERT_TRUE( !model.get_source_uri_param().empty() );
-        ASSERT_EQ( model.get_source_uri_param(), "file://processing_datatypes/bert-tiny.mnn" );
+        // After patching, the URI should be absolute and contain the filename
+        auto model_uri = model.get_source_uri_param();
+        ASSERT_TRUE( model_uri.find( "file://" ) == 0 ) << "URI should start with file://";
+        ASSERT_TRUE( model_uri.find( "bert-tiny.mnn" ) != std::string::npos ) << "URI should contain the filename";
 
         // Validate input nodes
         const auto &input_nodes = model.get_input_nodes();
@@ -148,6 +206,9 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         // Parse and verify CheckProcessValidity succeeds for string inputs
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) 
@@ -171,6 +232,9 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         // Create ProcessingManager and initialize with JSON
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
@@ -232,6 +296,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -266,6 +334,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -318,6 +390,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -351,6 +427,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -461,6 +541,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -494,6 +578,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -592,6 +680,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -625,6 +717,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -723,6 +819,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -754,6 +854,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -852,6 +956,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -883,6 +991,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -981,6 +1093,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -1014,6 +1130,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -1112,6 +1232,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -1145,6 +1269,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -1243,6 +1371,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -1276,6 +1408,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -1393,6 +1529,9 @@ namespace sgns
         std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
                                std::istreambuf_iterator<char>() );
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        json_data = PatchJsonUrisToAbsolute( json_data, bin_path );
+
         auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
         ASSERT_TRUE( result ) << result.error().message();
 
@@ -1478,6 +1617,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -1511,6 +1654,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -1609,6 +1756,10 @@ namespace sgns
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
+
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
                                                    << manager_result.error().message();
@@ -1641,6 +1792,10 @@ namespace sgns
                                   std::istreambuf_iterator<char>() );
         instance_stream.close();
         ASSERT_FALSE( instance_str.empty() ) << "Instance file is empty";
+
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+
+        instance_str = PatchJsonUrisToAbsolute( instance_str, bin_path );
 
         auto manager_result = sgns::sgprocessing::ProcessingManager::Create( instance_str );
         ASSERT_TRUE( manager_result.has_value() ) << "Failed to create ProcessingManager: "
@@ -1758,6 +1913,9 @@ namespace sgns
         std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
                                std::istreambuf_iterator<char>() );
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        json_data = PatchJsonUrisToAbsolute( json_data, bin_path );
+
         auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
         ASSERT_TRUE( result ) << result.error().message();
 
@@ -1862,6 +2020,9 @@ namespace sgns
         std::string json_data( ( std::istreambuf_iterator<char>( ifs ) ),
                                std::istreambuf_iterator<char>() );
 
+        // Patch relative file:// URIs to absolute paths for debugger compatibility
+        json_data = PatchJsonUrisToAbsolute( json_data, bin_path );
+
         auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
         ASSERT_TRUE( result ) << result.error().message();
 
@@ -1933,3 +2094,5 @@ namespace sgns
         ASSERT_LT( max_abs_diff, 1e-2 ) << "Max absolute diff too large";
     }
 }
+
+
