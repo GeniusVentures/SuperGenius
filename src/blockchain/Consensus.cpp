@@ -1373,7 +1373,7 @@ namespace sgns
             }
 
             (void)SubmitCertificate( certificate_result.value() );
-            ClearProposalState( state.proposal );
+            ClearProposalSlot( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
                                              GetPrintableSubjectHash( state.proposal.subject() ),
@@ -1755,7 +1755,7 @@ namespace sgns
             return;
         }
 
-        ClearProposalState( certificate.proposal() );
+        ClearProposalSlot( certificate.proposal() );
         ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
     }
 
@@ -1794,6 +1794,13 @@ namespace sgns
     bool ConsensusManager::ValidateCertificateBestProposal( const ProposalState &state,
                                                             const Certificate   &certificate ) const
     {
+        if ( certificate.has_proposal() && certificate.proposal().has_subject() &&
+             certificate.proposal().subject().type() == SubjectType::SUBJECT_REGISTRY_BATCH )
+        {
+            // Registry-batch subjects can have multiple competing proposals for the same deterministic batch root.
+            // Once a valid certificate exists, accept it even if local best_proposal_id changed due proposal races.
+            return true;
+        }
         std::lock_guard lock( proposals_mutex_ );
         auto            slot_it = slot_states_.find( state.slot_key );
         if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
@@ -1819,32 +1826,58 @@ namespace sgns
         return votes;
     }
 
-    void ConsensusManager::ClearProposalState( const Proposal &proposal )
+    void ConsensusManager::ClearProposalSlot( const Proposal &proposal )
     {
         std::lock_guard lock( proposals_mutex_ );
-        auto            it = proposals_.find( proposal.proposal_id() );
+
+        std::string slot_key;
+        auto        it = proposals_.find( proposal.proposal_id() );
         if ( it != proposals_.end() )
         {
-            const auto slot_key = it->second.slot_key;
-            proposals_.erase( it );
-            auto slot_it = slot_states_.find( slot_key );
-            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id == proposal.proposal_id() )
+            slot_key = it->second.slot_key;
+        }
+        else
+        {
+            slot_key = GetSlotKey( proposal );
+        }
+
+        std::unordered_set<std::string> ids_to_remove;
+        ids_to_remove.insert( proposal.proposal_id() );
+        for ( const auto &kv : proposals_ )
+        {
+            if ( kv.second.slot_key == slot_key )
             {
-                slot_states_.erase( slot_it );
+                ids_to_remove.insert( kv.first );
             }
         }
 
-        auto pending_it = pending_proposals_.find( proposal.proposal_id() );
-        if ( pending_it != pending_proposals_.end() )
+        for ( const auto &proposal_id : ids_to_remove )
         {
-            pending_proposals_.erase( pending_it );
+            proposals_.erase( proposal_id );
+            pending_proposals_.erase( proposal_id );
+            pending_votes_.erase( proposal_id );
         }
 
-        for ( auto &kv : pending_by_subject_hash_ )
+        for ( auto it_hash = pending_by_subject_hash_.begin(); it_hash != pending_by_subject_hash_.end(); )
         {
-            auto &vec = kv.second;
-            vec.erase( std::remove( vec.begin(), vec.end(), proposal.proposal_id() ), vec.end() );
+            auto &vec = it_hash->second;
+            vec.erase(
+                std::remove_if(
+                    vec.begin(),
+                    vec.end(),
+                    [&]( const std::string &proposal_id ) { return ids_to_remove.find( proposal_id ) != ids_to_remove.end(); } ),
+                vec.end() );
+            if ( vec.empty() )
+            {
+                it_hash = pending_by_subject_hash_.erase( it_hash );
+            }
+            else
+            {
+                ++it_hash;
+            }
         }
+
+        slot_states_.erase( slot_key );
 
         bool has_pending = false;
         for ( const auto &kv : proposals_ )

@@ -149,6 +149,71 @@ namespace sgns
             },
             instance->account_->GetAddress() );
 
+        instance->validator_registry_->SetBatchSubjectSubmitter(
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const ConsensusSubject &subject ) -> outcome::result<void>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto weight_result = strong->validator_registry_->GetValidatorWeight( strong->account_->GetAddress() );
+                    if ( weight_result.has_error() )
+                    {
+                        return outcome::failure( weight_result.error() );
+                    }
+                    if ( !weight_result.value().has_value() )
+                    {
+                        return outcome::success();
+                    }
+                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
+                                                                                        strong->account_->GetAddress(),
+                                                                                        strong->validator_registry_->GetRegistryCid(),
+                                                                                        strong->validator_registry_->GetRegistryEpoch() );
+                    if ( proposal_result.has_error() )
+                    {
+                        return outcome::failure( proposal_result.error() );
+                    }
+                    return strong->consensus_manager_->SubmitProposal( proposal_result.value(), true );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
+        instance->consensus_manager_->RegisterSubjectHandler(
+            SubjectType::SUBJECT_REGISTRY_BATCH,
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::SubjectCheck>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto decision_result = strong->validator_registry_->EvaluateBatchSubject( subject );
+                    if ( decision_result.has_error() )
+                    {
+                        return outcome::failure( decision_result.error() );
+                    }
+                    switch ( decision_result.value() )
+                    {
+                        case ValidatorRegistry::BatchSubjectDecision::Approve:
+                            return ConsensusManager::SubjectCheck::Approve;
+                        case ValidatorRegistry::BatchSubjectDecision::Pending:
+                            return ConsensusManager::SubjectCheck::Pending;
+                        case ValidatorRegistry::BatchSubjectDecision::Reject:
+                        default:
+                            return ConsensusManager::SubjectCheck::Reject;
+                    }
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
+        instance->consensus_manager_->RegisterCertificateHandler(
+            SubjectType::SUBJECT_REGISTRY_BATCH,
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( const std::string          &subject_hash,
+                                                                 const ConsensusCertificate &certificate )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
+                }
+            } );
+
         auto ensure_registry_result = instance->EnsureValidatorRegistry();
         if ( ensure_registry_result.has_error() )
         {

@@ -39,6 +39,7 @@ message RegistryUpdate {
   string prev_registry_hash = 2;
   repeated SignatureEntry signatures = 3;
   bytes certificate = 4; 
+  repeated string batch_certificate_subject_hashes = 5;
 }
 
 message RegistrySigningPayload {

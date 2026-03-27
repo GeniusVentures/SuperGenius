@@ -218,7 +218,7 @@ namespace sgns
         ProposalState                  CreateProposalState( const Certificate &certificate );
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
         std::vector<Vote>                   CollectCertificateVotes( const Certificate &certificate ) const;
-        void                                ClearProposalState( const Proposal &proposal );
+        void                                ClearProposalSlot( const Proposal &proposal );
         static outcome::result<std::string> GetSubjectHash( const Subject &subject );
         void                                ContinueProposalAfterSubject( const Proposal &proposal );
         void                  AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
