@@ -1652,6 +1652,10 @@ namespace sgns
 
     outcome::result<void> Blockchain::TryResumeProposal( const std::string &hash )
     {
+        if ( consensus_manager_->CheckCertificateForSubject( hash ) )
+        {
+            return outcome::success();
+        }
         return consensus_manager_->ResumeProposalHandling( hash );
     }
 
