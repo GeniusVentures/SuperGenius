@@ -242,7 +242,7 @@ namespace sgns
         else
         {
             genius_account_logger()->debug( "Secure storage ID file does not exist, will try migration" );
-            BOOST_OUTCOME_TRY( auto storage, MigrateSecureStorage( base_path ) );
+            BOOST_OUTCOME_TRY( storage, MigrateSecureStorage( base_path ) );
         }
 
         auto load_res = storage->Load( "sgns_key" );
