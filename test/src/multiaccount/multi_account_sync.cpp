@@ -407,6 +407,22 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
 TEST_F( MultiAccountTest, NodeConsensusTest )
 {
+    constexpr size_t kCertificatesPerBatch = 1;
+    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+
+    auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
+    {
+        ASSERT_TRUE( node );
+        ASSERT_TRUE( node->blockchain_ );
+        ASSERT_TRUE( node->blockchain_->consensus_manager_ );
+
+        auto node_registry = node->blockchain_->GetValidatorRegistry();
+        ASSERT_TRUE( node_registry );
+
+        node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
+        node->blockchain_->consensus_manager_->ConfigureCertificateDelay( kCertificateDelay );
+    };
+
     auto node_full = CreateNode( "node_consensus_full",
                                  "0xcafe",
                                  "1.0",
@@ -446,6 +462,12 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
                                   TokenID::FromBytes( { 0x00 } ),
                                   false,
                                   false );
+
+    configure_consensus_batch_and_delay( node_full );
+    configure_consensus_batch_and_delay( node_client );
+    configure_consensus_batch_and_delay( node_peer1 );
+    configure_consensus_batch_and_delay( node_peer2 );
+    configure_consensus_batch_and_delay( node_peer3 );
 
     node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
@@ -564,9 +586,9 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     cid_before   = registry->GetRegistryCid();
 
     auto transfer1 = node_client->TransferFunds( 75,
-                                                       node_peer1->GetAddress(),
-                                                       TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 node_peer1->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
     fmt::println( "Transfer 1 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -576,9 +598,9 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     cid_before   = registry->GetRegistryCid();
 
     auto transfer2 = node_client->TransferFunds( 40,
-                                                       node_peer2->GetAddress(),
-                                                       TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 node_peer2->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
     fmt::println( "Transfer 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -588,11 +610,183 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     cid_before   = registry->GetRegistryCid();
 
     auto transfer3 = node_client->TransferFunds( 10,
-                                                       node_peer3->GetAddress(),
-                                                       TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 node_peer3->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer3.has_value() ) << "Transfer 3 failed on node_client";
 
     fmt::println( "Transfer 3 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
+}
+
+TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
+{
+    constexpr size_t kCertificatesPerBatch = 5;
+    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+
+    auto node_full = CreateNode( "node_consensus_batch5_full",
+                                 "0xcafe",
+                                 "1.0",
+                                 TokenID::FromBytes( { 0x00 } ),
+                                 true,   // is full node
+                                 true,   // is processor
+                                 true ); // is genesis authorized
+
+    test::assertWaitForCondition(
+        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_full not synced" );
+
+    auto node_client = CreateNode( "node_consensus_batch5_client",
+                                   "0xcafe",
+                                   "1.0",
+                                   TokenID::FromBytes( { 0x00 } ),
+                                   false, // not full node
+                                   false  // not processor
+    );
+
+    auto node_peer1 = CreateNode( "node_consensus_batch5_peer1",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+    auto node_peer2 = CreateNode( "node_consensus_batch5_peer2",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+    auto node_peer3 = CreateNode( "node_consensus_batch5_peer3",
+                                  "0xcafe",
+                                  "1.0",
+                                  TokenID::FromBytes( { 0x00 } ),
+                                  false,
+                                  false );
+
+    auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
+    {
+        ASSERT_TRUE( node );
+        ASSERT_TRUE( node->blockchain_ );
+        ASSERT_TRUE( node->blockchain_->consensus_manager_ );
+
+        auto node_registry = node->blockchain_->GetValidatorRegistry();
+        ASSERT_TRUE( node_registry );
+
+        node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
+        node->blockchain_->consensus_manager_->ConfigureCertificateDelay( kCertificateDelay );
+    };
+
+    configure_consensus_batch_and_delay( node_full );
+    configure_consensus_batch_and_delay( node_client );
+    configure_consensus_batch_and_delay( node_peer1 );
+    configure_consensus_batch_and_delay( node_peer2 );
+    configure_consensus_batch_and_delay( node_peer3 );
+
+    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+
+    test::assertWaitForCondition(
+        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_client not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer1 not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer2 not synced" );
+    test::assertWaitForCondition(
+        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 30000 ),
+        "node_peer3 not synced" );
+
+    ASSERT_TRUE( node_full->blockchain_ );
+    auto registry = node_full->blockchain_->GetValidatorRegistry();
+    ASSERT_TRUE( registry );
+
+    test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadRegistry();
+            return load.has_value() && !registry->GetRegistryCid().empty();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "validator registry not initialized" );
+
+    auto registry_state = registry->LoadRegistry();
+    ASSERT_TRUE( registry_state.has_value() );
+    const auto initial_epoch = registry_state.value().epoch();
+    const auto initial_cid   = registry->GetRegistryCid();
+
+    auto assert_registry_immutable = [&]( const char *step )
+    {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+        while ( std::chrono::steady_clock::now() < deadline )
+        {
+            auto load = registry->LoadRegistry();
+            ASSERT_TRUE( load.has_value() ) << "registry load failed during " << step;
+            EXPECT_EQ( load.value().epoch(), initial_epoch ) << "registry epoch changed unexpectedly at " << step;
+            EXPECT_EQ( registry->GetRegistryCid(), initial_cid ) << "registry CID changed unexpectedly at " << step;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 250 ) );
+        }
+    };
+
+    auto mint1 = node_client->MintTokens( 100, "", "", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
+    assert_registry_immutable( "tx1" );
+
+    auto mint2 = node_client->MintTokens( 250, "", "", TokenID::FromBytes( { 0x00 } ) );
+    ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
+    assert_registry_immutable( "tx2" );
+
+    auto transfer1 = node_client->TransferFunds( 75,
+                                                 node_peer1->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
+    assert_registry_immutable( "tx3" );
+
+    auto transfer2 = node_client->TransferFunds( 40,
+                                                 node_peer2->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
+    assert_registry_immutable( "tx4" );
+
+    auto transfer3 = node_client->TransferFunds( 10,
+                                                 node_peer3->GetAddress(),
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer3.has_value() ) << "Transfer 3 failed on node_client";
+
+    test::assertWaitForCondition(
+        [&]()
+        {
+            auto load = registry->LoadRegistry();
+            return load.has_value() && ( load.value().epoch() > initial_epoch || registry->GetRegistryCid() != initial_cid );
+        },
+        std::chrono::milliseconds( 60000 ),
+        "validator registry did not update after 5th certificate" );
+
+    auto registry_after = registry->LoadRegistry();
+    ASSERT_TRUE( registry_after.has_value() );
+    EXPECT_GT( registry_after.value().epoch(), initial_epoch );
+    EXPECT_NE( registry->GetRegistryCid(), initial_cid );
+
+    const std::vector<std::string> expected_validators = { node_full->GetAddress(),
+                                                           node_client->GetAddress(),
+                                                           node_peer1->GetAddress(),
+                                                           node_peer2->GetAddress(),
+                                                           node_peer3->GetAddress() };
+    for ( const auto &validator_id : expected_validators )
+    {
+        auto *validator = sgns::ValidatorRegistry::FindValidator( registry_after.value(), validator_id );
+        ASSERT_TRUE( validator ) << "missing validator in registry: " << validator_id;
+        EXPECT_GT( validator->weight(), 0 ) << "validator has non-positive weight: " << validator_id;
+    }
 }
