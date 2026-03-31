@@ -28,20 +28,10 @@ void IpfsDHT::FindProviders(
     const libp2p::multi::ContentIdentifier& cid,
     std::function<void(libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>> onProvidersFound)> onProvidersFound)
 {
-    auto kadCID = libp2p::protocol::kademlia::ContentId::fromWire(
+    auto kadCID = libp2p::protocol::kademlia::ContentId(
         libp2p::multi::ContentIdentifierCodec::encode(cid).value());
-    if (!kadCID)
-    {
-        logger_->error("Wrong CID {}",
-            libp2p::peer::PeerId::fromHash(cid.content_address).value().toBase58());
-        // TODO: pass an error to callback
-        //onProvidersFound(ERROR);
-    }
-    else
-    {
-        [[maybe_unused]] auto res = kademlia_->findProviders(
-            kadCID.value(), 0, onProvidersFound);
-    }
+
+    [[maybe_unused]] auto res = kademlia_->findProviders(kadCID, 0, std::move(onProvidersFound));
 }
 
 std::vector<libp2p::peer::PeerInfo> IpfsDHT::GetBootstrapNodes() const

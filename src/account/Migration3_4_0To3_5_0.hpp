@@ -1,6 +1,6 @@
 /**
  * @file       Migration3_4_0To3_5_0.hpp
- * @brief      
+ * @brief
  * @date       2025-11-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -22,7 +22,7 @@ namespace sgns
 
     /**
      * @brief      Migration step for version 1.0.0 to 3.4.0.
-     *             Changes the full node topic from CRDT heads 
+     *             Changes the full node topic from CRDT heads
      */
     class Migration3_4_0To3_5_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_4_0To3_5_0>
     {
@@ -30,7 +30,7 @@ namespace sgns
         Migration3_4_0To3_5_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-                               std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+                               std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
@@ -81,7 +81,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< Request ID generator.
         std::string                     writeBasePath_;                             ///< Base path for writing DB files.
         std::string                     base58key_;                                 ///< Key to build legacy paths.

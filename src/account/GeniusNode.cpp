@@ -23,7 +23,7 @@
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Coin.h>
 
@@ -182,20 +182,23 @@ namespace sgns
     {
         try
         {
-            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID, mnemonic, dev_config.BaseWritePath, is_full_node );
+            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
+                                                           mnemonic,
+                                                           dev_config.BaseWritePath,
+                                                           is_full_node );
 
-            if (account == nullptr) {
+            if ( account == nullptr )
+            {
                 return nullptr;
             }
 
-            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
-                dev_config,
-                std::move(account),
-                autodht,
-                isprocessor,
-                base_port,
-                is_full_node,
-                use_upnp ) );
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config,
+                                                                         std::move( account ),
+                                                                         autodht,
+                                                                         isprocessor,
+                                                                         base_port,
+                                                                         is_full_node,
+                                                                         use_upnp ) );
 
             if ( instance )
             {
@@ -238,7 +241,9 @@ namespace sgns
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
-        scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
+        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         use_upnp_( use_upnp )
@@ -616,8 +621,8 @@ namespace sgns
             std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
             SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-            libp2p::protocol::kademlia::ContentId key( hash );
-            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+            auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
+            auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key );
             auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
             if ( !maybe_base58 )
             {
@@ -955,11 +960,11 @@ namespace sgns
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
         // Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
+        auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
 
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger_->info( "CID Test:: {}", cidstring.value() );
@@ -1060,7 +1065,7 @@ namespace sgns
 
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
         BOOST_OUTCOME_TRY( auto result_pair,
-                     manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+                           manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
         auto [tx_id, escrow_data_pair] = result_pair;
 

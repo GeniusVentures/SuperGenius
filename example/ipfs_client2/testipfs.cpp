@@ -15,7 +15,7 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <libp2p/host/host.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/protocol/identify/identify.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -336,7 +336,7 @@ int main(int argc, char *argv[]) {
     auto cid = libp2p::multi::ContentIdentifierCodec::fromString("QmSnuWmxptJZdLJpKRarxBMS2Ju2oANVrgbr2xWbie9b2D").value();
     auto content_id = libp2p::protocol::kademlia::ContentId::fromWire(
         libp2p::multi::ContentIdentifierCodec::encode(cid).value());
-    auto &scheduler = injector.create<libp2p::protocol::Scheduler &>();
+    auto &scheduler = injector.create<libp2p::basic::Scheduler &>();
 
     std::function<void()> find_providers = [&] {
       [[maybe_unused]] auto res1 = kademlia->findProviders(
@@ -344,7 +344,7 @@ int main(int argc, char *argv[]) {
           [&](libp2p::outcome::result<std::vector<libp2p::peer::PeerInfo>>
                   res) {
             scheduler
-                .schedule(libp2p::protocol::scheduler::toTicks(
+                .schedule(libp2p::basic::Scheduler::toTicks(
                               kademlia_config.randomWalk.interval),
                           find_providers)
                 .detach();
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
           kademlia->provide(content_id.value(), !kademlia_config.passiveMode);
 
       scheduler
-          .schedule(libp2p::protocol::scheduler::toTicks(
+          .schedule(libp2p::basic::Scheduler::toTicks(
                         kademlia_config.randomWalk.interval),
                     provide)
           .detach();

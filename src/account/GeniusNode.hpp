@@ -354,7 +354,7 @@ namespace sgns
         std::thread                                                     upnp_thread;
         std::atomic<bool>                                               stop_upnp{ false };
         std::string                                                     base58key_;
-        std::shared_ptr<libp2p::protocol::AsioScheduler>                scheduler_;
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_;
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_;
 
