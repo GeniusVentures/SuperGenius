@@ -1,6 +1,6 @@
 /**
  * @file       AccountHelper.cpp
- * @brief      
+ * @brief
  * @date       2024-05-15
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -83,7 +83,7 @@ namespace sgns
             crdt::KeyPairFileStorage( pubsubKeyPath ).GetKeyPair().value() );
         pubsub_->Start( 40001, {} );
 
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ), libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(),
                                                                                              scheduler );
         auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -141,14 +141,14 @@ namespace sgns
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
         //Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
+        auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
         pubsub_->GetDHT()->ProvideCID( key, true );
 
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
-        std::cout << "CID Test::" << cidstring.value() << std::endl;
+        std::cout << "CID Test::" << cidstring.value() << '\n';
 
         //Also Find providers
         pubsub_->StartFindingPeers( key );

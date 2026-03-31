@@ -1,5 +1,8 @@
 #include "testutil/storage/base_crdt_test.hpp"
 
+#include <chrono>
+#include <libp2p/basic/scheduler.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 
 #include <boost/asio/io_context.hpp>
@@ -15,7 +18,7 @@
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include "libp2p/protocol/common/asio/asio_scheduler.hpp"
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 using boost::asio::io_context;
 using sgns::crdt::GlobalDB;
@@ -55,7 +58,7 @@ namespace test
 
         BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-        auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} );
+        auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
                                                                                              scheduler );

@@ -47,7 +47,7 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
             std::shared_ptr<CrdtOptions>                                          crdtOptions,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-            std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                          scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
@@ -175,7 +175,7 @@ namespace sgns::crdt
 
         /**
          * @brief       Get the topics that are being listened to
-         * @return      A set of the monitored topic names 
+         * @return      A set of the monitored topic names
          */
         outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
 
@@ -194,7 +194,7 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<libp2p::basic::Scheduler>               scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr );
 

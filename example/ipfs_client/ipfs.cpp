@@ -6,7 +6,7 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <libp2p/host/host.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/protocol/identify/identify.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -207,7 +207,7 @@ int main(int argc, char* argv[])
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN").value();
         //auto peer_id = libp2p::peer::PeerId::fromBase58("QmTigmvYEhvcwEpZMuXHcC5HGQG4iKDCKaNeZuoy69QsJw").value();
 
-        // Peers addresses: 
+        // Peers addresses:
         // /ip4/127.0.0.1/udp/4001/quic;
         // /ip4/54.89.142.24/udp/4001/quic;
         // /ip4/54.89.142.24/tcp/1031;
@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
         // /ip4/10.0.65.121/tcp/4001;
         // /ip4/127.0.0.1/tcp/4001;
         // /ip4/54.89.142.24/tcp/1024;
-        auto peer_address = 
+        auto peer_address =
             libp2p::multi::Multiaddress::create(
                 //"/ip4/10.0.65.121/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
                 //"/ip4/54.89.142.24/tcp/4001/p2p/QmRXP6S7qwSH4vjSrZeJUGT68ww8rQVhoFWU5Kp7UkVkPN"
