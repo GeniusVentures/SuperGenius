@@ -1144,6 +1144,26 @@ namespace sgns
             return;
         }
 
+        auto subject_hash = GetSubjectHash( proposal.subject() );
+        if ( subject_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+        if ( CheckCertificateForSubject( subject_hash.value() ) )
+        {
+            ConsensusManagerLogger()->debug( "{}: ignored: subject already certified hash={} proposal_id={}",
+                                             __func__,
+                                             subject_hash.value().substr( 0, 8 ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
+            std::lock_guard lock( proposals_mutex_ );
+            pending_votes_.erase( proposal.proposal_id() );
+            pending_proposals_.erase( proposal.proposal_id() );
+            return;
+        }
+
         SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
@@ -1188,14 +1208,6 @@ namespace sgns
                     state.slot_key = GetSlotKey( proposal );
                     proposals_.emplace( proposal.proposal_id(), std::move( state ) );
                 }
-            }
-            auto subject_hash = GetSubjectHash( proposal.subject() );
-            if ( subject_hash.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
-                                                 __func__,
-                                                 proposal.proposal_id().substr( 0, 8 ) );
-                return;
             }
             ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
                                              __func__,
@@ -1310,6 +1322,16 @@ namespace sgns
 
         for ( auto &state : to_process )
         {
+            auto subject_hash = GetSubjectHash( state.proposal.subject() );
+            if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
+            {
+                ConsensusManagerLogger()->debug( "{}: hash {} already certified, clearing proposal_id={}",
+                                                 __func__,
+                                                 subject_hash.value().substr( 0, 8 ),
+                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                ClearProposalSlot( state.proposal );
+                continue;
+            }
             ConsensusManagerLogger()->debug( "{}: Processing proposal with quorum reached for hash {} proposal_id={}",
                                              __func__,
                                              GetPrintableSubjectHash( state.proposal.subject() ),
@@ -1623,8 +1645,7 @@ namespace sgns
         }
         const auto &registry = registry_result.value();
 
-        bool          has_quorum = false;
-        ProposalState state;
+        bool has_quorum = false;
         {
             std::lock_guard lock( proposals_mutex_ );
             auto            it = proposals_.find( vote.proposal_id() );
@@ -1637,6 +1658,16 @@ namespace sgns
                 return;
             }
             auto &proposal_state = it->second;
+            auto  subject_hash   = GetSubjectHash( proposal_state.proposal.subject() );
+            if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
+            {
+                ConsensusManagerLogger()->debug( "{}: ignored: vote for already certified hash {} proposal_id={}",
+                                                 __func__,
+                                                 subject_hash.value().substr( 0, 8 ),
+                                                 vote.proposal_id().substr( 0, 8 ) );
+                pending_votes_.erase( vote.proposal_id() );
+                return;
+            }
             auto  slot_it        = slot_states_.find( proposal_state.slot_key );
             if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
             {
@@ -1698,7 +1729,6 @@ namespace sgns
                                                  __func__,
                                                  vote.voter_id().substr( 0, 8 ) );
             }
-            state = it->second;
         }
         if ( has_quorum )
         {
