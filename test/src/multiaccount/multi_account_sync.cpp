@@ -32,6 +32,8 @@
 class MultiAccountTest : public ::testing::Test
 {
 protected:
+    static constexpr std::string_view FILE_PREFIX = "node_multi_account_";
+
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &dev_addr,
                                                   const std::string &tokenValue,
@@ -43,14 +45,13 @@ protected:
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 
-        std::string binaryPath = boost::dll::program_location().parent_path().string();
-        const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
-        std::string fileStem   = std::filesystem::path( filePath ).stem().string();
-        auto        outPath    = binaryPath + "/node_multi_account_" + std::to_string( id ) + "/";
+        auto binaryPath = boost::dll::program_location().parent_path();
+        auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
+        auto outPathStr = outPath.generic_string() + '/';
 
         DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
         std::strncpy( devConfig.Addr, dev_addr.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
+        std::strncpy( devConfig.BaseWritePath, outPathStr.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
         devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
         devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
 
@@ -96,9 +97,6 @@ protected:
 
     void SetUp() override
     {
-        // Clean up any previous test runs
-        std::string binaryPath = boost::dll::program_location().parent_path().string();
-
         // Helper to remove directory with retry on Windows (file locks may not be immediately released)
         auto removeWithRetry = []( const std::string &path )
         {
@@ -122,9 +120,16 @@ protected:
             }
         };
 
-        removeWithRetry( binaryPath + "/node_multi_account_0/" );
-        removeWithRetry( binaryPath + "/node_multi_account_1/" );
-        removeWithRetry( binaryPath + "/node_multi_account_2/" );
+        auto binaryPath = boost::dll::program_location().parent_path();
+
+        // Clean up any previous test runs
+        for ( auto &entry : boost::filesystem::directory_iterator( binaryPath ) )
+        {
+            if ( entry.is_directory() && entry.path().filename().string().find( FILE_PREFIX ) != std::string::npos )
+            {
+                removeWithRetry( entry.path().string() );
+            }
+        }
     }
 
     void TearDown() override
