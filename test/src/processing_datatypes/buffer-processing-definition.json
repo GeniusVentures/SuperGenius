@@ -1,0 +1,76 @@
+{
+  "name": "buffer-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for buffer input using a tiny MLP model",
+  "tags": ["buffer", "int8", "test"],
+
+  "inputs": [
+    {
+      "name": "inputBuffer",
+      "source_uri_param": "file://processing_datatypes/buffer_input.raw",
+      "type": "buffer",
+      "description": "Input int8 buffer",
+      "dimensions": {
+        "width": 16,
+        "block_len": 16,
+        "chunk_stride": 16
+      },
+      "format": "INT8"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "bufferOutput",
+      "source_uri_param": "file://processing_datatypes/buffer_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from buffer model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/buffer_tiny.mnn",
+      "description": "URI to the buffer MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "buffer_inference",
+      "type": "inference",
+      "description": "Buffer model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/buffer_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputBuffer",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:bufferOutput",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-16",
+    "framework": "MNN",
+    "test_case": "buffer_datatype"
+  }
+}

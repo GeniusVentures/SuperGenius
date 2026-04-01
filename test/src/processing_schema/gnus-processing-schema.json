@@ -453,7 +453,6 @@
       "type": "string",
       "enum": [
         "texture1D", "texture2D", "texture3D", "textureCube",
-        "texture1D_array", "texture2D_array", "texture3D_array",
         "tensor", "float", "int", "bool", "vec2", "vec3", "vec4",
         "mat2", "mat3", "mat4", "buffer", "string"
       ]

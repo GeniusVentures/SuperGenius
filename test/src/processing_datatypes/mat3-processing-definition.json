@@ -1,0 +1,76 @@
+{
+  "name": "mat3-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for mat3 input using a tiny Conv1D model",
+  "tags": ["mat3", "matrix", "test"],
+
+  "inputs": [
+    {
+      "name": "inputMat3",
+      "source_uri_param": "file://processing_datatypes/mat3_input.raw",
+      "type": "mat3",
+      "description": "Input mat3 array (row-major)",
+      "dimensions": {
+        "width": 12,
+        "block_len": 6,
+        "chunk_stride": 3
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "mat3Output",
+      "source_uri_param": "file://processing_datatypes/mat3_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from mat3 model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/mat3_tiny.mnn",
+      "description": "URI to the mat3 MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "mat3_inference",
+      "type": "inference",
+      "description": "Mat3 model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/mat3_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputMat3",
+            "shape": [1, 9, 6]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:mat3Output",
+            "shape": [1, 9, 6]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-16",
+    "framework": "MNN",
+    "test_case": "mat3_datatype"
+  }
+}

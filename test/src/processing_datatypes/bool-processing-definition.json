@@ -1,0 +1,76 @@
+{
+  "name": "bool-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for bool input using a tiny MLP model",
+  "tags": ["bool", "signal", "test"],
+
+  "inputs": [
+    {
+      "name": "inputBool",
+      "source_uri_param": "file://processing_datatypes/bool_input.raw",
+      "type": "bool",
+      "description": "Input bool vector",
+      "dimensions": {
+        "width": 8,
+        "block_len": 8,
+        "chunk_stride": 8
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "boolOutput",
+      "source_uri_param": "file://processing_datatypes/bool_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from bool model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/bool_tiny.mnn",
+      "description": "URI to the bool MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "bool_inference",
+      "type": "inference",
+      "description": "Bool model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/bool_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputBool",
+            "shape": [1, 8]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:boolOutput",
+            "shape": [1, 8]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-16",
+    "framework": "MNN",
+    "test_case": "bool_datatype"
+  }
+}
