@@ -1,5 +1,6 @@
 #include "Android.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <stdexcept>
 
@@ -16,6 +17,96 @@
 namespace
 {
     JavaVM *g_jvm = nullptr;
+    jclass  g_keystore_helper_class = nullptr;
+    
+    // Helper function to find class using app ClassLoader instead of system ClassLoader
+    jclass FindClassUsingAppClassLoader( JNIEnv *env, jobject context, const char *className )
+    {
+        // Get the application's ClassLoader through the Context
+        jclass contextClass = env->GetObjectClass( context );
+        if ( contextClass == nullptr )
+        {
+            LOGE( "Failed to get Context class" );
+            return nullptr;
+        }
+        
+        jmethodID getClassLoaderMethod = env->GetMethodID( contextClass, "getClassLoader", "()Ljava/lang/ClassLoader;" );
+        if ( getClassLoaderMethod == nullptr )
+        {
+            LOGE( "Failed to get getClassLoader method" );
+            env->DeleteLocalRef( contextClass );
+            return nullptr;
+        }
+        
+        jobject classLoader = env->CallObjectMethod( context, getClassLoaderMethod );
+        env->DeleteLocalRef( contextClass );
+        
+        if ( classLoader == nullptr )
+        {
+            LOGE( "Failed to get ClassLoader" );
+            return nullptr;
+        }
+        
+        // Use ClassLoader.loadClass() to find our class
+        jclass classLoaderClass = env->GetObjectClass( classLoader );
+        jmethodID loadClassMethod = env->GetMethodID( classLoaderClass, "loadClass", "(Ljava/lang/String;)Ljava/lang/Class;" );
+        env->DeleteLocalRef( classLoaderClass );
+        
+        if ( loadClassMethod == nullptr )
+        {
+            LOGE( "Failed to get loadClass method" );
+            env->DeleteLocalRef( classLoader );
+            return nullptr;
+        }
+        
+        // Convert className from JNI format (ai/gnus/sdk/KeyStoreHelper) to Java format (ai.gnus.sdk.KeyStoreHelper)
+        std::string javaClassName( className );
+        std::replace( javaClassName.begin(), javaClassName.end(), '/', '.' );
+        
+        jstring classNameStr = env->NewStringUTF( javaClassName.c_str() );
+        jclass foundClass = static_cast<jclass>( env->CallObjectMethod( classLoader, loadClassMethod, classNameStr ) );
+        
+        env->DeleteLocalRef( classNameStr );
+        env->DeleteLocalRef( classLoader );
+        
+        return foundClass;
+    }
+}
+
+// JNI function callable from Java to initialize the KeyStoreHelper class reference
+extern "C" JNIEXPORT void JNICALL
+Java_ai_gnus_sdk_KeyStoreHelper_nativeInit( JNIEnv *env, jclass clazz, jobject context )
+{
+    LOGI( "KeyStoreHelper native initialization called" );
+    
+    if ( g_keystore_helper_class != nullptr )
+    {
+        LOGI( "KeyStoreHelper class already initialized" );
+        return;
+    }
+    
+    // Find the KeyStoreHelper class using app ClassLoader
+    jclass local_class = FindClassUsingAppClassLoader( env, context, "ai/gnus/sdk/KeyStoreHelper" );
+    
+    if ( local_class == nullptr )
+    {
+        LOGE( "Failed to find KeyStoreHelper class using app ClassLoader" );
+        // Fallback to FindClass (may work on main thread)
+        local_class = env->FindClass( "ai/gnus/sdk/KeyStoreHelper" );
+        if ( local_class == nullptr )
+        {
+            LOGE( "Failed to find KeyStoreHelper class with FindClass fallback" );
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+            return;
+        }
+    }
+    
+    // Cache as global reference
+    g_keystore_helper_class = static_cast<jclass>( env->NewGlobalRef( local_class ) );
+    env->DeleteLocalRef( local_class );
+    
+    LOGI( "KeyStoreHelper class cached successfully" );
 }
 
 extern "C" JNIEXPORT jint JNICALL JNI_OnLoad( JavaVM *vm, void *_reserved )
@@ -55,16 +146,14 @@ namespace sgns
             throw std::runtime_error( "Failed to get JNI environment" );
         }
 
-        jclass local_class = env->FindClass( "ai/gnus/sdk/KeyStoreHelper" );
-        if ( local_class == nullptr )
+        // Use cached global reference instead of FindClass
+        if ( g_keystore_helper_class == nullptr )
         {
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            throw std::runtime_error( "Failed to find KeyStoreHelper class" );
+            LOGE( "KeyStoreHelper class not cached. Did you call KeyStoreHelper.initialize() from Java?" );
+            throw std::runtime_error( "KeyStoreHelper class not initialized. Call KeyStoreHelper.initialize(context) first." );
         }
-
-        key_store_helper_class_ = static_cast<jclass>( env->NewGlobalRef( local_class ) );
-        env->DeleteLocalRef( local_class );
+        
+        key_store_helper_class_ = g_keystore_helper_class;
 
         // Get STATIC method IDs (note the "Static" in the function names)
         load_method_   = env->GetStaticMethodID( key_store_helper_class_, "load", "()Ljava/lang/String;" );
@@ -83,15 +172,8 @@ namespace sgns
 
     AndroidSecureStorage::~AndroidSecureStorage()
     {
-        auto env = GetJNIEnv();
-
-        if ( env != nullptr )
-        {
-            if ( key_store_helper_class_ != nullptr )
-            {
-                env->DeleteGlobalRef( key_store_helper_class_ );
-            }
-        }
+        // We don't delete key_store_helper_class_ here anymore since it's a shared global reference
+        // It will be cleaned up when the JVM unloads
     }
 
     outcome::result<rapidjson::Document> AndroidSecureStorage::LoadJSON() const
