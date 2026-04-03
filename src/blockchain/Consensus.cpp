@@ -919,15 +919,22 @@ namespace sgns
             proposal.proposal_id().substr( 0, 8 ),
             votes.size() );
 
-        auto registry_result = registry_->LoadRegistry();
+        if ( proposal.registry_cid().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: proposal registry CID is empty", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto registry_result = registry_->LoadRegistry( proposal.registry_cid() );
         if ( registry_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed: registry load error={}",
+            ConsensusManagerLogger()->error( "{}: failed: registry load error={} cid={}",
                                              __func__,
-                                             registry_result.error().message() );
+                                             registry_result.error().message(),
+                                             proposal.registry_cid() );
             return outcome::failure( registry_result.error() );
         }
-        return TallyVotes( proposal, votes, registry_result.value(), registry_->GetRegistryCid() );
+        return TallyVotes( proposal, votes, registry_result.value(), proposal.registry_cid() );
     }
 
     outcome::result<std::vector<uint8_t>> ConsensusManager::ProposalSigningBytes( const Proposal &proposal )
@@ -1108,30 +1115,56 @@ namespace sgns
             return;
         }
 
-        const auto registry_cid = registry_->GetRegistryCid();
-        if ( registry_cid.empty() )
+        if ( proposal.registry_cid().empty() )
         {
             ConsensusManagerLogger()->error(
-                "{}: rejected: Local registry doesn't have a CID for hash {}. proposal_id={}",
+                "{}: rejected: proposal registry CID missing for hash {}. proposal_id={}",
                 __func__,
                 GetPrintableSubjectHash( proposal.subject() ),
                 proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
-        if ( proposal.registry_cid() != registry_cid )
+
+        auto subject_hash = GetSubjectHash( proposal.subject() );
+        if ( subject_hash.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: registry CID mismatch proposal={} registry={}",
+            ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
                                              __func__,
-                                             proposal.registry_cid(),
-                                             registry_cid );
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
-        if ( proposal.registry_epoch() != registry_->GetRegistryEpoch() )
+
+        auto proposal_registry_result = registry_->LoadRegistry( proposal.registry_cid() );
+        if ( proposal_registry_result.has_error() )
+        {
+            ConsensusManagerLogger()->warn(
+                "{}: deferred: registry load error={} proposal={} proposal_id={} hash={}. Keeping proposal pending",
+                __func__,
+                proposal_registry_result.error().message(),
+                proposal.registry_cid(),
+                proposal.proposal_id().substr( 0, 8 ),
+                subject_hash.value().substr( 0, 8 ) );
+
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+                {
+                    ProposalState state;
+                    state.proposal = proposal;
+                    state.slot_key = GetSlotKey( proposal );
+                    proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+                }
+            }
+
+            AddPendingProposal( proposal, subject_hash.value() );
+            return;
+        }
+        if ( proposal.registry_epoch() != proposal_registry_result.value().epoch() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: registry epoch mismatch proposal={} registry={}",
                                              __func__,
                                              proposal.registry_epoch(),
-                                             registry_->GetRegistryEpoch() );
+                                             proposal_registry_result.value().epoch() );
             return;
         }
 
@@ -1144,14 +1177,6 @@ namespace sgns
             return;
         }
 
-        auto subject_hash = GetSubjectHash( proposal.subject() );
-        if ( subject_hash.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
-                                             __func__,
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
         if ( CheckCertificateForSubject( subject_hash.value() ) )
         {
             ConsensusManagerLogger()->debug( "{}: ignored: subject already certified hash={} proposal_id={}",
@@ -1292,14 +1317,6 @@ namespace sgns
 
     void ConsensusManager::ProcessCertificates()
     {
-        auto registry_result = registry_->LoadRegistry();
-        if ( registry_result.has_error() )
-        {
-            return;
-        }
-        //ConsensusManagerLogger()->trace( "{}: Checking if need to process certificates", __func__ );
-        const auto &registry = registry_result.value();
-
         std::vector<ProposalState> to_process;
         {
             std::lock_guard lock( proposals_mutex_ );
@@ -1360,7 +1377,25 @@ namespace sgns
                     round );
                 continue;
             }
-            if ( !IsCurrentAggregator( state.proposal, registry ) )
+            auto proposal_registry_result = registry_->LoadRegistry( state.proposal.registry_cid() );
+            if ( proposal_registry_result.has_error() )
+            {
+                ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry load error={} proposal_id={}",
+                                                 __func__,
+                                                 proposal_registry_result.error().message(),
+                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                continue;
+            }
+            const auto &proposal_registry = proposal_registry_result.value();
+            if ( state.proposal.registry_epoch() != proposal_registry.epoch() )
+            {
+                ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry epoch mismatch proposal_id={}",
+                                                 __func__,
+                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                continue;
+            }
+
+            if ( !IsCurrentAggregator( state.proposal, proposal_registry ) )
             {
                 ConsensusManagerLogger()->debug( "{}: not aggregator for proposal for hash {} proposal_id={}",
                                                  __func__,
@@ -1635,16 +1670,6 @@ namespace sgns
             return;
         }
 
-        auto registry_result = registry_->LoadRegistry();
-        if ( registry_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: registry load error={}",
-                                             __func__,
-                                             registry_result.error().message() );
-            return;
-        }
-        const auto &registry = registry_result.value();
-
         bool has_quorum = false;
         {
             std::lock_guard lock( proposals_mutex_ );
@@ -1685,8 +1710,18 @@ namespace sgns
                 return;
             }
 
-            if ( proposal_state.proposal.registry_cid() != registry_->GetRegistryCid() ||
-                 proposal_state.proposal.registry_epoch() != registry.epoch() )
+            auto proposal_registry_result = registry_->LoadRegistry( proposal_state.proposal.registry_cid() );
+            if ( proposal_registry_result.has_error() )
+            {
+                ConsensusManagerLogger()->warn( "{}: deferred vote: registry load error={} proposal_id={}",
+                                                __func__,
+                                                proposal_registry_result.error().message(),
+                                                vote.proposal_id().substr( 0, 8 ) );
+                pending_votes_[vote.proposal_id()].push_back( vote );
+                return;
+            }
+            const auto &proposal_registry = proposal_registry_result.value();
+            if ( proposal_state.proposal.registry_epoch() != proposal_registry.epoch() )
             {
                 ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
                                                  __func__,
@@ -1694,12 +1729,12 @@ namespace sgns
                 return;
             }
 
-            const auto *validator           = registry_->FindValidator( registry, vote.voter_id() );
+            const auto *validator           = registry_->FindValidator( proposal_registry, vote.voter_id() );
             const bool  is_active_validator = validator && validator->status() == ValidatorRegistry::Status::ACTIVE;
 
             if ( it->second.total_weight == 0 )
             {
-                it->second.total_weight = registry_->TotalWeight( registry );
+                it->second.total_weight = registry_->TotalWeight( proposal_registry );
             }
 
             it->second.votes.push_back( vote );
