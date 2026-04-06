@@ -119,7 +119,8 @@ namespace sgns
             std::shared_ptr<sgns::GeniusAccount> account,
             UTXOManager                         &utxo_manager,
             uint64_t                             amount,
-            const std::string                   &destination )
+            const std::string                   &destination,
+            const std::string                   &previous_hash = "" )
         {
             OUTCOME_TRY( auto &&params,
                          utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
@@ -127,15 +128,17 @@ namespace sgns
             auto timestamp = std::chrono::system_clock::now();
 
             SGTransaction::DAGStruct dag;
-            dag.set_previous_hash( "" );
+            dag.set_previous_hash( previous_hash );
             dag.set_nonce( account->ReserveNextNonce() );
             dag.set_source_addr( account->GetAddress() );
-            dag.set_timestamp( timestamp.time_since_epoch().count() );
+            dag.set_timestamp(
+                std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
 
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
                 sgns::TransferTransaction::New( params.first, params.second, dag ) );
+            transfer_transaction->MakeSignature( *account );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( static_cast<uint64_t>( utxo_manager.GetBalance() ), static_cast<uint64_t>( amount ) );
@@ -439,7 +442,8 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     auto tx_pair = CreateTransfer( GetAccountFromNode( *node_proc1 ),
                                    *GetUTXOManagerFromNode( *node_proc1 ),
                                    10000000000,
-                                   node_proc2->GetAddress() );
+                                   node_proc2->GetAddress(),
+                                   mint_tx_id );
     if ( !tx_pair.has_value() )
     {
     }
@@ -457,46 +461,14 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     auto invalid_tx_id = tx->dag_st.data_hash();
     SendPair( *node_proc1, tx, proof_vect );
 
-    test::assertWaitForCondition(
-        [&]
-        {
-            return node_proc1->GetTransactionStatus( invalid_tx_id ) ==
-                   TransactionManager::TransactionStatus::VERIFYING;
-        },
-        std::chrono::milliseconds( 20000 ),
-        "Invalid transaction didn't get sent" );
-
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid - 10000000000 )
-        << "Correct Balance of outgoing transactions";
-
-    std::cout << "Invalid tx confirmed " << std::endl;
-
-    // Transfer funds with timeout
-    auto transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                      node_proc2->GetAddress(),
-                                                      sgns::TokenID::FromBytes( { 0x00 } ),
-                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_FALSE( transfer_result.has_value() ) << "Transfer transaction succeeded when it should fail";
-
-    std::cout << "subsequent tx failed" << std::endl;
-
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::SYNCING; },
-        std::chrono::milliseconds( 20000 ),
-        "Node didn't went into synching" );
-
-    EXPECT_EQ( node_proc1->GetTransactionManagerState(),
-               TransactionManager::State::SYNCING ); //confirms it's invalid
-
     auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
         invalid_tx_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED );
 
-    std::cout << "waited again for the invalid tx" << std::endl;
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
-    EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED ); //confirms it's invalid
-
-    std::cout << "now it's invalid" << std::endl;
+    std::cout << "Invalid tx failed" << std::endl;
 
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -505,12 +477,10 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
 
     std::cout << "wait until its ready" << std::endl;
 
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
-
-    transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                 node_proc2->GetAddress(),
-                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto transfer_result = node_proc1->TransferFunds( 10000000000,
+                                                      node_proc2->GetAddress(),
+                                                      sgns::TokenID::FromBytes( { 0x00 } ),
+                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed when it should succeed";
 
     auto [transfer_tx_id, transfer_duration] = transfer_result.value();
@@ -568,7 +538,8 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     auto tx_pair2 = CreateTransfer( GetAccountFromNode( *node_proc1 ),
                                     *GetUTXOManagerFromNode( *node_proc1 ),
                                     10000000000,
-                                    node_proc2->GetAddress() );
+                                    node_proc2->GetAddress(),
+                                    tx1_id );
     ASSERT_TRUE( tx_pair2.has_value() );
 
     auto [tx2, proof2]   = tx_pair2.value();

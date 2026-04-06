@@ -560,6 +560,25 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         }
     };
 
+    auto wait_client_registry_caught_up = [&]()
+    {
+        ASSERT_TRUE( node_client->blockchain_ );
+        auto client_registry = node_client->blockchain_->GetValidatorRegistry();
+        ASSERT_TRUE( client_registry );
+
+        test::assertWaitForCondition(
+            [&]()
+            {
+                auto full_load   = registry->LoadRegistry();
+                auto client_load = client_registry->LoadRegistry();
+                return full_load.has_value() && client_load.has_value() &&
+                       client_registry->GetRegistryCid() == registry->GetRegistryCid() &&
+                       client_load.value().epoch() >= full_load.value().epoch();
+            },
+            std::chrono::milliseconds( 30000 ),
+            "node_client validator registry not caught up" );
+    };
+
     auto registry_state = registry->LoadRegistry();
     ASSERT_TRUE( registry_state.has_value() );
     auto epoch_before = registry_state.value().epoch();
@@ -570,6 +589,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     fmt::println( "Mint 1 succeeded" );
 
     assert_registry_updated( epoch_before, cid_before );
+    wait_client_registry_caught_up();
 
     registry_state = registry->LoadRegistry();
     ASSERT_TRUE( registry_state.has_value() );
@@ -580,6 +600,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     fmt::println( "Mint 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
+    wait_client_registry_caught_up();
     registry_state = registry->LoadRegistry();
     ASSERT_TRUE( registry_state.has_value() );
     epoch_before = registry_state.value().epoch();
@@ -592,6 +613,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
     fmt::println( "Transfer 1 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
+    wait_client_registry_caught_up();
     registry_state = registry->LoadRegistry();
     ASSERT_TRUE( registry_state.has_value() );
     epoch_before = registry_state.value().epoch();
@@ -604,6 +626,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
     fmt::println( "Transfer 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
+    wait_client_registry_caught_up();
     registry_state = registry->LoadRegistry();
     ASSERT_TRUE( registry_state.has_value() );
     epoch_before = registry_state.value().epoch();
