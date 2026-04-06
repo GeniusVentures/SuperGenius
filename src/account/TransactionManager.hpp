@@ -210,6 +210,12 @@ namespace sgns
             TransactionStatus                    status;
             uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
+        struct AccountUTXOState
+        {
+            uint64_t     version{ 0 };
+            base::Hash256 root{};
+            bool         initialized{ false };
+        };
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
@@ -241,6 +247,11 @@ namespace sgns
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
+        void                            UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses,
+                                                                bool                                   increment_version );
 
         void InitializeUTXOs();
         void InitTransactions();
@@ -297,6 +308,9 @@ namespace sgns
 
         mutable std::shared_mutex                                   tx_mutex_m;
         std::unordered_map<std::string, TrackedTx>                  tx_processed_m;
+        mutable std::shared_mutex                                   account_utxo_state_mutex_;
+        mutable std::unordered_map<std::string, AccountUTXOState>   account_utxo_state_;
+        std::atomic<uint32_t>                                       utxo_state_tracking_suppression_{ 0 };
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                       task_m;
         std::atomic<bool>                                           stopped_{ false };
@@ -371,6 +385,13 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
+        enum class WitnessValidationResult : uint8_t
+        {
+            VALID,
+            DRIFT,
+            INVALID
+        };
+
         outcome::result<std::string>                    GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
@@ -386,8 +407,8 @@ namespace sgns
         std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
                                              std::vector<GeniusUTXO>                     &snapshot ) const;
-        bool ValidateWitnessForConsensus( const ConsensusSubject                    &subject,
-                                          const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        WitnessValidationResult ValidateWitnessForConsensus( const ConsensusSubject                    &subject,
+                                                             const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,

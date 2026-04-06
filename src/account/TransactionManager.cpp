@@ -867,38 +867,24 @@ namespace sgns
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        auto     nonce_result        = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
-        uint64_t expected_next_nonce = 0;
-
-        if ( nonce_result.has_error() )
+        std::optional<uint64_t> expected_next_nonce;
+        if ( auto local_confirmed = account_m->GetLocalConfirmedNonce(); local_confirmed.has_value() )
         {
-            if ( !full_node_m )
-            {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Network unreachable when fetching nonce",
-                                                   __func__,
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m );
-                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-            }
-            TransactionManagerLogger()->warn( "[{} - full: {}] Could not fetch nonce, but proceeding since full node",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m );
-            if ( auto local_confirmed = account_m->GetLocalConfirmedNonce(); local_confirmed.has_value() )
-            {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Using local confirmed nonce {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   local_confirmed.value() );
-                expected_next_nonce = local_confirmed.value() + 1;
-            }
-        }
-        else if ( nonce_result.value().has_value() )
-        {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Set nonce to {}",
+            expected_next_nonce = local_confirmed.value() + 1;
+            TransactionManagerLogger()->debug( "[{} - full: {}] Using local confirmed nonce {} as send baseline",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
-                                               nonce_result.value().value() );
-            expected_next_nonce = nonce_result.value().value() + 1;
+                                               local_confirmed.value() );
+        }
+        else if ( !transaction_batch.empty() )
+        {
+            // If confirmed nonce is not available yet, preserve local enqueue order.
+            expected_next_nonce = transaction_batch.front().first->GetNonce();
+            TransactionManagerLogger()->debug( "[{} - full: {}] Local confirmed nonce unavailable, using first "
+                                               "queued nonce {} as send baseline",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               expected_next_nonce.value() );
         }
         std::unordered_set<std::string>                topicSet;
         std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
@@ -910,13 +896,18 @@ namespace sgns
 
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
-            if ( transaction->GetNonce() != expected_next_nonce )
+            if ( !expected_next_nonce.has_value() )
+            {
+                expected_next_nonce = transaction->GetNonce();
+            }
+
+            if ( transaction->GetNonce() != expected_next_nonce.value() )
             {
                 TransactionManagerLogger()->error(
                     "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
-                    expected_next_nonce,
+                    expected_next_nonce.value(),
                     transaction->GetNonce() );
 
                 return outcome::failure(
@@ -958,7 +949,7 @@ namespace sgns
             topicSet.merge( transaction->GetTopics() );
             transactions_sent.insert( transaction );
 
-            expected_next_nonce++;
+            expected_next_nonce = expected_next_nonce.value() + 1;
         }
 
         OUTCOME_TRY( crdt_transaction->Commit( topicSet ) );
@@ -1010,9 +1001,8 @@ namespace sgns
                                                                transaction->GetHash(),
                                                                utxo_commitment,
                                                                utxo_witness ) );
-            OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
-
             OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
+            OUTCOME_TRY( blockchain_->SubmitProposal( proposal ) );
         }
 
         return outcome::success();
@@ -1144,7 +1134,12 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        return ( this->*it->second.first )( tx );
+        OUTCOME_TRY( ( this->*it->second.first )( tx ) );
+        if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
+        {
+            UpdateAccountUTXOState( CollectTouchedAccounts( tx ), true );
+        }
+        return outcome::success();
     }
 
     outcome::result<void> TransactionManager::RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -1158,7 +1153,127 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        return ( this->*( it->second.second ) )( tx );
+        utxo_state_tracking_suppression_.fetch_add( 1 );
+        auto revert_result = ( this->*( it->second.second ) )( tx );
+        utxo_state_tracking_suppression_.fetch_sub( 1 );
+        OUTCOME_TRY( revert_result );
+        if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
+        {
+            UpdateAccountUTXOState( CollectTouchedAccounts( tx ), false );
+        }
+        return outcome::success();
+    }
+
+    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        if ( !tx )
+        {
+            return false;
+        }
+
+        if ( tx->HasUTXOParameters() )
+        {
+            return true;
+        }
+
+        // Legacy mint transactions still create UTXOs for the source account.
+        return tx->GetType() == "mint";
+    }
+
+    std::unordered_set<std::string> TransactionManager::CollectTouchedAccounts(
+        const std::shared_ptr<IGeniusTransactions> &tx ) const
+    {
+        std::unordered_set<std::string> addresses;
+        if ( !tx )
+        {
+            return addresses;
+        }
+
+        if ( tx->HasUTXOParameters() )
+        {
+            auto params_opt = tx->GetUTXOParametersOpt();
+            if ( params_opt.has_value() )
+            {
+                const auto &[inputs, outputs] = params_opt.value();
+                if ( !inputs.empty() )
+                {
+                    if ( full_node_m || tx->GetSrcAddress() == account_m->GetAddress() )
+                    {
+                        addresses.insert( tx->GetSrcAddress() );
+                    }
+                }
+                for ( const auto &output : outputs )
+                {
+                    if ( !output.dest_address.empty() &&
+                         ( full_node_m || output.dest_address == account_m->GetAddress() ) )
+                    {
+                        addresses.insert( output.dest_address );
+                    }
+                }
+            }
+        }
+        else if ( tx->GetType() == "mint" && !tx->GetSrcAddress().empty() &&
+                  ( full_node_m || tx->GetSrcAddress() == account_m->GetAddress() ) )
+        {
+            addresses.insert( tx->GetSrcAddress() );
+        }
+
+        return addresses;
+    }
+
+    TransactionManager::AccountUTXOState TransactionManager::GetOrInitAccountUTXOState( const std::string &address ) const
+    {
+        const auto current_root = utxo_manager_.ComputeUTXOMerkleRoot( address );
+
+        std::unique_lock state_lock( account_utxo_state_mutex_ );
+        auto            &state = account_utxo_state_[address];
+        if ( !state.initialized )
+        {
+            state.version     = 0;
+            state.initialized = true;
+        }
+        state.root = current_root;
+        return state;
+    }
+
+    void TransactionManager::UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses,
+                                                     bool                                   increment_version )
+    {
+        if ( addresses.empty() )
+        {
+            return;
+        }
+
+        std::unordered_map<std::string, base::Hash256> roots;
+        roots.reserve( addresses.size() );
+        for ( const auto &address : addresses )
+        {
+            if ( !full_node_m && address != account_m->GetAddress() )
+            {
+                continue;
+            }
+            roots.emplace( address, utxo_manager_.ComputeUTXOMerkleRoot( address ) );
+        }
+
+        std::unique_lock state_lock( account_utxo_state_mutex_ );
+        for ( const auto &[address, root] : roots )
+        {
+            auto &state = account_utxo_state_[address];
+            if ( !state.initialized )
+            {
+                state.version     = 0;
+                state.initialized = true;
+            }
+            if ( increment_version )
+            {
+                state.version++;
+            }
+            else if ( state.version > 0 )
+            {
+                state.version--;
+            }
+            state.root = root;
+        }
     }
 
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::FetchTransaction(
@@ -3196,20 +3311,28 @@ namespace sgns
         const std::string tx_hash = subject.nonce().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
-        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-        auto                                it = tx_processed_m.find( key );
-        if ( it == tx_processed_m.end() )
+        std::shared_ptr<IGeniusTransactions> tracked_tx;
+        uint64_t                             tracked_nonce  = 0;
+        TransactionStatus                    tracked_status = TransactionStatus::INVALID;
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction not found for hash {}, pending",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
-            return ConsensusManager::SubjectCheck::Pending;
+            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            auto                                it = tx_processed_m.find( key );
+            if ( it == tx_processed_m.end() )
+            {
+                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction not found for hash {}, pending",
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   __func__,
+                                                   tx_hash );
+                return ConsensusManager::SubjectCheck::Pending;
+            }
+
+            tracked_tx     = it->second.tx;
+            tracked_nonce  = it->second.cached_nonce;
+            tracked_status = it->second.status;
         }
 
-        auto &tracked = it->second;
-        if ( !tracked.tx )
+        if ( !tracked_tx )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3219,50 +3342,100 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        if ( tracked.cached_nonce != subject.nonce().nonce() )
+        auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::SubjectCheck
+        {
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Rejecting nonce subject for hash {}: {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx_hash,
+                reason );
+
+            // Ensure local outgoing invalid transactions don't stay in VERIFYING forever.
+            if ( tracked_tx->GetSrcAddress() == account_m->GetAddress() )
+            {
+                auto current_out_status = GetOutgoingStatusByTxId( tracked_tx->GetHash() );
+                if ( current_out_status != TransactionStatus::FAILED &&
+                     current_out_status != TransactionStatus::CONFIRMED )
+                {
+                    if ( auto fail_result = ChangeTransactionState( tracked_tx, TransactionStatus::FAILED );
+                         fail_result.has_error() )
+                    {
+                        TransactionManagerLogger()->error(
+                            "[{} - full: {}] {}: Failed to mark rejected local tx as FAILED for hash {}: {}",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            __func__,
+                            tx_hash,
+                            fail_result.error().message() );
+                    }
+                }
+            }
+
+            return ConsensusManager::SubjectCheck::Reject;
+        };
+
+        if ( tracked_nonce != subject.nonce().nonce() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Nonce mismatch for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return ConsensusManager::SubjectCheck::Reject;
+            return reject_and_maybe_fail_local( "nonce mismatch" );
         }
 
-        if ( !subject.account_id().empty() && tracked.tx->GetSrcAddress() != subject.account_id() )
+        if ( !subject.account_id().empty() && tracked_tx->GetSrcAddress() != subject.account_id() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Account mismatch for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return ConsensusManager::SubjectCheck::Reject;
+            return reject_and_maybe_fail_local( "account mismatch" );
         }
 
-        if ( tracked.status == TransactionStatus::FAILED )
+        if ( tracked_status == TransactionStatus::FAILED )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Transaction status invalid for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return ConsensusManager::SubjectCheck::Reject;
+            return reject_and_maybe_fail_local( "transaction already failed" );
         }
 
-        const bool witness_valid = ValidateWitnessForConsensus( subject, tracked.tx );
-        if ( !witness_valid )
+        const auto witness_validation = ValidateWitnessForConsensus( subject, tracked_tx );
+        if ( witness_validation == WitnessValidationResult::DRIFT )
+        {
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Witness validation drift for hash {}, deferring as pending and requesting heads",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx_hash );
+            RequestRelevantHeads();
+            return ConsensusManager::SubjectCheck::Pending;
+        }
+        if ( witness_validation == WitnessValidationResult::INVALID )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Witness validation failed for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return ConsensusManager::SubjectCheck::Reject;
+            return reject_and_maybe_fail_local( "witness validation failed" );
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tracked.tx, witness_valid );
+        auto validate_result = ValidateTransactionForConsensus( tracked_tx, true );
 
-        return validate_result ? ConsensusManager::SubjectCheck::Approve : ConsensusManager::SubjectCheck::Reject;
+        if ( !validate_result )
+        {
+            return reject_and_maybe_fail_local( "transaction validation failed" );
+        }
+
+        return ConsensusManager::SubjectCheck::Approve;
     }
 
     bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
@@ -3640,114 +3813,176 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::ValidateWitnessForConsensus( const ConsensusSubject                     &subject,
-                                                          const std::shared_ptr<IGeniusTransactions> &tx ) const
+    TransactionManager::WitnessValidationResult TransactionManager::ValidateWitnessForConsensus(
+        const ConsensusSubject                     &subject,
+        const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
         if ( !tx )
         {
-            return false;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Null transaction",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__ );
+            return WitnessValidationResult::INVALID;
         }
+
+        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
+                                           "has_utxo_params={} has_commitment={} has_witness={}",
+                                           account_m->GetAddress().substr( 0, 8 ),
+                                           full_node_m,
+                                           __func__,
+                                           tx->GetHash(),
+                                           tx->GetSrcAddress(),
+                                           tx->GetNonce(),
+                                           subject.has_nonce() ? subject.nonce().nonce() : 0,
+                                           subject.has_nonce(),
+                                           tx->HasUTXOParameters(),
+                                           subject.has_nonce() && subject.nonce().has_utxo_commitment(),
+                                           subject.has_nonce() && subject.nonce().has_utxo_witness() );
 
         if ( !subject.has_nonce() )
         {
-            return true;
+            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Subject has no nonce payload, accepting tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return WitnessValidationResult::VALID;
         }
 
         const auto  chain_id  = GetValidationChainId( tx );
         const auto &validator = GetInputValidator( chain_id );
 
-        // For nonce > 0, anchor pre-state root in the certified per-account chain.
-        std::optional<ConsensusSubject> prev_subject;
-        if ( tx->GetNonce() > 0 )
-        {
-            const auto prev_hash = tx->GetPreviousHash();
-            if ( prev_hash.empty() )
-            {
-                return false;
-            }
-
-            auto prev_cert_result = blockchain_->GetCertificateBySubjectHash( prev_hash );
-            if ( prev_cert_result.has_error() )
-            {
-                return false;
-            }
-            const auto &prev_subject_ref = prev_cert_result.value().proposal().subject();
-            if ( !prev_subject_ref.has_nonce() )
-            {
-                return false;
-            }
-            if ( prev_subject_ref.account_id() != tx->GetSrcAddress() )
-            {
-                return false;
-            }
-            if ( prev_subject_ref.nonce().nonce() + 1 != tx->GetNonce() )
-            {
-                return false;
-            }
-            prev_subject = prev_subject_ref;
-        }
-
         if ( !tx->HasUTXOParameters() )
         {
-            return true;
+            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Tx has no UTXO params, accepting tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return WitnessValidationResult::VALID;
         }
 
         if ( !subject.nonce().has_utxo_commitment() )
         {
-            return false;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO commitment tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return WitnessValidationResult::INVALID;
         }
 
         const auto &commitment = subject.nonce().utxo_commitment();
         if ( commitment.pre_utxo_root().size() != base::Hash256::size() ||
              commitment.post_utxo_root().size() != base::Hash256::size() )
         {
-            return false;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Invalid commitment root sizes tx={} pre_size={} "
+                                               "post_size={} expected={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash(),
+                                               commitment.pre_utxo_root().size(),
+                                               commitment.post_utxo_root().size(),
+                                               base::Hash256::size() );
+            return WitnessValidationResult::INVALID;
         }
-        if ( commitment.account_state_version() != ( tx->GetNonce() > 0 ? tx->GetNonce() - 1 : 0 ) )
-        {
-            return false;
-        }
-
         auto pre_root_result = base::Hash256::fromSpan(
             gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.pre_utxo_root().data() ) ),
                        commitment.pre_utxo_root().size() ) );
         if ( pre_root_result.has_error() )
         {
-            return false;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to parse commitment pre-root tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return WitnessValidationResult::INVALID;
         }
         const auto pre_root = pre_root_result.value();
 
-        if ( tx->GetNonce() > 0 )
+        // Canonical pre-state is only guaranteed locally for our own account.
+        // Full nodes may validate proposals for remote accounts before their local
+        // snapshot converges, so this check must not reject those proposals.
+        const bool can_validate_canonical_pre_state = tx->GetSrcAddress() == account_m->GetAddress();
+        if ( can_validate_canonical_pre_state )
         {
-            if ( !prev_subject.has_value() || !prev_subject->nonce().has_utxo_commitment() )
+            const auto canonical_state = GetOrInitAccountUTXOState( tx->GetSrcAddress() );
+            if ( canonical_state.version != commitment.account_state_version() )
             {
-                return false;
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Account state version drift tx={} local={} "
+                                                  "commitment={}. Continuing with witness validation.",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash(),
+                                                  canonical_state.version,
+                                                  commitment.account_state_version() );
+                return WitnessValidationResult::DRIFT;
             }
-            const auto &prev_commitment       = prev_subject->nonce().utxo_commitment();
-            auto        prev_post_root_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                           prev_commitment.post_utxo_root().size() ) );
-            if ( prev_post_root_result.has_error() )
+            if ( canonical_state.root != pre_root )
             {
-                return false;
+                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Pre-root drift tx={} local_root={} "
+                                                  "commitment_pre_root={}. Continuing with witness validation.",
+                                                  account_m->GetAddress().substr( 0, 8 ),
+                                                  full_node_m,
+                                                  __func__,
+                                                  tx->GetHash(),
+                                                  canonical_state.root.toReadableString(),
+                                                  pre_root.toReadableString() );
+                return WitnessValidationResult::DRIFT;
             }
-            if ( prev_post_root_result.value() != pre_root )
-            {
-                return false;
-            }
+            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Canonical pre-state matched tx={} version={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash(),
+                                               canonical_state.version );
+        }
+        else
+        {
+            TransactionManagerLogger()->debug(
+                "[{} - full: {}] {}: Skipping canonical pre-state check for foreign source account tx={} src={}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx->GetHash(),
+                tx->GetSrcAddress() );
         }
 
         if ( validator.RequiresConsensusUTXOData() && !subject.nonce().has_utxo_witness() )
         {
-            return false;
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx->GetHash(),
+                chain_id,
+                validator.RequiresConsensusUTXOData() );
+            return WitnessValidationResult::INVALID;
         }
 
         auto params_opt = tx->GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
-            return false;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO params payload tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return WitnessValidationResult::INVALID;
         }
-        return validator.ValidateWitness( subject, tx, params_opt.value(), pre_root, blockchain_ );
+        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), pre_root, blockchain_ );
+        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validator witness result tx={} chain_id={} result={}",
+                                           account_m->GetAddress().substr( 0, 8 ),
+                                           full_node_m,
+                                           __func__,
+                                           tx->GetHash(),
+                                           chain_id,
+                                           witness_ok );
+        return witness_ok ? WitnessValidationResult::VALID : WitnessValidationResult::INVALID;
     }
 
     std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
@@ -3774,74 +4009,16 @@ namespace sgns
         const auto               pre_root  = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( before_snapshot );
         const auto               post_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( after_snapshot );
 
-        // Safety guard before proposing: for nonce > 0 pre-state must be anchored to certified chain.
-        if ( tx->GetNonce() > 0 )
+        // Anchor to current canonical state for the source account.
+        const auto canonical_state = GetOrInitAccountUTXOState( tx->GetSrcAddress() );
+        if ( canonical_state.root != pre_root )
         {
-            const auto previous_hash = tx->GetPreviousHash();
-            if ( previous_hash.empty() )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Missing previous hash for tx={}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash() );
-                return std::nullopt;
-            }
-            auto previous_cert = blockchain_->GetCertificateBySubjectHash( previous_hash );
-            if ( previous_cert.has_error() )
-            {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Missing previous certificate tx={} prev={} err={}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx->GetHash(),
-                    previous_hash,
-                    previous_cert.error().message() );
-                return std::nullopt;
-            }
-            const auto &previous_subject = previous_cert.value().proposal().subject();
-            if ( !previous_subject.has_nonce() || previous_subject.account_id() != tx->GetSrcAddress() ||
-                 ( previous_subject.nonce().nonce() + 1 ) != tx->GetNonce() )
-            {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Previous subject continuity mismatch tx={} prev={}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx->GetHash(),
-                    previous_hash );
-                return std::nullopt;
-            }
-
-            if ( !previous_subject.nonce().has_utxo_commitment() )
-            {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Previous subject missing mandatory UTXO commitment tx={} prev={}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx->GetHash(),
-                    previous_hash );
-                return std::nullopt;
-            }
-
-            {
-                const auto &prev_commitment       = previous_subject.nonce().utxo_commitment();
-                auto        prev_post_root_result = base::Hash256::fromSpan( gsl::span(
-                    reinterpret_cast<uint8_t *>( const_cast<char *>( prev_commitment.post_utxo_root().data() ) ),
-                    prev_commitment.post_utxo_root().size() ) );
-                if ( prev_post_root_result.has_error() || prev_post_root_result.value() != pre_root )
-                {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Pre-root not anchored to prev certified post-root tx={}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
-                    return std::nullopt;
-                }
-            }
+            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Stale pre-root while creating commitment tx={}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              __func__,
+                                              tx->GetHash() );
+            return std::nullopt;
         }
 
         std::vector<GeniusUTXO> produced_outputs;
@@ -3860,7 +4037,7 @@ namespace sgns
         commitment.set_post_utxo_root( post_root.data(), post_root.size() );
         commitment.set_utxo_count_before( before_snapshot.size() );
         commitment.set_utxo_count_after( after_snapshot.size() );
-        commitment.set_account_state_version( tx->GetNonce() > 0 ? tx->GetNonce() - 1 : 0 );
+        commitment.set_account_state_version( canonical_state.version );
         commitment.set_produced_outputs_root( produced_outputs_root.data(), produced_outputs_root.size() );
         return commitment;
     }
@@ -4279,6 +4456,15 @@ namespace sgns
                     OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
 
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
+                }
+                else if ( tx->GetSrcAddress() == account_m->GetAddress() && tx->HasUTXOParameters() )
+                {
+                    // Local outgoing tx failed before confirmation: release locally reserved inputs.
+                    auto params_opt = tx->GetUTXOParametersOpt();
+                    if ( params_opt.has_value() )
+                    {
+                        utxo_manager_.RollbackUTXOs( params_opt->first, tx->GetHash() );
+                    }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
                 account_m->ReleaseNonce( tx->GetNonce() );
