@@ -422,6 +422,7 @@ namespace sgns::crdt
         {
             started_ = true;
             m_crdtDatastore->Start();
+            m_broadcaster->SetIncomingBroadcastEnabled( incomingBroadcastEnabled_.load() );
             m_broadcaster->Start();
         }
     }
@@ -609,6 +610,18 @@ namespace sgns::crdt
 
         m_crdtDatastore->SetBroadcastEnabled( enabled );
         m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
+    }
+
+    void GlobalDB::SetIncomingBroadcastEnabled( bool enabled )
+    {
+        incomingBroadcastEnabled_.store( enabled );
+
+        if ( m_broadcaster )
+        {
+            m_broadcaster->SetIncomingBroadcastEnabled( enabled );
+        }
+
+        m_logger->info( "SetIncomingBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
     }
 
     outcome::result<std::set<std::string>> GlobalDB::GetMonitoredTopics() const

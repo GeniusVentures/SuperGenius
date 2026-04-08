@@ -318,6 +318,8 @@ namespace sgns
                                     strong->blockchain_->SetFullNodeMode();
                                 }
 
+                                strong->tx_globaldb_->SetIncomingBroadcastEnabled( true );
+
                                 strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
                             }
                         } );
@@ -634,6 +636,9 @@ namespace sgns
                 break;
             }
             tx_globaldb_ = std::move( global_db_ret.value() );
+
+            // Defer incoming CRDT broadcast consumption until blockchain initialization completes.
+            tx_globaldb_->SetIncomingBroadcastEnabled( false );
 
             tx_globaldb_->Start();
 

@@ -91,6 +91,12 @@ namespace sgns::crdt
 
         bool AddSingleCIDInfo( const std::string &cid, const std::string peer_id, const std::string address );
 
+        /**
+         * @brief Enable or disable processing of incoming pubsub broadcasts.
+         * @param enabled True to process incoming broadcasts, false to ignore them.
+         */
+        void SetIncomingBroadcastEnabled( bool enabled );
+
     private:
         /**
          * @brief Private constructor initializing members with provided topics and syncer.
@@ -116,6 +122,7 @@ namespace sgns::crdt
         std::mutex       broadcastTopicsMutex_; ///< protects topicsToListen_
         std::mutex       subscriptionMutex_;    ///< protects subscriptionFutures_
         std::atomic_bool started_;
+        std::atomic_bool incomingBroadcastEnabled_{ true };
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
         std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;

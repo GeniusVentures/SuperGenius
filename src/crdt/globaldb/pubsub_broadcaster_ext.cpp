@@ -127,6 +127,12 @@ namespace sgns::crdt
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message,
                                           const std::string                             &incomingTopic )
     {
+        if ( !incomingBroadcastEnabled_.load() )
+        {
+            m_logger->trace( "Ignoring incoming broadcast on topic {} while consumption is disabled", incomingTopic );
+            return;
+        }
+
         // Log that a message has been received (the incoming parameter is not used for filtering).
         m_logger->trace( "Received a message from topic {}", incomingTopic );
         do
@@ -434,6 +440,12 @@ namespace sgns::crdt
         } while ( 0 );
 
         return ret;
+    }
+
+    void PubSubBroadcasterExt::SetIncomingBroadcastEnabled( bool enabled )
+    {
+        incomingBroadcastEnabled_.store( enabled );
+        m_logger->info( "Incoming broadcast processing {}", enabled ? "enabled" : "disabled" );
     }
 
     bool PubSubBroadcasterExt::AddMultiCIDInfo( const std::vector<CID>                         &cids,

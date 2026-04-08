@@ -180,6 +180,12 @@ namespace sgns::crdt
         void SetBroadcastEnabled( bool enabled );
 
         /**
+         * @brief       Enable or disable incoming pubsub broadcast consumption.
+         * @param[in]   enabled True to consume incoming broadcasts, false to ignore them.
+         */
+        void SetIncomingBroadcastEnabled( bool enabled );
+
+        /**
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names 
          */
@@ -216,6 +222,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
+        std::atomic_bool                                  incomingBroadcastEnabled_{ true };
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;
