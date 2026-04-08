@@ -14,6 +14,15 @@ namespace sgns::crdt
 {
     namespace
     {
+        constexpr const char *kValidatorRegistryTopic = "gnus-validator-registry";
+
+        bool IsValidatorRegistryTopic( const std::string &topic )
+        {
+            const std::string validator_topic =
+                std::string( kValidatorRegistryTopic ) + version::GetNetAndVersionAppendix();
+            return topic == validator_topic;
+        }
+
         boost::optional<libp2p::peer::PeerInfo> PeerInfoFromString(
             const google::protobuf::RepeatedPtrField<std::string> &addresses )
         {
@@ -127,7 +136,7 @@ namespace sgns::crdt
     void PubSubBroadcasterExt::OnMessage( boost::optional<const GossipPubSub::Message &> message,
                                           const std::string                             &incomingTopic )
     {
-        if ( !incomingBroadcastEnabled_.load() )
+        if ( !incomingBroadcastEnabled_.load() && !IsValidatorRegistryTopic( incomingTopic ) )
         {
             m_logger->trace( "Ignoring incoming broadcast on topic {} while consumption is disabled", incomingTopic );
             return;
