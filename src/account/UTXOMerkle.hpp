@@ -120,18 +120,11 @@ namespace sgns::utxo_merkle
         return level_hashes.front();
     }
 
-    inline base::Hash256 ComputeMerkleRootFromUTXOs( const std::vector<GeniusUTXO> &utxos )
+    inline base::Hash256 ComputeMerkleRootFromPayloads( std::vector<std::vector<uint8_t>> payloads )
     {
-        if ( utxos.empty() )
+        if ( payloads.empty() )
         {
             return EmptyUTXOMerkleRoot();
-        }
-
-        std::vector<std::vector<uint8_t>> payloads;
-        payloads.reserve( utxos.size() );
-        for ( const auto &utxo : utxos )
-        {
-            payloads.push_back( SerializeUTXOLeafPayload( utxo ) );
         }
 
         std::sort( payloads.begin(), payloads.end() );
@@ -144,5 +137,20 @@ namespace sgns::utxo_merkle
         }
 
         return ComputeMerkleRootFromLeafHashes( std::move( leaf_hashes ) );
+    }
+
+    inline base::Hash256 ComputeMerkleRootFromUTXOs( const std::vector<GeniusUTXO> &utxos )
+    {
+        if ( utxos.empty() )
+        {
+            return EmptyUTXOMerkleRoot();
+        }
+        std::vector<std::vector<uint8_t>> payloads;
+        payloads.reserve( utxos.size() );
+        for ( const auto &utxo : utxos )
+        {
+            payloads.push_back( SerializeUTXOLeafPayload( utxo ) );
+        }
+        return ComputeMerkleRootFromPayloads( std::move( payloads ) );
     }
 }
