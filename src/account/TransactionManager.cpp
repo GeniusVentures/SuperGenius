@@ -1644,13 +1644,15 @@ namespace sgns
 
         do
         {
-            std::shared_lock in_lock( incoming_tx_mutex_m );
-            for ( const auto &[_, tracked] : incoming_tx_processed_m )
             {
-                if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
+                std::shared_lock in_lock( incoming_tx_mutex_m );
+                for ( const auto &[_, tracked] : incoming_tx_processed_m )
                 {
-                    retval = tracked.status;
-                    break;
+                    if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
+                    {
+                        retval = tracked.status;
+                        break;
+                    }
                 }
             }
 
@@ -1676,31 +1678,33 @@ namespace sgns
 
         do
         {
-            std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
-            m_logger->debug( "[{} - full: {}] Searching for transaction {}",
-                             account_m->GetAddress().substr( 0, 8 ),
-                             full_node_m,
-                             txId );
-            bool found = false;
-            for ( const auto &[_, tracked] : outgoing_tx_processed_m )
             {
-                if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
-                {
-                    retval = tracked.status;
-                    m_logger->debug( "[{} - full: {}] Transaction status is {}",
-                                     account_m->GetAddress().substr( 0, 8 ),
-                                     full_node_m,
-                                     static_cast<int>( retval ) );
-                    found = true;
-                    break;
-                }
-            }
-            if ( !found )
-            {
-                m_logger->debug( "[{} - full: {}] Transaction untracked",
+                std::shared_lock<std::shared_mutex> out_lock( outgoing_tx_mutex_m );
+                m_logger->debug( "[{} - full: {}] Searching for transaction {}",
                                  account_m->GetAddress().substr( 0, 8 ),
-                                 full_node_m );
-                retval = TransactionStatus::FAILED;
+                                 full_node_m,
+                                 txId );
+                bool found = false;
+                for ( const auto &[_, tracked] : outgoing_tx_processed_m )
+                {
+                    if ( tracked.tx && tracked.tx->dag_st.data_hash() == txId )
+                    {
+                        retval = tracked.status;
+                        m_logger->debug( "[{} - full: {}] Transaction status is {}",
+                                         account_m->GetAddress().substr( 0, 8 ),
+                                         full_node_m,
+                                         static_cast<int>( retval ) );
+                        found = true;
+                        break;
+                    }
+                }
+                if ( !found )
+                {
+                    m_logger->debug( "[{} - full: {}] Transaction untracked",
+                                     account_m->GetAddress().substr( 0, 8 ),
+                                     full_node_m );
+                    retval = TransactionStatus::FAILED;
+                }
             }
 
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
@@ -1727,32 +1731,33 @@ namespace sgns
 
         while ( std::chrono::steady_clock::now() - start < timeout )
         {
-            std::shared_lock in_lock( incoming_tx_mutex_m );
-
-            for ( const auto &[_, tracked] : incoming_tx_processed_m )
             {
-                if ( !tracked.tx )
+                std::shared_lock in_lock( incoming_tx_mutex_m );
+                for ( const auto &[_, tracked] : incoming_tx_processed_m )
                 {
-                    continue;
-                }
-
-                if ( tracked.tx->GetType() == "escrow-release" )
-                {
-                    auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tracked.tx );
-                    if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
+                    if ( !tracked.tx )
                     {
-                        m_logger->debug( "[{} - full: {}] Found matching escrow release transaction with tx id: {}",
-                                         account_m->GetAddress().substr( 0, 8 ),
-                                         full_node_m,
-                                         tracked.tx->dag_st.data_hash() );
+                        continue;
+                    }
 
-                        retval = tracked.status;
-
-                        // If finalized, return immediately; otherwise keep waiting.
-                        if ( retval == TransactionStatus::CONFIRMED || retval == TransactionStatus::FAILED ||
-                             retval == TransactionStatus::INVALID )
+                    if ( tracked.tx->GetType() == "escrow-release" )
+                    {
+                        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tracked.tx );
+                        if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
                         {
-                            return retval;
+                            m_logger->debug( "[{} - full: {}] Found matching escrow release transaction with tx id: {}",
+                                             account_m->GetAddress().substr( 0, 8 ),
+                                             full_node_m,
+                                             tracked.tx->dag_st.data_hash() );
+
+                            retval = tracked.status;
+
+                            // If finalized, return immediately; otherwise keep waiting.
+                            if ( retval == TransactionStatus::CONFIRMED || retval == TransactionStatus::FAILED ||
+                                 retval == TransactionStatus::INVALID )
+                            {
+                                return retval;
+                            }
                         }
                     }
                 }
