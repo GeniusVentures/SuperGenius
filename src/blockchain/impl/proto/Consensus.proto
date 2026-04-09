@@ -22,12 +22,23 @@ enum SubjectType {
 }
 
 message UTXOTransitionCommitment {
-  bytes pre_utxo_root = 1;
-  bytes post_utxo_root = 2;
-  uint64 utxo_count_before = 3;
-  uint64 utxo_count_after = 4;
-  uint64 account_state_version = 5;
-  bytes produced_outputs_root = 6;
+  message CommittedOutPoint {
+    bytes tx_id_hash = 1;
+    uint32 output_index = 2;
+  }
+
+  message CommittedOutput {
+    bytes tx_id_hash = 1;
+    uint32 output_index = 2;
+    string owner_address = 3;
+    bytes token_id = 4;
+    uint64 amount = 5;
+  }
+
+  repeated CommittedOutPoint consumed_outpoints = 1;
+  repeated CommittedOutput produced_outputs = 2;
+  bytes consumed_outpoints_root = 3;
+  bytes produced_outputs_root = 4;
 }
 
 message MerkleProofStep {

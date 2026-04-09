@@ -395,8 +395,7 @@ namespace sgns
         outcome::result<std::string>                    GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
-        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx,
-                                             bool skip_utxo_state_validation = false ) const;
+        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
         bool CheckTransactionAuthorization( const IGeniusTransactions &tx ) const;
         bool CheckTransactionTimestamp( const IGeniusTransactions &tx ) const;
@@ -413,6 +412,7 @@ namespace sgns
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                       TransactionStatus                           new_status );
+        bool HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const;
 
         bool IsGoingToOverwrite( const std::string &key ) const;
 

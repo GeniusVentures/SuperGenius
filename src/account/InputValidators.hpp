@@ -28,7 +28,6 @@ namespace sgns
         virtual bool ValidateWitness( const ConsensusSubject                     &subject,
                                       const std::shared_ptr<IGeniusTransactions> &tx,
                                       const UTXOTxParameters                     &params,
-                                      const base::Hash256                        &pre_root,
                                       const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
 
         virtual bool RequiresConsensusUTXOData() const = 0;
@@ -44,7 +43,6 @@ namespace sgns
         bool ValidateWitness( const ConsensusSubject                     &subject,
                               const std::shared_ptr<IGeniusTransactions> &tx,
                               const UTXOTxParameters                     &params,
-                              const base::Hash256                        &pre_root,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
         bool RequiresConsensusUTXOData() const override
@@ -63,7 +61,6 @@ namespace sgns
         bool ValidateWitness( const ConsensusSubject                     &subject,
                               const std::shared_ptr<IGeniusTransactions> &tx,
                               const UTXOTxParameters                     &params,
-                              const base::Hash256                        &pre_root,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
         bool RequiresConsensusUTXOData() const override

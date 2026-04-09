@@ -3139,6 +3139,53 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
+    bool TransactionManager::HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const
+    {
+        if ( !candidate_tx || !candidate_tx->HasUTXOParameters() )
+        {
+            return false;
+        }
+
+        auto candidate_params = candidate_tx->GetUTXOParametersOpt();
+        if ( !candidate_params.has_value() )
+        {
+            return false;
+        }
+
+        std::unordered_set<std::string> candidate_inputs;
+        candidate_inputs.reserve( candidate_params->first.size() );
+        for ( const auto &input : candidate_params->first )
+        {
+            candidate_inputs.insert( OutPointKey( input.txid_hash_, input.output_idx_ ) );
+        }
+
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
+        {
+            if ( !tracked.tx || tracked.status != TransactionStatus::CONFIRMED ||
+                 tracked.tx->GetHash() == candidate_tx->GetHash() || !tracked.tx->HasUTXOParameters() )
+            {
+                continue;
+            }
+
+            auto other_params = tracked.tx->GetUTXOParametersOpt();
+            if ( !other_params.has_value() )
+            {
+                continue;
+            }
+
+            for ( const auto &other_input : other_params->first )
+            {
+                if ( candidate_inputs.find( OutPointKey( other_input.txid_hash_, other_input.output_idx_ ) ) !=
+                     candidate_inputs.end() )
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     void TransactionManager::OnConsensusCertificate( const std::string &tx_hash )
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Consensus certificate arrived for transaction {}",
@@ -3406,18 +3453,18 @@ namespace sgns
             return reject_and_maybe_fail_local( "transaction already failed" );
         }
 
-        const auto witness_validation = ValidateWitnessForConsensus( subject, tracked_tx );
-        if ( witness_validation == WitnessValidationResult::DRIFT )
+        if ( HasConfirmedInputConflict( tracked_tx ) )
         {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Witness validation drift for hash {}, deferring as pending and requesting heads",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx_hash );
-            RequestRelevantHeads();
-            return ConsensusManager::SubjectCheck::Pending;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Outpoint conflict against finalized transaction "
+                                               "for hash {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx_hash );
+            return reject_and_maybe_fail_local( "input outpoint already finalized by another transaction" );
         }
+
+        const auto witness_validation = ValidateWitnessForConsensus( subject, tracked_tx );
         if ( witness_validation == WitnessValidationResult::INVALID )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Witness validation failed for hash {}",
@@ -3428,7 +3475,7 @@ namespace sgns
             return reject_and_maybe_fail_local( "witness validation failed" );
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tracked_tx, true );
+        auto validate_result = ValidateTransactionForConsensus( tracked_tx );
 
         if ( !validate_result )
         {
@@ -3473,8 +3520,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx,
-                                                              bool skip_utxo_state_validation ) const
+    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -3526,8 +3572,7 @@ namespace sgns
             return false;
         }
         //TODO - Deal with checking the Mint
-        const bool is_utxo_type = tx->HasUTXOParameters();
-        if ( !( skip_utxo_state_validation && is_utxo_type ) && !CheckTransactionTypeRules( tx ) )
+        if ( !CheckTransactionTypeRules( tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Type rules failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3874,81 +3919,31 @@ namespace sgns
         }
 
         const auto &commitment = subject.nonce().utxo_commitment();
-        if ( commitment.pre_utxo_root().size() != base::Hash256::size() ||
-             commitment.post_utxo_root().size() != base::Hash256::size() )
+        if ( commitment.consumed_outpoints_root().size() != base::Hash256::size() ||
+             commitment.produced_outputs_root().size() != base::Hash256::size() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Invalid commitment root sizes tx={} pre_size={} "
-                                               "post_size={} expected={}",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Invalid commitment root sizes tx={} consumed_size={} "
+                                               "produced_size={} expected={}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx->GetHash(),
-                                               commitment.pre_utxo_root().size(),
-                                               commitment.post_utxo_root().size(),
+                                               commitment.consumed_outpoints_root().size(),
+                                               commitment.produced_outputs_root().size(),
                                                base::Hash256::size() );
             return WitnessValidationResult::INVALID;
         }
-        auto pre_root_result = base::Hash256::fromSpan(
-            gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.pre_utxo_root().data() ) ),
-                       commitment.pre_utxo_root().size() ) );
-        if ( pre_root_result.has_error() )
+        auto consumed_root_result = base::Hash256::fromSpan(
+            gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( commitment.consumed_outpoints_root().data() ) ),
+                       commitment.consumed_outpoints_root().size() ) );
+        if ( consumed_root_result.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to parse commitment pre-root tx={}",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to parse commitment consumed root tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
             return WitnessValidationResult::INVALID;
-        }
-        const auto pre_root = pre_root_result.value();
-
-        // Canonical pre-state is only guaranteed locally for our own account.
-        // Full nodes may validate proposals for remote accounts before their local
-        // snapshot converges, so this check must not reject those proposals.
-        const bool can_validate_canonical_pre_state = tx->GetSrcAddress() == account_m->GetAddress();
-        if ( can_validate_canonical_pre_state )
-        {
-            const auto canonical_state = GetOrInitAccountUTXOState( tx->GetSrcAddress() );
-            if ( canonical_state.version != commitment.account_state_version() )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Account state version drift tx={} local={} "
-                                                  "commitment={}. Continuing with witness validation.",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash(),
-                                                  canonical_state.version,
-                                                  commitment.account_state_version() );
-                return WitnessValidationResult::DRIFT;
-            }
-            if ( canonical_state.root != pre_root )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] {}: Pre-root drift tx={} local_root={} "
-                                                  "commitment_pre_root={}. Continuing with witness validation.",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  __func__,
-                                                  tx->GetHash(),
-                                                  canonical_state.root.toReadableString(),
-                                                  pre_root.toReadableString() );
-                return WitnessValidationResult::DRIFT;
-            }
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Canonical pre-state matched tx={} version={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash(),
-                                               canonical_state.version );
-        }
-        else
-        {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] {}: Skipping canonical pre-state check for foreign source account tx={} src={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx->GetHash(),
-                tx->GetSrcAddress() );
         }
 
         if ( validator.RequiresConsensusUTXOData() && !subject.nonce().has_utxo_witness() )
@@ -3974,7 +3969,8 @@ namespace sgns
                                                tx->GetHash() );
             return WitnessValidationResult::INVALID;
         }
-        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), pre_root, blockchain_ );
+        (void)consumed_root_result;
+        const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), blockchain_ );
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validator witness result tx={} chain_id={} result={}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -3992,34 +3988,42 @@ namespace sgns
         {
             return std::nullopt;
         }
-        std::vector<GeniusUTXO> before_snapshot = utxo_manager_.GetUTXOsForReservation( tx->GetSrcAddress(),
-                                                                                        tx->GetHash() );
-        std::vector<GeniusUTXO> after_snapshot  = before_snapshot;
-        if ( !ApplyTransactionToUTXOSnapshot( tx, after_snapshot ) )
+        if ( !tx->HasUTXOParameters() )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not build transition snapshot for tx={}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__,
-                                              tx->GetHash() );
+            return std::nullopt;
+        }
+        auto params_opt = tx->GetUTXOParametersOpt();
+        if ( !params_opt.has_value() )
+        {
+            return std::nullopt;
+        }
+        const auto &inputs = params_opt->first;
+        if ( inputs.empty() )
+        {
+            return std::nullopt;
+        }
+        auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
+        if ( tx_hash.has_error() )
+        {
             return std::nullopt;
         }
 
         UTXOTransitionCommitment commitment;
-        const auto               pre_root  = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( before_snapshot );
-        const auto               post_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( after_snapshot );
-
-        // Anchor to current canonical state for the source account.
-        const auto canonical_state = GetOrInitAccountUTXOState( tx->GetSrcAddress() );
-        if ( canonical_state.root != pre_root )
+        std::vector<std::vector<uint8_t>> consumed_payloads;
+        consumed_payloads.reserve( inputs.size() );
+        for ( const auto &input : inputs )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Stale pre-root while creating commitment tx={}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__,
-                                              tx->GetHash() );
-            return std::nullopt;
+            auto *committed_input = commitment.add_consumed_outpoints();
+            committed_input->set_tx_id_hash( input.txid_hash_.data(), input.txid_hash_.size() );
+            committed_input->set_output_index( input.output_idx_ );
+
+            std::vector<uint8_t> leaf_payload;
+            leaf_payload.reserve( 32 + 4 );
+            leaf_payload.insert( leaf_payload.end(), input.txid_hash_.begin(), input.txid_hash_.end() );
+            utxo_merkle::AppendUInt32BE( leaf_payload, input.output_idx_ );
+            consumed_payloads.push_back( std::move( leaf_payload ) );
         }
+        const auto consumed_outpoints_root = utxo_merkle::ComputeMerkleRootFromPayloads( std::move( consumed_payloads ) );
 
         std::vector<GeniusUTXO> produced_outputs;
         if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
@@ -4031,13 +4035,30 @@ namespace sgns
                                               tx->GetHash() );
             return std::nullopt;
         }
-        const auto produced_outputs_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( produced_outputs );
+        std::vector<std::vector<uint8_t>> produced_payloads;
+        produced_payloads.reserve( produced_outputs.size() );
+        for ( size_t i = 0; i < produced_outputs.size(); ++i )
+        {
+            const auto &produced_output = produced_outputs[i];
+            auto       *committed_output = commitment.add_produced_outputs();
+            committed_output->set_tx_id_hash( tx_hash.value().data(), tx_hash.value().size() );
+            committed_output->set_output_index( static_cast<uint32_t>( i ) );
+            committed_output->set_owner_address( produced_output.GetOwnerAddress() );
+            const auto token_bytes = produced_output.GetTokenID().bytes();
+            committed_output->set_token_id( token_bytes.data(), token_bytes.size() );
+            committed_output->set_amount( produced_output.GetAmount() );
 
-        commitment.set_pre_utxo_root( pre_root.data(), pre_root.size() );
-        commitment.set_post_utxo_root( post_root.data(), post_root.size() );
-        commitment.set_utxo_count_before( before_snapshot.size() );
-        commitment.set_utxo_count_after( after_snapshot.size() );
-        commitment.set_account_state_version( canonical_state.version );
+            produced_payloads.push_back( SerializeUTXOLeafPayload( produced_output ) );
+        }
+        const auto produced_outputs_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( produced_outputs );
+        const auto produced_outputs_root_from_payloads =
+            utxo_merkle::ComputeMerkleRootFromPayloads( std::move( produced_payloads ) );
+        if ( produced_outputs_root != produced_outputs_root_from_payloads )
+        {
+            return std::nullopt;
+        }
+
+        commitment.set_consumed_outpoints_root( consumed_outpoints_root.data(), consumed_outpoints_root.size() );
         commitment.set_produced_outputs_root( produced_outputs_root.data(), produced_outputs_root.size() );
         return commitment;
     }
