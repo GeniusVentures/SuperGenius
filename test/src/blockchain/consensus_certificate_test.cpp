@@ -78,11 +78,16 @@ namespace
     sgns::UTXOTransitionCommitment MakeTestCommitment()
     {
         sgns::UTXOTransitionCommitment commitment;
-        commitment.set_pre_utxo_root( std::string( 32, '\x01' ) );
-        commitment.set_post_utxo_root( std::string( 32, '\x02' ) );
-        commitment.set_utxo_count_before( 1 );
-        commitment.set_utxo_count_after( 1 );
-        commitment.set_account_state_version( 0 );
+        auto *consumed = commitment.add_consumed_outpoints();
+        consumed->set_tx_id_hash( std::string( 32, '\x01' ) );
+        consumed->set_output_index( 0 );
+        auto *produced = commitment.add_produced_outputs();
+        produced->set_tx_id_hash( std::string( 32, '\x02' ) );
+        produced->set_output_index( 0 );
+        produced->set_owner_address( "owner" );
+        produced->set_token_id( std::string( 32, '\x03' ) );
+        produced->set_amount( 1 );
+        commitment.set_consumed_outpoints_root( std::string( 32, '\x05' ) );
         commitment.set_produced_outputs_root( std::string( 32, '\x04' ) );
         return commitment;
     }
@@ -514,11 +519,11 @@ namespace sgns::test
         auto manager  = MakeManager( registry, db_, pubs_, account );
 
         UTXOTransitionCommitment commitment;
-        commitment.set_pre_utxo_root( std::string( 32, '\x01' ) );
-        commitment.set_post_utxo_root( std::string( 32, '\x02' ) );
-        commitment.set_utxo_count_before( 1 );
-        commitment.set_utxo_count_after( 1 );
-        commitment.set_account_state_version( 0 );
+        auto *consumed = commitment.add_consumed_outpoints();
+        consumed->set_tx_id_hash( std::string( 32, '\x01' ) );
+        consumed->set_output_index( 0 );
+        commitment.set_consumed_outpoints_root( std::string( 32, '\x02' ) );
+        commitment.set_produced_outputs_root( std::string( 32, '\x03' ) );
 
         UTXOWitness witness;
         auto       *proof = witness.add_consumed_inputs();

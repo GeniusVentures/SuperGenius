@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <cstdint>
+#include <cstdio>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -28,6 +29,18 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/wait_condition.hpp"
+
+namespace
+{
+    std::string NextMintSourceHash()
+    {
+        static std::atomic<uint64_t> mint_counter{ 1 };
+        const auto                   value = mint_counter.fetch_add( 1 );
+        char                         buf[65] = {};
+        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
+        return std::string( buf );
+    }
+} // namespace
 
 class BlockchainGenesisTest : public ::testing::Test
 {
@@ -304,7 +317,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     auto balance_regular_2_before = node_regular_2->GetBalance();
 
     // Mint tokens on the first regular node after sync is confirmed
-    auto mint_result = node_regular_1->MintTokens( mint_amount, "", "", token_id );
+    auto mint_result = node_regular_1->MintTokens( mint_amount, NextMintSourceHash(), "", token_id );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

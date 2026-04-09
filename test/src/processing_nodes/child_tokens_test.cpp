@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <cstdio>
 #include <ostream>
 #include <random>
 #include <thread>
@@ -22,6 +23,15 @@ using boost::multiprecision::cpp_dec_float_50;
 
 namespace
 {
+    std::string NextMintSourceHash()
+    {
+        static std::atomic<uint64_t> mint_counter{ 1 };
+        const auto                   value = mint_counter.fetch_add( 1 );
+        char                         buf[65] = {};
+        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
+        return std::string( buf );
+    }
+
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize DevConfig.
@@ -181,11 +191,13 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     }
 
     // Ensure enough balance with +1 change
-    auto mintRes51 = node51->MintTokens( totalMint51 + 1, "", "", sgns::TokenID::FromBytes( { 0x51 } ) );
+    auto mintRes51 =
+        node51->MintTokens( totalMint51 + 1, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x51 } ) );
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
-    auto mintRes52 = node52->MintTokens( totalMint52 + 1, "", "", sgns::TokenID::FromBytes( { 0x52 } ) );
+    auto mintRes52 =
+        node52->MintTokens( totalMint52 + 1, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x52 } ) );
     ASSERT_TRUE( mintRes52.has_value() ) << "Grouped mint failed on token52";
     std::cout << "Minted total " << ( totalMint52 + 1 ) << " of token52 on node52\n";
 
@@ -275,7 +287,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
-    auto res = node->MintTokens( p.mintMain, "", "", p.TokenID );
+    auto res = node->MintTokens( p.mintMain, NextMintSourceHash(), "", p.TokenID );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -349,7 +361,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedMint.has_value() );
 
-    auto res = node->MintTokens( parsedMint.value(), "", "", p.TokenID );
+    auto res = node->MintTokens( parsedMint.value(), NextMintSourceHash(), "", p.TokenID );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -426,7 +438,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount, "", "", tm.tokenId );
+        auto res = node->MintTokens( tm.amount, NextMintSourceHash(), "", tm.tokenId );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
@@ -481,7 +493,8 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         std::chrono::milliseconds( 30000 ),
         "node_proc2 not synched" );
 
-    auto mintResMain = node_main->MintTokens( 1000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto mintResMain =
+        node_main->MintTokens( 1000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";

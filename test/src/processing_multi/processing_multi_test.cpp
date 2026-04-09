@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <cstdint>
+#include <cstdio>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -24,6 +25,17 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+
+namespace
+{
+    std::string NextMintSourceHash()
+    {
+        static uint64_t mint_counter = 1;
+        char            buf[65]      = {};
+        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
+        return std::string( buf );
+    }
+} // namespace
 
 class ProcessingMultiTest : public ::testing::Test
 {
@@ -135,8 +147,8 @@ std::string ProcessingMultiTest::binary_path = "";
 
 TEST_F( ProcessingMultiTest, MintTokens )
 {
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
 }
 

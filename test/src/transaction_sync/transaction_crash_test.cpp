@@ -7,11 +7,22 @@
 #endif
 #include <thread>
 #include <chrono>
+#include <cstdio>
 #include <boost/dll.hpp>
 #include "account/GeniusNode.hpp"
 
 namespace sgns
 {
+    namespace
+    {
+        std::string NextMintSourceHash()
+        {
+            static uint64_t mint_counter = 1;
+            char            buf[65]      = {};
+            std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
+            return std::string( buf );
+        }
+    } // namespace
 
     /**
  * @file transaction_crash_sync_test_updated.cpp
@@ -115,7 +126,7 @@ namespace sgns
         }
 
         std::cout << "Minting the required tokens" << std::endl;
-        auto mint_result = node1->MintTokens( total_amount, "", "", TokenID::FromBytes( { 0x00 } ) );
+        auto mint_result = node1->MintTokens( total_amount, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

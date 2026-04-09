@@ -4,6 +4,7 @@
 #include <memory>
 #include <iostream>
 #include <thread>
+#include <cstdio>
 
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
@@ -14,6 +15,17 @@
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::test;
+
+namespace
+{
+    std::string NextMintSourceHash()
+    {
+        static uint64_t mint_counter = 1;
+        char            buf[65]      = {};
+        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
+        return std::string( buf );
+    }
+} // namespace
 
 class ProcessingNodesTest : public ::testing::Test
 {
@@ -166,8 +178,8 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
         "Node proc 2 not synched" );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
     int transcount_node1 = node_proc1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
@@ -472,7 +484,8 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
-    auto mint_result = node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto mint_result =
+        node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
