@@ -180,7 +180,7 @@ namespace sgns
                                                    "",
                                                    "",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
         auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -194,7 +194,7 @@ namespace sgns
         auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                           node_proc2->GetAddress(),
                                                           sgns::TokenID::FromBytes( { 0x00 } ),
-                                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_TRANSFER ) );
         ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
         auto [transfer_tx_id, transfer_duration] = transfer_result.value();
         std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
@@ -260,7 +260,7 @@ namespace sgns
                                                        "",
                                                        "",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
             ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction of " << amount << " failed or timed out";
 
             auto [tx_id, duration] = mint_result.value();
@@ -272,14 +272,14 @@ namespace sgns
                                                     "",
                                                     "",
                                                     sgns::TokenID::FromBytes( { 0x00 } ),
-                                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
         auto mint_result2 = node_proc2->MintTokens( 20000000000,
                                                     "",
                                                     "",
                                                     sgns::TokenID::FromBytes( { 0x00 } ),
-                                                    std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
         // Verify balances after minting
@@ -458,12 +458,12 @@ namespace sgns
                                 "",
                                 "",
                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         auto mint_result = node_proc1->MintTokens( 10000000000,
                                                    "",
                                                    "",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
         auto [mint_tx_id, mint_duration] = mint_result.value();

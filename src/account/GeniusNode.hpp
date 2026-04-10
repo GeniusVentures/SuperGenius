@@ -116,6 +116,21 @@ namespace sgns
 
         std::string GetVersion();
 
+
+        /**
+         * @brief       Fires of a Mint transaction and returns the transaction hash
+         * @param[in]   amount Amount to be minted
+         * @param[in]   transaction_hash Hash of the transaction that burned the tokens elsewhere
+         * @param[in]   chainid The chain ID where the burn transaction took place
+         * @param[in]   tokenid The token ID of the tokens to mint 
+         * @return      The transaction hash of the mint transaction if successful, or an error otherwise
+         */
+        outcome::result<std::string> MintTokens(
+            uint64_t                  amount,
+            const std::string        &transaction_hash,
+            const std::string        &chainid,
+            TokenID                   tokenid);
+
         /**
          * @brief       Mints tokens by converting a string amount to fixed-point representation
          * @param[in]   amount: Numeric value with amount in Minion Tokens (1e-6 GNUS Token)
@@ -126,7 +141,7 @@ namespace sgns
             const std::string        &transaction_hash,
             const std::string        &chainid,
             TokenID                   tokenid,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_MINT ) );
+            std::chrono::milliseconds timeout);
 
         void AddPeer( const std::string &peer );
         void RefreshUPNP( uint16_t pubsubport );

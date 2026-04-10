@@ -101,7 +101,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
-        auto mintRes = originalNode->MintTokens( 500000, "", "", TokenID::FromBytes( { 0x00 } ) );
+        auto mintRes = originalNode->MintTokens( 500000, "", "", TokenID::FromBytes( { 0x00 } ) ,std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );

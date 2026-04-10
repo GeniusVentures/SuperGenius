@@ -190,7 +190,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                               "",
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_main";
 
     std::cout << "Mint transaction on main node completed, waiting for sync..." << std::endl;
@@ -208,7 +208,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                           "",
                                           "",
                                           sgns::TokenID::FromBytes( { 0x00 } ),
-                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_proc1";
 
     test::assertWaitForCondition( [&]() { return node_main->GetBalance() == 100000000000; },
@@ -316,7 +316,7 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
                                                        "",
                                                        "",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;

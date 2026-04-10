@@ -199,8 +199,8 @@ TEST_F( ProcessingNodesTest, ProcessNodesTransactionsCount )
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
         "Node proc 2 not synched" );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ),std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ),std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();

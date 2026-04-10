@@ -308,7 +308,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                                    "",
                                                    "",
                                                    token_id,
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

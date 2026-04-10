@@ -182,7 +182,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
                                          "",
                                          "",
                                          sgns::TokenID::FromBytes( { 0x51 } ),
-                                         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
@@ -190,7 +190,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
                                          "",
                                          "",
                                          sgns::TokenID::FromBytes( { 0x52 } ),
-                                         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
     ASSERT_TRUE( mintRes52.has_value() ) << "Grouped mint failed on token52";
     std::cout << "Minted total " << ( totalMint52 + 1 ) << " of token52 on node52\n";
 
@@ -200,7 +200,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
         auto transferRes = t.src->TransferFunds( t.amount,
                                                  node50->GetAddress(),
                                                  t.tokenId,
-                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
@@ -284,7 +284,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
                                  "",
                                  "",
                                  p.TokenID,
-                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -365,7 +365,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
                                  "",
                                  "",
                                  p.TokenID,
-                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -448,7 +448,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
                                      "",
                                      "",
                                      tm.tokenId,
-                                     std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                     std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
@@ -507,7 +507,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                                               "",
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
     std::string bin_path = boost::dll::program_location().parent_path().string() + "/";
