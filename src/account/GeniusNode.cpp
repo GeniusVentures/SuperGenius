@@ -528,7 +528,7 @@ namespace sgns
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
                 crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
                 config );
-            auto pubs = pubsub_->Start( pubsubport_, {}, old_lanip, {} );
+            auto pubs = pubsub_->Start( pubsubport_, { "/ip4/10.42.0.1/tcp/40297/ipfs/12D3KooWRFAdLScD2WD8tRHz26sggQdAzRtnxG9gtrBucjauqqfn" }, old_lanip, {} );
             pubs.wait();
             node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
 
