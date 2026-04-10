@@ -166,8 +166,18 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
         "Node proc 2 not synched" );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000,
+                           "",
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    node_main->MintTokens( 50000000000,
+                           "",
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetOutTransactions().size();
     int transcount_node1 = node_proc1->GetOutTransactions().size();
@@ -472,7 +482,12 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
-    auto mint_result = node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto mint_result = node_main->MintTokens( 50000000000,
+                                              "",
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 

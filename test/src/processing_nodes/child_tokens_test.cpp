@@ -181,11 +181,21 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     }
 
     // Ensure enough balance with +1 change
-    auto mintRes51 = node51->MintTokens( totalMint51 + 1, "", "", sgns::TokenID::FromBytes( { 0x51 } ) );
+    auto mintRes51 = node51->MintTokens( totalMint51 + 1,
+                                         "",
+                                         "",
+                                         sgns::TokenID::FromBytes( { 0x51 } ),
+                                         "",
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
-    auto mintRes52 = node52->MintTokens( totalMint52 + 1, "", "", sgns::TokenID::FromBytes( { 0x52 } ) );
+    auto mintRes52 = node52->MintTokens( totalMint52 + 1,
+                                         "",
+                                         "",
+                                         sgns::TokenID::FromBytes( { 0x52 } ),
+                                         "",
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintRes52.has_value() ) << "Grouped mint failed on token52";
     std::cout << "Minted total " << ( totalMint52 + 1 ) << " of token52 on node52\n";
 
@@ -195,7 +205,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
         auto transferRes = t.src->TransferFunds( t.amount,
                                                  node50->GetAddress(),
                                                  t.tokenId,
-                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
@@ -275,7 +285,12 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
-    auto res = node->MintTokens( p.mintMain, "", "", p.TokenID );
+    auto res = node->MintTokens( p.mintMain,
+                                 "",
+                                 "",
+                                 p.TokenID,
+                                 "",
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -349,7 +364,12 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedMint.has_value() );
 
-    auto res = node->MintTokens( parsedMint.value(), "", "", p.TokenID );
+    auto res = node->MintTokens( parsedMint.value(),
+                                 "",
+                                 "",
+                                 p.TokenID,
+                                 "",
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -426,7 +446,12 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount, "", "", tm.tokenId );
+        auto res = node->MintTokens( tm.amount,
+                                     "",
+                                     "",
+                                     tm.tokenId,
+                                     "",
+                                     std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
@@ -481,7 +506,12 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         std::chrono::milliseconds( 30000 ),
         "node_proc2 not synched" );
 
-    auto mintResMain = node_main->MintTokens( 1000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    auto mintResMain = node_main->MintTokens( 1000,
+                                              "",
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";

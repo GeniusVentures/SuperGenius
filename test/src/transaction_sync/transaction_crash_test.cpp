@@ -115,7 +115,12 @@ namespace sgns
         }
 
         std::cout << "Minting the required tokens" << std::endl;
-        auto mint_result = node1->MintTokens( total_amount, "", "", TokenID::FromBytes( { 0x00 } ) );
+        auto mint_result = node1->MintTokens( total_amount,
+                                              "",
+                                              "",
+                                              TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

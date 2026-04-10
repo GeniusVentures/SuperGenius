@@ -499,12 +499,12 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
-        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::trace );
+        auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::trace );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::trace );
@@ -1134,19 +1134,17 @@ namespace sgns
         return sgns::version::SuperGeniusVersionFullString();
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
-                                                                              const std::string &transaction_hash,
-                                                                              const std::string &chainid,
-                                                                              TokenID            tokenid,
-                                                                              std::string        destination,
-                                                                              std::chrono::milliseconds timeout )
+    outcome::result<std::string> GeniusNode::MintTokens( uint64_t           amount,
+                                                         const std::string &transaction_hash,
+                                                         const std::string &chainid,
+                                                         TokenID            tokenid,
+                                                         std::string        destination )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
-        auto start_time = std::chrono::steady_clock::now();
         if ( destination.empty() )
         {
             destination = account_->GetAddress();
@@ -1155,19 +1153,34 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
         BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
-        auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
+        node_logger_->debug( "Mint transaction {} sent ", tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
+                                                                              const std::string &transaction_hash,
+                                                                              const std::string &chainid,
+                                                                              TokenID            tokenid,
+                                                                              std::string        destination,
+                                                                              std::chrono::milliseconds timeout )
+    {
+        auto start_time = std::chrono::steady_clock::now();
+        BOOST_OUTCOME_TRY( auto mint_hash, MintTokens( amount, transaction_hash, chainid, tokenid ) );
+
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        auto mint_result = manager->WaitForTransactionOutgoing( mint_hash, timeout );
 
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
         if ( mint_result != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger_->error( "Mint transaction {} failed after {} ms", tx_id, duration );
+            node_logger_->error( "Mint transaction {} failed after {} ms", mint_hash, duration );
             return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
         }
 
-        node_logger_->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
-        return std::make_pair( tx_id, duration );
+        node_logger_->debug( "Mint transaction {} completed in {} ms", mint_hash, duration );
+        return std::make_pair( mint_hash, duration );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,

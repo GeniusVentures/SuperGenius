@@ -170,12 +170,27 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     auto balance_original_start = node_original->GetBalance();
     // Mint some tokens
-    auto mint_result = node_original->MintTokens( 100, "", "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint_result = node_original->MintTokens( 100,
+                                                  "",
+                                                  "",
+                                                  TokenID::FromBytes( { 0x00 } ),
+                                                  "",
+                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
-    mint_result = node_original->MintTokens( 2000, "", "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_original->MintTokens( 2000,
+                                             "",
+                                             "",
+                                             TokenID::FromBytes( { 0x00 } ),
+                                             "",
+                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
-    mint_result = node_original->MintTokens( 30, "", "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_original->MintTokens( 30,
+                                             "",
+                                             "",
+                                             TokenID::FromBytes( { 0x00 } ),
+                                             "",
+                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
@@ -195,7 +210,12 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
         std::chrono::milliseconds( 30000 ),
         "node_duplicated not synced" );
 
-    mint_result = node_duplicated->MintTokens( 60000, "", "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_duplicated->MintTokens( 60000,
+                                               "",
+                                               "",
+                                               TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
 
     test::assertWaitForCondition(
@@ -284,7 +304,9 @@ TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
     auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
                                                        "",
                                                        "",
-                                                       sgns::TokenID::FromBytes( { 0x00 } ) );
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "",
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
