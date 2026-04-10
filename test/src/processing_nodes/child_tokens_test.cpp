@@ -43,11 +43,7 @@ namespace
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
-        std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
         std::string key;
         key.reserve( 64 );
@@ -58,8 +54,8 @@ namespace
                          64,
                          [&]()
                          {
-                             static constexpr std::string_view hexChars = "0123456789abcdef";
-                             return hexChars[dist( rng )];
+                             static constexpr std::string_view HEX_CHARS = "0123456789abcdef";
+                             return HEX_CHARS[dist( rng )];
                          } );
 
         if ( setAsAuthorized )
@@ -546,7 +542,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "file://[basepath]./child_tokens/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -582,7 +578,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -621,7 +617,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
@@ -630,7 +626,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -639,7 +635,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]

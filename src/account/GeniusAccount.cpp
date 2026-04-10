@@ -249,7 +249,7 @@ namespace sgns
             addresses.push_back( std::move( line ) );
         }
 
-        genius_account_logger()->debug( "Found {} addresses in files", addresses.size() );
+        genius_account_logger()->debug( "Found {} public addresses in storage", addresses.size() );
 
         return addresses;
     }

@@ -32,11 +32,11 @@
 
 typedef struct DevConfig
 {
-    char        Addr[255];
+    std::string Addr;
     std::string Cut;
     std::string TokenValueInGNUS;
     TokenID     TokenID;
-    char        BaseWritePath[1024];
+    std::string BaseWritePath;
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;

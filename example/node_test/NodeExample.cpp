@@ -1,6 +1,6 @@
 /**
  * @file       NodeExample.cpp
- * @brief      
+ * @brief
  * @date       2024-04-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -226,7 +226,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -262,7 +262,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -301,7 +301,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
@@ -310,7 +310,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -319,7 +319,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -494,7 +494,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -530,7 +530,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -569,7 +569,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
@@ -578,7 +578,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -587,7 +587,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -672,14 +672,13 @@ int main( int argc, char *argv[] )
     // Apply path override if provided
     if ( !path_override.empty() )
     {
-        strncpy( DEV_CONFIG.BaseWritePath, path_override.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) - 1 );
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0'; // Ensure null termination
-        std::cout << "Using custom path: " << path_override << std::endl;
+        DEV_CONFIG.BaseWritePath = path_override;
+        std::cout << "Using custom path: " << path_override << '\n';
     }
 
     // Generate a random Ethereum-compatible private key
     std::string eth_private_key = generate_eth_private_key();
-    std::cout << "Generated Ethereum Private Key: " << eth_private_key << std::endl;
+    std::cout << "Generated Ethereum Private Key: " << eth_private_key << '\n';
 
     //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
@@ -696,7 +695,7 @@ int main( int argc, char *argv[] )
 
     if ( terminal_mode )
     {
-        std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
+        std::cout << "Insert \"process\", the image and the number of tokens to be" << '\n';
         redraw_prompt();
     }
 

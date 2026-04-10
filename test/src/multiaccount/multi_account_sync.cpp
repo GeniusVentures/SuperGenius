@@ -49,11 +49,7 @@ protected:
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
 
-        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
-        std::strncpy( devConfig.Addr, dev_addr.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPathStr.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
 
         // Generate deterministic key from self_address
         std::string key;
