@@ -145,7 +145,7 @@ namespace sgns
         static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain";
         /// Default CID / hex of the Genesis block creator pub address (authorized)
         static constexpr std::string_view DEFAULT_FULL_NODE_PUB_ADDRESS =
-            "8a33bdf1445a68736429d1773be8682362753a0efc6fb9d8b3e8dffe3b74fc91e26b203fd521547a5219eddf1d3ac51fd17a7646c9bca5ef065da131add4e5a2";
+            "b214269f134fc439f4aec6c7237a5f48bcac99565f878378e84674c93237b9714030c0bfb43a5535a17fb4f1af81fd00507267dffe4461a6dd4dac379e3335ce";
         static constexpr std::string_view GENESIS_KEY                     = "gnus-genesis-block";
         static constexpr std::string_view GENESIS_CID_KEY                 = "gnus-genesis-block-cid";
         static constexpr std::string_view ACCOUNT_CREATION_KEY_PREFIX     = "gnus-account-creation-";
