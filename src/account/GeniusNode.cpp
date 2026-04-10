@@ -528,7 +528,7 @@ namespace sgns
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
                 crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
                 config );
-            auto pubs = pubsub_->Start( pubsubport_, {}, old_lanip, {} );
+            auto pubs = pubsub_->Start( pubsubport_, { "/dns4/sg-fullnode-1.gnus.ai/tcp/40102/ipfs/12D3KooWRqFHPFz6YptGnt4wLEGsNuWuv5TLN7rdQ9CFJcbHCWZC" }, old_lanip, {} );
             pubs.wait();
             node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
 
@@ -1097,26 +1097,30 @@ namespace sgns
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
+        (void)timeout;
+
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
+
+        auto available_balance = utxo_manager_.GetBalance( token_id );
+        if ( available_balance < amount )
+        {
+            node_logger_->error( "PayDev insufficient local funds: requested={}, available={}",
+                                 amount,
+                                 available_balance );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
+        }
+
         auto start_time = std::chrono::steady_clock::now();
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
         OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
-        auto paydev_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
         auto end_time = std::chrono::steady_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
 
-        if ( paydev_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
-
-        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "PayDev transaction {} sent in {} ms", tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
