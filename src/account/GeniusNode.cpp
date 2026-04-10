@@ -229,6 +229,7 @@ namespace sgns
         write_base_path_( dev_config.BaseWritePath ),
         account_( std::move( account ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
+        io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         is_full_node_( is_full_node ),
@@ -264,7 +265,7 @@ namespace sgns
         io_threads_.reserve( io_thread_count_ );
         for ( unsigned i = 0; i < io_thread_count_; ++i )
         {
-            io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
+            io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
         }
 
         if ( use_upnp_ )
@@ -396,7 +397,7 @@ namespace sgns
                                 // Move transaction initialization off the AccountMessenger worker thread.
                                 boost::asio::post(
                                     *strong->io_,
-                                    [weak_self]()
+                                    [weak_self]
                                     {
                                         if ( auto strong = weak_self.lock() )
                                         {
@@ -660,64 +661,62 @@ namespace sgns
 
     bool GeniusNode::InitUPNP()
     {
-        bool ret  = false;
         auto upnp = std::make_shared<upnp::UPNP>();
+        if ( !upnp->GetIGD() )
+        {
+            return true;
+        }
+
+        bool ret = false;
         do
         {
-            if ( !upnp->GetIGD() )
-            {
-                ret = true;
-            }
-            else
-            {
-                std::string wanip = upnp->GetWanIP();
-                std::string lanip = upnp->GetLocalIP();
-                node_logger_->info( "Wan IP: {}", wanip );
-                node_logger_->info( "Lan IP: {}", lanip );
+            std::string wanip = upnp->GetWanIP();
+            std::string lanip = upnp->GetLocalIP();
+            node_logger_->info( "Wan IP: {}", wanip );
+            node_logger_->info( "Lan IP: {}", lanip );
 
-                std::string owner;
+            std::string owner;
 
-                constexpr uint16_t MAX_ATTEMPTS = 10;
-                for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            constexpr uint16_t MAX_ATTEMPTS = 10;
+            for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            {
+                uint16_t candidate_port = pubsubport_ + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
                 {
-                    uint16_t candidate_port = pubsubport_ + i;
-                    if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                    if ( owner == lanip )
                     {
-                        if ( owner == lanip )
+                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
-                            node_logger_->info( "Port {} is already mapped by this device. Try using it.",
-                                                candidate_port );
-                            if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                            {
-                                ret         = true;
-                                pubsubport_ = candidate_port;
-                                break;
-                            }
-
-                            node_logger_->error(
-                                "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                                candidate_port );
-                            continue;
+                            ret         = true;
+                            pubsubport_ = candidate_port;
+                            break;
                         }
-                        node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+
+                        node_logger_->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
                         continue;
                     }
-
-                    if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                    {
-                        node_logger_->info( "Successfully opened port {}", candidate_port );
-                        ret         = true;
-                        pubsubport_ = candidate_port;
-                        break;
-                    }
-                    node_logger_->warn( "Failed to open port {}", candidate_port );
+                    node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+                    continue;
                 }
-                if ( !ret )
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                 {
-                    node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                    node_logger_->info( "Successfully opened port {}", candidate_port );
+                    ret         = true;
+                    pubsubport_ = candidate_port;
                     break;
                 }
+                node_logger_->warn( "Failed to open port {}", candidate_port );
             }
+            if ( !ret )
+            {
+                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                break;
+            }
+
         } while ( 0 );
 
         return ret;
@@ -840,15 +839,11 @@ namespace sgns
         if ( pubsub_ )
         {
             pubsub_->Stop(); // Stop activities of OtherClass
-            node_logger_->debug("pubsub: {}", pubsub_.use_count());
         }
+        io_work_guard_.reset();
         if ( io_ )
         {
             io_->stop(); // Stop our io_context
-        }
-        if ( io_work_guard_ )
-        {
-            io_work_guard_->reset();
         }
         for ( auto &t : io_threads_ )
         {
@@ -873,7 +868,6 @@ namespace sgns
             processing_callback_pool_.reset();
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-        node_logger_->debug("pubsub2: {}", pubsub_.use_count());
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
 

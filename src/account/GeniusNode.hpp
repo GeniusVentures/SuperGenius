@@ -307,26 +307,27 @@ namespace sgns
         std::shared_ptr<GeniusAccount> account_;
 
     private:
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
-        std::shared_ptr<boost::asio::io_context>              io_;
-        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;
-        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;
-        std::shared_ptr<TransactionManager>                   transaction_manager_;
-        std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
-        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
-        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
-        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>               logging_system_;
-        bool                                                  autodht_;
-        bool                                                  isprocessor_;
-        bool                                                  is_full_node_;
-        base::Logger                                          node_logger_;
-        DevConfig_st                                          dev_config_;
-        std::string                                           gnus_network_full_path_;
-        std::string                                           processing_channel_topic_;
-        std::string                                           processing_grid_chanel_topic_;
-        uint16_t                                              pubsubport_;
-        std::shared_ptr<Blockchain>                           blockchain_;
+        std::shared_ptr<boost::asio::io_context>                                 io_;
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_work_guard_;
+        std::shared_ptr<crdt::GlobalDB>                                          tx_globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                                          job_globaldb_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                               pubsub_;
+        std::shared_ptr<TransactionManager>                                      transaction_manager_;
+        std::shared_ptr<processing::ProcessingTaskQueueImpl>                     task_queue_;
+        std::shared_ptr<processing::ProcessingCoreImpl>                          processing_core_;
+        std::shared_ptr<processing::ProcessingServiceImpl>                       processing_service_;
+        std::shared_ptr<processing::SubTaskResultStorageImpl>                    task_result_storage_;
+        std::shared_ptr<soralog::LoggingSystem>                                  logging_system_;
+        bool                                                                     autodht_;
+        bool                                                                     isprocessor_;
+        bool                                                                     is_full_node_;
+        base::Logger                                                             node_logger_;
+        DevConfig_st                                                             dev_config_;
+        std::string                                                              gnus_network_full_path_;
+        std::string                                                              processing_channel_topic_;
+        std::string                                                              processing_grid_chanel_topic_;
+        uint16_t                                                                 pubsubport_;
+        std::shared_ptr<Blockchain>                                              blockchain_;
 
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
@@ -366,10 +367,8 @@ namespace sgns
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
         static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 };
 
-        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
         static constexpr size_t                                         DEFAULT_IO_THREADS = 4;
         size_t                                                          io_thread_count_{ DEFAULT_IO_THREADS };
-        std::optional<IoWorkGuard>                                      io_work_guard_;
         std::vector<std::thread>                                        io_threads_;
         std::thread                                                     upnp_thread;
         std::atomic<bool>                                               stop_upnp{ false };
