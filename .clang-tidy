@@ -49,6 +49,7 @@ Checks: >
   readability-*,
   -readability-identifier-length,
   -readability-magic-numbers,
+  -readability-math-missing-parentheses,
   -readability-named-parameter,
   -readability-qualified-auto
 
@@ -59,7 +60,7 @@ CheckOptions:
 
   performance-unnecessary-value-param.IncludeStyle: google
 
-  readability-identifier-naming.VariableCase: lower_case
+  readability-identifier-naming.DefaultCase: lower_case
 
   readability-identifier-naming.ClassCase: CamelCase
 
