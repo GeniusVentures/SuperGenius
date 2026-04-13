@@ -15,7 +15,9 @@
 
 namespace fs = boost::filesystem;
 
-static const sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
+using namespace sgns;
+
+static const TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
 TEST( AccountCreationTest, CreationWithEthereumKey )
 {

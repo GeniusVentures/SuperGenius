@@ -999,8 +999,15 @@ namespace sgns
         this->transaction_manager_->Stop();
         this->transaction_manager_.reset();
 
-        this->blockchain_->Stop();
+        BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
         this->blockchain_.reset();
+
+        processing_service_.reset();
+        task_result_storage_.reset();
+        processing_core_.reset();
+        task_queue_.reset();
+
+        this->tx_globaldb_.reset();
 
         this->account_.swap( account );
         account.reset();
