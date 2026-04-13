@@ -36,6 +36,7 @@
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
+#include "outcome/outcome.hpp"
 #include <Generators.hpp>
 
 namespace
@@ -110,6 +111,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Could not get a price";
         case sgns::GeniusNode::Error::TRANSACTIONS_NOT_READY:
             return "Transaction manager is not ready";
+        case sgns::GeniusNode::Error::TRANSACTION_NOT_FINALIZED:
+            return "Requested transaction not finalized within timeout";
+        case sgns::GeniusNode::Error::TRANSACTION_FAILED:
+            return "Requested transaction failed";
     }
     return "Unknown error";
 }
@@ -1153,7 +1158,7 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
         BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
-        node_logger_->debug( "Mint transaction {} sent ", tx_id );
+        node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
         return tx_id;
     }
 
@@ -1228,31 +1233,106 @@ namespace sgns
         return tx_id;
     }
 
+    outcome::result<std::string> GeniusNode::PayDev( uint64_t amount, TokenID token_id )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+
+        auto available_balance = utxo_manager_.GetBalance( token_id );
+        if ( available_balance < amount )
+        {
+            node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
+                                 __func__,
+                                 amount,
+                                 available_balance );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
+        }
+
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
+
+        node_logger_->debug( "{}: transaction {} triggered ", __func__, tx_id );
+        return tx_id;
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
+        BOOST_OUTCOME_TRY( auto &&tx_id, PayDev( amount, token_id ) );
+
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
+        {
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
+        }
+
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
+    outcome::result<std::pair<TransactionManager::TransactionStatus, uint64_t>> GeniusNode::WaitForFinalized(
+        const std::string        &tx_id,
+        std::chrono::milliseconds timeout )
+    {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
-        auto paydev_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( paydev_result != TransactionManager::TransactionStatus::CONFIRMED )
+        do
         {
-            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
+            auto finalized_result = IsFinalized( tx_id );
+            if ( finalized_result.has_value() )
+            {
+                auto end_time = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+                node_logger_->debug( "{}: Transaction finalized with status {} and duration of {} ms",
+                                     __func__,
+                                     static_cast<int>( finalized_result.value() ),
+                                     duration );
 
-        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
-        return std::make_pair( tx_id, duration );
+                return std::make_pair( finalized_result.value(), duration );
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        } while ( std::chrono::steady_clock::now() - start_time < timeout );
+
+        node_logger_->error( "{}: Transaction not finalized within timeout of {} ms", __func__, timeout.count() );
+
+        return outcome::failure( Error::TRANSACTION_NOT_FINALIZED );
+    }
+
+    std::optional<TransactionManager::TransactionStatus> GeniusNode::IsFinalized( const std::string &tx_id )
+    {
+        auto manager_result = GetTransactionManager();
+
+        if ( manager_result.has_failure() )
+        {
+            node_logger_->error( "{}: Failed to get Transaction Manager: {}",
+                                 __func__,
+                                 manager_result.error().message() );
+            return std::nullopt;
+        }
+        auto manager   = manager_result.value();
+        auto tx_status = manager->GetOutgoingStatusByTxId( tx_id );
+        if ( tx_status == TransactionManager::TransactionStatus::CONFIRMED ||
+             tx_status == TransactionManager::TransactionStatus::FAILED ||
+             tx_status == TransactionManager::TransactionStatus::INVALID )
+        {
+            return tx_status;
+        }
+        return std::nullopt;
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(

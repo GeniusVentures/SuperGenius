@@ -93,19 +93,21 @@ namespace sgns
          */
         enum class Error : uint8_t
         {
-            INSUFFICIENT_FUNDS       = 1,  ///< Insufficient funds for a transaction
-            DATABASE_WRITE_ERROR     = 2,  ///< Error writing data into the database
-            INVALID_TRANSACTION_HASH = 3,  ///< Input transaction hash is invalid
-            INVALID_CHAIN_ID         = 4,  ///< Chain ID is invalid
-            INVALID_TOKEN_ID         = 5,  ///< Token ID is invalid
-            TOKEN_ID_MISMATCH        = 6,  ///< Informed Token ID doesn't match initialized ID
-            PROCESS_COST_ERROR       = 7,  ///< The calculated Processing cost was negative
-            PROCESS_INFO_MISSING     = 8,  ///< Processing information missing on JSON file
-            INVALID_JSON             = 9,  ///< JSON cannot be parsed>
-            INVALID_BLOCK_PARAMETERS = 10, ///< JSON params for blocks incorrect or missing>
-            NO_PROCESSOR             = 11, ///< No processor for this type
-            NO_PRICE                 = 12, ///< Couldn't get price of gnus
-            TRANSACTIONS_NOT_READY   = 13, ///< Transactions aren't ready
+            INSUFFICIENT_FUNDS        = 1,  ///< Insufficient funds for a transaction
+            DATABASE_WRITE_ERROR      = 2,  ///< Error writing data into the database
+            INVALID_TRANSACTION_HASH  = 3,  ///< Input transaction hash is invalid
+            INVALID_CHAIN_ID          = 4,  ///< Chain ID is invalid
+            INVALID_TOKEN_ID          = 5,  ///< Token ID is invalid
+            TOKEN_ID_MISMATCH         = 6,  ///< Informed Token ID doesn't match initialized ID
+            PROCESS_COST_ERROR        = 7,  ///< The calculated Processing cost was negative
+            PROCESS_INFO_MISSING      = 8,  ///< Processing information missing on JSON file
+            INVALID_JSON              = 9,  ///< JSON cannot be parsed>
+            INVALID_BLOCK_PARAMETERS  = 10, ///< JSON params for blocks incorrect or missing>
+            NO_PROCESSOR              = 11, ///< No processor for this type
+            NO_PRICE                  = 12, ///< Couldn't get price of gnus
+            TRANSACTIONS_NOT_READY    = 13, ///< Transactions aren't ready
+            TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction not finalized within timeout
+            TRANSACTION_FAILED        = 15, ///< Requested transaction failed
         };
 
 #ifdef SGNS_DEBUG
@@ -214,10 +216,17 @@ namespace sgns
 
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
-        outcome::result<std::pair<std::string, uint64_t>> PayDev(
-            uint64_t                  amount,
-            TokenID                   token_id,
-            std::chrono::milliseconds timeout = std::chrono::milliseconds( TIMEOUT_TRANSFER ) );
+        outcome::result<std::string> PayDev( uint64_t amount, TokenID token_id );
+
+        outcome::result<std::pair<std::string, uint64_t>> PayDev( uint64_t                  amount,
+                                                                  TokenID                   token_id,
+                                                                  std::chrono::milliseconds timeout );
+
+        outcome::result<std::pair<TransactionManager::TransactionStatus, uint64_t>> WaitForFinalized(
+            const std::string        &tx_id,
+            std::chrono::milliseconds timeout );
+
+        std::optional<TransactionManager::TransactionStatus> IsFinalized( const std::string &tx_id );
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub> GetPubSub()
         {
