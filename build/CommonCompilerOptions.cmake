@@ -47,6 +47,15 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
+option(SGNS_ENABLE_RELEASE_SYMBOLS "Build Release with debug symbols for symbolication" ON)
+
+if(SGNS_ENABLE_RELEASE_SYMBOLS AND CMAKE_CXX_COMPILER_ID MATCHES "^(AppleClang|Clang|GNU)$")
+    add_compile_options(
+        "$<$<CONFIG:Release>:-gline-tables-only>"
+        "$<$<CONFIG:RelWithDebInfo>:-g>"
+    )
+endif()
+
 # Define zkllvm directory
 if(NOT DEFINED ZKLLVM_BUILD_DIR)
     get_filename_component(BUILD_PLATFORM_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
