@@ -393,6 +393,7 @@ namespace sgns
 
         auto storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
                                                             libp2p::multi::detail::encodeBase58( pub_key_vec ) );
+        BOOST_OUTCOME_TRY( storage->Save( "sgns_key", key_seed.str() ) );
 
         // Save public key to file
         auto file_path = SetupStoragePath( base_path );
@@ -873,9 +874,9 @@ namespace sgns
         // Check if we have a fresh cached result (within 5 seconds)
         if ( cached_nonce_result_.has_value() )
         {
-            auto now          = std::chrono::steady_clock::now();
-            uint64_t cache_age_ms = std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ )
-                                    .count();
+            auto     now = std::chrono::steady_clock::now();
+            uint64_t cache_age_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>( now - cached_nonce_timestamp_ ).count();
 
             if ( cache_age_ms < NONCE_CACHE_DURATION_MS )
             {

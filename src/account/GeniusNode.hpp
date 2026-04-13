@@ -116,7 +116,6 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
         static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
-
         outcome::result<void> SelectAccount( std::string_view public_address );
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
