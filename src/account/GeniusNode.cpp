@@ -1033,7 +1033,7 @@ namespace sgns
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
@@ -1049,23 +1049,20 @@ namespace sgns
                                                                               TokenID            tokenid,
                                                                               std::chrono::milliseconds timeout )
     {
-        auto start_time = std::chrono::steady_clock::now();
-        OUTCOME_TRY( auto &&mint_hash, MintTokens( amount, transaction_hash, chainid, tokenid ) );
+        OUTCOME_TRY( auto &&tx_id, MintTokens( amount, transaction_hash, chainid, tokenid ) );
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        auto mint_result = manager->WaitForTransactionOutgoing( mint_hash, timeout );
+        OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+        auto [tx_status, duration] = finalized_result;
 
-        if ( mint_result != TransactionManager::TransactionStatus::CONFIRMED )
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger_->error( "Mint transaction {} failed after {} ms", mint_hash, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
         }
 
-        node_logger_->debug( "Mint transaction {} completed in {} ms", mint_hash, duration );
-        return std::make_pair( mint_hash, duration );
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
+        return std::make_pair( tx_id, duration );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
@@ -1073,27 +1070,19 @@ namespace sgns
                                                                                  TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        OUTCOME_TRY( auto &&tx_id, TransferFunds( amount, destination, token_id ) );
+
+        OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto start_time = std::chrono::steady_clock::now();
-
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
-
-        auto transfer_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( transfer_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
         }
 
-        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -1103,13 +1092,24 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            return outcome::failure( boost::system::error_code{} );
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+
+        auto available_balance = utxo_manager_.GetBalance( token_id );
+        if ( available_balance < amount )
+        {
+            node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
+                                 __func__,
+                                 amount,
+                                 available_balance );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
         OUTCOME_TRY( auto &&manager, GetTransactionManager() );
         OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
-        node_logger_->debug( "TransferFunds transaction {} sent", tx_id );
+        node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
     }
 
