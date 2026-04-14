@@ -487,77 +487,150 @@ namespace sgns
 
     bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
     {
-        bool ret    = true;
-        pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
+        bool ret = true;
+        std::string config_path = write_base_path_ + "/network_config.json";
+        bool config_found = false;
+        rapidjson::Document config_json;
+        std::string pubsub_bind_address = "0.0.0.0";
+        std::vector<std::string> bootstrap_addresses;
+        std::string authorized_full_node;
+        bool upnp_enabled = use_upnp_;
+        int high_water = is_full_node ? 400 : 300;
+        int low_water = is_full_node ? 200 : 150;
+        std::string port_str;
+        uint16_t config_port = 0;
+
+        // Try to read config file
+        std::ifstream config_file(config_path);
+        if (config_file.good()) {
+            std::stringstream buffer;
+            buffer << config_file.rdbuf();
+            config_json.Parse(buffer.str().c_str());
+            if (!config_json.HasParseError() && config_json.IsObject()) {
+                config_found = true;
+                if (config_json.HasMember("pubsub_port") && config_json["pubsub_port"].IsString()) {
+                    port_str = config_json["pubsub_port"].GetString();
+                    if (!port_str.empty()) {
+                        try {
+                            config_port = static_cast<uint16_t>(std::stoi(port_str));
+                        } catch (...) {
+                            node_logger_->warn("Invalid pubsub_port in config, using default");
+                        }
+                    }
+                }
+                if (config_json.HasMember("pubsub_bind_address") && config_json["pubsub_bind_address"].IsString()) {
+                    pubsub_bind_address = config_json["pubsub_bind_address"].GetString();
+                }
+                if (config_json.HasMember("bootstrap_addresses") && config_json["bootstrap_addresses"].IsArray()) {
+                    for (auto& v : config_json["bootstrap_addresses"].GetArray()) {
+                        if (v.IsString()) bootstrap_addresses.push_back(v.GetString());
+                    }
+                }
+                if (config_json.HasMember("upnp_enabled") && config_json["upnp_enabled"].IsBool()) {
+                    upnp_enabled = config_json["upnp_enabled"].GetBool();
+                }
+                if (config_json.HasMember("high_water") && config_json["high_water"].IsInt()) {
+                    high_water = config_json["high_water"].GetInt();
+                }
+                if (config_json.HasMember("low_water") && config_json["low_water"].IsInt()) {
+                    low_water = config_json["low_water"].GetInt();
+                }
+                if (config_json.HasMember("authorized_full_node") && config_json["authorized_full_node"].IsString()) {
+                    authorized_full_node = config_json["authorized_full_node"].GetString();
+                }
+            }
+        }
+
+        // Port selection logic
+        if (config_port != 0) {
+            pubsubport_ = config_port;
+        } else {
+            pubsubport_ = GenerateRandomPort(base_port, account_->GetAddress());
+        }
 
         std::string old_lanip;
-        do
-        {
-            if ( use_upnp_ )
-            {
-                //ret = InitUPNP();
-                (void)InitUPNP(); // Ignore UPNP init result for now
+        do {
+            if (upnp_enabled) {
+                // Only try the specified port if set in config, do not try alternatives
+                if (config_port != 0) {
+                    auto upnp = std::make_shared<upnp::UPNP>();
+                    if (upnp->GetIGD()) {
+                        std::string owner;
+                        if (!upnp->CheckIfPortInUse(pubsubport_, "TCP", owner) || owner == upnp->GetLocalIP()) {
+                            if (!upnp->OpenPort(pubsubport_, pubsubport_, "TCP", 3600)) {
+                                node_logger_->error("Failed to open specified UPnP port {}", pubsubport_);
+                                ret = false;
+                                break;
+                            }
+                        } else {
+                            node_logger_->error("Specified port {} already in use by {}", pubsubport_, owner);
+                            ret = false;
+                            break;
+                        }
+                    }
+                } else {
+                    (void)InitUPNP(); // Fallback to old logic if no port specified
+                }
             }
 
             // Make a base58 out of our address
-            std::string                tempaddress = account_->GetAddress();
-            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
-            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
-            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+            std::string tempaddress = account_->GetAddress();
+            std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
+            std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
+            SHA256(inputBytes.data(), inputBytes.size(), hash.data());
 
-            libp2p::protocol::kademlia::ContentId key( hash );
-            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
-            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
-            if ( !maybe_base58 )
-            {
+            libp2p::protocol::kademlia::ContentId key(hash);
+            auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
+            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
+            if (!maybe_base58) {
                 ret = false;
-                node_logger_->error( "We couldn't convert the account {} to base58", account_->GetAddress() );
+                node_logger_->error("We couldn't convert the account {} to base58", account_->GetAddress());
                 break;
             }
             base58key_ = maybe_base58.value();
 
-            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
-                                      base58key_;
-
+            gnus_network_full_path_ = std::string(GNUS_NETWORK_PATH) + version::GetNetAndVersionAppendix() + base58key_;
             auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
             //Set a pubsub config, use no signing because we can verify with proof and dag structure
             libp2p::protocol::gossip::Config config;
-            config.echo_forward_mode       = false;
-            config.sign_messages           = false;
-            config.seen_cache_limit        = 10;
-            config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
-            config.rw_timeout_msec         = std::chrono::seconds{ 30 };
+            config.echo_forward_mode = false;
+            config.sign_messages = false;
+            config.seen_cache_limit = 10;
+            config.heartbeat_interval_msec = std::chrono::milliseconds{500};
+            config.rw_timeout_msec = std::chrono::seconds{30};
 
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
-                config );
+                crdt::KeyPairFileStorage(write_base_path_ + pubsubKeyPath).GetKeyPair().value(),
+                config);
+
+            // Bootstrapper logic
+            std::vector<std::string> bootstrappers;
+            if (config_found) {
+                bootstrappers = bootstrap_addresses;
+            } else {
+                // If no config, do not bootstrap sg-fullnode-1
+                bootstrappers = {};
+            }
+
             auto pubs = pubsub_->Start(
                 pubsubport_,
-                { "/dns4/sg-fullnode-1.gnus.ai/tcp/40102/ipfs/12D3KooWRqFHPFz6YptGnt4wLEGsNuWuv5TLN7rdQ9CFJcbHCWZC" },
+                bootstrappers,
                 old_lanip,
-                {} );
+                {});
             pubs.wait();
-            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
+            node_logger_->info("PubSub started at address: {}", pubsub_->GetInterfaceAddress());
 
-            if ( !is_full_node )
-            {
-                pubsub_->GetHost()->getConnectionManagerConfig().high_water = 300;
-                pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 150;
-            }
-            else
-            {
-                pubsub_->GetHost()->getConnectionManagerConfig().high_water = 400;
-                pubsub_->GetHost()->getConnectionManagerConfig().low_water  = 200;
-            }
-            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
+            pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water = low_water;
+
+            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>(pubsub_->GetHost(), scheduler_);
 
             // Initialize DHT early so peer discovery works during database migration
-            if ( autodht_ )
-            {
+            if (autodht_) {
                 DHTInit();
             }
-        } while ( 0 );
+        } while (0);
         return ret;
     }
 
