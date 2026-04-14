@@ -200,6 +200,17 @@ namespace sgns
                             }
                             break;
                         }
+                        case 2:
+                        {
+                            sgns::crdt::GlobalDB::Buffer registry_cid_key;
+                            registry_cid_key.put( std::string( blockchain::ValidatorRegistry::RegistryCidKey() ) );
+                            auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                            if ( registry_cid.has_value() )
+                            {
+                                return std::string( registry_cid.value().toString() );
+                            }
+                            break;
+                        }
                         default:
                             break;
                     }

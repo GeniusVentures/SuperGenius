@@ -893,6 +893,19 @@ namespace sgns
         return messenger_->RequestAccountCreation( timeout_ms, std::move( callback ) );
     }
 
+    outcome::result<void> GeniusAccount::RequestValidatorRegistry(
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback ) const
+    {
+        if ( !messenger_ )
+        {
+            return outcome::failure( std::errc::no_such_device );
+        }
+        genius_account_logger()->debug( "Requesting Validator Registry block from the network" );
+
+        return messenger_->RequestValidatorRegistry( timeout_ms, std::move( callback ) );
+    }
+
     outcome::result<void> GeniusAccount::RequestHeads( const std::unordered_set<std::string> &topics ) const
     {
         if ( !messenger_ )

@@ -849,6 +849,22 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> AccountMessenger::RequestValidatorRegistry(
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback )
+    {
+        EnqueueTask( { RequestType::ValidatorRegistry,
+                       timeout_ms,
+                       150,
+                       2,
+                       std::string{},
+                       std::string{},
+                       std::move( callback ),
+                       nullptr,
+                       nullptr } );
+        return outcome::success();
+    }
+
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,
                                                                 const std::set<std::string>       &topics )
     {
@@ -896,6 +912,7 @@ namespace sgns
                 }
                 case RequestType::Genesis:
                 case RequestType::AccountCreation:
+                case RequestType::ValidatorRegistry:
                 {
                     auto res = PerformBlockRequest( task.timeout_ms, BlockIndexRequest{ task.block_index } );
                     if ( task.callback )
