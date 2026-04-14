@@ -582,8 +582,8 @@ namespace sgns
             std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
             SHA256(inputBytes.data(), inputBytes.size(), hash.data());
 
-            libp2p::protocol::kademlia::ContentId key(hash);
-            auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key.data);
+            auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
+            auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key);
             auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
             if (!maybe_base58) {
                 ret = false;
@@ -927,11 +927,11 @@ namespace sgns
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
         // Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
+        auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
 
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger_->info( "CID Test:: {}", cidstring.value() );

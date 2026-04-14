@@ -103,7 +103,7 @@ namespace sgns::processing
     outcome::result<std::pair<std::string, SGProcessing::Task>> ProcessingTaskQueueImpl::GrabTask()
     {
         m_logger->info( "GRAB_TASK called - blacklist has {} items", m_badjobs.size() );
-        OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
+        BOOST_OUTCOME_TRY( ( auto &&, queryTasks ), m_db->QueryKeyValues( std::string( TASK_LIST_KEY ) ) );
 
         //m_logger->info( "Task list grabbed from CRDT datastore" );
 
@@ -220,7 +220,7 @@ namespace sgns::processing
         complete_task_path % taskId;
         sgns::crdt::HierarchicalKey task_key( complete_task_path.str() );
 
-        OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( task_key ) );
+        BOOST_OUTCOME_TRY( ( auto &&, task_buffer ), m_db->Get( task_key ) );
 
         SGProcessing::Task task;
 
@@ -243,7 +243,7 @@ namespace sgns::processing
 
     outcome::result<void> ProcessingTaskQueueImpl::IsTaskValid( const std::string taskJson )
     {
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( taskJson ) );
         return outcome::success();
     }
 

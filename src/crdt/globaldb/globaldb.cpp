@@ -16,7 +16,8 @@
 #include <libp2p/multi/multiaddress.hpp>
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <libp2p/common/literals.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <boost/di/extension/scopes/shared.hpp>
@@ -185,7 +186,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                          scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
@@ -301,7 +302,7 @@ namespace sgns::crdt
     outcome::result<void> GlobalDB::Init(
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {

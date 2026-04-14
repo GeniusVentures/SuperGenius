@@ -15,6 +15,8 @@
 #include <libp2p/protocol/holepunch/holepunch_client.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 
 namespace sgns::crdt
 {
@@ -44,7 +46,7 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
             std::shared_ptr<CrdtOptions>                                          crdtOptions,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-            std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
@@ -204,7 +206,7 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr );
 

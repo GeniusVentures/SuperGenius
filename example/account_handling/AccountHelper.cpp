@@ -133,11 +133,11 @@ namespace sgns
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
         //Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
+        auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
         pubsub_->GetDHT()->ProvideCID( key, true );
 
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         std::cout << "CID Test::" << cidstring.value() << std::endl;
