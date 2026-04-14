@@ -272,11 +272,6 @@ namespace sgns::crdt
                                         const Buffer                          &value,
                                         const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
 
         return m_crdtDatastore->PutKey( key, value, topics );
     }
@@ -284,11 +279,6 @@ namespace sgns::crdt
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
         AtomicTransaction batch( m_crdtDatastore );
 
         for ( auto &data : data_vector )
@@ -306,11 +296,6 @@ namespace sgns::crdt
 
     outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
 
         return m_crdtDatastore->DeleteKey( key, topics );
     }
@@ -430,30 +415,28 @@ namespace sgns::crdt
     {
         if ( !m_crdtDatastore )
         {
-            m_logger->error( "RequestHeadBroadcast: CRDT datastore not initialized" );
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        if ( !cid_receiving_started_ )
+        {
+            m_logger->error( "{}: Broadcaster not receiving yet", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        if ( !cid_sync_started_ )
+        {
+            m_logger->error( "{}: CRDT not syncing", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
         if ( !started_.load() )
         {
-            m_logger->error( "RequestHeadBroadcast: GlobalDB not started" );
+            m_logger->error( "{}: GlobalDB not started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        m_logger->debug( "RequestHeadBroadcast: Forwarding request for {} topics", topics.size() );
+        m_logger->debug( "{}: Forwarding request for {} topics", __func__, topics.size() );
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
-    }
-
-    void GlobalDB::SetBroadcastEnabled( bool enabled )
-    {
-        if ( !m_crdtDatastore )
-        {
-            m_logger->warn( "SetBroadcastEnabled: CRDT datastore not initialized" );
-            return;
-        }
-
-        m_crdtDatastore->SetBroadcastEnabled( enabled );
-        m_logger->info( "SetBroadcastEnabled: {}", enabled ? "enabled" : "disabled" );
     }
 
     outcome::result<std::unordered_set<std::string>> GlobalDB::GetMonitoredTopics() const

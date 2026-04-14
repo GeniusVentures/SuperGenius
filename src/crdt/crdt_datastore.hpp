@@ -243,11 +243,6 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
-        /**
-         * @brief Enable or disable outgoing head broadcasts.
-         * @param[in] enabled True to allow broadcasts, false to suppress them.
-         */
-        void SetBroadcastEnabled( bool enabled );
 
         /**
          * @brief Query whether outgoing head broadcasts are enabled.

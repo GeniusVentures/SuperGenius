@@ -171,12 +171,6 @@ namespace sgns::crdt
         outcome::result<void> RequestHeadBroadcast( const std::set<std::string> &topics );
 
         /**
-         * @brief       Enable or disable outgoing CRDT head broadcasts.
-         * @param[in]   enabled True to allow broadcasts, false to suppress them.
-         */
-        void SetBroadcastEnabled( bool enabled );
-
-        /**
          * @brief       Get the topics that are being listened to
          * @return      A set of the monitored topic names
          */
@@ -213,6 +207,9 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
+        bool                                              cid_sync_started_;
+        bool                                              cid_receiving_started_;
+        bool                                              head_broadcasting_started_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

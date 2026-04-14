@@ -70,6 +70,35 @@ namespace sgns
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
+        auto request_validator_registry = []( const std::shared_ptr<Blockchain> &self )
+        {
+            if ( !self )
+            {
+                return;
+            }
+            auto request_result = self->account_->RequestValidatorRegistry(
+                TIMEOUT_GENESIS_BLOCK_MS,
+                [weak_ptr( std::weak_ptr<Blockchain>( self ) )]( outcome::result<std::string> registry_cid_res )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        if ( registry_cid_res.has_error() )
+                        {
+                            strong->logger_->warn( "[{}] Validator registry request finished with error",
+                                                   strong->account_->GetAddress().substr( 0, 8 ) );
+                            return;
+                        }
+                        strong->logger_->debug( "[{}] Validator registry request finished with CID {}",
+                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                registry_cid_res.value().substr( 0, 8 ) );
+                    }
+                } );
+            if ( request_result.has_error() )
+            {
+                self->logger_->warn( "[{}] Failed to request validator registry during blockchain init",
+                                     self->account_->GetAddress().substr( 0, 8 ) );
+            }
+        };
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
@@ -113,7 +142,7 @@ namespace sgns
                     (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -122,6 +151,7 @@ namespace sgns
                     {
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
+                        request_validator_registry( strong );
                     }
                 }
             } );
@@ -138,6 +168,10 @@ namespace sgns
         {
             instance->logger_->error( "[{}] Failed to ensure validator registry during init",
                                       instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+        if ( !instance->validator_registry_initialized_.load() )
+        {
+            request_validator_registry( instance );
         }
 
         if ( !genesis_filter_initialized )

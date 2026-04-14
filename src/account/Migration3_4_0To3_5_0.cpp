@@ -485,6 +485,7 @@ namespace sgns
         account_->DeconfigureDatabaseDependencies();
         db_3_4_0_.reset();
         db_3_5_0_.reset();
+        blockchain_.reset();
         return outcome::success();
     }
 }
