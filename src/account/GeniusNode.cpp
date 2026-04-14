@@ -548,7 +548,6 @@ namespace sgns
             pubsubport_ = GenerateRandomPort(base_port, account_->GetAddress());
         }
 
-        std::string old_lanip;
         do {
             if (upnp_enabled) {
                 // Only try the specified port if set in config, do not try alternatives
@@ -616,7 +615,7 @@ namespace sgns
             auto pubs = pubsub_->Start(
                 pubsubport_,
                 bootstrappers,
-                old_lanip,
+                pubsub_bind_address,
                 {});
             pubs.wait();
             node_logger_->info("PubSub started at address: {}", pubsub_->GetInterfaceAddress());
