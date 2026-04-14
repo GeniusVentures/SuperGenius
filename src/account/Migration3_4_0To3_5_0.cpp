@@ -123,8 +123,7 @@ namespace sgns
 
         account_->ConfigureDatabaseDependencies( db_3_5_0_ );
 
-        db_3_5_0_->Start();
-        db_3_5_0_->SetBroadcastEnabled( false );
+        db_3_5_0_->StartCICSync();
         logger_->info( "Broadcast suppression enabled for migration target DB" );
 
         //init blockchain
@@ -140,8 +139,6 @@ namespace sgns
                         if ( result.has_error() )
                         {
                             strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
-                            strong->account_->RequestHeads(
-                                { std::string( sgns::blockchain::ValidatorRegistry::ValidatorTopic() ) } );
                             strong->blockchain_status_.store( Status::ST_ERROR );
                             return;
                         }
@@ -488,7 +485,6 @@ namespace sgns
         account_->DeconfigureDatabaseDependencies();
         db_3_4_0_.reset();
         db_3_5_0_.reset();
-        blockchain_.reset();
         return outcome::success();
     }
 }
