@@ -91,7 +91,10 @@ namespace sgns::crdt
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_pubsub( std::move( pubsub ) ),
-        started_{ false }
+        started_{ false },
+        cid_sync_started_{ false },
+        cid_receiving_started_{ false },
+        head_broadcasting_started_{ false }
     {
     }
 
@@ -272,7 +275,6 @@ namespace sgns::crdt
                                         const Buffer                          &value,
                                         const std::unordered_set<std::string> &topics )
     {
-
         return m_crdtDatastore->PutKey( key, value, topics );
     }
 
@@ -296,7 +298,6 @@ namespace sgns::crdt
 
     outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
-
         return m_crdtDatastore->DeleteKey( key, topics );
     }
 
