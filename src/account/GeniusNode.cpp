@@ -35,7 +35,8 @@
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <Generators.hpp>
 
 namespace
@@ -160,7 +161,10 @@ namespace sgns
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
         m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
-        scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
+        scheduler_([this]() {
+            auto backend = std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_);
+            return std::make_shared<libp2p::basic::SchedulerImpl>(backend, libp2p::basic::Scheduler::Config{});
+        }()),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         use_upnp_( use_upnp )
@@ -964,7 +968,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
@@ -1026,8 +1030,8 @@ namespace sgns
             return outcome::failure( cut.error() );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( ( auto &&, result_pair ),
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( ( auto &&, result_pair ),
                      manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
         auto [tx_id, escrow_data_pair] = result_pair;
@@ -1108,8 +1112,8 @@ namespace sgns
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid ) );
 
         node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
         return tx_id;
@@ -1121,9 +1125,9 @@ namespace sgns
                                                                               TokenID            tokenid,
                                                                               std::chrono::milliseconds timeout )
     {
-        OUTCOME_TRY( auto &&tx_id, MintTokens( amount, transaction_hash, chainid, tokenid ) );
+        BOOST_OUTCOME_TRY( auto &&tx_id, MintTokens( amount, transaction_hash, chainid, tokenid ) );
 
-        OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
         auto [tx_status, duration] = finalized_result;
 
@@ -1142,9 +1146,9 @@ namespace sgns
                                                                                  TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
-        OUTCOME_TRY( auto &&tx_id, TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto &&tx_id, TransferFunds( amount, destination, token_id ) );
 
-        OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
         auto [tx_status, duration] = finalized_result;
 
@@ -1178,8 +1182,8 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
 
         node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
@@ -1203,8 +1207,8 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
         node_logger_->debug( "{}: transaction {} triggered ", __func__, tx_id );
         return tx_id;
@@ -1214,9 +1218,9 @@ namespace sgns
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
-        OUTCOME_TRY( auto &&tx_id, PayDev( amount, token_id ) );
+        BOOST_OUTCOME_TRY( auto &&tx_id, PayDev( amount, token_id ) );
 
-        OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
         auto [tx_status, duration] = finalized_result;
 
@@ -1299,8 +1303,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 

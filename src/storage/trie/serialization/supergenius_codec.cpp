@@ -161,7 +161,7 @@ namespace sgns::storage::trie {
   outcome::result<base::Buffer> SuperGeniusCodec::encodeBranch(
       const BranchNode &node) const {
     // node header
-    OUTCOME_TRY((auto &&, encoding), encodeHeader(node));
+    BOOST_OUTCOME_TRY((auto &&, encoding), encodeHeader(node));
 
     // key
     encoding += nibblesToKey(node.key_nibbles);
@@ -171,7 +171,7 @@ namespace sgns::storage::trie {
 
     if (node.getTrieType() == SuperGeniusNode::Type::BranchWithValue) {
       // scale encoded value
-      OUTCOME_TRY((auto &&, encNodeValue), scale::encode(node.value.get()));
+      BOOST_OUTCOME_TRY((auto &&, encNodeValue), scale::encode(node.value.get()));
       encoding += Buffer(std::move(encNodeValue));
     }
 
@@ -181,11 +181,11 @@ namespace sgns::storage::trie {
         if (child->isDummy()) {
           auto merkle_value =
               std::dynamic_pointer_cast<DummyNode>(child)->db_key;
-          OUTCOME_TRY((auto &&, scale_enc), scale::encode(std::move(merkle_value)));
+          BOOST_OUTCOME_TRY((auto &&, scale_enc), scale::encode(std::move(merkle_value)));
           encoding.put(scale_enc);
         } else {
-          OUTCOME_TRY((auto &&, enc), encodeNode(*child));
-          OUTCOME_TRY((auto &&, scale_enc), scale::encode(merkleValue(enc)));
+          BOOST_OUTCOME_TRY((auto &&, enc), encodeNode(*child));
+          BOOST_OUTCOME_TRY((auto &&, scale_enc), scale::encode(merkleValue(enc)));
           encoding.put(scale_enc);
         }
       }
@@ -196,14 +196,14 @@ namespace sgns::storage::trie {
 
   outcome::result<base::Buffer> SuperGeniusCodec::encodeLeaf(
       const LeafNode &node) const {
-    OUTCOME_TRY((auto &&, encoding), encodeHeader(node));
+    BOOST_OUTCOME_TRY((auto &&, encoding), encodeHeader(node));
 
     // key
     encoding += nibblesToKey(node.key_nibbles);
 
     if (!node.value) return Error::NO_NODE_VALUE;
     // scale encoded value
-    OUTCOME_TRY((auto &&, encNodeValue), scale::encode(node.value.get()));
+    BOOST_OUTCOME_TRY((auto &&, encNodeValue), scale::encode(node.value.get()));
     encoding += Buffer(std::move(encNodeValue));
 
     return outcome::success(std::move(encoding));
@@ -213,15 +213,15 @@ namespace sgns::storage::trie {
       const base::Buffer &encoded_data) const {
     BufferStream stream{encoded_data};
     // decode the header with the node type and the partial key length
-    OUTCOME_TRY((auto &&, header), decodeHeader(stream));
+    BOOST_OUTCOME_TRY((auto &&, header), decodeHeader(stream));
     auto [type, pk_length] = header;
     // decode the partial key
-    OUTCOME_TRY((auto &&, partial_key), decodePartialKey(pk_length, stream));
+    BOOST_OUTCOME_TRY((auto &&, partial_key), decodePartialKey(pk_length, stream));
     // decode the node subvalue (see Definition 28 of the supergenius
     // specification)
     switch (type) {
       case SuperGeniusNode::Type::Leaf: {
-        OUTCOME_TRY((auto &&, value), scale::decode<Buffer>(stream.leftBytes()));
+        BOOST_OUTCOME_TRY((auto &&, value), scale::decode<Buffer>(stream.leftBytes()));
         return std::make_shared<LeafNode>(partial_key, value);
       }
       case SuperGeniusNode::Type::BranchEmptyValue:

@@ -91,7 +91,7 @@ namespace sgns
         {
             return outcome::failure( ProverError::TABLE_PATH_ERROR );
         }
-        OUTCOME_TRY( ( auto &&, plonk_table ),
+        BOOST_OUTCOME_TRY( ( auto &&, plonk_table ),
                      NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkAssignTableType>( itable ) );
         itable.close();
         std::ifstream icircuit;
@@ -100,7 +100,7 @@ namespace sgns
         {
             return outcome::failure( ProverError::CIRCUIT_PATH_ERROR );
         }
-        OUTCOME_TRY( ( auto &&, plonk_constrains ),
+        BOOST_OUTCOME_TRY( ( auto &&, plonk_constrains ),
                      NilFileHelper::DecodeMarshalledData<GeniusAssigner::PlonkConstraintSystemType>( icircuit ) );
         icircuit.close();
         GeniusAssigner::AssignerOutput assigner_outputs( plonk_constrains, plonk_table );

@@ -49,7 +49,7 @@ namespace sgns
         Migration0_2_0To1_0_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-                               std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+                               std::shared_ptr<libp2p::basic::SchedulerImpl>                    scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key );
@@ -111,7 +111,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext_;    ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<libp2p::basic::SchedulerImpl>                    scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< Request ID generator.
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction_; ///< CRDT transaction to make it all atomic
         std::string                              writeBasePath_;    ///< Base path for writing DB files.

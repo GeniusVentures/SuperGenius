@@ -84,7 +84,7 @@ namespace sgns::crdt
             return outcome::failure( Error::HOST_IS_NULL );
         }
 
-        OUTCOME_TRY( host_->listen( listen_to ) );
+        BOOST_OUTCOME_TRY( host_->listen( listen_to ) );
 
         auto startResult = this->StartSync();
 
@@ -206,7 +206,7 @@ namespace sgns::crdt
         }
         ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
 
-        OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
+        BOOST_OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
         auto &peerID  = peerEntry.first;
         auto &address = peerEntry.second;
@@ -221,7 +221,7 @@ namespace sgns::crdt
         if ( already_requested == false )
         {
             logger_->debug( "Requesting CID {}", cid.toString().value() );
-            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+            BOOST_OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
             curr_subscription = std::move( subscription );
         }
 
@@ -253,7 +253,7 @@ namespace sgns::crdt
                     return result;
                 }
                 logger_->error( "Request state not found for CID {}", cid.toString().value() );
-                OUTCOME_TRY( BlackListPeer( peerID ) );
+                BOOST_OUTCOME_TRY( BlackListPeer( peerID ) );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
