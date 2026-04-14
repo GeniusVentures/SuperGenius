@@ -36,7 +36,6 @@
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include <Generators.hpp>
@@ -1233,7 +1232,7 @@ namespace sgns
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        auto available_balance = utxo_manager_.GetBalance( token_id );
+        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
         if ( available_balance < amount )
         {
             node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
@@ -1258,7 +1257,7 @@ namespace sgns
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        auto available_balance = utxo_manager_.GetBalance( token_id );
+        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
         if ( available_balance < amount )
         {
             node_logger_->error( "{}: insufficient local funds: requested={}, available={}",

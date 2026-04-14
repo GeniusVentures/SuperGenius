@@ -41,7 +41,7 @@ protected:
     static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
     static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
     static constexpr char FULL_NODE_KEY[] = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-    static constexpr std::string_uview FULL_NODE_PUB_ADDRESS =
+    static constexpr std::string_view FULL_NODE_PUB_ADDRESS =
         "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
     static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 

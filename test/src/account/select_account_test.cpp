@@ -1,10 +1,11 @@
-#include <chrono>
 #include <gtest/gtest.h>
+
+#include <chrono>
+
 #include <boost/dll/runtime_symbol_info.hpp>
 
-#include "testutil/wait_condition.hpp"
-
 #include "account/GeniusNode.hpp"
+#include "testutil/wait_condition.hpp"
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
