@@ -277,7 +277,18 @@ namespace sgns::crdt
 
     void CrdtDatastore::Start()
     {
-        if ( started_ == true )
+        StartCIDProcessing();
+        StartRebroadcastHeads();
+        started_ = true;
+    }
+
+    void CrdtDatastore::StartCIDProcessing()
+    {
+        if ( handleNextThreadRunning_ )
+        {
+            return;
+        }
+        if ( root_cid_sync_enabled_ )
         {
             return;
         }
@@ -311,6 +322,20 @@ namespace sgns::crdt
                 }
             } );
 
+        root_cid_sync_enabled_ = true;
+    }
+
+    void CrdtDatastore::StartRebroadcastHeads()
+    {
+        if ( rebroadcastThreadRunning_ )
+        {
+            return;
+        }
+        if ( broadcast_enabled_ )
+        {
+            return;
+        }
+
         rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
         rebroadcastFuture_ = std::async(
@@ -333,7 +358,7 @@ namespace sgns::crdt
                 }
             } );
 
-        started_ = true;
+        broadcast_enabled_ = true;
     }
 
     CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
@@ -944,11 +969,6 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
-        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
-        {
-            return;
-        }
-
         std::unordered_set<std::string> pending_topics;
         {
             std::lock_guard lock( pendingBroadcastMutex_ );
@@ -1023,9 +1043,9 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
     {
-        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
+        if ( !broadcast_enabled_ )
         {
-            logger_->debug( "BroadcastHeadsForTopics: broadcast suppressed" );
+            logger_->error( "{}: broadcast suppressed", __func__ );
             return outcome::success();
         }
 
@@ -1091,16 +1111,6 @@ namespace sgns::crdt
     outcome::result<CrdtDatastore::Buffer> CrdtDatastore::GetKey( const HierarchicalKey &aKey ) const
     {
         return set_->GetElement( aKey.GetKey() );
-    }
-
-    void CrdtDatastore::SetBroadcastEnabled( bool enabled )
-    {
-        broadcast_enabled_.store( enabled, std::memory_order_relaxed );
-    }
-
-    bool CrdtDatastore::IsBroadcastEnabled() const
-    {
-        return broadcast_enabled_.load( std::memory_order_relaxed );
     }
 
     std::string CrdtDatastore::GetKeysPrefix() const
@@ -1180,32 +1190,33 @@ namespace sgns::crdt
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
-        if ( !broadcast_enabled_.load( std::memory_order_relaxed ) )
+        if ( !broadcast_enabled_ )
         {
+            logger_->error( "{}: No broadcaster, Failed to broadcast", __func__ );
             return outcome::success();
         }
 
         if ( !broadcaster_ )
         {
-            logger_->error( "Broadcast: No broadcaster, Failed to broadcast" );
+            logger_->error( "{}: No broadcaster, Failed to broadcast", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
         if ( cids.empty() )
         {
-            logger_->error( "Broadcast: Cids Empty, Failed to broadcast" );
+            logger_->error( "{}: Cids Empty, Failed to broadcast", __func__ );
             return outcome::success();
         }
         auto encodedBufferResult = EncodeBroadcast( cids );
         if ( encodedBufferResult.has_failure() )
         {
-            logger_->error( "Broadcast: Encoding failed, Failed to broadcast" );
+            logger_->error( "{}: Encoding failed, Failed to broadcast", __func__ );
             return outcome::failure( encodedBufferResult.error() );
         }
 
         auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic, peerInfo );
         if ( bcastResult.has_failure() )
         {
-            logger_->error( "Broadcast: Broadcaster failed to broadcast" );
+            logger_->error( "{}: Broadcaster failed to broadcast", __func__ );
             return outcome::failure( bcastResult.error() );
         }
         return outcome::success();

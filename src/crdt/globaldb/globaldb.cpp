@@ -66,7 +66,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::basic::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
@@ -111,7 +111,7 @@ namespace sgns::crdt
     outcome::result<void> GlobalDB::Init(
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::basic::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
@@ -228,12 +228,44 @@ namespace sgns::crdt
 
     void GlobalDB::Start()
     {
-        if ( !started_ )
+        if ( started_ )
         {
-            started_ = true;
-            m_crdtDatastore->Start();
-            m_broadcaster->Start();
+            return;
         }
+        StartCIDReceiving();
+        StartCICSync();
+        StartRebroadcastHeads();
+        started_ = true;
+    }
+
+    void GlobalDB::StartCIDReceiving()
+    {
+        if ( cid_receiving_started_ )
+        {
+            return;
+        }
+        m_broadcaster->Start();
+        cid_receiving_started_ = true;
+    }
+
+    void GlobalDB::StartCICSync()
+    {
+        if ( cid_sync_started_ )
+        {
+            return;
+        }
+        m_crdtDatastore->StartCIDProcessing();
+        cid_sync_started_ = true;
+    }
+
+    void GlobalDB::StartRebroadcastHeads()
+    {
+        if ( head_broadcasting_started_ )
+        {
+            return;
+        }
+        m_crdtDatastore->StartRebroadcastHeads();
+        head_broadcasting_started_ = true;
     }
 
     outcome::result<CID> GlobalDB::Put( const HierarchicalKey                 &key,

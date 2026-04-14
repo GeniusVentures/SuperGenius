@@ -101,6 +101,8 @@ namespace sgns::crdt
          * @brief       Starts the datastore threads
          */
         void Start();
+        void StartCIDProcessing();
+        void StartRebroadcastHeads();
         /**
          * @brief      Destructor of the CRDT datastore
          */
@@ -252,7 +254,7 @@ namespace sgns::crdt
          * @return true when broadcasts are enabled.
          */
         bool IsBroadcastEnabled() const;
-        
+
         std::unordered_set<std::string> GetTopicNames() const;
 
     protected:
@@ -456,7 +458,9 @@ namespace sgns::crdt
         std::optional<CID>                                   activeRootCID_;
 
         CRDTDataFilter crdt_filter_;
-        bool           started_ = false;
+        bool           started_               = false;
+        bool           broadcast_enabled_     = false;
+        bool           root_cid_sync_enabled_ = false;
 
         std::mutex                      rebroadcastMutex_;
         std::mutex                      dagWorkerCvMutex_;
@@ -470,7 +474,6 @@ namespace sgns::crdt
 
         std::map<CID, JobStatus> pending_jobs_;
         bool                     has_full_node_topic_;
-        std::atomic_bool         broadcast_enabled_{ true };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );
