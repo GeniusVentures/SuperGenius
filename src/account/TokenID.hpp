@@ -1,6 +1,6 @@
 /**
  * @file       TokenID.hpp
- * @brief      
+ * @brief
  * @date       2025-06-19
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -25,6 +25,9 @@ namespace sgns
         TokenID() : data_{}, valid_( false ) {}
 
         TokenID( const TokenID &other ) = default;
+        TokenID( TokenID &&other )      = default;
+        TokenID &operator=( const TokenID &other ) = default;
+        TokenID &operator=( TokenID &&other ) = default;
 
         static TokenID FromBytes( std::initializer_list<uint8_t> list )
         {

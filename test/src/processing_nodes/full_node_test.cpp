@@ -49,11 +49,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
-    DevConfig_st devConfig = { "", "1.0", tokenValue, tokenId, "" };
-    std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
-    std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-    devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-    devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+    DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
     if ( isFullNode )
     {
@@ -114,7 +110,12 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
-        auto mintRes = originalNode->MintTokens( 500000, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+        auto mintRes = originalNode->MintTokens( 500000,
+                                                 NextMintSourceHash(),
+                                                 "",
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 "",
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );

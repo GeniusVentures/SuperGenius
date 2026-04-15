@@ -97,6 +97,8 @@ namespace sgns::crdt
          * @brief       Starts the datastore threads
          */
         void Start();
+        void StartCIDProcessing();
+        void StartRebroadcastHeads();
         /**
          * @brief      Destructor of the CRDT datastore
          */
@@ -239,6 +241,13 @@ namespace sgns::crdt
          * @return      outcome::success on success, or outcome::failure on error
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
+
+
+        /**
+         * @brief Query whether outgoing head broadcasts are enabled.
+         * @return true when broadcasts are enabled.
+         */
+        bool IsBroadcastEnabled() const;
 
         std::unordered_set<std::string> GetTopicNames() const;
 
@@ -446,7 +455,9 @@ namespace sgns::crdt
         std::optional<CID>                                   activeRootCID_;
 
         CRDTDataFilter crdt_filter_;
-        bool           started_ = false;
+        bool           started_               = false;
+        bool           broadcast_enabled_     = false;
+        bool           root_cid_sync_enabled_ = false;
 
         std::mutex                      rebroadcastMutex_;
         std::mutex                      dagWorkerCvMutex_;

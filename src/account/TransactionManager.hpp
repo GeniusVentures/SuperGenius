@@ -31,8 +31,6 @@
 
 #include "blockchain/Blockchain.hpp"
 
-#include "proof/proto/SGProof.pb.h"
-
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
@@ -96,7 +94,6 @@ namespace sgns
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
-            UTXOManager                             &utxo_manager,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
             std::shared_ptr<Blockchain>              blockchain,
@@ -108,8 +105,6 @@ namespace sgns
 
         void Start();
         void PrintAccountInfo() const;
-
-        const GeniusAccount &GetAccount() const;
 
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
@@ -127,9 +122,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -219,7 +214,6 @@ namespace sgns
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
-                            UTXOManager                             &utxo_manager,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
                             std::shared_ptr<Blockchain>              blockchain,
@@ -281,7 +275,6 @@ namespace sgns
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
-        UTXOManager                             &utxo_manager_;
         std::shared_ptr<crypto::Hasher>          hasher_m;
         std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
@@ -326,8 +319,6 @@ namespace sgns
         std::condition_variable                            cv_;
         std::queue<crdt::CRDTCallbackManager::NewDataPair> new_data_queue_;
         std::queue<std::string>                            deleted_data_queue_;
-        std::mutex                                         new_data_queue_mutex_;     // Separate mutex for the queue
-        std::mutex                                         deleted_data_queue_mutex_; // Separate mutex for the queue
 
         std::chrono::steady_clock::time_point last_loop_time_;
 

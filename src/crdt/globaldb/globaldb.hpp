@@ -47,7 +47,7 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
             std::shared_ptr<CrdtOptions>                                          crdtOptions,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-            std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
@@ -67,7 +67,7 @@ namespace sgns::crdt
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
          */
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
             IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created
@@ -155,6 +155,9 @@ namespace sgns::crdt
         void UnregisterDeletedElementCallback( const std::string &pattern );
 
         void Start();
+        void StartCIDReceiving();
+        void StartCICSync();
+        void StartRebroadcastHeads();
 
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
 
@@ -172,7 +175,7 @@ namespace sgns::crdt
 
         /**
          * @brief       Get the topics that are being listened to
-         * @return      A set of the monitored topic names 
+         * @return      A set of the monitored topic names
          */
         outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
 
@@ -194,7 +197,7 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr );
 
@@ -210,6 +213,9 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
+        bool                                              cid_sync_started_;
+        bool                                              cid_receiving_started_;
+        bool                                              head_broadcasting_started_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

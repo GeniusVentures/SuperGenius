@@ -1,0 +1,82 @@
+{
+  "name": "spleen-ct-texture3d-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for texture3D input using spleen_ct_seg",
+  "tags": ["texture3d", "volume", "test"],
+  
+  "inputs": [
+    {
+      "name": "inputVolume",
+      "source_uri_param": "file://processing_datatypes/spleen_15.raw",
+      "type": "texture3D",
+      "description": "Input volume for 3D segmentation",
+      "dimensions": {
+        "width": 253,
+        "height": 253,
+        "chunk_count": 94,
+        "chunk_subchunk_width": 96,
+        "chunk_subchunk_height": 96,
+        "block_len": 96,
+        "chunk_stride": 48,
+        "chunk_line_stride": 48,
+        "block_stride": 48
+      },
+      "format": "FLOAT32"
+    }
+  ],
+  
+  "outputs": [
+    {
+      "name": "segmentationOutput",
+      "source_uri_param": "file://processing_datatypes/stitched_logits.raw",
+      "type": "tensor",
+      "description": "Output segmentation tensor"
+    }
+  ],
+  
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/spleen_ct_seg.mnn",
+      "description": "URI to the spleen CT segmentation model"
+    }
+  ],
+  
+  "passes": [
+    {
+      "name": "volume_inference",
+      "type": "inference",
+      "description": "3D segmentation inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/spleen_ct_seg.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVolume",
+            "shape": [1, 1, 96, 96, 96]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:segmentationOutput",
+            "shape": [1, 2, 96, 96, 96]
+          }
+        ]
+      }
+    }
+  ],
+  
+  "metadata": {
+    "created_date": "2026-02-11",
+    "framework": "MNN",
+    "test_case": "texture3d_datatype"
+  }
+}

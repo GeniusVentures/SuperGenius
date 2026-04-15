@@ -277,7 +277,18 @@ namespace sgns::crdt
 
     void CrdtDatastore::Start()
     {
-        if ( started_ == true )
+        StartCIDProcessing();
+        StartRebroadcastHeads();
+        started_ = true;
+    }
+
+    void CrdtDatastore::StartCIDProcessing()
+    {
+        if ( handleNextThreadRunning_ )
+        {
+            return;
+        }
+        if ( root_cid_sync_enabled_ )
         {
             return;
         }
@@ -311,6 +322,20 @@ namespace sgns::crdt
                 }
             } );
 
+        root_cid_sync_enabled_ = true;
+    }
+
+    void CrdtDatastore::StartRebroadcastHeads()
+    {
+        if ( rebroadcastThreadRunning_ )
+        {
+            return;
+        }
+        if ( broadcast_enabled_ )
+        {
+            return;
+        }
+
         rebroadcastThreadRunning_ = true;
         // Starting Rebroadcast worker thread
         rebroadcastFuture_ = std::async(
@@ -333,7 +358,7 @@ namespace sgns::crdt
                 }
             } );
 
-        started_ = true;
+        broadcast_enabled_ = true;
     }
 
     CrdtDatastore::CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
@@ -585,7 +610,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
         dagSyncer_->InitCIDBlock( aRootCID );
-        OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
+        BOOST_OUTCOME_TRY( auto root_node, dagSyncer_->getNode( aRootCID ) );
 
         logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
 
@@ -699,7 +724,7 @@ namespace sgns::crdt
             }
 
             dagSyncer_->InitCIDBlock( cid );
-            OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
+            BOOST_OUTCOME_TRY( auto node, dagSyncer_->getNode( cid ) );
 
             RootCIDJob newRootJob;
 
@@ -749,9 +774,9 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
     {
-        OUTCOME_TRY( auto &&cid_string, node_cid.toString() );
+        BOOST_OUTCOME_TRY( auto cid_string, node_cid.toString() );
         logger_->debug( "{}: Merging node {} On CRDT", __func__, cid_string );
-        OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
+        BOOST_OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
         return outcome::success();
     }
 
@@ -759,7 +784,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Starting to process Root CID", __func__ );
 
-        OUTCOME_TRY( auto &&root_cid_string, job_to_process.root_node_->getCID().toString() );
+        BOOST_OUTCOME_TRY( auto root_cid_string, job_to_process.root_node_->getCID().toString() );
         logger_->debug( "{}: Processing Root CID job {}", __func__, root_cid_string );
 
         auto node_to_process = job_to_process.node_;
@@ -770,20 +795,20 @@ namespace sgns::crdt
             is_root         = true;
         }
 
-        OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
+        BOOST_OUTCOME_TRY( auto cid_string, node_to_process->getCID().toString() );
 
-        OUTCOME_TRY( auto &&delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
-        OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
+        BOOST_OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
 
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
-        OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
+        BOOST_OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
 
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
-        OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+        BOOST_OUTCOME_TRY( auto links, GetLinksToFetch( job_to_process ) );
         const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
@@ -799,7 +824,7 @@ namespace sgns::crdt
         else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
-            OUTCOME_TRY( FetchNodes( job_to_process, links ) );
+            BOOST_OUTCOME_TRY( FetchNodes( job_to_process, links ) );
             logger_->debug( "{}: Nodes fetched for Root job: {}", __func__, root_cid_string );
         }
         else if ( is_root )
@@ -1018,6 +1043,12 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
     {
+        if ( !broadcast_enabled_ )
+        {
+            logger_->error( "{}: broadcast suppressed", __func__ );
+            return outcome::success();
+        }
+
         if ( topics.empty() )
         {
             logger_->debug( "BroadcastHeadsForTopics: No topics requested" );
@@ -1150,8 +1181,8 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>          &aDelta,
                                                  const std::unordered_set<std::string> &topics )
     {
-        OUTCOME_TRY( auto &&node, CreateDAGNode( aDelta, topics ) );
-        OUTCOME_TRY( auto &&newCID, AddDAGNode( node ) );
+        BOOST_OUTCOME_TRY( auto node, CreateDAGNode( aDelta, topics ) );
+        BOOST_OUTCOME_TRY( auto newCID, AddDAGNode( node ) );
         return newCID;
     }
 
@@ -1159,27 +1190,33 @@ namespace sgns::crdt
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
+        if ( !broadcast_enabled_ )
+        {
+            logger_->error( "{}: No broadcaster, Failed to broadcast", __func__ );
+            return outcome::success();
+        }
+
         if ( !broadcaster_ )
         {
-            logger_->error( "Broadcast: No broadcaster, Failed to broadcast" );
+            logger_->error( "{}: No broadcaster, Failed to broadcast", __func__ );
             return outcome::failure( boost::system::error_code{} );
         }
         if ( cids.empty() )
         {
-            logger_->error( "Broadcast: Cids Empty, Failed to broadcast" );
+            logger_->error( "{}: Cids Empty, Failed to broadcast", __func__ );
             return outcome::success();
         }
         auto encodedBufferResult = EncodeBroadcast( cids );
         if ( encodedBufferResult.has_failure() )
         {
-            logger_->error( "Broadcast: Encoding failed, Failed to broadcast" );
+            logger_->error( "{}: Encoding failed, Failed to broadcast", __func__ );
             return outcome::failure( encodedBufferResult.error() );
         }
 
         auto bcastResult = broadcaster_->Broadcast( encodedBufferResult.value(), topic, peerInfo );
         if ( bcastResult.has_failure() )
         {
-            logger_->error( "Broadcast: Broadcaster failed to broadcast" );
+            logger_->error( "{}: Broadcaster failed to broadcast", __func__ );
             return outcome::failure( bcastResult.error() );
         }
         return outcome::success();
@@ -1240,7 +1277,7 @@ namespace sgns::crdt
         const std::shared_ptr<Delta>          &aDelta,
         const std::unordered_set<std::string> &topics )
     {
-        OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
+        BOOST_OUTCOME_TRY( auto head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
@@ -1256,7 +1293,7 @@ namespace sgns::crdt
             }
         }
 
-        OUTCOME_TRY( auto &&node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
+        BOOST_OUTCOME_TRY( auto node, CreateIPLDNode( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
         if ( logger_->level() == spdlog::level::debug )

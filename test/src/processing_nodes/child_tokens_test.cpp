@@ -53,11 +53,7 @@ namespace
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
-        std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
         std::string key;
         key.reserve( 64 );
@@ -68,8 +64,8 @@ namespace
                          64,
                          [&]()
                          {
-                             static constexpr std::string_view hexChars = "0123456789abcdef";
-                             return hexChars[dist( rng )];
+                             static constexpr std::string_view HEX_CHARS = "0123456789abcdef";
+                             return HEX_CHARS[dist( rng )];
                          } );
 
         if ( setAsAuthorized )
@@ -192,12 +188,22 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 
     // Ensure enough balance with +1 change
     auto mintRes51 =
-        node51->MintTokens( totalMint51 + 1, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x51 } ) );
+        node51->MintTokens( totalMint51 + 1,
+                                         NextMintSourceHash(),
+                                         "",
+                                         sgns::TokenID::FromBytes( { 0x51 } ),
+                                         "",
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
     auto mintRes52 =
-        node52->MintTokens( totalMint52 + 1, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x52 } ) );
+        node52->MintTokens( totalMint52 + 1,
+                                         NextMintSourceHash(),
+                                         "",
+                                         sgns::TokenID::FromBytes( { 0x52 } ),
+                                         "",
+                                         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintRes52.has_value() ) << "Grouped mint failed on token52";
     std::cout << "Minted total " << ( totalMint52 + 1 ) << " of token52 on node52\n";
 
@@ -207,7 +213,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
         auto transferRes = t.src->TransferFunds( t.amount,
                                                  node50->GetAddress(),
                                                  t.tokenId,
-                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( transferRes.has_value() ); // << "Transfer failed for " << t.tokenId;
         auto [txHash, duration] = transferRes.value();
         std::cout << "Transferred " << t.amount << " of " << t.tokenId << " in " << duration << " ms\n";
@@ -287,7 +293,12 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
-    auto res = node->MintTokens( p.mintMain, NextMintSourceHash(), "", p.TokenID );
+    auto res = node->MintTokens( p.mintMain,
+                                 NextMintSourceHash(),
+                                 "",
+                                 p.TokenID,
+                                 "",
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -361,7 +372,12 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
     ASSERT_TRUE( parsedMint.has_value() );
 
-    auto res = node->MintTokens( parsedMint.value(), NextMintSourceHash(), "", p.TokenID );
+    auto res = node->MintTokens( parsedMint.value(),
+                                 NextMintSourceHash(),
+                                 "",
+                                 p.TokenID,
+                                 "",
+                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
@@ -438,7 +454,9 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount, NextMintSourceHash(), "", tm.tokenId );
+        auto res = node->MintTokens( tm.amount, NextMintSourceHash(), "", tm.tokenId,
+                                     "",
+                                     std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
 
         expectedTotals[tm.tokenId] += tm.amount;
@@ -494,7 +512,12 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         "node_proc2 not synched" );
 
     auto mintResMain =
-        node_main->MintTokens( 1000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node_main->MintTokens( 1000,
+                                              NextMintSourceHash(),
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mintResMain.has_value() ) << "Mint failed on node_main";
 
     std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
@@ -529,7 +552,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "file://[basepath]./child_tokens/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -565,7 +588,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -604,7 +627,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "file://[basepath]./child_tokens/model.mnn",
@@ -613,7 +636,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -622,7 +645,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]

@@ -13,7 +13,7 @@
 
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <boost/format.hpp>
 
@@ -66,7 +66,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
@@ -77,12 +77,11 @@ namespace sgns::crdt
         auto new_instance = std::shared_ptr<GlobalDB>(
             new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
 
-        BOOST_OUTCOME_TRYV2( auto &&,
-                             new_instance->Init( std::move( crdtOptions ),
-                                                 std::move( graphsyncnetwork ),
-                                                 std::move( scheduler ),
-                                                 std::move( generator ),
-                                                 std::move( datastore ) ) );
+        BOOST_OUTCOME_TRY( new_instance->Init( std::move( crdtOptions ),
+                                               std::move( graphsyncnetwork ),
+                                               std::move( scheduler ),
+                                               std::move( generator ),
+                                               std::move( datastore ) ) );
         return new_instance;
     }
 
@@ -92,7 +91,10 @@ namespace sgns::crdt
         m_context( std::move( context ) ),
         m_databasePath( std::move( databasePath ) ),
         m_pubsub( std::move( pubsub ) ),
-        started_{ false }
+        started_{ false },
+        cid_sync_started_{ false },
+        cid_receiving_started_{ false },
+        head_broadcasting_started_{ false }
     {
     }
 
@@ -112,7 +114,7 @@ namespace sgns::crdt
     outcome::result<void> GlobalDB::Init(
         std::shared_ptr<CrdtOptions>                                          crdtOptions,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-        std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore )
     {
@@ -154,17 +156,12 @@ namespace sgns::crdt
                             m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
                         }
                     }
-                }
 
-                if ( dataStoreResult.has_value() )
-                {
-                    dataStore = std::move( dataStoreResult.value() );
-                }
-                else
-                {
                     m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
                     return outcome::failure( boost::system::error_code{} );
                 }
+
+                dataStore = std::move( dataStoreResult.value() );
             }
             catch ( std::exception &e )
             {
@@ -174,9 +171,7 @@ namespace sgns::crdt
         }
         m_datastore = std::move( dataStore );
 
-        IpfsRocksDb::Options rdbOptions;
-        rdbOptions.create_if_missing = true; // intentionally
-        auto ipfsDBResult            = IpfsRocksDb::create( m_datastore->getDB() );
+        auto ipfsDBResult = IpfsRocksDb::create( m_datastore->getDB() );
         if ( ipfsDBResult.has_error() )
         {
             m_logger->error( "Unable to create database for IPFS datastore" );
@@ -229,40 +224,61 @@ namespace sgns::crdt
 
     void GlobalDB::Start()
     {
-        if ( !started_ )
+        if ( started_ )
         {
-            started_ = true;
-            m_crdtDatastore->Start();
-            m_broadcaster->Start();
+            return;
         }
+        StartCIDReceiving();
+        StartCICSync();
+        StartRebroadcastHeads();
+        started_ = true;
+    }
+
+    void GlobalDB::StartCIDReceiving()
+    {
+        if ( cid_receiving_started_ )
+        {
+            return;
+        }
+        m_broadcaster->Start();
+        cid_receiving_started_ = true;
+    }
+
+    void GlobalDB::StartCICSync()
+    {
+        if ( cid_sync_started_ )
+        {
+            return;
+        }
+        m_crdtDatastore->StartCIDProcessing();
+        cid_sync_started_ = true;
+    }
+
+    void GlobalDB::StartRebroadcastHeads()
+    {
+        if ( head_broadcasting_started_ )
+        {
+            return;
+        }
+        m_crdtDatastore->StartRebroadcastHeads();
+        head_broadcasting_started_ = true;
     }
 
     outcome::result<CID> GlobalDB::Put( const HierarchicalKey                 &key,
                                         const Buffer                          &value,
                                         const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
-
         return m_crdtDatastore->PutKey( key, value, topics );
     }
 
     outcome::result<CID> GlobalDB::Put( const std::vector<DataPair>           &data_vector,
                                         const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
         AtomicTransaction batch( m_crdtDatastore );
 
         for ( auto &data : data_vector )
         {
-            BOOST_OUTCOME_TRYV2( auto &&, batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
+            BOOST_OUTCOME_TRY( batch.Put( std::get<0>( data ), std::get<1>( data ) ) );
         }
 
         return batch.Commit( topics );
@@ -275,12 +291,6 @@ namespace sgns::crdt
 
     outcome::result<CID> GlobalDB::Remove( const HierarchicalKey &key, const std::unordered_set<std::string> &topics )
     {
-        if ( !started_ )
-        {
-            m_logger->error( "{}: GlobalDB Not Started", __func__ );
-            return outcome::failure( Error::GLOBALDB_NOT_STARTED );
-        }
-
         return m_crdtDatastore->DeleteKey( key, topics );
     }
 
@@ -414,17 +424,27 @@ namespace sgns::crdt
     {
         if ( !m_crdtDatastore )
         {
-            m_logger->error( "RequestHeadBroadcast: CRDT datastore not initialized" );
+            m_logger->error( "{}: CRDT datastore not initialized", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        if ( !cid_receiving_started_ )
+        {
+            m_logger->error( "{}: Broadcaster not receiving yet", __func__ );
+            return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
+        }
+        if ( !cid_sync_started_ )
+        {
+            m_logger->error( "{}: CRDT not syncing", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
 
         if ( !started_.load() )
         {
-            m_logger->error( "RequestHeadBroadcast: GlobalDB not started" );
+            m_logger->error( "{}: GlobalDB not started", __func__ );
             return outcome::failure( Error::GLOBALDB_NOT_STARTED );
         }
 
-        m_logger->debug( "RequestHeadBroadcast: Forwarding request for {} topics", topics.size() );
+        m_logger->debug( "{}: Forwarding request for {} topics", __func__, topics.size() );
         return m_crdtDatastore->BroadcastHeadsForTopics( topics );
     }
 

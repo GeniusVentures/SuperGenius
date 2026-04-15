@@ -47,7 +47,7 @@ namespace sgns::storage::trie {
     // insert fetches a sequence of nodes (a path) from the storage and
     // these nodes are processed in memory, so any changes applied to them
     // will be written back to the storage only on storeNode call
-    OUTCOME_TRY((auto &&, n),
+    BOOST_OUTCOME_TRY( auto n,
                 insert(root, k_enc, std::make_shared<LeafNode>(k_enc, value)));
     root_ = n;
 
@@ -60,7 +60,7 @@ namespace sgns::storage::trie {
       return outcome::success();
     }
     auto key_nibbles = SuperGeniusCodec::keyToNibbles(prefix);
-    OUTCOME_TRY((auto &&, new_root), detachNode(root_, key_nibbles));
+    BOOST_OUTCOME_TRY( auto new_root, detachNode(root_, key_nibbles));
     root_ = new_root;
 
     return outcome::success();
@@ -144,9 +144,9 @@ namespace sgns::storage::trie {
         parent->value = node->value;
         return parent;
       }
-      OUTCOME_TRY((auto &&, child), retrieveChild(parent, key_nibbles[length]));
+      BOOST_OUTCOME_TRY( auto child, retrieveChild(parent, key_nibbles[length]));
       if (child) {
-        OUTCOME_TRY((auto &&, n), insert(child, key_nibbles.subspan(length + 1), node));
+        BOOST_OUTCOME_TRY( auto n, insert(child, key_nibbles.subspan(length + 1), node));
         parent->children.at(key_nibbles[length]) = n;
         return parent;
       }
@@ -156,14 +156,13 @@ namespace sgns::storage::trie {
     }
     auto br = std::make_shared<BranchNode>(key_nibbles.subspan(0, length));
     auto parentIdx = parent->key_nibbles[length];
-    OUTCOME_TRY((auto &&,
-        new_branch),
+    BOOST_OUTCOME_TRY( auto new_branch,
         insert(nullptr, parent->key_nibbles.subspan(length + 1), parent));
     br->children.at(parentIdx) = new_branch;
     if (key_nibbles.size() <= length) {
       br->value = node->value;
     } else {
-      OUTCOME_TRY((auto &&, new_child),
+      BOOST_OUTCOME_TRY( auto new_child,
                   insert(nullptr, key_nibbles.subspan(length + 1), node));
       br->children.at(key_nibbles[length]) = new_child;
     }
@@ -176,7 +175,7 @@ namespace sgns::storage::trie {
       return TrieError::NO_VALUE;
     }
     auto nibbles = SuperGeniusCodec::keyToNibbles(key);
-    OUTCOME_TRY((auto &&, node), getNode(root_, nibbles));
+    BOOST_OUTCOME_TRY( auto node, getNode(root_, nibbles));
     if (node && node->value) {
       return node->value.get();
     }
@@ -201,7 +200,7 @@ namespace sgns::storage::trie {
           return nullptr;
         }
         auto parent_as_branch = std::dynamic_pointer_cast<BranchNode>(parent);
-        OUTCOME_TRY((auto &&, n), retrieveChild(parent_as_branch, key_nibbles[length]));
+        BOOST_OUTCOME_TRY( auto n, retrieveChild(parent_as_branch, key_nibbles[length]));
         return getNode(n, key_nibbles.subspan(length + 1));
       }
       case T::Leaf:
@@ -235,8 +234,8 @@ namespace sgns::storage::trie {
           return Path{};
         }
         auto parent_as_branch = std::dynamic_pointer_cast<BranchNode>(parent);
-        OUTCOME_TRY((auto &&, n), retrieveChild(parent_as_branch, key_nibbles[length]));
-        OUTCOME_TRY((auto &&, path), getPath(n, key_nibbles.subspan(length + 1)));
+        BOOST_OUTCOME_TRY( auto n, retrieveChild(parent_as_branch, key_nibbles[length]));
+        BOOST_OUTCOME_TRY( auto path, getPath(n, key_nibbles.subspan(length + 1)));
         path.emplace_front( parent_as_branch, key_nibbles[length] );
         return path;
       }
@@ -274,7 +273,7 @@ namespace sgns::storage::trie {
       auto key_nibbles = SuperGeniusCodec::keyToNibbles(key);
       // delete node will fetch nodes that it needs from the storage (the nodes
       // typically are a path in the trie) and work on them in memory
-      OUTCOME_TRY((auto &&, n), deleteNode(root_, key_nibbles));
+      BOOST_OUTCOME_TRY( auto n, deleteNode(root_, key_nibbles));
       // afterwards, the nodes are written back to the storage and the new trie
       // root hash is obtained
       root_ = n;
@@ -298,13 +297,13 @@ namespace sgns::storage::trie {
           parent->value = boost::none;
           newRoot = parent;
         } else {
-          OUTCOME_TRY((auto &&, child),
+          BOOST_OUTCOME_TRY( auto child,
                       retrieveChild(parent_as_branch, key_nibbles[length]));
-          OUTCOME_TRY((auto &&, n), deleteNode(child, key_nibbles.subspan(length + 1)));
+          BOOST_OUTCOME_TRY( auto n, deleteNode(child, key_nibbles.subspan(length + 1)));
           newRoot = parent;
           parent_as_branch->children.at(key_nibbles[length]) = n;
         }
-        OUTCOME_TRY((auto &&, n), handleDeletion(parent_as_branch, newRoot, key_nibbles));
+        BOOST_OUTCOME_TRY( auto n, handleDeletion(parent_as_branch, newRoot, key_nibbles));
         return n;
       }
       case T::Leaf:
@@ -336,7 +335,7 @@ namespace sgns::storage::trie {
           break;
         }
       }
-      OUTCOME_TRY((auto &&, child), retrieveChild(parent, idx));
+      BOOST_OUTCOME_TRY( auto child, retrieveChild(parent, idx));
       using T = SuperGeniusNode::Type;
       if (child->getTrieType() == T::Leaf) {
         auto newKey = parent->key_nibbles;
@@ -386,11 +385,11 @@ namespace sgns::storage::trie {
         || parent->getTrieType() == T::BranchEmptyValue) {
       auto branch = std::dynamic_pointer_cast<BranchNode>(parent);
       auto length = getCommonPrefixLength(parent->key_nibbles, prefix_nibbles);
-      OUTCOME_TRY((auto &&, child), retrieveChild(branch, prefix_nibbles[length]));
+      BOOST_OUTCOME_TRY( auto child, retrieveChild(branch, prefix_nibbles[length]));
       if (child == nullptr) {
         return parent;
       }
-      OUTCOME_TRY((auto &&, n), detachNode(child, prefix_nibbles.subspan(length + 1)));
+      BOOST_OUTCOME_TRY( auto n, detachNode(child, prefix_nibbles.subspan(length + 1)));
       branch->children.at(prefix_nibbles[length]) = n;
       return branch;
     }

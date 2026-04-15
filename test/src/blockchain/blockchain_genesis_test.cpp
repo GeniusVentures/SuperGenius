@@ -35,7 +35,7 @@ namespace
     std::string NextMintSourceHash()
     {
         static std::atomic<uint64_t> mint_counter{ 1 };
-        const auto                   value = mint_counter.fetch_add( 1 );
+        const auto                   value   = mint_counter.fetch_add( 1 );
         char                         buf[65] = {};
         std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
         return std::string( buf );
@@ -63,11 +63,7 @@ protected:
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
-        std::strncpy( devConfig.Addr, dev_addr.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         // Generate deterministic key from self_address
         std::string key;
@@ -317,7 +313,12 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     auto balance_regular_2_before = node_regular_2->GetBalance();
 
     // Mint tokens on the first regular node after sync is confirmed
-    auto mint_result = node_regular_1->MintTokens( mint_amount, NextMintSourceHash(), "", token_id );
+    auto mint_result = node_regular_1->MintTokens( mint_amount,
+                                                   NextMintSourceHash(),
+                                                   "",
+                                                   token_id,
+                                                   "",
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

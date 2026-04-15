@@ -38,6 +38,8 @@
 class MultiAccountTest : public ::testing::Test
 {
 protected:
+    static constexpr std::string_view FILE_PREFIX = "node_multi_account_";
+
     static std::string NextMintSourceHash()
     {
         static std::atomic<uint64_t> mint_counter{ 1 };
@@ -60,16 +62,11 @@ protected:
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 
-        std::string binaryPath = boost::dll::program_location().parent_path().string();
-        const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
-        std::string fileStem   = std::filesystem::path( filePath ).stem().string();
-        auto        outPath    = binaryPath + "/node_multi_account_" + std::to_string( id ) + "/";
+        auto binaryPath = boost::dll::program_location().parent_path();
+        auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
+        auto outPathStr = outPath.generic_string() + '/';
 
-        DevConfig_st devConfig = { "", "0.65", tokenValue, tokenId, "" };
-        std::strncpy( devConfig.Addr, dev_addr.c_str(), sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
 
         // Generate deterministic key from self_address
         std::string key;
@@ -113,9 +110,6 @@ protected:
 
     void SetUp() override
     {
-        // Clean up any previous test runs
-        std::string binaryPath = boost::dll::program_location().parent_path().string();
-
         // Helper to remove directory with retry on Windows (file locks may not be immediately released)
         auto removeWithRetry = []( const std::string &path )
         {
@@ -139,11 +133,16 @@ protected:
             }
         };
 
-        removeWithRetry( binaryPath + "/node_multi_account_0/" );
-        removeWithRetry( binaryPath + "/node_multi_account_1/" );
-        removeWithRetry( binaryPath + "/node_multi_account_2/" );
-        removeWithRetry( binaryPath + "/node_multi_account_3/" );
-        removeWithRetry( binaryPath + "/node_multi_account_4/" );
+        auto binaryPath = boost::dll::program_location().parent_path();
+
+        // Clean up any previous test runs
+        for ( auto &entry : boost::filesystem::directory_iterator( binaryPath ) )
+        {
+            if ( entry.is_directory() && entry.path().filename().string().find( FILE_PREFIX ) != std::string::npos )
+            {
+                removeWithRetry( entry.path().string() );
+            }
+        }
     }
 
     void TearDown() override
@@ -184,12 +183,27 @@ TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
 
     auto balance_original_start = node_original->GetBalance();
     // Mint some tokens
-    auto mint_result = node_original->MintTokens( 100, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint_result = node_original->MintTokens( 100,
+                                                  NextMintSourceHash(),
+                                                  "",
+                                                  TokenID::FromBytes( { 0x00 } ),
+                                                  "",
+                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
-    mint_result = node_original->MintTokens( 2000, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_original->MintTokens( 2000,
+                                             NextMintSourceHash(),
+                                             "",
+                                             TokenID::FromBytes( { 0x00 } ),
+                                             "",
+                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
-    mint_result = node_original->MintTokens( 30, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_original->MintTokens( 30,
+                                             NextMintSourceHash(),
+                                             "",
+                                             TokenID::FromBytes( { 0x00 } ),
+                                             "",
+                                             std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
@@ -209,7 +223,12 @@ TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
         std::chrono::milliseconds( 30000 ),
         "node_duplicated not synced" );
 
-    mint_result = node_duplicated->MintTokens( 60000, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_duplicated->MintTokens( 60000,
+                                               NextMintSourceHash(),
+                                               "",
+                                               TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
 
     test::assertWaitForCondition(
@@ -304,7 +323,9 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
                                                        NextMintSourceHash(),
                                                        "",
-                                                       sgns::TokenID::FromBytes( { 0x00 } ) );
+                                                       sgns::TokenID::FromBytes( { 0x00 } ), 
+                                                       "",
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
@@ -803,7 +824,8 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         [&]()
         {
             auto load = registry->LoadRegistry();
-            return load.has_value() && ( load.value().epoch() > initial_epoch || registry->GetRegistryCid() != initial_cid );
+            return load.has_value() &&
+                   ( load.value().epoch() > initial_epoch || registry->GetRegistryCid() != initial_cid );
         },
         std::chrono::milliseconds( 60000 ),
         "validator registry did not update after 5th certificate" );

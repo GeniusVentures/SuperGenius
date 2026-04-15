@@ -62,7 +62,7 @@ namespace sgns::processing
             return std::errc::bad_message;
         }
         //Parse main json data
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
         m_currentProcessingManager = procmgr; // Store for progress tracking
         //Parse subtask json
         auto            subtaskjson = nlohmann::json::parse( subTask.json_data() );

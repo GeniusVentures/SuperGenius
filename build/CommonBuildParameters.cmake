@@ -211,8 +211,9 @@ if(SGNS_STACKTRACE_BACKTRACE)
     endif()
 endif()
 
-# header only libraries must not be added here
-message(STATUS "Booost coroutine dir: ${boost_coroutine_DIR}")
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
 find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json context coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -405,15 +406,19 @@ endif()
 include_directories(
     ${PROJECT_ROOT}/src
 )
+
 include_directories(
-    ${PROJECT_ROOT}/GeniusKDF
+        ${PROJECT_ROOT}/ProofSystem/include
 )
+
 include_directories(
-    ${PROJECT_ROOT}/ProofSystem
+        ${PROJECT_ROOT}/SGProcessingManager/include
 )
+
 include_directories(
-    ${PROJECT_ROOT}/SGProcessingManager
+        ${PROJECT_ROOT}/evmrelay/include
 )
+
 include_directories(
     ${PROJECT_ROOT}/app
 )
@@ -436,13 +441,12 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
+add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
+add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
-
-add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
-add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
-add_subdirectory(${PROJECT_ROOT}/rlp ${CMAKE_BINARY_DIR}/rlp)
 
 if(BUILD_TESTING)
     enable_testing()
@@ -475,40 +479,40 @@ write_basic_package_version_file(
 )
 
 # install header files
-install_hfile(${PROJECT_ROOT}/src/api)
-install_hfile(${PROJECT_ROOT}/src/authorship)
-install_hfile(${PROJECT_ROOT}/src/application)
-install_hfile(${PROJECT_ROOT}/src/base)
-install_hfile(${PROJECT_ROOT}/src/blockchain)
-install_hfile(${PROJECT_ROOT}/src/clock)
-install_hfile(${PROJECT_ROOT}/src/crdt)
-install_hfile(${PROJECT_ROOT}/src/crypto)
-install_hfile(${PROJECT_ROOT}/src/extensions)
-install_hfile(${PROJECT_ROOT}/src/injector)
-install_hfile(${PROJECT_ROOT}/src/macro)
-install_hfile(${PROJECT_ROOT}/src/network)
-install_hfile(${PROJECT_ROOT}/src/outcome)
-install_hfile(${PROJECT_ROOT}/src/processing)
-install_hfile(${PROJECT_ROOT}/src/primitives)
-install_hfile(${PROJECT_ROOT}/src/runtime)
-install_hfile(${PROJECT_ROOT}/src/scale)
-install_hfile(${PROJECT_ROOT}/src/storage)
-install_hfile(${PROJECT_ROOT}/src/subscription)
-install_hfile(${PROJECT_ROOT}/src/transaction_pool)
-install_hfile(${PROJECT_ROOT}/src/verification)
-install_hfile(${PROJECT_ROOT}/src/account)
-install_hfile(${PROJECT_ROOT}/app/integration)
-install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
-install_hfile(${PROJECT_ROOT}/src/singleton)
-install_hfile(${PROJECT_ROOT}/src/coinprices)
-install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
-
-# install proto header files
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
+#install_hfile(${PROJECT_ROOT}/src/api)
+#install_hfile(${PROJECT_ROOT}/src/authorship)
+#install_hfile(${PROJECT_ROOT}/src/application)
+#install_hfile(${PROJECT_ROOT}/src/base)
+#install_hfile(${PROJECT_ROOT}/src/blockchain)
+#install_hfile(${PROJECT_ROOT}/src/clock)
+#install_hfile(${PROJECT_ROOT}/src/crdt)
+#install_hfile(${PROJECT_ROOT}/src/crypto)
+#install_hfile(${PROJECT_ROOT}/src/extensions)
+#install_hfile(${PROJECT_ROOT}/src/injector)
+#install_hfile(${PROJECT_ROOT}/src/macro)
+#install_hfile(${PROJECT_ROOT}/src/network)
+#install_hfile(${PROJECT_ROOT}/src/outcome)
+#install_hfile(${PROJECT_ROOT}/src/processing)
+#install_hfile(${PROJECT_ROOT}/src/primitives)
+#install_hfile(${PROJECT_ROOT}/src/runtime)
+#install_hfile(${PROJECT_ROOT}/src/scale)
+#install_hfile(${PROJECT_ROOT}/src/storage)
+#install_hfile(${PROJECT_ROOT}/src/subscription)
+#install_hfile(${PROJECT_ROOT}/src/transaction_pool)
+#install_hfile(${PROJECT_ROOT}/src/verification)
+#install_hfile(${PROJECT_ROOT}/src/account)
+#install_hfile(${PROJECT_ROOT}/app/integration)
+#install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
+#install_hfile(${PROJECT_ROOT}/src/singleton)
+#install_hfile(${PROJECT_ROOT}/src/coinprices)
+#install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
+#
+## install proto header files
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
 
 # install the configuration file
 install(FILES

@@ -34,7 +34,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
@@ -89,20 +89,20 @@ namespace sgns
         {
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
-            OUTCOME_TRY( step->Init() );
+            BOOST_OUTCOME_TRY( step->Init() );
 
-            OUTCOME_TRY( bool is_req, step->IsRequired() );
+            BOOST_OUTCOME_TRY( bool is_req, step->IsRequired() );
 
             if ( is_req )
             {
-                OUTCOME_TRY( step->Apply() );
+                BOOST_OUTCOME_TRY( step->Apply() );
                 m_logger->debug( "Completed migration step to {}", step->ToVersion() );
             }
             else
             {
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
-            OUTCOME_TRY( step->ShutDown() );
+            BOOST_OUTCOME_TRY( step->ShutDown() );
             std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 

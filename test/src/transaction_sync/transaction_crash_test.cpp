@@ -62,14 +62,9 @@ namespace sgns
         static void SetUpTestSuite()
         {
             std::string binary_path = boost::dll::program_location().parent_path().string();
-            std::strncpy( CONFIG1.BaseWritePath,
-                          ( binary_path + "/node_crash1/" ).c_str(),
-                          sizeof( CONFIG1.BaseWritePath ) );
-            std::strncpy( CONFIG2.BaseWritePath,
-                          ( binary_path + "/node_crash2/" ).c_str(),
-                          sizeof( CONFIG2.BaseWritePath ) );
-            CONFIG1.BaseWritePath[sizeof( CONFIG1.BaseWritePath ) - 1] = '\0';
-            CONFIG2.BaseWritePath[sizeof( CONFIG2.BaseWritePath ) - 1] = '\0';
+
+            CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
+            CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
 
             node1 = sgns::GeniusNode::New( CONFIG1,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -126,7 +121,12 @@ namespace sgns
         }
 
         std::cout << "Minting the required tokens" << std::endl;
-        auto mint_result = node1->MintTokens( total_amount, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+        auto mint_result = node1->MintTokens( total_amount,
+                                              NextMintSourceHash(),
+                                              "",
+                                              TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

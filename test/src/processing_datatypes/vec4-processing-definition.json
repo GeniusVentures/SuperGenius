@@ -1,0 +1,74 @@
+{
+  "name": "vec4-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for vec4 input using a tiny Conv1D model",
+  "tags": ["vec4", "vector", "test"],
+
+  "inputs": [
+    {
+      "name": "inputVec4",
+      "source_uri_param": "file://processing_datatypes/vec4_input.raw",
+      "type": "vec4",
+      "description": "Input vec4 array (X, Y, Z, W components)",
+      "dimensions": {
+        "width": 16
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "vec4Output",
+      "source_uri_param": "file://processing_datatypes/vec4_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from vec4 model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/vec4_tiny.mnn",
+      "description": "URI to the vec4 MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "vec4_inference",
+      "type": "inference",
+      "description": "Vec4 model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/vec4_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVec4",
+            "shape": [1, 4, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:vec4Output",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-17",
+    "framework": "MNN",
+    "test_case": "vec4_datatype"
+  }
+}

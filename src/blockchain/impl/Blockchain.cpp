@@ -71,6 +71,35 @@ namespace sgns
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
+        auto request_validator_registry = []( const std::shared_ptr<Blockchain> &self )
+        {
+            if ( !self )
+            {
+                return;
+            }
+            auto request_result = self->account_->RequestValidatorRegistry(
+                TIMEOUT_GENESIS_BLOCK_MS,
+                [weak_ptr( std::weak_ptr<Blockchain>( self ) )]( outcome::result<std::string> registry_cid_res )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        if ( registry_cid_res.has_error() )
+                        {
+                            strong->logger_->warn( "[{}] Validator registry request finished with error",
+                                                   strong->account_->GetAddress().substr( 0, 8 ) );
+                            return;
+                        }
+                        strong->logger_->debug( "[{}] Validator registry request finished with CID {}",
+                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                registry_cid_res.value().substr( 0, 8 ) );
+                    }
+                } );
+            if ( request_result.has_error() )
+            {
+                self->logger_->warn( "[{}] Failed to request validator registry during blockchain init",
+                                     self->account_->GetAddress().substr( 0, 8 ) );
+            }
+        };
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
@@ -114,7 +143,7 @@ namespace sgns
                     (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -123,6 +152,7 @@ namespace sgns
                     {
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
+                        request_validator_registry( strong );
                     }
                 }
             } );
@@ -220,6 +250,10 @@ namespace sgns
             instance->logger_->error( "[{}] Failed to ensure validator registry during init",
                                       instance->account_->GetAddress().substr( 0, 8 ) );
         }
+        if ( !instance->validator_registry_initialized_.load() )
+        {
+            request_validator_registry( instance );
+        }
 
         if ( !genesis_filter_initialized )
         {
@@ -281,6 +315,17 @@ namespace sgns
                             }
                             break;
                         }
+                        case 2:
+                        {
+                            sgns::crdt::GlobalDB::Buffer registry_cid_key;
+                            registry_cid_key.put( std::string( blockchain::ValidatorRegistry::RegistryCidKey() ) );
+                            auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                            if ( registry_cid.has_value() )
+                            {
+                                return std::string( registry_cid.value().toString() );
+                            }
+                            break;
+                        }
                         default:
                             break;
                     }
@@ -336,9 +381,9 @@ namespace sgns
             }
             blockchain_logger()->debug( " Migrating CID: {}", cid_string );
 
-            OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
-            OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
-            OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
+            BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+            BOOST_OUTCOME_TRY( auto node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+            BOOST_OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
             return outcome::success();
         };
 
@@ -356,7 +401,7 @@ namespace sgns
             crdt::GlobalDB::Buffer genesis_cid_value;
             genesis_cid_value.putBuffer( genesis_cid.value() );
             (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
-            OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
+            BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
         }
 
         blockchain_logger()->debug( "{}: Getting the account creation CIDs from old database", __func__ );
@@ -370,7 +415,7 @@ namespace sgns
                 blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
 
                 (void)new_store->put( entry.first, entry.second );
-                OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
+                BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
             }
         }
         blockchain_logger()->debug( "{}: Finalized migrating the blockchain", __func__ );
@@ -462,11 +507,11 @@ namespace sgns
             }
             logger_->info( "[{}] Genesis block also found locally, verifying account creation block",
                            account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
-            OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
-            OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
+            BOOST_OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
 
             auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_KEY_PREFIX ) );
             if ( query_result.has_error() )
@@ -526,9 +571,9 @@ namespace sgns
         if ( !get_genesis_result.has_error() )
         {
             logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );

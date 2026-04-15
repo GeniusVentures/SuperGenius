@@ -11,7 +11,7 @@ namespace sgns::processing
     class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
     {
     public:
-        enum class Status {
+        enum class Status : uint8_t {
             DISABLED,
             IDLE,
             PROCESSING,
@@ -21,7 +21,7 @@ namespace sgns::processing
             Status status;
             float percentage; // 0.0 to 100.0
 
-            ProcessingStatus(Status s = Status::DISABLED, float p = 0.0f) 
+            ProcessingStatus(Status s = Status::DISABLED, float p = 0.0f)
                 : status(s), percentage(p) {}
         };
 

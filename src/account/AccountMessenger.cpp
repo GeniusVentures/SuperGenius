@@ -1,6 +1,6 @@
 /**
  * @file       AccountMessenger.cpp
- * @brief      
+ * @brief
  * @date       2025-07-22
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -289,7 +289,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        BOOST_OUTCOME_TRY( auto signature, methods_.sign_( serialized_vec ) );
         accountComm::SignedNonceRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature.data(), signature.size() );
@@ -407,7 +407,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        BOOST_OUTCOME_TRY( auto signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedBlockRequest signed_req;
         *signed_req.mutable_data() = req;
@@ -436,7 +436,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        BOOST_OUTCOME_TRY( auto signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedBlockCidRequest signed_req;
         *signed_req.mutable_data() = req;
@@ -466,7 +466,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        BOOST_OUTCOME_TRY( auto signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedTransactionRequest signed_req;
         *signed_req.mutable_data() = req;
@@ -495,7 +495,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        BOOST_OUTCOME_TRY( auto signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedUTXORequest signed_req;
         *signed_req.mutable_data() = req;
@@ -849,6 +849,22 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> AccountMessenger::RequestValidatorRegistry(
+        uint64_t                                            timeout_ms,
+        std::function<void( outcome::result<std::string> )> callback )
+    {
+        EnqueueTask( { RequestType::ValidatorRegistry,
+                       timeout_ms,
+                       150,
+                       2,
+                       std::string{},
+                       std::string{},
+                       std::move( callback ),
+                       nullptr,
+                       nullptr } );
+        return outcome::success();
+    }
+
     outcome::result<void> AccountMessenger::SendAccountMessage( const accountComm::AccountMessage &msg,
                                                                 const std::set<std::string>       &topics )
     {
@@ -896,6 +912,7 @@ namespace sgns
                 }
                 case RequestType::Genesis:
                 case RequestType::AccountCreation:
+                case RequestType::ValidatorRegistry:
                 {
                     auto res = PerformBlockRequest( task.timeout_ms, BlockIndexRequest{ task.block_index } );
                     if ( task.callback )
@@ -1025,7 +1042,7 @@ namespace sgns
             first_response_time_.erase( req_id );
         }
 
-        OUTCOME_TRY( RequestNonce( req_id ) );
+        BOOST_OUTCOME_TRY( RequestNonce( req_id ) );
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );

@@ -1,6 +1,7 @@
 ---
 Checks: >
   boost-*,
+  -boost-use-ranges,
 
   bugprone-*,
   -bugprone-easily-swappable-parameters,
@@ -48,26 +49,30 @@ Checks: >
   readability-*,
   -readability-identifier-length,
   -readability-magic-numbers,
+  -readability-math-missing-parentheses,
   -readability-named-parameter,
   -readability-qualified-auto
 
 FormatStyle: file
 
 CheckOptions:
-  - {
-      key: misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic,
-      value: true,
-    }
+  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
 
-  - { key: performance-unnecessary-value-param.IncludeStyle, value: google }
-  
-  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
-  - { key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE }
+  performance-unnecessary-value-param.IncludeStyle: google
 
-  - { key: readability-identifier-naming.TypeAliasCase, value: CamelCase }
-  - { key: readability-identifier-naming.TypeDefCase, value: CamelCase }
+  readability-identifier-naming.DefaultCase: lower_case
 
-  - { key: readability-identifier-naming.ClassMemberPrefix, value: m_ }
+  readability-identifier-naming.ClassCase: CamelCase
 
-  - { key: modernize-use-std-print.ReplacementPrintFunction, value: "fmt::print"}
-  - { key: modernize-use-std-print.ReplacementPrintlnFunction, value: "fmt::println"}
+  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+
+  readability-identifier-naming.EnumCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+
+  readability-identifier-naming.FunctionCase: CamelCase
+
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.TypeDefCase: CamelCase
+
+  modernize-use-std-print.ReplacementPrintFunction: "fmt::print"
+  modernize-use-std-print.ReplacementPrintlnFunction: "fmt::println"

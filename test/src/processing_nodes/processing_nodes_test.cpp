@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <fstream>
 #include <memory>
 #include <iostream>
 #include <thread>
@@ -9,7 +8,6 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
-#include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/wait_condition.hpp"
@@ -47,20 +45,9 @@ protected:
         std::string binary_path = boost::dll::program_location().parent_path().string();
         Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
 
-        std::strncpy( DEV_CONFIG.BaseWritePath,
-                      ( binary_path + "/node1/" ).c_str(),
-                      sizeof( DEV_CONFIG.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG2.BaseWritePath,
-                      ( binary_path + "/node2/" ).c_str(),
-                      sizeof( DEV_CONFIG2.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG3.BaseWritePath,
-                      ( binary_path + "/node3/" ).c_str(),
-                      sizeof( DEV_CONFIG3.BaseWritePath ) );
-
-        // Ensure null termination in case the string is too long
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-        DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+        DEV_CONFIG.BaseWritePath = ( binary_path + "/node1/" );
+        DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
+        DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -178,8 +165,18 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
         "Node proc 2 not synched" );
-    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    node_main->MintTokens( 50000000000,
+                           NextMintSourceHash(),
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    node_main->MintTokens( 50000000000,
+                           NextMintSourceHash(),
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
     int transcount_node1 = node_proc1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
@@ -225,7 +222,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -261,7 +258,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -300,7 +297,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
@@ -309,7 +306,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -318,7 +315,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -379,7 +376,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -415,7 +412,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -454,7 +451,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
@@ -463,7 +460,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -472,7 +469,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -485,7 +482,12 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
     auto mint_result =
-        node_main->MintTokens( 50000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node_main->MintTokens( 50000000000,
+                                              NextMintSourceHash(),
+                                              "",
+                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
@@ -508,28 +510,20 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Cost:                   " << cost << std::endl;
 
     assertWaitForCondition(
-        [&]()
+        [&]
         {
             auto result = node_main->GetBalance();
-            if ( result == balance_main - cost )
-            {
-                return true;
-            }
-            return false;
+            return result == balance_main - cost;
         },
         std::chrono::milliseconds( 20000 ),
         "Main Balance not updated in time" );
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     assertWaitForCondition(
-        [&]()
+        [&]
         {
             auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
             auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
-            if ( result == balance_node1 + balance_node2 + 2 * expected_peer_gain )
-            {
-                return true;
-            }
-            return false;
+            return balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );

@@ -1,0 +1,18 @@
+# Gradle build outputs
+.gradle/
+build/
+library/build/
+
+# Gradle wrapper (download on demand)
+.gradle-wrapper.jar
+gradlew
+gradlew.bat
+gradle/
+
+# Local configuration
+local.properties
+
+# IDE files
+.idea/
+*.iml
+.DS_Store

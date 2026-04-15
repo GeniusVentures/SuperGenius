@@ -1,7 +1,9 @@
+#include <chrono>
 #include <gtest/gtest.h>
 
 #include <cmath>
 #include <fstream>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
 #include <iostream>
 #include <cstdint>
@@ -28,7 +30,7 @@
 #include "testutil/wait_condition.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include "libp2p/protocol/common/asio/asio_scheduler.hpp"
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 std::string GetLoggingSystem( const std::string & )
 {
@@ -128,12 +130,14 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
         &resultTime
 
     );
-    auto scheduler         = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
-                                                                        libp2p::protocol::SchedulerConfig{} );
-    auto graphsyncnetwork  = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
-    auto generator         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-    auto scheduler2        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
-                                                                         libp2p::protocol::SchedulerConfig{} );
+    auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context ),
+        libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+    auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
+    auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+    auto scheduler2       = std::make_shared<libp2p::basic::SchedulerImpl>(
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_context ),
+        libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
     auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(),
                                                                                           scheduler2 );
 

@@ -62,21 +62,10 @@ namespace sgns
 
         static void SetUpTestSuite()
         {
-            std::string binary_path = boost::dll::program_location().parent_path().string();
-            std::strncpy( DEV_CONFIG.BaseWritePath,
-                          ( binary_path + "/node10/" ).c_str(),
-                          sizeof( DEV_CONFIG.BaseWritePath ) );
-            std::strncpy( DEV_CONFIG2.BaseWritePath,
-                          ( binary_path + "/node20/" ).c_str(),
-                          sizeof( DEV_CONFIG2.BaseWritePath ) );
-            std::strncpy( DEV_CONFIG3.BaseWritePath,
-                          ( binary_path + "/node_full/" ).c_str(),
-                          sizeof( DEV_CONFIG3.BaseWritePath ) );
-
-            // Ensure null termination in case the string is too long
-            DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-            DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-            DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+            std::string binary_path   = boost::dll::program_location().parent_path().string();
+            DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
+            DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";
+            DEV_CONFIG3.BaseWritePath = binary_path + "/node_full/";
 
             std::string full_node_pub_address =
                 "8b095989e76c1fef19451abc6837c8da086b9196a65bb7335f92a8aad48226319ab3f85c54d932c914c49f39c679314bc2bb6fad905d66d96969834e9c9f12b3";
@@ -134,8 +123,9 @@ namespace sgns
             const std::string                   &destination,
             const std::string                   &previous_hash = "" )
         {
-            OUTCOME_TRY( auto &&params,
-                         utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
+            BOOST_OUTCOME_TRY(
+                auto params,
+                utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
             auto timestamp = std::chrono::system_clock::now();
 
@@ -153,8 +143,8 @@ namespace sgns
             transfer_transaction->MakeSignature( *account );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
-            TransferProof prover( static_cast<uint64_t>( utxo_manager.GetBalance() ), static_cast<uint64_t>( amount ) );
-            OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+            TransferProof prover( utxo_manager.GetBalance(), amount );
+            BOOST_OUTCOME_TRY( auto proof_result, prover.GenerateFullProof() );
 
             maybe_proof = std::move( proof_result );
 
@@ -169,7 +159,7 @@ namespace sgns
 
         UTXOManager *GetUTXOManagerFromNode( sgns::GeniusNode &node )
         {
-            return &node.utxo_manager_;
+            return &node.account_->GetUTXOManager();
         }
 
         void SendPair( sgns::GeniusNode &node, std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
@@ -186,7 +176,12 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
 
     // Mint tokens with timeout
     auto mint_result =
-        node_proc1->MintTokens( 10000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node_proc1->MintTokens( 10000000000,
+                                               NextMintSourceHash(),
+                                               "",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -199,7 +194,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                       node_proc2->GetAddress(),
                                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                      std::chrono::milliseconds( GeniusNode::TIMEOUT_TRANSFER ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id, transfer_duration] = transfer_result.value();
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
@@ -259,7 +254,12 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     for ( auto amount : mint_amounts )
     {
-        auto mint_result = node_proc1->MintTokens( amount, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        auto mint_result = node_proc1->MintTokens( amount,
+                                                   NextMintSourceHash(),
+                                                   "",
+                                                   sgns::TokenID::FromBytes( { 0x00 } ),
+                                                   "",
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction of " << amount << " failed or timed out";
 
         auto [tx_id, duration] = mint_result.value();
@@ -268,11 +268,21 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     // Mint tokens on node_proc2
     auto mint_result1 =
-        node_proc2->MintTokens( 10000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node_proc2->MintTokens( 10000000000,
+                                                NextMintSourceHash(),
+                                                "",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
     auto mint_result2 =
-        node_proc2->MintTokens( 20000000000, NextMintSourceHash(), "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node_proc2->MintTokens( 20000000000,
+                                                NextMintSourceHash(),
+                                                "",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
@@ -358,9 +368,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
     for ( size_t index = 0; index < xfer_amounts[0].size(); index++ )
     {
-        auto xfer_amount       = xfer_amounts[0][index];
-        xfer_amount_1         += xfer_amount;
-        auto transfer_result1  = node_proc1->TransferFunds( xfer_amount,
+        auto xfer_amount  = xfer_amounts[0][index];
+        xfer_amount_1    += xfer_amount;
+        auto transfer_result1 = node_proc1->TransferFunds( xfer_amount,
                                                            node_proc2->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -370,9 +380,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
         txIDs[0].push_back( transfer_tx_id1 );
 
-        xfer_amount            = xfer_amounts[1][index];
-        xfer_amount_2         += xfer_amount;
-        auto transfer_result2  = node_proc2->TransferFunds( xfer_amount,
+        xfer_amount    = xfer_amounts[1][index];
+        xfer_amount_2 += xfer_amount;
+        auto transfer_result2 = node_proc2->TransferFunds( xfer_amount,
                                                            node_proc1->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -442,9 +452,19 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
 
     // Mint tokens with timeout
     auto mint_result =
-        node_proc1->MintTokens( 10000000000, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+        node_proc1->MintTokens( 10000000000,
+                                               NextMintSourceHash(),
+                                               "",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
-    mint_result = node_proc1->MintTokens( 10000000000, NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    mint_result = node_proc1->MintTokens( 10000000000,
+                                               NextMintSourceHash(),
+                                               "",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();

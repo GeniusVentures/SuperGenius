@@ -1,0 +1,80 @@
+addtest(processing_datatypes_test
+    processing_datatypes_test.cpp
+)
+
+target_include_directories(processing_datatypes_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
+target_link_libraries(processing_datatypes_test
+    nlohmann_json
+    ProcessingBase
+)
+
+add_custom_command(TARGET processing_datatypes_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+    "$<TARGET_FILE_DIR:processing_datatypes_test>/processing_datatypes"
+    COMMENT "Creating processing_datatypes directory"
+)
+
+add_custom_command(TARGET processing_datatypes_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/bert-tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/string-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_input.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spleen_ct_seg.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spleen_15.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture3d-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture1d_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture1d_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture1d_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texture1d-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bool_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bool_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bool_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/bool-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/buffer_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/buffer_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/buffer_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/buffer-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/float_model.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/float_input.bin"
+    "${CMAKE_CURRENT_SOURCE_DIR}/float_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/float-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/int_model.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/int_input.bin"
+    "${CMAKE_CURRENT_SOURCE_DIR}/int_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/int-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat2_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat2_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat2_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat2-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat3_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat3_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat3_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat3-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/mat4-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec2_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec2_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec2_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec2-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec3_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec3_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec3_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec3-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec4_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec4_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec4_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/vec4-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tensor_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tensor_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tensor_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tensor-processing-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_tiny.mnn"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_input.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube_output_pt.raw"
+    "${CMAKE_CURRENT_SOURCE_DIR}/texturecube-processing-definition.json"
+    "$<TARGET_FILE_DIR:processing_datatypes_test>/processing_datatypes/"
+    COMMENT "Copying test files"
+)

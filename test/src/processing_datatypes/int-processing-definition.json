@@ -1,0 +1,76 @@
+{
+  "name": "int-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for int input using a tiny MLP model",
+  "tags": ["int", "signal", "test"],
+
+  "inputs": [
+    {
+      "name": "inputInt",
+      "source_uri_param": "file://processing_datatypes/int_input.bin",
+      "type": "int",
+      "description": "Input int vector",
+      "dimensions": {
+        "width": 512,
+        "block_len": 64,
+        "chunk_stride": 32
+      },
+      "format": "INT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "intOutput",
+      "source_uri_param": "file://processing_datatypes/int_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from int model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/int_model.mnn",
+      "description": "URI to the int MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "int_inference",
+      "type": "inference",
+      "description": "Int model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/int_model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputInt",
+            "shape": [1, 64]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:intOutput",
+            "shape": [1, 64]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-16",
+    "framework": "MNN",
+    "test_case": "int_datatype"
+  }
+}

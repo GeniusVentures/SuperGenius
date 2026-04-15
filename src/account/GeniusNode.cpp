@@ -23,10 +23,11 @@
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Coin.h>
 
+#include "account/GeniusAccount.hpp"
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
@@ -35,7 +36,8 @@
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
-#include "local_secure_storage/SecureStorage.hpp"
+#include "outcome/outcome.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include <Generators.hpp>
 
 namespace
@@ -71,8 +73,6 @@ namespace
                 return "INITIALIZING_BLOCKCHAIN";
             case State::INITIALIZING_TRANSACTIONS:
                 return "INITIALIZING_TRANSACTIONS";
-            case State::INITIALIZING_DHT:
-                return "INITIALIZING_DHT";
             case State::READY:
                 return "READY";
         }
@@ -110,6 +110,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Could not get a price";
         case sgns::GeniusNode::Error::TRANSACTIONS_NOT_READY:
             return "Transaction manager is not ready";
+        case sgns::GeniusNode::Error::TRANSACTION_NOT_FINALIZED:
+            return "Requested transaction not finalized within timeout";
+        case sgns::GeniusNode::Error::TRANSACTION_FAILED:
+            return "Requested transaction failed";
     }
     return "Unknown error";
 }
@@ -172,28 +176,33 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewWithMnemonics( const DevConfig_st &dev_config,
-                                                              const char         *mnemonics,
-                                                              bool                autodht,
-                                                              bool                isprocessor,
-                                                              uint16_t            base_port,
-                                                              bool                is_full_node,
-                                                              bool                use_upnp )
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
+                                                             const std::string  &mnemonic,
+                                                             bool                autodht,
+                                                             bool                isprocessor,
+                                                             uint16_t            base_port,
+                                                             bool                is_full_node,
+                                                             bool                use_upnp )
     {
         try
         {
-            TW::HDWallet wallet( mnemonics, "", true );
-            auto         derivation_path = TW::derivationPath( TWCoinTypeEthereum );
-            auto         private_key     = wallet.getKey( TWCoinTypeEthereum, derivation_path );
+            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
+                                                           mnemonic,
+                                                           dev_config.BaseWritePath,
+                                                           is_full_node );
 
-            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
-                dev_config,
-                GeniusAccount::New( dev_config.TokenID, private_key, dev_config.BaseWritePath, is_full_node ),
-                autodht,
-                isprocessor,
-                base_port,
-                is_full_node,
-                use_upnp ) );
+            if ( account == nullptr )
+            {
+                return nullptr;
+            }
+
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config,
+                                                                         std::move( account ),
+                                                                         autodht,
+                                                                         isprocessor,
+                                                                         base_port,
+                                                                         is_full_node,
+                                                                         use_upnp ) );
 
             if ( instance )
             {
@@ -218,25 +227,18 @@ namespace sgns
                             bool                           use_upnp ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( std::move( account ) ),
-        utxo_manager_(
-            is_full_node,
-            account_->GetAddress(),
-            [this]( const std::vector<uint8_t> data ) { return this->account_->Sign( data ); },
-            []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
-                return GeniusAccount::VerifySignature( address,
-                                                       std::string( signature.begin(), signature.end() ),
-                                                       data );
-            } ),
         io_( std::make_shared<boost::asio::io_context>() ),
+        io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
         autodht_( autodht ),
         isprocessor_( isprocessor ),
         is_full_node_( is_full_node ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
-        m_lastApiCall( std::chrono::system_clock::now() - m_minApiCallInterval ),
-        scheduler_( std::make_shared<libp2p::protocol::AsioScheduler>( io_, libp2p::protocol::SchedulerConfig{} ) ),
+        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL ),
+        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
         processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
         use_upnp_( use_upnp )
@@ -257,6 +259,18 @@ namespace sgns
             throw std::runtime_error( "Network initialization error" );
         }
         node_logger_->debug( "Account Address {}", account_->GetAddress() );
+
+        // Initializes the thread pool for IO context
+        io_threads_.reserve( io_thread_count_ );
+        for ( unsigned i = 0; i < io_thread_count_; ++i )
+        {
+            io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
+        }
+
+        if ( use_upnp_ )
+        {
+            RefreshUPNP( pubsubport_ );
+        }
     }
 
     void GeniusNode::BeginDBInitialization()
@@ -337,30 +351,9 @@ namespace sgns
                     account_->GetAddress() );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
-                StateTransition( NodeState::INITIALIZING_DHT );
-                break;
-            }
-            case NodeState::INITIALIZING_DHT:
-            {
-                if ( use_upnp_ )
-                {
-                    RefreshUPNP( pubsubport_ );
-                }
-                io_work_guard_.emplace( io_->get_executor() );
-                unsigned desired_threads = io_thread_count_;
-                if ( desired_threads == 0 )
-                {
-                    desired_threads = GeniusNode::DEFAULT_IO_THREADS;
-                }
-                io_threads_.reserve( desired_threads );
-                for ( unsigned i = 0; i < desired_threads; ++i )
-                {
-                    io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
-                }
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
-
             case NodeState::INITIALIZING_BLOCKCHAIN:
             {
                 if ( !blockchain_ )
@@ -379,8 +372,6 @@ namespace sgns
                                     strong->node_logger_->error( "Error starting blockchain: {}",
                                                                  result.error().message() );
                                     strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                    strong->account_->RequestHeads(
-                                        { std::string( ValidatorRegistry::ValidatorTopic() ) } );
                                     strong->ScheduleBlockchainRetry();
                                     return;
                                 }
@@ -404,7 +395,7 @@ namespace sgns
                                 // Move transaction initialization off the AccountMessenger worker thread.
                                 boost::asio::post(
                                     *strong->io_,
-                                    [weak_self]()
+                                    [weak_self]
                                     {
                                         if ( auto strong = weak_self.lock() )
                                         {
@@ -431,7 +422,6 @@ namespace sgns
             {
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
-                                                                utxo_manager_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 blockchain_,
@@ -619,8 +609,8 @@ namespace sgns
             std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
             SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
-            libp2p::protocol::kademlia::ContentId key( hash );
-            auto                                  acc_cid = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+            auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
+            auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key );
             auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
             if ( !maybe_base58 )
             {
@@ -673,64 +663,62 @@ namespace sgns
 
     bool GeniusNode::InitUPNP()
     {
-        bool ret  = false;
         auto upnp = std::make_shared<upnp::UPNP>();
+        if ( !upnp->GetIGD() )
+        {
+            return true;
+        }
+
+        bool ret = false;
         do
         {
-            if ( !upnp->GetIGD() )
-            {
-                ret = true;
-            }
-            else
-            {
-                std::string wanip = upnp->GetWanIP();
-                std::string lanip = upnp->GetLocalIP();
-                node_logger_->info( "Wan IP: {}", wanip );
-                node_logger_->info( "Lan IP: {}", lanip );
+            std::string wanip = upnp->GetWanIP();
+            std::string lanip = upnp->GetLocalIP();
+            node_logger_->info( "Wan IP: {}", wanip );
+            node_logger_->info( "Lan IP: {}", lanip );
 
-                std::string owner;
+            std::string owner;
 
-                constexpr uint16_t MAX_ATTEMPTS = 10;
-                for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            constexpr uint16_t MAX_ATTEMPTS = 10;
+            for ( uint16_t i = 0; i < MAX_ATTEMPTS; ++i )
+            {
+                uint16_t candidate_port = pubsubport_ + i;
+                if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
                 {
-                    uint16_t candidate_port = pubsubport_ + i;
-                    if ( upnp->CheckIfPortInUse( candidate_port, "TCP", owner ) )
+                    if ( owner == lanip )
                     {
-                        if ( owner == lanip )
+                        node_logger_->info( "Port {} is already mapped by this device. Try using it.", candidate_port );
+                        if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                         {
-                            node_logger_->info( "Port {} is already mapped by this device. Try using it.",
-                                                candidate_port );
-                            if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                            {
-                                ret         = true;
-                                pubsubport_ = candidate_port;
-                                break;
-                            }
-
-                            node_logger_->error(
-                                "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
-                                candidate_port );
-                            continue;
+                            ret         = true;
+                            pubsubport_ = candidate_port;
+                            break;
                         }
-                        node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+
+                        node_logger_->error(
+                            "Port {} is already mapped by this device. We tried using it, but could not. Will try other ports.",
+                            candidate_port );
                         continue;
                     }
-
-                    if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
-                    {
-                        node_logger_->info( "Successfully opened port {}", candidate_port );
-                        ret         = true;
-                        pubsubport_ = candidate_port;
-                        break;
-                    }
-                    node_logger_->warn( "Failed to open port {}", candidate_port );
+                    node_logger_->error( "Port {} already in use by {}", candidate_port, owner );
+                    continue;
                 }
-                if ( !ret )
+
+                if ( upnp->OpenPort( candidate_port, candidate_port, "TCP", 3600 ) )
                 {
-                    node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                    node_logger_->info( "Successfully opened port {}", candidate_port );
+                    ret         = true;
+                    pubsubport_ = candidate_port;
                     break;
                 }
+                node_logger_->warn( "Failed to open port {}", candidate_port );
             }
+            if ( !ret )
+            {
+                node_logger_->error( "Unable to open a usable UPnP port after {} attempts", MAX_ATTEMPTS );
+                break;
+            }
+
         } while ( 0 );
 
         return ret;
@@ -854,13 +842,10 @@ namespace sgns
         {
             pubsub_->Stop(); // Stop activities of OtherClass
         }
+        io_work_guard_.reset();
         if ( io_ )
         {
             io_->stop(); // Stop our io_context
-        }
-        if ( io_work_guard_ )
-        {
-            io_work_guard_->reset();
         }
         for ( auto &t : io_threads_ )
         {
@@ -957,12 +942,13 @@ namespace sgns
         // Compute the SHA-256 hash of the input bytes
         std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
         SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
+
         // Provide CID
-        libp2p::protocol::kademlia::ContentId key( hash );
+        auto key = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
         pubsub_->GetDHT()->Start();
         pubsub_->ProvideCID( key );
 
-        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key.data );
+        auto cidtest = libp2p::multi::ContentIdentifierCodec::decode( key );
 
         auto cidstring = libp2p::multi::ContentIdentifierCodec::toString( cidtest.value() );
         node_logger_->info( "CID Test:: {}", cidstring.value() );
@@ -993,13 +979,53 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
+    outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
+    {
+        auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
+
+        if ( std::find( addresses.cbegin(), addresses.cend(), public_address ) == addresses.cend() )
+        {
+            node_logger_->error( "Could not find requested address" );
+            return std::errc::address_not_available;
+        }
+
+        auto account = GeniusAccount::NewFromPublicKey( TokenID::FromBytes( { 0x00 } ),
+                                                        public_address,
+                                                        this->is_full_node_ );
+
+        if ( account == nullptr )
+        {
+            return std::errc::address_not_available;
+        }
+
+        this->transaction_manager_->Stop();
+        this->transaction_manager_.reset();
+
+        BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
+        this->blockchain_.reset();
+
+        processing_service_.reset();
+        task_result_storage_.reset();
+        processing_core_.reset();
+        task_queue_.reset();
+
+        this->tx_globaldb_.reset();
+
+        this->account_.swap( account );
+        account.reset();
+
+        this->BeginDBInitialization();
+
+        return outcome::success();
+    }
+
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
+        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
         auto funds = GetProcessCost( procmgr );
         if ( funds <= 0 )
@@ -1007,7 +1033,7 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        if ( utxo_manager_.GetBalance() < funds )
+        if ( account_->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
@@ -1061,9 +1087,9 @@ namespace sgns
             return outcome::failure( cut.error() );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( ( auto &&, result_pair ),
-                     manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto result_pair,
+                           manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
         auto [tx_id, escrow_data_pair] = result_pair;
 
@@ -1132,6 +1158,29 @@ namespace sgns
         return sgns::version::SuperGeniusVersionFullString();
     }
 
+    outcome::result<std::string> GeniusNode::MintTokens( uint64_t           amount,
+                                                         const std::string &transaction_hash,
+                                                         const std::string &chainid,
+                                                         TokenID            tokenid,
+                                                         std::string        destination )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction manager not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        if ( destination.empty() )
+        {
+            destination = account_->GetAddress();
+        }
+
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
+
+        node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
+        return tx_id;
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
@@ -1139,32 +1188,19 @@ namespace sgns
                                                                               std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        BOOST_OUTCOME_TRY( auto tx_id, MintTokens( amount, transaction_hash, chainid, tokenid ) );
+
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            node_logger_->error( "{}: Transaction manager not ready", __func__ );
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto start_time = std::chrono::steady_clock::now();
-        if ( destination.empty() )
-        {
-            destination = account_->GetAddress();
-        }
-
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
-
-        auto mint_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( mint_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "Mint transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
         }
 
-        node_logger_->debug( "Mint transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -1173,27 +1209,19 @@ namespace sgns
                                                                                  TokenID                   token_id,
                                                                                  std::chrono::milliseconds timeout )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        BOOST_OUTCOME_TRY( auto &&tx_id, TransferFunds( amount, destination, token_id ) );
+
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
         {
-            return outcome::failure( boost::system::error_code{} );
-        }
-        auto start_time = std::chrono::steady_clock::now();
-
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
-
-        auto transfer_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( transfer_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
         }
 
-        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
         return std::make_pair( tx_id, duration );
     }
 
@@ -1203,13 +1231,49 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            return outcome::failure( boost::system::error_code{} );
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
+        if ( available_balance < amount )
+        {
+            node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
+                                 __func__,
+                                 amount,
+                                 available_balance );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
+        }
 
-        node_logger_->debug( "TransferFunds transaction {} sent", tx_id );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
+
+        node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::string> GeniusNode::PayDev( uint64_t amount, TokenID token_id )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+
+        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
+        if ( available_balance < amount )
+        {
+            node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
+                                 __func__,
+                                 amount,
+                                 available_balance );
+            return outcome::failure( Error::INSUFFICIENT_FUNDS );
+        }
+
+        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
+
+        node_logger_->debug( "{}: transaction {} triggered ", __func__, tx_id );
         return tx_id;
     }
 
@@ -1217,27 +1281,77 @@ namespace sgns
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
+        BOOST_OUTCOME_TRY( auto &&tx_id, PayDev( amount, token_id ) );
+
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
+        {
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
+        }
+
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
+    outcome::result<std::pair<TransactionManager::TransactionStatus, uint64_t>> GeniusNode::WaitForFinalized(
+        const std::string        &tx_id,
+        std::chrono::milliseconds timeout )
+    {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+
             return outcome::failure( boost::system::error_code{} );
         }
         auto start_time = std::chrono::steady_clock::now();
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
 
-        auto paydev_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( paydev_result != TransactionManager::TransactionStatus::CONFIRMED )
+        do
         {
-            node_logger_->error( "TransferFunds transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
+            auto finalized_result = IsFinalized( tx_id );
+            if ( finalized_result.has_value() )
+            {
+                auto end_time = std::chrono::steady_clock::now();
+                auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
+                node_logger_->debug( "{}: Transaction finalized with status {} and duration of {} ms",
+                                     __func__,
+                                     static_cast<int>( finalized_result.value() ),
+                                     duration );
 
-        node_logger_->debug( "TransferFunds transaction {} completed in {} ms", tx_id, duration );
-        return std::make_pair( tx_id, duration );
+                return std::make_pair( finalized_result.value(), duration );
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        } while ( std::chrono::steady_clock::now() - start_time < timeout );
+
+        node_logger_->error( "{}: Transaction not finalized within timeout of {} ms", __func__, timeout.count() );
+
+        return outcome::failure( Error::TRANSACTION_NOT_FINALIZED );
+    }
+
+    std::optional<TransactionManager::TransactionStatus> GeniusNode::IsFinalized( const std::string &tx_id )
+    {
+        auto manager_result = GetTransactionManager();
+
+        if ( manager_result.has_failure() )
+        {
+            node_logger_->error( "{}: Failed to get Transaction Manager: {}",
+                                 __func__,
+                                 manager_result.error().message() );
+            return std::nullopt;
+        }
+        auto manager   = manager_result.value();
+        auto tx_status = manager->GetOutgoingStatusByTxId( tx_id );
+        if ( tx_status == TransactionManager::TransactionStatus::CONFIRMED ||
+             tx_status == TransactionManager::TransactionStatus::FAILED ||
+             tx_status == TransactionManager::TransactionStatus::INVALID )
+        {
+            return tx_status;
+        }
+        return std::nullopt;
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(
@@ -1252,8 +1366,8 @@ namespace sgns
         }
         auto start_time = std::chrono::steady_clock::now();
 
-        OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        OUTCOME_TRY( auto &&tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
 
         auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
 
@@ -1272,22 +1386,22 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        return utxo_manager_.GetBalance();
+        return account_->GetUTXOManager().GetBalance();
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        return utxo_manager_.GetBalance( token_id );
+        return account_->GetUTXOManager().GetBalance( token_id );
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        return utxo_manager_.GetBalance( address );
+        return account_->GetUTXOManager().GetBalance( address );
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        return utxo_manager_.GetBalance( token_id, address );
+        return account_->GetUTXOManager().GetBalance( token_id, address );
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
@@ -1436,7 +1550,7 @@ namespace sgns
         }
 
         // If we have tokens to fetch and we're not rate limited
-        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= m_minApiCallInterval )
+        if ( !tokensToFetch.empty() && ( currentTime - m_lastApiCall ) >= MIN_API_CALL_INTERVAL )
         {
             sgns::CoinGeckoPriceRetriever retriever;
             auto                          newPricesResult = retriever.getCurrentPrices( tokensToFetch );

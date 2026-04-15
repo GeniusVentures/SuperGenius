@@ -23,7 +23,7 @@
 #include "outcome/outcome.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 #include "IMigrationStep.hpp"
 
@@ -57,7 +57,7 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context>                        ioContext,
             std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-            std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
