@@ -51,14 +51,9 @@ namespace sgns
         static void SetUpTestSuite()
         {
             std::string binary_path = boost::dll::program_location().parent_path().string();
-            std::strncpy( CONFIG1.BaseWritePath,
-                          ( binary_path + "/node_crash1/" ).c_str(),
-                          sizeof( CONFIG1.BaseWritePath ) );
-            std::strncpy( CONFIG2.BaseWritePath,
-                          ( binary_path + "/node_crash2/" ).c_str(),
-                          sizeof( CONFIG2.BaseWritePath ) );
-            CONFIG1.BaseWritePath[sizeof( CONFIG1.BaseWritePath ) - 1] = '\0';
-            CONFIG2.BaseWritePath[sizeof( CONFIG2.BaseWritePath ) - 1] = '\0';
+
+            CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
+            CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
 
             node1 = sgns::GeniusNode::New( CONFIG1,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",

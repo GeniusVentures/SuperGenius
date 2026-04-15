@@ -1,8 +1,6 @@
 #ifndef _GENIUS_NODE_HPP_
 #define _GENIUS_NODE_HPP_
 
-#include "UTXOManager.hpp"
-
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -34,11 +32,11 @@
 
 typedef struct DevConfig
 {
-    char        Addr[255];
+    std::string Addr;
     std::string Cut;
     std::string TokenValueInGNUS;
     TokenID     TokenID;
-    char        BaseWritePath[1024];
+    std::string BaseWritePath;
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;
@@ -84,7 +82,6 @@ namespace sgns
             INITIALIZING_PROCESSING,
             INITIALIZING_BLOCKCHAIN,
             INITIALIZING_TRANSACTIONS,
-            INITIALIZING_DHT,
             READY,
         };
 
@@ -119,6 +116,7 @@ namespace sgns
         static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
         static constexpr uint64_t TIMEOUT_MINT       = 30000;
 #endif
+        outcome::result<void> SelectAccount( std::string_view public_address );
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
@@ -306,29 +304,29 @@ namespace sgns
 
         std::string                    write_base_path_;
         std::shared_ptr<GeniusAccount> account_;
-        UTXOManager                    utxo_manager_;
 
     private:
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;
-        std::shared_ptr<boost::asio::io_context>              io_;
-        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;
-        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;
-        std::shared_ptr<TransactionManager>                   transaction_manager_;
-        std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;
-        std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;
-        std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;
-        std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_;
-        std::shared_ptr<soralog::LoggingSystem>               logging_system_;
-        bool                                                  autodht_;
-        bool                                                  isprocessor_;
-        bool                                                  is_full_node_;
-        base::Logger                                          node_logger_;
-        DevConfig_st                                          dev_config_;
-        std::string                                           gnus_network_full_path_;
-        std::string                                           processing_channel_topic_;
-        std::string                                           processing_grid_chanel_topic_;
-        uint16_t                                              pubsubport_;
-        std::shared_ptr<Blockchain>                           blockchain_;
+        std::shared_ptr<boost::asio::io_context>                                 io_;
+        boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_work_guard_;
+        std::shared_ptr<crdt::GlobalDB>                                          tx_globaldb_;
+        std::shared_ptr<crdt::GlobalDB>                                          job_globaldb_;
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>                               pubsub_;
+        std::shared_ptr<TransactionManager>                                      transaction_manager_;
+        std::shared_ptr<processing::ProcessingTaskQueueImpl>                     task_queue_;
+        std::shared_ptr<processing::ProcessingCoreImpl>                          processing_core_;
+        std::shared_ptr<processing::ProcessingServiceImpl>                       processing_service_;
+        std::shared_ptr<processing::SubTaskResultStorageImpl>                    task_result_storage_;
+        std::shared_ptr<soralog::LoggingSystem>                                  logging_system_;
+        bool                                                                     autodht_;
+        bool                                                                     isprocessor_;
+        bool                                                                     is_full_node_;
+        base::Logger                                                             node_logger_;
+        DevConfig_st                                                             dev_config_;
+        std::string                                                              gnus_network_full_path_;
+        std::string                                                              processing_channel_topic_;
+        std::string                                                              processing_grid_chanel_topic_;
+        uint16_t                                                                 pubsubport_;
+        std::shared_ptr<Blockchain>                                              blockchain_;
 
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
@@ -366,12 +364,10 @@ namespace sgns
         std::map<std::string, PriceInfo>                   m_tokenPriceCache;
         const std::chrono::minutes                         m_cacheValidityDuration{ 1 };
         std::chrono::time_point<std::chrono::system_clock> m_lastApiCall{};
-        static constexpr std::chrono::seconds              m_minApiCallInterval{ 5 };
+        static constexpr std::chrono::seconds              MIN_API_CALL_INTERVAL{ 5 };
 
-        using IoWorkGuard = boost::asio::executor_work_guard<boost::asio::io_context::executor_type>;
-        static constexpr unsigned                                       DEFAULT_IO_THREADS = 4;
-        unsigned                                                        io_thread_count_{ DEFAULT_IO_THREADS };
-        std::optional<IoWorkGuard>                                      io_work_guard_;
+        static constexpr size_t                                         DEFAULT_IO_THREADS = 4;
+        size_t                                                          io_thread_count_{ DEFAULT_IO_THREADS };
         std::vector<std::thread>                                        io_threads_;
         std::thread                                                     upnp_thread;
         std::atomic<bool>                                               stop_upnp{ false };
@@ -404,7 +400,7 @@ namespace sgns
 
         void TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state );
 
-        static constexpr std::string_view db_path_        = "bc-%d/";
+        static constexpr std::string_view DB_PATH         = "bc-%d/";
         static constexpr std::uint16_t    MAIN_NET        = 369;
         static constexpr std::uint16_t    TEST_NET        = 963;
         static constexpr std::size_t      MAX_NODES_COUNT = 1;

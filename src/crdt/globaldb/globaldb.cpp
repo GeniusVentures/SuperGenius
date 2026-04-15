@@ -156,17 +156,12 @@ namespace sgns::crdt
                             m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
                         }
                     }
-                }
 
-                if ( dataStoreResult.has_value() )
-                {
-                    dataStore = std::move( dataStoreResult.value() );
-                }
-                else
-                {
                     m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
                     return outcome::failure( boost::system::error_code{} );
                 }
+
+                dataStore = std::move( dataStoreResult.value() );
             }
             catch ( std::exception &e )
             {
@@ -176,9 +171,7 @@ namespace sgns::crdt
         }
         m_datastore = std::move( dataStore );
 
-        IpfsRocksDb::Options rdbOptions;
-        rdbOptions.create_if_missing = true; // intentionally
-        auto ipfsDBResult            = IpfsRocksDb::create( m_datastore->getDB() );
+        auto ipfsDBResult = IpfsRocksDb::create( m_datastore->getDB() );
         if ( ipfsDBResult.has_error() )
         {
             m_logger->error( "Unable to create database for IPFS datastore" );

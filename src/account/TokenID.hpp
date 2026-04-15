@@ -1,6 +1,6 @@
 /**
  * @file       TokenID.hpp
- * @brief      
+ * @brief
  * @date       2025-06-19
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */

@@ -8,6 +8,12 @@
 
 #include <filesystem>
 
+#include "MigrationManager.hpp"
+#include "EscrowReleaseTransaction.hpp"
+#include "TransactionManager.hpp"
+#include "TransferTransaction.hpp"
+#include "base/sgns_version.hpp"
+
 namespace sgns
 {
     namespace
@@ -103,10 +109,10 @@ namespace sgns
         }
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
-        auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
+        auto                            crdt_transaction_ = db_3_4_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
 
-        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+        topics_.emplace( TransactionManager::GNUS_FULL_NODES_TOPIC );
 
         const std::string BASE = "/bc-963/";
         BOOST_OUTCOME_TRY( auto entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
