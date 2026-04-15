@@ -655,7 +655,7 @@ namespace sgns
                                          __func__,
                                          proposal.proposal_id().substr( 0, 8 ),
                                          GetPrintableSubjectHash( subject ) );
-        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
+        BOOST_OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         proposal.set_signature( signature.data(), signature.size() );
 
         ConsensusManagerLogger()->debug( "{}: success for hash {} proposal_id={}",
@@ -698,7 +698,7 @@ namespace sgns
             return outcome::failure( signing_bytes.error() );
         }
 
-        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
+        BOOST_OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         vote.set_signature( signature.data(), signature.size() );
 
         ConsensusManagerLogger()->debug( "{}: {} voted for proposal_id={}",
@@ -744,7 +744,7 @@ namespace sgns
             return outcome::failure( signing_bytes.error() );
         }
 
-        OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
+        BOOST_OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
         bundle.set_signature( signature.data(), signature.size() );
 
         ConsensusManagerLogger()->debug(
@@ -2388,7 +2388,7 @@ namespace sgns
     {
         const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
 
-        OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
+        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
 
         Certificate certificate;
         if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )

@@ -1083,7 +1083,7 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        OUTCOME_TRY( ( this->*it->second.first )( tx ) );
+        BOOST_OUTCOME_TRY( ( this->*it->second.first )( tx ) );
         if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
         {
             UpdateAccountUTXOState( CollectTouchedAccounts( tx ), true );
@@ -1105,7 +1105,7 @@ namespace sgns
         utxo_state_tracking_suppression_.fetch_add( 1 );
         auto revert_result = ( this->*( it->second.second ) )( tx );
         utxo_state_tracking_suppression_.fetch_sub( 1 );
-        OUTCOME_TRY( revert_result );
+        BOOST_OUTCOME_TRY( revert_result );
         if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
         {
             UpdateAccountUTXOState( CollectTouchedAccounts( tx ), false );
@@ -1172,7 +1172,7 @@ namespace sgns
 
     TransactionManager::AccountUTXOState TransactionManager::GetOrInitAccountUTXOState( const std::string &address ) const
     {
-        const auto current_root = utxo_manager_.ComputeUTXOMerkleRoot( address );
+        const auto current_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( address );
 
         std::unique_lock state_lock( account_utxo_state_mutex_ );
         auto            &state = account_utxo_state_[address];
@@ -1201,7 +1201,7 @@ namespace sgns
             {
                 continue;
             }
-            roots.emplace( address, utxo_manager_.ComputeUTXOMerkleRoot( address ) );
+            roots.emplace( address, account_m->GetUTXOManager().ComputeUTXOMerkleRoot( address ) );
         }
 
         std::unique_lock state_lock( account_utxo_state_mutex_ );
@@ -1379,7 +1379,7 @@ namespace sgns
                 tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
         }
-        OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
+        BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
 
         return outcome::success();
     }
@@ -1567,7 +1567,7 @@ namespace sgns
             for ( std::uint32_t i = 0; i < outputs.size(); ++i )
             {
                 const auto &dest_info = outputs[i];
-                OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) )
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) )
             }
             if ( !inputs.empty() )
             {
@@ -1869,7 +1869,7 @@ namespace sgns
 
         if ( has_local_utxos )
         {
-            auto checkpoint_result = utxo_manager_.LoadLatestCheckpoint( account_m->GetAddress() );
+            auto checkpoint_result = account_m->GetUTXOManager().LoadLatestCheckpoint( account_m->GetAddress() );
             if ( checkpoint_result.has_error() )
             {
                 TransactionManagerLogger()->warn(
@@ -1880,7 +1880,7 @@ namespace sgns
             }
             else if ( checkpoint_result.value().has_value() )
             {
-                const auto local_root = utxo_manager_.ComputeUTXOMerkleRoot( account_m->GetAddress() );
+                const auto local_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( account_m->GetAddress() );
                 if ( local_root != checkpoint_result.value()->utxo_merkle_root )
                 {
                     TransactionManagerLogger()->warn(
@@ -1888,7 +1888,7 @@ namespace sgns
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m );
 
-                    auto clear_result = utxo_manager_.SetUTXOs( std::vector<GeniusUTXO>{}, account_m->GetAddress() );
+                    auto clear_result = account_m->GetUTXOManager().SetUTXOs( std::vector<GeniusUTXO>{}, account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
                         TransactionManagerLogger()->error(
@@ -2844,7 +2844,7 @@ namespace sgns
                     full_node_m,
                     key );
                 tx_lock.unlock();
-                OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
+                BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
                 tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
             }
@@ -2880,10 +2880,10 @@ namespace sgns
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     conflicting_tx.value()->GetHash() );
-                OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
+                BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
             }
         }
-        OUTCOME_TRY( ChangeTransactionState( new_tx, next_tx_state ) );
+        BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, next_tx_state ) );
 
         return outcome::success();
     }
@@ -3284,7 +3284,7 @@ namespace sgns
         auto           registry_hash  = hasher_m->sha2_256(
             gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( registry_cid.data() ), registry_cid.size() ) );
 
-        if ( auto checkpoint_res = utxo_manager_.CreateCheckpoint( registry_epoch, tx_hash_bin.value(), registry_hash );
+        if ( auto checkpoint_res = account_m->GetUTXOManager().CreateCheckpoint( registry_epoch, tx_hash_bin.value(), registry_hash );
              checkpoint_res.has_error() )
         {
             TransactionManagerLogger()->error(
@@ -3458,7 +3458,7 @@ namespace sgns
             return false;
         }
 
-        if ( !utxo_manager_.VerifyParameters( params, address ) )
+        if ( !account_m->GetUTXOManager().VerifyParameters( params, address ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: VerifyParameters failed for address {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3808,7 +3808,7 @@ namespace sgns
             }
             const auto  chain_id  = GetValidationChainId( tx );
             const auto &validator = GetInputValidator( chain_id );
-            return validator.ValidateUTXOParameters( params_opt.value(), tx->GetSrcAddress(), utxo_manager_ );
+            return validator.ValidateUTXOParameters( params_opt.value(), tx->GetSrcAddress(), account_m->GetUTXOManager() );
         }
 
         return true;
@@ -4006,7 +4006,7 @@ namespace sgns
 
             produced_payloads.push_back( SerializeUTXOLeafPayload( produced_output ) );
         }
-        const auto produced_outputs_root = utxo_manager_.ComputeUTXOMerkleRootFromSnapshot( produced_outputs );
+        const auto produced_outputs_root = account_m->GetUTXOManager().ComputeUTXOMerkleRootFromSnapshot( produced_outputs );
         const auto produced_outputs_root_from_payloads =
             utxo_merkle::ComputeMerkleRootFromPayloads( std::move( produced_payloads ) );
         if ( produced_outputs_root != produced_outputs_root_from_payloads )
@@ -4046,7 +4046,7 @@ namespace sgns
         };
 
         std::vector<SnapshotLeaf> leaves;
-        auto                      utxos = utxo_manager_.GetUTXOsForReservation( tx->GetSrcAddress(), tx->GetHash() );
+        auto                      utxos = account_m->GetUTXOManager().GetUTXOsForReservation( tx->GetSrcAddress(), tx->GetHash() );
         leaves.reserve( utxos.size() );
         for ( const auto &utxo : utxos )
         {
@@ -4345,9 +4345,9 @@ namespace sgns
                         full_node_m,
                         __func__,
                         tx->GetHash() );
-                    OUTCOME_TRY( RevertTransaction( tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
-                    OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
+                    BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
 
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
                 }
@@ -4364,7 +4364,7 @@ namespace sgns
                     __func__,
                     tx->GetHash() );
                 tx_lock.unlock();
-                OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
+                BOOST_OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
                 TransactionManagerLogger()->debug(
                     "[{} - full: {}] {}: Resumed the proposal handling to transaction {}",
                     account_m->GetAddress().substr( 0, 8 ),
@@ -4396,7 +4396,7 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    tx->GetHash() );
-                OUTCOME_TRY( ParseTransaction( tx ) );
+                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
@@ -4428,9 +4428,9 @@ namespace sgns
                                                        full_node_m,
                                                        __func__,
                                                        tx->GetHash() );
-                    OUTCOME_TRY( RevertTransaction( tx ) );
+                    BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
-                    OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
+                    BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
 
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
                 }
@@ -4440,7 +4440,7 @@ namespace sgns
                     auto params_opt = tx->GetUTXOParametersOpt();
                     if ( params_opt.has_value() )
                     {
-                        utxo_manager_.RollbackUTXOs( params_opt->first, tx->GetHash() );
+                        account_m->GetUTXOManager().RollbackUTXOs( params_opt->first, tx->GetHash() );
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };

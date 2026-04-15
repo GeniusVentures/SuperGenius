@@ -496,7 +496,7 @@ namespace sgns
     {
         ValidatorRegistryLogger()->trace( "{}: entry cid={}", __func__, cid );
 
-        OUTCOME_TRY( auto cid_content, db_->GetCIDContent( cid ) );
+        BOOST_OUTCOME_TRY( auto cid_content, db_->GetCIDContent( cid ) );
         ValidatorRegistryLogger()->trace( "{}: Got CID content with {} entries ", __func__, cid_content.size() );
         crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
         for ( auto &[key, registry_content] : cid_content )

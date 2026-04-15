@@ -21,7 +21,10 @@ namespace sgns
 
         std::string BuildUTXORecordKey( const std::string &owner_address, const OutPoint &outpoint )
         {
-            return fmt::format( "/utxo/{}/{}:{}", owner_address, outpoint.txid_hash_.toReadableString(), outpoint.output_idx_ );
+            return fmt::format( "/utxo/{}/{}:{}",
+                                owner_address,
+                                outpoint.txid_hash_.toReadableString(),
+                                outpoint.output_idx_ );
         }
 
         std::string BuildCheckpointRecordKey( const std::string &owner_address, uint64_t epoch )
@@ -61,7 +64,7 @@ namespace sgns
         UTXOManager::UTXOState FromProtoState( SGTransaction::UTXOEntryState state )
         {
             return state == SGTransaction::UTXO_ENTRY_CONSUMED ? UTXOManager::UTXOState::UTXO_CONSUMED
-                                                                : UTXOManager::UTXOState::UTXO_READY;
+                                                               : UTXOManager::UTXOState::UTXO_READY;
         }
 
         base::Hash256 ComputeMerkleRootFromUTXOList( std::vector<GeniusUTXO> unspent )
@@ -173,14 +176,17 @@ namespace sgns
             return false;
         }
 
-        utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_READY, new_utxo };
+        utxo_outpoints_[outpoint] =
+            UTXOEntry{ UTXOState::UTXO_READY, new_utxo, 0, std::nullopt, std::nullopt };
         address_outpoints_[address].push_back( outpoint );
 
         BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
         return true;
     }
 
-    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, uint32_t output_idx, const std::string &address )
+    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id,
+                                                   uint32_t             output_idx,
+                                                   const std::string   &address )
     {
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -191,12 +197,12 @@ namespace sgns
         std::unique_lock lock( utxos_mutex_ );
         if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
         {
-            auto &outpoints = address_it->second;
-            auto  outpoint_it =
-                std::find_if( outpoints.begin(),
-                              outpoints.end(),
-                              [&]( const OutPoint &outpoint )
-                              { return outpoint.txid_hash_ == utxo_id && outpoint.output_idx_ == output_idx; } );
+            auto &outpoints   = address_it->second;
+            auto  outpoint_it = std::find_if(
+                outpoints.begin(),
+                outpoints.end(),
+                [&]( const OutPoint &outpoint )
+                { return outpoint.txid_hash_ == utxo_id && outpoint.output_idx_ == output_idx; } );
             if ( outpoint_it != outpoints.end() )
             {
                 const OutPoint outpoint = *outpoint_it;
@@ -239,7 +245,8 @@ namespace sgns
             if ( !utxo_found )
             {
                 GeniusUTXO consumed_utxo( input_info.txid_hash_, input_info.output_idx_, 0, TokenID(), address );
-                utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_CONSUMED, consumed_utxo };
+                utxo_outpoints_[outpoint] =
+                    UTXOEntry{ UTXOState::UTXO_CONSUMED, consumed_utxo, 0, std::nullopt, std::nullopt };
             }
 
             consumed = consumed && utxo_found;
@@ -310,7 +317,7 @@ namespace sgns
 
     std::unordered_map<std::string, std::vector<UTXOManager::UTXOData>> UTXOManager::GetAllUTXOs() const
     {
-        std::shared_lock lock( utxos_mutex_ );
+        std::shared_lock                                       lock( utxos_mutex_ );
         std::unordered_map<std::string, std::vector<UTXOData>> result;
         for ( const auto &[outpoint, entry] : utxo_outpoints_ )
         {
@@ -350,7 +357,8 @@ namespace sgns
             auto owned_utxo = utxo;
             owned_utxo.SetOwnerAddress( address );
             const OutPoint outpoint{ owned_utxo.GetTxID(), owned_utxo.GetOutputIdx() };
-            utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_READY, owned_utxo };
+            utxo_outpoints_[outpoint] =
+                UTXOEntry{ UTXOState::UTXO_READY, owned_utxo, 0, std::nullopt, std::nullopt };
             outpoints.push_back( outpoint );
         }
 
@@ -495,13 +503,18 @@ namespace sgns
 
             if ( utxo_it->second.state != UTXOState::UTXO_READY )
             {
-                logger_->warn( "Outpoint {}:{} is not spendable", input.txid_hash_.toReadableString(), input.output_idx_ );
+                logger_->warn( "Outpoint {}:{} is not spendable",
+                               input.txid_hash_.toReadableString(),
+                               input.output_idx_ );
                 return false;
             }
 
             if ( utxo_it->second.utxo.GetOwnerAddress() != address )
             {
-                logger_->warn( "Outpoint {}:{} does not belong to {}", input.txid_hash_.toReadableString(), input.output_idx_, address );
+                logger_->warn( "Outpoint {}:{} does not belong to {}",
+                               input.txid_hash_.toReadableString(),
+                               input.output_idx_,
+                               address );
                 return false;
             }
 
@@ -625,19 +638,21 @@ namespace sgns
 
             const auto state = FromProtoState( entry_record.state() );
 
-            BOOST_OUTCOME_TRY( auto hash,
-                         base::Hash256::fromSpan(
-                             gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.utxo().hash().data() ) ),
-                                        entry_record.utxo().hash().size() ) ) );
+            BOOST_OUTCOME_TRY(
+                auto hash,
+                base::Hash256::fromSpan(
+                    gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.utxo().hash().data() ) ),
+                               entry_record.utxo().hash().size() ) ) );
 
-            auto      token_id = TokenID::FromBytes( entry_record.utxo().token().data(), entry_record.utxo().token().size() );
+            auto       token_id = TokenID::FromBytes( entry_record.utxo().token().data(),
+                                                entry_record.utxo().token().size() );
             GeniusUTXO loaded_utxo( hash,
                                     entry_record.utxo().output_idx(),
                                     entry_record.utxo().amount(),
                                     token_id,
                                     address );
             const auto outpoint = loaded_utxo.GetOutPoint();
-            UTXOEntry loaded_entry;
+            UTXOEntry  loaded_entry;
             loaded_entry.state         = state;
             loaded_entry.utxo          = loaded_utxo;
             loaded_entry.created_epoch = entry_record.created_epoch();
@@ -647,10 +662,10 @@ namespace sgns
             }
             if ( entry_record.has_spent_by_txid() )
             {
-                OUTCOME_TRY( auto spent_by_hash,
-                             base::Hash256::fromSpan( gsl::span(
-                                 reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.spent_by_txid().data() ) ),
-                                 entry_record.spent_by_txid().size() ) ) );
+                BOOST_OUTCOME_TRY( auto spent_by_hash,
+                                   base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                           entry_record.spent_by_txid().data() ) ),
+                                                                       entry_record.spent_by_txid().size() ) ) );
                 loaded_entry.spent_by_txid = spent_by_hash;
             }
 
@@ -702,8 +717,8 @@ namespace sgns
 
             SGTransaction::UTXOEntryRecord entry_record;
             auto                          *utxo_proto = entry_record.mutable_utxo();
-            const auto txid     = entry.utxo.GetTxID();
-            const auto token_id = entry.utxo.GetTokenID();
+            const auto                     txid       = entry.utxo.GetTxID();
+            const auto                     token_id   = entry.utxo.GetTokenID();
             utxo_proto->set_hash( txid.data(), txid.size() );
             utxo_proto->set_token( token_id.bytes().data(), token_id.size() );
             utxo_proto->set_amount( entry.utxo.GetAmount() );
@@ -719,7 +734,8 @@ namespace sgns
             entry_record.set_has_spent_by_txid( entry.spent_by_txid.has_value() );
             if ( entry.spent_by_txid.has_value() )
             {
-                entry_record.set_spent_by_txid( entry.spent_by_txid.value().data(), entry.spent_by_txid.value().size() );
+                entry_record.set_spent_by_txid( entry.spent_by_txid.value().data(),
+                                                entry.spent_by_txid.value().size() );
             }
 
             base::Buffer value_buf( std::vector<uint8_t>( entry_record.ByteSizeLong() ) );
@@ -744,7 +760,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> UTXOManager::CreateCheckpoint( uint64_t            epoch,
+    outcome::result<void> UTXOManager::CreateCheckpoint( uint64_t             epoch,
                                                          const base::Hash256 &last_finalized_tx,
                                                          const base::Hash256 &registry_hash )
     {
@@ -809,7 +825,7 @@ namespace sgns
             return std::errc::bad_message;
         }
 
-        const auto checkpoint_key = BuildCheckpointRecordKey( address, epoch );
+        const auto   checkpoint_key = BuildCheckpointRecordKey( address, epoch );
         base::Buffer checkpoint_key_buf;
         checkpoint_key_buf.put( checkpoint_key );
         if ( auto put_res = db_->put( checkpoint_key_buf, checkpoint_value_buf ); put_res.has_error() )
@@ -822,16 +838,14 @@ namespace sgns
         latest_pointer_key_buf.put( BuildLatestCheckpointPointerKey( address ) );
         base::Buffer latest_pointer_value_buf;
         latest_pointer_value_buf.put( checkpoint_key );
-        if ( auto put_latest_res = db_->put( latest_pointer_key_buf, latest_pointer_value_buf ); put_latest_res.has_error() )
+        if ( auto put_latest_res = db_->put( latest_pointer_key_buf, latest_pointer_value_buf );
+             put_latest_res.has_error() )
         {
             logger_->error( "Failed to store checkpoint latest pointer for address {}", address );
             return put_latest_res.error();
         }
 
-        logger_->info( "Created checkpoint owner={} epoch={} utxo_count={}",
-                       address,
-                       epoch,
-                       unspent_snapshot.size() );
+        logger_->info( "Created checkpoint owner={} epoch={} utxo_count={}", address, epoch, unspent_snapshot.size() );
         return outcome::success();
     }
 
@@ -883,27 +897,27 @@ namespace sgns
             return std::errc::bad_message;
         }
 
-        OUTCOME_TRY( auto last_finalized_tx_hash,
-                     base::Hash256::fromSpan( gsl::span(
-                         reinterpret_cast<uint8_t *>( const_cast<char *>( checkpoint_record.last_finalized_tx().data() ) ),
-                         checkpoint_record.last_finalized_tx().size() ) ) );
-        OUTCOME_TRY( auto registry_hash,
-                     base::Hash256::fromSpan(
-                         gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( checkpoint_record.registry_hash().data() ) ),
-                                    checkpoint_record.registry_hash().size() ) ) );
-        OUTCOME_TRY( auto utxo_root_hash,
-                     base::Hash256::fromSpan( gsl::span(
-                         reinterpret_cast<uint8_t *>( const_cast<char *>( checkpoint_record.utxo_merkle_root().data() ) ),
-                         checkpoint_record.utxo_merkle_root().size() ) ) );
+        BOOST_OUTCOME_TRY( auto last_finalized_tx_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.last_finalized_tx().data() ) ),
+                                                               checkpoint_record.last_finalized_tx().size() ) ) );
+        BOOST_OUTCOME_TRY( auto registry_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.registry_hash().data() ) ),
+                                                               checkpoint_record.registry_hash().size() ) ) );
+        BOOST_OUTCOME_TRY( auto utxo_root_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.utxo_merkle_root().data() ) ),
+                                                               checkpoint_record.utxo_merkle_root().size() ) ) );
 
         UTXOCheckpoint checkpoint;
-        checkpoint.owner_address    = checkpoint_record.owner_address();
-        checkpoint.epoch            = checkpoint_record.epoch();
+        checkpoint.owner_address     = checkpoint_record.owner_address();
+        checkpoint.epoch             = checkpoint_record.epoch();
         checkpoint.last_finalized_tx = last_finalized_tx_hash;
-        checkpoint.registry_hash    = registry_hash;
-        checkpoint.utxo_merkle_root = utxo_root_hash;
-        checkpoint.utxo_count       = checkpoint_record.utxo_count();
-        checkpoint.created_at_ms    = checkpoint_record.created_at_ms();
+        checkpoint.registry_hash     = registry_hash;
+        checkpoint.utxo_merkle_root  = utxo_root_hash;
+        checkpoint.utxo_count        = checkpoint_record.utxo_count();
+        checkpoint.created_at_ms     = checkpoint_record.created_at_ms();
 
         return std::optional<UTXOCheckpoint>{ checkpoint };
     }

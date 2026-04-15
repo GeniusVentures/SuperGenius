@@ -318,7 +318,7 @@ namespace sgns
                         case 2:
                         {
                             sgns::crdt::GlobalDB::Buffer registry_cid_key;
-                            registry_cid_key.put( std::string( blockchain::ValidatorRegistry::RegistryCidKey() ) );
+                            registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
                             auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
                             if ( registry_cid.has_value() )
                             {
@@ -1679,9 +1679,9 @@ namespace sgns
                                                                                      const std::optional<UTXOTransitionCommitment> &utxo_commitment,
                                                                                      const std::optional<UTXOWitness>              &utxo_witness )
     {
-        OUTCOME_TRY( auto &&nonce_subject,
+        BOOST_OUTCOME_TRY( auto &&nonce_subject,
                      CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
-        OUTCOME_TRY( auto &&nonce_proposal,
+        BOOST_OUTCOME_TRY( auto &&nonce_proposal,
                      consensus_manager_->CreateProposal( nonce_subject,
                                                          account_id,
                                                          validator_registry_->GetRegistryCid(),

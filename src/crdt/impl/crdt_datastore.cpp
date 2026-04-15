@@ -1808,12 +1808,12 @@ namespace sgns::crdt
     outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetILPDNodeContent(
         const std::string &cid_string )
     {
-        OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+        BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
 
-        OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
+        BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
 
         //TODO - Check if filtering is needed here. Currently not filtering.
-        OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
+        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
 
         //TODO - Maybe check tombstones, right now just grabbing elements.
         std::vector elements( delta.elements().begin(), delta.elements().end() );
