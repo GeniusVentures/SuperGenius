@@ -49,11 +49,19 @@ endif()
 
 option(SGNS_ENABLE_RELEASE_SYMBOLS "Build Release with debug symbols for symbolication" ON)
 
-if(SGNS_ENABLE_RELEASE_SYMBOLS AND CMAKE_CXX_COMPILER_ID MATCHES "^(AppleClang|Clang|GNU)$")
-    add_compile_options(
-        "$<$<CONFIG:Release>:-gline-tables-only>"
-        "$<$<CONFIG:RelWithDebInfo>:-g>"
-    )
+if(SGNS_ENABLE_RELEASE_SYMBOLS)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "^(AppleClang|Clang|GNU)$")
+        add_compile_options(
+            "$<$<CONFIG:Release>:-gline-tables-only>"
+            "$<$<CONFIG:RelWithDebInfo>:-g>"
+        )
+    elseif(MSVC)
+        # Static libs: keep debug info inside .obj/.lib (no standalone PDB required now)
+        add_compile_options(
+            "$<$<CONFIG:Release>:/Z7>"
+            "$<$<CONFIG:RelWithDebInfo>:/Z7>"
+        )
+    endif()
 endif()
 
 # Define zkllvm directory
