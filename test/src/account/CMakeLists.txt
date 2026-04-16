@@ -40,18 +40,18 @@ else()
     )
 endif()
 
-addtest(select_account_test
-    select_account_test.cpp
+addtest(account_management_test
+    account_management_test.cpp
 )
 
-target_link_libraries(select_account_test genius_node)
+target_link_libraries(account_management_test genius_node)
 
 if(MSVC)
-    target_link_options(select_account_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(account_management_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
-    target_link_options(select_account_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(account_management_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
 else()
-    target_link_options(select_account_test PUBLIC
+    target_link_options(account_management_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node>"
         "-Wl,--no-whole-archive"

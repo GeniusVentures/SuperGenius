@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
+#include <chrono>
 #include <stdexcept>
 #include <thread>
 #include <memory>
@@ -1012,6 +1013,34 @@ namespace sgns
         this->BeginDBInitialization();
 
         return outcome::success();
+    }
+
+    outcome::result<void> GeniusNode::TransferAccount( std::string_view public_address )
+    {
+        auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
+
+        if ( std::find( addresses.cbegin(), addresses.cend(), public_address ) == addresses.cend() )
+        {
+            node_logger_->error( "Tried to transfer to account that was not added to GeniusNode" );
+            return std::errc::address_not_available;
+        }
+
+        auto balance = account_->GetUTXOManager().GetBalance();
+        if ( balance > 0 )
+        {
+            BOOST_OUTCOME_TRY(
+                auto hash,
+                transaction_manager_->TransferFunds( balance, std::string( public_address ), this->GetTokenID() ) );
+
+            if ( transaction_manager_->WaitForTransactionOutgoing( hash, std::chrono::seconds( 20 ) ) !=
+                 TransactionManager::TransactionStatus::CONFIRMED )
+            {
+                node_logger_->error( "Failed to transfer fund in viable time" );
+                return std::errc::interrupted;
+            }
+        }
+
+        return SelectAccount( public_address );
     }
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
