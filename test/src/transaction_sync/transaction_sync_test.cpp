@@ -222,15 +222,15 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_proc1 not synched" );
+        "node_proc1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_proc2 not synched" );
+        "node_proc2 not synced" );
     test::assertWaitForCondition(
         [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "full_node not synched" );
+        "full_node not synced" );
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> mint_amounts =
@@ -422,15 +422,15 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_proc1 not synched" );
+        "node_proc1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "node_proc2 not synched" );
+        "node_proc2 not synced" );
     test::assertWaitForCondition(
         [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "full_node not synched" );
+        "full_node not synced" );
 
     // Mint tokens with timeout
     auto mint_result = node_proc1->MintTokens( 10000000000,

@@ -77,7 +77,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     test::assertWaitForCondition(
         [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
-        "fullNode not synched" );
+        "fullnode not synced" );
 
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =

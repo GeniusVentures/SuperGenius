@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef __ANDROID__
 
 #include "local_secure_storage/impl/Android.hpp"

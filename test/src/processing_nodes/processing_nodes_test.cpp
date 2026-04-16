@@ -144,15 +144,15 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
     test::assertWaitForCondition(
         [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "Main node not synched" );
+        "Main node not synced" );
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "Node proc 1 not synched" );
+        "Node proc 1 not synced" );
     test::assertWaitForCondition(
         [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 20000 ),
-        "Node proc 2 not synched" );
+        "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            "",
                            "",

@@ -18,7 +18,7 @@ namespace sgns
     LinuxSecureStorage::LinuxSecureStorage( std::string identifier ) :
         identifier_( std::move( identifier ) ), schema_( { identifier_.c_str(), SECRET_SCHEMA_NONE } )
     {
-    }   
+    }
 
     outcome::result<rj::Document> LinuxSecureStorage::LoadJSON() const
     {
