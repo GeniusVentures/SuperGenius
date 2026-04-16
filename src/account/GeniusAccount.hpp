@@ -48,7 +48,7 @@ namespace sgns
                                              std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
-        static constexpr int64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
          * @brief       Factory constructor of new GeniusAccount.
@@ -81,6 +81,9 @@ namespace sgns
                                                    bool                           full_node = false );
 
         static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
+
+        static outcome::result<void> DeleteAccount( std::string_view               public_address,
+                                                    const boost::filesystem::path &base_path );
 
         /**
          * @brief       Initialize the messenger for the account
