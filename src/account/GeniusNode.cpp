@@ -977,9 +977,9 @@ namespace sgns
 
     outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
     {
-        if (public_address == GetAddress())
+        if ( public_address == GetAddress() )
         {
-            node_logger_->warn("Address already active");
+            node_logger_->warn( "Address already active" );
             return std::errc::address_in_use;
         }
         auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
@@ -1056,7 +1056,13 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        return GeniusAccount::DeleteAccount(public_address, write_base_path_);
+        return GeniusAccount::DeleteAccount( public_address, write_base_path_ );
+    }
+
+    outcome::result<void> GeniusNode::MergeAccount( std::string_view public_address )
+    {
+        BOOST_OUTCOME_TRY( TransferAccount( public_address ) );
+        return DeleteAccount( public_address );
     }
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
