@@ -3,7 +3,6 @@
 #include "account/MigrationManager.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "base/sgns_version.hpp"
@@ -162,11 +161,6 @@ namespace sgns
                     {
                         topics_.emplace( dest_info.dest_address );
                     }
-                }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
                 }
 
                 ++migrated_count;

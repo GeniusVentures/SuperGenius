@@ -330,12 +330,9 @@ namespace sgns
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> RevertEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
         static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers = {
@@ -345,10 +342,7 @@ namespace sgns
                 { "mint-v2",
                   { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
                 { "escrow-hold",
-                  { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
-                { "escrow-release",
-                  { &TransactionManager::ParseEscrowReleaseTransaction,
-                    &TransactionManager::RevertEscrowReleaseTransaction } } };
+                  { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
 
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );

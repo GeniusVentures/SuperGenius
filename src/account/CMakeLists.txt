@@ -59,7 +59,6 @@ add_library(genius_node
     MintTransactionV2.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
-    EscrowReleaseTransaction.cpp
     InputValidators.cpp
     TransactionManager.cpp
     TokenAmount.cpp

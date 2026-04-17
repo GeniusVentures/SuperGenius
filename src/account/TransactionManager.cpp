@@ -19,7 +19,6 @@
 #include "MintTransaction.hpp"
 #include "MintTransactionV2.hpp"
 #include "EscrowTransaction.hpp"
-#include "EscrowReleaseTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -572,15 +571,16 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        auto              hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        const std::string lock_id   = "0x" + hash_data.toReadableString();
 
         BOOST_OUTCOME_TRY( auto params,
                      account_m->GetUTXOManager().CreateTxParameter( amount,
-                                                      "0x" + hash_data.toReadableString(),
+                                                      lock_id,
                                                       TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs]  = params;
         auto escrow_transaction = std::make_shared<EscrowTransaction>(
-            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct() ) );
+            EscrowTransaction::New( params, amount, dev_addr, peers_cut, FillDAGStruct( lock_id ) ) );
 
         escrow_transaction->MakeSignature( *account_m );
         account_m->GetUTXOManager().ReserveUTXOs( inputs, escrow_transaction->GetHash() );
@@ -595,7 +595,7 @@ namespace sgns
 
         // Return both the transaction ID and the original EscrowDataPair
         return std::make_pair( txId,
-                               std::make_pair( "0x" + hash_data.toReadableString(), std::move( data_transaction ) ) );
+                               std::make_pair( lock_id, std::move( data_transaction ) ) );
     }
 
     outcome::result<std::string> TransactionManager::PayEscrow(
@@ -625,6 +625,10 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto transaction, FetchTransaction( globaldb_m, escrow_path ) );
 
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
+        if ( crdt_transaction && escrow_tx && !escrow_tx->GetSrcAddress().empty() )
+        {
+            BOOST_OUTCOME_TRY( crdt_transaction->AddTopic( escrow_tx->GetSrcAddress() ) );
+        }
         std::vector<std::string>           subtask_ids;
         std::vector<OutputDestInfo>        payout_peers;
 
@@ -665,28 +669,24 @@ namespace sgns
         escrow_utxo_input.output_idx_ = 0;
         escrow_utxo_input.signature_  = account_m->Sign( escrow_utxo_input.SerializeForSigning() );
 
+        std::string lock_id = escrow_tx->GetUncleHash();
+        if ( lock_id.empty() && !escrow_tx->GetUTXOParameters().second.empty() )
+        {
+            lock_id = escrow_tx->GetUTXOParameters().second[0].dest_address;
+            TransactionManagerLogger()->warn( "[{} - full: {}] Escrow transaction {} has empty lock_id but has UTXO parameters - using dest_address as fallback lock_id: {}",
+                                       account_m->GetAddress().substr( 0, 8 ),
+                                       full_node_m,
+                                       escrow_tx->GetHash(),
+                                       lock_id );
+        }
+
         auto transfer_transaction = std::make_shared<TransferTransaction>(
-            TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct() ) );
+            TransferTransaction::New( std::vector{ escrow_utxo_input }, payout_peers, FillDAGStruct( lock_id ) ) );
 
         transfer_transaction->MakeSignature( *account_m );
-        auto escrow_release_dag = FillDAGStruct();
-        escrow_release_dag.set_previous_hash( transfer_transaction->GetHash() );
-
-        auto escrow_release_tx = std::make_shared<EscrowReleaseTransaction>(
-            EscrowReleaseTransaction::New( escrow_tx->GetUTXOParameters(),
-                                           escrow_tx->GetAmount(),
-                                           escrow_tx->GetDevAddress(),
-                                           escrow_tx->dag_st.source_addr(),
-                                           escrow_tx->GetHash(),
-                                           escrow_release_dag ) );
-
-        escrow_release_tx->MakeSignature( *account_m );
 
         TransactionBatch tx_batch;
-
         tx_batch.push_back( std::make_pair( transfer_transaction, std::nullopt ) );
-        tx_batch.push_back( std::make_pair( escrow_release_tx, std::nullopt ) );
-
         EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->GetHash();
     }
@@ -1465,46 +1465,25 @@ namespace sgns
     outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
-
-        if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
+        if ( !escrow_tx )
         {
-            auto [_, outputs] = escrow_tx->GetUTXOParameters();
-
-            if ( !outputs.empty() )
-            {
-                //The first is the escrow, second is the change (might not happen)
-                auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
-                if ( outputs.size() > 1 )
-                {
-                    GeniusUTXO new_utxo( hash, 1, outputs[1].encrypted_amount, outputs[1].token_id );
-                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[1].dest_address ) );
-                }
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( escrow_tx->GetUTXOParameters().first,
-                                                                             escrow_tx->GetSrcAddress() ) );
-            }
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::ParseEscrowReleaseTransaction(
-        const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-
-        if ( !escrowReleaseTx )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
             return std::errc::invalid_argument;
         }
 
-        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
-        TransactionManagerLogger()->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           originalEscrowHash );
+        auto [inputs, outputs] = escrow_tx->GetUTXOParameters();
+        auto hash              = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
+
+        for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+        {
+            // output[0] is escrow hold, optional output[1] is change.
+            GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
+        }
+
+        if ( !inputs.empty() )
+        {
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs, escrow_tx->GetSrcAddress() ) );
+        }
 
         return outcome::success();
     }
@@ -1605,54 +1584,32 @@ namespace sgns
     outcome::result<void> TransactionManager::RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
-
-        if ( escrow_tx->GetSrcAddress() == account_m->GetAddress() )
+        if ( !escrow_tx )
         {
-            if ( auto [inputs, outputs] = escrow_tx->GetUTXOParameters(); !outputs.empty() )
-            {
-                //The first is the escrow, second is the change (might not happen)
-                auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
-                if ( outputs.size() > 1 )
-                {
-                    BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, 1, outputs[1].dest_address ) );
-                }
-                for ( auto &input : inputs )
-                {
-                    auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-                    if ( tx )
-                    {
-                        TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
-                                                           account_m->GetAddress().substr( 0, 8 ),
-                                                           full_node_m,
-                                                           tx->GetType() );
-                        BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-                    }
-                }
-                account_m->GetUTXOManager().RollbackUTXOs( inputs, escrow_tx->GetHash() );
-            }
-        }
-
-        return outcome::success();
-    }
-
-    outcome::result<void> TransactionManager::RevertEscrowReleaseTransaction(
-        const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx );
-
-        if ( !escrowReleaseTx )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] Failed to cast transaction to EscrowReleaseTransaction",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
             return std::errc::invalid_argument;
         }
 
-        std::string originalEscrowHash = escrowReleaseTx->GetOriginalEscrowHash();
-        TransactionManagerLogger()->debug( "[{} - full: {}] Successfully fetched release for escrow: {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           originalEscrowHash );
+        if ( auto [inputs, outputs] = escrow_tx->GetUTXOParameters(); !outputs.empty() )
+        {
+            auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, outputs[i].dest_address ) );
+            }
+            for ( auto &input : inputs )
+            {
+                auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
+                if ( tx )
+                {
+                    TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
+                                                       account_m->GetAddress().substr( 0, 8 ),
+                                                       full_node_m,
+                                                       tx->GetType() );
+                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                }
+            }
+            account_m->GetUTXOManager().RollbackUTXOs( inputs, escrow_tx->GetHash() );
+        }
 
         return outcome::success();
     }
@@ -1803,47 +1760,73 @@ namespace sgns
         std::chrono::milliseconds timeout ) const
     {
         auto start  = std::chrono::steady_clock::now();
-        auto retval = TransactionStatus::INVALID;
+        auto escrow_hash_result = base::Hash256::fromReadableString( originalEscrowId );
+        if ( escrow_hash_result.has_error() )
+        {
+            TransactionManagerLogger()->warn( "[{} - full: {}] Invalid original escrow tx id while waiting release: {}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              originalEscrowId );
+            return TransactionStatus::INVALID;
+        }
+        const auto escrow_hash = escrow_hash_result.value();
+
+        auto is_escrow_spent_by_confirmed_transfer = [this, &escrow_hash]() -> bool
+        {
+            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+            for ( const auto &[_, tracked] : tx_processed_m )
+            {
+                if ( tracked.status != TransactionStatus::CONFIRMED || !tracked.tx || !tracked.tx->HasUTXOParameters() )
+                {
+                    continue;
+                }
+
+                const auto params_opt = tracked.tx->GetUTXOParametersOpt();
+                if ( !params_opt.has_value() )
+                {
+                    continue;
+                }
+
+                const auto &inputs = params_opt->first;
+                const bool  spends_original_escrow = std::any_of(
+                    inputs.begin(),
+                    inputs.end(),
+                    [&escrow_hash]( const InputUTXOInfo &input )
+                    { return input.txid_hash_ == escrow_hash && input.output_idx_ == 0; } );
+
+                if ( spends_original_escrow )
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
 
         while ( std::chrono::steady_clock::now() - start < timeout )
         {
+            if ( account_m->GetUTXOManager().IsOutPointConsumed( escrow_hash, 0 ) )
             {
-                std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-                for ( const auto &[_, tracked] : tx_processed_m )
-                {
-                    if ( !tracked.tx )
-                    {
-                        continue;
-                    }
+                TransactionManagerLogger()->debug( "[{} - full: {}] Escrow hold ({},0) is consumed",
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   originalEscrowId );
+                return TransactionStatus::CONFIRMED;
+            }
 
-                    if ( tracked.tx->GetType() == "escrow-release" )
-                    {
-                        auto escrowReleaseTx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tracked.tx );
-                        if ( escrowReleaseTx && escrowReleaseTx->GetOriginalEscrowHash() == originalEscrowId )
-                        {
-                            TransactionManagerLogger()->debug(
-                            "[{} - full: {}] Found matching escrow release transaction with tx id: {}",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                tracked.tx->GetHash() );
-
-                            retval = tracked.status;
-
-                            // If finalized, return immediately; otherwise keep waiting.
-                            if ( retval == TransactionStatus::CONFIRMED || retval == TransactionStatus::FAILED ||
-                                 retval == TransactionStatus::INVALID )
-                            {
-                                return retval;
-                            }
-                        }
-                    }
-                }
+            if ( is_escrow_spent_by_confirmed_transfer() )
+            {
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] Escrow release confirmed via tracked transfer spend for {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    originalEscrowId );
+                return TransactionStatus::CONFIRMED;
             }
 
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
 
-        return retval; // Will be INVALID if not seen within timeout
+        return TransactionStatus::INVALID;
     }
 
     void TransactionManager::InitializeUTXOs()
