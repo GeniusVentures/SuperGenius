@@ -169,6 +169,10 @@ namespace sgns
 
         bool VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const;
 
+        std::optional<UTXOState> GetOutPointState( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
+        bool IsOutPointConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
         /**
          * @brief Compute a deterministic Merkle root for unspent UTXOs owned by this node address
          */

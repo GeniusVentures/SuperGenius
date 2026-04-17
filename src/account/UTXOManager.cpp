@@ -71,6 +71,7 @@ namespace sgns
         {
             return utxo_merkle::ComputeMerkleRootFromUTXOs( unspent );
         }
+
     } // namespace
 
     uint64_t UTXOManager::GetBalance() const
@@ -470,12 +471,6 @@ namespace sgns
 
         std::shared_lock lock( utxos_mutex_ );
 
-        if ( address_outpoints_.find( address ) == address_outpoints_.end() )
-        {
-            logger_->warn( "Could not find UTXOs from address {}", address );
-            return false;
-        }
-
         std::unordered_set<OutPoint, OutPointHash> seen_inputs;
         seen_inputs.reserve( params.first.size() );
 
@@ -509,13 +504,27 @@ namespace sgns
                 return false;
             }
 
-            if ( utxo_it->second.utxo.GetOwnerAddress() != address )
+            const auto &owner_address = utxo_it->second.utxo.GetOwnerAddress();
+            const bool delegated_escrow_spend = owner_address != address &&
+                                                input.output_idx_ == 0 &&
+                                                utxo_address::IsEscrowLockAddress( owner_address );
+
+            if ( owner_address != address && !delegated_escrow_spend )
             {
                 logger_->warn( "Outpoint {}:{} does not belong to {}",
                                input.txid_hash_.toReadableString(),
                                input.output_idx_,
                                address );
                 return false;
+            }
+
+            if ( delegated_escrow_spend )
+            {
+                logger_->debug( "Allowing delegated escrow spend for outpoint {}:{} by {} (lock owner: {})",
+                                input.txid_hash_.toReadableString(),
+                                input.output_idx_,
+                                address.substr( 0, 8 ),
+                                owner_address );
             }
 
             expected_amount += utxo_it->second.utxo.GetAmount();
@@ -528,6 +537,25 @@ namespace sgns
                                                 { return o.encrypted_amount + s; } );
 
         return real_amount == expected_amount && seen_inputs.size() == params.first.size();
+    }
+
+    std::optional<UTXOManager::UTXOState> UTXOManager::GetOutPointState( const base::Hash256 &utxo_id,
+                                                                          uint32_t             output_idx ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        const OutPoint   outpoint{ utxo_id, output_idx };
+        auto             it = utxo_outpoints_.find( outpoint );
+        if ( it == utxo_outpoints_.end() )
+        {
+            return std::nullopt;
+        }
+        return it->second.state;
+    }
+
+    bool UTXOManager::IsOutPointConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const
+    {
+        auto state = GetOutPointState( utxo_id, output_idx );
+        return state.has_value() && state.value() == UTXOState::UTXO_CONSUMED;
     }
 
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const

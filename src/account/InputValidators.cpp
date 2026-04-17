@@ -66,6 +66,7 @@ namespace sgns
             }
             return utxo_merkle::ComputeMerkleRootFromLeafHashes( std::move( leaf_hashes ) );
         }
+
     } // namespace
 
     bool GeniusInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
@@ -302,7 +303,10 @@ namespace sgns
                 return false;
             }
             const std::string payload_owner( payload.data() + 40, payload.data() + 40 + owner_len );
-            if ( payload_owner != tx->GetSrcAddress() )
+            const bool delegated_escrow_spend =
+                payload_owner != tx->GetSrcAddress() && tx->GetType() == "transfer" && input.output_idx_ == 0 &&
+                utxo_address::IsEscrowLockAddress( payload_owner ) && tx->GetUncleHash() == payload_owner;
+            if ( payload_owner != tx->GetSrcAddress() && !delegated_escrow_spend )
             {
                 return false;
             }
