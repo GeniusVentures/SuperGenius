@@ -10,20 +10,10 @@
 #include <cstdio>
 #include <boost/dll.hpp>
 #include "account/GeniusNode.hpp"
+#include "testutil/mint_source_hash.hpp"
 
 namespace sgns
 {
-    namespace
-    {
-        std::string NextMintSourceHash()
-        {
-            static uint64_t mint_counter = 1;
-            char            buf[65]      = {};
-            std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
-            return std::string( buf );
-        }
-    } // namespace
-
     /**
  * @file transaction_crash_sync_test_updated.cpp
  * @brief Verifies transaction synchronization after a node crash and recovery,
@@ -122,7 +112,7 @@ namespace sgns
 
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
-                                              NextMintSourceHash(),
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",

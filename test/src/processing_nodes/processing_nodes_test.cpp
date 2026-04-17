@@ -10,20 +10,10 @@
 #include "account/GeniusNode.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::test;
-
-namespace
-{
-    std::string NextMintSourceHash()
-    {
-        static uint64_t mint_counter = 1;
-        char            buf[65]      = {};
-        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
-        return std::string( buf );
-    }
-} // namespace
 
 class ProcessingNodesTest : public ::testing::Test
 {
@@ -166,13 +156,13 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
         std::chrono::milliseconds( 20000 ),
         "Node proc 2 not synched" );
     node_main->MintTokens( 50000000000,
-                           NextMintSourceHash(),
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
-                           NextMintSourceHash(),
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
@@ -483,7 +473,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     auto mint_result =
         node_main->MintTokens( 50000000000,
-                                              NextMintSourceHash(),
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",
@@ -523,7 +513,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         {
             auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
             auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
-            return balance_node1 + balance_node2 + 2 * expected_peer_gain;
+            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );

@@ -8,22 +8,11 @@
 #include <iostream>
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
-
-namespace
-{
-    std::string NextMintSourceHash()
-    {
-        static std::atomic<uint64_t> mint_counter{ 1 };
-        const auto                   value = mint_counter.fetch_add( 1 );
-        char                         buf[65] = {};
-        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
-        return std::string( buf );
-    }
-} // namespace
 
 /**
  * @brief Helper to create a GeniusNode with explicit full-node flag, custom folder, and fixed private key.
@@ -111,7 +100,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     for ( size_t i = 0; i < mintAmount; ++i )
     {
         auto mintRes = originalNode->MintTokens( 500000,
-                                                 NextMintSourceHash(),
+                                                 sgns::test::NextMintSourceHash(),
                                                  "",
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  "",

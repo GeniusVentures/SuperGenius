@@ -25,17 +25,7 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
-
-namespace
-{
-    std::string NextMintSourceHash()
-    {
-        static uint64_t mint_counter = 1;
-        char            buf[65]      = {};
-        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( mint_counter++ ) );
-        return std::string( buf );
-    }
-} // namespace
+#include "testutil/mint_source_hash.hpp"
 
 class ProcessingMultiTest : public ::testing::Test
 {
@@ -148,13 +138,13 @@ std::string ProcessingMultiTest::binary_path = "";
 TEST_F( ProcessingMultiTest, MintTokens )
 {
     node_main->MintTokens( 50000000000,
-                           NextMintSourceHash(),
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
-                           NextMintSourceHash(),
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",

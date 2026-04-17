@@ -13,6 +13,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
@@ -23,15 +24,6 @@ using boost::multiprecision::cpp_dec_float_50;
 
 namespace
 {
-    std::string NextMintSourceHash()
-    {
-        static std::atomic<uint64_t> mint_counter{ 1 };
-        const auto                   value = mint_counter.fetch_add( 1 );
-        char                         buf[65] = {};
-        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
-        return std::string( buf );
-    }
-
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
      * @param tokenValue TokenValueInGNUS to initialize DevConfig.
@@ -189,7 +181,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     // Ensure enough balance with +1 change
     auto mintRes51 =
         node51->MintTokens( totalMint51 + 1,
-                                         NextMintSourceHash(),
+                                         sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x51 } ),
                                          "",
@@ -199,7 +191,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 
     auto mintRes52 =
         node52->MintTokens( totalMint52 + 1,
-                                         NextMintSourceHash(),
+                                         sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x52 } ),
                                          "",
@@ -294,7 +286,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
     auto res = node->MintTokens( p.mintMain,
-                                 NextMintSourceHash(),
+                                 sgns::test::NextMintSourceHash(),
                                  "",
                                  p.TokenID,
                                  "",
@@ -373,7 +365,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     ASSERT_TRUE( parsedMint.has_value() );
 
     auto res = node->MintTokens( parsedMint.value(),
-                                 NextMintSourceHash(),
+                                 sgns::test::NextMintSourceHash(),
                                  "",
                                  p.TokenID,
                                  "",
@@ -454,7 +446,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount, NextMintSourceHash(), "", tm.tokenId,
+        auto res = node->MintTokens( tm.amount, sgns::test::NextMintSourceHash(), "", tm.tokenId,
                                      "",
                                      std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
@@ -513,7 +505,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     auto mintResMain =
         node_main->MintTokens( 1000,
-                                              NextMintSourceHash(),
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",

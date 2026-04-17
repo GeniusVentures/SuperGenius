@@ -28,19 +28,8 @@
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
-
-namespace
-{
-    std::string NextMintSourceHash()
-    {
-        static std::atomic<uint64_t> mint_counter{ 1 };
-        const auto                   value   = mint_counter.fetch_add( 1 );
-        char                         buf[65] = {};
-        std::snprintf( buf, sizeof( buf ), "%064llx", static_cast<unsigned long long>( value ) );
-        return std::string( buf );
-    }
-} // namespace
 
 class BlockchainGenesisTest : public ::testing::Test
 {
@@ -314,7 +303,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
-                                                   NextMintSourceHash(),
+                                                   sgns::test::NextMintSourceHash(),
                                                    "",
                                                    token_id,
                                                    "",
