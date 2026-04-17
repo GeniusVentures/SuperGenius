@@ -198,6 +198,7 @@ namespace sgns::processing
         auto job_completion_transaction = m_db->BeginTransaction();
         data.put( taskResult.SerializeAsString() );
         BOOST_OUTCOME_TRY( job_completion_transaction->Put( std::move( result_key ), std::move( data ) ) );
+        BOOST_OUTCOME_TRY( job_completion_transaction->AddTopic( m_processing_topic ) );
 
         m_logger->debug( "TASK_COMPLETED: {}, results stored", taskKey );
         return job_completion_transaction;
