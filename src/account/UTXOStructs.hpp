@@ -5,6 +5,15 @@
 
 namespace sgns
 {
+    namespace utxo_address
+    {
+        // Escrow locks are encoded as 0x + 32-byte hash (66 chars total).
+        bool IsEscrowLockAddress( std::string_view address );
+
+        // Genius account addresses are full pubkeys encoded as 64 bytes hex (128 chars).
+        bool IsAccountPublicKeyAddress( std::string_view address );
+    } // namespace utxo_address
+
     /**
      * @brief   Raw UTXO input data for a transaction
      */
