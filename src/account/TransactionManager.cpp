@@ -3146,12 +3146,13 @@ namespace sgns
         auto tx = GetTransactionByHash( tx_hash );
         if ( !tx )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Transaction not found for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
-            return ConsensusManager::Check::Stalled;
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Transaction not found for hash {}. Accepting certificate callback and waiting for tx ingestion path",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx_hash );
+            return ConsensusManager::Check::Approve;
         }
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
                                            account_m->GetAddress().substr( 0, 8 ),

@@ -213,7 +213,7 @@ namespace sgns::crdt
             {
                 continue;
             }
-            entry.state          = State::Seen;
+            entry.state          = State::Stalled;
             entry.updated_at_ms  = now_ms;
             entry.lease_until_ms = 0;
             PutEntryUnlocked( entry );

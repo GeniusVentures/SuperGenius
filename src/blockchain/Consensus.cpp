@@ -152,6 +152,7 @@ namespace sgns
         round_timer_                              = std::thread(
             [weak_self]()
             {
+                constexpr auto min_interval = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
                     auto self = weak_self.lock();
@@ -166,28 +167,26 @@ namespace sgns
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
                     }
-                    self->timer_cv_.wait( lock,
-                                          [self]()
-                                          { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
+                    if ( interval < min_interval )
+                    {
+                        interval = min_interval;
+                    }
+                    self->timer_cv_.wait_for( lock,
+                                              interval,
+                                              [self]()
+                                              { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
                     if ( self->stop_timer_.load() )
                     {
                         return;
                     }
                     lock.unlock();
-                    self->ProcessCertificates();
-                    self->UpdateCertificatesPending();
-                    lock.lock();
-                    if ( self->certificates_pending_.load() && !self->stop_timer_.load() )
+                    if ( self->certificates_pending_.load() )
                     {
-                        self->timer_cv_.wait_for(
-                            lock,
-                            interval,
-                            [self]() { return self->stop_timer_.load() || !self->certificates_pending_.load(); } );
+                        self->ProcessCertificates();
+                        self->UpdateCertificatesPending();
                     }
-                    if ( self->stop_timer_.load() )
-                    {
-                        return;
-                    }
+                    // Keep replaying unfinished certificate work while the node is running.
+                    self->RecoverPendingCertificateWork();
                 }
             } );
     }
@@ -1567,6 +1566,7 @@ namespace sgns
             auto it = certificate_subject_handlers_.find( static_cast<int>( certificate.proposal().subject().type() ) );
             if ( it == certificate_subject_handlers_.end() )
             {
+                (void)certificate_work_journal_->MarkDone( key );
                 return;
             }
             handler = it->second;
@@ -1593,6 +1593,7 @@ namespace sgns
             certificate_work_journal_->MarkStalled( key );
             return;
         }
+        (void)certificate_work_journal_->MarkDone( key );
     }
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
@@ -2438,18 +2439,29 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        //auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN,
-        //                                                                    std::chrono::seconds( 15 ) );
-        //if ( recovered > 0 )
-        //{
-        //    ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
-        //}
+        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN, std::chrono::seconds( 15 ) );
+        if ( recovered > 0 )
+        {
+            ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
+        }
 
         auto unfinished = certificate_work_journal_->ListUnfinished( CERT_KEY_PATTERN );
+        const auto now_ms =
+            static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                       std::chrono::system_clock::now().time_since_epoch() )
+                                       .count() );
 
         for ( const auto &entry : unfinished )
         {
             if ( entry.key.empty() )
+            {
+                continue;
+            }
+            if ( entry.state != crdt::CRDTWorkJournal::State::Stalled )
+            {
+                continue;
+            }
+            if ( entry.lease_until_ms != 0 && entry.lease_until_ms > now_ms )
             {
                 continue;
             }
@@ -2499,8 +2511,8 @@ namespace sgns
         {
             return false;
         }
-        //TODO - Check if we need to call ValidateCertificate here. I don't think so because it was validated before.
-        return true;
+        auto certificate_check = ValidateCertificate( certificate_result.value() );
+        return certificate_check == Check::Approve;
     }
 
     bool ConsensusManager::CheckCertificateForSubject( const ConsensusManager::Subject &subject ) const
@@ -2545,11 +2557,26 @@ namespace sgns
         }
         auto proposed_subject_id = subject_id_result.value();
         bool equal               = proposed_subject_id == certificate_subject_id;
+        if ( !equal )
+        {
+            ConsensusManagerLogger()->debug( "{}: Match for subject and certificate (hash {}): MISMATCH",
+                                             __func__,
+                                             GetPrintableSubjectHash( subject ) );
+            return false;
+        }
+        auto certificate_check = ValidateCertificate( certificate );
+        if ( certificate_check != Check::Approve )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate failed validation for hash {}",
+                                             __func__,
+                                             GetPrintableSubjectHash( subject ) );
+            return false;
+        }
         ConsensusManagerLogger()->debug( "{}: Match for subject and certificate (hash {}): {}",
                                          __func__,
                                          GetPrintableSubjectHash( subject ),
                                          equal ? "Match" : "MISMATCH" );
-        return equal;
+        return true;
     }
 
     std::string ConsensusManager::GetPrintableSubjectHash( const Subject &subject )
