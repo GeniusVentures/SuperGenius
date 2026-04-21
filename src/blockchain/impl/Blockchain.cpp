@@ -185,7 +185,8 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    auto weight_result = strong->validator_registry_->GetValidatorWeight( strong->account_->GetAddress() );
+                    auto weight_result = strong->validator_registry_->GetValidatorWeight(
+                        strong->account_->GetAddress() );
                     if ( weight_result.has_error() )
                     {
                         return outcome::failure( weight_result.error() );
@@ -194,10 +195,11 @@ namespace sgns
                     {
                         return outcome::success();
                     }
-                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
-                                                                                        strong->account_->GetAddress(),
-                                                                                        strong->validator_registry_->GetRegistryCid(),
-                                                                                        strong->validator_registry_->GetRegistryEpoch() );
+                    auto proposal_result = strong->consensus_manager_->CreateProposal(
+                        subject,
+                        strong->account_->GetAddress(),
+                        strong->validator_registry_->GetRegistryCid(),
+                        strong->validator_registry_->GetRegistryEpoch() );
                     if ( proposal_result.has_error() )
                     {
                         return outcome::failure( proposal_result.error() );
@@ -210,7 +212,7 @@ namespace sgns
         instance->consensus_manager_->RegisterSubjectHandler(
             SubjectType::SUBJECT_REGISTRY_BATCH,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::SubjectCheck>
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -222,12 +224,12 @@ namespace sgns
                     switch ( decision_result.value() )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
-                            return ConsensusManager::SubjectCheck::Approve;
+                            return ConsensusManager::Check::Approve;
                         case ValidatorRegistry::BatchSubjectDecision::Pending:
-                            return ConsensusManager::SubjectCheck::Pending;
+                            return ConsensusManager::Check::Pending;
                         case ValidatorRegistry::BatchSubjectDecision::Reject:
                         default:
-                            return ConsensusManager::SubjectCheck::Reject;
+                            return ConsensusManager::Check::Reject;
                     }
                 }
                 return outcome::failure( std::errc::owner_dead );
@@ -235,13 +237,31 @@ namespace sgns
 
         instance->consensus_manager_->RegisterCertificateHandler(
             SubjectType::SUBJECT_REGISTRY_BATCH,
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( const std::string          &subject_hash,
-                                                                 const ConsensusCertificate &certificate )
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const std::string          &subject_hash,
+                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
+                    auto decision = strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
+                    if ( decision.has_error() )
+                    {
+                        return outcome::failure( decision.error() );
+                    }
+                    switch ( decision.value() )
+                    {
+                        case ValidatorRegistry::BatchCertificateDecision::Approve:
+                            return ConsensusManager::Check::Approve;
+                        case ValidatorRegistry::BatchCertificateDecision::Pending:
+                            return ConsensusManager::Check::Pending;
+                        case ValidatorRegistry::BatchCertificateDecision::Stalled:
+                            return ConsensusManager::Check::Stalled;
+                        case ValidatorRegistry::BatchCertificateDecision::Reject:
+                        default:
+                            return ConsensusManager::Check::Reject;
+                    }
                 }
+                return outcome::failure( std::errc::owner_dead );
             } );
 
         auto ensure_registry_result = instance->EnsureValidatorRegistry();
@@ -1523,8 +1543,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> Blockchain::AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
-                                                      const std::string                            &cid )
+    outcome::result<void> Blockchain::AccountCreationReceivedCallback(
+        const crdt::CRDTCallbackManager::NewDataPair &new_data,
+        const std::string                            &cid )
     {
         logger_->debug( "[{}] Account creation received callback triggered with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
@@ -1664,28 +1685,30 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( type );
     }
 
-    outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject( const std::string &account_id,
-                                                                                        uint64_t           nonce,
-                                                                                        const std::string &tx_hash,
-                                                                                        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                                        const std::optional<UTXOWitness>              &utxo_witness )
+    outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
+        const std::string                             &account_id,
+        uint64_t                                       nonce,
+        const std::string                             &tx_hash,
+        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+        const std::optional<UTXOWitness>              &utxo_witness )
     {
         return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
     }
 
-    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal( const std::string &account_id,
-                                                                                     uint64_t           nonce,
-                                                                                     const std::string &tx_hash,
-                                                                                     const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                                     const std::optional<UTXOWitness>              &utxo_witness )
+    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
+        const std::string                             &account_id,
+        uint64_t                                       nonce,
+        const std::string                             &tx_hash,
+        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+        const std::optional<UTXOWitness>              &utxo_witness )
     {
         BOOST_OUTCOME_TRY( auto &&nonce_subject,
-                     CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
+                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
         BOOST_OUTCOME_TRY( auto &&nonce_proposal,
-                     consensus_manager_->CreateProposal( nonce_subject,
-                                                         account_id,
-                                                         validator_registry_->GetRegistryCid(),
-                                                         validator_registry_->GetRegistryEpoch() ) );
+                           consensus_manager_->CreateProposal( nonce_subject,
+                                                               account_id,
+                                                               validator_registry_->GetRegistryCid(),
+                                                               validator_registry_->GetRegistryEpoch() ) );
 
         return nonce_proposal;
     }

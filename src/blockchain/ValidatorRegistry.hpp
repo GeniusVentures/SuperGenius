@@ -84,14 +84,14 @@ namespace sgns
         uint64_t        QuorumThreshold( uint64_t total_weight ) const;
         bool            IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
-        Registry                        CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
-        outcome::result<void>           StoreGenesisRegistry( const std::string &genesis_validator_id,
-                                                              std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
-        outcome::result<Registry>       LoadRegistry() const;
-        outcome::result<Registry>       LoadRegistry( const std::string &cid ) const;
-        outcome::result<RegistryUpdate> LoadRegistryUpdate() const;
+        Registry                                 CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        outcome::result<void>                    StoreGenesisRegistry( const std::string &genesis_validator_id,
+                                                                       std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
+        outcome::result<Registry>                LoadRegistry() const;
+        outcome::result<Registry>                LoadRegistry( const std::string &cid ) const;
+        outcome::result<RegistryUpdate>          LoadRegistryUpdate() const;
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
-        bool                            RegisterFilter();
+        bool                                     RegisterFilter();
         outcome::result<RegistryUpdate> CreateUpdateFromCertificate( const sgns::ConsensusCertificate &certificate );
         outcome::result<void>           StoreRegistryUpdate( const RegistryUpdate &update );
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
@@ -107,7 +107,7 @@ namespace sgns
         void                                  SetCertificatesPerBatch( size_t batch_size );
         void                                  SetBatchSubjectSubmitter(
                                              std::function<outcome::result<void>( const ConsensusSubject &subject )> submitter );
-        void                                  OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
+        void OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
 
         enum class BatchSubjectDecision
         {
@@ -115,9 +115,17 @@ namespace sgns
             Reject,
             Pending
         };
-        outcome::result<BatchSubjectDecision> EvaluateBatchSubject( const ConsensusSubject &subject );
-        void                                  HandleBatchCertificate( const std::string               &subject_hash,
-                                                                      const sgns::ConsensusCertificate &certificate );
+        enum class BatchCertificateDecision
+        {
+            Approve,
+            Reject,
+            Pending,
+            Stalled
+        };
+        outcome::result<BatchSubjectDecision>    EvaluateBatchSubject( const ConsensusSubject &subject );
+        outcome::result<BatchCertificateDecision> HandleBatchCertificate(
+            const std::string                &subject_hash,
+            const sgns::ConsensusCertificate &certificate );
 
         static constexpr std::string_view RegistryKey()
         {
@@ -175,30 +183,33 @@ namespace sgns
                                                        const sgns::ConsensusCertificate            &certificate,
                                                        const std::unordered_map<std::string, bool> &registered_votes,
                                                        const std::unordered_map<std::string, bool> &unregistered_votes ) const;
-        Registry BuildRegistryFromAggregatedVotes( const Registry                              &current_registry,
-                                                   const std::unordered_map<std::string, bool> &registered_votes,
-                                                   const std::unordered_map<std::string, bool> &unregistered_votes ) const;
-        void             InsertNewValidators( Registry                                    &registry,
-                                              const std::unordered_map<std::string, bool> &unregistered_votes ) const;
-        void             ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
-                                           const std::unordered_map<std::string, bool> &registered_votes ) const;
-        void             ApplyInactivityDecay( std::vector<ValidatorEntry>           &entries,
-                                               const std::unordered_set<std::string> &participants ) const;
-        void             ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
-        static void      NormalizeRegistry( Registry &registry );
+        Registry         BuildRegistryFromAggregatedVotes(
+                    const Registry                              &current_registry,
+                    const std::unordered_map<std::string, bool> &registered_votes,
+                    const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void        InsertNewValidators( Registry                                    &registry,
+                                         const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        void        ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
+                                      const std::unordered_map<std::string, bool> &registered_votes ) const;
+        void        ApplyInactivityDecay( std::vector<ValidatorEntry>           &entries,
+                                          const std::unordered_set<std::string> &participants ) const;
+        void        ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
+        static void NormalizeRegistry( Registry &registry );
 
-        void InitializeCache();
+        void               InitializeCache();
         static std::string BuildBatchKey( const std::string &base_registry_cid, uint64_t base_registry_epoch );
         outcome::result<std::string> ComputeBatchRoot( const std::vector<std::string> &subject_hashes ) const;
-        outcome::result<std::vector<std::string>> SelectBatchSubjects( const std::string &base_registry_cid,
-                                                                       uint64_t           base_registry_epoch,
-                                                                       uint32_t           certificate_count,
-                                                                       std::optional<std::string> expected_root ) const;
-        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySubjectHash( const std::string &subject_hash ) const;
-        outcome::result<void> TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid, uint64_t base_registry_epoch );
-        void NotifyInitialized( bool success ) const;
-        void PersistLocalState( const std::string &cid ) const;
-        void RequestHeadCids( const std::set<CID> &cids );
+        outcome::result<std::vector<std::string>>   SelectBatchSubjects( const std::string         &base_registry_cid,
+                                                                         uint64_t                   base_registry_epoch,
+                                                                         uint32_t                   certificate_count,
+                                                                         std::optional<std::string> expected_root ) const;
+        outcome::result<sgns::ConsensusCertificate> LoadCertificateBySubjectHash(
+            const std::string &subject_hash ) const;
+        outcome::result<void> TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid,
+                                                               uint64_t           base_registry_epoch );
+        void                  NotifyInitialized( bool success ) const;
+        void                  PersistLocalState( const std::string &cid ) const;
+        void                  RequestHeadCids( const std::set<CID> &cids );
 
         std::shared_ptr<crdt::GlobalDB> db_;
         uint64_t                        quorum_numerator_;
@@ -214,10 +225,10 @@ namespace sgns
         size_t                          max_new_validators_per_update_ = DefaultMaxNewValidatorsPerUpdate;
         size_t                          certificates_per_batch_        = DefaultCertificatesPerBatch;
         mutable std::mutex              batch_mutex_;
-        std::unordered_map<std::string, std::set<std::string>> pending_certificate_subjects_by_base_;
-        std::unordered_set<std::string> pending_batch_subject_ids_;
-        std::unordered_set<std::string> finalized_batch_subject_ids_;
-        std::unordered_set<std::string> applying_batch_subject_ids_;
+        std::unordered_map<std::string, std::set<std::string>>                  pending_certificate_subjects_by_base_;
+        std::unordered_set<std::string>                                         pending_batch_subject_ids_;
+        std::unordered_set<std::string>                                         finalized_batch_subject_ids_;
+        std::unordered_set<std::string>                                         applying_batch_subject_ids_;
         std::function<outcome::result<void>( const ConsensusSubject &subject )> submit_batch_subject_;
 
         InitCallback init_callback_;

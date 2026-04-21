@@ -145,6 +145,14 @@ namespace sgns::crdt
                 {
                     logger_->info( "Executing callback for key '{}' matching pattern '{}'", key, pattern );
                     callback( std::make_pair( key, value ), cid );
+                    if ( auto entry = work_journal_->GetEntry( key );
+                         entry.has_value() && entry->state == CRDTWorkJournal::State::Processing )
+                    {
+                        if ( !work_journal_->MarkDone( key ) )
+                        {
+                            logger_->error( "Failed to auto-complete CRDT work for key '{}'", key );
+                        }
+                    }
                     callback_triggered = true;
                 }
             }

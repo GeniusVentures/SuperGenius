@@ -693,7 +693,8 @@ namespace sgns
         return base_registry_cid + ":" + std::to_string( base_registry_epoch );
     }
 
-    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot( const std::vector<std::string> &subject_hashes ) const
+    outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot(
+        const std::vector<std::string> &subject_hashes ) const
     {
         if ( subject_hashes.empty() )
         {
@@ -709,7 +710,7 @@ namespace sgns
             payload += subject_hashes[i];
         }
         sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.sha2_256(
+        auto                     hash = hasher.sha2_256(
             gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( payload.data() ), payload.size() ) );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
@@ -763,7 +764,7 @@ namespace sgns
         }
 
         sgns::ConsensusCertificate certificate;
-        std::string               serialized = std::string(cert_get.value().toString());
+        std::string                serialized = std::string( cert_get.value().toString() );
         if ( !certificate.ParseFromString( serialized ) )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -798,13 +799,13 @@ namespace sgns
     }
 
     outcome::result<void> ValidatorRegistry::TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid,
-                                                                               uint64_t           base_registry_epoch )
+                                                                              uint64_t           base_registry_epoch )
     {
         std::function<outcome::result<void>( const ConsensusSubject &subject )> submitter;
-        size_t                                                                 threshold = 0;
+        size_t                                                                  threshold = 0;
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            submitter  = submit_batch_subject_;
+            submitter = submit_batch_subject_;
             threshold = certificates_per_batch_;
         }
         if ( !submitter || threshold == 0 )
@@ -845,7 +846,7 @@ namespace sgns
 
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            auto batch_hash_result = ExtractConsensusSubjectHash( subject_result.value() );
+            auto                        batch_hash_result = ExtractConsensusSubjectHash( subject_result.value() );
             if ( batch_hash_result.has_error() )
             {
                 return outcome::failure( batch_hash_result.error() );
@@ -868,8 +869,8 @@ namespace sgns
             return outcome::success( BatchSubjectDecision::Reject );
         }
 
-        const auto &payload = subject.registry_batch();
-        auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
+        const auto &payload         = subject.registry_batch();
+        auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
                                                     payload.base_registry_epoch(),
                                                     payload.certificate_count(),
                                                     std::string( payload.batch_root() ) );
@@ -897,28 +898,29 @@ namespace sgns
         return outcome::success( BatchSubjectDecision::Approve );
     }
 
-    void ValidatorRegistry::HandleBatchCertificate( const std::string               &subject_hash,
-                                                    const sgns::ConsensusCertificate &certificate )
+    outcome::result<ValidatorRegistry::BatchCertificateDecision> ValidatorRegistry::HandleBatchCertificate(
+        const std::string                &subject_hash,
+        const sgns::ConsensusCertificate &certificate )
     {
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             if ( finalized_batch_subject_ids_.find( subject_hash ) != finalized_batch_subject_ids_.end() )
             {
-                return;
+                return BatchCertificateDecision::Approve;
             }
             if ( applying_batch_subject_ids_.find( subject_hash ) != applying_batch_subject_ids_.end() )
             {
-                return;
+                return BatchCertificateDecision::Approve;
             }
             applying_batch_subject_ids_.insert( subject_hash );
         }
         if ( !certificate.has_proposal() || !certificate.proposal().has_subject() ||
              certificate.proposal().subject().type() != SubjectType::SUBJECT_REGISTRY_BATCH ||
-             !certificate.proposal().subject().has_registry_batch() )
+            !certificate.proposal().subject().has_registry_batch() )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return BatchCertificateDecision::Reject;
         }
 
         auto current_registry_result = LoadRegistry();
@@ -926,17 +928,17 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return BatchCertificateDecision::Reject;
         }
         if ( !ValidateCertificate( certificate, current_registry_result.value() ) )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return BatchCertificateDecision::Reject;
         }
 
-        const auto &payload = certificate.proposal().subject().registry_batch();
-        auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
+        const auto &payload         = certificate.proposal().subject().registry_batch();
+        auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
                                                     payload.base_registry_epoch(),
                                                     payload.certificate_count(),
                                                     std::string( payload.batch_root() ) );
@@ -944,7 +946,7 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return BatchCertificateDecision::Reject;
         }
 
         auto base_registry_result = LoadRegistry( payload.base_registry_cid() );
@@ -952,7 +954,7 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return BatchCertificateDecision::Stalled;
         }
 
         std::vector<sgns::ConsensusCertificate> certificates;
@@ -964,7 +966,7 @@ namespace sgns
             {
                 std::lock_guard<std::mutex> lock( batch_mutex_ );
                 applying_batch_subject_ids_.erase( subject_hash );
-                return;
+                return BatchCertificateDecision::Reject;
             }
             certificates.push_back( cert_result.value() );
         }
@@ -1005,13 +1007,14 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
-            return;
+            return outcome::failure( std::errc::invalid_argument );
         }
         update.set_certificate( serialized_cert );
         for ( const auto &tx_subject_hash : selected_result.value() )
         {
             update.add_batch_certificate_subject_hashes( tx_subject_hash );
         }
+        return BatchCertificateDecision::Approve;
 
         std::thread(
             [weak_self = weak_from_this(), subject_hash, update = std::move( update )]() mutable
@@ -1021,7 +1024,7 @@ namespace sgns
                 {
                     return;
                 }
-                auto store_result = self->StoreRegistryUpdate( update );
+                auto                        store_result = self->StoreRegistryUpdate( update );
                 std::lock_guard<std::mutex> lock( self->batch_mutex_ );
                 self->applying_batch_subject_ids_.erase( subject_hash );
                 if ( store_result.has_error() )
@@ -1239,8 +1242,8 @@ namespace sgns
                  certificate.proposal().subject().has_registry_batch() )
             {
                 const auto &payload = certificate.proposal().subject().registry_batch();
-                if ( payload.base_registry_cid() != update.prev_registry_hash() || payload.base_registry_epoch() !=
-                                                                               current_registry->epoch() ||
+                if ( payload.base_registry_cid() != update.prev_registry_hash() ||
+                     payload.base_registry_epoch() != current_registry->epoch() ||
                      payload.target_registry_epoch() != current_registry->epoch() + 1 )
                 {
                     logger_->error( "{}: batch subject metadata mismatch", __func__ );
@@ -1277,7 +1280,9 @@ namespace sgns
                     auto certificate_result = LoadCertificateBySubjectHash( subject_hash );
                     if ( certificate_result.has_error() )
                     {
-                        logger_->error( "{}: missing certificate for batch hash={}", __func__, subject_hash.substr( 0, 8 ) );
+                        logger_->error( "{}: missing certificate for batch hash={}",
+                                        __func__,
+                                        subject_hash.substr( 0, 8 ) );
                         return false;
                     }
                     const auto &tx_cert = certificate_result.value();
@@ -1731,9 +1736,9 @@ namespace sgns
                 continue;
             }
 
-            const bool     approve = vote_it->second;
-            uint32_t       penalty = static_cast<uint32_t>( entry.penalty_score() );
-            const uint32_t cap     = weight_config_.penalty_cap_;
+            const bool     approve     = vote_it->second;
+            uint32_t       penalty     = static_cast<uint32_t>( entry.penalty_score() );
+            const uint32_t cap         = weight_config_.penalty_cap_;
             const uint64_t old_weight  = entry.weight();
             const uint32_t old_penalty = penalty;
             const auto     old_status  = entry.status();
@@ -1891,7 +1896,7 @@ namespace sgns
                 continue;
             }
             const uint64_t old_weight = entries[i].weight();
-            const uint64_t scaled = ( entries[i].weight() * weight_cap ) / total_active;
+            const uint64_t scaled     = ( entries[i].weight() * weight_cap ) / total_active;
             entries[i].set_weight( scaled );
             scaled_sum += scaled;
             active_indices.push_back( i );

@@ -122,9 +122,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
-                                                const SGProcessing::TaskResult          &task_result,
-                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
+                                                                           const SGProcessing::TaskResult          &task_result,
+                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -205,11 +205,12 @@ namespace sgns
             TransactionStatus                    status;
             uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
         };
+
         struct AccountUTXOState
         {
-            uint64_t     version{ 0 };
+            uint64_t      version{ 0 };
             base::Hash256 root{};
-            bool         initialized{ false };
+            bool          initialized{ false };
         };
 
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
@@ -244,8 +245,7 @@ namespace sgns
         bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
-        void                            UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses,
-                                                                bool                                   increment_version );
+        void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
 
         void InitializeUTXOs();
         void InitTransactions();
@@ -269,7 +269,7 @@ namespace sgns
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
-        void OnConsensusCertificate( const std::string &tx_hash );
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -377,8 +377,8 @@ namespace sgns
             INVALID
         };
 
-        outcome::result<std::string>                    GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::SubjectCheck> HandleNonceConsensusSubject(
+        outcome::result<std::string>             GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<ConsensusManager::Check> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
         bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
@@ -389,10 +389,10 @@ namespace sgns
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
             const std::shared_ptr<IGeniusTransactions> &tx ) const;
         std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<IGeniusTransactions> &tx ) const;
-        bool ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
-                                             std::vector<GeniusUTXO>                     &snapshot ) const;
-        WitnessValidationResult ValidateWitnessForConsensus( const ConsensusSubject                    &subject,
-                                                             const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool                       ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                   std::vector<GeniusUTXO>                    &snapshot ) const;
+        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                     &subject,
+                                                                const std::shared_ptr<IGeniusTransactions> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,

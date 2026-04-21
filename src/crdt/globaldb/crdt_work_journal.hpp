@@ -24,6 +24,7 @@ namespace sgns::crdt
         {
             Seen       = 0,
             Processing = 1,
+            Stalled    = 2,
         };
 
         struct Entry
@@ -35,23 +36,27 @@ namespace sgns::crdt
             uint64_t    lease_until_ms = 0;
         };
 
-        explicit CRDTWorkJournal( std::shared_ptr<storage::rocksdb> datastore );
+        static std::shared_ptr<CRDTWorkJournal> New( std::shared_ptr<storage::rocksdb> datastore );
 
         void MarkSeen( const std::string &key );
         void MarkProcessing( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 5 ) );
+        void MarkStalled( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 5 ) );
         bool MarkDone( const std::string &key );
 
         std::optional<Entry> GetEntry( const std::string &key ) const;
-        std::vector<Entry>   ListUnfinished() const;
-        size_t               RecoverStaleProcessing( std::chrono::milliseconds stale = std::chrono::milliseconds( 0 ) );
+        std::vector<Entry>   ListUnfinished( std::string_view key_pattern = {} ) const;
+        size_t               RecoverStaleProcessing( std::string_view          key_pattern,
+                                                     std::chrono::milliseconds stale = std::chrono::milliseconds( 0 ) );
 
     private:
         static constexpr std::string_view NAMESPACE_PREFIX = "/crdt/work/";
-        static uint64_t                   NowMs();
-        std::string                       BuildStorageKey( const std::string &key ) const;
-        static std::optional<Entry>       DeserializeEntry( std::string_view storage_key, std::string_view value );
-        static std::string                SerializeEntry( const Entry &entry );
-        static std::vector<std::string>   Split( const std::string &value, char separator );
+
+        explicit CRDTWorkJournal( std::shared_ptr<storage::rocksdb> datastore );
+        static uint64_t                 NowMs();
+        std::string                     BuildStorageKey( const std::string &key ) const;
+        static std::optional<Entry>     DeserializeEntry( std::string_view storage_key, std::string_view value );
+        static std::string              SerializeEntry( const Entry &entry );
+        static std::vector<std::string> Split( const std::string &value, char separator );
 
         std::optional<Entry> GetEntryUnlocked( const std::string &key ) const;
         bool                 PutEntryUnlocked( const Entry &entry ) const;

@@ -8,6 +8,15 @@
 
 namespace sgns::crdt
 {
+    std::shared_ptr<CRDTWorkJournal> CRDTWorkJournal::New( std::shared_ptr<storage::rocksdb> datastore )
+    {
+        if ( !datastore )
+        {
+            return nullptr;
+        }
+        return std::shared_ptr<CRDTWorkJournal>( new CRDTWorkJournal( std::move( datastore ) ) );
+    }
+
     CRDTWorkJournal::CRDTWorkJournal( std::shared_ptr<storage::rocksdb> datastore ) :
         datastore_( std::move( datastore ) )
     {
@@ -59,6 +68,27 @@ namespace sgns::crdt
         PutEntryUnlocked( entry );
     }
 
+    void CRDTWorkJournal::MarkStalled( const std::string &key, std::chrono::milliseconds lease )
+    {
+        if ( key.empty() )
+        {
+            return;
+        }
+        std::lock_guard<std::mutex> lock( mutex_ );
+        auto                        maybe_entry = GetEntryUnlocked( key );
+        if ( !maybe_entry.has_value() )
+        {
+            return;
+        }
+
+        auto entry            = maybe_entry.value();
+        entry.state           = State::Stalled;
+        entry.updated_at_ms   = NowMs();
+        entry.lease_until_ms  = entry.updated_at_ms + static_cast<uint64_t>( std::max<int64_t>( 0, lease.count() ) );
+        entry.attempt_count  += 1;
+        PutEntryUnlocked( entry );
+    }
+
     bool CRDTWorkJournal::MarkDone( const std::string &key )
     {
         if ( key.empty() )
@@ -85,7 +115,7 @@ namespace sgns::crdt
         return GetEntryUnlocked( key );
     }
 
-    std::vector<CRDTWorkJournal::Entry> CRDTWorkJournal::ListUnfinished() const
+    std::vector<CRDTWorkJournal::Entry> CRDTWorkJournal::ListUnfinished( std::string_view key_pattern ) const
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         std::vector<Entry>          out;
@@ -101,19 +131,37 @@ namespace sgns::crdt
         {
             return out;
         }
+
+        std::optional<std::regex> pattern_regex;
+        if ( !key_pattern.empty() )
+        {
+            try
+            {
+                pattern_regex.emplace( std::string( key_pattern ) );
+            }
+            catch ( const std::regex_error & )
+            {
+                return out;
+            }
+        }
+
         out.reserve( result.value().size() );
         for ( const auto &[raw_key, raw_value] : result.value() )
         {
             auto parsed = DeserializeEntry( raw_key.toString(), raw_value.toString() );
             if ( parsed.has_value() )
             {
+                if ( pattern_regex.has_value() && !std::regex_match( parsed->key, pattern_regex.value() ) )
+                {
+                    continue;
+                }
                 out.push_back( std::move( parsed.value() ) );
             }
         }
         return out;
     }
 
-    size_t CRDTWorkJournal::RecoverStaleProcessing( std::chrono::milliseconds stale )
+    size_t CRDTWorkJournal::RecoverStaleProcessing( std::string_view key_pattern, std::chrono::milliseconds stale )
     {
         std::lock_guard<std::mutex> lock( mutex_ );
         if ( !datastore_ )
@@ -132,6 +180,19 @@ namespace sgns::crdt
         {
             return recovered;
         }
+        std::optional<std::regex> pattern_regex;
+        if ( !key_pattern.empty() )
+        {
+            try
+            {
+                pattern_regex.emplace( std::string( key_pattern ) );
+            }
+            catch ( const std::regex_error & )
+            {
+                return recovered;
+            }
+        }
+
         for ( const auto &[raw_key, raw_value] : result.value() )
         {
             auto parsed = DeserializeEntry( raw_key.toString(), raw_value.toString() );
@@ -140,6 +201,10 @@ namespace sgns::crdt
                 continue;
             }
             auto &entry = parsed.value();
+            if ( pattern_regex.has_value() && !std::regex_match( entry.key, pattern_regex.value() ) )
+            {
+                continue;
+            }
             if ( entry.state != State::Processing )
             {
                 continue;
@@ -166,7 +231,7 @@ namespace sgns::crdt
 
     std::string CRDTWorkJournal::BuildStorageKey( const std::string &key ) const
     {
-        return NAMESPACE_PREFIX + key;
+        return std::string( NAMESPACE_PREFIX ) + key;
     }
 
     std::optional<CRDTWorkJournal::Entry> CRDTWorkJournal::DeserializeEntry( std::string_view storage_key,
@@ -181,7 +246,8 @@ namespace sgns::crdt
         try
         {
             const auto state = std::stoi( fields[1] );
-            if ( state != static_cast<int>( State::Seen ) && state != static_cast<int>( State::Processing ) )
+            if ( state != static_cast<int>( State::Seen ) && state != static_cast<int>( State::Processing ) &&
+                 state != static_cast<int>( State::Stalled ) )
             {
                 return std::nullopt;
             }

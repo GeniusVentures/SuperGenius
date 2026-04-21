@@ -24,6 +24,7 @@
 
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
+#include "crdt/globaldb/crdt_work_journal.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
 #include "ipfs_pubsub/gossip_pubsub.hpp"
@@ -65,20 +66,21 @@ namespace sgns
         using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
 
         /**
-         * @brief      Subject checking values
+         * @brief      Object checking values
          */
-        enum class SubjectCheck
+        enum class Check
         {
-            Approve, ///< Subject is approved
-            Reject,  ///< Subject is rejected
-            Pending  ///< Subject evaluation is pending
+            Approve, ///< Object is approved
+            Reject,  ///< Object is rejected
+            Pending, ///< Object evaluation is pending
+            Stalled  ///< Object evaluation is stalled
         };
 
         /// @brief      Alias for a subject handler method type
-        using SubjectHandler = std::function<outcome::result<SubjectCheck>( const Subject &subject )>;
+        using SubjectHandler = std::function<outcome::result<Check>( const Subject &subject )>;
         /// @brief      Alias for a certificate handler method type
         using CertificateSubjectHandler =
-            std::function<void( const std::string &subject_hash, const Certificate &certificate )>;
+            std::function<outcome::result<Check>( const std::string &subject_hash, const Certificate &certificate )>;
 
         /**
          * @brief      Quorum tally structure
@@ -136,28 +138,29 @@ namespace sgns
         static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
         static outcome::result<std::vector<uint8_t>> VoteBundleSigningBytes( const VoteBundle &bundle );
         static outcome::result<std::string>          ComputeSubjectId( const Subject &subject );
-        static outcome::result<Subject>              CreateNonceSubject( const std::string &account_id,
-                                                                         uint64_t           nonce,
-                                                                         const std::string &tx_hash,
-                                                                         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                         const std::optional<UTXOWitness>              &utxo_witness );
-        static outcome::result<Subject>              CreateTaskResultSubject( const std::string &account_id,
-                                                                              const std::string &escrow_path,
-                                                                              const std::string &task_result_hash,
-                                                                              uint64_t           result_epoch );
-        static outcome::result<Subject>              CreateRegistryBatchSubject( const std::string &account_id,
-                                                                                const std::string &base_registry_cid,
-                                                                                uint64_t           base_registry_epoch,
-                                                                                uint64_t           target_registry_epoch,
-                                                                                uint32_t           certificate_count,
-                                                                                const std::string &batch_root );
-        static const std::string                    &BestHash( const std::string &a, const std::string &b );
-        outcome::result<void>                        SubmitProposal( const Proposal &proposal, bool self_vote = true );
-        outcome::result<void>                        SubmitVote( const Vote &vote, bool self_handle = true );
-        outcome::result<void>                        SubmitCertificate( const Certificate &certificate );
-        outcome::result<void>                        ResumeProposalHandling( const std::string &subject_hash );
-        void                                         ProcessCertificates();
-        void                                         ConfigureCertificateDelay( std::chrono::milliseconds delay );
+        static outcome::result<Subject>              CreateNonceSubject(
+                         const std::string                             &account_id,
+                         uint64_t                                       nonce,
+                         const std::string                             &tx_hash,
+                         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+                         const std::optional<UTXOWitness>              &utxo_witness );
+        static outcome::result<Subject> CreateTaskResultSubject( const std::string &account_id,
+                                                                 const std::string &escrow_path,
+                                                                 const std::string &task_result_hash,
+                                                                 uint64_t           result_epoch );
+        static outcome::result<Subject> CreateRegistryBatchSubject( const std::string &account_id,
+                                                                    const std::string &base_registry_cid,
+                                                                    uint64_t           base_registry_epoch,
+                                                                    uint64_t           target_registry_epoch,
+                                                                    uint32_t           certificate_count,
+                                                                    const std::string &batch_root );
+        static const std::string       &BestHash( const std::string &a, const std::string &b );
+        outcome::result<void>           SubmitProposal( const Proposal &proposal, bool self_vote = true );
+        outcome::result<void>           SubmitVote( const Vote &vote, bool self_handle = true );
+        outcome::result<void>           SubmitCertificate( const Certificate &certificate );
+        outcome::result<void>           ResumeProposalHandling( const std::string &subject_hash );
+        void                            ProcessCertificates();
+        void                            ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
         bool                         CheckCertificateForSubject( const std::string &subject_hash ) const;
@@ -183,6 +186,7 @@ namespace sgns
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION    = std::chrono::milliseconds( 500 );
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_SKEW        = std::chrono::milliseconds( 250 );
         static constexpr uint64_t                  NO_ROUND                  = std::numeric_limits<uint64_t>::max();
+        static constexpr std::string_view          CERT_KEY_PATTERN          = "^/?cert/[^/]+";
 
         struct ProposalState
         {
@@ -228,9 +232,10 @@ namespace sgns
         bool                  RegisterCertificateFilter();
         std::optional<std::vector<crdt::pb::Element>> FilterCertificate( const crdt::pb::Element &element );
         void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
-        bool ValidateCertificate( const Certificate &certificate ) const;
-        static std::string CreateProposalId( const Proposal &proposal );
-        static bool        ValidateSubject( const Subject &subject );
+        void RecoverPendingCertificateWork();
+        ConsensusManager::Check ValidateCertificate( const Certificate &certificate ) const;
+        static std::string      CreateProposalId( const Proposal &proposal );
+        static bool             ValidateSubject( const Subject &subject );
 
         void               OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
         void               UpdateCertificatesPending();
@@ -240,6 +245,7 @@ namespace sgns
         static std::string GetPrintableSubjectHash( const Subject &subject );
         std::shared_ptr<ValidatorRegistry>                        registry_;
         std::shared_ptr<crdt::GlobalDB>                           db_;
+        std::shared_ptr<crdt::CRDTWorkJournal>                    certificate_work_journal_;
         std::unordered_map<int, SubjectHandler>                   subject_handlers_;
         mutable std::shared_mutex                                 subject_handlers_mutex_;
         std::unordered_map<int, CertificateSubjectHandler>        certificate_subject_handlers_;

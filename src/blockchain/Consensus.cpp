@@ -69,6 +69,14 @@ namespace sgns
                                                                                  std::move( signer ),
                                                                                  address,
                                                                                  consensus_topic ) );
+        instance->certificate_work_journal_ = instance->db_->GetWorkJournal();
+
+        if ( !instance->certificate_work_journal_ )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: crdt work journal is empty",
+                                             __func__ );
+            return nullptr;
+        }
 
         instance->consensus_subs_future_ = std::move( instance->pubsub_->Subscribe(
             instance->consensus_messages_topic_,
@@ -91,6 +99,7 @@ namespace sgns
         {
             ConsensusManagerLogger()->error( "{}: Failed to register certificate filter", __func__ );
         }
+        instance->RecoverPendingCertificateWork();
 
         return instance;
     }
@@ -1117,11 +1126,10 @@ namespace sgns
 
         if ( proposal.registry_cid().empty() )
         {
-            ConsensusManagerLogger()->error(
-                "{}: rejected: proposal registry CID missing for hash {}. proposal_id={}",
-                __func__,
-                GetPrintableSubjectHash( proposal.subject() ),
-                proposal.proposal_id().substr( 0, 8 ) );
+            ConsensusManagerLogger()->error( "{}: rejected: proposal registry CID missing for hash {}. proposal_id={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
@@ -1213,7 +1221,7 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == SubjectCheck::Reject )
+        if ( subject_result.value() == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                              __func__,
@@ -1222,7 +1230,7 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == SubjectCheck::Pending )
+        if ( subject_result.value() == Check::Pending )
         {
             {
                 std::lock_guard lock( proposals_mutex_ );
@@ -1283,7 +1291,7 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == SubjectCheck::Reject )
+            if ( subject_result.value() == Check::Reject )
             {
                 ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                                  __func__,
@@ -1292,7 +1300,7 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == SubjectCheck::Pending )
+            if ( subject_result.value() == Check::Pending )
             {
                 auto subject_hash_result = GetSubjectHash( proposal.subject() );
                 if ( subject_hash_result.has_error() )
@@ -1461,7 +1469,7 @@ namespace sgns
 
     bool ConsensusManager::RegisterCertificateFilter()
     {
-        const std::string pattern = "^/?cert/[^/]+";
+        const std::string pattern = std::string( CERT_KEY_PATTERN );
 
         auto       weak_self         = weak_from_this();
         const bool filter_registered = db_->RegisterElementFilter(
@@ -1501,7 +1509,13 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( !ValidateCertificate( certificate ) )
+        if ( certificate.proposal_id().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: missing proposal_id, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
+        if ( ValidateCertificate( certificate ) == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
@@ -1526,6 +1540,22 @@ namespace sgns
         auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
         if ( subject_hash.has_error() )
         {
+            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ),
+                                             subject_hash.error().message() );
+            return;
+        }
+
+        auto certificate_check = ValidateCertificate( certificate );
+
+        if ( certificate_check == Check::Stalled )
+        {
+            ConsensusManagerLogger()->error(
+                "{}: Validation of the certificate pending for key {}, certificate handler not called ",
+                __func__,
+                key );
+            certificate_work_journal_->MarkStalled( key );
             return;
         }
 
@@ -1542,20 +1572,40 @@ namespace sgns
             handler = it->second;
         }
 
-        handler( subject_hash.value(), certificate );
+        auto certificate_handler_result = handler( subject_hash.value(), certificate );
+
+        if ( certificate_handler_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate handler error proposal_id={} error={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ),
+                                             certificate_handler_result.error().message() );
+            return;
+        }
+        auto certificate_result = certificate_handler_result.value();
+
+        if ( certificate_result == Check::Stalled )
+        {
+            ConsensusManagerLogger()->error( "{}: certificate rejected by handler proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ) );
+            ConsensusManagerLogger()->debug( "{}: Key {} is not Done yet", __func__, key );
+            certificate_work_journal_->MarkStalled( key );
+            return;
+        }
     }
 
-    bool ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
+    ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
     {
         if ( certificate.proposal_id().empty() )
         {
             ConsensusManagerLogger()->error( "{}: Certificate proposal ID missing ", __func__ );
-            return false;
+            return Check::Reject;
         }
         if ( !certificate.has_proposal() )
         {
             ConsensusManagerLogger()->error( "{}: Certificate missing proposal ", __func__ );
-            return false;
+            return Check::Reject;
         }
 
         const auto &proposal = certificate.proposal();
@@ -1565,7 +1615,7 @@ namespace sgns
                                              __func__,
                                              certificate.proposal_id(),
                                              proposal.proposal_id() );
-            return false;
+            return Check::Reject;
         }
         if ( proposal.registry_cid() != certificate.registry_cid() ||
              proposal.registry_epoch() != certificate.registry_epoch() )
@@ -1573,7 +1623,7 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
                                              __func__,
                                              certificate.proposal_id() );
-            return false;
+            return Check::Reject;
         }
         auto registry_ret = registry_->LoadRegistry( certificate.registry_cid() );
         if ( registry_ret.has_error() )
@@ -1583,7 +1633,7 @@ namespace sgns
                                              registry_ret.error().message(),
                                              certificate.registry_cid(),
                                              certificate.proposal_id() );
-            return false;
+            return Check::Stalled;
         }
         auto &registry = registry_ret.value();
         if ( !ValidateSubject( proposal.subject() ) )
@@ -1591,21 +1641,21 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
-            return false;
+            return Check::Reject;
         }
         if ( !CheckProposal( proposal ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid proposal proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
-            return false;
+            return Check::Reject;
         }
 
         const auto computed_id = CreateProposalId( proposal );
         if ( computed_id.empty() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
-            return false;
+            return Check::Reject;
         }
         if ( computed_id != certificate.proposal_id() )
         {
@@ -1613,7 +1663,7 @@ namespace sgns
                                              __func__,
                                              certificate.proposal_id(),
                                              computed_id );
-            return false;
+            return Check::Reject;
         }
 
         std::vector<Vote> votes;
@@ -1625,10 +1675,10 @@ namespace sgns
         auto tally = TallyVotes( proposal, votes, registry, certificate.registry_cid() );
         if ( tally.has_error() || !tally.value().has_quorum )
         {
-            return false;
+            return Check::Reject;
         }
 
-        return true;
+        return Check::Approve;
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
@@ -1693,7 +1743,7 @@ namespace sgns
                 pending_votes_.erase( vote.proposal_id() );
                 return;
             }
-            auto  slot_it        = slot_states_.find( proposal_state.slot_key );
+            auto slot_it = slot_states_.find( proposal_state.slot_key );
             if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
             {
                 ConsensusManagerLogger()->error( "{}: ignored: not best proposal proposal_id={}",
@@ -1790,7 +1840,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( !ValidateCertificate( certificate ) )
+        if ( ValidateCertificate( certificate ) == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
@@ -1926,12 +1976,11 @@ namespace sgns
         for ( auto it_hash = pending_by_subject_hash_.begin(); it_hash != pending_by_subject_hash_.end(); )
         {
             auto &vec = it_hash->second;
-            vec.erase(
-                std::remove_if(
-                    vec.begin(),
-                    vec.end(),
-                    [&]( const std::string &proposal_id ) { return ids_to_remove.find( proposal_id ) != ids_to_remove.end(); } ),
-                vec.end() );
+            vec.erase( std::remove_if( vec.begin(),
+                                       vec.end(),
+                                       [&]( const std::string &proposal_id )
+                                       { return ids_to_remove.find( proposal_id ) != ids_to_remove.end(); } ),
+                       vec.end() );
             if ( vec.empty() )
             {
                 it_hash = pending_by_subject_hash_.erase( it_hash );
@@ -2022,11 +2071,12 @@ namespace sgns
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
-    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject( const std::string &account_id,
-                                                                                     uint64_t           nonce,
-                                                                                     const std::string &tx_hash,
-                                                                                     const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                                     const std::optional<UTXOWitness>              &utxo_witness )
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject(
+        const std::string                             &account_id,
+        uint64_t                                       nonce,
+        const std::string                             &tx_hash,
+        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+        const std::optional<UTXOWitness>              &utxo_witness )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} nonce={}", __func__, account_id, nonce );
         Subject subject;
@@ -2184,8 +2234,10 @@ namespace sgns
                 return subject.has_task_result() && !subject.task_result().task_result_hash().empty();
             case SubjectType::SUBJECT_REGISTRY_BATCH:
                 return subject.has_registry_batch() && !subject.registry_batch().base_registry_cid().empty() &&
-                       subject.registry_batch().target_registry_epoch() == subject.registry_batch().base_registry_epoch() + 1 &&
-                       subject.registry_batch().certificate_count() > 0 && !subject.registry_batch().batch_root().empty();
+                       subject.registry_batch().target_registry_epoch() ==
+                           subject.registry_batch().base_registry_epoch() + 1 &&
+                       subject.registry_batch().certificate_count() > 0 &&
+                       !subject.registry_batch().batch_root().empty();
             case SubjectType::SUBJECT_UNSPECIFIED:
             default:
                 return false;
@@ -2308,7 +2360,8 @@ namespace sgns
                 ConsensusManagerLogger()->error( "{}: subject registry_batch base_registry_cid is empty", __func__ );
                 return false;
             }
-            if ( subject.registry_batch().target_registry_epoch() != subject.registry_batch().base_registry_epoch() + 1 )
+            if ( subject.registry_batch().target_registry_epoch() !=
+                 subject.registry_batch().base_registry_epoch() + 1 )
             {
                 ConsensusManagerLogger()->error( "{}: subject registry_batch target epoch mismatch", __func__ );
                 return false;
@@ -2381,6 +2434,32 @@ namespace sgns
             return false;
         }
         return true;
+    }
+
+    void ConsensusManager::RecoverPendingCertificateWork()
+    {
+        //auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN,
+        //                                                                    std::chrono::seconds( 15 ) );
+        //if ( recovered > 0 )
+        //{
+        //    ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
+        //}
+
+        auto unfinished = certificate_work_journal_->ListUnfinished( CERT_KEY_PATTERN );
+
+        for ( const auto &entry : unfinished )
+        {
+            if ( entry.key.empty() )
+            {
+                continue;
+            }
+            auto value = db_->Get( { entry.key } );
+            if ( value.has_error() )
+            {
+                continue;
+            }
+            CertificateReceived( { entry.key, value.value() }, std::string{} );
+        }
     }
 
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(

@@ -403,7 +403,7 @@ namespace sgns::crdt
         outcome::result<CID> WaitForJob( const CID &cid );
 
     private:
-        CrdtDatastore() = default;
+        CrdtDatastore() = delete;
 
         CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
                        const HierarchicalKey       &aKey,
