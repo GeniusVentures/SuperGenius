@@ -503,12 +503,12 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              escrow_path );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         if ( escrow_path.empty() )
         {
             m_logger->error( "[{} - full: {}] Escrow path empty", account_m->GetAddress().substr( 0, 8 ), full_node_m );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         m_logger->debug( "[{} - full: {}] Fetching escrow from processing DB at {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -572,8 +572,8 @@ namespace sgns
         transfer_transaction->MakeSignature( *account_m );
         escrow_release_tx->MakeSignature( *account_m );
 
-        tx_batch.emplace_back( transfer_transaction, std::nullopt  );
-        tx_batch.emplace_back( escrow_release_tx, std::nullopt  );
+        tx_batch.emplace_back( transfer_transaction, std::nullopt );
+        tx_batch.emplace_back( escrow_release_tx, std::nullopt );
 
         EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->GetHash();

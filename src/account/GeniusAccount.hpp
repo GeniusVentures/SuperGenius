@@ -253,6 +253,17 @@ namespace sgns
         static outcome::result<StorageWithAddress> GenerateGeniusAddress( const TW::PrivateKey          &private_key,
                                                                           const boost::filesystem::path &base_path );
 
+        outcome::result<void> SaveInSecureStorage( const std::string                      &key,
+                                                   const ISecureStorage::SecureBufferType &buffer )
+        {
+            return storage_->Save( key, buffer );
+        }
+
+        outcome::result<ISecureStorage::SecureBufferType> LoadFromSecureStorage( const std::string &key )
+        {
+            return storage_->Load( key );
+        }
+
         const UTXOManager &GetUTXOManager() const
         {
             return utxo_manager_;
