@@ -7,6 +7,7 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <shared_mutex>
@@ -16,6 +17,7 @@
 
 namespace sgns::crdt
 {
+    class CRDTWorkJournal;
 
     class CRDTCallbackManager
     {
@@ -30,7 +32,7 @@ namespace sgns::crdt
         /**
          * @brief       Construct a new CRDTCallbackManager object
          */
-        explicit CRDTCallbackManager();
+        explicit CRDTCallbackManager( std::shared_ptr<CRDTWorkJournal> work_journal );
         /**
          * @brief      Destroy the CRDTCallbackManager object
          */
@@ -76,6 +78,7 @@ namespace sgns::crdt
         void DeleteDataCallback( const std::string &deleted_key, const std::string &cid );
 
     private:
+        std::shared_ptr<CRDTWorkJournal> work_journal_;
         std::shared_mutex new_data_callback_registry_mutex_; ///< Mutex to manipulate @ref new_data_callback_registry_
         NewDataCallbackRegistry new_data_callback_registry_; ///< New data callback registry
         std::shared_mutex

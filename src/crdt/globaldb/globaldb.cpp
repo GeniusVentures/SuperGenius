@@ -386,6 +386,11 @@ namespace sgns::crdt
         return m_datastore;
     }
 
+    std::shared_ptr<CRDTWorkJournal> GlobalDB::GetWorkJournal() const
+    {
+        return m_crdtDatastore ? m_crdtDatastore->GetWorkJournal() : nullptr;
+    }
+
     outcome::result<GlobalDB::CRDTHeadListResult> GlobalDB::GetCRDTHeadList()
     {
         return m_crdtDatastore->GetHeadList();

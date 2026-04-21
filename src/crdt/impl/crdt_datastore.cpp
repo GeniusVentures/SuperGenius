@@ -371,8 +371,9 @@ namespace sgns::crdt
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
-        crdt_filter_( true ),
-        crdt_cb_manager_()
+        work_journal_( CRDTWorkJournal::New( dataStore_ ) ),
+        crdt_filter_( work_journal_, true ),
+        crdt_cb_manager_( work_journal_ )
     {
         logger_            = options_->logger;
         numberOfDagWorkers = options_->numWorkers;
@@ -1634,6 +1635,11 @@ namespace sgns::crdt
     void CrdtDatastore::DeleteElementsCallback( const std::string &key, const std::string &cid )
     {
         crdt_cb_manager_.DeleteDataCallback( key, cid );
+    }
+
+    std::shared_ptr<CRDTWorkJournal> CrdtDatastore::GetWorkJournal() const
+    {
+        return work_journal_;
     }
 
     void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast )

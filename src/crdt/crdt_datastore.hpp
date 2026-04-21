@@ -30,6 +30,7 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
+#include "crdt/globaldb/crdt_work_journal.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 
 namespace sgns
@@ -216,6 +217,7 @@ namespace sgns::crdt
         void UnregisterElementFilter( const std::string &pattern );
         void UnregisterNewElementCallback( const std::string &pattern );
         void UnregisterDeletedElementCallback( const std::string &pattern );
+        std::shared_ptr<CRDTWorkJournal> GetWorkJournal() const;
 
         /**
          * @brief Configure which topic this datastore should filter on.
@@ -454,6 +456,7 @@ namespace sgns::crdt
         std::queue<CID>                                      pendingRootQueue_;
         std::optional<CID>                                   activeRootCID_;
 
+        std::shared_ptr<CRDTWorkJournal> work_journal_;
         CRDTDataFilter crdt_filter_;
         bool           started_               = false;
         bool           broadcast_enabled_     = false;
