@@ -796,10 +796,11 @@ namespace sgns
     {
         std::unique_lock lock( nonce_mutex_ );
         auto             current_confirmed_nonce = confirmed_nonces_[address];
-        genius_account_logger()->debug( "Setting the max value between {} and {} as a confirmed nonce for address {}",
-                                        current_confirmed_nonce,
-                                        nonce,
-                                        address.substr( 0, 8 ) );
+        genius_account_logger()->debug(
+            "Setting the max value between {} and {:.8} as a confirmed nonce for address {}",
+            current_confirmed_nonce,
+            nonce,
+            address );
         auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
         confirmed_nonces_[address] = updated_nonce;
 
@@ -830,9 +831,9 @@ namespace sgns
         {
             current_confirmed_nonce = it->second;
         }
-        genius_account_logger()->debug( "Rolling back nonce {} for address {} (current confirmed {})",
+        genius_account_logger()->debug( "Rolling back nonce {} for address {:.8} (current confirmed {})",
                                         nonce,
-                                        address.substr( 0, 8 ),
+                                        address,
                                         current_confirmed_nonce );
         if ( it != confirmed_nonces_.end() && nonce == current_confirmed_nonce )
         {
@@ -1103,7 +1104,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        genius_account_logger()->debug( "Requesting transaction {}", tx_hash.substr( 0, 8 ) );
+        genius_account_logger()->debug( "Requesting transaction {:.8}", tx_hash );
 
         return messenger_->RequestTransaction( timeout_ms, tx_hash, std::move( callback ) );
     }
@@ -1116,7 +1117,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::no_such_device );
         }
-        genius_account_logger()->debug( "Requesting UTXOs for {}", address.substr( 0, 8 ) );
+        genius_account_logger()->debug( "Requesting UTXOs for {:.8}", address );
 
         return messenger_->RequestUTXOs( timeout_ms, address, silent_time_ms );
     }
@@ -1214,9 +1215,7 @@ namespace sgns
             }
             catch ( const std::exception & )
             {
-                genius_account_logger()->error( "Failed to parse nonce for {}: ",
-                                                address.substr( 0, 8 ),
-                                                val_buf.toString() );
+                genius_account_logger()->error( "Failed to parse nonce for {:.8}: ", address, val_buf.toString() );
             }
         }
 
@@ -1248,7 +1247,7 @@ namespace sgns
         auto put_res = nonce_db_->put( key, value );
         if ( put_res.has_error() )
         {
-            genius_account_logger()->error( "Failed to persist nonce for {}", address.substr( 0, 8 ) );
+            genius_account_logger()->error( "Failed to persist nonce for {:.8}", address );
         }
     }
 }

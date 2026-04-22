@@ -125,6 +125,8 @@ namespace sgns
 
         outcome::result<void> MergeAccount( std::string_view public_address );
 
+        outcome::result<void> SetPayoutAddress( std::string_view payout_address );
+
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
         uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );

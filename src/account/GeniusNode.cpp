@@ -318,40 +318,6 @@ namespace sgns
                 }
                 account_->ConfigureDatabaseDependencies( tx_globaldb_ );
                 tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-                StateTransition( NodeState::INITIALIZING_PROCESSING );
-                break;
-            }
-            case NodeState::INITIALIZING_PROCESSING:
-            {
-                if ( !InitProcessingModules() )
-                {
-                    node_logger_->error( "Processing modules initialization error" );
-                    return;
-                }
-
-                processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
-                    pubsub_,
-                    MAX_NODES_COUNT,
-                    std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),
-                    task_result_storage_,
-                    processing_core_,
-                    [weak_self = weak_from_this()]( const std::string &var, const SGProcessing::TaskResult &taskresult )
-                    {
-                        if ( auto strong = weak_self.lock() )
-                        {
-                            strong->ProcessingDone( var, taskresult );
-                        }
-                    },
-                    [weak_self = weak_from_this()]( const std::string &var )
-                    {
-                        if ( auto strong = weak_self.lock() )
-                        {
-                            strong->ProcessingError( var );
-                        }
-                    },
-                    account_->GetAddress() );
-
-                processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
@@ -436,6 +402,51 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
+                break;
+            }
+            case NodeState::INITIALIZING_PROCESSING:
+            {
+                if ( !InitProcessingModules() )
+                {
+                    node_logger_->error( "Processing modules initialization error" );
+                    return;
+                }
+
+                auto payout_address = account_->GetAddress();
+
+                if ( auto address = account_->LoadFromSecureStorage( "payout_address" ); address.has_value() )
+                {
+                    payout_address = std::move( address.value() );
+                    node_logger_->debug( "Using address {:.8} for payout", payout_address );
+                }
+
+                processing_service_ = std::make_shared<processing::ProcessingServiceImpl>(
+                    pubsub_,
+                    MAX_NODES_COUNT,
+                    std::make_shared<processing::SubTaskEnqueuerImpl>( task_queue_ ),
+                    task_result_storage_,
+                    processing_core_,
+                    [weak_self = weak_from_this()]( const std::string &var, const SGProcessing::TaskResult &taskresult )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            strong->ProcessingDone( var, taskresult );
+                        }
+                    },
+                    [weak_self = weak_from_this()]( const std::string &var )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            strong->ProcessingError( var );
+                        }
+                    },
+                    payout_address );
+
+                processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+                if ( isprocessor_ )
+                {
+                    StartProcessing();
+                }
                 StateTransition( NodeState::READY );
                 break;
             }
@@ -468,7 +479,7 @@ namespace sgns
         auto result     = logging_system_->configure();
         if ( result.has_error )
         {
-            std::cerr << "Logger Error" << std::endl;
+            std::cerr << "Logger init error: " << result.message;
             return false;
         }
 
@@ -755,7 +766,6 @@ namespace sgns
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
-
         return ret;
     }
 
@@ -771,7 +781,7 @@ namespace sgns
                                                              account_ );
 
         std::thread migration_thread(
-            [manager = std::move( migrationManager ), cb = std::move( callback )]()
+            [manager = std::move( migrationManager ), cb = std::move( callback )]
             {
                 auto migrationResult = manager->Migrate();
                 if ( cb )
@@ -999,16 +1009,16 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
+        processing_service_.reset();
+        task_result_storage_.reset();
+        processing_core_.reset();
+        task_queue_.reset();
+
         this->transaction_manager_->Stop();
         this->transaction_manager_.reset();
 
         BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
         this->blockchain_.reset();
-
-        processing_service_.reset();
-        task_result_storage_.reset();
-        processing_core_.reset();
-        task_queue_.reset();
 
         this->tx_globaldb_.reset();
 
@@ -1063,6 +1073,20 @@ namespace sgns
     {
         BOOST_OUTCOME_TRY( TransferAccount( public_address ) );
         return DeleteAccount( public_address );
+    }
+
+    outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
+    {
+        BOOST_OUTCOME_TRY( account_->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
+
+        processing_service_.reset();
+        task_result_storage_.reset();
+        processing_core_.reset();
+        task_queue_.reset();
+
+        this->StateTransition( NodeState::INITIALIZING_PROCESSING );
+
+        return outcome::success();
     }
 
     outcome::result<std::string> GeniusNode::ProcessImage( const std::string &jsondata )
@@ -1452,6 +1476,7 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
+        static constexpr std::string_view FUNC = __func__;
         boost::asio::post(
             *processing_callback_pool_,
             [weak_self( weak_from_this() ), task_id, taskresult]()
@@ -1460,7 +1485,7 @@ namespace sgns
                 {
                     strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
                                                 strong->account_->GetAddress().substr( 0, 8 ),
-                                                __func__,
+                                                FUNC,
                                                 task_id );
                     do
                     {
@@ -1468,25 +1493,25 @@ namespace sgns
                         {
                             strong->node_logger_->info( "[{}]{}: Task Already completed!",
                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__ );
+                                                        FUNC );
                             break;
                         }
                         if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
                         {
                             strong->node_logger_->info( "[{}]{}: Transactions are not ready",
                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__ );
+                                                        FUNC );
                             break;
                         }
                         strong->node_logger_->info( "[{}]{}: Transactions READY",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
-                                                    __func__ );
+                                                    FUNC );
                         auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
                         if ( maybe_escrow_path.has_failure() )
                         {
                             strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__,
+                                                        FUNC,
                                                         task_id );
                             break;
                         }
@@ -1495,13 +1520,13 @@ namespace sgns
                         {
                             strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
                                                          strong->account_->GetAddress().substr( 0, 8 ),
-                                                         __func__,
+                                                         FUNC,
                                                          task_id );
                             break;
                         }
                         strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
-                                                    __func__ );
+                                                    FUNC );
                         auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
                                                              taskresult,
                                                              std::move( complete_task_result.value() ) );
@@ -1509,13 +1534,13 @@ namespace sgns
                         {
                             strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
                                                          strong->account_->GetAddress().substr( 0, 8 ),
-                                                         __func__,
+                                                         FUNC,
                                                          task_id );
                             break;
                         }
                         strong->node_logger_->info( "[{}]{}: Paid for task: {}",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
-                                                    __func__,
+                                                    FUNC,
                                                     task_id );
 
                     } while ( 0 );
@@ -1831,10 +1856,7 @@ namespace sgns
         switch ( new_state )
         {
             case TransactionManager::State::READY:
-                if ( isprocessor_ )
-                {
-                    StartProcessing();
-                }
+                StateTransition( NodeState::INITIALIZING_PROCESSING );
                 break;
             case TransactionManager::State::INITIALIZING:
             case TransactionManager::State::SYNCING:
