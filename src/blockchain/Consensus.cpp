@@ -171,10 +171,19 @@ namespace sgns
                     {
                         interval = min_interval;
                     }
-                    self->timer_cv_.wait_for( lock,
-                                              interval,
-                                              [self]()
-                                              { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
+                    if ( self->certificates_pending_.load() )
+                    {
+                        // Work is pending: run on cadence, only interrupt for shutdown.
+                        self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } );
+                    }
+                    else
+                    {
+                        // No pending work: wait up to interval, but wake immediately when new work appears.
+                        self->timer_cv_.wait_for(
+                            lock,
+                            interval,
+                            [self]() { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
+                    }
                     if ( self->stop_timer_.load() )
                     {
                         return;

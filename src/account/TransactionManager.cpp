@@ -123,6 +123,7 @@ namespace sgns
                     }
                     return process_result;
                 }
+                return outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
             SubjectType::SUBJECT_NONCE,

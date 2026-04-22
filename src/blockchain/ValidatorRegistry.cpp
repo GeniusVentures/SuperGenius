@@ -1014,7 +1014,6 @@ namespace sgns
         {
             update.add_batch_certificate_subject_hashes( tx_subject_hash );
         }
-        return BatchCertificateDecision::Approve;
 
         std::thread(
             [weak_self = weak_from_this(), subject_hash, update = std::move( update )]() mutable
@@ -1039,6 +1038,7 @@ namespace sgns
                 self->finalized_batch_subject_ids_.insert( subject_hash );
             } )
             .detach();
+        return BatchCertificateDecision::Approve;
     }
 
     outcome::result<std::optional<uint64_t>> ValidatorRegistry::GetValidatorWeight(
