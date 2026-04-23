@@ -1,6 +1,8 @@
 /**
- * @file TransactionManager.hpp
+ * @file       TransactionManager.hpp
  * @brief
+ * @date       2024-03-13
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #ifndef _TRANSACTION_MANAGER_HPP_
 #define _TRANSACTION_MANAGER_HPP_
