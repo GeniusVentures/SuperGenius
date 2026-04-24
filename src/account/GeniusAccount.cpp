@@ -23,6 +23,13 @@ namespace
 {
     using namespace sgns;
 
+    base::Logger get_persistent_genius_account_logger()
+    {
+        // Intentionally leaked to avoid static destruction order issues during app shutdown.
+        static base::Logger *logger = new base::Logger( base::createLogger( "GeniusAccount" ) );
+        return *logger;
+    }
+
     std::array<uint8_t, 32> get_elgamal_pubkey()
     {
         const auto              elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
@@ -34,9 +41,7 @@ namespace
 
     base::Logger genius_account_logger()
     {
-        // Always call base::createLogger to get the current logger
-        // This will return existing logger or create new one as needed
-        return base::createLogger( "GeniusAccount" );
+        return get_persistent_genius_account_logger();
     }
 
     boost::filesystem::path SetupStoragePath( const boost::filesystem::path &base_path )
@@ -106,9 +111,7 @@ namespace sgns
 
     base::Logger genius_account_logger()
     {
-        // Always call base::createLogger to get the current logger
-        // This will return existing logger or create new one as needed
-        return base::createLogger( "GeniusAccount" );
+        return get_persistent_genius_account_logger();
     }
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();

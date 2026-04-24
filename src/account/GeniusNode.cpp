@@ -805,6 +805,12 @@ namespace sgns
     {
         node_logger_->debug( "~GeniusNode CALLED" );
 
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
+            transaction_manager_.reset();
+        }
+
         if ( pubsub_ )
         {
             pubsub_->Stop(); // Stop activities of OtherClass
