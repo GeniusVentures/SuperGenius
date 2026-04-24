@@ -49,12 +49,18 @@ namespace test
 {
     const std::string                       CRDTFixture::basePath = "CRDT.Datastore.TEST";
     std::shared_ptr<soralog::LoggingSystem> CRDTFixture::logging_system_;
+    std::atomic<uint64_t>                   CRDTFixture::fixture_counter_{ 0 };
 
     CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
     {
+        const auto fixture_id = fixture_counter_.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        const auto suffix     = std::to_string( fixture_id );
+        keypair_path_         = basePath + "/unit_test_" + suffix;
+        db_path_              = basePath + ".unit_" + suffix;
+
         io_ = std::make_shared<io_context>();
 
-        pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( basePath + "/unit_test" ).GetKeyPair().value() );
+        pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
 
         BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
@@ -63,8 +69,7 @@ namespace test
         auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs_->GetHost(),
                                                                                              scheduler );
 
-        auto globaldb_ret =
-            GlobalDB::New( io_, basePath + ".unit", pubs_, crdtOptions, graphsyncnetwork, scheduler, generator );
+        auto globaldb_ret = GlobalDB::New( io_, db_path_, pubs_, crdtOptions, graphsyncnetwork, scheduler, generator );
         BOOST_ASSERT( globaldb_ret.has_value() );
         db_ = std::move( globaldb_ret.value() );
 
@@ -80,10 +85,18 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
+        if ( pubs_ )
+        {
+            pubs_->Stop();
+        }
+        db_.reset();
+        pubs_.reset();
+        io_.reset();
+
         try
         {
-            fs::remove_all( basePath );
-            fs::remove_all( basePath + ".unit" );
+            fs::remove_all( keypair_path_ );
+            fs::remove_all( db_path_ );
         }
         catch ( const fs::filesystem_error &err )
         {
