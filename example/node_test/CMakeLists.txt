@@ -8,6 +8,21 @@ target_link_libraries(node_example PRIVATE
     genius_node
 )
 target_include_directories(node_example PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
+option(NODE_EXAMPLE_ENABLE_SENTRY "Enable optional Sentry-native integration for node_example" OFF)
+if(NODE_EXAMPLE_ENABLE_SENTRY)
+    find_package(sentry CONFIG QUIET)
+    if(TARGET sentry::sentry)
+        target_link_libraries(node_example PRIVATE sentry::sentry)
+        target_compile_definitions(node_example PRIVATE SG_NODE_EXAMPLE_WITH_SENTRY=1)
+    elseif(TARGET sentry)
+        target_link_libraries(node_example PRIVATE sentry)
+        target_compile_definitions(node_example PRIVATE SG_NODE_EXAMPLE_WITH_SENTRY=1)
+    else()
+        message(WARNING "NODE_EXAMPLE_ENABLE_SENTRY=ON but sentry package target was not found; building without Sentry integration")
+    endif()
+endif()
+
 if(WIN32)
     target_link_options(node_example PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 

@@ -23,12 +23,114 @@
 #include "FileManager.hpp"
 #include <thread>
 #include <chrono>
+#include <cmath>
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+#include <sentry.h>
+#endif
 
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
 std::string             current_input;
 std::atomic<bool>       finished( false );
+
+namespace
+{
+  const char *NodeStateToString( sgns::GeniusNode::NodeState state )
+  {
+    using NodeState = sgns::GeniusNode::NodeState;
+    switch ( state )
+    {
+      case NodeState::CREATING:
+        return "CREATING";
+      case NodeState::MIGRATING_DATABASE:
+        return "MIGRATING_DATABASE";
+      case NodeState::INITIALIZING_DATABASE:
+        return "INITIALIZING_DATABASE";
+      case NodeState::INITIALIZING_PROCESSING:
+        return "INITIALIZING_PROCESSING";
+      case NodeState::INITIALIZING_BLOCKCHAIN:
+        return "INITIALIZING_BLOCKCHAIN";
+      case NodeState::INITIALIZING_TRANSACTIONS:
+        return "INITIALIZING_TRANSACTIONS";
+      case NodeState::INITIALIZING_DHT:
+        return "INITIALIZING_DHT";
+      case NodeState::READY:
+        return "READY";
+    }
+    return "UNKNOWN";
+  }
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  class NodeExampleSentry
+  {
+  public:
+    void Init( const std::string &database_path )
+    {
+      const char *dsn = std::getenv( "SENTRY_DSN" );
+      if ( dsn == nullptr || std::string( dsn ).empty() )
+      {
+        std::cout << "Sentry disabled: SENTRY_DSN not set" << std::endl;
+        return;
+      }
+
+      sentry_options_t *options = sentry_options_new();
+      sentry_options_set_dsn( options, dsn );
+      sentry_options_set_database_path( options, database_path.c_str() );
+      sentry_options_set_release( options, "node_example@dev" );
+      sentry_options_set_environment( options, "node_example" );
+
+      if ( sentry_init( options ) == 0 )
+      {
+        enabled_ = true;
+        std::cout << "Sentry initialized for node_example" << std::endl;
+      }
+      else
+      {
+        std::cout << "Sentry init failed for node_example" << std::endl;
+      }
+    }
+
+    void ReportStall( const std::string &message,
+              const std::string &node_state,
+              const std::string &tx_state,
+              double             processing_pct )
+    {
+      if ( !enabled_ )
+      {
+        return;
+      }
+
+      sentry_value_t event = sentry_value_new_message_event( SENTRY_LEVEL_ERROR,
+                                  "node_watchdog",
+                                  message.c_str() );
+      sentry_value_set_by_key( event,
+                   "node_state",
+                   sentry_value_new_string( node_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "transaction_manager_state",
+                   sentry_value_new_string( tx_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "processing_percentage",
+                   sentry_value_new_double( processing_pct ) );
+      sentry_capture_event( event );
+      sentry_flush( 2000 );
+    }
+
+    ~NodeExampleSentry()
+    {
+      if ( enabled_ )
+      {
+        sentry_close();
+      }
+    }
+
+  private:
+    bool enabled_{ false };
+  };
+#endif
+} // namespace
 
 #ifdef _WIN32
 // Add a global variable to store the original console mode
@@ -627,6 +729,7 @@ int main( int argc, char *argv[] )
     bool        is_full_node     = false;
     bool        terminal_mode    = false; // Enable terminal input mode
     std::string path_override    = "";    // Path override for DEV_CONFIG
+    uint64_t    stall_seconds    = 300;
 
     // Parse command-line arguments
     if ( argc > 1 )
@@ -663,6 +766,10 @@ int main( int argc, char *argv[] )
             {
                 terminal_mode = true;
             }
+            else if ( current_arg.rfind( "--stall-seconds=", 0 ) == 0 )
+            {
+              stall_seconds = static_cast<uint64_t>( std::stoull( current_arg.substr( 16 ) ) );
+            }
         }
     }
 
@@ -681,6 +788,68 @@ int main( int argc, char *argv[] )
     //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+
+  #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+    NodeExampleSentry sentry;
+    sentry.Init( std::string( DEV_CONFIG.BaseWritePath ) + "/.sentry-native" );
+  #endif
+
+    std::thread stall_watchdog_thread(
+      [node_instance, stall_seconds]()
+      {
+        auto   last_change = std::chrono::steady_clock::now();
+        auto   last_node   = node_instance->GetState();
+        auto   last_tx     = node_instance->GetTransactionManagerState();
+        double last_pct    = node_instance->GetProcessingStatus().percentage;
+        bool   reported    = false;
+
+        while ( !finished )
+        {
+          std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+          if ( finished )
+          {
+            break;
+          }
+
+          auto   node_state = node_instance->GetState();
+          auto   tx_state   = node_instance->GetTransactionManagerState();
+          double pct        = node_instance->GetProcessingStatus().percentage;
+
+          bool changed = ( node_state != last_node ) || ( tx_state != last_tx ) ||
+                   ( std::fabs( pct - last_pct ) > 0.001 );
+
+          if ( changed )
+          {
+            last_change = std::chrono::steady_clock::now();
+            last_node   = node_state;
+            last_tx     = tx_state;
+            last_pct    = pct;
+            reported    = false;
+            continue;
+          }
+
+          auto stalled_for = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() -
+                                               last_change )
+                       .count();
+
+          if ( stalled_for >= static_cast<long long>( stall_seconds ) && !reported &&
+             ( node_state != sgns::GeniusNode::NodeState::READY ||
+               tx_state != sgns::TransactionManager::State::READY ) )
+          {
+            std::string message = ( boost::format( "Node stalled for %1%s before READY" ) % stalled_for ).str();
+            std::cout << message << " node_state=" << NodeStateToString( node_state )
+                  << " tx_state=" << sgns::TransactionManager::StateToString( tx_state ) << std::endl;
+
+  #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+            sentry.ReportStall( message,
+                      NodeStateToString( node_state ),
+                      sgns::TransactionManager::StateToString( tx_state ),
+                      pct );
+  #endif
+            reported = true;
+          }
+        }
+      } );
 
     std::thread input_thread;
     std::thread status_thread;
@@ -743,6 +912,11 @@ int main( int argc, char *argv[] )
     if ( status_thread.joinable() )
     {
         status_thread.join();
+    }
+
+    if ( stall_watchdog_thread.joinable() )
+    {
+      stall_watchdog_thread.join();
     }
 
     return 0;
