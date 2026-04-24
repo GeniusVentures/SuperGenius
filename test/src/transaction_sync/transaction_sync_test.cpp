@@ -165,8 +165,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto balance_2_before = node_proc2->GetBalance();
 
     // Mint tokens with timeout
-    auto mint_result =
-        node_proc1->MintTokens( 10000000000,
+    auto mint_result = node_proc1->MintTokens( 10000000000,
                                                sgns::test::NextMintSourceHash(),
                                                "",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
@@ -257,8 +256,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     }
 
     // Mint tokens on node_proc2
-    auto mint_result1 =
-        node_proc2->MintTokens( 10000000000,
+    auto mint_result1 = node_proc2->MintTokens( 10000000000,
                                                 sgns::test::NextMintSourceHash(),
                                                 "",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
@@ -266,8 +264,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
-    auto mint_result2 =
-        node_proc2->MintTokens( 20000000000,
+    auto mint_result2 = node_proc2->MintTokens( 20000000000,
                                                 sgns::test::NextMintSourceHash(),
                                                 "",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
@@ -358,9 +355,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
     for ( size_t index = 0; index < xfer_amounts[0].size(); index++ )
     {
-        auto xfer_amount  = xfer_amounts[0][index];
-        xfer_amount_1    += xfer_amount;
-        auto transfer_result1 = node_proc1->TransferFunds( xfer_amount,
+        auto xfer_amount       = xfer_amounts[0][index];
+        xfer_amount_1         += xfer_amount;
+        auto transfer_result1  = node_proc1->TransferFunds( xfer_amount,
                                                            node_proc2->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -370,9 +367,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
         txIDs[0].push_back( transfer_tx_id1 );
 
-        xfer_amount    = xfer_amounts[1][index];
-        xfer_amount_2 += xfer_amount;
-        auto transfer_result2 = node_proc2->TransferFunds( xfer_amount,
+        xfer_amount            = xfer_amounts[1][index];
+        xfer_amount_2         += xfer_amount;
+        auto transfer_result2  = node_proc2->TransferFunds( xfer_amount,
                                                            node_proc1->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -441,8 +438,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
         "full_node not synched" );
 
     // Mint tokens with timeout
-    auto mint_result =
-        node_proc1->MintTokens( 10000000000,
+    auto mint_result = node_proc1->MintTokens( 10000000000,
                                                sgns::test::NextMintSourceHash(),
                                                "",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
@@ -450,11 +446,11 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
     mint_result = node_proc1->MintTokens( 10000000000,
-                                               sgns::test::NextMintSourceHash(),
-                                               "",
-                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "",
-                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                          sgns::test::NextMintSourceHash(),
+                                          "",
+                                          sgns::TokenID::FromBytes( { 0x00 } ),
+                                          "",
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -543,8 +539,12 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
         "node_proc2 not synched" );
 
     // Mint tokens to ensure sufficient balance
-    auto mint_result =
-        node_proc1->MintTokens( 20000000000, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint_result = node_proc1->MintTokens( 20000000000,
+                                               sgns::test::NextMintSourceHash(),
+                                               "",
+                                               TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     // Create and send a valid first transfer using the normal flow
