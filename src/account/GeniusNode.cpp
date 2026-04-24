@@ -270,10 +270,6 @@ namespace sgns
             }
             case NodeState::INITIALIZING_DHT:
             {
-                if ( use_upnp_ )
-                {
-                    RefreshUPNP( pubsubport_ );
-                }
                 io_work_guard_.emplace( io_->get_executor() );
                 unsigned desired_threads = io_thread_count_;
                 if ( desired_threads == 0 )
@@ -553,27 +549,12 @@ namespace sgns
         }
 
         do {
-            if (upnp_enabled) {
-                // Only try the specified port if set in config, do not try alternatives
-                if (config_port != 0) {
-                    auto upnp = std::make_shared<upnp::UPNP>();
-                    if (upnp->GetIGD()) {
-                        std::string owner;
-                        if (!upnp->CheckIfPortInUse(pubsubport_, "TCP", owner) || owner == upnp->GetLocalIP()) {
-                            if (!upnp->OpenPort(pubsubport_, pubsubport_, "TCP", 3600)) {
-                                node_logger_->error("Failed to open specified UPnP port {}", pubsubport_);
-                                ret = false;
-                                break;
-                            }
-                        } else {
-                            node_logger_->error("Specified port {} already in use by {}", pubsubport_, owner);
-                            ret = false;
-                            break;
-                        }
-                    }
-                } else {
-                    (void)InitUPNP(); // Fallback to old logic if no port specified
-                }
+            // Never block node construction on UPnP/IGD discovery.
+            // RefreshUPNP() runs on its own thread and will try immediately.
+            use_upnp_ = upnp_enabled;
+            if ( use_upnp_ )
+            {
+                node_logger_->info( "UPnP enabled: startup port mapping will run in background" );
             }
 
             // Make a base58 out of our address
@@ -623,6 +604,11 @@ namespace sgns
                 {});
             pubs.wait();
             node_logger_->info("PubSub started at address: {}", pubsub_->GetInterfaceAddress());
+
+            if ( use_upnp_ )
+            {
+                RefreshUPNP( pubsubport_ );
+            }
 
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water = low_water;
@@ -870,7 +856,7 @@ namespace sgns
         upnp_thread = std::thread(
             [this, pubsubport]()
             {
-                auto next_refresh_time = std::chrono::steady_clock::now() + std::chrono::minutes( 60 );
+                auto next_refresh_time = std::chrono::steady_clock::now();
                 auto upnp_shared       = std::make_shared<upnp::UPNP>();
 
                 while ( !stop_upnp )
