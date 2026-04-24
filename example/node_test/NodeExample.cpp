@@ -794,8 +794,12 @@ int main( int argc, char *argv[] )
     sentry.Init( std::string( DEV_CONFIG.BaseWritePath ) + "/.sentry-native" );
   #endif
 
-    std::thread stall_watchdog_thread(
-      [node_instance, stall_seconds]()
+        std::thread stall_watchdog_thread(
+      [node_instance, stall_seconds
+    #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+      , &sentry
+    #endif
+      ]()
       {
         auto   last_change = std::chrono::steady_clock::now();
         auto   last_node   = node_instance->GetState();
