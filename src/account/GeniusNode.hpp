@@ -240,6 +240,8 @@ namespace sgns
             return pubsub_;
         }
 
+        void ResetProcessingMembers();
+
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
          * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).

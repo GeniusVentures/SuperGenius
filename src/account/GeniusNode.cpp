@@ -406,6 +406,8 @@ namespace sgns
             }
             case NodeState::INITIALIZING_PROCESSING:
             {
+                ResetProcessingMembers();
+
                 if ( !InitProcessingModules() )
                 {
                     node_logger_->error( "Processing modules initialization error" );
@@ -1009,10 +1011,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        processing_service_.reset();
-        task_result_storage_.reset();
-        processing_core_.reset();
-        task_queue_.reset();
+        ResetProcessingMembers();
 
         this->transaction_manager_->Stop();
         this->transaction_manager_.reset();
@@ -1028,6 +1027,14 @@ namespace sgns
         this->BeginDBInitialization();
 
         return outcome::success();
+    }
+
+    void GeniusNode::ResetProcessingMembers()
+    {
+        processing_service_.reset();
+        task_result_storage_.reset();
+        processing_core_.reset();
+        task_queue_.reset();
     }
 
     outcome::result<void> GeniusNode::TransferAccount( std::string_view public_address )
@@ -1078,11 +1085,6 @@ namespace sgns
     outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
     {
         BOOST_OUTCOME_TRY( account_->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
-
-        processing_service_.reset();
-        task_result_storage_.reset();
-        processing_core_.reset();
-        task_queue_.reset();
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );
 
@@ -1856,7 +1858,14 @@ namespace sgns
         switch ( new_state )
         {
             case TransactionManager::State::READY:
-                StateTransition( NodeState::INITIALIZING_PROCESSING );
+                if ( processing_service_ == nullptr )
+                {
+                    StateTransition( NodeState::INITIALIZING_PROCESSING );
+                }
+                else if ( isprocessor_ )
+                {
+                    StartProcessing();
+                }
                 break;
             case TransactionManager::State::INITIALIZING:
             case TransactionManager::State::SYNCING:
