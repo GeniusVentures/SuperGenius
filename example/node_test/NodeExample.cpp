@@ -68,15 +68,15 @@ namespace
   public:
     void Init( const std::string &database_path )
     {
-      const char *dsn = std::getenv( "SENTRY_DSN" );
-      if ( dsn == nullptr || std::string( dsn ).empty() )
-      {
-        std::cout << "Sentry disabled: SENTRY_DSN not set" << std::endl;
-        return;
-      }
+      // const char *dsn = std::getenv( "SENTRY_DSN" );
+      // if ( dsn == nullptr || std::string( dsn ).empty() )
+      // {
+      //   std::cout << "Sentry disabled: SENTRY_DSN not set" << std::endl;
+      //   return;
+      // }
 
       sentry_options_t *options = sentry_options_new();
-      sentry_options_set_dsn( options, dsn );
+      sentry_options_set_dsn( options, "https://c6ea0a719f6ee5a6278445861d411b20@o4511215700017152.ingest.us.sentry.io/4511219645153280" );
       sentry_options_set_database_path( options, database_path.c_str() );
       sentry_options_set_release( options, "node_example@dev" );
       sentry_options_set_environment( options, "node_example" );
