@@ -26,9 +26,13 @@
 #include <cmath>
 #include <filesystem>
 #include <system_error>
+#include <sstream>
 
 #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
 #include <sentry.h>
+#ifndef _WIN32
+#include <execinfo.h>
+#endif
 #endif
 
 std::mutex              keyboard_mutex;
@@ -65,6 +69,37 @@ namespace
   }
 
 #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  class NodeExampleSentry;
+  NodeExampleSentry *g_sentry = nullptr;
+
+  std::string CaptureCurrentStackTrace()
+  {
+#ifdef _WIN32
+    return "stacktrace capture is not implemented on Windows for this example";
+#else
+    void *frames[64];
+    int   frame_count = backtrace( frames, 64 );
+    if ( frame_count <= 0 )
+    {
+      return "no stack frames captured";
+    }
+
+    char **symbols = backtrace_symbols( frames, frame_count );
+    if ( symbols == nullptr )
+    {
+      return "backtrace_symbols failed";
+    }
+
+    std::ostringstream os;
+    for ( int i = 0; i < frame_count; ++i )
+    {
+      os << symbols[i] << '\n';
+    }
+    free( symbols );
+    return os.str();
+#endif
+  }
+
   std::string GetExecutableDirectory()
   {
 #ifdef _WIN32
@@ -209,6 +244,40 @@ namespace
       sentry_flush( 2000 );
     }
 
+    void ReportDatabaseWriteError( const std::string &message,
+                                   const std::string &call_site,
+                                   const std::string &node_state,
+                                   const std::string &tx_state,
+                                   double             processing_pct,
+                                   const std::string &stacktrace )
+    {
+      if ( !enabled_ )
+      {
+        return;
+      }
+
+      sentry_value_t event = sentry_value_new_message_event( SENTRY_LEVEL_ERROR,
+                                  "database_write",
+                                  message.c_str() );
+      sentry_value_set_by_key( event,
+                   "call_site",
+                   sentry_value_new_string( call_site.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "node_state",
+                   sentry_value_new_string( node_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "transaction_manager_state",
+                   sentry_value_new_string( tx_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "processing_percentage",
+                   sentry_value_new_double( processing_pct ) );
+      sentry_value_set_by_key( event,
+                   "stacktrace",
+                   sentry_value_new_string( stacktrace.c_str() ) );
+      sentry_capture_event( event );
+      sentry_flush( 2000 );
+    }
+
     ~NodeExampleSentry()
     {
       if ( enabled_ )
@@ -222,6 +291,36 @@ namespace
   };
 #endif
 } // namespace
+
+void MaybeReportDatabaseWriteError( const std::shared_ptr<sgns::GeniusNode> &genius_node,
+                  const outcome::result<std::string>       &jobpost,
+                  const std::string                        &call_site )
+{
+  if ( jobpost )
+  {
+    return;
+  }
+
+  if ( jobpost.error().value() != static_cast<int>( sgns::GeniusNode::Error::DATABASE_WRITE_ERROR ) )
+  {
+    return;
+  }
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  if ( g_sentry != nullptr )
+  {
+    const auto node_state = genius_node->GetState();
+    const auto tx_state   = genius_node->GetTransactionManagerState();
+    const auto processing = genius_node->GetProcessingStatus();
+    g_sentry->ReportDatabaseWriteError( "ProcessImage returned DATABASE_WRITE_ERROR",
+                      call_site,
+                      NodeStateToString( node_state ),
+                      sgns::TransactionManager::StateToString( tx_state ),
+                      processing.percentage,
+                      CaptureCurrentStackTrace() );
+  }
+#endif
+}
 
 #ifdef _WIN32
 // Add a global variable to store the original console mode
@@ -523,6 +622,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
     );
     if ( !jobpost )
     {
+      MaybeReportDatabaseWriteError( genius_node, jobpost, "CreateProcessingTransaction" );
         std::cout << "Job post error: " << jobpost.error().message() << std::endl;
     }
 }
@@ -801,6 +901,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
         );
         if ( !jobpost )
         {
+          MaybeReportDatabaseWriteError( genius_node, jobpost, "periodic_processing" );
             std::cout << "Job post error: " << jobpost.error().message() << std::endl;
         }
     }
@@ -894,6 +995,7 @@ int main( int argc, char *argv[] )
   #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
     NodeExampleSentry sentry;
     sentry.Init( std::string( DEV_CONFIG.BaseWritePath ) + "/.sentry-native" );
+    g_sentry = &sentry;
   #endif
 
         std::thread stall_watchdog_thread(
