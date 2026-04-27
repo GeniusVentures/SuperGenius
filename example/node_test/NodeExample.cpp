@@ -535,6 +535,13 @@ std::vector<std::string> split_string( const std::string &str )
     return results;
 }
 
+[[noreturn]] void TriggerIntentionalCrash()
+{
+  std::cerr << "Intentional crash requested via terminal command 'crash'." << std::endl;
+  std::cerr << "Aborting process to generate a crash report." << std::endl;
+  std::abort();
+}
+
 void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
@@ -632,6 +639,10 @@ void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
             else if ( arguments[0] == "quit" )
             {
                 finished = true;
+            }
+            else if ( arguments[0] == "crash" )
+            {
+              TriggerIntentionalCrash();
             }
             else
             {
@@ -957,7 +968,8 @@ int main( int argc, char *argv[] )
 
     if ( terminal_mode )
     {
-        std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
+      std::cout << "Commands: process, mint, transfer, info, balance, ds, price, peer, stopprocessing, crash, quit"
+            << std::endl;
         redraw_prompt();
     }
 
