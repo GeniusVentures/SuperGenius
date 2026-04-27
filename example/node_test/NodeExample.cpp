@@ -10,7 +10,7 @@
 #include <atomic>
 #include <iomanip>
 #ifdef _WIN32
-//#include <windows.h>
+#include <windows.h>
 #else
 #include <termios.h>
 #include <unistd.h>
@@ -24,6 +24,8 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <filesystem>
+#include <system_error>
 
 #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
 #include <sentry.h>
@@ -63,6 +65,54 @@ namespace
   }
 
 #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  std::string GetExecutableDirectory()
+  {
+#ifdef _WIN32
+    char  exe_path[MAX_PATH];
+    DWORD length = GetModuleFileNameA( nullptr, exe_path, MAX_PATH );
+    if ( length == 0 || length >= MAX_PATH )
+    {
+      return {};
+    }
+
+    return std::filesystem::path( std::string( exe_path, static_cast<size_t>( length ) ) )
+      .parent_path()
+      .string();
+#else
+    std::vector<char> exe_path( 4096, '\0' );
+    ssize_t           length = readlink( "/proc/self/exe", exe_path.data(), exe_path.size() - 1 );
+    if ( length <= 0 )
+    {
+      return {};
+    }
+
+    return std::filesystem::path( std::string( exe_path.data(), static_cast<size_t>( length ) ) )
+      .parent_path()
+      .string();
+#endif
+  }
+
+  std::string ResolveCrashpadHandlerPath()
+  {
+    const std::string exe_dir = GetExecutableDirectory();
+    if ( !exe_dir.empty() )
+    {
+      const std::filesystem::path base( exe_dir );
+    #ifdef _WIN32
+      const std::filesystem::path candidate = base / "crashpad_handler.exe";
+    #else
+      const std::filesystem::path candidate = base / "crashpad_handler";
+    #endif
+      std::error_code ec;
+      if ( std::filesystem::exists( candidate, ec ) && !ec )
+      {
+        return candidate.lexically_normal().string();
+      }
+    }
+
+    return {};
+  }
+
   class NodeExampleSentry
   {
   public:
@@ -75,20 +125,61 @@ namespace
       //   return;
       // }
 
+      const char *dsn = "https://c6ea0a719f6ee5a6278445861d411b20@o4511215700017152.ingest.us.sentry.io/4511219645153280";
+      if ( dsn == nullptr || std::string( dsn ).empty() )
+      {
+        std::cerr << "Sentry disabled: DSN is empty" << std::endl;
+        return;
+      }
+
+      std::error_code ec;
+      std::filesystem::create_directories( database_path, ec );
+      if ( ec )
+      {
+        std::cerr << "Sentry init precheck failed: cannot create database path '" << database_path
+                  << "': " << ec.message() << std::endl;
+        return;
+      }
+
       sentry_options_t *options = sentry_options_new();
-      sentry_options_set_dsn( options, "https://c6ea0a719f6ee5a6278445861d411b20@o4511215700017152.ingest.us.sentry.io/4511219645153280" );
+      if ( options == nullptr )
+      {
+        std::cerr << "Sentry init precheck failed: sentry_options_new returned null" << std::endl;
+        return;
+      }
+
+      sentry_options_set_debug( options, 1 );
+      sentry_options_set_dsn( options, dsn );
       sentry_options_set_database_path( options, database_path.c_str() );
       sentry_options_set_release( options, "node_example@dev" );
       sentry_options_set_environment( options, "node_example" );
 
-      if ( sentry_init( options ) == 0 )
+      const std::string handler_path = ResolveCrashpadHandlerPath();
+      if ( !handler_path.empty() )
       {
-        enabled_ = true;
-        std::cout << "Sentry initialized for node_example" << std::endl;
+        sentry_options_set_handler_path( options, handler_path.c_str() );
+        std::cout << "Sentry crashpad handler path: '" << handler_path << "'" << std::endl;
       }
       else
       {
-        std::cout << "Sentry init failed for node_example" << std::endl;
+        std::cerr << "Sentry warning: crashpad_handler not found in known locations. "
+                  << "CMake should copy it beside node_example. Check node_example POST_BUILD steps."
+                  << std::endl;
+      }
+
+      int init_rc = sentry_init( options );
+      if ( init_rc == 0 )
+      {
+        enabled_ = true;
+        std::cout << "Sentry initialized for node_example"
+                  << " (database_path='" << database_path << "')" << std::endl;
+      }
+      else
+      {
+        std::cerr << "Sentry init failed for node_example (rc=" << init_rc << ")" << std::endl;
+        std::cerr << "Sentry init details: DSN configured, database_path='" << database_path << "'" << std::endl;
+        std::cerr << "Likely causes on Linux: missing crashpad_handler binary for sentry-native backend, "
+                  << "invalid DSN, or insufficient permissions on the database path." << std::endl;
       }
     }
 

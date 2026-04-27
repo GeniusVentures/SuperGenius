@@ -11,12 +11,19 @@ target_include_directories(node_example PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 option(NODE_EXAMPLE_ENABLE_SENTRY "Enable optional Sentry-native integration for node_example" OFF)
 set(node_example_with_sentry FALSE)
+set(node_example_with_crashpad_handler FALSE)
 if(NODE_EXAMPLE_ENABLE_SENTRY)
     find_package(sentry CONFIG QUIET)
     if(TARGET sentry::sentry)
         target_link_libraries(node_example PRIVATE sentry::sentry)
         target_compile_definitions(node_example PRIVATE SG_NODE_EXAMPLE_WITH_SENTRY=1)
         set(node_example_with_sentry TRUE)
+
+        if(TARGET sentry_crashpad::crashpad_handler)
+            set(node_example_with_crashpad_handler TRUE)
+        else()
+            message(WARNING "Sentry was found but sentry_crashpad::crashpad_handler target is unavailable; node_example may fail to initialize Sentry crashpad backend")
+        endif()
     elseif(TARGET sentry)
         target_link_libraries(node_example PRIVATE sentry)
         target_compile_definitions(node_example PRIVATE SG_NODE_EXAMPLE_WITH_SENTRY=1)
@@ -24,6 +31,18 @@ if(NODE_EXAMPLE_ENABLE_SENTRY)
     else()
         message(WARNING "NODE_EXAMPLE_ENABLE_SENTRY=ON but sentry package target was not found; building without Sentry integration")
     endif()
+endif()
+
+if(node_example_with_sentry AND node_example_with_crashpad_handler)
+    add_custom_command(
+        TARGET node_example
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:sentry_crashpad::crashpad_handler>
+            $<TARGET_FILE_DIR:node_example>
+        COMMENT "Copying crashpad_handler beside node_example for sentry-native"
+        VERBATIM
+    )
 endif()
 
 if(node_example_with_sentry AND CMAKE_OBJCOPY)
