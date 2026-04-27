@@ -228,6 +228,9 @@ namespace sgns
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
         outcome::result<void>    SendTransactionItem( TransactionItem &item );
         outcome::result<void>    RollbackTransactions( TransactionItem &item_to_rollback );
 

@@ -378,12 +378,28 @@ namespace sgns
                 auto send_result = SendTransactionItem( tx_queue_m.front() );
                 if ( send_result.has_error() )
                 {
+                    const auto err             = send_result.error();
+                    const bool retryable_error = ( err == boost::system::errc::make_error_code(
+                                                              boost::system::errc::timed_out ) ) ||
+                                                 ( err == boost::system::errc::make_error_code(
+                                                              boost::system::errc::resource_unavailable_try_again ) );
+
+                    if ( retryable_error )
+                    {
+                        TransactionManagerLogger()->info(
+                            "[{} - full: {}] Send deferred/retryable ({}). Keeping transaction in queue",
+                            account_m->GetAddress().substr( 0, 8 ),
+                            full_node_m,
+                            err.message() );
+                        break;
+                    }
+
                     ChangeState( State::SYNCING );
 
                     TransactionManagerLogger()->error( "[{} - full: {}] Error in SendTransactionItem: {}",
                                                        account_m->GetAddress().substr( 0, 8 ),
                                                        full_node_m,
-                                                       send_result.error().message() );
+                                                       err.message() );
 
                     auto rollback_result = RollbackTransactions( tx_queue_m.front() );
                     if ( rollback_result.has_error() )
@@ -394,19 +410,7 @@ namespace sgns
                                                            __func__ );
                         break;
                     }
-
-                    if ( send_result.error() == boost::system::errc::make_error_code( boost::system::errc::timed_out ) )
-                    {
-                        TransactionManagerLogger()->info(
-                            "[{} - full: {}] Network timeout - keeping transaction in queue for retry",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m );
-                        // Don't pop - transaction stays in queue for retry when we return to READY
-                    }
-                    else
-                    {
-                        tx_queue_m.pop_front();
-                    }
+                    tx_queue_m.pop_front();
                     break;
                 }
                 tx_queue_m.pop_front();
@@ -760,26 +764,133 @@ namespace sgns
             return "";
         }
 
-        std::shared_lock tx_lock( tx_mutex_m );
-        for ( const auto &[_, tracked] : tx_processed_m )
+        auto tracked_hash = GetTrackedOutgoingPreviousHash( nonce );
+        if ( !tracked_hash.empty() )
         {
-            if ( !tracked.tx )
+            return tracked_hash;
+        }
+
+        auto persisted_hash = GetPersistedOutgoingPreviousHash( nonce );
+        if ( !persisted_hash.empty() )
+        {
+            return persisted_hash;
+        }
+
+        return QueryOutgoingPreviousHashFromCRDT( nonce );
+    }
+
+    std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        {
+            std::shared_lock tx_lock( tx_mutex_m );
+            for ( const auto &[_, tracked] : tx_processed_m )
+            {
+                if ( !tracked.tx )
+                {
+                    continue;
+                }
+                if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
+                {
+                    continue;
+                }
+                if ( tracked.cached_nonce != ( nonce - 1 ) )
+                {
+                    continue;
+                }
+                if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
+                {
+                    continue;
+                }
+                return tracked.tx->GetHash();
+            }
+        }
+        return "";
+    }
+
+    std::string TransactionManager::GetPersistedOutgoingPreviousHash( uint64_t nonce ) const
+    {
+        if ( nonce == 0 )
+        {
+            return "";
+        }
+
+        auto persisted_hash_result = account_m->GetLocalConfirmedTxHash( nonce - 1 );
+        if ( persisted_hash_result.has_error() )
+        {
+            return "";
+        }
+
+        const auto &persisted_hash = persisted_hash_result.value();
+        if ( persisted_hash.empty() || !blockchain_->CheckCertificate( persisted_hash ) )
+        {
+            return "";
+        }
+
+        TransactionManagerLogger()->debug(
+            "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted head",
+            account_m->GetAddress().substr( 0, 8 ),
+            full_node_m,
+            persisted_hash,
+            nonce );
+        return persisted_hash;
+    }
+
+    std::string TransactionManager::QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const
+    {
+        if ( nonce == 0 )
+        {
+            return "";
+        }
+
+        const uint64_t expected_previous_nonce = nonce - 1;
+        std::string    selected_hash;
+        auto           monitored_networks = GetMonitoredNetworkIDs();
+        for ( auto network_id : monitored_networks )
+        {
+            const std::string query_path = GetBlockChainBase( network_id ) + "tx";
+            auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
+            if ( !tx_list.has_value() )
             {
                 continue;
             }
-            if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
+
+            for ( const auto &[_, value] : tx_list.value() )
             {
-                continue;
+                auto tx_result = DeSerializeTransaction( value );
+                if ( !tx_result.has_value() || !tx_result.value() )
+                {
+                    continue;
+                }
+
+                const auto &candidate = tx_result.value();
+                if ( candidate->GetSrcAddress() != account_m->GetAddress() ||
+                     candidate->GetNonce() != expected_previous_nonce )
+                {
+                    continue;
+                }
+
+                if ( !blockchain_->CheckCertificate( candidate->GetHash() ) )
+                {
+                    continue;
+                }
+
+                if ( selected_hash.empty() ||
+                     blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                {
+                    selected_hash = candidate->GetHash();
+                }
             }
-            if ( tracked.cached_nonce != ( nonce - 1 ) )
-            {
-                continue;
-            }
-            if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
-            {
-                continue;
-            }
-            return tracked.tx->GetHash();
+        }
+
+        if ( !selected_hash.empty() )
+        {
+            TransactionManagerLogger()->debug(
+                "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted transactions",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                selected_hash,
+                nonce );
+            return selected_hash;
         }
         return "";
     }
@@ -863,13 +974,24 @@ namespace sgns
 
             if ( transaction->GetNonce() != expected_next_nonce.value() )
             {
+                if ( transaction->GetNonce() > expected_next_nonce.value() )
+                {
+                    TransactionManagerLogger()->debug(
+                        "[{} - full: {}] Deferring transaction send due to nonce gap - Expected: {}, Tried to send: {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        expected_next_nonce.value(),
+                        transaction->GetNonce() );
+                    return outcome::failure(
+                        boost::system::errc::make_error_code( boost::system::errc::resource_unavailable_try_again ) );
+                }
+
                 TransactionManagerLogger()->error(
                     "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     expected_next_nonce.value(),
                     transaction->GetNonce() );
-
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
@@ -2118,7 +2240,7 @@ namespace sgns
         }
 
         auto network_nonce      = maybe_nonce.value();
-        auto local_nonce_result = account_m->GetPeerNonce( account_m->GetAddress() );
+        auto local_nonce_result = account_m->GetLocalConfirmedNonce();
         if ( local_nonce_result.has_error() )
         {
             TransactionManagerLogger()->debug( "[{} - full: {}] No local nonce found. Network nonce exists: {}",
@@ -2859,8 +2981,9 @@ namespace sgns
             key );
 
         auto next_tx_state = TransactionStatus::VERIFYING;
+        auto has_cert      = blockchain_->CheckCertificate( new_tx->GetHash() );
 
-        if ( blockchain_->CheckCertificate( new_tx->GetHash() ) )
+        if ( has_cert )
         {
             TransactionManagerLogger()->debug(
                 "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
@@ -2878,6 +3001,24 @@ namespace sgns
                 BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
             }
         }
+
+        auto maybe_existing = GetTrackedTxByHash( new_tx->GetHash() );
+        if ( maybe_existing.has_value() && next_tx_state == TransactionStatus::VERIFYING )
+        {
+            const auto current_status = maybe_existing->status;
+            if ( current_status == TransactionStatus::FAILED || current_status == TransactionStatus::CONFIRMED )
+            {
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] Keeping terminal status {} for tx {}, skipping downgrade to VERIFYING (has_cert={})",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    static_cast<int>( current_status ),
+                    new_tx->GetHash(),
+                    has_cert );
+                return outcome::success();
+            }
+        }
+
         BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, next_tx_state ) );
 
         return outcome::success();
@@ -3668,34 +3809,27 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx.GetHash() );
-        auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
-        if ( nonce_result.has_error() )
+
+        if ( tx.GetNonce() > 0 )
         {
-            if ( tx.GetNonce() == 0 )
-            {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] {}: Transaction Nonce 0 for {}. No need to check previous transactions",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx.GetSrcAddress() );
-                //TODO - Possibly check account creation
-                return true;
-            }
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] {}: No confirmed nonce for address {}. Checking certificate and nonce from previous hash",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx.GetSrcAddress() );
             const auto previous_hash = tx.GetPreviousHash();
             if ( previous_hash.empty() )
             {
+                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous hash tx={}",
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   __func__,
+                                                   tx.GetHash() );
                 return false;
             }
             auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
             if ( previous_cert_result.has_error() )
             {
+                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
+                                                   account_m->GetAddress().substr( 0, 8 ),
+                                                   full_node_m,
+                                                   __func__,
+                                                   previous_hash );
                 return false;
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
@@ -3707,7 +3841,21 @@ namespace sgns
             {
                 return false;
             }
-            return ( previous_subject.nonce().nonce() + 1 ) == tx.GetNonce();
+            if ( ( previous_subject.nonce().nonce() + 1 ) != tx.GetNonce() )
+            {
+                return false;
+            }
+        }
+
+        auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
+        if ( nonce_result.has_error() )
+        {
+            TransactionManagerLogger()->debug( "[{} - full: {}] {}: No confirmed nonce for address {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx.GetSrcAddress() );
+            return true;
         }
 
         const auto confirmed_nonce = nonce_result.value();
@@ -3768,7 +3916,6 @@ namespace sgns
                 }
             }
         }
-
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Replay protection ok tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -4401,7 +4548,7 @@ namespace sgns
                                                    __func__,
                                                    tx->GetHash() );
                 BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-                account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress() );
+                account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
