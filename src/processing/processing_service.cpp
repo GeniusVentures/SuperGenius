@@ -5,26 +5,6 @@
 
 namespace sgns::processing
 {
-    ProcessingServiceImpl::ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                                  size_t                                     maximalNodesCount,
-                                                  std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                                                  std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
-                                                  std::shared_ptr<ProcessingCore>            processingCore ) :
-        m_gossipPubSub( std::move( gossipPubSub ) ),
-        m_context( std::make_shared<boost::asio::io_context>() ),
-        m_maximalNodesCount( maximalNodesCount ),
-        m_subTaskEnqueuer( std::move( subTaskEnqueuer ) ),
-        m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
-        m_processingCore( std::move( processingCore ) ),
-        m_timerChannelListRequestTimeout( *m_context ),
-        m_channelListRequestTimeout( boost::posix_time::seconds( 5 ) ),
-        m_isStopped( true ),
-        node_address_( m_gossipPubSub->GetLocalAddress() ),
-        m_nodeCreationTimer( *m_context ),
-        m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
-    {
-    }
-
     ProcessingServiceImpl::ProcessingServiceImpl(
         std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
         size_t                                     maximalNodesCount,
@@ -415,7 +395,7 @@ namespace sgns::processing
     {
         if ( m_isStopped )
         {
-            return ProcessingStatus( Status::DISABLED, 0.0f );
+            return { Status::DISABLED, 0.0f };
         }
 
         float  totalProgress = 0.0f;
@@ -425,7 +405,7 @@ namespace sgns::processing
             std::lock_guard lock( m_mutexNodes );
             if ( m_processingNodes.empty() )
             {
-                return ProcessingStatus( Status::IDLE, 0.0f );
+                return { Status::IDLE, 0.0f };
             }
 
             // Calculate average progress across all processing nodes
@@ -443,7 +423,7 @@ namespace sgns::processing
         // Round to 2 decimal places
         averageProgress = std::round( averageProgress * 100.0f ) / 100.0f;
 
-        return ProcessingStatus( Status::PROCESSING, averageProgress );
+        return { Status::PROCESSING, averageProgress };
     }
 
     void ProcessingServiceImpl::HandleRequestTimeout()

@@ -287,7 +287,9 @@ int main( int argc, char *argv[] )
 
     auto io          = std::make_shared<boost::asio::io_context>();
     auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
-    auto scheduler   = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ), libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+    auto scheduler   = std::make_shared<libp2p::basic::SchedulerImpl>(
+        std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+        libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto globaldb_ret     = sgns::crdt::GlobalDB::New(
@@ -314,8 +316,8 @@ int main( int argc, char *argv[] )
     auto taskQueue = std::make_shared<ProcessingTaskQueueImpl>( globalDB, "test" );
 
     auto processingCore                     = std::make_shared<ProcessingCoreImpl>( globalDB,
-                                                                options->subTaskProcessingTime,
-                                                                options->maximalSubTaskCount );
+                                                                                    options->subTaskProcessingTime,
+                                                                                    options->maximalSubTaskCount );
     processingCore->m_chunkResulHashes      = options->chunkResultHashes;
     processingCore->m_validationChunkHashes = options->validationChunkHashes;
 
@@ -325,7 +327,10 @@ int main( int argc, char *argv[] )
                                              maximalNodesCount,
                                              enqueuer,
                                              std::make_shared<SubTaskResultStorageImpl>( globalDB, "test" ),
-                                             processingCore );
+                                             processingCore,
+                                             nullptr,
+                                             nullptr,
+                                             pubs->GetLocalAddress() );
 
     processingService.SetChannelListRequestTimeout(
         boost::posix_time::milliseconds( options->channelListRequestTimeout ) );

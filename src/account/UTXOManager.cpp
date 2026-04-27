@@ -242,9 +242,9 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( uint64_t           amount,
-                                                                      const std::string &dest_address,
-                                                                      const TokenID     &token_id )
+    outcome::result<UTXOTxParameters> UTXOManager::CreateTxParameter( uint64_t    amount,
+                                                                      std::string dest_address,
+                                                                      TokenID     token_id )
     {
         BOOST_OUTCOME_TRY( auto selection_result, SelectUTXOs( amount, token_id ) );
         auto [inputs, selected_amount] = selection_result;
@@ -254,7 +254,7 @@ namespace sgns
         outputs.reserve( 2 );
 
         // Primary output
-        outputs.push_back( { amount, dest_address, token_id } );
+        outputs.push_back( { amount, std::move( dest_address ), token_id } );
 
         // Change output if needed
         uint64_t change = selected_amount - amount;
@@ -428,9 +428,9 @@ namespace sgns
             {
                 const auto &utxo = utxos.utxos( i );
                 BOOST_OUTCOME_TRY( auto hash,
-                             base::Hash256::fromSpan(
-                                 gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( utxo.hash().data() ) ),
-                                            utxo.hash().size() ) ) );
+                                   base::Hash256::fromSpan( gsl::span(
+                                       reinterpret_cast<uint8_t *>( const_cast<char *>( utxo.hash().data() ) ),
+                                       utxo.hash().size() ) ) );
 
                 auto token_id = TokenID::FromBytes( utxo.token().data(), utxo.token().size() );
 

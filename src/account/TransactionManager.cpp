@@ -394,21 +394,23 @@ namespace sgns
 
     void TransactionManager::PrintAccountInfo() const
     {
-        std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
-        std::cout << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << std::endl;
-        std::cout << "Token Type: " << account_m->GetToken() << std::endl;
-        std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
+        std::cout << "Account Address: " << account_m->GetAddress() << '\n'
+                  << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << '\n'
+                  << "Token Type: " << account_m->GetToken() << '\n'
+                  << "Nonce: " << account_m->GetNonce() << '\n';
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
-                                                                    const std::string &destination,
-                                                                    TokenID            token_id )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t    amount,
+                                                                    std::string destination,
+                                                                    TokenID     token_id )
     {
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        BOOST_OUTCOME_TRY( auto params, account_m->GetUTXOManager().CreateTxParameter( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY(
+            auto params,
+            account_m->GetUTXOManager().CreateTxParameter( amount, std::move( destination ), token_id ) );
         auto [inputs, outputs] = params;
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
@@ -440,7 +442,7 @@ namespace sgns
         auto mint_transaction = std::make_shared<MintTransactionV2>(
             MintTransactionV2::New( amount,
                                     std::move( chainid ),
-                                    std::move( tokenid ),
+                                    tokenid,
                                     FillDAGStruct( std::move( transaction_hash ) ),
                                     destination ) );
 
@@ -466,9 +468,9 @@ namespace sgns
         auto hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
 
         BOOST_OUTCOME_TRY( auto params,
-                     account_m->GetUTXOManager().CreateTxParameter( amount,
-                                                      "0x" + hash_data.toReadableString(),
-                                                                    TokenID::FromBytes( { 0x00 } ) ) );
+                           account_m->GetUTXOManager().CreateTxParameter( amount,
+                                                                          "0x" + hash_data.toReadableString(),
+                                                                          TokenID::FromBytes( { 0x00 } ) ) );
         auto [inputs, outputs] = params;
         account_m->GetUTXOManager().ReserveUTXOs( inputs );
 
@@ -501,12 +503,12 @@ namespace sgns
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
                              escrow_path );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         if ( escrow_path.empty() )
         {
             m_logger->error( "[{} - full: {}] Escrow path empty", account_m->GetAddress().substr( 0, 8 ), full_node_m );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         m_logger->debug( "[{} - full: {}] Fetching escrow from processing DB at {}",
                          account_m->GetAddress().substr( 0, 8 ),
@@ -531,7 +533,6 @@ namespace sgns
 
         for ( auto &subtask : task_result.subtask_results() )
         {
-            std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             m_logger->debug( "[{} - full: {}] Paying out {} in {}",
                              account_m->GetAddress().substr( 0, 8 ),
                              full_node_m,
@@ -571,8 +572,8 @@ namespace sgns
         transfer_transaction->MakeSignature( *account_m );
         escrow_release_tx->MakeSignature( *account_m );
 
-        tx_batch.push_back( std::make_pair( transfer_transaction, std::nullopt ) );
-        tx_batch.push_back( std::make_pair( escrow_release_tx, std::nullopt ) );
+        tx_batch.emplace_back( transfer_transaction, std::nullopt );
+        tx_batch.emplace_back( escrow_release_tx, std::nullopt );
 
         EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
         return transfer_transaction->GetHash();
@@ -714,8 +715,7 @@ namespace sgns
                                  proof_key.GetKey() );
 
                 proof_transaction.put( proof );
-                BOOST_OUTCOME_TRY(
-                                     crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
+                BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
             nonces_set.insert( transaction->dag_st.nonce() );
             expected_next_nonce++;
@@ -1463,7 +1463,7 @@ namespace sgns
                 for ( const auto &[_, tracked] : tx_processed_m )
                 {
                     if ( tracked.tx && tracked.tx->GetHash() == txId &&
-                     tracked.tx->GetSrcAddress() != account_m->GetAddress() )
+                         tracked.tx->GetSrcAddress() != account_m->GetAddress() )
                     {
                         retval = tracked.status;
                         break;
@@ -1503,7 +1503,7 @@ namespace sgns
                 for ( const auto &[_, tracked] : tx_processed_m )
                 {
                     if ( tracked.tx && tracked.tx->GetHash() == txId &&
-                     tracked.tx->GetSrcAddress() == account_m->GetAddress() )
+                         tracked.tx->GetSrcAddress() == account_m->GetAddress() )
                     {
                         retval = tracked.status;
                         m_logger->trace( "[{} - full: {}] Transaction status is {}",

@@ -25,7 +25,7 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         modified_keys_.insert( key.GetKey() ); // Track the key
-        operations_.push_back( { Operation::PUT,  std::move(key), std::move( value ) } );
+        operations_.push_back( { Operation::PUT, std::move( key ), std::move( value ) } );
         return outcome::success();
     }
 
@@ -105,8 +105,9 @@ namespace sgns::crdt
             std::shared_ptr<Delta> delta;
             if ( op.type == Operation::PUT )
             {
-                BOOST_OUTCOME_TRY( auto result,
-                             datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
+                BOOST_OUTCOME_TRY(
+                    auto result,
+                    datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
                 delta = result;
             }
             else // REMOVE

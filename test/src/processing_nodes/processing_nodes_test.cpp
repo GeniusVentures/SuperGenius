@@ -33,7 +33,7 @@ protected:
         std::string binary_path = boost::dll::program_location().parent_path().string();
         Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
 
-        DEV_CONFIG.BaseWritePath = ( binary_path + "/node1/" );
+        DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
         DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
@@ -44,10 +44,9 @@ protected:
                                             40054,
                                             true );
 
-        test::assertWaitForCondition(
-            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_proc1 not ready" );
+        test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_proc1 not ready" );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -68,14 +67,12 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
-        test::assertWaitForCondition(
-            [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_main not ready" );
-        test::assertWaitForCondition(
-            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_proc2 not ready" );
+        test::assertWaitForCondition( [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_main not ready" );
+        test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_proc2 not ready" );
     }
 
     static void TearDownTestSuite()
@@ -141,18 +138,15 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
-    test::assertWaitForCondition(
-        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Main node not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Node proc 1 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Node proc 2 not synched" );
+    test::assertWaitForCondition( [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Main node not synced" );
+    test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Node proc 1 not synced" );
+    test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            "",
                            "",
