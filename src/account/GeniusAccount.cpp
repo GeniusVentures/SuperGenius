@@ -23,11 +23,21 @@ namespace
 {
     using namespace sgns;
 
-    base::Logger get_persistent_genius_account_logger()
+    base::Logger *GetGeniusAccountLoggerSlot()
     {
         // Intentionally leaked to avoid static destruction order issues during app shutdown.
-        static base::Logger *logger = new base::Logger( base::createLogger( "GeniusAccount" ) );
-        return *logger;
+        static base::Logger *logger = new base::Logger();
+        return logger;
+    }
+
+    base::Logger get_persistent_genius_account_logger()
+    {
+        auto *slot = GetGeniusAccountLoggerSlot();
+        if ( !*slot )
+        {
+            *slot = base::createLogger( "GeniusAccount" );
+        }
+        return *slot;
     }
 
     std::array<uint8_t, 32> get_elgamal_pubkey()
@@ -112,6 +122,15 @@ namespace sgns
     base::Logger genius_account_logger()
     {
         return get_persistent_genius_account_logger();
+    }
+
+    void set_genius_account_logger( const base::Logger &logger )
+    {
+        if ( !logger )
+        {
+            return;
+        }
+        *GetGeniusAccountLoggerSlot() = logger;
     }
 
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
@@ -243,7 +262,7 @@ namespace sgns
                         auto result = globaldb->RequestHeadBroadcast( topics );
                         if ( result.has_error() )
                         {
-                            auto logger = base::createLogger( "GeniusAccount" );
+                            auto logger = genius_account_logger();
                             logger->error( "Failed to request head broadcast for {} topics", topics.size() );
                         }
                     }
