@@ -154,7 +154,7 @@ TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
                                  true, // is processor
                                  true );
     test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_full not synced" );
     auto node_original = CreateNode( "node_multi_1",
@@ -167,7 +167,7 @@ TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
 
     node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     test::assertWaitForCondition(
-        [&]() { return node_original->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_original->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_original not synced" );
 
@@ -209,7 +209,7 @@ TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
     node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition(
-        [&]() { return node_duplicated->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_duplicated->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_duplicated not synced" );
 
@@ -245,7 +245,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                                  true );
 
     test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_full not synced" );
     auto node_same_addr_1 = CreateNode( "duplicate_address_12345", // same self_address
@@ -269,11 +269,11 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition(
-        [&]() { return node_same_addr_1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_same_addr_1->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 20000 ),
         "node_same_addr_1 not synced" );
     test::assertWaitForCondition(
-        [&]() { return node_same_addr_2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_same_addr_2->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 20000 ),
         "node_same_addr_2 not synced" );
 

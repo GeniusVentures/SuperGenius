@@ -72,8 +72,7 @@ namespace sgns::processing
         }
         else
         {
-            m_logger->error( "Tried creating channel with {} but channel already created",
-                             results_topic );
+            m_logger->error( "Tried creating channel with {} but channel already created", results_topic );
         }
         StartPeriodicStateBroadcast();
         return ret;
@@ -372,12 +371,6 @@ namespace sgns::processing
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
 
                 rebroadcast_results = _this->OnResultReceived( std::move( result ) );
-
-                //if ( rebroadcast_results )
-                //{
-                //    std::this_thread::sleep_for( std::chrono::milliseconds( 300 ) );
-                //    _this->m_resultChannel->Publish( message->data);
-                //}
             }
         }
     }

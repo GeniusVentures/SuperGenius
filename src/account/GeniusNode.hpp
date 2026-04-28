@@ -1,6 +1,7 @@
 #ifndef _GENIUS_NODE_HPP_
 #define _GENIUS_NODE_HPP_
 
+#include <chrono>
 #include <memory>
 #include <cstdint>
 #include <functional>
@@ -108,15 +109,23 @@ namespace sgns
         };
 
 #ifdef SGNS_DEBUG
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 50000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 50000;
-        static constexpr uint64_t TIMEOUT_MINT       = 50000;
+        static constexpr std::chrono::milliseconds TIMEOUT_ESCROW_PAY{ 50000 };
+        static constexpr std::chrono::milliseconds TIMEOUT_TRANSFER{ 50000 };
+        static constexpr std::chrono::milliseconds TIMEOUT_MINT{ 50000 };
 #else
-        static constexpr uint64_t TIMEOUT_ESCROW_PAY = 30000;
-        static constexpr uint64_t TIMEOUT_TRANSFER   = 30000;
-        static constexpr uint64_t TIMEOUT_MINT       = 30000;
+        static constexpr std::chrono::milliseconds TIMEOUT_ESCROW_PAY{ 30000 };
+        static constexpr std::chrono::milliseconds TIMEOUT_TRANSFER{ 30000 };
+        static constexpr std::chrono::milliseconds TIMEOUT_MINT{ 30000 };
 #endif
         outcome::result<void> SelectAccount( std::string_view public_address );
+
+        outcome::result<void> TransferAccount( std::string_view public_address );
+
+        outcome::result<void> DeleteAccount( std::string_view public_address );
+
+        outcome::result<void> MergeAccount( std::string_view public_address );
+
+        outcome::result<void> SetPayoutAddress( std::string_view payout_address );
 
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
@@ -136,7 +145,7 @@ namespace sgns
          * @param[in]   amount Amount to be minted
          * @param[in]   transaction_hash Hash of the transaction that burned the tokens elsewhere
          * @param[in]   chainid The chain ID where the burn transaction took place
-         * @param[in]   tokenid The token ID of the tokens to mint 
+         * @param[in]   tokenid The token ID of the tokens to mint
          * @return      The transaction hash of the mint transaction if successful, or an error otherwise
          */
         outcome::result<std::string> MintTokens( uint64_t           amount,
@@ -169,7 +178,7 @@ namespace sgns
         uint64_t GetBalance( const std::string &address );
         uint64_t GetBalance( TokenID token_id, const std::string &address );
 
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetInTransactions() const
+        [[nodiscard]] std::vector<std::vector<uint8_t>> GetInTransactions() const
         {
             auto manager_result = GetTransactionManager();
             if ( !manager_result.has_value() )
@@ -179,7 +188,7 @@ namespace sgns
             return manager_result.value()->GetInTransactions();
         }
 
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetOutTransactions() const
+        [[nodiscard]] std::vector<std::vector<uint8_t>> GetOutTransactions() const
         {
             auto manager_result = GetTransactionManager();
             if ( !manager_result.has_value() )
@@ -242,6 +251,8 @@ namespace sgns
             return pubsub_;
         }
 
+        void ResetProcessingMembers();
+
         /**
          * @brief       Formats a fixed-point amount into a human-readable string.
          * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
@@ -251,7 +262,7 @@ namespace sgns
          *                         – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the formatted string in GNUS or an error.
          */
-        outcome::result<std::string> FormatTokens( uint64_t amount, const TokenID tokenId );
+        outcome::result<std::string> FormatTokens( uint64_t amount, TokenID tokenId );
 
         /**
          * @brief       Parses a human-readable string into a fixed-point amount.
@@ -262,7 +273,7 @@ namespace sgns
          *                          – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
-        outcome::result<uint64_t> ParseTokens( const std::string &str, const TokenID tokenId );
+        outcome::result<uint64_t> ParseTokens( const std::string &str, TokenID tokenId );
 
         void PrintDataStore() const;
         void StopProcessing();

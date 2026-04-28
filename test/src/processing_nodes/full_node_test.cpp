@@ -76,10 +76,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     auto fullNode =
         CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full_2", fullKey );
 
-    test::assertWaitForCondition(
-        [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "fullNode not synched" );
+    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "fullnode not synced" );
 
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =
@@ -87,10 +86,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition(
-        [&]() { return originalNode->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Recovery node balance not updated in time" );
+    test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Recovery node balance not updated in time" );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();

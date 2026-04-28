@@ -490,22 +490,24 @@ namespace sgns
 
     void TransactionManager::PrintAccountInfo() const
     {
-        std::cout << "Account Address: " << account_m->GetAddress() << std::endl;
-        std::cout << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << std::endl;
-        std::cout << "Token Type: " << account_m->GetToken() << std::endl;
-        std::cout << "Nonce: " << account_m->GetNonce() << std::endl;
+        std::cout << "Account Address: " << account_m->GetAddress() << '\n'
+                  << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << '\n'
+                  << "Token Type: " << account_m->GetToken() << '\n'
+                  << "Nonce: " << account_m->GetNonce() << '\n';
     }
 
-    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t           amount,
-                                                                    const std::string &destination,
-                                                                    TokenID            token_id )
+    outcome::result<std::string> TransactionManager::TransferFunds( uint64_t    amount,
+                                                                    std::string destination,
+                                                                    TokenID     token_id )
     {
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        BOOST_OUTCOME_TRY( auto params,
-                           account_m->GetUTXOManager().CreateTxParameter( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY(
+            auto params,
+                          
+            account_m->GetUTXOManager().CreateTxParameter( amount, std::move( destination ), token_id ) );
         auto [inputs, outputs] = params;
 
         auto transfer_transaction = std::make_shared<TransferTransaction>(
@@ -563,7 +565,7 @@ namespace sgns
         auto mint_transaction = std::make_shared<MintTransactionV2>(
             MintTransactionV2::New( amount,
                                     std::move( chainid ),
-                                    std::move( tokenid ),
+                                    tokenid,
                                     FillDAGStruct( std::move( transaction_hash ) ),
                                     std::move( mint_inputs ),
                                     destination ) );
@@ -623,14 +625,14 @@ namespace sgns
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                escrow_path );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         if ( escrow_path.empty() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] Escrow path empty",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m );
-            return outcome::failure( boost::system::error_code{} );
+            return std::errc::invalid_argument;
         }
         TransactionManagerLogger()->debug( "[{} - full: {}] Fetching escrow from processing DB at {}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -659,7 +661,6 @@ namespace sgns
 
         for ( auto &subtask : task_result.subtask_results() )
         {
-            std::cout << "Subtask Result " << subtask.subtaskid() << "from " << subtask.node_address() << std::endl;
             TransactionManagerLogger()->debug( "[{} - full: {}] Paying out {} in {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,

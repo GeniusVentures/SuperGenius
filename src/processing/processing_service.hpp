@@ -25,19 +25,6 @@ namespace sgns::processing
                 : status(s), percentage(p) {}
         };
 
-        /** Constructs a processing service.
-         * @param gossipPubSub - PubSub service.
-         * @param maximalNodesCount - Max number of processing nodes handled by the service.
-         * @param subTaskEnqueuer - Subtask enqueuer used to dispatch tasks.
-         * @param subTaskResultStorage - Storage for subtask results.
-         * @param processingCore - Processing core used to execute subtasks.
-         */
-        ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
-                               size_t                                     maximalNodesCount,
-                               std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                               std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>            processingCore );
-
         /**
          * @brief Constructs a processing service with user callbacks.
          * @param gossipPubSub PubSub service.

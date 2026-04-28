@@ -130,7 +130,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
     test::assertWaitForCondition(
         [full_node]
-        { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
+        { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
@@ -140,7 +140,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition(
-        [node] { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 40000 ),
         readiness_message );
 

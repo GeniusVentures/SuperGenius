@@ -151,9 +151,9 @@ namespace sgns
             return SetUTXOs( utxos, address_ );
         }
 
-        outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t           amount,
-                                                             const std::string &dest_address,
-                                                             const TokenID     &token_id );
+        outcome::result<UTXOTxParameters> CreateTxParameter( uint64_t    amount,
+                                                             std::string dest_address,
+                                                             TokenID     token_id );
 
         outcome::result<UTXOTxParameters> CreateTxParameter( const std::vector<OutputDestInfo> &destinations,
                                                              const TokenID                     &token_id );
