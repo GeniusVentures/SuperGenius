@@ -9,9 +9,7 @@
 #include <cstdint>
 #include <atomic>
 #include <iomanip>
-#ifdef _WIN32
-//#include <windows.h>
-#else
+#ifndef _WIN32
 #include <termios.h>
 #include <unistd.h>
 #endif
@@ -23,12 +21,304 @@
 #include "FileManager.hpp"
 #include <thread>
 #include <chrono>
+#include <cmath>
+#include <filesystem>
+#include <system_error>
+#include <sstream>
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+#include <sentry.h>
+#ifndef _WIN32
+#include <execinfo.h>
+#endif
+#endif
 
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
 std::string             current_input;
 std::atomic<bool>       finished( false );
+
+namespace
+{
+  const char *NodeStateToString( sgns::GeniusNode::NodeState state )
+  {
+    using NodeState = sgns::GeniusNode::NodeState;
+    switch ( state )
+    {
+      case NodeState::CREATING:
+        return "CREATING";
+      case NodeState::MIGRATING_DATABASE:
+        return "MIGRATING_DATABASE";
+      case NodeState::INITIALIZING_DATABASE:
+        return "INITIALIZING_DATABASE";
+      case NodeState::INITIALIZING_PROCESSING:
+        return "INITIALIZING_PROCESSING";
+      case NodeState::INITIALIZING_BLOCKCHAIN:
+        return "INITIALIZING_BLOCKCHAIN";
+      case NodeState::INITIALIZING_TRANSACTIONS:
+        return "INITIALIZING_TRANSACTIONS";
+      case NodeState::INITIALIZING_DHT:
+        return "INITIALIZING_DHT";
+      case NodeState::READY:
+        return "READY";
+    }
+    return "UNKNOWN";
+  }
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  class NodeExampleSentry;
+  NodeExampleSentry *g_sentry = nullptr;
+
+  std::string CaptureCurrentStackTrace()
+  {
+#ifdef _WIN32
+    return "stacktrace capture is not implemented on Windows for this example";
+#else
+    void *frames[64];
+    int   frame_count = backtrace( frames, 64 );
+    if ( frame_count <= 0 )
+    {
+      return "no stack frames captured";
+    }
+
+    char **symbols = backtrace_symbols( frames, frame_count );
+    if ( symbols == nullptr )
+    {
+      return "backtrace_symbols failed";
+    }
+
+    std::ostringstream os;
+    for ( int i = 0; i < frame_count; ++i )
+    {
+      os << symbols[i] << '\n';
+    }
+    free( symbols );
+    return os.str();
+#endif
+  }
+
+  std::string GetExecutableDirectory()
+  {
+#ifdef _WIN32
+    char  exe_path[MAX_PATH];
+    DWORD length = GetModuleFileNameA( nullptr, exe_path, MAX_PATH );
+    if ( length == 0 || length >= MAX_PATH )
+    {
+      return {};
+    }
+
+    return std::filesystem::path( std::string( exe_path, static_cast<size_t>( length ) ) )
+      .parent_path()
+      .string();
+#else
+    std::vector<char> exe_path( 4096, '\0' );
+    ssize_t           length = readlink( "/proc/self/exe", exe_path.data(), exe_path.size() - 1 );
+    if ( length <= 0 )
+    {
+      return {};
+    }
+
+    return std::filesystem::path( std::string( exe_path.data(), static_cast<size_t>( length ) ) )
+      .parent_path()
+      .string();
+#endif
+  }
+
+  std::string ResolveCrashpadHandlerPath()
+  {
+    const std::string exe_dir = GetExecutableDirectory();
+    if ( !exe_dir.empty() )
+    {
+      const std::filesystem::path base( exe_dir );
+    #ifdef _WIN32
+      const std::filesystem::path candidate = base / "crashpad_handler.exe";
+    #else
+      const std::filesystem::path candidate = base / "crashpad_handler";
+    #endif
+      std::error_code ec;
+      if ( std::filesystem::exists( candidate, ec ) && !ec )
+      {
+        return candidate.lexically_normal().string();
+      }
+    }
+
+    return {};
+  }
+
+  class NodeExampleSentry
+  {
+  public:
+    void Init( const std::string &database_path )
+    {
+      // const char *dsn = std::getenv( "SENTRY_DSN" );
+      // if ( dsn == nullptr || std::string( dsn ).empty() )
+      // {
+      //   std::cout << "Sentry disabled: SENTRY_DSN not set" << std::endl;
+      //   return;
+      // }
+
+      const char *dsn = "https://c6ea0a719f6ee5a6278445861d411b20@o4511215700017152.ingest.us.sentry.io/4511219645153280";
+      if ( dsn == nullptr || std::string( dsn ).empty() )
+      {
+        std::cerr << "Sentry disabled: DSN is empty" << std::endl;
+        return;
+      }
+
+      std::error_code ec;
+      std::filesystem::create_directories( database_path, ec );
+      if ( ec )
+      {
+        std::cerr << "Sentry init precheck failed: cannot create database path '" << database_path
+                  << "': " << ec.message() << std::endl;
+        return;
+      }
+
+      sentry_options_t *options = sentry_options_new();
+      if ( options == nullptr )
+      {
+        std::cerr << "Sentry init precheck failed: sentry_options_new returned null" << std::endl;
+        return;
+      }
+
+      sentry_options_set_debug( options, 1 );
+      sentry_options_set_dsn( options, dsn );
+      sentry_options_set_database_path( options, database_path.c_str() );
+      sentry_options_set_release( options, "node_example@dev" );
+      sentry_options_set_environment( options, "node_example" );
+
+      const std::string handler_path = ResolveCrashpadHandlerPath();
+      if ( !handler_path.empty() )
+      {
+        sentry_options_set_handler_path( options, handler_path.c_str() );
+        std::cout << "Sentry crashpad handler path: '" << handler_path << "'" << std::endl;
+      }
+      else
+      {
+        std::cerr << "Sentry warning: crashpad_handler not found in known locations. "
+                  << "CMake should copy it beside node_example. Check node_example POST_BUILD steps."
+                  << std::endl;
+      }
+
+      int init_rc = sentry_init( options );
+      if ( init_rc == 0 )
+      {
+        enabled_ = true;
+        std::cout << "Sentry initialized for node_example"
+                  << " (database_path='" << database_path << "')" << std::endl;
+      }
+      else
+      {
+        std::cerr << "Sentry init failed for node_example (rc=" << init_rc << ")" << std::endl;
+        std::cerr << "Sentry init details: DSN configured, database_path='" << database_path << "'" << std::endl;
+        std::cerr << "Likely causes on Linux: missing crashpad_handler binary for sentry-native backend, "
+                  << "invalid DSN, or insufficient permissions on the database path." << std::endl;
+      }
+    }
+
+    void ReportStall( const std::string &message,
+              const std::string &node_state,
+              const std::string &tx_state,
+              double             processing_pct )
+    {
+      if ( !enabled_ )
+      {
+        return;
+      }
+
+      sentry_value_t event = sentry_value_new_message_event( SENTRY_LEVEL_ERROR,
+                                  "node_watchdog",
+                                  message.c_str() );
+      sentry_value_set_by_key( event,
+                   "node_state",
+                   sentry_value_new_string( node_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "transaction_manager_state",
+                   sentry_value_new_string( tx_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "processing_percentage",
+                   sentry_value_new_double( processing_pct ) );
+      sentry_capture_event( event );
+      sentry_flush( 2000 );
+    }
+
+    void ReportDatabaseWriteError( const std::string &message,
+                                   const std::string &call_site,
+                                   const std::string &node_state,
+                                   const std::string &tx_state,
+                                   double             processing_pct,
+                                   const std::string &stacktrace )
+    {
+      if ( !enabled_ )
+      {
+        return;
+      }
+
+      sentry_value_t event = sentry_value_new_message_event( SENTRY_LEVEL_ERROR,
+                                  "database_write",
+                                  message.c_str() );
+      sentry_value_set_by_key( event,
+                   "call_site",
+                   sentry_value_new_string( call_site.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "node_state",
+                   sentry_value_new_string( node_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "transaction_manager_state",
+                   sentry_value_new_string( tx_state.c_str() ) );
+      sentry_value_set_by_key( event,
+                   "processing_percentage",
+                   sentry_value_new_double( processing_pct ) );
+      sentry_value_set_by_key( event,
+                   "stacktrace",
+                   sentry_value_new_string( stacktrace.c_str() ) );
+      sentry_capture_event( event );
+      sentry_flush( 2000 );
+    }
+
+    ~NodeExampleSentry()
+    {
+      if ( enabled_ )
+      {
+        sentry_close();
+      }
+    }
+
+  private:
+    bool enabled_{ false };
+  };
+#endif
+} // namespace
+
+void MaybeReportDatabaseWriteError( const std::shared_ptr<sgns::GeniusNode> &genius_node,
+                  const outcome::result<std::string>       &jobpost,
+                  const std::string                        &call_site )
+{
+  if ( jobpost )
+  {
+    return;
+  }
+
+  if ( jobpost.error().value() != static_cast<int>( sgns::GeniusNode::Error::DATABASE_WRITE_ERROR ) )
+  {
+    return;
+  }
+
+#ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+  if ( g_sentry != nullptr )
+  {
+    const auto node_state = genius_node->GetState();
+    const auto tx_state   = genius_node->GetTransactionManagerState();
+    const auto processing = genius_node->GetProcessingStatus();
+    g_sentry->ReportDatabaseWriteError( "ProcessImage returned DATABASE_WRITE_ERROR",
+                      call_site,
+                      NodeStateToString( node_state ),
+                      sgns::TransactionManager::StateToString( tx_state ),
+                      processing.percentage,
+                      CaptureCurrentStackTrace() );
+  }
+#endif
+}
 
 #ifdef _WIN32
 // Add a global variable to store the original console mode
@@ -330,6 +620,7 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
     );
     if ( !jobpost )
     {
+      MaybeReportDatabaseWriteError( genius_node, jobpost, "CreateProcessingTransaction" );
         std::cout << "Job post error: " << jobpost.error().message() << std::endl;
     }
 }
@@ -340,6 +631,13 @@ std::vector<std::string> split_string( const std::string &str )
     std::vector<std::string> results( ( std::istream_iterator<std::string>( iss ) ),
                                       std::istream_iterator<std::string>() );
     return results;
+}
+
+[[noreturn]] void TriggerIntentionalCrash()
+{
+  std::cerr << "Intentional crash requested via terminal command 'crash'." << std::endl;
+  std::cerr << "Aborting process to generate a crash report." << std::endl;
+  std::abort();
 }
 
 void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
@@ -439,6 +737,10 @@ void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
             else if ( arguments[0] == "quit" )
             {
                 finished = true;
+            }
+            else if ( arguments[0] == "crash" )
+            {
+              TriggerIntentionalCrash();
             }
             else
             {
@@ -597,6 +899,7 @@ void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
         );
         if ( !jobpost )
         {
+          MaybeReportDatabaseWriteError( genius_node, jobpost, "periodic_processing" );
             std::cout << "Job post error: " << jobpost.error().message() << std::endl;
         }
     }
@@ -627,6 +930,7 @@ int main( int argc, char *argv[] )
     bool        is_full_node     = false;
     bool        terminal_mode    = false; // Enable terminal input mode
     std::string path_override    = "";    // Path override for DEV_CONFIG
+    uint64_t    stall_seconds    = 300;
 
     // Parse command-line arguments
     if ( argc > 1 )
@@ -663,6 +967,10 @@ int main( int argc, char *argv[] )
             {
                 terminal_mode = true;
             }
+            else if ( current_arg.rfind( "--stall-seconds=", 0 ) == 0 )
+            {
+              stall_seconds = static_cast<uint64_t>( std::stoull( current_arg.substr( 16 ) ) );
+            }
         }
     }
 
@@ -682,6 +990,73 @@ int main( int argc, char *argv[] )
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
 
+  #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+    NodeExampleSentry sentry;
+    sentry.Init( std::string( DEV_CONFIG.BaseWritePath ) + "/.sentry-native" );
+    g_sentry = &sentry;
+  #endif
+
+        std::thread stall_watchdog_thread(
+      [node_instance, stall_seconds
+    #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+      , &sentry
+    #endif
+      ]()
+      {
+        auto   last_change = std::chrono::steady_clock::now();
+        auto   last_node   = node_instance->GetState();
+        auto   last_tx     = node_instance->GetTransactionManagerState();
+        double last_pct    = node_instance->GetProcessingStatus().percentage;
+        bool   reported    = false;
+
+        while ( !finished )
+        {
+          std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+          if ( finished )
+          {
+            break;
+          }
+
+          auto   node_state = node_instance->GetState();
+          auto   tx_state   = node_instance->GetTransactionManagerState();
+          double pct        = node_instance->GetProcessingStatus().percentage;
+
+          bool changed = ( node_state != last_node ) || ( tx_state != last_tx ) ||
+                   ( std::fabs( pct - last_pct ) > 0.001 );
+
+          if ( changed )
+          {
+            last_change = std::chrono::steady_clock::now();
+            last_node   = node_state;
+            last_tx     = tx_state;
+            last_pct    = pct;
+            reported    = false;
+            continue;
+          }
+
+          auto stalled_for = std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() -
+                                               last_change )
+                       .count();
+
+          if ( stalled_for >= static_cast<long long>( stall_seconds ) && !reported &&
+             ( node_state != sgns::GeniusNode::NodeState::READY ||
+               tx_state != sgns::TransactionManager::State::READY ) )
+          {
+            std::string message = ( boost::format( "Node stalled for %1%s before READY" ) % stalled_for ).str();
+            std::cout << message << " node_state=" << NodeStateToString( node_state )
+                  << " tx_state=" << sgns::TransactionManager::StateToString( tx_state ) << std::endl;
+
+  #ifdef SG_NODE_EXAMPLE_WITH_SENTRY
+            sentry.ReportStall( message,
+                      NodeStateToString( node_state ),
+                      sgns::TransactionManager::StateToString( tx_state ),
+                      pct );
+  #endif
+            reported = true;
+          }
+        }
+      } );
+
     std::thread input_thread;
     std::thread status_thread;
     if ( terminal_mode )
@@ -693,7 +1068,8 @@ int main( int argc, char *argv[] )
 
     if ( terminal_mode )
     {
-        std::cout << "Insert \"process\", the image and the number of tokens to be" << std::endl;
+      std::cout << "Commands: process, mint, transfer, info, balance, ds, price, peer, stopprocessing, crash, quit"
+            << std::endl;
         redraw_prompt();
     }
 
@@ -743,6 +1119,11 @@ int main( int argc, char *argv[] )
     if ( status_thread.joinable() )
     {
         status_thread.join();
+    }
+
+    if ( stall_watchdog_thread.joinable() )
+    {
+      stall_watchdog_thread.join();
     }
 
     return 0;

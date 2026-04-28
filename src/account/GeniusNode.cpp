@@ -421,6 +421,10 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
+        if ( account_ )
+        {
+            account_->set_genius_account_logger( loggerGeniusAccount );
+        }
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
@@ -462,6 +466,10 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        if ( account_ )
+        {
+            account_->set_genius_account_logger( loggerGeniusAccount );
+        }
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
@@ -1035,11 +1043,16 @@ namespace sgns
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
         if ( enqueue_task_return.has_failure() )
         {
+            node_logger_->error( "ProcessImage DB write failed in EnqueueTask: {}",
+                                 enqueue_task_return.error().message() );
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
         auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
         if ( send_escrow_return.has_failure() )
         {
+            node_logger_->error( "ProcessImage DB write failed in SendEscrow (path='{}'): {}",
+                                 escrow_path,
+                                 send_escrow_return.error().message() );
             task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }

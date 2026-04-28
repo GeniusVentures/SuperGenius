@@ -52,7 +52,7 @@ option(SGNS_ENABLE_RELEASE_SYMBOLS "Build Release with debug symbols for symboli
 if(SGNS_ENABLE_RELEASE_SYMBOLS)
     if(CMAKE_CXX_COMPILER_ID MATCHES "^(AppleClang|Clang|GNU)$")
         add_compile_options(
-            "$<$<CONFIG:Release>:-gline-tables-only>"
+            "$<$<CONFIG:Release>:-g>"
             "$<$<CONFIG:RelWithDebInfo>:-g>"
         )
     elseif(MSVC)

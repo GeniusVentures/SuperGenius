@@ -25,6 +25,7 @@
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
+#include "base/logger.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
 #include <boost/filesystem/path.hpp>
@@ -33,6 +34,9 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
+
+    base::Logger genius_account_logger();
+    void         set_genius_account_logger( const base::Logger &logger );
 
     namespace ipfs_pubsub
     {
@@ -92,6 +96,16 @@ namespace sgns
          * @return      The token of the account
          */
         [[nodiscard]] TokenID GetToken() const;
+
+        void set_genius_account_logger( const base::Logger &logger )
+        {
+            sgns::set_genius_account_logger( logger );
+        }
+
+        void SetLogger( const base::Logger &logger )
+        {
+            sgns::set_genius_account_logger( logger );
+        }
 
         /**
          * @brief       Get the confirmed nonce as a string
