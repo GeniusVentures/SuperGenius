@@ -9,9 +9,7 @@
 #include <cstdint>
 #include <atomic>
 #include <iomanip>
-#ifdef _WIN32
-#include <windows.h>
-#else
+#ifndef _WIN32
 #include <termios.h>
 #include <unistd.h>
 #endif
