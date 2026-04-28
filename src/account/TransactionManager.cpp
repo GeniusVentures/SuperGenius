@@ -11,6 +11,7 @@
 #include <utility>
 #include <algorithm>
 #include <thread>
+#include <exception>
 
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 
@@ -182,7 +183,22 @@ namespace sgns
         // First kick: keep self alive during the first dispatch only
         if ( !stopped_.load() )
         {
-            boost::asio::post( *ctx_m, [self = shared_from_this()]() { self->TickOnce(); } );
+            boost::asio::post( *ctx_m,
+                               [self = shared_from_this()]()
+                               {
+                                   try
+                                   {
+                                       self->TickOnce();
+                                   }
+                                   catch ( const std::exception &e )
+                                   {
+                                       self->m_logger->error( "TickOnce exception during initial post: {}", e.what() );
+                                   }
+                                   catch ( ... )
+                                   {
+                                       self->m_logger->error( "TickOnce unknown exception during initial post" );
+                                   }
+                               } );
         }
     }
 
@@ -403,9 +419,20 @@ namespace sgns
                                {
                                    if ( auto instance = weak_instance.lock() )
                                    {
-                                       if ( !instance->stopped_.load() )
+                                       try
                                        {
-                                           instance->TickOnce();
+                                           if ( !instance->stopped_.load() )
+                                           {
+                                               instance->TickOnce();
+                                           }
+                                       }
+                                       catch ( const std::exception &e )
+                                       {
+                                           instance->m_logger->error( "TickOnce exception in repost: {}", e.what() );
+                                       }
+                                       catch ( ... )
+                                       {
+                                           instance->m_logger->error( "TickOnce unknown exception in repost" );
                                        }
                                    }
                                } );

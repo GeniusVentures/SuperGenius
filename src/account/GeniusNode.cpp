@@ -207,17 +207,28 @@ namespace sgns
                     {
                         if ( auto strong = weak_self.lock() )
                         {
-                            if ( result.has_error() )
+                            try
                             {
-                                strong->node_logger_->error( "Database migration error: {}", result.error().message() );
-                                if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                                if ( result.has_error() )
                                 {
-                                    strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                    strong->ScheduleMigrationRetry();
+                                    strong->node_logger_->error( "Database migration error: {}", result.error().message() );
+                                    if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                                    {
+                                        strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                        strong->ScheduleMigrationRetry();
+                                    }
+                                    return;
                                 }
-                                return;
+                                strong->StateTransition( NodeState::INITIALIZING_DATABASE );
                             }
-                            strong->StateTransition( NodeState::INITIALIZING_DATABASE );
+                            catch ( const std::exception &e )
+                            {
+                                strong->node_logger_->error( "Unhandled exception in migration callback: {}", e.what() );
+                            }
+                            catch ( ... )
+                            {
+                                strong->node_logger_->error( "Unhandled unknown exception in migration callback" );
+                            }
                         }
                     } );
                 break;
@@ -297,34 +308,47 @@ namespace sgns
                         {
                             if ( auto strong = weak_self.lock() )
                             {
-                                if ( result.has_error() )
+                                try
                                 {
-                                    strong->node_logger_->error( "Error starting blockchain: {}",
-                                                                 result.error().message() );
-                                    strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                                    strong->ScheduleBlockchainRetry();
-                                    return;
-                                }
-                                auto current_state = strong->state_.load();
-                                if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
-                                {
+                                    if ( result.has_error() )
+                                    {
+                                        strong->node_logger_->error( "Error starting blockchain: {}",
+                                                                     result.error().message() );
+                                        strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                        strong->ScheduleBlockchainRetry();
+                                        return;
+                                    }
+                                    auto current_state = strong->state_.load();
+                                    if ( current_state != NodeState::INITIALIZING_BLOCKCHAIN )
+                                    {
+                                        strong->node_logger_->debug(
+                                            "Skipping transaction initialization, unexpected state: {}",
+                                            NodeStateToString( current_state ) );
+                                        return;
+                                    }
                                     strong->node_logger_->debug(
-                                        "Skipping transaction initialization, unexpected state: {}",
-                                        NodeStateToString( current_state ) );
-                                    return;
+                                        "Blockchain started successfully, starting transaction manager" );
+                                    if ( strong->is_full_node_ )
+                                    {
+                                        strong->node_logger_->debug(
+                                            "Full node: Setting blockchain to grab other account creation blocks" );
+                                        strong->blockchain_->SetFullNodeMode();
+                                    }
+
+                                    strong->tx_globaldb_->SetIncomingBroadcastEnabled( true );
+
+                                    strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
                                 }
-                                strong->node_logger_->debug(
-                                    "Blockchain started successfully, starting transaction manager" );
-                                if ( strong->is_full_node_ )
+                                catch ( const std::exception &e )
                                 {
-                                    strong->node_logger_->debug(
-                                        "Full node: Setting blockchain to grab other account creation blocks" );
-                                    strong->blockchain_->SetFullNodeMode();
+                                    strong->node_logger_->error( "Unhandled exception in blockchain start callback: {}",
+                                                                 e.what() );
                                 }
-
-                                strong->tx_globaldb_->SetIncomingBroadcastEnabled( true );
-
-                                strong->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                catch ( ... )
+                                {
+                                    strong->node_logger_->error(
+                                        "Unhandled unknown exception in blockchain start callback" );
+                                }
                             }
                         } );
                 }
@@ -348,7 +372,21 @@ namespace sgns
                     {
                         if ( auto strong = weak_self.lock() )
                         {
-                            strong->TransactionStateChanged( old_state, new_state );
+                            try
+                            {
+                                strong->TransactionStateChanged( old_state, new_state );
+                            }
+                            catch ( const std::exception &e )
+                            {
+                                strong->node_logger_->error(
+                                    "Unhandled exception in transaction state callback: {}",
+                                    e.what() );
+                            }
+                            catch ( ... )
+                            {
+                                strong->node_logger_->error(
+                                    "Unhandled unknown exception in transaction state callback" );
+                            }
                         }
                     } );
                 transaction_manager_->Start();
@@ -1354,70 +1392,84 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
-                                                strong->account_->GetAddress().substr( 0, 8 ),
-                                                __func__,
-                                                task_id );
-                    do
+                    try
                     {
-                        if ( strong->task_queue_->IsTaskCompleted( task_id ) )
-                        {
-                            strong->node_logger_->info( "[{}]{}: Task Already completed!",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__ );
-                            break;
-                        }
-                        if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
-                        {
-                            strong->node_logger_->info(
-                                "[{}]{}: Transactions are not ready (state: {}), skipping escrow payout for task {}",
-                                strong->account_->GetAddress().substr( 0, 8 ),
-                                __func__,
-                                TransactionManager::StateToString( strong->GetTransactionManagerState() ),
-                                task_id );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Transactions READY",
-                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                    __func__ );
-                        auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
-                        if ( maybe_escrow_path.has_failure() )
-                        {
-                            strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        __func__,
-                                                        task_id );
-                            break;
-                        }
-                        auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
-                        if ( complete_task_result.has_failure() )
-                        {
-                            strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
-                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                         __func__,
-                                                         task_id );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
-                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                    __func__ );
-                        auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
-                                                             taskresult,
-                                                             std::move( complete_task_result.value() ) );
-                        if ( pay_result.has_failure() )
-                        {
-                            strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
-                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                         __func__,
-                                                         task_id );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                        strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
                                                     __func__,
                                                     task_id );
+                        do
+                        {
+                            if ( strong->task_queue_->IsTaskCompleted( task_id ) )
+                            {
+                                strong->node_logger_->info( "[{}]{}: Task Already completed!",
+                                                            strong->account_->GetAddress().substr( 0, 8 ),
+                                                            __func__ );
+                                break;
+                            }
+                            if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
+                            {
+                                strong->node_logger_->info(
+                                    "[{}]{}: Transactions are not ready (state: {}), skipping escrow payout for task {}",
+                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                    __func__,
+                                    TransactionManager::StateToString( strong->GetTransactionManagerState() ),
+                                    task_id );
+                                break;
+                            }
+                            strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
+                            auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
+                            if ( maybe_escrow_path.has_failure() )
+                            {
+                                strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
+                                                            strong->account_->GetAddress().substr( 0, 8 ),
+                                                            __func__,
+                                                            task_id );
+                                break;
+                            }
+                            auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
+                            if ( complete_task_result.has_failure() )
+                            {
+                                strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
+                                                             strong->account_->GetAddress().substr( 0, 8 ),
+                                                             __func__,
+                                                             task_id );
+                                break;
+                            }
+                            strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                        __func__ );
+                            auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
+                                                                 taskresult,
+                                                                 std::move( complete_task_result.value() ) );
+                            if ( pay_result.has_failure() )
+                            {
+                                strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
+                                                             strong->account_->GetAddress().substr( 0, 8 ),
+                                                             __func__,
+                                                             task_id );
+                                break;
+                            }
+                            strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                                         strong->account_->GetAddress().substr( 0, 8 ),
+                                                         __func__,
+                                                         task_id );
 
-                    } while ( 0 );
+                        } while ( 0 );
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        strong->node_logger_->error( "Unhandled exception in ProcessingDone callback {}: {}",
+                                                     task_id,
+                                                     e.what() );
+                    }
+                    catch ( ... )
+                    {
+                        strong->node_logger_->error( "Unhandled unknown exception in ProcessingDone callback {}",
+                                                     task_id );
+                    }
                 }
             } );
     }
@@ -1429,9 +1481,25 @@ namespace sgns
                            {
                                if ( auto strong = weak_self.lock() )
                                {
-                                   strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
-                                                                strong->account_->GetAddress().substr( 0, 8 ),
-                                                                task_id );
+                                   try
+                                   {
+                                       strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
+                                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                                    task_id );
+                                   }
+                                   catch ( const std::exception &e )
+                                   {
+                                       strong->node_logger_->error(
+                                           "Unhandled exception in ProcessingError callback {}: {}",
+                                           task_id,
+                                           e.what() );
+                                   }
+                                   catch ( ... )
+                                   {
+                                       strong->node_logger_->error(
+                                           "Unhandled unknown exception in ProcessingError callback {}",
+                                           task_id );
+                                   }
                                }
                            } );
     }
