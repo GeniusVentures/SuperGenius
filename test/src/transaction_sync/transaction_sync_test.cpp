@@ -134,7 +134,7 @@ namespace sgns
 
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
                 sgns::TransferTransaction::New( params.first, params.second, dag ) );
-            transfer_transaction->MakeSignature( *account );
+            transfer_transaction->MakeSignature( account );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
             TransferProof prover( account.GetUTXOManager().GetBalance(), amount );
@@ -560,8 +560,7 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
-    auto tx_pair2 = CreateTransfer( GetAccountFromNode( *node_proc1 ),
-                                    *GetUTXOManagerFromNode( *node_proc1 ),
+    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ),
                                     10000000000,
                                     node_proc2->GetAddress(),
                                     tx1_id );
