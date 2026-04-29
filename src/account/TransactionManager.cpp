@@ -582,6 +582,36 @@ namespace sgns
         return txId;
     }
 
+    outcome::result<std::string> TransactionManager::MigrationFunds( uint64_t    amount,
+                                                                     std::string from_version,
+                                                                     TokenID     tokenid,
+                                                                     std::string destination )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        if ( destination.empty() )
+        {
+            destination = account_m->GetAddress();
+        }
+
+        auto migration_transaction = std::make_shared<MigrationTransaction>(
+            MigrationTransaction::New( amount,
+                                       std::move( from_version ),
+                                       tokenid,
+                                       FillDAGStruct(),
+                                       destination ) );
+
+        migration_transaction->MakeSignature( *account_m );
+
+        auto txId = migration_transaction->GetHash();
+
+        EnqueueTransaction( std::make_pair( std::move( migration_transaction ), std::nullopt ) );
+
+        return txId;
+    }
+
     outcome::result<std::pair<std::string, EscrowDataPair>> TransactionManager::HoldEscrow( uint64_t           amount,
                                                                                             const std::string &dev_addr,
                                                                                             uint64_t peers_cut,

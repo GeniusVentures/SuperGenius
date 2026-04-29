@@ -135,6 +135,19 @@ namespace sgns
                                                 std::string destination = "" );
 
         /**
+         * @brief Creates and enqueues a one-time migration mint transaction.
+         * @param[in] amount  Amount to migrate.
+         * @param[in] from_version  Legacy version namespace for the migration source key.
+         * @param[in] tokenid  Token to mint.
+         * @param[in] destination  Recipient address; defaults to the local account address when empty.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> MigrationFunds( uint64_t    amount,
+                                                     std::string from_version,
+                                                     TokenID     tokenid,
+                                                     std::string destination = "" );
+
+        /**
          * @brief Creates and enqueues an escrow-hold transaction.
          *
          * Hashes @p job_id with blake2b-256 to derive the escrow destination address,
