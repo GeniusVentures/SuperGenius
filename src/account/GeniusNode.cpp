@@ -785,7 +785,8 @@ namespace sgns
                                                              generator_,        // generator
                                                              write_base_path_,  // writeBasePath
                                                              base58key_,        // base58key
-                                                             account_ );
+                                                             account_,
+                                                             is_full_node_ );
 
         std::thread migration_thread(
             [manager = std::move( migrationManager ), cb = std::move( callback )]

@@ -13,6 +13,7 @@
 namespace sgns
 {
     class GeniusAccount;
+    class TransactionManager;
 
     class Migration3_6_0To3_7_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_6_0To3_7_0>
     {
@@ -26,7 +27,8 @@ namespace sgns
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
-                               std::shared_ptr<GeniusAccount>                                  account );
+                               std::shared_ptr<GeniusAccount>                                  account,
+                               bool                                                            is_full_node );
 
         std::string           FromVersion() const override;
         std::string           ToVersion() const override;
@@ -60,7 +62,9 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> db_3_6_0_;
         std::shared_ptr<crdt::GlobalDB> db_3_7_0_;
         std::shared_ptr<Blockchain>     blockchain_;
+        std::shared_ptr<TransactionManager> transaction_manager_;
         std::shared_ptr<GeniusAccount>  account_;
+        bool                            is_full_node_ = false;
         std::atomic<Status>             blockchain_status_{ Status::ST_INIT };
     };
 }

@@ -2,9 +2,11 @@
 
 #include "account/MigrationAllowList.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/TransactionManager.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/sgns_version.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "crypto/hasher/hasher_impl.hpp"
 #include "storage/database_error.hpp"
 
 #include <algorithm>
@@ -41,7 +43,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account ) :
+        std::shared_ptr<GeniusAccount>                                  account,
+        bool                                                            is_full_node ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -49,7 +52,8 @@ namespace sgns
         generator_( std::move( generator ) ),
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
-        account_( std::move( account ) )
+        account_( std::move( account ) ),
+        is_full_node_( is_full_node )
     {
     }
 
@@ -239,6 +243,59 @@ namespace sgns
                        FromVersion(),
                        ToVersion() );
 
+        if ( !transaction_manager_ )
+        {
+            transaction_manager_ = TransactionManager::New( db_3_7_0_,
+                                                            ioContext_,
+                                                            account_,
+                                                            std::make_shared<crypto::HasherImpl>(),
+                                                            blockchain_,
+                                                            is_full_node_ );
+        }
+
+        transaction_manager_->Start();
+
+        start_time = std::chrono::steady_clock::now();
+        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        {
+            if ( transaction_manager_->GetState() == TransactionManager::State::READY )
+            {
+                break;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+        if ( transaction_manager_->GetState() != TransactionManager::State::READY )
+        {
+            logger_->error( "{}: Transaction Manager did not reach READY", __func__ );
+            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+        }
+
+        BOOST_OUTCOME_TRY( auto observed_balance, allow_list.LoadObservedBalance( account_->GetAddress() ) );
+
+        if ( observed_balance.has_value() && observed_balance.value() > 0 )
+        {
+            const auto token_id = TokenID::FromBytes( { 0x00 } );
+            BOOST_OUTCOME_TRY( auto tx_hash,
+                               transaction_manager_->MigrationFunds( observed_balance.value(),
+                                                                     FromVersion(),
+                                                                     token_id,
+                                                                     account_->GetAddress() ) );
+
+            auto tx_status = transaction_manager_->WaitForTransactionOutgoing( tx_hash, std::chrono::minutes( 4 ) );
+            if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
+            {
+                logger_->error( "{}: Migration transaction {} did not confirm. status={}",
+                                __func__,
+                                tx_hash,
+                                static_cast<int>( tx_status ) );
+                return outcome::failure( std::errc::timed_out );
+            }
+        }
+        else
+        {
+            logger_->info( "{}: Local account has no observed legacy balance; skipping migration claim", __func__ );
+        }
+
         crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         crdt::GlobalDB::Buffer version_value;
@@ -251,6 +308,11 @@ namespace sgns
 
     outcome::result<void> Migration3_6_0To3_7_0::ShutDown()
     {
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
+            transaction_manager_.reset();
+        }
         if ( blockchain_ )
         {
             (void)blockchain_->Stop();

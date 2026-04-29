@@ -39,7 +39,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account )
+        std::shared_ptr<GeniusAccount>                                  account,
+        bool                                                            is_full_node )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
         instance->RegisterStep( std::make_shared<Migration0_2_0To1_0_0>( ioContext,
@@ -78,7 +79,8 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key,
-                                                                         account ) );
+                                                                         account,
+                                                                         is_full_node ) );
         return instance;
     }
 
