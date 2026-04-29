@@ -19,6 +19,7 @@
 #include "MintTransaction.hpp"
 #include "MintTransactionV2.hpp"
 #include "MigrationTransaction.hpp"
+#include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
@@ -3618,6 +3619,29 @@ namespace sgns
                                                __func__,
                                                tx_hash );
             return reject_and_maybe_fail_local( "witness validation failed" );
+        }
+
+        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tracked_tx ) )
+        {
+            MigrationAllowList allow_list( globaldb_m->GetDataStore(), migration_tx->GetFromVersion() );
+            auto               eligibility_result =
+                allow_list.IsEligible( migration_tx->GetSrcAddress(), migration_tx->GetAmount() );
+            if ( eligibility_result.has_error() )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Failed to evaluate local migration allowlist tx={} src={} err={}, pending",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx_hash,
+                    migration_tx->GetSrcAddress(),
+                    eligibility_result.error().message() );
+                return ConsensusManager::Check::Pending;
+            }
+            if ( !eligibility_result.value() )
+            {
+                return reject_and_maybe_fail_local( "migration source address not locally eligible" );
+            }
         }
 
         auto validate_result = ValidateTransactionForConsensus( tracked_tx );

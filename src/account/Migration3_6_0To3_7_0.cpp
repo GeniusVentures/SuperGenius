@@ -123,7 +123,7 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( auto balances, ComputeLegacyBalances() );
-        MigrationAllowList allow_list( db_3_7_0_->GetDataStore(), ToVersion() );
+        MigrationAllowList allow_list( db_3_7_0_->GetDataStore(), FromVersion() );
         BOOST_OUTCOME_TRY( allow_list.StoreObservedBalances( balances ) );
         logger_->info( "Computed {} legacy address balances for {} -> {} migration",
                        balances.size(),
