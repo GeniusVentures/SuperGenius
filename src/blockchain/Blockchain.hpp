@@ -30,6 +30,7 @@ namespace sgns
     class ValidatorRegistry;
 
     class Migration3_5_0To3_6_0;
+    class Migration3_6_0To3_7_0;
 
     class Blockchain : public std::enable_shared_from_this<Blockchain>
     {
@@ -133,6 +134,7 @@ namespace sgns
 
     protected:
         friend class Migration3_5_0To3_6_0;
+        friend class Migration3_6_0To3_7_0;
 
         static outcome::result<void> MigrateCids( const std::shared_ptr<crdt::GlobalDB> &old_db,
                                                   const std::shared_ptr<crdt::GlobalDB> &new_db );

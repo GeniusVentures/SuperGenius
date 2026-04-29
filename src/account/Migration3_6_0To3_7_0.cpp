@@ -4,6 +4,7 @@
 #include "account/MigrationManager.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/sgns_version.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "storage/database_error.hpp"
 
 #include <algorithm>
@@ -39,14 +40,16 @@ namespace sgns
         std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
-        std::string                                                     base58key ) :
+        std::string                                                     base58key,
+        std::shared_ptr<GeniusAccount>                                  account ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
         scheduler_( std::move( scheduler ) ),
         generator_( std::move( generator ) ),
         writeBasePath_( std::move( writeBasePath ) ),
-        base58key_( std::move( base58key ) )
+        base58key_( std::move( base58key ) ),
+        account_( std::move( account ) )
     {
     }
 
@@ -122,6 +125,112 @@ namespace sgns
             return outcome::failure( std::errc::no_such_device );
         }
 
+        logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
+
+        account_->ConfigureDatabaseDependencies( db_3_7_0_ );
+        
+        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_6_0_, db_3_7_0_ ) );
+        db_3_7_0_->StartCICSync();
+
+        if ( !blockchain_ )
+        {
+            blockchain_ = Blockchain::New(
+                db_3_7_0_,
+                account_,
+                pubSub_,
+                [wptr( weak_from_this() )]( outcome::result<void> result )
+                {
+                    if ( auto strong = wptr.lock() )
+                    {
+                        if ( result.has_error() )
+                        {
+                            strong->logger_->error( "Error starting blockchain: {}", result.error().message() );
+                            strong->blockchain_status_.store( Status::ST_ERROR );
+                            return;
+                        }
+                        strong->blockchain_status_.store( Status::ST_SUCCESS );
+                    }
+                } );
+        }
+        blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
+
+        auto                  retry_duration   = std::chrono::minutes( 2 );
+        auto                  retry_interval   = std::chrono::seconds( 5 );
+        auto                  retry_start_time = std::chrono::steady_clock::now();
+        auto                  last_log_time    = retry_start_time;
+        outcome::result<void> start_result     = outcome::failure( Blockchain::Error::BLOCKCHAIN_NOT_INITIALIZED );
+        do
+        {
+            start_result = blockchain_->Start();
+            if ( start_result.has_error() )
+            {
+                logger_->error( "Error starting blockchain: {}", start_result.error().message() );
+            }
+
+            const auto current_time = std::chrono::steady_clock::now();
+            if ( current_time - last_log_time >= std::chrono::seconds( 30 ) )
+            {
+                const auto elapsed_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>( current_time - retry_start_time ).count();
+                logger_->info( "{}: Retrying blockchain start (elapsed: {}s)", __func__, elapsed_seconds );
+                last_log_time = current_time;
+            }
+            std::this_thread::sleep_for( retry_interval );
+        } while ( std::chrono::steady_clock::now() - retry_start_time < retry_duration && start_result.has_error() );
+
+        const auto timeout_duration = std::chrono::minutes( 4 );
+        auto       start_time       = std::chrono::steady_clock::now();
+        last_log_time               = start_time;
+        bool blockchain_succeeded   = false;
+
+        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        {
+            const auto current_time = std::chrono::steady_clock::now();
+            if ( blockchain_status_.load( std::memory_order_acquire ) != Status::ST_INIT )
+            {
+                if ( blockchain_status_.load( std::memory_order_acquire ) == Status::ST_SUCCESS )
+                {
+                    blockchain_succeeded = true;
+                }
+                break;
+            }
+            if ( current_time - last_log_time >= std::chrono::seconds( 30 ) )
+            {
+                const auto elapsed_seconds =
+                    std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time ).count();
+                logger_->info( "{}: Still waiting for the blockchain to initialize (elapsed: {}s)",
+                               __func__,
+                               elapsed_seconds );
+                last_log_time = current_time;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        if ( !blockchain_succeeded )
+        {
+            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+        }
+
+        start_time           = std::chrono::steady_clock::now();
+        blockchain_succeeded = false;
+        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        {
+            auto genesis_cid_result          = blockchain_->GetGenesisCID();
+            auto account_creation_cid_result = blockchain_->GetAccountCreationCID();
+            if ( genesis_cid_result.has_value() && account_creation_cid_result.has_value() &&
+                 blockchain_->validator_registry_initialized_.load( std::memory_order_acquire ) )
+            {
+                blockchain_succeeded = true;
+                break;
+            }
+
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+        if ( !blockchain_succeeded )
+        {
+            logger_->error( "{}: Genesis, Account Creation and/or Validator Registry not initialized", __func__ );
+            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+        }
+
         BOOST_OUTCOME_TRY( auto balances, ComputeLegacyBalances() );
         MigrationAllowList allow_list( db_3_7_0_->GetDataStore(), FromVersion() );
         BOOST_OUTCOME_TRY( allow_list.StoreObservedBalances( balances ) );
@@ -130,11 +239,24 @@ namespace sgns
                        FromVersion(),
                        ToVersion() );
 
+        crdt::GlobalDB::Buffer version_key;
+        version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
+        crdt::GlobalDB::Buffer version_value;
+        version_value.put( ToVersion() );
+        BOOST_OUTCOME_TRY( db_3_7_0_->GetDataStore()->put( version_key, version_value ) );
+        logger_->info( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
+
         return outcome::success();
     }
 
     outcome::result<void> Migration3_6_0To3_7_0::ShutDown()
     {
+        if ( blockchain_ )
+        {
+            (void)blockchain_->Stop();
+            blockchain_.reset();
+        }
+        blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
         db_3_6_0_.reset();
         db_3_7_0_.reset();
 

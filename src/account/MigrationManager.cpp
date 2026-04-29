@@ -11,6 +11,7 @@
 #include "account/Migration1_0_0To3_4_0.hpp"
 #include "account/Migration3_4_0To3_5_0.hpp"
 #include "account/Migration3_5_0To3_6_0.hpp"
+#include "account/Migration3_6_0To3_7_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
@@ -70,6 +71,14 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key ) );
+        instance->RegisterStep( std::make_shared<Migration3_6_0To3_7_0>( ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key,
+                                                                         account ) );
         return instance;
     }
 

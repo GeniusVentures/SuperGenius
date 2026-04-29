@@ -2,14 +2,18 @@
 
 #include "IMigrationStep.hpp"
 #include "base/logger.hpp"
+#include "blockchain/Blockchain.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 
+#include <atomic>
 #include <memory>
 #include <utility>
 #include <vector>
 
 namespace sgns
 {
+    class GeniusAccount;
+
     class Migration3_6_0To3_7_0 : public IMigrationStep, public std::enable_shared_from_this<Migration3_6_0To3_7_0>
     {
     public:
@@ -21,7 +25,8 @@ namespace sgns
                                std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
-                               std::string                                                     base58key );
+                               std::string                                                     base58key,
+                               std::shared_ptr<GeniusAccount>                                  account );
 
         std::string           FromVersion() const override;
         std::string           ToVersion() const override;
@@ -31,6 +36,13 @@ namespace sgns
         outcome::result<bool> IsRequired() const override;
 
     private:
+        enum class Status
+        {
+            ST_INIT = 0,
+            ST_ERROR,
+            ST_SUCCESS,
+        };
+
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitLegacyDb() const;
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitTargetDb() const;
         outcome::result<std::vector<AddressBalance>>     ComputeLegacyBalances() const;
@@ -47,5 +59,8 @@ namespace sgns
 
         std::shared_ptr<crdt::GlobalDB> db_3_6_0_;
         std::shared_ptr<crdt::GlobalDB> db_3_7_0_;
+        std::shared_ptr<Blockchain>     blockchain_;
+        std::shared_ptr<GeniusAccount>  account_;
+        std::atomic<Status>             blockchain_status_{ Status::ST_INIT };
     };
 }
