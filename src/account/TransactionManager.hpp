@@ -502,6 +502,8 @@ namespace sgns
                 { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
                 { "mint-v2",
                   { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+                { "migration",
+                  { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
                 { "escrow-hold",
                   { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
 

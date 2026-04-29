@@ -108,6 +108,14 @@ message MintTxV2
     uint64 amount = 4; //
     UTXOTxParams utxo_params = 5;
 }
+message MigrationTx
+{
+    DAGStruct dag_struct = 1;//
+    bytes token_id = 2;
+    uint64 amount = 3; //
+    UTXOTxParams utxo_params = 4;
+    string from_version = 5;
+}
 message EscrowTx
 {
     DAGStruct dag_struct = 1;// 

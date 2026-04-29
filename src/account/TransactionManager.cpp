@@ -18,6 +18,7 @@
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
 #include "MintTransactionV2.hpp"
+#include "MigrationTransaction.hpp"
 #include "EscrowTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
@@ -1554,6 +1555,29 @@ namespace sgns
 
     outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
+        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        {
+            auto [inputs, outputs] = migration_tx->GetUTXOParameters();
+            auto hash              = ( base::Hash256::fromReadableString( migration_tx->GetHash() ) ).value();
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
+                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
+            }
+
+            if ( !inputs.empty() )
+            {
+                account_m->GetUTXOManager().ConsumeUTXOs( inputs, migration_tx->GetSrcAddress() );
+            }
+
+            TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (migration), amount {} balance {}",
+                                              account_m->GetAddress().substr( 0, 8 ),
+                                              full_node_m,
+                                              std::to_string( migration_tx->GetAmount() ),
+                                              std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            return outcome::success();
+        }
+
         if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
@@ -1672,6 +1696,31 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
+        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        {
+            auto [inputs, outputs] = migration_tx->GetUTXOParameters();
+            auto hash              = ( base::Hash256::fromReadableString( migration_tx->GetHash() ) ).value();
+
+            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            {
+                const auto &dest_info = outputs[i];
+                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) )
+            }
+            if ( !inputs.empty() )
+            {
+                account_m->GetUTXOManager().RollbackUTXOs( inputs, tx->GetHash() );
+            }
+
+            TransactionManagerLogger()->info(
+                "[{} - full: {}] Deleted {} tokens (migration), from tx {}, final balance {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                migration_tx->GetAmount(),
+                migration_tx->GetHash(),
+                std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            return outcome::success();
+        }
+
         if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
         {
             auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
