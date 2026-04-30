@@ -1,6 +1,5 @@
 add_subdirectory(processing_room)
 add_subdirectory(processing_dapp)
-add_subdirectory(graphsync_app)
 add_subdirectory(echo_client)
 add_subdirectory(crdt_globaldb)
 add_subdirectory(ipfs_client)

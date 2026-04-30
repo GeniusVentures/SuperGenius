@@ -1258,7 +1258,7 @@ namespace sgns::crdt
             {
                 continue;
             }
-            ipfs_lite::ipld::IPLDLinkImpl link( head, topic, cidByte.value().size() );
+            ipfs_lite::ipld::IPLDLink link( head, topic, cidByte.value().size() );
             node->addLink( link );
             //Log expensive toString only if trace enabled
             if ( logger_->level() == spdlog::level::trace )

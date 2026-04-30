@@ -117,6 +117,8 @@ namespace sgns
         static constexpr std::chrono::milliseconds TIMEOUT_TRANSFER{ 30000 };
         static constexpr std::chrono::milliseconds TIMEOUT_MINT{ 30000 };
 #endif
+        std::vector<std::string> GetAvailableAccounts();
+
         outcome::result<void> SelectAccount( std::string_view public_address );
 
         outcome::result<void> TransferAccount( std::string_view public_address );

@@ -993,6 +993,11 @@ namespace sgns
         return boost::uuids::to_string( uuid );
     }
 
+    std::vector<std::string> GeniusNode::GetAvailableAccounts()
+    {
+        return GeniusAccount::GetAvailableAccounts( write_base_path_ );
+    }
+
     outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
     {
         if ( public_address == GetAddress() )

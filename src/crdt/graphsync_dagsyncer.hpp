@@ -4,13 +4,12 @@
 #include <memory>
 #include <chrono>
 
+#include <libp2p/host/host.hpp>
+#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
+#include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
+
 #include "crdt/dagsyncer.hpp"
 #include "base/logger.hpp"
-
-#include <ipfs_lite/ipfs/graphsync/impl/merkledag_bridge_impl.hpp>
-#include <ipfs_lite/ipfs/merkledag/impl/merkledag_service_impl.hpp>
-
-#include <libp2p/host/host.hpp>
 
 namespace sgns::crdt
 {
@@ -22,25 +21,24 @@ namespace sgns::crdt
     class GraphsyncDAGSyncer : public DAGSyncer, public std::enable_shared_from_this<GraphsyncDAGSyncer>
     {
     public:
-        using IpfsDatastore       = ipfs_lite::ipfs::IpfsDatastore;
-        using Graphsync           = ipfs_lite::ipfs::graphsync::Graphsync;
-        using ResponseMetadata    = ipfs_lite::ipfs::graphsync::ResponseMetadata;
-        using Extension           = ipfs_lite::ipfs::graphsync::Extension;
-        using MerkleDagBridgeImpl = ipfs_lite::ipfs::graphsync::MerkleDagBridgeImpl;
-        using ResponseStatusCode  = ipfs_lite::ipfs::graphsync::ResponseStatusCode;
-        using Multiaddress        = libp2p::multi::Multiaddress;
-        using Multihash           = libp2p::multi::Multihash;
-        using PeerId              = libp2p::peer::PeerId;
-        using Subscription        = libp2p::protocol::Subscription;
-        using Logger              = base::Logger;
-        using BlockCallback       = Graphsync::BlockCallback;
+        using IpfsDatastore      = ipfs_lite::ipfs::IpfsDatastore;
+        using Graphsync          = ipfs_lite::ipfs::graphsync::Graphsync;
+        using ResponseMetadata   = ipfs_lite::ipfs::graphsync::ResponseMetadata;
+        using Extension          = ipfs_lite::ipfs::graphsync::Extension;
+        using ResponseStatusCode = ipfs_lite::ipfs::graphsync::ResponseStatusCode;
+        using Multiaddress       = libp2p::multi::Multiaddress;
+        using Multihash          = libp2p::multi::Multihash;
+        using PeerId             = libp2p::peer::PeerId;
+        using Subscription       = libp2p::protocol::Subscription;
+        using Logger             = base::Logger;
+        using BlockCallback      = Graphsync::BlockCallback;
 
         // New peer registry types
         using PeerKey      = size_t; // Unique identifier for a peer in our registry
         using PeerEntry    = std::pair<PeerId, std::vector<Multiaddress>>;
         using RouteMapType = std::map<CID, PeerKey>; // Maps CIDs to peer registry keys
 
-        enum class Error
+        enum class Error : uint8_t
         {
             CID_NOT_FOUND = 0,     ///< The requested CID wasn't found
             ROUTE_NOT_FOUND,       ///< Route for the CID wasn't found
@@ -170,9 +168,10 @@ namespace sgns::crdt
         bool             started_ = false;
         std::vector<CID> unexpected_blocks;
 
-        mutable std::mutex                               dagMutex_;
-        ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
-        std::shared_ptr<Graphsync>                       graphsync_;
+        mutable std::mutex                                                dagMutex_;
+        std::shared_ptr<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl> dagService_;
+        // ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl dagService_;
+        std::shared_ptr<Graphsync>                                        graphsync_;
 
         std::shared_ptr<libp2p::Host> host_;
 
