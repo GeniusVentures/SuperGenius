@@ -101,6 +101,8 @@ namespace sgns
         ~TransactionManager();
 
         void Start();
+        void StartListeningTopics();
+        void StartCore();
 
         void PrintAccountInfo() const;
 
@@ -495,6 +497,8 @@ namespace sgns
         std::queue<std::string>                            deleted_data_queue_;
 
         std::chrono::steady_clock::time_point last_loop_time_;
+        std::atomic<bool>                     listening_topics_started_{ false };
+        std::atomic<bool>                     core_started_{ false };
 
         std::mutex                            missing_tx_mutex_;
         std::unordered_set<std::string>       missing_tx_hashes_;

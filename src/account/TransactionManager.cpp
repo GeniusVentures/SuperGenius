@@ -261,14 +261,16 @@ namespace sgns
 
     void TransactionManager::Start()
     {
-        if ( GetState() != State::CREATING || stopped_.load() )
+        StartListeningTopics();
+        StartCore();
+    }
+
+    void TransactionManager::StartListeningTopics()
+    {
+        if ( stopped_.load() || listening_topics_started_.exchange( true ) )
         {
             return;
         }
-
-        TransactionManagerLogger()->info( "[{} - full: {}] Starting Transaction Manager",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m );
 
         full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
 
@@ -285,6 +287,18 @@ namespace sgns
                                                full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
         }
+    }
+
+    void TransactionManager::StartCore()
+    {
+        if ( GetState() != State::CREATING || stopped_.load() || core_started_.exchange( true ) )
+        {
+            return;
+        }
+
+        TransactionManagerLogger()->info( "[{} - full: {}] Starting Transaction Manager",
+                                          account_m->GetAddress().substr( 0, 8 ),
+                                          full_node_m );
 
         ChangeState( State::INITIALIZING );
 
