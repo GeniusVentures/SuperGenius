@@ -132,12 +132,16 @@ namespace sgns
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
         account_->ConfigureDatabaseDependencies( db_3_7_0_ );
-        
+        logger_->debug( "{}: Configured account database dependencies for {}", __func__, ToVersion() );
+
         BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_6_0_, db_3_7_0_ ) );
+        logger_->debug( "{}: Migrated blockchain CIDs from {} to {}", __func__, FromVersion(), ToVersion() );
         db_3_7_0_->StartCICSync();
+        logger_->debug( "{}: Started CID processing for target {}", __func__, ToVersion() );
 
         if ( !blockchain_ )
         {
+            logger_->debug( "{}: Creating blockchain for target {}", __func__, ToVersion() );
             blockchain_ = Blockchain::New(
                 db_3_7_0_,
                 account_,
@@ -157,6 +161,7 @@ namespace sgns
                 } );
         }
         blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
+        logger_->debug( "{}: Starting blockchain bootstrap for {}", __func__, ToVersion() );
 
         auto                  retry_duration   = std::chrono::minutes( 2 );
         auto                  retry_interval   = std::chrono::seconds( 5 );
@@ -234,6 +239,7 @@ namespace sgns
             logger_->error( "{}: Genesis, Account Creation and/or Validator Registry not initialized", __func__ );
             return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
+        logger_->debug( "{}: Blockchain bootstrap complete for {}", __func__, ToVersion() );
 
         BOOST_OUTCOME_TRY( auto balances, ComputeLegacyBalances() );
         MigrationAllowList allow_list( db_3_7_0_->GetDataStore(), FromVersion() );
@@ -243,8 +249,14 @@ namespace sgns
                        FromVersion(),
                        ToVersion() );
 
+        logger_->debug( "{}: Starting CID receiving for target {}", __func__, ToVersion() );
+        db_3_7_0_->StartCIDReceiving();
+        logger_->debug( "{}: Starting head rebroadcast for target {}", __func__, ToVersion() );
+        db_3_7_0_->StartRebroadcastHeads();
+
         if ( !transaction_manager_ )
         {
+            logger_->debug( "{}: Creating transaction manager for migration flow", __func__ );
             transaction_manager_ = TransactionManager::New( db_3_7_0_,
                                                             ioContext_,
                                                             account_,
@@ -253,7 +265,8 @@ namespace sgns
                                                             is_full_node_ );
         }
 
-        transaction_manager_->Start();
+        logger_->debug( "{}: Starting transaction manager core for migration flow", __func__ );
+        transaction_manager_->StartCore();
 
         start_time = std::chrono::steady_clock::now();
         while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
@@ -269,17 +282,28 @@ namespace sgns
             logger_->error( "{}: Transaction Manager did not reach READY", __func__ );
             return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
         }
+        logger_->debug( "{}: Transaction Manager is READY for migration flow", __func__ );
 
         BOOST_OUTCOME_TRY( auto observed_balance, allow_list.LoadObservedBalance( account_->GetAddress() ) );
+        logger_->debug( "{}: Observed balance lookup for {} returned has_value={} balance={}",
+                        __func__,
+                        account_->GetAddress(),
+                        observed_balance.has_value(),
+                        observed_balance.has_value() ? observed_balance.value() : 0 );
 
         if ( observed_balance.has_value() && observed_balance.value() > 0 )
         {
             const auto token_id = TokenID::FromBytes( { 0x00 } );
+            logger_->info( "{}: Submitting migration transaction for {} amount={}",
+                           __func__,
+                           account_->GetAddress(),
+                           observed_balance.value() );
             BOOST_OUTCOME_TRY( auto tx_hash,
                                transaction_manager_->MigrationFunds( observed_balance.value(),
                                                                      FromVersion(),
                                                                      token_id,
                                                                      account_->GetAddress() ) );
+            logger_->debug( "{}: Waiting for migration transaction confirmation tx={}", __func__, tx_hash );
 
             auto tx_status = transaction_manager_->WaitForTransactionOutgoing( tx_hash, std::chrono::minutes( 4 ) );
             if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
