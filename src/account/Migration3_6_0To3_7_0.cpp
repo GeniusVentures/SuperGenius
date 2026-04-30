@@ -249,41 +249,6 @@ namespace sgns
                        FromVersion(),
                        ToVersion() );
 
-        logger_->debug( "{}: Starting CID receiving for target {}", __func__, ToVersion() );
-        db_3_7_0_->StartCIDReceiving();
-        logger_->debug( "{}: Starting head rebroadcast for target {}", __func__, ToVersion() );
-        db_3_7_0_->StartRebroadcastHeads();
-
-        if ( !transaction_manager_ )
-        {
-            logger_->debug( "{}: Creating transaction manager for migration flow", __func__ );
-            transaction_manager_ = TransactionManager::New( db_3_7_0_,
-                                                            ioContext_,
-                                                            account_,
-                                                            std::make_shared<crypto::HasherImpl>(),
-                                                            blockchain_,
-                                                            is_full_node_ );
-        }
-
-        logger_->debug( "{}: Starting transaction manager core for migration flow", __func__ );
-        transaction_manager_->StartCore();
-
-        start_time = std::chrono::steady_clock::now();
-        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
-        {
-            if ( transaction_manager_->GetState() == TransactionManager::State::READY )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-        }
-        if ( transaction_manager_->GetState() != TransactionManager::State::READY )
-        {
-            logger_->error( "{}: Transaction Manager did not reach READY", __func__ );
-            return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
-        }
-        logger_->debug( "{}: Transaction Manager is READY for migration flow", __func__ );
-
         BOOST_OUTCOME_TRY( auto observed_balance, allow_list.LoadObservedBalance( account_->GetAddress() ) );
         logger_->debug( "{}: Observed balance lookup for {} returned has_value={} balance={}",
                         __func__,
@@ -293,6 +258,41 @@ namespace sgns
 
         if ( observed_balance.has_value() && observed_balance.value() > 0 )
         {
+            logger_->debug( "{}: Starting CID receiving for target {}", __func__, ToVersion() );
+            db_3_7_0_->StartCIDReceiving();
+            logger_->debug( "{}: Starting head rebroadcast for target {}", __func__, ToVersion() );
+            db_3_7_0_->StartRebroadcastHeads();
+
+            if ( !transaction_manager_ )
+            {
+                logger_->debug( "{}: Creating transaction manager for migration flow", __func__ );
+                transaction_manager_ = TransactionManager::New( db_3_7_0_,
+                                                                ioContext_,
+                                                                account_,
+                                                                std::make_shared<crypto::HasherImpl>(),
+                                                                blockchain_,
+                                                                is_full_node_ );
+            }
+
+            logger_->debug( "{}: Starting transaction manager core for migration flow", __func__ );
+            transaction_manager_->StartCore();
+
+            start_time = std::chrono::steady_clock::now();
+            while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+            {
+                if ( transaction_manager_->GetState() == TransactionManager::State::READY )
+                {
+                    break;
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            }
+            if ( transaction_manager_->GetState() != TransactionManager::State::READY )
+            {
+                logger_->error( "{}: Transaction Manager did not reach READY", __func__ );
+                return outcome::failure( MigrationManager::Error::BLOCKCHAIN_INIT_FAILED );
+            }
+            logger_->debug( "{}: Transaction Manager is READY for migration flow", __func__ );
+
             const auto token_id = TokenID::FromBytes( { 0x00 } );
             logger_->info( "{}: Submitting migration transaction for {} amount={}",
                            __func__,
@@ -341,6 +341,10 @@ namespace sgns
         {
             (void)blockchain_->Stop();
             blockchain_.reset();
+        }
+        if ( account_ )
+        {
+            account_->DeconfigureDatabaseDependencies();
         }
         blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
         db_3_6_0_.reset();
