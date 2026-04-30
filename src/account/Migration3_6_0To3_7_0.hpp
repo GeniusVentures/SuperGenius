@@ -49,7 +49,7 @@ namespace sgns
         outcome::result<std::shared_ptr<crdt::GlobalDB>> InitTargetDb() const;
         outcome::result<std::vector<AddressBalance>>     ComputeLegacyBalances() const;
 
-        base::Logger logger_ = base::createLogger( "Migration3_6_0To3_7_0" );
+        base::Logger logger_ = base::createLogger( "MigrationStep" );
 
         std::shared_ptr<boost::asio::io_context>                        ioContext_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;
