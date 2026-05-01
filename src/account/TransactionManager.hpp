@@ -101,6 +101,7 @@ namespace sgns
         ~TransactionManager();
 
         void Start();
+        void RegisterTopicNames();
         void StartListeningTopics();
         void StartCore();
 
@@ -266,6 +267,7 @@ namespace sgns
 
     protected:
         friend class GeniusNode;
+        friend class Migration3_6_0To3_7_0;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -497,6 +499,7 @@ namespace sgns
         std::queue<std::string>                            deleted_data_queue_;
 
         std::chrono::steady_clock::time_point last_loop_time_;
+        std::atomic<bool>                     topic_names_registered_{ false };
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 

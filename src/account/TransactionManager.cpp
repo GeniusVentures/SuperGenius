@@ -261,8 +261,25 @@ namespace sgns
 
     void TransactionManager::Start()
     {
+        RegisterTopicNames();
         StartListeningTopics();
         StartCore();
+    }
+
+    void TransactionManager::RegisterTopicNames()
+    {
+        if ( stopped_.load() || topic_names_registered_.exchange( true ) )
+        {
+            return;
+        }
+
+        full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
+
+        globaldb_m->AddTopicName( account_m->GetAddress() );
+        if ( full_node_m )
+        {
+            globaldb_m->AddTopicName( full_node_topic_m );
+        }
     }
 
     void TransactionManager::StartListeningTopics()
@@ -272,7 +289,7 @@ namespace sgns
             return;
         }
 
-        full_node_topic_m = std::string( GNUS_FULL_NODES_TOPIC );
+        RegisterTopicNames();
 
         globaldb_m->AddListenTopic( account_m->GetAddress() );
         TransactionManagerLogger()->info( "[{} - full: {}] Adding broadcast to full node on {}",

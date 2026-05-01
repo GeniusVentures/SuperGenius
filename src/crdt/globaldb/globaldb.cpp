@@ -345,10 +345,15 @@ namespace sgns::crdt
         return m_broadcaster->AddBroadcastTopic( topicName );
     }
 
+    void GlobalDB::AddTopicName( const std::string &topicName )
+    {
+        m_crdtDatastore->AddTopicName( topicName );
+    }
+
     void GlobalDB::AddListenTopic( const std::string &topicName )
     {
         m_broadcaster->AddListenTopic( topicName );
-        m_crdtDatastore->AddTopicName( topicName );
+        AddTopicName( topicName );
     }
 
     bool GlobalDB::RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter )
