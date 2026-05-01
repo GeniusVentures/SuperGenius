@@ -2,6 +2,7 @@
 
 #include "account/MigrationAllowList.hpp"
 #include "account/MigrationManager.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "base/sgns_version.hpp"
@@ -11,12 +12,20 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace sgns
 {
     namespace
     {
         constexpr std::string_view kLegacyUTXOPrefix = "/utxo/";
+
+        struct LegacyProducedOutput
+        {
+            std::string owner_address;
+            uint64_t    amount;
+        };
 
         std::optional<std::string> ParseLegacyUTXOOwnerAddress( std::string_view key )
         {
@@ -32,6 +41,16 @@ namespace sgns
             }
 
             return std::string( address );
+        }
+
+        std::string MakeLegacyOutPointKey( std::string_view tx_hash, uint32_t output_idx )
+        {
+            return std::string( tx_hash ) + ":" + std::to_string( output_idx );
+        }
+
+        bool IsMigratableBalanceAddress( std::string_view address )
+        {
+            return utxo_address::IsAccountPublicKeyAddress( address );
         }
     }
 
@@ -274,6 +293,8 @@ namespace sgns
                                                                 is_full_node_ );
             }
 
+            logger_->debug( "{}: Registering transaction topic names for migration flow", __func__ );
+            transaction_manager_->RegisterTopicNames();
             logger_->debug( "{}: Starting transaction manager core for migration flow", __func__ );
             transaction_manager_->StartCore();
 
@@ -294,7 +315,7 @@ namespace sgns
             logger_->debug( "{}: Transaction Manager is READY for migration flow", __func__ );
 
             const auto token_id = TokenID::FromBytes( { 0x00 } );
-            logger_->info( "{}: Submitting migration transaction for {} amount={}",
+            logger_->info( "{}: Submitting migration transaction for {:.8} amount={}",
                            __func__,
                            account_->GetAddress(),
                            observed_balance.value() );
@@ -400,12 +421,105 @@ namespace sgns
                 balance += utxos.utxos( i ).amount();
             }
 
-            balances.emplace_back( std::move( address_opt.value() ), balance );
+            if ( IsMigratableBalanceAddress( address_opt.value() ) )
+            {
+                balances.emplace_back( std::move( address_opt.value() ), balance );
+            }
         }
 
-        std::sort( balances.begin(),
-                   balances.end(),
-                   []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
+        if ( !balances.empty() )
+        {
+            std::sort(
+                balances.begin(),
+                balances.end(),
+                []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
+            return balances;
+        }
+
+        logger_->info( "No legacy UTXO snapshots found in {}; reconstructing balances from migrated transactions",
+                       FromVersion() );
+
+        std::unordered_map<std::string, LegacyProducedOutput> produced_outputs;
+        std::unordered_set<std::string>                       consumed_outpoints;
+        size_t                                                scanned_transactions = 0;
+
+        for ( auto network_id : TransactionManager::GetMonitoredNetworkIDs() )
+        {
+            const std::string query_path = TransactionManager::GetBlockChainBase( network_id ) + "tx";
+            BOOST_OUTCOME_TRY( auto transaction_list, db_3_6_0_->QueryKeyValues( query_path ) );
+
+            for ( const auto &[key, value] : transaction_list )
+            {
+                ++scanned_transactions;
+
+                BOOST_OUTCOME_TRY( auto tx, TransactionManager::DeSerializeTransaction( value ) );
+                if ( tx->GetHash().empty() )
+                {
+                    tx->FillHash();
+                }
+
+                const auto tx_hash = tx->GetHash();
+                if ( tx_hash.empty() )
+                {
+                    logger_->error( "Failed to determine hash while reconstructing legacy balance from {}",
+                                    key.toString() );
+                    return std::errc::bad_message;
+                }
+
+                if ( auto params_opt = tx->GetUTXOParametersOpt() )
+                {
+                    const auto &[inputs, outputs] = params_opt.value();
+                    for ( const auto &input : inputs )
+                    {
+                        consumed_outpoints.emplace(
+                            MakeLegacyOutPointKey( input.txid_hash_.toReadableString(), input.output_idx_ ) );
+                    }
+
+                    for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+                    {
+                        produced_outputs[MakeLegacyOutPointKey( tx_hash, i )] =
+                            LegacyProducedOutput{ outputs[i].dest_address, outputs[i].encrypted_amount };
+                    }
+
+                    continue;
+                }
+
+                if ( auto mint_tx = std::dynamic_pointer_cast<MintTransaction>( tx ) )
+                {
+                    produced_outputs[MakeLegacyOutPointKey( tx_hash, 0 )] =
+                        LegacyProducedOutput{ mint_tx->GetSrcAddress(), mint_tx->GetAmount() };
+                }
+            }
+        }
+
+        std::unordered_map<std::string, uint64_t> balance_by_address;
+        for ( const auto &[outpoint_key, output] : produced_outputs )
+        {
+            if ( consumed_outpoints.find( outpoint_key ) != consumed_outpoints.end() ||
+                 !IsMigratableBalanceAddress( output.owner_address ) )
+            {
+                continue;
+            }
+
+            balance_by_address[output.owner_address] += output.amount;
+        }
+
+        balances.clear();
+        balances.reserve( balance_by_address.size() );
+        for ( auto &[address, balance] : balance_by_address )
+        {
+            balances.emplace_back( std::move( address ), balance );
+        }
+
+        std::sort(
+            balances.begin(),
+            balances.end(),
+            []( const AddressBalance &lhs, const AddressBalance &rhs ) { return lhs.first < rhs.first; } );
+
+        logger_->info( "Reconstructed {} legacy balances from {} transactions and {} produced outputs",
+                       balances.size(),
+                       scanned_transactions,
+                       produced_outputs.size() );
 
         return balances;
     }
