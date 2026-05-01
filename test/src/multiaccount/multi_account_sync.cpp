@@ -435,9 +435,14 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
     {
-        ASSERT_TRUE( node );
-        ASSERT_TRUE( node->blockchain_ );
-        ASSERT_TRUE( node->blockchain_->consensus_manager_ );
+        test::assertWaitForCondition(
+            [&]()
+            {
+                return node && node->blockchain_ && node->blockchain_->consensus_manager_ &&
+                       node->GetTransactionManagerState() == TransactionManager::State::READY;
+            },
+            std::chrono::milliseconds( 30000 ),
+            "node blockchain not ready for consensus configuration" );
 
         auto node_registry = node->blockchain_->GetValidatorRegistry();
         ASSERT_TRUE( node_registry );
@@ -486,12 +491,6 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
                                   false,
                                   false );
 
-    configure_consensus_batch_and_delay( node_full );
-    configure_consensus_batch_and_delay( node_client );
-    configure_consensus_batch_and_delay( node_peer1 );
-    configure_consensus_batch_and_delay( node_peer2 );
-    configure_consensus_batch_and_delay( node_peer3 );
-
     node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
@@ -512,6 +511,12 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer3 not synced" );
+
+    configure_consensus_batch_and_delay( node_full );
+    configure_consensus_batch_and_delay( node_client );
+    configure_consensus_batch_and_delay( node_peer1 );
+    configure_consensus_batch_and_delay( node_peer2 );
+    configure_consensus_batch_and_delay( node_peer3 );
 
     ASSERT_TRUE( node_full->blockchain_ );
     auto registry = node_full->blockchain_->GetValidatorRegistry();
@@ -712,9 +717,14 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 
     auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
     {
-        ASSERT_TRUE( node );
-        ASSERT_TRUE( node->blockchain_ );
-        ASSERT_TRUE( node->blockchain_->consensus_manager_ );
+        test::assertWaitForCondition(
+            [&]()
+            {
+                return node && node->blockchain_ && node->blockchain_->consensus_manager_ &&
+                       node->GetTransactionManagerState() == TransactionManager::State::READY;
+            },
+            std::chrono::milliseconds( 30000 ),
+            "node blockchain not ready for consensus configuration" );
 
         auto node_registry = node->blockchain_->GetValidatorRegistry();
         ASSERT_TRUE( node_registry );
@@ -722,12 +732,6 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
         node->blockchain_->consensus_manager_->ConfigureCertificateDelay( kCertificateDelay );
     };
-
-    configure_consensus_batch_and_delay( node_full );
-    configure_consensus_batch_and_delay( node_client );
-    configure_consensus_batch_and_delay( node_peer1 );
-    configure_consensus_batch_and_delay( node_peer2 );
-    configure_consensus_batch_and_delay( node_peer3 );
 
     node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
@@ -750,6 +754,12 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer3 not synced" );
+
+    configure_consensus_batch_and_delay( node_full );
+    configure_consensus_batch_and_delay( node_client );
+    configure_consensus_batch_and_delay( node_peer1 );
+    configure_consensus_batch_and_delay( node_peer2 );
+    configure_consensus_batch_and_delay( node_peer3 );
 
     ASSERT_TRUE( node_full->blockchain_ );
     auto registry = node_full->blockchain_->GetValidatorRegistry();
