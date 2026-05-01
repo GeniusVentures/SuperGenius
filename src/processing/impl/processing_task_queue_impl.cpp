@@ -346,13 +346,41 @@ namespace sgns::processing
         if ( !job_crdt_transaction_ )
         {
             //task and subtasks need to be enqueued
+            m_logger->error( "SendEscrow called without active transaction (path='{}', value_size={})",
+                             path,
+                             value.size() );
             return outcome::failure( boost::system::error_code{} );
         }
 
+        m_logger->debug( "SendEscrow start (path='{}', value_size={}, topic='{}')",
+                         path,
+                         value.size(),
+                         m_processing_topic );
+
         sgns::crdt::HierarchicalKey key( path );
 
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Put( std::move( key ), std::move( value ) ) );
-        BOOST_OUTCOME_TRYV2( auto &&, job_crdt_transaction_->Commit( { m_processing_topic } ) );
+        auto put_result = job_crdt_transaction_->Put( std::move( key ), std::move( value ) );
+        if ( put_result.has_failure() )
+        {
+            m_logger->error( "SendEscrow Put failed (path='{}', error='{}')", path, put_result.error().message() );
+            return put_result.as_failure();
+        }
+
+        auto commit_result = job_crdt_transaction_->Commit( { m_processing_topic } );
+        if ( commit_result.has_failure() )
+        {
+            m_logger->error( "SendEscrow Commit failed (path='{}', topic='{}', error='{}')",
+                             path,
+                             m_processing_topic,
+                             commit_result.error().message() );
+            return commit_result.as_failure();
+        }
+
+        auto cid_string_result = commit_result.value().toString();
+        m_logger->debug( "SendEscrow commit succeeded (path='{}', cid='{}', topic='{}')",
+                         path,
+                         cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                         m_processing_topic );
 
         ResetAtomicTransaction();
 

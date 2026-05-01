@@ -1075,6 +1075,8 @@ namespace sgns
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
+        auto escrow_size                = escrow_data.size();
+        auto task_id                    = std::string( task.ipfs_block_id() );
 
         task.set_escrow_path( escrow_path );
 
@@ -1088,8 +1090,10 @@ namespace sgns
         auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
         if ( send_escrow_return.has_failure() )
         {
-            node_logger_->error( "ProcessImage DB write failed in SendEscrow (path='{}'): {}",
+            node_logger_->error( "ProcessImage DB write failed in SendEscrow (task_id={}, path={}, escrow_size={}, error={})",
+                                 task_id,
                                  escrow_path,
+                                 escrow_size,
                                  send_escrow_return.error().message() );
             task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );

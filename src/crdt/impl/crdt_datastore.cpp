@@ -10,6 +10,23 @@
 #include <utility>
 #include <boost/format.hpp>
 
+namespace
+{
+    const char *JobStatusToString( sgns::crdt::CrdtDatastore::JobStatus status )
+    {
+        switch ( status )
+        {
+            case sgns::crdt::CrdtDatastore::JobStatus::PENDING:
+                return "PENDING";
+            case sgns::crdt::CrdtDatastore::JobStatus::COMPLETED:
+                return "COMPLETED";
+            case sgns::crdt::CrdtDatastore::JobStatus::FAILED:
+                return "FAILED";
+        }
+        return "UNKNOWN";
+    }
+}
+
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
 {
     using CrdtDatastoreErr = sgns::crdt::CrdtDatastore::Error;
@@ -151,13 +168,31 @@ namespace sgns::crdt
 
         logger_->debug( "Processing job for CID {}", job_to_process.root_node_->getCID().toString().value() );
 
+        auto process_start = std::chrono::steady_clock::now();
         auto process_res = ProcessJobIteration( job_to_process );
         if ( process_res.has_failure() )
         {
+            auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                                        process_start )
+                                   .count();
+            auto cid_string_result = job_to_process.root_node_->getCID().toString();
+            logger_->error( "ProcessJobs: CID {} failed after {}ms (created_by_self={}, error='{}')",
+                            cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                            duration_ms,
+                            job_to_process.created_by_self_,
+                            process_res.error().message() );
             HandleJobProcessingFailure( job_to_process );
         }
         else
         {
+            auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                                        process_start )
+                                   .count();
+            auto cid_string_result = job_to_process.root_node_->getCID().toString();
+            logger_->debug( "ProcessJobs: CID {} completed in {}ms (created_by_self={})",
+                            cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                            duration_ms,
+                            job_to_process.created_by_self_ );
             HandleJobProcessingSuccess( job_to_process );
         }
 
@@ -191,16 +226,27 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingFailure( const RootCIDJob &job )
     {
+        size_t pending_jobs_size = 0;
+        size_t self_jobs_size    = 0;
+        size_t root_jobs_size    = 0;
         // Signal job failure
         {
             std::lock_guard lock_jobs( dagWorkerMutex_ );
             pending_jobs_[job.root_node_->getCID()] = JobStatus::FAILED;
+            pending_jobs_size                        = pending_jobs_.size();
+            self_jobs_size                           = selfCreatedJobList_.size();
+            root_jobs_size                           = rootCIDJobList_.size();
         }
 
         const std::string_view jobType = job.created_by_self_ ? "SELF-CREATED" : "EXTERNAL";
-        logger_->error( "{} JOB PROCESSING ERROR: Failed to process CID {}",
+        logger_->error( "{} JOB PROCESSING ERROR: Failed to process CID {} (pending_jobs={}, self_queue={}, "
+                        "root_queue={}, active_root={})",
                         jobType,
-                        job.root_node_->getCID().toString().value() );
+                        job.root_node_->getCID().toString().value(),
+                        pending_jobs_size,
+                        self_jobs_size,
+                        root_jobs_size,
+                        activeRootCID_.has_value() );
 
         CleanupFailedJob( job );
 
@@ -222,16 +268,25 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleJobProcessingSuccess( const RootCIDJob &job )
     {
+        size_t pending_jobs_size = 0;
+        size_t self_jobs_size    = 0;
+        size_t root_jobs_size    = 0;
         {
             // Mark self-created job as completed
             std::lock_guard lock_jobs( dagWorkerMutex_ );
             pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
+            pending_jobs_size                        = pending_jobs_.size();
+            self_jobs_size                           = selfCreatedJobList_.size();
+            root_jobs_size                           = rootCIDJobList_.size();
         }
-        if ( job.created_by_self_ )
-        {
-            logger_->debug( "Successfully completed self-created job for CID {}",
-                            job.root_node_->getCID().toString().value() );
-        }
+        logger_->debug( "HandleJobProcessingSuccess: CID {} marked COMPLETED (created_by_self={}, pending_jobs={}, "
+                        "self_queue={}, root_queue={}, active_root={})",
+                        job.root_node_->getCID().toString().value(),
+                        job.created_by_self_,
+                        pending_jobs_size,
+                        self_jobs_size,
+                        root_jobs_size,
+                        activeRootCID_.has_value() );
         // External jobs are handled in ProcessJobIteration when they complete
     }
 
@@ -776,18 +831,61 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
 
-        BOOST_OUTCOME_TRY( auto &&delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        auto delta_result = GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ );
+        if ( delta_result.has_failure() )
+        {
+            logger_->error( "{}: GetDeltaFromNode failed for root CID {} node CID {} (created_by_self={}, error='{}')",
+                            __func__,
+                            root_cid_string,
+                            cid_string,
+                            job_to_process.created_by_self_,
+                            delta_result.error().message() );
+            return delta_result.as_failure();
+        }
+        auto delta = std::move( delta_result.value() );
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
-        BOOST_OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
+        auto merge_result = MergeDataFromDelta( node_to_process->getCID(), delta );
+        if ( merge_result.has_failure() )
+        {
+            logger_->error( "{}: MergeDataFromDelta failed for root CID {} node CID {} (created_by_self={}, error='{}')",
+                            __func__,
+                            root_cid_string,
+                            cid_string,
+                            job_to_process.created_by_self_,
+                            merge_result.error().message() );
+            return merge_result.as_failure();
+        }
 
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
-        BOOST_OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
+        auto add_node_result = dagSyncer_->addNode( node_to_process );
+        if ( add_node_result.has_failure() )
+        {
+            logger_->error( "{}: dagSyncer->addNode failed for root CID {} node CID {} (created_by_self={}, "
+                            "error='{}')",
+                            __func__,
+                            root_cid_string,
+                            cid_string,
+                            job_to_process.created_by_self_,
+                            add_node_result.error().message() );
+            return add_node_result.as_failure();
+        }
 
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
-        BOOST_OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
+        auto links_result = GetLinksToFetch( job_to_process );
+        if ( links_result.has_failure() )
+        {
+            logger_->error( "{}: GetLinksToFetch failed for root CID {} node CID {} (created_by_self={}, error='{}')",
+                            __func__,
+                            root_cid_string,
+                            cid_string,
+                            job_to_process.created_by_self_,
+                            links_result.error().message() );
+            return links_result.as_failure();
+        }
+        auto links                  = std::move( links_result.value() );
         const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
@@ -803,7 +901,19 @@ namespace sgns::crdt
         else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
-            BOOST_OUTCOME_TRY( FetchNodes( job_to_process, links ) );
+            auto fetch_result = FetchNodes( job_to_process, links );
+            if ( fetch_result.has_failure() )
+            {
+                logger_->error( "{}: FetchNodes failed for root CID {} node CID {} (created_by_self={}, links={}, "
+                                "error='{}')",
+                                __func__,
+                                root_cid_string,
+                                cid_string,
+                                job_to_process.created_by_self_,
+                                links.size(),
+                                fetch_result.error().message() );
+                return fetch_result.as_failure();
+            }
             logger_->debug( "{}: Nodes fetched for Root job: {}", __func__, root_cid_string );
         }
         else if ( is_root )
@@ -832,6 +942,14 @@ namespace sgns::crdt
                 if ( it != pending_jobs_.end() )
                 {
                     it->second = JobStatus::COMPLETED;
+                    logger_->debug( "{}: Root CID {} transitioned to {} after finalization",
+                                    __func__,
+                                    root_cid_string,
+                                    JobStatusToString( it->second ) );
+                }
+                else
+                {
+                    logger_->warn( "{}: Root CID {} finalization had no pending_jobs_ entry", __func__, root_cid_string );
                 }
             }
         }
@@ -1297,6 +1415,13 @@ namespace sgns::crdt
             MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
+            logger_->debug( "AddDAGNode: queued self-created CID {} (pending_jobs={}, self_queue={}, root_queue={}, "
+                            "active_root={})",
+                            node->getCID().toString().value(),
+                            pending_jobs_.size(),
+                            selfCreatedJobList_.size(),
+                            rootCIDJobList_.size(),
+                            activeRootCID_.has_value() );
             if ( logger_->level() == spdlog::level::trace )
             {
                 logger_->trace(
@@ -1316,7 +1441,27 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::WaitForJob( const CID &cid )
     {
         auto cid_string_result = cid.toString();
-        logger_->debug( "WaitForJob: Starting to wait for CID {} completion", cid_string_result.value() );
+        const auto cid_string = cid_string_result.has_value() ? cid_string_result.value() : std::string( "<invalid-cid>" );
+
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            size_t running_workers = 0;
+            for ( const auto &worker : dagWorkers_ )
+            {
+                if ( worker && worker->dagWorkerThreadRunning_ )
+                {
+                    ++running_workers;
+                }
+            }
+            logger_->debug( "WaitForJob: Starting wait for CID {} (pending_jobs={}, self_queue={}, root_queue={}, "
+                            "active_root={}, running_workers={})",
+                            cid_string,
+                            pending_jobs_.size(),
+                            selfCreatedJobList_.size(),
+                            rootCIDJobList_.size(),
+                            activeRootCID_.has_value(),
+                            running_workers );
+        }
 
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();
@@ -1332,19 +1477,65 @@ namespace sgns::crdt
                     if ( it->second == JobStatus::COMPLETED )
                     {
                         pending_jobs_.erase( it );
-                        logger_->debug( "WaitForJob: CID {} completed successfully", cid_string_result.value() );
+                        size_t running_workers = 0;
+                        for ( const auto &worker : dagWorkers_ )
+                        {
+                            if ( worker && worker->dagWorkerThreadRunning_ )
+                            {
+                                ++running_workers;
+                            }
+                        }
+                        logger_->debug( "WaitForJob: CID {} completed successfully (pending_jobs={}, self_queue={}, "
+                                        "root_queue={}, active_root={}, running_workers={})",
+                                        cid_string,
+                                        pending_jobs_.size(),
+                                        selfCreatedJobList_.size(),
+                                        rootCIDJobList_.size(),
+                                        activeRootCID_.has_value(),
+                                        running_workers );
                         return cid;
                     }
                     else if ( it->second == JobStatus::FAILED )
                     {
                         pending_jobs_.erase( it );
-                        logger_->error( "WaitForJob: CID {} processing failed", cid_string_result.value() );
+                        size_t running_workers = 0;
+                        for ( const auto &worker : dagWorkers_ )
+                        {
+                            if ( worker && worker->dagWorkerThreadRunning_ )
+                            {
+                                ++running_workers;
+                            }
+                        }
+                        logger_->error( "WaitForJob: CID {} processing failed (status={}, pending_jobs={}, self_queue={}, "
+                                        "root_queue={}, active_root={}, running_workers={})",
+                                        cid_string,
+                                        JobStatusToString( JobStatus::FAILED ),
+                                        pending_jobs_.size(),
+                                        selfCreatedJobList_.size(),
+                                        rootCIDJobList_.size(),
+                                        activeRootCID_.has_value(),
+                                        running_workers );
                         return outcome::failure( Error::NODE_CREATION );
                     }
                 }
                 else
                 {
-                    logger_->error( "WaitForJob: CID {} not found in pending jobs", cid_string_result.value() );
+                    size_t running_workers = 0;
+                    for ( const auto &worker : dagWorkers_ )
+                    {
+                        if ( worker && worker->dagWorkerThreadRunning_ )
+                        {
+                            ++running_workers;
+                        }
+                    }
+                    logger_->error( "WaitForJob: CID {} not found in pending_jobs_ (pending_jobs={}, self_queue={}, "
+                                    "root_queue={}, active_root={}, running_workers={})",
+                                    cid_string,
+                                    pending_jobs_.size(),
+                                    selfCreatedJobList_.size(),
+                                    rootCIDJobList_.size(),
+                                    activeRootCID_.has_value(),
+                                    running_workers );
                     return outcome::failure( Error::NODE_CREATION );
                 }
             }
@@ -1356,9 +1547,34 @@ namespace sgns::crdt
             {
                 auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
                                            .count();
-                logger_->info( "WaitForJob: Still waiting for CID {} (elapsed: {}s)",
-                               cid_string_result.value(),
-                               elapsed_seconds );
+                size_t pending_jobs_size = 0;
+                size_t self_queue_size   = 0;
+                size_t root_queue_size   = 0;
+                bool   has_active_root   = false;
+                size_t running_workers   = 0;
+                {
+                    std::lock_guard lock( dagWorkerMutex_ );
+                    pending_jobs_size = pending_jobs_.size();
+                    self_queue_size   = selfCreatedJobList_.size();
+                    root_queue_size   = rootCIDJobList_.size();
+                    has_active_root   = activeRootCID_.has_value();
+                    for ( const auto &worker : dagWorkers_ )
+                    {
+                        if ( worker && worker->dagWorkerThreadRunning_ )
+                        {
+                            ++running_workers;
+                        }
+                    }
+                }
+                logger_->info( "WaitForJob: Still waiting for CID {} (elapsed={}s, pending_jobs={}, self_queue={}, "
+                               "root_queue={}, active_root={}, running_workers={})",
+                               cid_string,
+                               elapsed_seconds,
+                               pending_jobs_size,
+                               self_queue_size,
+                               root_queue_size,
+                               has_active_root,
+                               running_workers );
                 last_log_time = current_time;
             }
 
@@ -1373,12 +1589,39 @@ namespace sgns::crdt
         }
 
         // Timeout reached
-        logger_->error( "WaitForJob: Timeout (20 minutes) waiting for CID {} - size of the rootCIDJobList_: {}",
-                        cid_string_result.value(),
-                        rootCIDJobList_.size() );
-        // Clean up the pending job
+        size_t pending_jobs_size = 0;
+        size_t self_queue_size   = 0;
+        size_t root_queue_size   = 0;
+        bool   has_active_root   = false;
+        size_t running_workers   = 0;
+
         {
             std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_size = pending_jobs_.size();
+            self_queue_size   = selfCreatedJobList_.size();
+            root_queue_size   = rootCIDJobList_.size();
+            has_active_root   = activeRootCID_.has_value();
+            for ( const auto &worker : dagWorkers_ )
+            {
+                if ( worker && worker->dagWorkerThreadRunning_ )
+                {
+                    ++running_workers;
+                }
+            }
+
+            logger_->error( "WaitForJob: Timeout waiting for CID {} after {}s (pending_jobs={}, self_queue={}, "
+                            "root_queue={}, active_root={}, running_workers={})",
+                            cid_string,
+                            std::chrono::duration_cast<std::chrono::seconds>( std::chrono::steady_clock::now() -
+                                                                              start_time )
+                                .count(),
+                            pending_jobs_size,
+                            self_queue_size,
+                            root_queue_size,
+                            has_active_root,
+                            running_workers );
+
+            // Clean up the pending job
             pending_jobs_.erase( cid );
         }
         return outcome::failure( Error::NODE_CREATION );
@@ -1387,17 +1630,53 @@ namespace sgns::crdt
     void CrdtDatastore::MarkJobPending( const CID &cid )
     {
         std::lock_guard lock( dagWorkerMutex_ );
+        auto            pending_before = pending_jobs_.size();
+        auto            self_before    = selfCreatedJobList_.size();
+        auto            root_before    = rootCIDJobList_.size();
+
         auto            it = pending_jobs_.find( cid );
         if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
         {
             pending_jobs_[cid] = JobStatus::PENDING;
+            auto cid_string_result = cid.toString();
+            logger_->debug( "MarkJobPending: CID {} -> {} (pending_jobs={} -> {}, self_queue={}, root_queue={}, "
+                            "active_root={})",
+                            cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                            JobStatusToString( JobStatus::PENDING ),
+                            pending_before,
+                            pending_jobs_.size(),
+                            self_before,
+                            root_before,
+                            activeRootCID_.has_value() );
+        }
+        else
+        {
+            auto cid_string_result = cid.toString();
+            logger_->debug( "MarkJobPending: CID {} skipped because status is already {}",
+                            cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                            JobStatusToString( it->second ) );
         }
     }
 
     void CrdtDatastore::MarkJobFailed( const CID &cid )
     {
         std::lock_guard lock( dagWorkerMutex_ );
+        auto            pending_before = pending_jobs_.size();
+        auto            self_before    = selfCreatedJobList_.size();
+        auto            root_before    = rootCIDJobList_.size();
+
         pending_jobs_[cid] = JobStatus::FAILED;
+
+        auto cid_string_result = cid.toString();
+        logger_->error( "MarkJobFailed: CID {} -> {} (pending_jobs={} -> {}, self_queue={}, root_queue={}, "
+                        "active_root={})",
+                        cid_string_result.has_value() ? cid_string_result.value() : "<invalid-cid>",
+                        JobStatusToString( JobStatus::FAILED ),
+                        pending_before,
+                        pending_jobs_.size(),
+                        self_before,
+                        root_before,
+                        activeRootCID_.has_value() );
     }
 
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )

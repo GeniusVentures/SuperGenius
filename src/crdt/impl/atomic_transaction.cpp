@@ -1,7 +1,9 @@
 #include <algorithm>
+#include <chrono>
 #include <utility>
 #include "crdt/atomic_transaction.hpp"
 #include "crdt/crdt_datastore.hpp"
+#include "base/logger.hpp"
 
 namespace sgns::crdt
 {
@@ -91,20 +93,39 @@ namespace sgns::crdt
 
     outcome::result<CID> AtomicTransaction::Commit( const std::set<std::string> &topics )
     {
+        static auto logger = base::createLogger( "AtomicTransaction" );
+
         if ( is_committed_ )
         {
+            logger->error( "Commit called after transaction already committed" );
             return outcome::failure( boost::system::error_code{} );
         }
+
+        auto commit_start = std::chrono::steady_clock::now();
 
         // Create a combined delta for all operations
         auto     combined_delta = std::make_shared<Delta>();
         uint64_t max_priority   = 0;
+        size_t   total_value_size = 0;
+
+        std::string topic_list;
+        for ( const auto &topic : topics )
+        {
+            if ( !topic_list.empty() )
+            {
+                topic_list += ",";
+            }
+            topic_list += topic;
+        }
+
+        logger->debug( "Commit started (operations={}, topics='{}')", operations_.size(), topic_list );
 
         for ( const auto &op : operations_ )
         {
             std::shared_ptr<Delta> delta;
             if ( op.type == Operation::PUT )
             {
+                total_value_size += op.value.size();
                 BOOST_OUTCOME_TRY( ( auto &&, result ),
                              datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
                 delta = result;
@@ -129,10 +150,44 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
+        auto publish_start = std::chrono::steady_clock::now();
         auto result = datastore_->Publish( combined_delta, topics );
+        auto publish_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                                   publish_start )
+                              .count();
+
         if ( !result.has_failure() )
         {
             is_committed_ = true;
+            auto commit_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                                      commit_start )
+                                 .count();
+            logger->debug( "Commit succeeded (operations={}, total_value_bytes={}, elements={}, tombstones={}, "
+                           "priority={}, publish_ms={}, total_ms={}, cid={})",
+                           operations_.size(),
+                           total_value_size,
+                           combined_delta->elements_size(),
+                           combined_delta->tombstones_size(),
+                           combined_delta->priority(),
+                           publish_ms,
+                           commit_ms,
+                           result.value().toString().value() );
+        }
+        else
+        {
+            auto commit_ms = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() -
+                                                                                      commit_start )
+                                 .count();
+            logger->error( "Commit failed (operations={}, total_value_bytes={}, elements={}, tombstones={}, "
+                           "priority={}, publish_ms={}, total_ms={}, error='{}')",
+                           operations_.size(),
+                           total_value_size,
+                           combined_delta->elements_size(),
+                           combined_delta->tombstones_size(),
+                           combined_delta->priority(),
+                           publish_ms,
+                           commit_ms,
+                           result.error().message() );
         }
 
         return result;

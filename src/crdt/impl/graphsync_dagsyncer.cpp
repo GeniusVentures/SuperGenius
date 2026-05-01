@@ -167,7 +167,10 @@ namespace sgns::crdt
         }
         else
         {
-            logger_->error( "{}: ERROR Adding node {} on dagService ", __func__, cid.toString().value() );
+            logger_->error( "{}: ERROR adding node {} on dagService (error='{}')",
+                            __func__,
+                            cid.toString().value(),
+                            ret.error().message() );
         }
         return ret;
     }
