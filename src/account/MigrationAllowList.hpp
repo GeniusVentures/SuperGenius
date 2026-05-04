@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+class MigrationParamTest;
+
 namespace sgns
 {
     class MigrationAllowList
@@ -31,6 +33,10 @@ namespace sgns
         static std::string BuildKey( std::string_view migration_version, std::string_view address );
 
     private:
+        friend class ::MigrationParamTest;
+
+        static void SetEligibilityCheckEnabledForTests( bool enabled );
+        static bool IsEligibilityCheckEnabledForTests();
         static outcome::result<uint64_t> DecodeBalance( const base::Buffer &buffer );
 
         std::shared_ptr<storage::rocksdb> db_;

@@ -3,6 +3,7 @@
 #include "storage/database_error.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <limits>
 #include <system_error>
 
@@ -11,6 +12,7 @@ namespace sgns
     namespace
     {
         constexpr std::string_view kPrefixBase = "/migration-allowlist";
+        std::atomic_bool           g_migration_allowlist_enabled_for_tests{ true };
     }
 
     MigrationAllowList::MigrationAllowList( std::shared_ptr<storage::rocksdb> db, std::string migration_version ) :
@@ -18,6 +20,16 @@ namespace sgns
         migration_version_( std::move( migration_version ) ),
         prefix_( BuildPrefix( migration_version_ ) )
     {
+    }
+
+    void MigrationAllowList::SetEligibilityCheckEnabledForTests( bool enabled )
+    {
+        g_migration_allowlist_enabled_for_tests.store( enabled, std::memory_order_release );
+    }
+
+    bool MigrationAllowList::IsEligibilityCheckEnabledForTests()
+    {
+        return g_migration_allowlist_enabled_for_tests.load( std::memory_order_acquire );
     }
 
     outcome::result<void> MigrationAllowList::StoreObservedBalance( const std::string &address, uint64_t balance )
@@ -72,6 +84,11 @@ namespace sgns
 
     outcome::result<bool> MigrationAllowList::IsEligible( const std::string &address, uint64_t claimed_balance ) const
     {
+        if ( !IsEligibilityCheckEnabledForTests() )
+        {
+            return true;
+        }
+
         BOOST_OUTCOME_TRY( auto maybe_balance, LoadObservedBalance( address ) );
         if ( !maybe_balance.has_value() )
         {

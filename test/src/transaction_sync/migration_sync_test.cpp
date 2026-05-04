@@ -9,8 +9,10 @@
 #include <gtest/gtest.h>
 #include <boost/dll.hpp>
 
+#include "account/MigrationAllowList.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
@@ -44,6 +46,21 @@ protected:
     static constexpr std::string_view FULL_NODE_PUB_ADDRESS =
         "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
     static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
+
+    void SetEligibilityCheckEnabled( bool enabled )
+    {
+        sgns::MigrationAllowList::SetEligibilityCheckEnabledForTests( enabled );
+    }
+
+    void SetUp() override
+    {
+        SetEligibilityCheckEnabled( true );
+    }
+
+    void TearDown() override
+    {
+        SetEligibilityCheckEnabled( true );
+    }
 
     static void RemovePrefixedSubdirs( const fs::path &baseDir )
     {
@@ -123,6 +140,8 @@ protected:
 
 TEST_P( MigrationParamTest, BalanceAfterMigration )
 {
+    SetEligibilityCheckEnabled( false );
+
     std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
     Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
     auto params    = GetParam();
@@ -145,6 +164,36 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
         readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
+}
+
+TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
+{
+    namespace fs = std::filesystem;
+    using sgns::MigrationAllowList;
+    using sgns::storage::rocksdb;
+
+    const auto     unique_suffix = std::to_string(
+        std::chrono::steady_clock::now().time_since_epoch().count() );
+    const fs::path db_path = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
+    std::error_code ec;
+    fs::remove_all( db_path, ec );
+    fs::create_directories( db_path, ec );
+    ASSERT_FALSE( ec ) << "Failed to create temp DB directory: " << ec.message();
+
+    rocksdb::Options options;
+    options.create_if_missing = true;
+
+    auto db_result = rocksdb::create( db_path.string(), options );
+    ASSERT_TRUE( db_result.has_value() ) << db_result.error().message();
+
+    MigrationAllowList allow_list( db_result.value(), "3.6.0" );
+    ASSERT_TRUE( allow_list.StoreObservedBalance( "eligible-address", 100 ).has_value() );
+
+    auto eligible = allow_list.IsEligible( "eligible-address", 201 );
+    ASSERT_TRUE( eligible.has_value() ) << eligible.error().message();
+    EXPECT_FALSE( eligible.value() );
+
+    fs::remove_all( db_path, ec );
 }
 
 INSTANTIATE_TEST_SUITE_P(
