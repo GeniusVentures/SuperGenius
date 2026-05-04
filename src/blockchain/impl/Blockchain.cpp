@@ -475,6 +475,7 @@ namespace sgns
             db_->UnregisterElementFilter( account_pattern );
         }
         account_->ClearGetBlockChainCIDMethod();
+        account_->ClearGetValidatorWeightMethod();
     }
 
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )

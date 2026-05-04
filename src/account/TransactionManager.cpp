@@ -246,6 +246,7 @@ namespace sgns
                 globaldb_m->UnregisterElementFilter( proof_pattern );
             }
         }
+        account_m->ClearGetTransactionCIDMethod();
         Stop();
     }
 

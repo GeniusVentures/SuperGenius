@@ -704,6 +704,12 @@ namespace sgns
         return !utxo_outpoints_.empty();
     }
 
+    void UTXOManager::ReleaseStorage()
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        db_.reset();
+    }
+
     outcome::result<void> UTXOManager::StoreUTXOs( const std::string &address )
     {
         if ( db_ == nullptr )

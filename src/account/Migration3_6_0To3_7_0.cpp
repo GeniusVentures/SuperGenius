@@ -366,6 +366,7 @@ namespace sgns
         if ( account_ )
         {
             account_->DeconfigureDatabaseDependencies();
+            account_->GetUTXOManager().ReleaseStorage();
         }
         blockchain_status_.store( Status::ST_INIT, std::memory_order_release );
         db_3_6_0_.reset();

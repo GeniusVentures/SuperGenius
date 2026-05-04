@@ -189,6 +189,7 @@ namespace sgns
         [[nodiscard]] base::Hash256 ComputeUTXOMerkleRootFromSnapshot( const std::vector<GeniusUTXO> &utxos ) const;
 
         outcome::result<bool> LoadUTXOs( std::shared_ptr<storage::rocksdb> db );
+        void                  ReleaseStorage();
 
         /**
          * @return True if loaded any UTXOs, false if loaded 0 UTXOs and error if one occurred
