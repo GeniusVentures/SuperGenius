@@ -626,15 +626,22 @@ namespace sgns
             {
                 logger_->warn( "UTXOs were already loaded" );
             }
-            db_ = db;
+            db_ = std::move( db );
             utxo_outpoints_.clear();
             address_outpoints_.clear();
             reserved_outpoints_.clear();
         }
 
+        auto db_handle = AcquireStorage();
+        if ( db_handle == nullptr )
+        {
+            logger_->error( "Tried to query UTXOs without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
+
         base::Buffer key_buf;
         key_buf.put( DB_PREFIX );
-        auto utxo_list = db->query( key_buf );
+        auto utxo_list = db_handle->query( key_buf );
 
         if ( utxo_list.has_error() )
         {
