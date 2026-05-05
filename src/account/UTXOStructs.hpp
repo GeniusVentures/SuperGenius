@@ -1,3 +1,9 @@
+/**
+ * @file       UTXOStructs.hpp
+ * @brief      Shared UTXO transaction input and output data structures.
+ * @date       2026-01-20
+ * @author     Henrique A. Klein (hklein@gnus.ai)
+ */
 #pragma once
 
 #include "base/blob.hpp"
@@ -7,27 +13,38 @@ namespace sgns
 {
     namespace utxo_address
     {
-        // Escrow locks are encoded as 0x + 32-byte hash (66 chars total).
+        /**
+         * @brief       Checks if the address is a valid escrow lock address (0x-prefixed 64 hex chars)
+         * @param[in]   address The address to check
+         * @return      true if the address is a valid escrow lock address, false otherwise
+         */
         bool IsEscrowLockAddress( std::string_view address );
 
-        // Genius account addresses are full pubkeys encoded as 64 bytes hex (128 chars).
+        /**
+         * @brief       Checks if the address is a public key 
+         * @param[in]   address The address to check
+         * @return      true if the address is a public key address, false otherwise
+         */
         bool IsAccountPublicKeyAddress( std::string_view address );
     } // namespace utxo_address
 
     /**
-     * @brief   Raw UTXO input data for a transaction
+     * @brief Raw UTXO input data included in a spend request.
      */
     struct InputUTXOInfo
     {
+        /**
+         * @brief Serializes the input fields that must be signed by the owner.
+         */
         std::vector<uint8_t> SerializeForSigning() const;
 
-        base::Hash256        txid_hash_;  //< Hash of the related transaction
-        uint32_t             output_idx_; //< Index of the related output in the output vector
-        std::vector<uint8_t> signature_;  //< Signature of the hash and index
+        base::Hash256        txid_hash_;  ///< Hash of the transaction that created the output.
+        uint32_t             output_idx_; ///< Zero-based output index within the originating transaction.
+        std::vector<uint8_t> signature_;  ///< Signature authorizing the spend of this outpoint.
     };
 
     /**
-     * @brief   Single output entry
+     * @brief Single UTXO output destination entry.
      */
     struct OutputDestInfo
     {
@@ -36,5 +53,8 @@ namespace sgns
         TokenID     token_id;         ///< Token identifier
     };
 
+    /**
+     * @brief Pair of signed inputs and destination outputs that make up a UTXO transaction payload.
+     */
     using UTXOTxParameters = std::pair<std::vector<InputUTXOInfo>, std::vector<OutputDestInfo>>;
 }

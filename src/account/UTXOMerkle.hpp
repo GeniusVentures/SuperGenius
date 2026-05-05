@@ -1,3 +1,9 @@
+/**
+ * @file       UTXOMerkle.hpp
+ * @brief      Helpers for deterministic serialization and Merkle hashing of UTXO snapshots.
+ * @date       2026-03-18
+ * @author     Henrique A. Klein (hklein@gnus.ai)
+ */
 #pragma once
 
 #include "account/GeniusUTXO.hpp"
@@ -7,11 +13,21 @@
 #include <string>
 #include <vector>
 
+/**
+ * @brief Utilities for building deterministic Merkle roots over ordered UTXO payloads.
+ */
 namespace sgns::utxo_merkle
 {
+    /// Domain separator prefix used for hashed leaf payloads.
     constexpr uint8_t kLeafPrefix = 0x00;
+    /// Domain separator prefix used for hashed internal nodes.
     constexpr uint8_t kNodePrefix = 0x01;
 
+    /**
+     * @brief       Appends a 32-bit unsigned integer in big-endian order.
+     * @param[out]  out The vector to append to
+     * @param[in]   value the value to append
+     */
     inline void AppendUInt32BE( std::vector<uint8_t> &out, uint32_t value )
     {
         out.push_back( static_cast<uint8_t>( ( value >> 24 ) & 0xFF ) );
@@ -20,6 +36,11 @@ namespace sgns::utxo_merkle
         out.push_back( static_cast<uint8_t>( value & 0xFF ) );
     }
 
+    /**
+     * @brief       Appends a 64-bit unsigned integer in big-endian order.
+     * @param[out]  out The vector to append to 
+     * @param[in]   value the value to append
+     */
     inline void AppendUInt64BE( std::vector<uint8_t> &out, uint64_t value )
     {
         out.push_back( static_cast<uint8_t>( ( value >> 56 ) & 0xFF ) );
@@ -32,12 +53,22 @@ namespace sgns::utxo_merkle
         out.push_back( static_cast<uint8_t>( value & 0xFF ) );
     }
 
+    /**
+     * @brief       Reads a 32-bit unsigned integer from big-endian bytes.
+     * @param[in]   data A pointer to the byte array
+     * @return      the 32 bit unsigned integer represented by the bytes
+     */
     inline uint32_t ReadUInt32BE( const uint8_t *data )
     {
         return ( static_cast<uint32_t>( data[0] ) << 24 ) | ( static_cast<uint32_t>( data[1] ) << 16 ) |
                ( static_cast<uint32_t>( data[2] ) << 8 ) | static_cast<uint32_t>( data[3] );
     }
 
+    /**
+     * @brief       Reads a 64-bit unsigned integer from big-endian bytes.
+     * @param[in]   data A pointer to the byte array
+     * @return      the 64 bit unsigned integer represented by the bytes
+     */
     inline uint64_t ReadUInt64BE( const uint8_t *data )
     {
         return ( static_cast<uint64_t>( data[0] ) << 56 ) | ( static_cast<uint64_t>( data[1] ) << 48 ) |
@@ -46,11 +77,22 @@ namespace sgns::utxo_merkle
                ( static_cast<uint64_t>( data[6] ) << 8 ) | static_cast<uint64_t>( data[7] );
     }
 
+    /**
+     * @brief       Generates a canonical key for a UTXO outpoint, used for deterministic ordering in Merkle tree construction.
+     * @param[in]   txid The transaction hash that created the UTXO
+     * @param[in]   idx The output index of the UTXO within the transaction
+     * @return      Canonical string key in the format "txid:idx" where txid is the readable hex representation of the transaction hash
+     */
     inline std::string OutPointKey( const base::Hash256 &txid, uint32_t idx )
     {
         return txid.toReadableString() + ":" + std::to_string( idx );
     }
 
+    /**
+     * @brief       Serializes a UTXO into the canonical leaf payload used for Merkle hashing.
+     * @param[in]   utxo The UTXO to serialize
+     * @return      The serialized leaf payload
+     */
     inline std::vector<uint8_t> SerializeUTXOLeafPayload( const GeniusUTXO &utxo )
     {
         std::vector<uint8_t> payload;
@@ -69,6 +111,11 @@ namespace sgns::utxo_merkle
         return payload;
     }
 
+    /**
+     * @brief       Hashes a serialized UTXO leaf payload with the leaf domain separator.
+     * @param[in]   payload The payload to hash
+     * @return      The hash of the payload as a leaf node in the Merkle tree
+     */
     inline base::Hash256 HashLeaf( const std::vector<uint8_t> &payload )
     {
         std::vector<uint8_t> bytes;
@@ -78,6 +125,12 @@ namespace sgns::utxo_merkle
         return crypto::sha256( gsl::span<const uint8_t>( bytes.data(), bytes.size() ) );
     }
 
+    /**
+     * @brief       Hashes two child nodes with the internal-node domain separator.
+     * @param[in]   left  The hash of the left child node
+     * @param[in]   right The hash of the right child node
+     * @return      The hash of the parent node
+     */
     inline base::Hash256 HashNode( const base::Hash256 &left, const base::Hash256 &right )
     {
         std::vector<uint8_t> bytes;
@@ -88,12 +141,21 @@ namespace sgns::utxo_merkle
         return crypto::sha256( gsl::span<const uint8_t>( bytes.data(), bytes.size() ) );
     }
 
+    /**
+     * @brief       Returns the canonical root used for an empty UTXO set.
+     * @return      The canonical root for an empty UTXO set
+     */
     inline base::Hash256 EmptyUTXOMerkleRoot()
     {
         static const base::Hash256 empty_root = crypto::sha256( std::string_view( "UTXO_EMPTY_V1" ) );
         return empty_root;
     }
 
+    /**
+     * @brief       Reduces a list of leaf hashes into a single Merkle root.
+     * @param[in]   level_hashes The list of leaf hashes
+     * @return      The computed Merkle root
+     */
     inline base::Hash256 ComputeMerkleRootFromLeafHashes( std::vector<base::Hash256> level_hashes )
     {
         if ( level_hashes.empty() )
@@ -120,6 +182,11 @@ namespace sgns::utxo_merkle
         return level_hashes.front();
     }
 
+    /**
+     * @brief       Sorts canonical payloads, hashes them as leaves, and computes the Merkle root.
+     * @param[in]   payloads The list of serialized UTXO payloads to include in the Merkle tree
+     * @return      The computed Merkle root of the payloads
+     */
     inline base::Hash256 ComputeMerkleRootFromPayloads( std::vector<std::vector<uint8_t>> payloads )
     {
         if ( payloads.empty() )
@@ -139,6 +206,11 @@ namespace sgns::utxo_merkle
         return ComputeMerkleRootFromLeafHashes( std::move( leaf_hashes ) );
     }
 
+    /**
+     * @brief       Computes the Merkle root for a given set of UTXOs by serializing them into canonical payloads and hashing them.
+     * @param[in]   utxos The list of UTXOs to include in the Merkle tree
+     * @return      The computed Merkle root of the UTXOs
+     */
     inline base::Hash256 ComputeMerkleRootFromUTXOs( const std::vector<GeniusUTXO> &utxos )
     {
         if ( utxos.empty() )

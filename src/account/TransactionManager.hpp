@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.hpp
- * @brief
+ * @brief      Transaction coordination, CRDT sync, and lifecycle tracking for outgoing and incoming account activity.
  * @date       2024-03-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -36,6 +36,9 @@ namespace sgns
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
+    /**
+     * @brief Coordinates transaction creation, CRDT propagation, verification, and status tracking.
+     */
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
