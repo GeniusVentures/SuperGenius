@@ -216,6 +216,8 @@ namespace sgns
         static constexpr std::string_view DB_PREFIX = "/utxo";
         static constexpr std::string_view CHECKPOINT_PREFIX = "/utxo-checkpoint";
 
+        std::shared_ptr<storage::rocksdb> AcquireStorage() const;
+
         outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> SelectUTXOs( uint64_t       required_amount,
                                                                                       const TokenID &token_id );
 
