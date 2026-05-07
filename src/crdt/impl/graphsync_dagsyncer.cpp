@@ -6,6 +6,13 @@
 #include <utility>
 #include <thread>
 #include <deque>
+#include <condition_variable>
+
+namespace
+{
+    std::mutex              g_request_wait_mutex;
+    std::condition_variable g_request_wait_cv;
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 {
@@ -299,7 +306,11 @@ namespace sgns::crdt
                     logger_->trace( "Request for CID {} from peer {} - In Progress",
                                     cid.toString().value(),
                                     peerID.toBase58() );
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+
+                    std::unique_lock<std::mutex> wait_lock( g_request_wait_mutex );
+                    g_request_wait_cv.wait_for( wait_lock,
+                                                std::chrono::milliseconds( 100 ),
+                                                [this]() { return this->is_stopped_.load(); } );
                     break;
                 }
             }
@@ -405,6 +416,7 @@ namespace sgns::crdt
         }
         host_->start();
 
+        is_stopped_ = false;
         started_ = true;
 
         return outcome::success();
@@ -412,6 +424,8 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::StopSync()
     {
+        is_stopped_ = true;
+
         if ( graphsync_ != nullptr )
         {
             graphsync_->stop();
@@ -420,6 +434,8 @@ namespace sgns::crdt
         {
             host_->stop();
         }
+
+        g_request_wait_cv.notify_all();
         started_ = false;
     }
 
@@ -1077,7 +1093,13 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
-        graphsync_->stop();
+
+        if ( graphsync_ != nullptr )
+        {
+            graphsync_->stop();
+        }
+
+        g_request_wait_cv.notify_all();
     }
 
 }
