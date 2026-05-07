@@ -60,7 +60,10 @@ namespace sgns::processing
         task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
         //Parse main json data
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
-        m_currentProcessingManager = procmgr; // Store for progress tracking
+        {
+            std::lock_guard<std::mutex> lock( m_processingManagerMutex );
+            m_currentProcessingManager = procmgr; // Store for progress tracking
+        }
         //Parse subtask json
         auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
         sgns::ModelNode                 model;
@@ -80,12 +83,18 @@ namespace sgns::processing
             result.set_result_hash( hashString );
             result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
             --m_processingSubTaskCount;
-            m_currentProcessingManager.reset(); // Clear after completion
+            {
+                std::lock_guard<std::mutex> lock( m_processingManagerMutex );
+                m_currentProcessingManager.reset(); // Clear after completion
+            }
         }
         else
         {
             --m_processingSubTaskCount;
-            m_currentProcessingManager.reset(); // Clear on error
+            {
+                std::lock_guard<std::mutex> lock( m_processingManagerMutex );
+                m_currentProcessingManager.reset(); // Clear on error
+            }
             return tempResult.error();
         }
         return result;
@@ -93,10 +102,28 @@ namespace sgns::processing
 
     float ProcessingCoreImpl::GetProgress() const
     {
-        if (m_currentProcessingManager) {
-            return m_currentProcessingManager->GetProgress();
+        std::shared_ptr<sgprocessing::ProcessingManager> manager;
+        {
+            std::lock_guard<std::mutex> lock( m_processingManagerMutex );
+            manager = m_currentProcessingManager;
+        }
+        if (manager) {
+            return manager->GetProgress();
         }
         return 0.0f;
+    }
+
+    void ProcessingCoreImpl::CancelCurrentProcessing()
+    {
+        std::shared_ptr<sgprocessing::ProcessingManager> manager;
+        {
+            std::lock_guard<std::mutex> lock( m_processingManagerMutex );
+            manager = m_currentProcessingManager;
+        }
+        if ( manager )
+        {
+            manager->Cancel();
+        }
     }
     
 }

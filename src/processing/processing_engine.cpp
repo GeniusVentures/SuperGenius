@@ -43,6 +43,10 @@ namespace sgns::processing
     void ProcessingEngine::StopQueueProcessing()
     {
         std::lock_guard<std::mutex> queueGuard( m_mutexSubTaskQueue );
+        if ( m_processingCore )
+        {
+            m_processingCore->CancelCurrentProcessing();
+        }
         m_subTaskQueueAccessor.reset();
         m_logger->debug( "[PROCESSING_STOPPED] m_nodeId: {}", m_nodeId );
     }
