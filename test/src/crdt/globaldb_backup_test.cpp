@@ -280,7 +280,7 @@ groups:
     }
 } // namespace
 
-GTEST_TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
+TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
 {
     EnsureLoggingInitialized();
 
@@ -311,10 +311,9 @@ GTEST_TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
     const size_t final_count = GetBackupCount( backup_dir );
     EXPECT_EQ( final_count, backup_options.keep_count );
 
-    boost::filesystem::remove_all( root );
 }
 
-GTEST_TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackup )
+TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackup )
 {
     EnsureLoggingInitialized();
 
@@ -347,5 +346,4 @@ GTEST_TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackup )
         EXPECT_EQ( node.GetValue( key ), original_value );
     }
 
-    boost::filesystem::remove_all( root );
 }
