@@ -23,6 +23,7 @@
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <boost/di/extension/scopes/shared.hpp>
 #include <boost/format.hpp>
+#include <cstdlib>
 #include <filesystem>
 
 #if defined( _WIN32 )
@@ -334,62 +335,68 @@ namespace sgns::crdt
             {
                 auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
 
-                // If database open fails with corruption, try to repair it
+                auto restoreFromLatestBackup = [&]() -> bool
+                {
+                    if ( !( backup_options_.enabled && backup_options_.auto_restore_on_repair_failure ) )
+                    {
+                        m_logger->error( "Backup restore is disabled; cannot recover corrupted DB from backup" );
+                        return false;
+                    }
+
+                    ::ROCKSDB_NAMESPACE::BackupEngineReadOnly *backup_engine = nullptr;
+                    ::ROCKSDB_NAMESPACE::BackupEngineOptions    backup_options_engine( backup_directory_ );
+                    auto open_backup_status = ::ROCKSDB_NAMESPACE::BackupEngineReadOnly::Open(
+                        ::ROCKSDB_NAMESPACE::Env::Default(),
+                        backup_options_engine,
+                        &backup_engine );
+
+                    if ( !open_backup_status.ok() || backup_engine == nullptr )
+                    {
+                        m_logger->error( "Could not open backup engine at {}: {}",
+                                         backup_directory_,
+                                         open_backup_status.ToString() );
+                        return false;
+                    }
+
+                    std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngineReadOnly> backup_guard( backup_engine );
+
+                    ::ROCKSDB_NAMESPACE::RestoreOptions restore_options;
+                    restore_options.keep_log_files = false;
+
+                    auto restore_status =
+                        backup_guard->RestoreDBFromLatestBackup( databasePathAbsolute,
+                                                                 databasePathAbsolute,
+                                                                 restore_options );
+                    if ( !restore_status.ok() )
+                    {
+                        m_logger->error( "Restore from latest backup failed: {}", restore_status.ToString() );
+                        return false;
+                    }
+
+                    m_logger->warn( "Database restored from latest backup, retrying open" );
+                    dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                    return dataStoreResult.has_value();
+                };
+
+                // If database open fails with corruption, restore from backup first.
                 if ( !dataStoreResult.has_value() )
                 {
                     std::string errorMsg = dataStoreResult.error().message();
                     if ( errorMsg.find( "corruption" ) != std::string::npos ||
                          errorMsg.find( "Corruption" ) != std::string::npos )
                     {
-                        m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
-                        auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
-                        if ( repairStatus.ok() )
+                        m_logger->warn( "Database corruption detected, attempting restore from latest backup first: {}",
+                                        databasePathAbsolute );
+
+                        if ( !restoreFromLatestBackup() )
                         {
-                            m_logger->info( "Database repair successful, retrying open" );
-                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                        }
-                        else
-                        {
-                            m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
-
-                            if ( backup_options_.enabled && backup_options_.auto_restore_on_repair_failure )
-                            {
-                                ::ROCKSDB_NAMESPACE::BackupEngineReadOnly *backup_engine = nullptr;
-                                ::ROCKSDB_NAMESPACE::BackupEngineOptions    backup_options_engine( backup_directory_ );
-                                auto open_backup_status = ::ROCKSDB_NAMESPACE::BackupEngineReadOnly::Open(
-                                    ::ROCKSDB_NAMESPACE::Env::Default(),
-                                    backup_options_engine,
-                                    &backup_engine );
-
-                                if ( open_backup_status.ok() && backup_engine != nullptr )
-                                {
-                                    std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngineReadOnly> backup_guard( backup_engine );
-
-                                    ::ROCKSDB_NAMESPACE::RestoreOptions restore_options;
-                                    restore_options.keep_log_files = false;
-
-                                    auto restore_status =
-                                        backup_guard->RestoreDBFromLatestBackup( databasePathAbsolute,
-                                                                                 databasePathAbsolute,
-                                                                                 restore_options );
-                                    if ( restore_status.ok() )
-                                    {
-                                        m_logger->warn( "Database restored from latest backup, retrying open" );
-                                        dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                                    }
-                                    else
-                                    {
-                                        m_logger->error( "Restore from latest backup failed: {}",
-                                                         restore_status.ToString() );
-                                    }
-                                }
-                                else
-                                {
-                                    m_logger->error( "Could not open backup engine at {}: {}",
-                                                     backup_directory_,
-                                                     open_backup_status.ToString() );
-                                }
-                            }
+                            // Intentionally disabled during testnet forensic phase: do not run RepairDB.
+                            // auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
+                            m_logger->critical(
+                                "Restore from backup failed for corrupted DB {}. Repair is disabled in testnet mode; "
+                                "terminating process to preserve on-disk state for forensic analysis.",
+                                databasePathAbsolute );
+                            std::abort();
                         }
                     }
                 }

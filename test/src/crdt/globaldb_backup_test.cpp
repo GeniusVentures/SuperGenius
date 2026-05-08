@@ -69,7 +69,20 @@ groups:
     }
 
 
-    std::atomic<uint16_t> g_test_port{ 51501 };
+    constexpr uint16_t kMinTestPort{ 20000 };
+    constexpr uint16_t kMaxTestPort{ 60000 };
+    constexpr uint32_t kTestPortSpan{ static_cast<uint32_t>( kMaxTestPort - kMinTestPort + 1 ) };
+
+    std::atomic<uint32_t> g_test_port_counter{
+        static_cast<uint32_t>(
+            std::chrono::high_resolution_clock::now().time_since_epoch().count() % kTestPortSpan )
+    };
+
+    uint16_t NextTestPort()
+    {
+        const auto n = g_test_port_counter.fetch_add( 1, std::memory_order_relaxed );
+        return static_cast<uint16_t>( kMinTestPort + ( n % kTestPortSpan ) );
+    }
 
     template <typename Predicate>
     bool WaitFor( Predicate pred,
@@ -126,7 +139,7 @@ groups:
             auto                           key_pair = key_store.GetKeyPair().value();
 
             pubsub_ = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( key_pair );
-            const auto port = g_test_port.fetch_add( 1 );
+            const auto port = NextTestPort();
             auto       pubsub_start = pubsub_->Start( port, {}, "127.0.0.1", {} );
             pubsub_start.wait();
             if ( !pubsub_->GetHost() )
