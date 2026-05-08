@@ -58,6 +58,16 @@ groups:
   )";
             }
 
+    void ConfigureTestLogger( const std::string &tag, spdlog::level::level_enum level )
+    {
+        auto logger = sgns::base::createLogger( tag );
+        logger->set_level( level );
+        if ( level != spdlog::level::off )
+        {
+            logger->flush_on( level );
+        }
+    }
+
 
     std::atomic<uint16_t> g_test_port{ 51501 };
 
@@ -316,12 +326,65 @@ groups:
 
                 libp2p::log::setLoggingSystem( logging_system );
 
-                auto globaldb_logger = sgns::base::createLogger( "GlobalDB" );
-                auto rocksdb_logger  = sgns::base::createLogger( "rocksdb" );
-                globaldb_logger->set_level( spdlog::level::trace );
-                rocksdb_logger->set_level( spdlog::level::trace );
+                // Mirror GeniusNode::ConfigureLogger usage to quiet unrelated subsystems.
+                ConfigureTestLogger( "SuperGeniusNode", spdlog::level::err );
+                ConfigureTestLogger( "GeniusNode", spdlog::level::err );
+                ConfigureTestLogger( "GlobalDB", spdlog::level::trace );
+                ConfigureTestLogger( "GraphsyncDAGSyncer", spdlog::level::err );
+                ConfigureTestLogger( "graphsync", spdlog::level::err );
+                ConfigureTestLogger( "PubSubBroadcasterExt", spdlog::level::err );
+                ConfigureTestLogger( "CrdtDatastore", spdlog::level::err );
+                ConfigureTestLogger( "CrdtHeads", spdlog::level::err );
+                ConfigureTestLogger( "TransactionManager", spdlog::level::err );
+                ConfigureTestLogger( "MigrationManager", spdlog::level::err );
+                ConfigureTestLogger( "MigrationStep", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingTaskQueueImpl", spdlog::level::err );
+                ConfigureTestLogger( "rocksdb", spdlog::level::err );
+                ConfigureTestLogger( "Kademlia", spdlog::level::err );
+                ConfigureTestLogger( "Noise", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingEngine", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingSubTaskQueueAccessorImpl", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingService", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingSubTaskQueueManager", spdlog::level::err );
+                ConfigureTestLogger( "UPNP", spdlog::level::err );
+                ConfigureTestLogger( "ProcessingNode", spdlog::level::err );
+                ConfigureTestLogger( "GossipPubSub", spdlog::level::off );
+                ConfigureTestLogger( "Gossip", spdlog::level::off );
+                ConfigureTestLogger( "AccountMessenger", spdlog::level::err );
+                ConfigureTestLogger( "GeniusAccount", spdlog::level::err );
+                ConfigureTestLogger( "KeyPairFileStorage", spdlog::level::err );
+                ConfigureTestLogger( "Blockchain", spdlog::level::err );
+                ConfigureTestLogger( "ValidatorRegistry", spdlog::level::err );
+                ConfigureTestLogger( "SGProcessingManager", spdlog::level::err );
+                ConfigureTestLogger( "SGProcessor", spdlog::level::err );
+                ConfigureTestLogger( "CRDTCallbackManager", spdlog::level::err );
+                ConfigureTestLogger( "CoinPrices", spdlog::level::err );
+                ConfigureTestLogger( "FILECommon", spdlog::level::err );
+                ConfigureTestLogger( "FileManager", spdlog::level::err );
+                ConfigureTestLogger( "HTTPCommon", spdlog::level::err );
+                ConfigureTestLogger( "IPFSCommon", spdlog::level::err );
+                ConfigureTestLogger( "IPFSLoader", spdlog::level::err );
+                ConfigureTestLogger( "MNNLoader", spdlog::level::err );
+                ConfigureTestLogger( "WSCommon", spdlog::level::err );
             } );
     }
+
+    class ScopedRepairFailureInjection
+    {
+    public:
+        explicit ScopedRepairFailureInjection( bool enabled = true )
+        {
+            sgns::crdt::GlobalDB::SetForceRepairFailureForTesting( enabled );
+        }
+
+        ~ScopedRepairFailureInjection()
+        {
+            sgns::crdt::GlobalDB::SetForceRepairFailureForTesting( false );
+        }
+
+        ScopedRepairFailureInjection( const ScopedRepairFailureInjection & ) = delete;
+        ScopedRepairFailureInjection &operator=( const ScopedRepairFailureInjection & ) = delete;
+    };
 } // namespace
 
 TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
@@ -372,23 +435,148 @@ TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackup )
     backup_options.keep_count = 3;
     backup_options.auto_restore_on_repair_failure = true;
 
-    const std::string key = "/backup/restore";
-    const std::string original_value = "value-before-corruption";
+    std::vector<std::string> keys;
+    std::vector<std::string> original_values;
+    keys.reserve( backup_options.keep_count );
+    original_values.reserve( backup_options.keep_count );
+
+    for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+    {
+        keys.emplace_back( "/backup/restore/key_" + std::to_string( i ) );
+        original_values.emplace_back( "value_" + std::to_string( i ) );
+    }
+
+    const std::string early_key = keys.front();
+    const std::string early_original_value = original_values.front();
+    const std::string early_corrupted_value = "corrupted-early-value";
     const std::string db_path = root + "/CommonKey";
     const std::string backup_dir = db_path + "/backups";
 
     {
         GlobalDbTestNode node( root, backup_options );
-        node.PutValue( key, original_value );
-        ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= 1; } ) );
+
+        for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+        {
+            node.PutValue( keys[i], original_values[i] );
+            ASSERT_TRUE( node.CreateManualBackup( backup_options.keep_count ) );
+
+            const size_t expected_backups = static_cast<size_t>( std::min( i + 1, backup_options.keep_count ) );
+            ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= expected_backups; } ) );
+        }
+
+        // Simulate an unintended mutation after the latest good backup.
+        node.PutValue( early_key, early_corrupted_value );
+        EXPECT_EQ( node.GetValue( early_key ), early_corrupted_value );
+        for (uint32_t i = 0; i < backup_options.keep_count; ++i )
+        {
+            const auto key = keys[i];
+            const auto expected_value = original_values[i];
+            std::cout << "Pre-corruption, Key: " << key << ", Expected: " << expected_value << "\n" << "In DB Val: " << node.GetValue( key ) << "\n";
+        }
+        std::cout << "Pre-corruption, Early Key: " << early_key << ", Expected: " << early_original_value
+                << ", Corrupted: " << early_corrupted_value << "\n" << "In DB Val: " << node.GetValue( early_key ) << "\n";
     }
+
 
     CorruptDatabase( db_path );
 
     {
         GlobalDbTestNode node( root, backup_options );
-        ASSERT_TRUE( WaitFor( [&]() { return node.GetValue( key ) == original_value; } ) );
-        EXPECT_EQ( node.GetValue( key ), original_value );
+
+        for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+        {
+            const auto key = keys[i];
+            if ( key == early_key )
+            {
+                // If RocksDB repair succeeds, this post-backup mutation can legitimately survive.
+                ASSERT_TRUE( WaitFor( [&]()
+                                      {
+                                          const auto value = node.GetValue( key );
+                                          return value == early_original_value || value == early_corrupted_value;
+                                      } ) );
+                const auto repaired_value = node.GetValue( key );
+                std::cout << "Key: " << key << ", Repaired Value: " << repaired_value << "\n";
+                EXPECT_TRUE( repaired_value == early_original_value || repaired_value == early_corrupted_value );
+            }
+            else
+            {
+                const auto expected_value = original_values[i];
+                
+                ASSERT_TRUE( WaitFor( [&]() { return node.GetValue( key ) == expected_value; } ) );
+                std::cout << "Key: " << key << ", Expected: " << expected_value << ", Actual: " << node.GetValue( key ) << "\n";
+                EXPECT_EQ( node.GetValue( key ), expected_value );
+            }
+        }
+
+        // For this test, successful repair is acceptable and may keep the post-backup write.
+        const auto early_after_recovery = node.GetValue( early_key );
+        EXPECT_TRUE( early_after_recovery == early_original_value || early_after_recovery == early_corrupted_value );
     }
 
+}
+
+TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackupWhenRepairFails )
+{
+    EnsureLoggingInitialized();
+
+    const auto root = BuildTestDir( "globaldb_backup_restore_forced_repair_fail" );
+    boost::filesystem::remove_all( root );
+    boost::filesystem::create_directories( root );
+
+    sgns::crdt::GlobalDB::BackupOptions backup_options;
+    backup_options.enabled = true;
+    backup_options.interval_minutes = 60;
+    backup_options.keep_count = 3;
+    backup_options.auto_restore_on_repair_failure = true;
+
+    std::vector<std::string> keys;
+    std::vector<std::string> original_values;
+    keys.reserve( backup_options.keep_count );
+    original_values.reserve( backup_options.keep_count );
+
+    for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+    {
+        keys.emplace_back( "/backup/restore/fail/key_" + std::to_string( i ) );
+        original_values.emplace_back( "value_" + std::to_string( i ) );
+    }
+
+    const std::string early_key = keys.front();
+    const std::string early_original_value = original_values.front();
+    const std::string early_corrupted_value = "corrupted-early-value";
+    const std::string db_path = root + "/CommonKey";
+    const std::string backup_dir = db_path + "/backups";
+
+    {
+        GlobalDbTestNode node( root, backup_options );
+
+        for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+        {
+            node.PutValue( keys[i], original_values[i] );
+            ASSERT_TRUE( node.CreateManualBackup( backup_options.keep_count ) );
+
+            const size_t expected_backups = static_cast<size_t>( std::min( i + 1, backup_options.keep_count ) );
+            ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= expected_backups; } ) );
+        }
+
+        node.PutValue( early_key, early_corrupted_value );
+        EXPECT_EQ( node.GetValue( early_key ), early_corrupted_value );
+    }
+
+    CorruptDatabase( db_path );
+
+    {
+        ScopedRepairFailureInjection force_repair_failure;
+        GlobalDbTestNode             node( root, backup_options );
+
+        for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
+        {
+            const auto key = keys[i];
+            const auto expected_value = original_values[i];
+            ASSERT_TRUE( WaitFor( [&]() { return node.GetValue( key ) == expected_value; } ) );
+            EXPECT_EQ( node.GetValue( key ), expected_value );
+        }
+
+        // With repair failure forced, recovery must come from backup snapshot.
+        EXPECT_EQ( node.GetValue( early_key ), early_original_value );
+    }
 }
