@@ -42,6 +42,19 @@ target_link_libraries(globaldb_integration_test
     crdt_globaldb
 )
 
+addtest(globaldb_backup_test
+  globaldb_backup_test.cpp
+)
+
+target_link_libraries(globaldb_backup_test
+  crdt_globaldb
+)
+
+if(MSVC)
+  target_compile_options(globaldb_backup_test PRIVATE /Zi)
+  target_link_options(globaldb_backup_test PRIVATE /DEBUG)
+endif()
+
 if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
