@@ -17,12 +17,25 @@
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <atomic>
+#include <chrono>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 namespace sgns::crdt
 {
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
     {
     public:
+        struct BackupOptions
+        {
+            bool     enabled{ false };
+            uint32_t interval_minutes{ 15 };
+            uint32_t keep_count{ 12 };
+            bool     auto_restore_on_repair_failure{ true };
+        };
+
         using Buffer             = base::Buffer;
         using QueryResult        = CrdtDatastore::QueryResult;
         using RocksDB            = storage::rocksdb;
@@ -48,7 +61,8 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-            std::shared_ptr<RocksDB>                                              datastore = nullptr );
+            std::shared_ptr<RocksDB>                                              datastore = nullptr,
+            BackupOptions                                                          backup_options = BackupOptions{} );
 
         /**
          * @brief       Factory method that opens an existing database in read-only migration-source mode.
@@ -208,7 +222,8 @@ namespace sgns::crdt
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
                                     std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                                    std::shared_ptr<RocksDB> datastore = nullptr );
+                                    std::shared_ptr<RocksDB> datastore = nullptr,
+                                    BackupOptions            backup_options = BackupOptions{} );
 
         outcome::result<void> InitMigrationSource( std::shared_ptr<RocksDB> datastore = nullptr );
 
@@ -225,6 +240,13 @@ namespace sgns::crdt
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
         std::atomic_bool                                  incomingBroadcastEnabled_{ true };
+        BackupOptions                                     backup_options_{};
+        std::string                                       backup_directory_;
+        std::atomic_bool                                  stop_backup_thread_{ false };
+        std::thread                                       backup_thread_;
+        std::mutex                                        backup_mutex_;
+        std::mutex                                        backup_wait_mutex_;
+        std::condition_variable                           backup_wait_cv_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;
@@ -235,6 +257,11 @@ namespace sgns::crdt
         int obsAddrRetries = 0;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
+
+        std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;
+        bool        CreateBackupNow();
+        void        StartBackupLoop();
+        void        StopBackupLoop();
 
         //Default Bootstrap Servers
         std::vector<std::string> bootstrapAddresses_ = {

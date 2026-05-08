@@ -12,6 +12,8 @@
 #include <boost/multiprecision/cpp_int.hpp>
 
 #include <memory>
+#include <fstream>
+#include <sstream>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
@@ -20,6 +22,7 @@
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/MigrationManager.hpp"
+#include "crdt/globaldb/globaldb.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
@@ -184,7 +187,67 @@ namespace sgns
         {
             throw std::runtime_error( "Network initialization error" );
         }
+
+        LoadCrdtConfig();
         node_logger_->debug( "Account Address {}", account_->GetAddress() );
+    }
+
+    void GeniusNode::LoadCrdtConfig()
+    {
+        crdt_backup_config_ = CrdtBackupConfig{};
+
+        const std::string config_path = write_base_path_ + "/crdt_config.json";
+        std::ifstream     config_file( config_path );
+        if ( !config_file.good() )
+        {
+            node_logger_->info( "crdt_config.json not found at {}, using defaults", config_path );
+            return;
+        }
+
+        std::stringstream buffer;
+        buffer << config_file.rdbuf();
+
+        rapidjson::Document config_json;
+        config_json.Parse( buffer.str().c_str() );
+        if ( config_json.HasParseError() || !config_json.IsObject() )
+        {
+            node_logger_->warn( "Invalid crdt_config.json at {}, using defaults", config_path );
+            return;
+        }
+
+        if ( config_json.HasMember( "backup_enabled" ) && config_json["backup_enabled"].IsBool() )
+        {
+            crdt_backup_config_.enabled = config_json["backup_enabled"].GetBool();
+        }
+        if ( config_json.HasMember( "backup_interval_minutes" ) && config_json["backup_interval_minutes"].IsUint() )
+        {
+            crdt_backup_config_.interval_minutes = config_json["backup_interval_minutes"].GetUint();
+        }
+        if ( config_json.HasMember( "backup_keep_count" ) && config_json["backup_keep_count"].IsUint() )
+        {
+            crdt_backup_config_.keep_count = config_json["backup_keep_count"].GetUint();
+        }
+        if ( config_json.HasMember( "backup_auto_restore_on_repair_failure" ) &&
+             config_json["backup_auto_restore_on_repair_failure"].IsBool() )
+        {
+            crdt_backup_config_.auto_restore_on_repair_failure =
+                config_json["backup_auto_restore_on_repair_failure"].GetBool();
+        }
+
+        if ( crdt_backup_config_.interval_minutes == 0 )
+        {
+            crdt_backup_config_.interval_minutes = 15;
+        }
+        if ( crdt_backup_config_.keep_count == 0 )
+        {
+            crdt_backup_config_.keep_count = 12;
+        }
+
+        node_logger_->info( "CRDT backup config loaded: enabled={}, interval_minutes={}, keep_count={}, auto_restore={}",
+                            crdt_backup_config_.enabled,
+                            crdt_backup_config_.interval_minutes,
+                            crdt_backup_config_.keep_count,
+                            crdt_backup_config_.auto_restore_on_repair_failure );
     }
 
     void GeniusNode::BeginDBInitialization()
@@ -482,13 +545,13 @@ namespace sgns
         // Release mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::trace );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
-        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
+        auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::trace );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
@@ -739,13 +802,21 @@ namespace sgns
         bool ret = false;
         do
         {
+            crdt::GlobalDB::BackupOptions backup_options;
+            backup_options.enabled = crdt_backup_config_.enabled;
+            backup_options.interval_minutes = crdt_backup_config_.interval_minutes;
+            backup_options.keep_count = crdt_backup_config_.keep_count;
+            backup_options.auto_restore_on_repair_failure = crdt_backup_config_.auto_restore_on_repair_failure;
+
             auto global_db_ret = crdt::GlobalDB::New( io_,
                                                       write_base_path_ + gnus_network_full_path_,
                                                       pubsub_,
                                                       crdt::CrdtOptions::DefaultOptions(),
                                                       graphsyncnetwork_,
                                                       scheduler_,
-                                                      generator_ );
+                                                      generator_,
+                                                      nullptr,
+                                                      backup_options );
             if ( global_db_ret.has_error() )
             {
                 node_logger_->error( "Error creating GlobalDB: {}", global_db_ret.error().message() );

@@ -322,6 +322,7 @@ namespace sgns
                                       const std::string        &logdir,
                                       spdlog::level::level_enum level );
         bool         InitNetwork( uint16_t base_port, bool is_full_node );
+        void         LoadCrdtConfig();
         bool         InitUPNP();
         bool         InitDatabase();
         bool         InitProcessingModules();
@@ -362,6 +363,16 @@ namespace sgns
 
         std::atomic<NodeState> state_{ NodeState::CREATING };
         bool                   use_upnp_;
+
+        struct CrdtBackupConfig
+        {
+            bool     enabled{ true };
+            uint32_t interval_minutes{ 15 };
+            uint32_t keep_count{ 12 };
+            bool     auto_restore_on_repair_failure{ true };
+        };
+
+        CrdtBackupConfig crdt_backup_config_{};
 
         outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
             const std::string                       &escrow_path,
