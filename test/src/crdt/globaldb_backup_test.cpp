@@ -296,6 +296,51 @@ groups:
         }
     }
 
+    void CatastrophicallyCorruptDatabase( const std::string &db_path )
+    {
+        const boost::filesystem::path db_dir( db_path );
+        if ( !boost::filesystem::exists( db_dir ) )
+        {
+            return;
+        }
+
+        const auto current = db_dir / "CURRENT";
+        if ( boost::filesystem::exists( current ) )
+        {
+            std::ofstream current_file( current.string(), std::ios::trunc | std::ios::binary );
+            current_file << "BROKEN_CURRENT_POINTER_MANIFEST-999999";
+        }
+
+        for ( boost::filesystem::directory_iterator it( db_dir ); it != boost::filesystem::directory_iterator(); ++it )
+        {
+            const auto path = it->path();
+            const auto filename = path.filename().string();
+
+            if ( boost::filesystem::is_directory( path ) )
+            {
+                // Keep BackupEngine artifacts intact; we only destroy live DB files.
+                continue;
+            }
+
+            const bool is_manifest = filename.rfind( "MANIFEST", 0 ) == 0;
+            const bool is_options = filename.rfind( "OPTIONS", 0 ) == 0;
+            const bool is_sst = path.extension() == ".sst" || path.extension() == ".ldb";
+            const bool is_wal = path.extension() == ".log";
+
+            if ( is_manifest || is_options || is_wal )
+            {
+                boost::filesystem::remove( path );
+                continue;
+            }
+
+            if ( is_sst )
+            {
+                std::ofstream truncated( path.string(), std::ios::trunc | std::ios::binary );
+                truncated << "X";
+            }
+        }
+    }
+
     void EnsureLoggingInitialized()
     {
         static std::once_flag once;
@@ -368,23 +413,6 @@ groups:
                 ConfigureTestLogger( "WSCommon", spdlog::level::err );
             } );
     }
-
-    class ScopedRepairFailureInjection
-    {
-    public:
-        explicit ScopedRepairFailureInjection( bool enabled = true )
-        {
-            sgns::crdt::GlobalDB::SetForceRepairFailureForTesting( enabled );
-        }
-
-        ~ScopedRepairFailureInjection()
-        {
-            sgns::crdt::GlobalDB::SetForceRepairFailureForTesting( false );
-        }
-
-        ScopedRepairFailureInjection( const ScopedRepairFailureInjection & ) = delete;
-        ScopedRepairFailureInjection &operator=( const ScopedRepairFailureInjection & ) = delete;
-    };
 } // namespace
 
 TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
@@ -515,11 +543,11 @@ TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackup )
 
 }
 
-TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackupWhenRepairFails )
+TEST( GlobalDbBackupTest, CatastrophicCorruptionForcesRestoreFromLatestBackup )
 {
     EnsureLoggingInitialized();
 
-    const auto root = BuildTestDir( "globaldb_backup_restore_forced_repair_fail" );
+    const auto root = BuildTestDir( "globaldb_backup_restore_catastrophic" );
     boost::filesystem::remove_all( root );
     boost::filesystem::create_directories( root );
 
@@ -536,7 +564,7 @@ TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackupWhenRepairFails )
 
     for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
     {
-        keys.emplace_back( "/backup/restore/fail/key_" + std::to_string( i ) );
+        keys.emplace_back( "/backup/restore/catastrophic/key_" + std::to_string( i ) );
         original_values.emplace_back( "value_" + std::to_string( i ) );
     }
 
@@ -558,15 +586,15 @@ TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackupWhenRepairFails )
             ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= expected_backups; } ) );
         }
 
+        // This write is intentionally after the latest backup and must be rolled back by restore.
         node.PutValue( early_key, early_corrupted_value );
         EXPECT_EQ( node.GetValue( early_key ), early_corrupted_value );
     }
 
-    CorruptDatabase( db_path );
+    CatastrophicallyCorruptDatabase( db_path );
 
     {
-        ScopedRepairFailureInjection force_repair_failure;
-        GlobalDbTestNode             node( root, backup_options );
+        GlobalDbTestNode node( root, backup_options );
 
         for ( uint32_t i = 0; i < backup_options.keep_count; ++i )
         {
@@ -576,7 +604,6 @@ TEST( GlobalDbBackupTest, CorruptionRestoresFromLatestBackupWhenRepairFails )
             EXPECT_EQ( node.GetValue( key ), expected_value );
         }
 
-        // With repair failure forced, recovery must come from backup snapshot.
         EXPECT_EQ( node.GetValue( early_key ), early_original_value );
     }
 }
