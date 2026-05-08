@@ -201,6 +201,50 @@ groups:
             return db_path_;
         }
 
+        bool CreateManualBackup( uint32_t keep_count ) const
+        {
+            if ( !db_ )
+            {
+                return false;
+            }
+
+            const std::string backup_dir = db_path_ + "/backups";
+            boost::filesystem::create_directories( backup_dir );
+
+            auto data_store = db_->GetDataStore();
+            if ( !data_store )
+            {
+                return false;
+            }
+
+            auto native_db = data_store->getDB();
+            if ( !native_db )
+            {
+                return false;
+            }
+
+            ::ROCKSDB_NAMESPACE::BackupEngine *engine = nullptr;
+            ::ROCKSDB_NAMESPACE::BackupEngineOptions options( backup_dir );
+            const auto open_status = ::ROCKSDB_NAMESPACE::BackupEngine::Open(
+                ::ROCKSDB_NAMESPACE::Env::Default(),
+                options,
+                &engine );
+            if ( !open_status.ok() || engine == nullptr )
+            {
+                return false;
+            }
+
+            std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngine> engine_guard( engine );
+            const auto create_status = engine_guard->CreateNewBackup( native_db.get(), true );
+            if ( !create_status.ok() )
+            {
+                return false;
+            }
+
+            const auto purge_status = engine_guard->PurgeOldBackups( keep_count );
+            return purge_status.ok();
+        }
+
     private:
         std::string db_root_;
         std::string db_path_;
@@ -297,15 +341,16 @@ TEST( GlobalDbBackupTest, KeepsOnlyConfiguredMaximumBackups )
     const std::string db_path = root + "/CommonKey";
     const std::string backup_dir = db_path + "/backups";
 
+    GlobalDbTestNode node( root, backup_options );
+
     for ( int i = 0; i < 6; ++i )
     {
-        {
-            GlobalDbTestNode node( root, backup_options );
-            node.PutValue( "/backup/retention", "v" + std::to_string( i ) );
+        node.PutValue( "/backup/retention", "v" + std::to_string( i ) );
+        ASSERT_TRUE( node.CreateManualBackup( backup_options.keep_count ) );
 
-            const size_t expected_max = static_cast<size_t>( std::min( i + 1, static_cast<int>( backup_options.keep_count ) ) );
-            ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= expected_max; } ) );
-        }
+        const size_t expected_max =
+            static_cast<size_t>( std::min( i + 1, static_cast<int>( backup_options.keep_count ) ) );
+        ASSERT_TRUE( WaitFor( [&]() { return GetBackupCount( backup_dir ) >= expected_max; } ) );
     }
 
     const size_t final_count = GetBackupCount( backup_dir );
