@@ -26,6 +26,7 @@ namespace sgns::storage
 
         // Store a deep copy of options
         l->options_ = std::make_shared<Options>( options );
+        l->logger_  = base::createLogger( "rocksdb" );
 
         // Set up bloom filter
         BlockBasedTableOptions table_options;
@@ -58,8 +59,6 @@ namespace sgns::storage
                                                   delete ptr;
                                               }
                                           } );
-            // Create logger
-            l->logger_  = base::createLogger( "rocksdb" );
             l->wo_.sync = true;
             l->setWriteOptions( l->wo_ );
             return l; // Return the shared_ptr
@@ -72,6 +71,7 @@ namespace sgns::storage
         }
 
         // Return an error result
+        l->logger_->error( "Failed to open RocksDB at {}: {}", l->path_, status.ToString() );
         return error_as_result<std::shared_ptr<rocksdb>>( status );
     }
 
