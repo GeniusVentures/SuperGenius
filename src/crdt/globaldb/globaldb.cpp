@@ -5,6 +5,7 @@
 #include "crdt/crdt_datastore.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 #include "crdt/atomic_transaction.hpp"
+#include "storage/database_error.hpp"
 
 #include <ipfs_lite/ipfs/impl/datastore_rocksdb.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
@@ -16,6 +17,8 @@
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <boost/format.hpp>
+#include <chrono>
+#include <thread>
 
 #if defined( _WIN32 )
 #include <winsock2.h>
@@ -108,7 +111,10 @@ namespace sgns::crdt
         if ( m_crdtDatastore )
         {
             m_crdtDatastore->Close();
+            m_crdtDatastore.reset();
         }
+        m_broadcaster.reset();
+        m_datastore.reset();
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -135,12 +141,25 @@ namespace sgns::crdt
             options.level_compaction_dynamic_level_bytes = false;
             try
             {
-                auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                constexpr int  kMaxLockRetries = 30;
+                constexpr auto kRetrySleep     = std::chrono::milliseconds( 100 );
 
-                // If database open fails with corruption, try to repair it
-                if ( !dataStoreResult.has_value() )
+                auto is_retryable_open_error = []( storage::DatabaseError error )
+                {
+                    return error == storage::DatabaseError::IO_ERROR || error == storage::DatabaseError::BUSY ||
+                           error == storage::DatabaseError::TRY_AGAIN_ ||
+                           error == storage::DatabaseError::TIMED_OUT ||
+                           error == storage::DatabaseError::SHUTDOWN_IN_PROGRESS;
+                };
+
+                int  lock_retry_count = 0;
+                auto dataStoreResult  = RocksDB::create( databasePathAbsolute, options );
+
+                while ( !dataStoreResult.has_value() )
                 {
                     std::string errorMsg = dataStoreResult.error().message();
+                    auto        errorCode =
+                        static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
                     if ( errorMsg.find( "corruption" ) != std::string::npos ||
                          errorMsg.find( "Corruption" ) != std::string::npos )
                     {
@@ -155,10 +174,39 @@ namespace sgns::crdt
                         {
                             m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
                         }
+
+                        if ( dataStoreResult.has_value() )
+                        {
+                            break;
+                        }
+                        errorMsg = dataStoreResult.error().message();
+                        errorCode = static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
                     }
 
-                    m_logger->error( "Unable to open database: " + std::string( dataStoreResult.error().message() ) );
-                    return outcome::failure( boost::system::error_code{} );
+                    if ( is_retryable_open_error( errorCode ) && lock_retry_count < kMaxLockRetries )
+                    {
+                        ++lock_retry_count;
+                        m_logger->warn(
+                            "Database {} not open yet ({}). Retrying open in {}ms ({}/{})",
+                            databasePathAbsolute,
+                            errorMsg,
+                            kRetrySleep.count(),
+                            lock_retry_count,
+                            kMaxLockRetries );
+                        std::this_thread::sleep_for( kRetrySleep );
+                        dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                        continue;
+                    }
+
+                    m_logger->error( "Unable to open database {}: {}",
+                                     databasePathAbsolute,
+                                     dataStoreResult.error().message() );
+                    return dataStoreResult.error();
+                }
+
+                if ( lock_retry_count > 0 )
+                {
+                    m_logger->info( "Opened database {} after {} open retries", databasePathAbsolute, lock_retry_count );
                 }
 
                 dataStore = std::move( dataStoreResult.value() );
