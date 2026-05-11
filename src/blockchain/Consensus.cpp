@@ -125,6 +125,7 @@ namespace sgns
     {
         stop_timer_.store( true );
         timer_cv_.notify_all();
+        ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
     void ConsensusManager::Close()
@@ -1576,6 +1577,7 @@ namespace sgns
             if ( it == certificate_subject_handlers_.end() )
             {
                 (void)certificate_work_journal_->MarkDone( key );
+                ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
                 return;
             }
             handler = it->second;
@@ -2448,17 +2450,17 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN, std::chrono::seconds( 15 ) );
+        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN,
+                                                                            std::chrono::seconds( 15 ) );
         if ( recovered > 0 )
         {
             ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
         }
 
-        auto unfinished = certificate_work_journal_->ListUnfinished( CERT_KEY_PATTERN );
-        const auto now_ms =
-            static_cast<uint64_t>( std::chrono::duration_cast<std::chrono::milliseconds>(
-                                       std::chrono::system_clock::now().time_since_epoch() )
-                                       .count() );
+        auto       unfinished = certificate_work_journal_->ListUnfinished( CERT_KEY_PATTERN );
+        const auto now_ms     = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
 
         for ( const auto &entry : unfinished )
         {
