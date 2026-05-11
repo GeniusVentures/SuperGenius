@@ -540,7 +540,7 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY(
             auto params,
-                          
+
             account_m->GetUTXOManager().CreateTxParameter( amount, std::move( destination ), token_id ) );
         auto [inputs, outputs] = params;
 
@@ -629,11 +629,7 @@ namespace sgns
         }
 
         auto migration_transaction = std::make_shared<MigrationTransaction>(
-            MigrationTransaction::New( amount,
-                                       std::move( from_version ),
-                                       tokenid,
-                                       FillDAGStruct(),
-                                       destination ) );
+            MigrationTransaction::New( amount, std::move( from_version ), tokenid, FillDAGStruct(), destination ) );
 
         migration_transaction->MakeSignature( *account_m );
 
@@ -3511,21 +3507,21 @@ namespace sgns
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
         if ( tx_hash_bin.has_error() )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not parse tx hash for checkpoint tx={}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__,
-                                              tx_hash );
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Could not parse tx hash for checkpoint tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx_hash );
             return outcome::failure( tx_hash_bin.error() );
         }
 
         auto validator_registry = blockchain_->GetValidatorRegistry();
         if ( !validator_registry )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: No validator registry, skipping checkpoint",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__ );
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: No validator registry, skipping checkpoint",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__ );
             return outcome::failure( std::errc::no_such_device );
         }
 
@@ -3686,8 +3682,7 @@ namespace sgns
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tracked_tx ) )
         {
             MigrationAllowList allow_list( globaldb_m->GetDataStore(), migration_tx->GetFromVersion() );
-            auto               eligibility_result =
-                allow_list.IsEligible( migration_tx->GetSrcAddress(), migration_tx->GetAmount() );
+            auto eligibility_result = allow_list.IsEligible( migration_tx->GetSrcAddress(), migration_tx->GetAmount() );
             if ( eligibility_result.has_error() )
             {
                 TransactionManagerLogger()->warn(
