@@ -40,21 +40,12 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
-    if ( isFullNode )
-    {
-        auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( privKey.c_str(), outPath );
-        if ( !maybe_address.has_value() )
-        {
-            ADD_FAILURE() << "Failed to generate full-node address for authorization";
-        }
-        else
-        {
-            const auto &pub_address = maybe_address.value().second.second.GetEntirePubValue();
-            sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
-        }
-    }
     uint16_t port = static_cast<uint16_t>( 40001 + id );
     auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    if ( isFullNode )
+    {
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    }
 
     // allow startup
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );

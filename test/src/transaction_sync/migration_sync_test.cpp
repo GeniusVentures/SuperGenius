@@ -42,9 +42,7 @@ protected:
     static constexpr int              STARTUP_DELAY_MS = 1000;
     static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
     static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
-    static constexpr char FULL_NODE_KEY[] = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-    static constexpr std::string_view FULL_NODE_PUB_ADDRESS =
-        "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
+    static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
     static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 
     void SetEligibilityCheckEnabled( bool enabled )
@@ -132,6 +130,8 @@ protected:
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
         auto     instance    = GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
+
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         std::cout << "Full node created" << std::endl;
         return instance;
@@ -142,26 +142,21 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 {
     SetEligibilityCheckEnabled( false );
 
-    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
-    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
-    EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
-    test::assertWaitForCondition(
-        [full_node]
-        { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 80000 ),
-        "Full node not synced" );
+    test::assertWaitForCondition( [full_node]
+                                  { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 80000 ),
+                                  "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
-    test::assertWaitForCondition(
-        [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 40000 ),
-        readiness_message );
+    test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 40000 ),
+                                  readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
 }
@@ -172,9 +167,8 @@ TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
     using sgns::MigrationAllowList;
     using sgns::storage::rocksdb;
 
-    const auto     unique_suffix = std::to_string(
-        std::chrono::steady_clock::now().time_since_epoch().count() );
-    const fs::path db_path = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
+    const auto      unique_suffix = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() );
+    const fs::path  db_path       = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
     std::error_code ec;
     fs::remove_all( db_path, ec );
     fs::create_directories( db_path, ec );

@@ -60,22 +60,13 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        if ( setAsAuthorized )
-        {
-            auto response = sgns::GeniusAccount::GenerateGeniusAddress( key.c_str(), outPath );
-            if ( !response.has_value() )
-            {
-                ADD_FAILURE() << "Failed to generate full-node address for authorization";
-            }
-            else
-            {
-                const auto &pub_address = response.value().second.second.GetEntirePubValue();
-                sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
-            }
-        }
-
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+
+        if ( setAsAuthorized )
+        {
+            sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+        }
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
@@ -176,8 +167,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     }
 
     // Ensure enough balance with +1 change
-    auto mintRes51 =
-        node51->MintTokens( totalMint51 + 1,
+    auto mintRes51 = node51->MintTokens( totalMint51 + 1,
                                          sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x51 } ),
@@ -186,8 +176,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     ASSERT_TRUE( mintRes51.has_value() ) << "Grouped mint failed on token51";
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
-    auto mintRes52 =
-        node52->MintTokens( totalMint52 + 1,
+    auto mintRes52 = node52->MintTokens( totalMint52 + 1,
                                          sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x52 } ),
@@ -437,7 +426,10 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 
     for ( const auto &tm : mints )
     {
-        auto res = node->MintTokens( tm.amount, sgns::test::NextMintSourceHash(), "", tm.tokenId,
+        auto res = node->MintTokens( tm.amount,
+                                     sgns::test::NextMintSourceHash(),
+                                     "",
+                                     tm.tokenId,
                                      "",
                                      std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( res.has_value() ); // << "MintTokens failed for token=" << tm.tokenId << " amount=" << tm.amount;
@@ -491,8 +483,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                                   std::chrono::milliseconds( 30000 ),
                                   "node_proc2 not synced" );
 
-    auto mintResMain =
-        node_main->MintTokens( 1000,
+    auto mintResMain = node_main->MintTokens( 1000,
                                               sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),

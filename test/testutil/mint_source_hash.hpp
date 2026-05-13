@@ -1,3 +1,9 @@
+/**
+ * @file       mint_source_hash.hpp
+ * @brief      Auxiliary function to generate unique mint source hashes for testing.
+ * @date       2026-04-17
+ * @author     Henrique A. Klein (hklein@gnus.ai)
+ */
 #pragma once
 
 #include <atomic>
@@ -10,6 +16,10 @@
 
 namespace sgns::test
 {
+    /**
+     * @brief       Computes a unique hash string to be used as a mint source identifier in tests.
+     * @return      unique hash string
+     */
     inline std::string NextMintSourceHash()
     {
         static std::atomic<uint64_t> counter{ 0 };

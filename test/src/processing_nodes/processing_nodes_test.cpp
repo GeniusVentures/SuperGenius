@@ -30,10 +30,8 @@ protected:
 
     static void SetUpTestSuite()
     {
-        std::string full_node_pub_address =
-            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
+
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
 
         DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
@@ -45,6 +43,7 @@ protected:
                                             true,
                                             40054,
                                             true );
+        Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
                                       std::chrono::milliseconds( 30000 ),
@@ -162,9 +161,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
-    int transcount_node1 = node_proc1->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
-    int transcount_node2 = node_proc2->GetTransactions(TransactionManager::TransactionStatus::CONFIRMED).size();
+    int transcount_main  = node_main->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node1 = node_proc1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node2 = node_proc2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -465,8 +464,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        procmgr   = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
-    auto mint_result =
-        node_main->MintTokens( 50000000000,
+    auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
