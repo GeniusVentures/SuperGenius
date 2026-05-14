@@ -1716,6 +1716,37 @@ namespace sgns
         return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
     }
 
+    std::vector<std::vector<uint8_t>> GeniusNode::GetInTransactions() const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetInTransactions();
+    }
+
+    std::vector<std::vector<uint8_t>> GeniusNode::GetOutTransactions() const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetOutTransactions();
+    }
+
+    const std::vector<std::vector<uint8_t>> GeniusNode::GetTransactions(
+        std::optional<TransactionManager::TransactionStatus> tx_status ) const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetTransactions( tx_status );
+    }
+
     // Wait for a transaction to be processed with a timeout
     TransactionManager::TransactionStatus GeniusNode::WaitForTransactionOutgoing( const std::string        &txId,
                                                                                   std::chrono::milliseconds timeout )

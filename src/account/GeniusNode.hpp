@@ -320,29 +320,13 @@ namespace sgns
          * @brief Returns serialized incoming transactions known to the transaction manager.
          * @return Incoming transaction byte vectors, or an empty vector when transactions are not ready.
          */
-        [[nodiscard]] std::vector<std::vector<uint8_t>> GetInTransactions() const
-        {
-            auto manager_result = GetTransactionManager();
-            if ( !manager_result.has_value() )
-            {
-                return {};
-            }
-            return manager_result.value()->GetInTransactions();
-        }
+        [[nodiscard]] std::vector<std::vector<uint8_t>> GetInTransactions() const;
 
         /**
          * @brief Returns serialized outgoing transactions known to the transaction manager.
          * @return Outgoing transaction byte vectors, or an empty vector when transactions are not ready.
          */
-        [[nodiscard]] std::vector<std::vector<uint8_t>> GetOutTransactions() const
-        {
-            auto manager_result = GetTransactionManager();
-            if ( !manager_result.has_value() )
-            {
-                return {};
-            }
-            return manager_result.value()->GetOutTransactions();
-        }
+        [[nodiscard]] std::vector<std::vector<uint8_t>> GetOutTransactions() const;
 
         /**
          * @brief Returns serialized transactions filtered by optional status.
@@ -350,15 +334,7 @@ namespace sgns
          * @return Transaction byte vectors, or an empty vector when transactions are not ready.
          */
         [[nodiscard]] const std::vector<std::vector<uint8_t>> GetTransactions(
-            std::optional<TransactionManager::TransactionStatus> tx_status = std::nullopt ) const
-        {
-            auto manager_result = GetTransactionManager();
-            if ( !manager_result.has_value() )
-            {
-                return {};
-            }
-            return manager_result.value()->GetTransactions( tx_status );
-        }
+            std::optional<TransactionManager::TransactionStatus> tx_status = std::nullopt ) const;
 
         /**
          * @brief Returns the active account public address.

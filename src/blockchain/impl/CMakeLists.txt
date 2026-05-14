@@ -40,10 +40,10 @@ target_link_libraries(blockchain_genesis
     logger
     sgns_genius_account
     ipfs-pubsub
+    ValidatorRegistryProto
     PRIVATE
     SGBlockchainProto
     ConsensusProto
-    ValidatorRegistryProto
 )
 
 supergenius_install(blockchain_genesis)

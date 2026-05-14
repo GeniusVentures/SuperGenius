@@ -518,17 +518,8 @@ namespace sgns
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
-            transaction_parsers = {
-                { "transfer",
-                  { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
-                { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
-                { "mint-v2",
-                  { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
-                { "migration",
-                  { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
-                { "escrow-hold",
-                  { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
+        static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
+            transaction_parsers;
 
         base::Logger m_logger = base::createLogger( "TransactionManager" );
 

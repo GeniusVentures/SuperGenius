@@ -87,6 +87,17 @@ namespace sgns
         return base::createLogger( "TransactionManager" );
     }
 
+    const std::unordered_map<std::string,
+                             std::pair<TransactionManager::TransactionParserFn, TransactionManager::TransactionParserFn>>
+        TransactionManager::transaction_parsers = {
+            { "transfer",
+              { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
+            { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+            { "mint-v2", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+            { "migration", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
+            { "escrow-hold",
+              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
+
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
                                                                  std::shared_ptr<GeniusAccount>           account,
