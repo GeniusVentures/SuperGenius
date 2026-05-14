@@ -27,6 +27,9 @@ elseif (DEFINED SGNS_PRINT_LOGS)
 	add_definitions(-DSGNS_DEBUGLOGS)
 endif()
 
+set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
+find_package(ZLIB CONFIG REQUIRED)
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     message("Gtest dir: ${GTest_DIR}")

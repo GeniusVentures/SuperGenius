@@ -84,7 +84,6 @@ examples/.env.*
 !examples/.env.example
 
 # Build outputs
-build/
 
 # macOS
 .DS_Store
