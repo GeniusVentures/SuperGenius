@@ -19,6 +19,7 @@
 #include <atomic>
 #include <random>
 #include <ctime>
+#include <tuple>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -591,10 +592,18 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
             "node_client validator registry not caught up" );
     };
 
-    auto registry_state = registry->LoadRegistry();
-    ASSERT_TRUE( registry_state.has_value() );
-    auto epoch_before = registry_state.value().epoch();
-    auto cid_before   = registry->GetRegistryCid();
+    auto load_registry_state = [&]() -> std::pair<uint64_t, std::string>
+    {
+        auto state = registry->LoadRegistry();
+        EXPECT_TRUE( state.has_value() );
+        if ( !state.has_value() )
+        {
+            return { 0, "" };
+        }
+        return { state.value().epoch(), registry->GetRegistryCid() };
+    };
+
+    auto [epoch_before, cid_before] = load_registry_state();
 
     auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
@@ -603,20 +612,14 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     assert_registry_updated( epoch_before, cid_before );
     wait_client_registry_caught_up();
 
-    registry_state = registry->LoadRegistry();
-    ASSERT_TRUE( registry_state.has_value() );
-    epoch_before = registry_state.value().epoch();
-    cid_before   = registry->GetRegistryCid();
+    std::tie( epoch_before, cid_before ) = load_registry_state();
 
     auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     fmt::println( "Mint 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
     wait_client_registry_caught_up();
-    registry_state = registry->LoadRegistry();
-    ASSERT_TRUE( registry_state.has_value() );
-    epoch_before = registry_state.value().epoch();
-    cid_before   = registry->GetRegistryCid();
+    std::tie( epoch_before, cid_before ) = load_registry_state();
 
     auto transfer1 = node_client->TransferFunds( 75,
                                                  node_peer1->GetAddress(),
@@ -626,10 +629,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     fmt::println( "Transfer 1 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
     wait_client_registry_caught_up();
-    registry_state = registry->LoadRegistry();
-    ASSERT_TRUE( registry_state.has_value() );
-    epoch_before = registry_state.value().epoch();
-    cid_before   = registry->GetRegistryCid();
+    std::tie( epoch_before, cid_before ) = load_registry_state();
 
     auto transfer2 = node_client->TransferFunds( 40,
                                                  node_peer2->GetAddress(),
@@ -639,10 +639,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     fmt::println( "Transfer 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
     wait_client_registry_caught_up();
-    registry_state = registry->LoadRegistry();
-    ASSERT_TRUE( registry_state.has_value() );
-    epoch_before = registry_state.value().epoch();
-    cid_before   = registry->GetRegistryCid();
+    std::tie( epoch_before, cid_before ) = load_registry_state();
 
     auto transfer3 = node_client->TransferFunds( 10,
                                                  node_peer3->GetAddress(),
