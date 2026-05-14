@@ -522,13 +522,13 @@ namespace sgns
         auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
         auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
-        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::trace );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
         auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
         auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
         auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
-        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::trace );
+        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
