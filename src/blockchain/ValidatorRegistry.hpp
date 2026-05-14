@@ -362,7 +362,7 @@ namespace sgns
         /**
          * @brief Filters CRDT elements to registry-update entries.
          * @param[in] element Incoming CRDT element.
-         * @return Filtered element vector, or `std::nullopt` when rejected.
+         * @return Aditional elements to be filtered out or nullopt when no other elements need to be removed.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterRegistryUpdate( const crdt::pb::Element &element );
         /**
