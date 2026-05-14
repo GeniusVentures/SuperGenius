@@ -877,7 +877,7 @@ namespace sgns
             const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
             if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
             {
-                ConsensusManagerLogger()->error( "{}: processing vote for hash {}: voter_id={} approve={}",
+                ConsensusManagerLogger()->debug( "{}: processing vote for hash {}: voter_id={} approve={}",
                                                  __func__,
                                                  GetPrintableSubjectHash( proposal.subject() ),
                                                  vote.voter_id().substr( 0, 8 ),
