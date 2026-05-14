@@ -1,5 +1,8 @@
 #include <memory>
 #include <utility>
+#include <cstdio>
+#include <functional>
+#include <thread>
 
 #include <boost/filesystem.hpp>
 
@@ -35,7 +38,7 @@ namespace sgns::storage
         // Define a prefix extractor
         l->options_->prefix_extractor.reset( ::ROCKSDB_NAMESPACE::NewCappedPrefixTransform( 3 ) );
 
-        l->options_->info_log_level = ::ROCKSDB_NAMESPACE::InfoLogLevel::ERROR_LEVEL;
+        l->options_->info_log_level = ::ROCKSDB_NAMESPACE::InfoLogLevel::DEBUG_LEVEL;
         // Configure threading environment
         l->options_->env = ::rocksdb::Env::Default();
         l->options_->env->SetBackgroundThreads( 4, ::rocksdb::Env::Priority::HIGH );
@@ -53,8 +56,25 @@ namespace sgns::storage
                                           {
                                               if ( ptr )
                                               {
+                                                  auto tid = static_cast<unsigned long long>(
+                                                      std::hash<std::thread::id>{}( std::this_thread::get_id() ) );
+                                                  std::fprintf( stderr,
+                                                                "[SG-ROCKSDB-DELETER] begin ptr=%p tid=%llu\n",
+                                                                static_cast<void *>( ptr ),
+                                                                tid );
+                                                  std::fflush( stderr );
                                                   ptr->Close(); // Properly release RocksDB handles
+                                                  std::fprintf( stderr,
+                                                                "[SG-ROCKSDB-DELETER] after_close ptr=%p tid=%llu\n",
+                                                                static_cast<void *>( ptr ),
+                                                                tid );
+                                                  std::fflush( stderr );
                                                   delete ptr;
+                                                  std::fprintf( stderr,
+                                                                "[SG-ROCKSDB-DELETER] after_delete ptr=%p tid=%llu\n",
+                                                                static_cast<void *>( ptr ),
+                                                                tid );
+                                                  std::fflush( stderr );
                                               }
                                           } );
             // Create logger

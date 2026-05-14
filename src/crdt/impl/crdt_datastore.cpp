@@ -331,6 +331,12 @@ namespace sgns::crdt
 
     void CrdtDatastore::Start()
     {
+        if ( shutdown_started_.load() )
+        {
+            logger_->warn( "CrdtDatastore::Start ignored because shutdown has already started" );
+            return;
+        }
+
         if ( started_ == true )
         {
             return;
@@ -472,7 +478,28 @@ namespace sgns::crdt
 
     void CrdtDatastore::Close()
     {
-        dagSyncer_->Stop();
+        CancelAndCloseNow();
+    }
+
+    void CrdtDatastore::CancelAndCloseNow()
+    {
+        bool expected = false;
+        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
+        {
+            logger_->warn( "CancelAndCloseNow called but shutdown has already started" );
+            return;
+        }
+
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            logger_->info( "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+                           pending_jobs_.size(),
+                           selfCreatedJobList_.size(),
+                           rootCIDJobList_.size(),
+                           pendingRootQueue_.size(),
+                           activeRootCID_.has_value() );
+        }
+
         if ( handleNextThreadRunning_ )
         {
             handleNextThreadRunning_ = false;
@@ -483,6 +510,10 @@ namespace sgns::crdt
             rebroadcastThreadRunning_ = false;
             rebroadcastCv_.notify_all();
         }
+
+        // Stop graphsync after cancellation signals are raised so workers
+        // observe shutdown intent first.
+        dagSyncer_->Stop();
 
         if ( dagWorkerJobListThreadRunning_ )
         {
@@ -501,8 +532,11 @@ namespace sgns::crdt
             {
                 std::lock_guard        lock( dagWorkerMutex_ );
                 std::queue<RootCIDJob> empty1, empty2;
+                std::queue<CID>        empty_roots;
                 std::swap( rootCIDJobList_, empty1 );
                 std::swap( selfCreatedJobList_, empty2 );
+                std::swap( pendingRootQueue_, empty_roots );
+                activeRootCID_.reset();
                 pending_jobs_.clear();
             }
         }
@@ -516,6 +550,15 @@ namespace sgns::crdt
         {
             rebroadcastFuture_.wait();
         }
+
+        started_ = false;
+        logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
+        logger_->debug( "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+                       pending_jobs_.size(),
+                       selfCreatedJobList_.size(),
+                       rootCIDJobList_.size(),
+                       pendingRootQueue_.size(),
+                       activeRootCID_.has_value() );
     }
 
     void CrdtDatastore::HandleCIDBroadcast()
@@ -612,6 +655,11 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
+        if ( shutdown_started_.load() )
+        {
+            return outcome::failure( Error::INVALID_JOB );
+        }
+
         auto root_job_result = CreateRootJob( aCid );
         if ( root_job_result.has_failure() )
         {
@@ -1383,6 +1431,12 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
+        if ( shutdown_started_.load() )
+        {
+            logger_->warn( "AddDAGNode rejected because shutdown is in progress" );
+            return outcome::failure( Error::INVALID_JOB );
+        }
+
         BOOST_OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
 
@@ -2002,6 +2056,11 @@ namespace sgns::crdt
     bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
+        if ( shutdown_started_.load() )
+        {
+            return false;
+        }
+
         if ( IsRootCIDPendingOrActiveLocked( cid ) )
         {
             return false;

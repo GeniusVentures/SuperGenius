@@ -331,6 +331,7 @@ namespace sgns
         void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
         void         ScheduleMigrationRetry();
         void         ScheduleBlockchainRetry();
+        void         ShutdownForDestruction();
         outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
         outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
 
@@ -362,6 +363,7 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_;
 
         std::atomic<NodeState> state_{ NodeState::CREATING };
+        std::atomic_bool       shutdown_started_{ false };
         bool                   use_upnp_;
 
         struct CrdtBackupConfig
