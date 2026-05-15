@@ -56,25 +56,8 @@ namespace sgns::storage
                                           {
                                               if ( ptr )
                                               {
-                                                  auto tid = static_cast<unsigned long long>(
-                                                      std::hash<std::thread::id>{}( std::this_thread::get_id() ) );
-                                                  std::fprintf( stderr,
-                                                                "[SG-ROCKSDB-DELETER] begin ptr=%p tid=%llu\n",
-                                                                static_cast<void *>( ptr ),
-                                                                tid );
-                                                  std::fflush( stderr );
                                                   ptr->Close(); // Properly release RocksDB handles
-                                                  std::fprintf( stderr,
-                                                                "[SG-ROCKSDB-DELETER] after_close ptr=%p tid=%llu\n",
-                                                                static_cast<void *>( ptr ),
-                                                                tid );
-                                                  std::fflush( stderr );
                                                   delete ptr;
-                                                  std::fprintf( stderr,
-                                                                "[SG-ROCKSDB-DELETER] after_delete ptr=%p tid=%llu\n",
-                                                                static_cast<void *>( ptr ),
-                                                                tid );
-                                                  std::fflush( stderr );
                                               }
                                           } );
             // Create logger
