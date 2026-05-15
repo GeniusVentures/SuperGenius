@@ -32,11 +32,6 @@ public:
     * @return Progress percentage (0.0 to 100.0)
     */
     virtual float GetProgress() const { return 0.0f; }
-
-    /**
-    * Request cancellation for any in-flight processing.
-    */
-    virtual void CancelCurrentProcessing() {}
 };
 
 } // namespace sgns::processing
