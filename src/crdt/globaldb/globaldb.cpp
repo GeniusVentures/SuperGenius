@@ -350,7 +350,6 @@ namespace sgns::crdt
             options.level0_file_num_compaction_trigger   = 1;
             options.target_file_size_multiplier          = 1;
             options.level_compaction_dynamic_level_bytes = false;
-            options.disable_auto_compactions             = true; // disable auto compactions to avoid compaction during critical startup phase; will be re-enabled after startup
             try
             {
                 auto dataStoreResult = RocksDB::create( databasePathAbsolute, options );
