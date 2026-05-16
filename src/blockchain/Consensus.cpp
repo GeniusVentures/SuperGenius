@@ -240,12 +240,43 @@ namespace sgns
         return true;
     }
 
+    bool ConsensusManager::RegisterSubjectHandler( const std::string &subject_type, SubjectHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty handler subject_type={}", __func__, subject_type );
+            return false;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid handler subject_type={}", __func__, subject_type );
+            return false;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering subject handler subject_type={}", __func__, subject_type );
+        std::unique_lock lock( subject_handlers_mutex_ );
+        subject_handlers_[type_hash.value()] = std::move( handler );
+        return true;
+    }
+
     void ConsensusManager::UnregisterSubjectHandler( SubjectType type )
     {
         ConsensusManagerLogger()->debug( "{}: Removing Subject handler with type={}",
                                          __func__,
                                          static_cast<int>( type ) );
         auto type_hash = ComputeSubjectTypeHash( type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( subject_handlers_mutex_ );
+        subject_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::UnregisterSubjectHandler( const std::string &subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing Subject handler with subject_type={}", __func__, subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
             return;
@@ -279,12 +310,52 @@ namespace sgns
         return true;
     }
 
+    bool ConsensusManager::RegisterCertificateHandler( const std::string        &subject_type,
+                                                       CertificateSubjectHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty certificate handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid certificate handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering certificate handler subject_type={}",
+                                         __func__,
+                                         subject_type );
+        std::unique_lock lock( certificate_handlers_mutex_ );
+        certificate_subject_handlers_[type_hash.value()] = std::move( handler );
+        return true;
+    }
+
     void ConsensusManager::UnregisterCertificateHandler( SubjectType type )
     {
         ConsensusManagerLogger()->debug( "{}: Removing Certificate handler with type={}",
                                          __func__,
                                          static_cast<int>( type ) );
         auto type_hash = ComputeSubjectTypeHash( type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( certificate_handlers_mutex_ );
+        certificate_subject_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::UnregisterCertificateHandler( const std::string &subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing Certificate handler with subject_type={}",
+                                         __func__,
+                                         subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
             return;
@@ -422,6 +493,14 @@ namespace sgns
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
     {
+        if ( subject.has_generic() )
+        {
+            if ( subject.subject_id().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return subject.subject_id();
+        }
         if ( subject.type() == SubjectType::SUBJECT_NONCE )
         {
             if ( !subject.has_nonce() || subject.nonce().tx_hash().empty() )
@@ -2129,6 +2208,20 @@ namespace sgns
         return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
     }
 
+    outcome::result<std::string> ConsensusManager::ComputeSubjectTypeHash( const std::string &subject_type )
+    {
+        if ( subject_type.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        sgns::crypto::HasherImpl hasher;
+        auto                     hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( subject_type.data() ),
+                                      subject_type.size() ) );
+        return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
+    }
+
     bool ConsensusManager::SetSubjectTypeHash( Subject *subject )
     {
         if ( subject == nullptr )
@@ -2136,7 +2229,8 @@ namespace sgns
             return false;
         }
 
-        auto type_hash = ComputeSubjectTypeHash( subject->type() );
+        auto type_hash = subject->has_generic() ? ComputeSubjectTypeHash( subject->generic().subject_type() )
+                                                : ComputeSubjectTypeHash( subject->type() );
         if ( type_hash.has_error() )
         {
             return false;
@@ -2262,6 +2356,50 @@ namespace sgns
         return subject;
     }
 
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject(
+        const std::string          &account_id,
+        const std::string          &subject_type,
+        const std::vector<uint8_t> &payload )
+    {
+        ConsensusManagerLogger()->trace( "{}: called account_id={} subject_type={}",
+                                         __func__,
+                                         account_id.substr( 0, 8 ),
+                                         subject_type );
+        if ( account_id.empty() || subject_type.empty() || payload.empty() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        sgns::crypto::HasherImpl hasher;
+        auto                     payload_hash = hasher.sha2_256(
+            gsl::span<const uint8_t>( payload.data(), payload.size() ) );
+
+        Subject subject;
+        subject.set_type( SubjectType::SUBJECT_UNSPECIFIED );
+        subject.set_account_id( account_id );
+        auto *generic = subject.mutable_generic();
+        generic->set_subject_type( subject_type );
+        generic->set_payload( payload.data(), payload.size() );
+        generic->set_payload_hash( payload_hash.data(), payload_hash.size() );
+
+        if ( !SetSubjectTypeHash( &subject ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto subject_id = ComputeSubjectId( subject );
+        if ( subject_id.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: subject id error={}",
+                                             __func__,
+                                             subject_id.error().message() );
+            return outcome::failure( subject_id.error() );
+        }
+        subject.set_subject_id( subject_id.value() );
+        ConsensusManagerLogger()->debug( "{}: success subject_id={}", __func__, subject.subject_id() );
+        return subject;
+    }
+
     std::string ConsensusManager::CreateProposalId( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: Creating proposal ID", __func__ );
@@ -2300,7 +2438,9 @@ namespace sgns
         {
             return false;
         }
-        const auto expected_subject_type_hash = ComputeSubjectTypeHash( subject.type() );
+        const auto expected_subject_type_hash = subject.has_generic()
+                                                    ? ComputeSubjectTypeHash( subject.generic().subject_type() )
+                                                    : ComputeSubjectTypeHash( subject.type() );
         if ( expected_subject_type_hash.has_error() ||
              expected_subject_type_hash.value() != subject.subject_type_hash().hash() )
         {
@@ -2311,6 +2451,29 @@ namespace sgns
         if ( expected_subject_id.has_error() || expected_subject_id.value() != subject.subject_id() )
         {
             return false;
+        }
+
+        if ( subject.has_generic() )
+        {
+            if ( subject.type() != SubjectType::SUBJECT_UNSPECIFIED )
+            {
+                return false;
+            }
+            if ( subject.generic().subject_type().empty()
+                 || subject.generic().payload().empty()
+                 || subject.generic().payload_hash().empty() )
+            {
+                return false;
+            }
+            sgns::crypto::HasherImpl hasher;
+            auto                     payload_hash = hasher.sha2_256(
+                gsl::span<const uint8_t>(
+                    reinterpret_cast<const uint8_t *>( subject.generic().payload().data() ),
+                    subject.generic().payload().size() ) );
+            const std::string expected_payload_hash(
+                reinterpret_cast<const char *>( payload_hash.data() ),
+                payload_hash.size() );
+            return expected_payload_hash == subject.generic().payload_hash();
         }
 
         switch ( subject.type() )
@@ -2402,7 +2565,9 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: subject subject_type_hash is empty", __func__ );
             return false;
         }
-        auto expected_subject_type_hash = ComputeSubjectTypeHash( subject.type() );
+        auto expected_subject_type_hash = subject.has_generic()
+                                              ? ComputeSubjectTypeHash( subject.generic().subject_type() )
+                                              : ComputeSubjectTypeHash( subject.type() );
         if ( expected_subject_type_hash.has_error() ||
              expected_subject_type_hash.value() != subject.subject_type_hash().hash() )
         {
@@ -2414,6 +2579,44 @@ namespace sgns
         {
             ConsensusManagerLogger()->error( "{}: subject subject_id mismatch", __func__ );
             return false;
+        }
+
+        if ( subject.has_generic() )
+        {
+            if ( subject.type() != SubjectType::SUBJECT_UNSPECIFIED )
+            {
+                ConsensusManagerLogger()->error( "{}: generic subject has non-generic enum type", __func__ );
+                return false;
+            }
+            if ( subject.generic().subject_type().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: generic subject type is empty", __func__ );
+                return false;
+            }
+            if ( subject.generic().payload().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: generic subject payload is empty", __func__ );
+                return false;
+            }
+            if ( subject.generic().payload_hash().empty() )
+            {
+                ConsensusManagerLogger()->error( "{}: generic subject payload_hash is empty", __func__ );
+                return false;
+            }
+            sgns::crypto::HasherImpl hasher;
+            auto                     payload_hash = hasher.sha2_256(
+                gsl::span<const uint8_t>(
+                    reinterpret_cast<const uint8_t *>( subject.generic().payload().data() ),
+                    subject.generic().payload().size() ) );
+            const std::string expected_payload_hash(
+                reinterpret_cast<const char *>( payload_hash.data() ),
+                payload_hash.size() );
+            if ( expected_payload_hash != subject.generic().payload_hash() )
+            {
+                ConsensusManagerLogger()->error( "{}: generic subject payload_hash mismatch", __func__ );
+                return false;
+            }
+            return true;
         }
 
         if ( subject.type() != SubjectType::SUBJECT_NONCE && subject.type() != SubjectType::SUBJECT_TASK_RESULT &&

@@ -20,6 +20,7 @@ message ConsensusSubject {
     NonceSubject nonce = 10;
     TaskResultSubject task_result = 11;
     RegistryBatchSubject registry_batch = 12;
+    GenericSubject generic = 100;
   }
 }
 
@@ -86,6 +87,12 @@ message RegistryBatchSubject {
   uint64 target_registry_epoch = 3;
   uint32 certificate_count = 4;
   bytes batch_root = 5;
+}
+
+message GenericSubject {
+  string subject_type = 1;
+  bytes payload = 2;
+  bytes payload_hash = 3;
 }
 
 message ConsensusProposal {

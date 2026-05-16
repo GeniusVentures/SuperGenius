@@ -3,6 +3,14 @@ addtest(blockchain_genesis_test
     blockchain_genesis_test.cpp
     )
 
+addtest(consensus_subject_test
+    consensus_subject_test.cpp
+)
+target_link_libraries(consensus_subject_test
+    blockchain_genesis
+    rapidjson
+)
+
 #addtest(consensus_certificate_test
 #    consensus_certificate_test.cpp
 #)
