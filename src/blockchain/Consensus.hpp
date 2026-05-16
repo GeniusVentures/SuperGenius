@@ -247,6 +247,12 @@ namespace sgns
          */
         static outcome::result<std::string> ComputeSubjectId( const Subject &subject );
         /**
+         * @brief Computes deterministic bytes for a subject type hash.
+         * @param[in] type Subject type to hash.
+         * @return 32-byte subject type hash on success, otherwise an error.
+         */
+        static outcome::result<std::string> ComputeSubjectTypeHash( SubjectType type );
+        /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.
          * @param[in] nonce Account nonce.
@@ -585,6 +591,12 @@ namespace sgns
          */
         static std::string CreateProposalId( const Proposal &proposal );
         /**
+         * @brief Populates a subject's type hash from its enum discriminator.
+         * @param[in,out] subject Subject to update.
+         * @return `true` when the hash was populated.
+         */
+        static bool SetSubjectTypeHash( Subject *subject );
+        /**
          * @brief Performs basic subject sanity validation.
          * @param[in] subject Subject to validate.
          * @return `true` when subject structure is valid.
@@ -627,11 +639,12 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry>      registry_; ///< Validator registry dependency.
         std::shared_ptr<crdt::GlobalDB>         db_;       ///< GlobalDB dependency for persistence and CRDT operations.
         std::shared_ptr<crdt::CRDTWorkJournal>  certificate_work_journal_; ///< Work journal for certificate processing.
-        std::unordered_map<int, SubjectHandler> subject_handlers_;         ///< Subject handlers keyed by subject type.
-        mutable std::shared_mutex               subject_handlers_mutex_;   ///< Guards `subject_handlers_`.
-        std::unordered_map<int, CertificateSubjectHandler>
-                                  certificate_subject_handlers_;      ///< Certificate handlers by subject type.
-        mutable std::shared_mutex certificate_handlers_mutex_;        ///< Guards `certificate_subject_handlers_`.
+        std::unordered_map<std::string, SubjectHandler>
+                                  subject_handlers_;               ///< Subject handlers keyed by subject type hash.
+        mutable std::shared_mutex subject_handlers_mutex_;         ///< Guards `subject_handlers_`.
+        std::unordered_map<std::string, CertificateSubjectHandler>
+                                  certificate_subject_handlers_;   ///< Certificate handlers by subject type hash.
+        mutable std::shared_mutex certificate_handlers_mutex_;      ///< Guards `certificate_subject_handlers_`.
         Signer                    signer_;                            ///< Local signing callback.
         std::string               account_address_;                   ///< Local validator/account id.
         std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.

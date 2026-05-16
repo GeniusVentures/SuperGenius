@@ -11,8 +11,8 @@
 
 namespace
 {
-    constexpr const char *kTestPrivateKey  = "0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce8b1a6f0d4f3b9b7f0a1b2";
-    constexpr const char *kTestPrivateKey2 = "0x6c3e7b1a8d3f2c9b0f1e2d3c4b5a69788796a5b4c3d2e1f0a9b8c7d6e5f4a3b2";
+    constexpr const char *kTestPrivateKey  = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+    constexpr const char *kTestPrivateKey2 = "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
     std::shared_ptr<sgns::GeniusAccount> MakeAccount( const std::string &path )
     {
@@ -278,16 +278,16 @@ namespace sgns::test
             manager->RegisterCertificateHandler( SubjectType::SUBJECT_NONCE,
                                                  []( const std::string &, const ConsensusManager::Certificate & )
                                                  { return outcome::success( ConsensusManager::Check::Approve ); } ) );
-        EXPECT_TRUE( manager->subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) !=
-                     manager->subject_handlers_.end() );
-        EXPECT_TRUE( manager->certificate_subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) !=
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( SubjectType::SUBJECT_NONCE );
+        ASSERT_TRUE( type_hash.has_value() );
+        EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) != manager->subject_handlers_.end() );
+        EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) !=
                      manager->certificate_subject_handlers_.end() );
 
         manager->UnregisterSubjectHandler( SubjectType::SUBJECT_NONCE );
         manager->UnregisterCertificateHandler( SubjectType::SUBJECT_NONCE );
-        EXPECT_TRUE( manager->subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) ==
-                     manager->subject_handlers_.end() );
-        EXPECT_TRUE( manager->certificate_subject_handlers_.find( static_cast<int>( SubjectType::SUBJECT_NONCE ) ) ==
+        EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) == manager->subject_handlers_.end() );
+        EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) ==
                      manager->certificate_subject_handlers_.end() );
     }
 
@@ -351,6 +351,10 @@ namespace sgns::test
                                                                          12 );
         ASSERT_TRUE( subject_result.has_value() );
         EXPECT_FALSE( subject_result.value().subject_id().empty() );
+        ASSERT_TRUE( subject_result.value().has_subject_type_hash() );
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( SubjectType::SUBJECT_TASK_RESULT );
+        ASSERT_TRUE( type_hash.has_value() );
+        EXPECT_EQ( type_hash.value(), subject_result.value().subject_type_hash().hash() );
 
         auto computed = ConsensusManager::ComputeSubjectId( subject_result.value() );
         ASSERT_TRUE( computed.has_value() );
@@ -582,6 +586,32 @@ namespace sgns::test
         ASSERT_TRUE( manager->ValidateSubject( subject ) );
 
         subject.mutable_nonce()->set_nonce( subject.nonce().nonce() + 1 );
+        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+    }
+
+    TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedSubjectTypeHash )
+    {
+        auto account  = MakeAccount( getPathString() );
+        ASSERT_TRUE( account );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( registry );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( manager );
+
+        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
+                                                                    12,
+                                                                    "0xabc124",
+                                                                    MakeTestCommitment(),
+                                                                    MakeTestWitness() );
+        ASSERT_TRUE( subject_result.has_value() );
+        auto subject = subject_result.value();
+
+        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+
+        subject.mutable_subject_type_hash()->set_hash( std::string( 32, '\x7f' ) );
+        auto recomputed_subject_id = ConsensusManager::ComputeSubjectId( subject );
+        ASSERT_TRUE( recomputed_subject_id.has_value() );
+        subject.set_subject_id( recomputed_subject_id.value() );
         EXPECT_FALSE( manager->ValidateSubject( subject ) );
     }
 

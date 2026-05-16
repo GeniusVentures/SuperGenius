@@ -2,10 +2,19 @@ syntax = "proto3";
 
 package sgns;
 
+// Deterministic hash of a canonical UTF-8 string.
+message HashOfAString {
+  bytes hash = 1;
+}
+
 message ConsensusSubject {
+  // Hash of the full canonical subject contents, excluding this field.
   string subject_id = 1;
+  // Legacy enum discriminator retained for wire compatibility.
   SubjectType type = 2;
   string account_id = 3;
+  // Hash of the canonical subject type string for table/switch dispatch.
+  HashOfAString subject_type_hash = 4;
 
   oneof payload {
     NonceSubject nonce = 10;
