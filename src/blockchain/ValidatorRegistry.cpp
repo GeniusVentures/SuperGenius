@@ -65,25 +65,25 @@ namespace sgns
 
         outcome::result<std::string> ExtractConsensusSubjectHash( const ConsensusSubject &subject )
         {
-            if ( subject.type() == SubjectType::SUBJECT_NONCE )
+            if ( subject.has_nonce() )
             {
-                if ( !subject.has_nonce() || subject.nonce().tx_hash().empty() )
+                if ( subject.nonce().tx_hash().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
                 return subject.nonce().tx_hash();
             }
-            if ( subject.type() == SubjectType::SUBJECT_TASK_RESULT )
+            if ( subject.has_task_result() )
             {
-                if ( !subject.has_task_result() || subject.task_result().task_result_hash().empty() )
+                if ( subject.task_result().task_result_hash().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
                 return subject.task_result().task_result_hash();
             }
-            if ( subject.type() == SubjectType::SUBJECT_REGISTRY_BATCH )
+            if ( subject.has_registry_batch() )
             {
-                if ( !subject.has_registry_batch() || subject.registry_batch().batch_root().empty() )
+                if ( subject.registry_batch().batch_root().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
@@ -778,7 +778,7 @@ namespace sgns
         {
             return;
         }
-        if ( certificate.proposal().subject().type() == SubjectType::SUBJECT_REGISTRY_BATCH )
+        if ( certificate.proposal().subject().has_registry_batch() )
         {
             return;
         }
@@ -864,7 +864,7 @@ namespace sgns
     outcome::result<ValidatorRegistry::BatchSubjectDecision> ValidatorRegistry::EvaluateBatchSubject(
         const ConsensusSubject &subject )
     {
-        if ( subject.type() != SubjectType::SUBJECT_REGISTRY_BATCH || !subject.has_registry_batch() )
+        if ( !subject.has_registry_batch() )
         {
             return outcome::success( BatchSubjectDecision::Reject );
         }
@@ -915,8 +915,7 @@ namespace sgns
             applying_batch_subject_ids_.insert( subject_hash );
         }
         if ( !certificate.has_proposal() || !certificate.proposal().has_subject() ||
-             certificate.proposal().subject().type() != SubjectType::SUBJECT_REGISTRY_BATCH ||
-            !certificate.proposal().subject().has_registry_batch() )
+             !certificate.proposal().subject().has_registry_batch() )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
@@ -1238,7 +1237,6 @@ namespace sgns
 
             Registry expected;
             if ( certificate.has_proposal() && certificate.proposal().has_subject() &&
-                 certificate.proposal().subject().type() == SubjectType::SUBJECT_REGISTRY_BATCH &&
                  certificate.proposal().subject().has_registry_batch() )
             {
                 const auto &payload = certificate.proposal().subject().registry_batch();

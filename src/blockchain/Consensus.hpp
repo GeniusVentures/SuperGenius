@@ -32,6 +32,10 @@
 
 namespace sgns
 {
+    inline constexpr const char *kNonceSubjectType         = "sgns.nonce.v1";
+    inline constexpr const char *kTaskResultSubjectType    = "sgns.task_result.v1";
+    inline constexpr const char *kRegistryBatchSubjectType = "sgns.registry_batch.v1";
+
     /**
      * @brief      Implements Consensus with weighted voting.
      *             
@@ -110,13 +114,6 @@ namespace sgns
         };
 
         /**
-         * @brief Registers a subject validation/handling callback.
-         * @param[in] type Subject type handled by the callback.
-         * @param[in] handler Callback invoked for subjects of the given type.
-         * @return `true` when registered, `false` when input is invalid.
-         */
-        bool RegisterSubjectHandler( SubjectType type, SubjectHandler handler );
-        /**
          * @brief Registers a subject validation/handling callback by canonical subject type string.
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
          * @param[in] handler Callback invoked for matching subject type hash.
@@ -124,22 +121,10 @@ namespace sgns
          */
         bool RegisterSubjectHandler( const std::string &subject_type, SubjectHandler handler );
         /**
-         * @brief Unregisters a subject handler.
-         * @param[in] type Subject type associated with the handler.
-         */
-        void UnregisterSubjectHandler( SubjectType type );
-        /**
          * @brief Unregisters a subject handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with the handler.
          */
         void UnregisterSubjectHandler( const std::string &subject_type );
-        /**
-         * @brief Registers a certificate handling callback for a subject type.
-         * @param[in] type Subject type associated with certificates.
-         * @param[in] handler Callback invoked for matching certificate subjects.
-         * @return `true` when registered, `false` when input is invalid.
-         */
-        bool RegisterCertificateHandler( SubjectType type, CertificateSubjectHandler handler );
         /**
          * @brief Registers a certificate handling callback by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with certificates.
@@ -147,11 +132,6 @@ namespace sgns
          * @return `true` when registered, `false` when input is invalid.
          */
         bool RegisterCertificateHandler( const std::string &subject_type, CertificateSubjectHandler handler );
-        /**
-         * @brief Unregisters a certificate handler.
-         * @param[in] type Subject type associated with the handler.
-         */
-        void UnregisterCertificateHandler( SubjectType type );
         /**
          * @brief Unregisters a certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with the handler.
@@ -271,17 +251,17 @@ namespace sgns
          */
         static outcome::result<std::string> ComputeSubjectId( const Subject &subject );
         /**
-         * @brief Computes deterministic bytes for a subject type hash.
-         * @param[in] type Subject type to hash.
-         * @return 32-byte subject type hash on success, otherwise an error.
-         */
-        static outcome::result<std::string> ComputeSubjectTypeHash( SubjectType type );
-        /**
          * @brief Computes deterministic bytes for a canonical subject type string.
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
          * @return 32-byte subject type hash on success, otherwise an error.
          */
         static outcome::result<std::string> ComputeSubjectTypeHash( const std::string &subject_type );
+        /**
+         * @brief Returns the canonical subject type string implied by the payload arm.
+         * @param[in] subject Subject to inspect.
+         * @return Canonical subject type on success, otherwise an error.
+         */
+        static outcome::result<std::string> GetSubjectType( const Subject &subject );
         /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.
@@ -631,7 +611,7 @@ namespace sgns
          */
         static std::string CreateProposalId( const Proposal &proposal );
         /**
-         * @brief Populates a subject's type hash from its enum or generic subject type.
+         * @brief Populates a subject's type hash from its canonical subject type.
          * @param[in,out] subject Subject to update.
          * @return `true` when the hash was populated.
          */

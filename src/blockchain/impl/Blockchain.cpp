@@ -210,7 +210,7 @@ namespace sgns
             } );
 
         instance->consensus_manager_->RegisterSubjectHandler(
-            SubjectType::SUBJECT_REGISTRY_BATCH,
+            kRegistryBatchSubjectType,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
             {
@@ -236,7 +236,7 @@ namespace sgns
             } );
 
         instance->consensus_manager_->RegisterCertificateHandler(
-            SubjectType::SUBJECT_REGISTRY_BATCH,
+            kRegistryBatchSubjectType,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
                 const std::string          &subject_hash,
                 const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
@@ -1666,19 +1666,9 @@ namespace sgns
             std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
 
-    bool Blockchain::RegisterSubjectHandler( SubjectType type, ConsensusManager::SubjectHandler handler )
-    {
-        return consensus_manager_->RegisterSubjectHandler( type, std::move( handler ) );
-    }
-
     bool Blockchain::RegisterSubjectHandler( const std::string &subject_type, ConsensusManager::SubjectHandler handler )
     {
         return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
-    }
-
-    void Blockchain::UnregisterSubjectHandler( SubjectType type )
-    {
-        consensus_manager_->UnregisterSubjectHandler( type );
     }
 
     void Blockchain::UnregisterSubjectHandler( const std::string &subject_type )
@@ -1686,20 +1676,10 @@ namespace sgns
         consensus_manager_->UnregisterSubjectHandler( subject_type );
     }
 
-    bool Blockchain::RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler )
-    {
-        return consensus_manager_->RegisterCertificateHandler( type, std::move( handler ) );
-    }
-
     bool Blockchain::RegisterCertificateHandler( const std::string                            &subject_type,
                                                  ConsensusManager::CertificateSubjectHandler handler )
     {
         return consensus_manager_->RegisterCertificateHandler( subject_type, std::move( handler ) );
-    }
-
-    void Blockchain::UnregisterCertificateHandler( SubjectType type )
-    {
-        consensus_manager_->UnregisterCertificateHandler( type );
     }
 
     void Blockchain::UnregisterCertificateHandler( const std::string &subject_type )

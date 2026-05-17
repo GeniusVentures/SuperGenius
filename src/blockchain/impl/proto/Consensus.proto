@@ -10,8 +10,8 @@ message HashOfAString {
 message ConsensusSubject {
   // Hash of the full canonical subject contents, excluding this field.
   string subject_id = 1;
-  // Legacy enum discriminator retained for wire compatibility.
-  SubjectType type = 2;
+  // Canonical subject type string, e.g. "sgns.nonce.v1" or "gnus.bridge_event.v1".
+  string subject_type = 2;
   string account_id = 3;
   // Hash of the canonical subject type string for table/switch dispatch.
   HashOfAString subject_type_hash = 4;
@@ -22,13 +22,6 @@ message ConsensusSubject {
     RegistryBatchSubject registry_batch = 12;
     GenericSubject generic = 100;
   }
-}
-
-enum SubjectType {
-  SUBJECT_UNSPECIFIED = 0;
-  SUBJECT_NONCE = 1;
-  SUBJECT_TASK_RESULT = 2;
-  SUBJECT_REGISTRY_BATCH = 3;
 }
 
 message UTXOTransitionCommitment {
@@ -90,9 +83,8 @@ message RegistryBatchSubject {
 }
 
 message GenericSubject {
-  string subject_type = 1;
-  bytes payload = 2;
-  bytes payload_hash = 3;
+  bytes payload = 1;
+  bytes payload_hash = 2;
 }
 
 message ConsensusProposal {

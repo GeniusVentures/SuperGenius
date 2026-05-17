@@ -117,7 +117,7 @@ namespace sgns
                                                                                      mutability_window ) );
 
         instance->blockchain_->RegisterCertificateHandler(
-            SubjectType::SUBJECT_NONCE,
+            kNonceSubjectType,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string          &subject_hash,
                 const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
@@ -139,7 +139,7 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
-            SubjectType::SUBJECT_NONCE,
+            kNonceSubjectType,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
             {
@@ -3561,13 +3561,12 @@ namespace sgns
     outcome::result<ConsensusManager::Check> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
     {
-        if ( subject.type() != SubjectType::SUBJECT_NONCE )
+        if ( !subject.has_nonce() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Received unexpected subject type: {}",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Received unexpected subject payload",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
-                                               __func__,
-                                               static_cast<int>( subject.type() ) );
+                                               __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 

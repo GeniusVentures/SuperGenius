@@ -207,7 +207,7 @@ namespace sgns::test
 
         auto cert = cert_result.value();
 
-        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+        manager->RegisterSubjectHandler( kNonceSubjectType,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
         manager->HandleProposal( proposal_result.value() );
@@ -271,21 +271,21 @@ namespace sgns::test
         auto manager  = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
-        EXPECT_TRUE( manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+        EXPECT_TRUE( manager->RegisterSubjectHandler( kNonceSubjectType,
                                                       []( const ConsensusManager::Subject & )
                                                       { return ConsensusManager::Check::Approve; } ) );
         EXPECT_TRUE(
-            manager->RegisterCertificateHandler( SubjectType::SUBJECT_NONCE,
+            manager->RegisterCertificateHandler( kNonceSubjectType,
                                                  []( const std::string &, const ConsensusManager::Certificate & )
                                                  { return outcome::success( ConsensusManager::Check::Approve ); } ) );
-        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( SubjectType::SUBJECT_NONCE );
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( kNonceSubjectType );
         ASSERT_TRUE( type_hash.has_value() );
         EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) != manager->subject_handlers_.end() );
         EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) !=
                      manager->certificate_subject_handlers_.end() );
 
-        manager->UnregisterSubjectHandler( SubjectType::SUBJECT_NONCE );
-        manager->UnregisterCertificateHandler( SubjectType::SUBJECT_NONCE );
+        manager->UnregisterSubjectHandler( kNonceSubjectType );
+        manager->UnregisterCertificateHandler( kNonceSubjectType );
         EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) == manager->subject_handlers_.end() );
         EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) ==
                      manager->certificate_subject_handlers_.end() );
@@ -352,7 +352,7 @@ namespace sgns::test
         ASSERT_TRUE( subject_result.has_value() );
         EXPECT_FALSE( subject_result.value().subject_id().empty() );
         ASSERT_TRUE( subject_result.value().has_subject_type_hash() );
-        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( SubjectType::SUBJECT_TASK_RESULT );
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( kTaskResultSubjectType );
         ASSERT_TRUE( type_hash.has_value() );
         EXPECT_EQ( type_hash.value(), subject_result.value().subject_type_hash().hash() );
 
@@ -442,7 +442,7 @@ namespace sgns::test
                                                         registry->GetRegistryEpoch() );
         ASSERT_TRUE( proposal_result.has_value() );
 
-        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+        manager->RegisterSubjectHandler( kNonceSubjectType,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
 
@@ -490,14 +490,14 @@ namespace sgns::test
                                                         registry->GetRegistryEpoch() );
         ASSERT_TRUE( proposal_result.has_value() );
 
-        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+        manager->RegisterSubjectHandler( kNonceSubjectType,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Pending; } );
         manager->HandleProposal( proposal_result.value() );
         EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) !=
                      manager->pending_proposals_.end() );
 
-        manager->RegisterSubjectHandler( SubjectType::SUBJECT_NONCE,
+        manager->RegisterSubjectHandler( kNonceSubjectType,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
 
@@ -543,7 +543,7 @@ namespace sgns::test
 
         std::atomic<bool> handler_called{ false };
         manager->RegisterCertificateHandler(
-            SubjectType::SUBJECT_NONCE,
+            kNonceSubjectType,
             [&handler_called, &tx_hash]( const std::string &subject_hash, const ConsensusManager::Certificate & )
             {
                 if ( subject_hash == tx_hash )

@@ -143,13 +143,6 @@ namespace sgns
         void SetFullNodeMode();
 
         /**
-         * @brief Registers a consensus subject handler.
-         * @param[in] type Subject type to handle.
-         * @param[in] handler Callback invoked for matching subjects.
-         * @return `true` on successful registration.
-         */
-        bool RegisterSubjectHandler( SubjectType type, ConsensusManager::SubjectHandler handler );
-        /**
          * @brief Registers a consensus subject handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to handle.
          * @param[in] handler Callback invoked for matching subjects.
@@ -157,22 +150,10 @@ namespace sgns
          */
         bool RegisterSubjectHandler( const std::string &subject_type, ConsensusManager::SubjectHandler handler );
         /**
-         * @brief Unregisters a consensus subject handler.
-         * @param[in] type Subject type to remove.
-         */
-        void UnregisterSubjectHandler( SubjectType type );
-        /**
          * @brief Unregisters a consensus subject handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to remove.
          */
         void UnregisterSubjectHandler( const std::string &subject_type );
-        /**
-         * @brief Registers a consensus certificate handler.
-         * @param[in] type Subject type associated with certificate callback.
-         * @param[in] handler Callback invoked for matching certificates.
-         * @return `true` on successful registration.
-         */
-        bool RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler );
         /**
          * @brief Registers a consensus certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with certificate callback.
@@ -181,11 +162,6 @@ namespace sgns
          */
         bool RegisterCertificateHandler( const std::string &subject_type,
                                          ConsensusManager::CertificateSubjectHandler handler );
-        /**
-         * @brief Unregisters a consensus certificate handler.
-         * @param[in] type Subject type to remove.
-         */
-        void UnregisterCertificateHandler( SubjectType type );
         /**
          * @brief Unregisters a consensus certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to remove.
