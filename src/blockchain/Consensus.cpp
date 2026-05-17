@@ -2099,6 +2099,8 @@ namespace sgns
 
     namespace
     {
+        constexpr size_t kSubjectTypeHashSize = base::Hash256::size();
+
         outcome::result<std::string> ComputePayloadHash( const std::string &payload )
         {
             if ( payload.empty() )
@@ -2117,7 +2119,7 @@ namespace sgns
                                 const std::string                &subject_type_hash,
                                 const google::protobuf::MessageLite &payload )
         {
-            if ( subject == nullptr || subject_type_hash.size() != 32 )
+            if ( subject == nullptr || subject_type_hash.size() != kSubjectTypeHashSize )
             {
                 return false;
             }
@@ -2143,12 +2145,13 @@ namespace sgns
             auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
             if ( expected.has_error() || !subject.has_subject_type_hash() ||
                  subject.subject_type_hash().hash() != expected.value() ||
-                 subject.payload().size() <= expected.value().size() ||
-                 subject.payload().compare( 0, expected.value().size(), expected.value() ) != 0 )
+                 subject.payload().size() <= kSubjectTypeHashSize ||
+                 expected.value().size() != kSubjectTypeHashSize ||
+                 subject.payload().compare( 0, kSubjectTypeHashSize, expected.value() ) != 0 )
             {
                 return outcome::failure( std::errc::invalid_argument );
             }
-            return subject.payload().substr( expected.value().size() );
+            return subject.payload().substr( kSubjectTypeHashSize );
         }
     }
 
