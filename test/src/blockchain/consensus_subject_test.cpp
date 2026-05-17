@@ -45,11 +45,8 @@ TEST( ConsensusSubjectTest, CreatesGenericSubject )
     ASSERT_TRUE( subject_result.has_value() );
     const auto &subject = subject_result.value();
     EXPECT_EQ( subject.account_id(), kAccountId );
-    EXPECT_EQ( subject.subject_type(), kBridgeSubjectType );
-    ASSERT_TRUE( subject.has_generic() );
-    EXPECT_EQ( subject.generic().payload(), std::string( payload.begin(), payload.end() ) );
-    EXPECT_FALSE( subject.generic().payload_hash().empty() );
-    EXPECT_FALSE( subject.subject_id().empty() );
+    EXPECT_EQ( subject.payload(), std::string( payload.begin(), payload.end() ) );
+    EXPECT_FALSE( subject.payload_hash().empty() );
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( kBridgeSubjectType );
     ASSERT_TRUE( type_hash.has_value() );
@@ -57,7 +54,7 @@ TEST( ConsensusSubjectTest, CreatesGenericSubject )
 
     const auto computed_id = sgns::ConsensusManager::ComputeSubjectId( subject );
     ASSERT_TRUE( computed_id.has_value() );
-    EXPECT_EQ( subject.subject_id(), computed_id.value() );
+    EXPECT_FALSE( computed_id.value().empty() );
     EXPECT_TRUE( sgns::ConsensusManager::ValidateSubject( subject ) );
     EXPECT_TRUE( sgns::ConsensusManager::CheckSubject( subject ) );
 }
@@ -85,17 +82,13 @@ TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsTamperedPayloadHash )
 
     auto subject = subject_result.value();
     ASSERT_TRUE( sgns::ConsensusManager::ValidateSubject( subject ) );
-    subject.mutable_generic()->set_payload_hash( "bad" );
-
-    const auto subject_id = sgns::ConsensusManager::ComputeSubjectId( subject );
-    ASSERT_TRUE( subject_id.has_value() );
-    subject.set_subject_id( subject_id.value() );
+    subject.set_payload_hash( "bad" );
 
     EXPECT_FALSE( sgns::ConsensusManager::ValidateSubject( subject ) );
     EXPECT_FALSE( sgns::ConsensusManager::CheckSubject( subject ) );
 }
 
-TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsTamperedSubjectTypeHash )
+TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsEmptySubjectTypeHash )
 {
     const auto subject_result = sgns::ConsensusManager::CreateGenericSubject(
         kAccountId,
@@ -105,11 +98,7 @@ TEST( ConsensusSubjectTest, ValidateGenericSubjectRejectsTamperedSubjectTypeHash
 
     auto subject = subject_result.value();
     ASSERT_TRUE( sgns::ConsensusManager::ValidateSubject( subject ) );
-    subject.mutable_subject_type_hash()->set_hash( "bad" );
-
-    const auto subject_id = sgns::ConsensusManager::ComputeSubjectId( subject );
-    ASSERT_TRUE( subject_id.has_value() );
-    subject.set_subject_id( subject_id.value() );
+    subject.clear_subject_type_hash();
 
     EXPECT_FALSE( sgns::ConsensusManager::ValidateSubject( subject ) );
     EXPECT_FALSE( sgns::ConsensusManager::CheckSubject( subject ) );
@@ -126,10 +115,10 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
     ASSERT_TRUE( subject_result.has_value() );
 
     const auto &subject = subject_result.value();
-    ASSERT_TRUE( subject.has_nonce() );
-    const auto subject_type = sgns::ConsensusManager::GetSubjectType( subject );
-    ASSERT_TRUE( subject_type.has_value() );
-    EXPECT_EQ( subject_type.value(), sgns::kNonceSubjectType );
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value().nonce(), 7U );
+    EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
 
     const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::kNonceSubjectType );
     ASSERT_TRUE( type_hash.has_value() );

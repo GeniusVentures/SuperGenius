@@ -256,12 +256,10 @@ namespace sgns
          * @return 32-byte subject type hash on success, otherwise an error.
          */
         static outcome::result<std::string> ComputeSubjectTypeHash( const std::string &subject_type );
-        /**
-         * @brief Returns the canonical subject type string implied by the payload arm.
-         * @param[in] subject Subject to inspect.
-         * @return Canonical subject type on success, otherwise an error.
-         */
-        static outcome::result<std::string> GetSubjectType( const Subject &subject );
+        static outcome::result<NonceSubject> DecodeNonceSubject( const Subject &subject );
+        static outcome::result<TaskResultSubject> DecodeTaskResultSubject( const Subject &subject );
+        static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
+        static bool SubjectTypeMatches( const Subject &subject, const std::string &subject_type );
         /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.

@@ -65,29 +65,32 @@ namespace sgns
 
         outcome::result<std::string> ExtractConsensusSubjectHash( const ConsensusSubject &subject )
         {
-            if ( subject.has_nonce() )
+            auto nonce_payload = ConsensusManager::DecodeNonceSubject( subject );
+            if ( nonce_payload.has_value() )
             {
-                if ( subject.nonce().tx_hash().empty() )
+                if ( nonce_payload.value().tx_hash().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
-                return subject.nonce().tx_hash();
+                return nonce_payload.value().tx_hash();
             }
-            if ( subject.has_task_result() )
+            auto task_payload = ConsensusManager::DecodeTaskResultSubject( subject );
+            if ( task_payload.has_value() )
             {
-                if ( subject.task_result().task_result_hash().empty() )
+                if ( task_payload.value().task_result_hash().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
-                return subject.task_result().task_result_hash();
+                return task_payload.value().task_result_hash();
             }
-            if ( subject.has_registry_batch() )
+            auto batch_payload = ConsensusManager::DecodeRegistryBatchSubject( subject );
+            if ( batch_payload.has_value() )
             {
-                if ( subject.registry_batch().batch_root().empty() )
+                if ( batch_payload.value().batch_root().empty() )
                 {
                     return outcome::failure( std::errc::invalid_argument );
                 }
-                return std::string( subject.registry_batch().batch_root() );
+                return std::string( batch_payload.value().batch_root() );
             }
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -778,7 +781,7 @@ namespace sgns
         {
             return;
         }
-        if ( certificate.proposal().subject().has_registry_batch() )
+        if ( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
         {
             return;
         }
@@ -864,12 +867,13 @@ namespace sgns
     outcome::result<ValidatorRegistry::BatchSubjectDecision> ValidatorRegistry::EvaluateBatchSubject(
         const ConsensusSubject &subject )
     {
-        if ( !subject.has_registry_batch() )
+        auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( subject );
+        if ( payload_result.has_error() )
         {
             return outcome::success( BatchSubjectDecision::Reject );
         }
 
-        const auto &payload         = subject.registry_batch();
+        const auto &payload         = payload_result.value();
         auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
                                                     payload.base_registry_epoch(),
                                                     payload.certificate_count(),
@@ -915,7 +919,7 @@ namespace sgns
             applying_batch_subject_ids_.insert( subject_hash );
         }
         if ( !certificate.has_proposal() || !certificate.proposal().has_subject() ||
-             !certificate.proposal().subject().has_registry_batch() )
+             ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_error() )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
@@ -936,7 +940,14 @@ namespace sgns
             return BatchCertificateDecision::Reject;
         }
 
-        const auto &payload         = certificate.proposal().subject().registry_batch();
+        auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
+        if ( payload_result.has_error() )
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Reject;
+        }
+        const auto &payload         = payload_result.value();
         auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
                                                     payload.base_registry_epoch(),
                                                     payload.certificate_count(),
@@ -1236,10 +1247,13 @@ namespace sgns
             }
 
             Registry expected;
-            if ( certificate.has_proposal() && certificate.proposal().has_subject() &&
-                 certificate.proposal().subject().has_registry_batch() )
+            auto batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
+                                     ? ConsensusManager::DecodeRegistryBatchSubject(
+                                           certificate.proposal().subject() )
+                                     : outcome::failure( std::errc::invalid_argument );
+            if ( batch_payload.has_value() )
             {
-                const auto &payload = certificate.proposal().subject().registry_batch();
+                const auto &payload = batch_payload.value();
                 if ( payload.base_registry_cid() != update.prev_registry_hash() ||
                      payload.base_registry_epoch() != current_registry->epoch() ||
                      payload.target_registry_epoch() != current_registry->epoch() + 1 )

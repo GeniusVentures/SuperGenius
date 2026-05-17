@@ -90,7 +90,10 @@ namespace sgns
         {
             return false;
         }
-        if ( !subject.has_nonce() || !subject.nonce().has_utxo_witness() || !subject.nonce().has_utxo_commitment() )
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() ||
+             !nonce_subject.value().has_utxo_witness() ||
+             !nonce_subject.value().has_utxo_commitment() )
         {
             return false;
         }
@@ -106,7 +109,7 @@ namespace sgns
         {
             return false;
         }
-        const auto &commitment = subject.nonce().utxo_commitment();
+        const auto &commitment = nonce_subject.value().utxo_commitment();
         if ( commitment.consumed_outpoints_root().size() != base::Hash256::size() ||
              commitment.produced_outputs_root().size() != base::Hash256::size() )
         {
@@ -220,8 +223,8 @@ namespace sgns
         }
 
         std::unordered_map<std::string, const ConsumedInputProof *> proofs;
-        proofs.reserve( subject.nonce().utxo_witness().consumed_inputs_size() );
-        for ( const auto &proof : subject.nonce().utxo_witness().consumed_inputs() )
+        proofs.reserve( nonce_subject.value().utxo_witness().consumed_inputs_size() );
+        for ( const auto &proof : nonce_subject.value().utxo_witness().consumed_inputs() )
         {
             auto hash_result = base::Hash256::fromSpan(
                 gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( proof.tx_id_hash().data() ) ),
@@ -328,11 +331,12 @@ namespace sgns
                 return false;
             }
             const auto &producer_subject = producer_cert_result.value().proposal().subject();
-            if ( !producer_subject.has_nonce() || !producer_subject.nonce().has_utxo_commitment() )
+            auto producer_nonce = ConsensusManager::DecodeNonceSubject( producer_subject );
+            if ( producer_nonce.has_error() || !producer_nonce.value().has_utxo_commitment() )
             {
                 return false;
             }
-            const auto &producer_commitment = producer_subject.nonce().utxo_commitment();
+            const auto &producer_commitment = producer_nonce.value().utxo_commitment();
             if ( producer_commitment.produced_outputs_root().size() != base::Hash256::size() )
             {
                 return false;

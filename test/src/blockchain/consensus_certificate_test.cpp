@@ -217,8 +217,12 @@ namespace sgns::test
 
         manager->HandleProposal( proposal_result.value() );
         EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
-        auto *bad_subject = cert.mutable_proposal()->mutable_subject()->mutable_nonce();
-        bad_subject->set_nonce( bad_subject->nonce() + 1 );
+        auto bad_subject = ConsensusManager::DecodeNonceSubject( cert.proposal().subject() );
+        ASSERT_TRUE( bad_subject.has_value() );
+        bad_subject.value().set_nonce( bad_subject.value().nonce() + 1 );
+        std::string bad_payload;
+        ASSERT_TRUE( bad_subject.value().SerializeToString( &bad_payload ) );
+        cert.mutable_proposal()->mutable_subject()->set_payload( bad_payload );
 
         manager->HandleCertificate( cert );
         EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
@@ -350,7 +354,6 @@ namespace sgns::test
                                                                          "0xdeadbeef",
                                                                          12 );
         ASSERT_TRUE( subject_result.has_value() );
-        EXPECT_FALSE( subject_result.value().subject_id().empty() );
         ASSERT_TRUE( subject_result.value().has_subject_type_hash() );
         auto type_hash = ConsensusManager::ComputeSubjectTypeHash( kTaskResultSubjectType );
         ASSERT_TRUE( type_hash.has_value() );
@@ -358,7 +361,7 @@ namespace sgns::test
 
         auto computed = ConsensusManager::ComputeSubjectId( subject_result.value() );
         ASSERT_TRUE( computed.has_value() );
-        EXPECT_EQ( computed.value(), subject_result.value().subject_id() );
+        EXPECT_FALSE( computed.value().empty() );
     }
 
     TEST_F( ConsensusCertificateTest, TallyVotesWithRegistry )
@@ -501,7 +504,9 @@ namespace sgns::test
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
 
-        auto resume = manager->ResumeProposalHandling( subject_result.value().nonce().tx_hash() );
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject_result.value() );
+        ASSERT_TRUE( nonce_subject.has_value() );
+        auto resume = manager->ResumeProposalHandling( nonce_subject.value().tx_hash() );
         EXPECT_FALSE( resume.has_error() );
         EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) ==
                      manager->pending_proposals_.end() );
@@ -585,7 +590,12 @@ namespace sgns::test
 
         ASSERT_TRUE( manager->ValidateSubject( subject ) );
 
-        subject.mutable_nonce()->set_nonce( subject.nonce().nonce() + 1 );
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        ASSERT_TRUE( nonce_subject.has_value() );
+        nonce_subject.value().set_nonce( nonce_subject.value().nonce() + 1 );
+        std::string bad_payload;
+        ASSERT_TRUE( nonce_subject.value().SerializeToString( &bad_payload ) );
+        subject.set_payload( bad_payload );
         EXPECT_FALSE( manager->ValidateSubject( subject ) );
     }
 
@@ -609,9 +619,6 @@ namespace sgns::test
         ASSERT_TRUE( manager->ValidateSubject( subject ) );
 
         subject.mutable_subject_type_hash()->set_hash( std::string( 32, '\x7f' ) );
-        auto recomputed_subject_id = ConsensusManager::ComputeSubjectId( subject );
-        ASSERT_TRUE( recomputed_subject_id.has_value() );
-        subject.set_subject_id( recomputed_subject_id.value() );
         EXPECT_FALSE( manager->ValidateSubject( subject ) );
     }
 
@@ -647,8 +654,13 @@ namespace sgns::test
 
         ASSERT_TRUE( manager->ValidateSubject( subject ) );
 
-        auto *tampered = subject.mutable_nonce()->mutable_utxo_witness()->mutable_consumed_inputs( 0 );
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        ASSERT_TRUE( nonce_subject.has_value() );
+        auto *tampered = nonce_subject.value().mutable_utxo_witness()->mutable_consumed_inputs( 0 );
         tampered->set_output_index( 9 );
+        std::string bad_payload;
+        ASSERT_TRUE( nonce_subject.value().SerializeToString( &bad_payload ) );
+        subject.set_payload( bad_payload );
         EXPECT_FALSE( manager->ValidateSubject( subject ) );
     }
 } // namespace sgns::test

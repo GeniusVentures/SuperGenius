@@ -8,20 +8,13 @@ message HashOfAString {
 }
 
 message ConsensusSubject {
-  // Hash of the full canonical subject contents, excluding this field.
-  string subject_id = 1;
-  // Canonical subject type string, e.g. "sgns.nonce.v1" or "gnus.bridge_event.v1".
-  string subject_type = 2;
   string account_id = 3;
   // Hash of the canonical subject type string for table/switch dispatch.
   HashOfAString subject_type_hash = 4;
-
-  oneof payload {
-    NonceSubject nonce = 10;
-    TaskResultSubject task_result = 11;
-    RegistryBatchSubject registry_batch = 12;
-    GenericSubject generic = 100;
-  }
+  // Canonical payload bytes owned by the subject type handler.
+  bytes payload = 5;
+  // Hash of payload bytes.
+  bytes payload_hash = 6;
 }
 
 message UTXOTransitionCommitment {
@@ -80,11 +73,6 @@ message RegistryBatchSubject {
   uint64 target_registry_epoch = 3;
   uint32 certificate_count = 4;
   bytes batch_root = 5;
-}
-
-message GenericSubject {
-  bytes payload = 1;
-  bytes payload_hash = 2;
 }
 
 message ConsensusProposal {
