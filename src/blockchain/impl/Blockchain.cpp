@@ -1671,9 +1671,19 @@ namespace sgns
         return consensus_manager_->RegisterSubjectHandler( type, std::move( handler ) );
     }
 
+    bool Blockchain::RegisterSubjectHandler( const std::string &subject_type, ConsensusManager::SubjectHandler handler )
+    {
+        return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
+    }
+
     void Blockchain::UnregisterSubjectHandler( SubjectType type )
     {
         consensus_manager_->UnregisterSubjectHandler( type );
+    }
+
+    void Blockchain::UnregisterSubjectHandler( const std::string &subject_type )
+    {
+        consensus_manager_->UnregisterSubjectHandler( subject_type );
     }
 
     bool Blockchain::RegisterCertificateHandler( SubjectType type, ConsensusManager::CertificateSubjectHandler handler )
@@ -1681,9 +1691,20 @@ namespace sgns
         return consensus_manager_->RegisterCertificateHandler( type, std::move( handler ) );
     }
 
+    bool Blockchain::RegisterCertificateHandler( const std::string                            &subject_type,
+                                                 ConsensusManager::CertificateSubjectHandler handler )
+    {
+        return consensus_manager_->RegisterCertificateHandler( subject_type, std::move( handler ) );
+    }
+
     void Blockchain::UnregisterCertificateHandler( SubjectType type )
     {
         consensus_manager_->UnregisterCertificateHandler( type );
+    }
+
+    void Blockchain::UnregisterCertificateHandler( const std::string &subject_type )
+    {
+        consensus_manager_->UnregisterCertificateHandler( subject_type );
     }
 
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
