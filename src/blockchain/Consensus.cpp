@@ -2113,9 +2113,11 @@ namespace sgns
             return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
         }
 
-        bool SetSubjectPayload( ConsensusSubject *subject, const google::protobuf::MessageLite &payload )
+        bool SetSubjectPayload( ConsensusSubject                 *subject,
+                                const std::string                &subject_type_hash,
+                                const google::protobuf::MessageLite &payload )
         {
-            if ( subject == nullptr )
+            if ( subject == nullptr || subject_type_hash.size() != 32 )
             {
                 return false;
             }
@@ -2124,14 +2126,29 @@ namespace sgns
             {
                 return false;
             }
-            auto payload_hash = ComputePayloadHash( serialized );
+            std::string canonical_payload = subject_type_hash + serialized;
+            auto        payload_hash      = ComputePayloadHash( canonical_payload );
             if ( payload_hash.has_error() )
             {
                 return false;
             }
-            subject->set_payload( serialized.data(), serialized.size() );
+            subject->set_payload( canonical_payload.data(), canonical_payload.size() );
             subject->set_payload_hash( payload_hash.value().data(), payload_hash.value().size() );
             return true;
+        }
+
+        outcome::result<std::string> ExtractBuiltinPayload( const ConsensusSubject &subject,
+                                                            const std::string      &subject_type )
+        {
+            auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
+            if ( expected.has_error() || !subject.has_subject_type_hash() ||
+                 subject.subject_type_hash().hash() != expected.value() ||
+                 subject.payload().size() <= expected.value().size() ||
+                 subject.payload().compare( 0, expected.value().size(), expected.value() ) != 0 )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return subject.payload().substr( expected.value().size() );
         }
     }
 
@@ -2158,12 +2175,13 @@ namespace sgns
 
     outcome::result<NonceSubject> ConsensusManager::DecodeNonceSubject( const Subject &subject )
     {
-        if ( !SubjectTypeMatches( subject, kNonceSubjectType ) )
+        auto raw_payload = ExtractBuiltinPayload( subject, kNonceSubjectType );
+        if ( raw_payload.has_error() )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            return outcome::failure( raw_payload.error() );
         }
         NonceSubject payload;
-        if ( !payload.ParseFromString( subject.payload() ) )
+        if ( !payload.ParseFromString( raw_payload.value() ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2172,12 +2190,13 @@ namespace sgns
 
     outcome::result<TaskResultSubject> ConsensusManager::DecodeTaskResultSubject( const Subject &subject )
     {
-        if ( !SubjectTypeMatches( subject, kTaskResultSubjectType ) )
+        auto raw_payload = ExtractBuiltinPayload( subject, kTaskResultSubjectType );
+        if ( raw_payload.has_error() )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            return outcome::failure( raw_payload.error() );
         }
         TaskResultSubject payload;
-        if ( !payload.ParseFromString( subject.payload() ) )
+        if ( !payload.ParseFromString( raw_payload.value() ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2186,12 +2205,13 @@ namespace sgns
 
     outcome::result<RegistryBatchSubject> ConsensusManager::DecodeRegistryBatchSubject( const Subject &subject )
     {
-        if ( !SubjectTypeMatches( subject, kRegistryBatchSubjectType ) )
+        auto raw_payload = ExtractBuiltinPayload( subject, kRegistryBatchSubjectType );
+        if ( raw_payload.has_error() )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            return outcome::failure( raw_payload.error() );
         }
         RegistryBatchSubject payload;
-        if ( !payload.ParseFromString( subject.payload() ) )
+        if ( !payload.ParseFromString( raw_payload.value() ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2225,7 +2245,7 @@ namespace sgns
             *payload.mutable_utxo_witness() = utxo_witness.value();
         }
         auto type_hash = ComputeSubjectTypeHash( kNonceSubjectType );
-        if ( type_hash.has_error() || !SetSubjectPayload( &subject, payload ) )
+        if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2252,7 +2272,7 @@ namespace sgns
         payload.set_task_result_hash( task_result_hash.data(), task_result_hash.size() );
         payload.set_result_epoch( result_epoch );
         auto type_hash = ComputeSubjectTypeHash( kTaskResultSubjectType );
-        if ( type_hash.has_error() || !SetSubjectPayload( &subject, payload ) )
+        if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2285,7 +2305,7 @@ namespace sgns
         payload.set_certificate_count( certificate_count );
         payload.set_batch_root( batch_root.data(), batch_root.size() );
         auto type_hash = ComputeSubjectTypeHash( kRegistryBatchSubjectType );
-        if ( type_hash.has_error() || !SetSubjectPayload( &subject, payload ) )
+        if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }

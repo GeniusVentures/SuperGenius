@@ -1,8 +1,11 @@
 #include <gtest/gtest.h>
+#include <gsl/span>
 
 #define private public
 #include "blockchain/Consensus.hpp"
 #undef private
+
+#include "crypto/hasher/hasher_impl.hpp"
 
 namespace
 {
@@ -12,6 +15,28 @@ namespace
     std::vector<uint8_t> BridgePayload()
     {
         return std::vector<uint8_t>{ 0x01, 0x02, 0x03 };
+    }
+
+    std::string SerializedTaskResultPayload()
+    {
+        sgns::TaskResultSubject payload;
+        payload.set_escrow_path( "escrow/path" );
+        payload.set_task_result_hash( "task-hash" );
+        payload.set_result_epoch( 1 );
+
+        std::string serialized;
+        EXPECT_TRUE( payload.SerializeToString( &serialized ) );
+        return serialized;
+    }
+
+    void RefreshPayloadHash( sgns::ConsensusSubject &subject )
+    {
+        sgns::crypto::HasherImpl hasher;
+        auto payload_hash = hasher.sha2_256(
+            gsl::span<const uint8_t>(
+                reinterpret_cast<const uint8_t *>( subject.payload().data() ),
+                subject.payload().size() ) );
+        subject.set_payload_hash( payload_hash.data(), payload_hash.size() );
     }
 }
 
@@ -126,4 +151,63 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
 
     EXPECT_TRUE( sgns::ConsensusManager::ValidateSubject( subject ) );
     EXPECT_TRUE( sgns::ConsensusManager::CheckSubject( subject ) );
+}
+
+TEST( ConsensusSubjectTest, RejectsMalformedNoncePayload )
+{
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        7,
+        "tx-hash",
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto subject = subject_result.value();
+    subject.set_payload( "\xff\xff\xff", 3 );
+    RefreshPayloadHash( subject );
+
+    EXPECT_TRUE( sgns::ConsensusManager::DecodeNonceSubject( subject ).has_error() );
+    EXPECT_FALSE( sgns::ConsensusManager::ValidateSubject( subject ) );
+    EXPECT_FALSE( sgns::ConsensusManager::CheckSubject( subject ) );
+}
+
+TEST( ConsensusSubjectTest, RejectsNonceHashWithTaskResultPayload )
+{
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        7,
+        "tx-hash",
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto subject = subject_result.value();
+    const auto task_payload = SerializedTaskResultPayload();
+    subject.set_payload( task_payload.data(), task_payload.size() );
+    RefreshPayloadHash( subject );
+
+    EXPECT_TRUE( sgns::ConsensusManager::DecodeNonceSubject( subject ).has_error() );
+    EXPECT_FALSE( sgns::ConsensusManager::ValidateSubject( subject ) );
+    EXPECT_FALSE( sgns::ConsensusManager::CheckSubject( subject ) );
+}
+
+TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
+{
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        7,
+        "tx-hash",
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto subject = subject_result.value();
+    const auto task_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::kTaskResultSubjectType );
+    ASSERT_TRUE( task_hash.has_value() );
+    subject.mutable_subject_type_hash()->set_hash( task_hash.value().data(), task_hash.value().size() );
+
+    EXPECT_TRUE( sgns::ConsensusManager::DecodeTaskResultSubject( subject ).has_error() );
+    EXPECT_FALSE( sgns::ConsensusManager::ValidateSubject( subject ) );
+    EXPECT_FALSE( sgns::ConsensusManager::CheckSubject( subject ) );
 }
