@@ -64,6 +64,7 @@ add_library(genius_node
     InputValidators.cpp
     TransactionManager.cpp
     TokenAmount.cpp
+    BridgeConsensusAdapter.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
