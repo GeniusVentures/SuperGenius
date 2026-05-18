@@ -265,36 +265,35 @@ namespace sgns
             case NodeState::MIGRATING_DATABASE:
             {
                 account_->InitMessenger( pubsub_ );
-                // MigrateDatabase(
-                //     [weak_self( weak_from_this() )]( outcome::result<void> result )
-                //     {
-                //         if ( auto strong = weak_self.lock() )
-                //         {
-                //             try
-                //             {
-                //                 if ( result.has_error() )
-                //                 {
-                //                     strong->node_logger_->error( "Database migration error: {}", result.error().message() );
-                //                     if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
-                //                     {
-                //                         strong->node_logger_->info( "Scheduling blockchain retry after failure" );
-                //                         strong->ScheduleMigrationRetry();
-                //                     }
-                //                     return;
-                //                 }
-                //                 strong->StateTransition( NodeState::INITIALIZING_DATABASE );
-                //             }
-                //             catch ( const std::exception &e )
-                //             {
-                //                 strong->node_logger_->error( "Unhandled exception in migration callback: {}", e.what() );
-                //             }
-                //             catch ( ... )
-                //             {
-                //                 strong->node_logger_->error( "Unhandled unknown exception in migration callback" );
-                //             }
-                //         }
-                //     } );
-                    StateTransition( NodeState::INITIALIZING_DATABASE );
+                MigrateDatabase(
+                    [weak_self( weak_from_this() )]( outcome::result<void> result )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            try
+                            {
+                                if ( result.has_error() )
+                                {
+                                    strong->node_logger_->error( "Database migration error: {}", result.error().message() );
+                                    if ( result.error() == MigrationManager::Error::BLOCKCHAIN_INIT_FAILED )
+                                    {
+                                        strong->node_logger_->info( "Scheduling blockchain retry after failure" );
+                                        strong->ScheduleMigrationRetry();
+                                    }
+                                    return;
+                                }
+                                strong->StateTransition( NodeState::INITIALIZING_DATABASE );
+                            }
+                            catch ( const std::exception &e )
+                            {
+                                strong->node_logger_->error( "Unhandled exception in migration callback: {}", e.what() );
+                            }
+                            catch ( ... )
+                            {
+                                strong->node_logger_->error( "Unhandled unknown exception in migration callback" );
+                            }
+                        }
+                    } );
                 break;
             }
             case NodeState::INITIALIZING_DATABASE:
@@ -546,11 +545,11 @@ namespace sgns
         // Release mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::trace );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::trace );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
