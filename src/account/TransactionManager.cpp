@@ -117,7 +117,7 @@ namespace sgns
                                                                                      mutability_window ) );
 
         instance->blockchain_->RegisterCertificateHandler(
-            SubjectType::SUBJECT_NONCE,
+            kNonceSubjectType,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string          &subject_hash,
                 const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
@@ -139,7 +139,7 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
-            SubjectType::SUBJECT_NONCE,
+            kNonceSubjectType,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
             {
@@ -3561,17 +3561,17 @@ namespace sgns
     outcome::result<ConsensusManager::Check> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
     {
-        if ( subject.type() != SubjectType::SUBJECT_NONCE )
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Received unexpected subject type: {}",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Received unexpected subject payload",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
-                                               __func__,
-                                               static_cast<int>( subject.type() ) );
+                                               __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        const std::string tx_hash = subject.nonce().tx_hash();
+        const std::string tx_hash = nonce_subject.value().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
         std::shared_ptr<IGeniusTransactions> tracked_tx;
@@ -3638,7 +3638,7 @@ namespace sgns
             return ConsensusManager::Check::Reject;
         };
 
-        if ( tracked_nonce != subject.nonce().nonce() )
+        if ( tracked_nonce != nonce_subject.value().nonce() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Nonce mismatch for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3975,7 +3975,8 @@ namespace sgns
                 return false;
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
-            if ( !previous_subject.has_nonce() )
+            auto previous_nonce = ConsensusManager::DecodeNonceSubject( previous_subject );
+            if ( previous_nonce.has_error() )
             {
                 return false;
             }
@@ -3983,7 +3984,7 @@ namespace sgns
             {
                 return false;
             }
-            if ( ( previous_subject.nonce().nonce() + 1 ) != tx.GetNonce() )
+            if ( ( previous_nonce.value().nonce() + 1 ) != tx.GetNonce() )
             {
                 return false;
             }
@@ -4116,6 +4117,7 @@ namespace sgns
             return WitnessValidationResult::INVALID;
         }
 
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         TransactionManagerLogger()->debug(
             "[{} - full: {}] {}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
             "has_utxo_params={} has_commitment={} has_witness={}",
@@ -4125,13 +4127,13 @@ namespace sgns
             tx->GetHash(),
             tx->GetSrcAddress(),
             tx->GetNonce(),
-            subject.has_nonce() ? subject.nonce().nonce() : 0,
-            subject.has_nonce(),
+            nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
+            nonce_subject.has_value(),
             tx->HasUTXOParameters(),
-            subject.has_nonce() && subject.nonce().has_utxo_commitment(),
-            subject.has_nonce() && subject.nonce().has_utxo_witness() );
+            nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
+            nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
 
-        if ( !subject.has_nonce() )
+        if ( nonce_subject.has_error() )
         {
             TransactionManagerLogger()->debug( "[{} - full: {}] {}: Subject has no nonce payload, accepting tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -4154,7 +4156,7 @@ namespace sgns
             return WitnessValidationResult::VALID;
         }
 
-        if ( !subject.nonce().has_utxo_commitment() )
+        if ( !nonce_subject.value().has_utxo_commitment() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO commitment tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -4164,7 +4166,7 @@ namespace sgns
             return WitnessValidationResult::INVALID;
         }
 
-        const auto &commitment = subject.nonce().utxo_commitment();
+        const auto &commitment = nonce_subject.value().utxo_commitment();
         if ( commitment.consumed_outpoints_root().size() != base::Hash256::size() ||
              commitment.produced_outputs_root().size() != base::Hash256::size() )
         {
@@ -4193,7 +4195,7 @@ namespace sgns
             return WitnessValidationResult::INVALID;
         }
 
-        if ( validator.RequiresConsensusUTXOData() && !subject.nonce().has_utxo_witness() )
+        if ( validator.RequiresConsensusUTXOData() && !nonce_subject.value().has_utxo_witness() )
         {
             TransactionManagerLogger()->error(
                 "[{} - full: {}] {}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
