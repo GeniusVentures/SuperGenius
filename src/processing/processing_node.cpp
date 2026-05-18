@@ -82,10 +82,6 @@ namespace sgns::processing
     ProcessingNode::~ProcessingNode()
     {
         m_logger->debug( "[{}] Processing node DELETED ", m_nodeId );
-        if ( m_processingEngine )
-        {
-            m_processingEngine->StopQueueProcessing();
-        }
         if ( m_localContext )
         {
             m_localContext->stop();

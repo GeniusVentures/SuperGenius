@@ -294,15 +294,34 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED" );
+        ShutdownNow();
+    }
+
+    void GlobalDB::ShutdownNow()
+    {
+        bool expected = false;
+        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
+        {
+            return;
+        }
+
+        m_logger->info( "GlobalDB shutdown start" );
+
+        SetIncomingBroadcastEnabled( false );
         StopBackupLoop();
+
         if ( m_broadcaster )
         {
             m_broadcaster->Stop();
         }
+
         if ( m_crdtDatastore )
         {
-            m_crdtDatastore->Close();
+            m_crdtDatastore->CancelAndCloseNow();
         }
+
+        started_.store( false );
+        m_logger->info( "GlobalDB shutdown finished" );
     }
 
     outcome::result<void> GlobalDB::Init(
@@ -382,6 +401,7 @@ namespace sgns::crdt
                 if ( !dataStoreResult.has_value() )
                 {
                     std::string errorMsg = dataStoreResult.error().message();
+                    m_logger->error( "Unable to open database: {}", errorMsg );
                     if ( errorMsg.find( "corruption" ) != std::string::npos ||
                          errorMsg.find( "Corruption" ) != std::string::npos )
                     {
@@ -582,6 +602,12 @@ namespace sgns::crdt
 
     void GlobalDB::Start()
     {
+        if ( shutdown_started_.load() )
+        {
+            m_logger->warn( "GlobalDB::Start ignored because shutdown has already started" );
+            return;
+        }
+
         if ( !started_ )
         {
             started_ = true;

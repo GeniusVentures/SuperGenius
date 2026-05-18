@@ -99,8 +99,6 @@ namespace sgns::processing
         */
         float GetProgress() const override;
 
-        void CancelCurrentProcessing() override;
-
 
         std::vector<size_t> m_chunkResulHashes;
         std::vector<size_t> m_validationChunkHashes;
@@ -117,7 +115,6 @@ namespace sgns::processing
         size_t m_processingSubTaskCount;
 
         mutable std::shared_ptr<sgprocessing::ProcessingManager> m_currentProcessingManager;
-        mutable std::mutex                                       m_processingManagerMutex;
 
         std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
         

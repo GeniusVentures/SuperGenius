@@ -525,6 +525,12 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::BlockReceivedCallback( const CID &cid, common::Buffer buffer )
     {
+        if ( is_stopped_.load() )
+        {
+            logger_->debug( "Ignoring block callback after stop: cid={}", cid.toString().value() );
+            return;
+        }
+
         logger_->trace( "Block received: cid={}", cid.toString().value() );
         auto hb = HasBlock( cid );
 
@@ -719,6 +725,7 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
     {
         std::lock_guard<std::mutex> lock( dagMutex_ );
+        logger_->debug( "Marking CID as resolved: {}", cid.toString().value() );
         return dagService_->markResolved( cid );
     }
 
@@ -1207,14 +1214,7 @@ namespace sgns::crdt
     void GraphsyncDAGSyncer::Stop()
     {
         logger_->debug( "Stopping Dagsyncer" );
-        is_stopped_ = true;
-
-        if ( graphsync_ != nullptr )
-        {
-            graphsync_->stop();
-        }
-
-        g_request_wait_cv.notify_all();
+        StopSync();
     }
 
 }

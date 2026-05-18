@@ -175,6 +175,12 @@ namespace sgns::crdt
 
         void Start();
 
+        /**
+         * @brief Immediately quiesce and shut down CRDT intake and workers.
+         * Safe to call multiple times.
+         */
+        void ShutdownNow();
+
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
 
         outcome::result<uint64_t> GetCRDTHeadHeight( const CID &aCid, const std::string &topic );
@@ -239,6 +245,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
+        std::atomic_bool                                  shutdown_started_{ false };
         std::atomic_bool                                  incomingBroadcastEnabled_{ true };
         BackupOptions                                     backup_options_{};
         std::string                                       backup_directory_;
