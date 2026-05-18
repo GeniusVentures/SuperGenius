@@ -62,7 +62,7 @@ namespace sgns::crdt
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
-            BackupOptions                                                          backup_options = BackupOptions{} );
+            BackupOptions                                                          backup_options = BackupOptions{ false, 15, 12, true } );
 
         /**
          * @brief       Factory method that opens an existing database in read-only migration-source mode.
@@ -229,7 +229,7 @@ namespace sgns::crdt
                                     std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr,
-                                    BackupOptions            backup_options = BackupOptions{} );
+                                    BackupOptions            backup_options = BackupOptions{ false, 15, 12, true } );
 
         outcome::result<void> InitMigrationSource( std::shared_ptr<RocksDB> datastore = nullptr );
 
