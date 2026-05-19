@@ -393,6 +393,8 @@ namespace sgns
         void ConfigureRoundSkew( std::chrono::milliseconds skew );
 
     private:
+        friend class ConsensusManagerTestAccess;
+
         /**
          * @brief Constructs a consensus manager.
          * @param[in] registry Validator registry dependency.
