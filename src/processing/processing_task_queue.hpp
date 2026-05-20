@@ -38,6 +38,13 @@ public:
                                                const std::list<SGProcessing::SubTask>  &subTasks,
                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) = 0;
 
+    /**
+    * @brief       Returns a task by task id, returns failure if task not found or invalid
+    * @param[in]   taskId the ID of the task
+    * @return      The task if found, failure otherwise
+    */
+    virtual outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) = 0;
+
     /** Returns a list of subtasks linked to taskId
     * @param taskId - task id
     * @param subTasks - list of found subtasks

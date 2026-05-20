@@ -32,6 +32,7 @@ namespace sgns::processing
             const std::list<SGProcessing::SubTask>  &subTasks,
             std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr ) override;
 
+        outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) override;
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override;
 
         outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() override;

@@ -4,22 +4,25 @@
 
 namespace sgns::processing
 {
-    ProcessingTaskQueueImpl::ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
+    ProcessingTaskQueueImpl::ProcessingTaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                                      std::string                           processing_topic ) :
         m_db( std::move( db ) ),
         m_processingTimeout( std::chrono::seconds( 10 ) ),
         m_processing_topic( std::move( processing_topic ) ),
         m_badjobs()
     {
-        m_logger->info( "ProcessingTaskQueueImpl CREATED - instance at {}", static_cast<void*>(this) );
+        m_logger->info( "ProcessingTaskQueueImpl CREATED - instance at {}", static_cast<void *>( this ) );
     }
 
     ProcessingTaskQueueImpl::~ProcessingTaskQueueImpl()
     {
-        m_logger->info( "ProcessingTaskQueueImpl DESTROYED - instance at {}", static_cast<void*>(this) );
+        m_logger->info( "ProcessingTaskQueueImpl DESTROYED - instance at {}", static_cast<void *>( this ) );
     }
-    outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
-                                                                const std::list<SGProcessing::SubTask> &subTasks,
-                                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
+
+    outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask(
+        const SGProcessing::Task                &task,
+        const std::list<SGProcessing::SubTask>  &subTasks,
+        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
         (void)crdt_transaction;
         if ( job_crdt_transaction_ )
@@ -57,6 +60,11 @@ namespace sgns::processing
         return outcome::success();
     }
 
+    outcome::result<SGProcessing::Task> ProcessingTaskQueueImpl::GetTask( const std::string &taskId )
+    {
+        return outcome::failure( boost::system::error_code{} );
+    }
+
     bool ProcessingTaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
         m_logger->debug( "SUBTASKS_REQUESTED. TaskId: {}", taskId );
@@ -81,7 +89,7 @@ namespace sgns::processing
                 if ( subTask.ParseFromArray( element.second.data(), element.second.size() ) )
                 {
                     m_logger->debug( "Subtask check {}", subTask.chunkstoprocess_size() );
-                    if (!IsSubTaskValid(subTask.json_data()))
+                    if ( !IsSubTaskValid( subTask.json_data() ) )
                     {
                         m_logger->debug( "Subtask does not validate" );
                         return false;
@@ -133,12 +141,16 @@ namespace sgns::processing
 
             if ( m_badjobs.find( task.ipfs_block_id() ) != m_badjobs.end() )
             {
-                m_logger->debug( "Skip bad job: {} (found in blacklist of {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                m_logger->debug( "Skip bad job: {} (found in blacklist of {} items)",
+                                 task.ipfs_block_id(),
+                                 m_badjobs.size() );
                 continue;
             }
             else
             {
-                m_logger->debug( "Task {} not in blacklist (blacklist has {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                m_logger->debug( "Task {} not in blacklist (blacklist has {} items)",
+                                 task.ipfs_block_id(),
+                                 m_badjobs.size() );
             }
 
             if ( IsTaskCompleted( task.ipfs_block_id() ) )
@@ -174,7 +186,9 @@ namespace sgns::processing
                 break;
             }
         }
-        m_logger->info( "Checked task Queue: {} tasks processed, {} bad tasks in blacklist", queryTasks.size(), m_badjobs.size() );
+        m_logger->info( "Checked task Queue: {} tasks processed, {} bad tasks in blacklist",
+                        queryTasks.size(),
+                        m_badjobs.size() );
         if ( task_grabbed )
         {
             m_logger->info( "GRAB_TASK_SUCCESS: returning task_id={}", task.ipfs_block_id() );
@@ -318,12 +332,16 @@ namespace sgns::processing
                             // Check if this task is blacklisted before allowing it to be processed again
                             if ( m_badjobs.find( task.ipfs_block_id() ) != m_badjobs.end() )
                             {
-                                m_logger->debug( "Skip expired bad job: {} (found in blacklist of {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                                m_logger->debug( "Skip expired bad job: {} (found in blacklist of {} items)",
+                                                 task.ipfs_block_id(),
+                                                 m_badjobs.size() );
                                 return false;
                             }
                             else
                             {
-                                m_logger->debug( "Expired task {} not in blacklist (blacklist has {} items)", task.ipfs_block_id(), m_badjobs.size() );
+                                m_logger->debug( "Expired task {} not in blacklist (blacklist has {} items)",
+                                                 task.ipfs_block_id(),
+                                                 m_badjobs.size() );
                             }
 
                             if ( LockTask( taskKey ) )
@@ -368,17 +386,26 @@ namespace sgns::processing
 
     void ProcessingTaskQueueImpl::MarkTaskBad( const std::string &taskKey )
     {
-        m_logger->info( "MARKING_TASK_BAD: {} (total bad jobs: {}) - instance at {}", taskKey, m_badjobs.size(), static_cast<void*>(this) );
+        m_logger->info( "MARKING_TASK_BAD: {} (total bad jobs: {}) - instance at {}",
+                        taskKey,
+                        m_badjobs.size(),
+                        static_cast<void *>( this ) );
         m_badjobs.insert( taskKey );
-        m_logger->info( "MARKED_TASK_BAD: {} (total bad jobs now: {}) - instance at {}", taskKey, m_badjobs.size(), static_cast<void*>(this) );
+        m_logger->info( "MARKED_TASK_BAD: {} (total bad jobs now: {}) - instance at {}",
+                        taskKey,
+                        m_badjobs.size(),
+                        static_cast<void *>( this ) );
 
         // Dump current blacklist for debugging
         if ( m_badjobs.size() <= 10 ) // Only dump if list is small
         {
             std::string blacklist;
-            for ( const auto& bad_task : m_badjobs )
+            for ( const auto &bad_task : m_badjobs )
             {
-                if ( !blacklist.empty() ) blacklist += ", ";
+                if ( !blacklist.empty() )
+                {
+                    blacklist += ", ";
+                }
                 blacklist += bad_task;
             }
             m_logger->info( "Current blacklist: [{}]", blacklist );

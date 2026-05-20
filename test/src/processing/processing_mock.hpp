@@ -126,6 +126,10 @@ namespace sgns::test
         {
             return outcome::success();
         }
+        outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) override
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
 
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override
         {

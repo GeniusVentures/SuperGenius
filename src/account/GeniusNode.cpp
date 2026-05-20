@@ -1510,15 +1510,16 @@ namespace sgns
                         strong->node_logger_->info( "[{}]{}: Transactions READY",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
                                                     FUNC );
-                        auto maybe_escrow_path = strong->task_queue_->GetTaskEscrow( task_id );
-                        if ( maybe_escrow_path.has_failure() )
+                        auto maybe_task = strong->task_queue_->GetTask( task_id );
+                        if ( maybe_task.has_failure() )
                         {
-                            strong->node_logger_->info( "[{}]{}: No associated Escrow with the task id: {} ",
+                            strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
                                                         strong->account_->GetAddress().substr( 0, 8 ),
                                                         FUNC,
                                                         task_id );
                             break;
                         }
+                        auto escrow_path = maybe_task.value().escrow_path();
                         auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
                         if ( complete_task_result.has_failure() )
                         {
@@ -1531,7 +1532,7 @@ namespace sgns
                         strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
                                                     strong->account_->GetAddress().substr( 0, 8 ),
                                                     FUNC );
-                        auto pay_result = strong->PayEscrow( maybe_escrow_path.value(),
+                        auto pay_result = strong->PayEscrow( escrow_path,
                                                              taskresult,
                                                              std::move( complete_task_result.value() ) );
                         if ( pay_result.has_failure() )

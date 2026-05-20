@@ -133,6 +133,23 @@ namespace sgns::processing
         return outcome::success();
     }
 
+    outcome::result<SGProcessing::Task> TaskQueueImpl::GetTask( const std::string &taskId )
+    {
+        TaskQueueImplLogger()->debug( "Fetching task with ID: {}", taskId );
+        BOOST_OUTCOME_TRY( auto task_buffer, db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( taskId ) ) ) );
+
+        SGProcessing::Task task;
+
+        if ( !task.ParseFromArray( task_buffer.data(), task_buffer.size() ) )
+        {
+            TaskQueueImplLogger()->error( "Failed to parse from proto task with ID: {}", taskId );
+            return outcome::failure( boost::system::error_code{} );
+        }
+        TaskQueueImplLogger()->debug( "Successfully fetched task with ID: {}", taskId );
+
+        return task;
+    }
+
     bool TaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
         auto querySubTasks = db_->QueryKeyValues( SubTaskPrefixForTask( taskId ) );

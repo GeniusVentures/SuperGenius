@@ -37,6 +37,7 @@ namespace sgns::processing
                                            const std::list<SGProcessing::SubTask>  &subTasks,
                                            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) override;
 
+        outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) override;
         /** Get subtasks by task id, returns true if we got subtasks
         * @param taskId - id to look for subtasks of
         * @param subTasks - Reference of subtask list

@@ -83,6 +83,18 @@ namespace
             return outcome::success();
         }
 
+        outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) override
+        {
+            for ( const auto &task : m_tasks )
+            {
+                if ( task.ipfs_block_id() == taskId )
+                {
+                    return task;
+                }
+            }
+            return outcome::failure( boost::system::error_code{} );
+        }
+
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override
         {
             auto it = m_subTasks.find( taskId );
