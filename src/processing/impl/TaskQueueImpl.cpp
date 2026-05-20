@@ -11,16 +11,6 @@ namespace sgns::processing
     {
         constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
 
-        std::string SubTaskPrefixForTask( std::string_view taskId )
-        {
-            auto prefix = TaskKeys::SubTaskKey( taskId, "" );
-            if ( !prefix.empty() && prefix.back() == '/' )
-            {
-                prefix.pop_back();
-            }
-            return prefix;
-        }
-
         bool IsTaskLocked( const std::shared_ptr<sgns::crdt::GlobalDB> &db, const std::string &taskKey )
         {
             const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
@@ -152,9 +142,10 @@ namespace sgns::processing
 
     bool TaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
-        auto querySubTasks = db_->QueryKeyValues( SubTaskPrefixForTask( taskId ) );
+        auto querySubTasks = db_->QueryKeyValues( sgns::crdt::HierarchicalKey( TaskKeys::SubTaskListKey( taskId ) ) );
         if ( querySubTasks.has_failure() || !querySubTasks.has_value() )
         {
+            TaskQueueImplLogger()->error( "No subtasks found for task with ID: {}", taskId );
             return false;
         }
 
@@ -163,16 +154,20 @@ namespace sgns::processing
             SGProcessing::SubTask subTask;
             if ( !subTask.ParseFromArray( element.second.data(), element.second.size() ) )
             {
+                TaskQueueImplLogger()->error( "Failed to parse subtask from proto task with ID: {}", taskId );
                 return false;
             }
             subTasks.push_back( std::move( subTask ) );
         }
+        TaskQueueImplLogger()->debug( "Successfully fetched subtasks for task with ID: {}", taskId );
+
         return true;
     }
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> TaskQueueImpl::GrabTask()
     {
-        BOOST_OUTCOME_TRY( auto queryTasks, db_->QueryKeyValues( TaskKeys::TaskListKey() ) );
+        BOOST_OUTCOME_TRY( auto queryTasks,
+                           db_->QueryKeyValues( sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey() ) ) );
 
         std::set<std::string> lockedTasks;
         for ( const auto &element : queryTasks )
