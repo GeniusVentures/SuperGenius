@@ -27,8 +27,10 @@ namespace sgns::processing
 
         ~TaskQueueImpl() override = default;
 
-        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                           const std::list<SGProcessing::SubTask> &subTasks ) override;
+        outcome::result<void> EnqueueTask(
+            const SGProcessing::Task                &task,
+            const std::list<SGProcessing::SubTask>  &subTasks,
+            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr ) override;
 
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override;
 
@@ -42,7 +44,8 @@ namespace sgns::processing
         void MarkTaskBad( const std::string &taskKey ) override;
 
     private:
-        std::shared_ptr<sgns::crdt::GlobalDB> db_;
-        std::string                           processing_topic_;
+        std::shared_ptr<sgns::crdt::GlobalDB>          db_;
+        std::string                                    processing_topic_;
+        std::shared_ptr<sgns::crdt::AtomicTransaction> crdt_transaction_;
     };
 }

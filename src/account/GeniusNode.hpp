@@ -322,7 +322,6 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                                 io_;
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type> io_work_guard_;
         std::shared_ptr<crdt::GlobalDB>                                          tx_globaldb_;
-        std::shared_ptr<crdt::GlobalDB>                                          job_globaldb_;
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                               pubsub_;
         std::shared_ptr<TransactionManager>                                      transaction_manager_;
         std::shared_ptr<processing::ProcessingTaskQueueImpl>                     task_queue_;
@@ -363,8 +362,10 @@ namespace sgns
         void         MigrateDatabase( std::function<void( outcome::result<void> )> callback );
         void         ScheduleMigrationRetry();
         void         ScheduleBlockchainRetry();
-        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
-        outcome::result<void>                                CheckProcessValidity( const std::string &jsondata );
+        outcome::result<std::shared_ptr<TransactionManager>>      GetTransactionManager() const;
+        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
+            std::string        path,
+            sgns::base::Buffer value );
 
         void DHTInit();
 

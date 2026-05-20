@@ -18,8 +18,10 @@ namespace sgns::processing
         m_logger->info( "ProcessingTaskQueueImpl DESTROYED - instance at {}", static_cast<void*>(this) );
     }
     outcome::result<void> ProcessingTaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
-                                                                const std::list<SGProcessing::SubTask> &subTasks )
+                                                                const std::list<SGProcessing::SubTask> &subTasks,
+                                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
+        (void)crdt_transaction;
         if ( job_crdt_transaction_ )
         {
             //escrow needs to be sent/commited

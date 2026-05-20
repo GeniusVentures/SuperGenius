@@ -20,6 +20,7 @@ namespace sgns::processing
     class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
+        using ProcessingTaskQueue::EnqueueTask;
         /** Create a task queue.
         * @param db - CRDT GlobalDB to use.
         * @param processing_topic - Topic prefix used for task keys.
@@ -32,8 +33,9 @@ namespace sgns::processing
         * @param task - Task to add
         * @param subTasks - List of subtasks
         */
-        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                           const std::list<SGProcessing::SubTask> &subTasks ) override;
+        outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
+                                           const std::list<SGProcessing::SubTask>  &subTasks,
+                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) override;
 
         /** Get subtasks by task id, returns true if we got subtasks
         * @param taskId - id to look for subtasks of
@@ -91,7 +93,7 @@ namespace sgns::processing
         outcome::result<void> SendEscrow( std::string path, sgns::base::Buffer value );
         void                  ResetAtomicTransaction();
 
-        void MarkTaskBad( const std::string& taskKey ) override;
+        void MarkTaskBad( const std::string &taskKey ) override;
 
     private:
         std::shared_ptr<sgns::crdt::GlobalDB>          m_db;

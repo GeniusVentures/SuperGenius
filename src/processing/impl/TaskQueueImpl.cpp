@@ -50,11 +50,10 @@ namespace sgns::processing
 
         bool MoveExpiredTaskLock( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
                                   const std::string                           &processingTopic,
-                                  const std::set<std::string>                 &badJobs,
                                   const std::string                           &taskKey,
                                   SGProcessing::Task                          &task )
         {
-            const auto timestamp = std::chrono::system_clock::now();
+            const auto                        timestamp = std::chrono::system_clock::now();
             const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
             auto                              lockData = db->Get( lockKey );
             if ( lockData.has_failure() || !lockData.has_value() )
@@ -68,8 +67,8 @@ namespace sgns::processing
                 return false;
             }
 
-            const auto lockTimePoint =
-                std::chrono::system_clock::time_point( std::chrono::milliseconds( lock.lock_timestamp() ) );
+            const auto lockTimePoint = std::chrono::system_clock::time_point(
+                std::chrono::milliseconds( lock.lock_timestamp() ) );
             const auto expirationTime = lockTimePoint + LOCK_TIMEOUT;
             if ( timestamp <= expirationTime )
             {
@@ -87,11 +86,6 @@ namespace sgns::processing
                 return false;
             }
 
-            if ( badJobs.find( task.ipfs_block_id() ) != badJobs.end() )
-            {
-                return false;
-            }
-
             return LockTask( db, processingTopic, taskKey );
         }
     } // namespace
@@ -103,27 +97,38 @@ namespace sgns::processing
         return base::createLogger( "TaskQueueImpl" );
     }
 
-    outcome::result<void> TaskQueueImpl::EnqueueTask( const SGProcessing::Task               &task,
-                                                      const std::list<SGProcessing::SubTask> &subTasks )
+    outcome::result<void> TaskQueueImpl::EnqueueTask( const SGProcessing::Task                &task,
+                                                      const std::list<SGProcessing::SubTask>  &subTasks,
+                                                      std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
-        auto transaction = db_->BeginTransaction();
+        if ( !crdt_transaction )
+        {
+            crdt_transaction = db_->BeginTransaction();
+        }
+
+        TaskQueueImplLogger()->debug( "Enqueuing task with ID: {}, number of subtasks: {}",
+                                      task.ipfs_block_id(),
+                                      subTasks.size() );
 
         for ( const auto &subTask : subTasks )
         {
             sgns::base::Buffer value;
             value.put( subTask.SerializeAsString() );
-            BOOST_OUTCOME_TRY(
-                transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( task.ipfs_block_id(),
-                                                                                       subTask.subtaskid() ) ),
-                                  std::move( value ) ) );
+            TaskQueueImplLogger()->debug( "Enqueuing subtask: {}", subTask.subtaskid() );
+
+            BOOST_OUTCOME_TRY( crdt_transaction->Put(
+                sgns::crdt::HierarchicalKey( TaskKeys::SubTaskKey( task.ipfs_block_id(), subTask.subtaskid() ) ),
+                std::move( value ) ) );
         }
 
         sgns::base::Buffer taskValue;
         taskValue.put( task.SerializeAsString() );
-        BOOST_OUTCOME_TRY( transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task.ipfs_block_id() ) ),
-                                             std::move( taskValue ) ) );
+        BOOST_OUTCOME_TRY(
+            crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task.ipfs_block_id() ) ),
+                                   std::move( taskValue ) ) );
 
-        BOOST_OUTCOME_TRY( transaction->Commit( { processing_topic_ } ) );
+        TaskQueueImplLogger()->debug( "Task with ID: {} enqueued to CRDT transaction", task.ipfs_block_id() );
+        BOOST_OUTCOME_TRY( crdt_transaction->Commit( { processing_topic_ } ) );
 
         return outcome::success();
     }
@@ -167,11 +172,6 @@ namespace sgns::processing
                 continue;
             }
 
-            if ( bad_jobs_.find( task.ipfs_block_id() ) != bad_jobs_.end() )
-            {
-                continue;
-            }
-
             if ( IsTaskCompleted( task.ipfs_block_id() ) )
             {
                 continue;
@@ -195,7 +195,7 @@ namespace sgns::processing
         for ( const auto &lockedTask : lockedTasks )
         {
             SGProcessing::Task task;
-            if ( MoveExpiredTaskLock( db_, processing_topic_, bad_jobs_, lockedTask, task ) )
+            if ( MoveExpiredTaskLock( db_, processing_topic_, lockedTask, task ) )
             {
                 return std::make_pair( task.ipfs_block_id(), task );
             }
@@ -210,6 +210,7 @@ namespace sgns::processing
     {
         auto completionTransaction = db_->BeginTransaction();
 
+        TaskQueueImplLogger()->debug( "Completing task with ID: {}, result: {}", taskKey, taskResult.DebugString() );
         sgns::base::Buffer resultData;
         resultData.put( taskResult.SerializeAsString() );
         BOOST_OUTCOME_TRY(
@@ -226,8 +227,5 @@ namespace sgns::processing
         return resultData.has_value();
     }
 
-    void TaskQueueImpl::MarkTaskBad( const std::string &taskKey )
-    {
-        bad_jobs_.insert( taskKey );
-    }
+    void TaskQueueImpl::MarkTaskBad( const std::string &taskKey ) {}
 }

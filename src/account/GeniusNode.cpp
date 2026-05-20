@@ -1168,21 +1168,18 @@ namespace sgns
         BOOST_OUTCOME_TRY( auto result_pair,
                            manager->HoldEscrow( funds, std::string( dev_config_.Addr ), cut.value(), uuidstring ) );
 
+        //TODO - Make it async to post the job data in case the transaction gets confirmed.
         auto [tx_id, escrow_data_pair] = result_pair;
 
         auto [escrow_path, escrow_data] = escrow_data_pair;
 
         task.set_escrow_path( escrow_path );
 
-        auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks );
+        BOOST_OUTCOME_TRY(auto crdt_transaction, CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
+
+        auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks, crdt_transaction );
         if ( enqueue_task_return.has_failure() )
         {
-            return outcome::failure( Error::DATABASE_WRITE_ERROR );
-        }
-        auto send_escrow_return = task_queue_->SendEscrow( escrow_path, std::move( escrow_data ) );
-        if ( send_escrow_return.has_failure() )
-        {
-            task_queue_->ResetAtomicTransaction();
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
 
@@ -1752,6 +1749,18 @@ namespace sgns
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         return transaction_manager_;
+    }
+
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateEscrowInfoCRDTTransaction( std::string        path,
+                                                                                          sgns::base::Buffer value )
+    {
+        auto crdt_transaction = tx_globaldb_->BeginTransaction();
+
+        sgns::crdt::HierarchicalKey key( path );
+
+        BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( key ), std::move( value ) ) );
+
+        return crdt_transaction;
     }
 
     TransactionManager::State GeniusNode::GetTransactionManagerState() const

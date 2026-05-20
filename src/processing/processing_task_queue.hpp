@@ -24,12 +24,19 @@ class ProcessingTaskQueue
 public:
     virtual ~ProcessingTaskQueue() = default;
 
+    outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
+                                       const std::list<SGProcessing::SubTask> &subTasks )
+    {
+        return EnqueueTask( task, subTasks, nullptr );
+    }
+
     /** Enqueues a task with subtasks that the task has been split to
     * @param task - task to enqueue
     * @param subTasks - list of subtasks that the task has been split to
     */
-    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                               const std::list<SGProcessing::SubTask> &subTasks ) = 0;
+    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
+                                               const std::list<SGProcessing::SubTask>  &subTasks,
+                                               std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) = 0;
 
     /** Returns a list of subtasks linked to taskId
     * @param taskId - task id

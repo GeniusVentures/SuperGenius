@@ -69,11 +69,15 @@ namespace
     class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
+        using ProcessingTaskQueue::EnqueueTask;
+
         ProcessingTaskQueueImpl() {}
 
-        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                           const std::list<SGProcessing::SubTask> &subTasks ) override
+        outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
+                                           const std::list<SGProcessing::SubTask>  &subTasks,
+                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) override
         {
+            (void)crdt_transaction;
             m_tasks.push_back( task );
             m_subTasks.emplace( task.ipfs_block_id(), subTasks );
             return outcome::success();
