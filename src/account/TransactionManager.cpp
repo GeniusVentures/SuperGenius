@@ -3538,8 +3538,7 @@ namespace sgns
 
         const uint64_t registry_epoch = validator_registry->GetRegistryEpoch();
         const auto     registry_cid   = validator_registry->GetRegistryCid();
-        auto           registry_hash  = hasher_m->sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( registry_cid.data() ), registry_cid.size() ) );
+        auto           registry_hash  = hasher_m->sha2_256( registry_cid.data(), registry_cid.size() );
 
         if ( auto checkpoint_res = account_m->GetUTXOManager().CreateCheckpoint( registry_epoch,
                                                                                  tx_hash_bin.value(),

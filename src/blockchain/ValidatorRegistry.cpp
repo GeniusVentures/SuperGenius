@@ -704,17 +704,14 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
         std::string payload;
-        for ( size_t i = 0; i < subject_hashes.size(); ++i )
+        payload += subject_hashes[0];
+        for ( size_t i = 1; i < subject_hashes.size(); ++i )
         {
-            if ( i > 0 )
-            {
-                payload.push_back( '\n' );
-            }
+            payload.push_back( '\n' );
             payload += subject_hashes[i];
         }
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( payload.data() ), payload.size() ) );
+        auto                     hash = hasher.sha2_256( payload.data(), payload.size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
