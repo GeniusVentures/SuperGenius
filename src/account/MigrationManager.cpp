@@ -40,20 +40,20 @@ namespace sgns
         std::shared_ptr<GeniusAccount>                                  account )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
-        instance->RegisterStep( std::make_shared<Migration0_2_0To1_0_0>( ioContext,
-                                                                         pubSub,
-                                                                         graphsync,
-                                                                         scheduler,
-                                                                         generator,
-                                                                         writeBasePath,
-                                                                         base58key ) );
-        instance->RegisterStep( std::make_shared<Migration1_0_0To3_4_0>( ioContext,
-                                                                         pubSub,
-                                                                         graphsync,
-                                                                         scheduler,
-                                                                         generator,
-                                                                         writeBasePath,
-                                                                         base58key ) );
+        // instance->RegisterStep( std::make_shared<Migration0_2_0To1_0_0>( ioContext,
+        //                                                                  pubSub,
+        //                                                                  graphsync,
+        //                                                                  scheduler,
+        //                                                                  generator,
+        //                                                                  writeBasePath,
+        //                                                                  base58key ) );
+        // instance->RegisterStep( std::make_shared<Migration1_0_0To3_4_0>( ioContext,
+        //                                                                  pubSub,
+        //                                                                  graphsync,
+        //                                                                  scheduler,
+        //                                                                  generator,
+        //                                                                  writeBasePath,
+        //                                                                  base58key ) );
         instance->RegisterStep( std::make_shared<Migration3_4_0To3_5_0>( ioContext,
                                                                          pubSub,
                                                                          graphsync,
