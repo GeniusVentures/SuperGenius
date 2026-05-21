@@ -1,6 +1,6 @@
 /**
  * @file       MigrationTransaction.hpp
- * @brief      Header file for one-time migration mint transactions.
+ * @brief      Header file for a Migration transaction that mint tokens on the destination chain based on observed legacy balances on the source chain.
  * @date       2026-04-29
  */
 #pragma once

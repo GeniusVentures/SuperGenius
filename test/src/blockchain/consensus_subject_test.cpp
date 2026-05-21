@@ -160,7 +160,7 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
     EXPECT_EQ( nonce.value().nonce(), 7U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
 
-    const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::kNonceSubjectType );
+    const auto type_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::NONCE_SUBJECT_TYPE );
     ASSERT_TRUE( type_hash.has_value() );
     EXPECT_EQ( subject.subject_type_hash().hash(), type_hash.value() );
 
@@ -218,7 +218,7 @@ TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
     ASSERT_TRUE( subject_result.has_value() );
 
     auto subject = subject_result.value();
-    const auto task_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::kTaskResultSubjectType );
+    const auto task_hash = sgns::ConsensusManager::ComputeSubjectTypeHash( sgns::TASK_RESULT_SUBJECT_TYPE );
     ASSERT_TRUE( task_hash.has_value() );
     subject.mutable_subject_type_hash()->set_hash( task_hash.value().data(), task_hash.value().size() );
 

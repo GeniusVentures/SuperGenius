@@ -5,6 +5,8 @@
  */
 #include "account/MigrationTransaction.hpp"
 
+#include <fmt/format.h>
+
 #include "base/blob.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
 
@@ -165,8 +167,7 @@ namespace sgns
                                                              std::string_view source_address,
                                                              const TokenID   &token_id )
     {
-        const auto payload =
-            "migration:" + std::string( from_version ) + ":" + std::string( source_address ) + ":" + token_id.ToHex();
+        const auto payload = fmt::format( "migration:{}:{}:{}", from_version, source_address, token_id.ToHex() );
         auto hasher = std::make_shared<crypto::HasherImpl>();
         return hasher->blake2b_256( std::vector<uint8_t>( payload.begin(), payload.end() ) ).toReadableString();
     }

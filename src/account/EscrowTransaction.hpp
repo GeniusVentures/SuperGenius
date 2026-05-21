@@ -47,11 +47,7 @@ namespace sgns
         ~EscrowTransaction() override = default;
 
         using IGeniusTransactions::SerializeByteVector;
-        /**
-         * @brief Serializes the escrow transaction payload and DAG metadata.
-         * @param[in] dag DAG metadata to serialize into the transaction payload.
-         * @return Serialized @c SGTransaction::EscrowTx bytes.
-         */
+
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
@@ -60,10 +56,6 @@ namespace sgns
          */
         uint64_t GetNumChunks() const;
 
-        /**
-         * @brief Returns the transaction-specific storage path component.
-         * @return Transaction type string used as the path component.
-         */
         std::string GetTransactionSpecificPath() const override
         {
             return GetType();
@@ -78,19 +70,11 @@ namespace sgns
             return utxo_params_;
         }
 
-        /**
-         * @brief Returns whether the transaction supports UTXO parameters.
-         * @return Always true for escrow-hold transactions.
-         */
         bool HasUTXOParameters() const override
         {
             return true;
         }
 
-        /**
-         * @brief Returns the escrow transaction UTXO parameters.
-         * @return UTXO parameters carried by this escrow hold.
-         */
         std::optional<UTXOTxParameters> GetUTXOParametersOpt() const override
         {
             return utxo_params_;

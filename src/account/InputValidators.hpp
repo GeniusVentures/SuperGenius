@@ -6,8 +6,11 @@
  */
 #pragma once
 
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "account/IGeniusTransactions.hpp"
 #include "account/UTXOManager.hpp"
@@ -17,6 +20,21 @@
 
 namespace sgns
 {
+    namespace input_validator_constants
+    {
+        constexpr size_t HASH256_BYTES               = base::Hash256::size();
+        constexpr size_t SERIALIZED_UINT32_BYTES     = sizeof( uint32_t );
+        constexpr size_t SERIALIZED_UINT64_BYTES     = sizeof( uint64_t );
+        constexpr size_t OUTPUT_INDEX_OFFSET         = HASH256_BYTES;
+        constexpr size_t OWNER_ADDRESS_LENGTH_OFFSET = OUTPUT_INDEX_OFFSET + SERIALIZED_UINT32_BYTES;
+        constexpr size_t OWNER_ADDRESS_OFFSET        = OWNER_ADDRESS_LENGTH_OFFSET + SERIALIZED_UINT32_BYTES;
+        constexpr size_t TOKEN_ID_BYTES_IN_PAYLOAD   = HASH256_BYTES;
+        constexpr size_t AMOUNT_BYTES_IN_PAYLOAD     = SERIALIZED_UINT64_BYTES;
+
+        constexpr uint32_t         ESCROW_LOCK_OUTPUT_INDEX = 0;
+        constexpr std::string_view TRANSFER_TX_TYPE         = "transfer";
+    } // namespace input_validator_constants
+
     /**
      * @brief Strategy interface for validating transaction inputs and their witness data.
      */

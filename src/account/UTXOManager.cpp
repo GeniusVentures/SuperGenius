@@ -14,10 +14,6 @@ namespace sgns
 {
     namespace
     {
-        void RemoveOutPointFromVector( std::vector<OutPoint> &outpoints, const OutPoint &target )
-        {
-            outpoints.erase( std::remove( outpoints.begin(), outpoints.end(), target ), outpoints.end() );
-        }
 
         std::string BuildUTXORecordKey( const std::string &owner_address, const OutPoint &outpoint )
         {
@@ -245,7 +241,8 @@ namespace sgns
                 reserved_outpoints_.erase( outpoint );
                 if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
                 {
-                    RemoveOutPointFromVector( address_it->second, outpoint );
+                    auto &outpoints_vector = address_it->second;
+                    outpoints_vector.erase( std::remove( outpoints_vector.begin(), outpoints_vector.end(), outpoint ), outpoints_vector.end() );
                 }
 
                 if ( !utxo_found )

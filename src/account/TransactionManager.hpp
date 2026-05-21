@@ -98,7 +98,7 @@ namespace sgns
             std::shared_ptr<crypto::Hasher>          hasher,
             std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();

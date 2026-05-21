@@ -41,26 +41,24 @@ namespace sgns
         using utxo_merkle::ReadUInt32BE;
         using utxo_merkle::ReadUInt64BE;
         using utxo_merkle::SerializeUTXOLeafPayload;
+        using input_validator_constants::HASH256_BYTES;
+        using input_validator_constants::SERIALIZED_UINT32_BYTES;
 
-        bool ExtractProducedUTXOs( const std::shared_ptr<IGeniusTransactions> &tx, std::vector<GeniusUTXO> &outputs )
+        bool ExtractProducedUTXOs( const IGeniusTransactions &tx, std::vector<GeniusUTXO> &outputs )
         {
-            if ( !tx )
-            {
-                return false;
-            }
-            auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
+            auto tx_hash = base::Hash256::fromReadableString( tx.GetHash() );
             if ( tx_hash.has_error() )
             {
                 return false;
             }
 
             outputs.clear();
-            if ( !tx->HasUTXOParameters() )
+            if ( !tx.HasUTXOParameters() )
             {
                 return false;
             }
 
-            auto params_opt = tx->GetUTXOParametersOpt();
+            auto params_opt = tx.GetUTXOParametersOpt();
             if ( !params_opt.has_value() )
             {
                 return false;
@@ -87,8 +85,9 @@ namespace sgns
         return base::createLogger( "TransactionManager" );
     }
 
-    const std::unordered_map<std::string,
-                             std::pair<TransactionManager::TransactionParserFn, TransactionManager::TransactionParserFn>>
+    const std::unordered_map<
+        std::string,
+        std::pair<TransactionManager::TransactionParserFn, TransactionManager::TransactionParserFn>>
         TransactionManager::transaction_parsers = {
             { "transfer",
               { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
@@ -117,7 +116,7 @@ namespace sgns
                                                                                      mutability_window ) );
 
         instance->blockchain_->RegisterCertificateHandler(
-            kNonceSubjectType,
+            NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string          &subject_hash,
                 const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
@@ -139,7 +138,7 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
         instance->blockchain_->RegisterSubjectHandler(
-            kNonceSubjectType,
+            NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
             {
@@ -3139,9 +3138,7 @@ namespace sgns
             }
         }
 
-        BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, next_tx_state ) );
-
-        return outcome::success();
+        return ChangeTransactionState( new_tx, next_tx_state );
     }
 
     void TransactionManager::ProcessDeletion( std::string key )
@@ -3923,15 +3920,20 @@ namespace sgns
             return false;
         }
 
-        const auto elapsed = GetElapsedTime( ts );
-        if ( elapsed < 0 && timestamp_tolerance_m.count() > 0 &&
-             ( -elapsed ) > static_cast<int64_t>( timestamp_tolerance_m.count() ) )
+        const auto elapsed      = GetElapsedTime( ts );
+        const auto tolerance_ms = static_cast<int64_t>( timestamp_tolerance_m.count() );
+        const auto drift_ms     = elapsed >= 0 ? elapsed : -elapsed;
+
+        if ( tolerance_ms > 0 && drift_ms > tolerance_ms )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Timestamp out of tolerance tx={}",
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Timestamp out of tolerance tx={} (elapsed: {} ms, tolerance: {} ms)",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
-                                               tx.GetHash() );
+                                               tx.GetHash(),
+                                               elapsed,
+                                               tolerance_ms );
             return false;
         }
 
@@ -3974,7 +3976,7 @@ namespace sgns
                 return false;
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
-            auto previous_nonce = ConsensusManager::DecodeNonceSubject( previous_subject );
+            auto        previous_nonce   = ConsensusManager::DecodeNonceSubject( previous_subject );
             if ( previous_nonce.has_error() )
             {
                 return false;
@@ -4266,7 +4268,7 @@ namespace sgns
             committed_input->set_output_index( input.output_idx_ );
 
             std::vector<uint8_t> leaf_payload;
-            leaf_payload.reserve( 32 + 4 );
+            leaf_payload.reserve( HASH256_BYTES + SERIALIZED_UINT32_BYTES );
             leaf_payload.insert( leaf_payload.end(), input.txid_hash_.begin(), input.txid_hash_.end() );
             utxo_merkle::AppendUInt32BE( leaf_payload, input.output_idx_ );
             consumed_payloads.push_back( std::move( leaf_payload ) );
@@ -4275,7 +4277,7 @@ namespace sgns
             std::move( consumed_payloads ) );
 
         std::vector<GeniusUTXO> produced_outputs;
-        if ( !ExtractProducedUTXOs( tx, produced_outputs ) )
+        if ( !ExtractProducedUTXOs( *tx, produced_outputs ) )
         {
             TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not extract produced outputs for tx={}",
                                               account_m->GetAddress().substr( 0, 8 ),
@@ -4409,7 +4411,7 @@ namespace sgns
                 return std::nullopt;
             }
             std::vector<GeniusUTXO> produced_outputs;
-            if ( !ExtractProducedUTXOs( producer_tx, produced_outputs ) )
+            if ( !ExtractProducedUTXOs( *producer_tx, produced_outputs ) )
             {
                 return std::nullopt;
             }

@@ -1,13 +1,73 @@
 #include <gtest/gtest.h>
 
-#define private public
 #include "blockchain/Consensus.hpp"
-#undef private
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
+
+namespace sgns
+{
+    class ConsensusManagerTestAccess
+    {
+    public:
+        static bool HasProposal( const std::shared_ptr<ConsensusManager> &manager, const std::string &proposal_id )
+        {
+            return manager && manager->proposals_.find( proposal_id ) != manager->proposals_.end();
+        }
+
+        static bool IsProposalQuorumReached( const std::shared_ptr<ConsensusManager> &manager,
+                                             const std::string                       &proposal_id )
+        {
+            if ( !manager )
+            {
+                return false;
+            }
+            auto it = manager->proposals_.find( proposal_id );
+            return it != manager->proposals_.end() && it->second.quorum_reached;
+        }
+
+        static bool HasPendingProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                        const std::string                       &proposal_id )
+        {
+            return manager && manager->pending_proposals_.find( proposal_id ) != manager->pending_proposals_.end();
+        }
+
+        static bool HasSubjectHandler( const std::shared_ptr<ConsensusManager> &manager, const std::string &type_hash )
+        {
+            return manager && manager->subject_handlers_.find( type_hash ) != manager->subject_handlers_.end();
+        }
+
+        static bool HasCertificateSubjectHandler( const std::shared_ptr<ConsensusManager> &manager,
+                                                  const std::string                       &type_hash )
+        {
+            return manager && manager->certificate_subject_handlers_.find( type_hash ) !=
+                                  manager->certificate_subject_handlers_.end();
+        }
+
+        static bool ValidateSubject( const ConsensusManager::Subject &subject )
+        {
+            return ConsensusManager::ValidateSubject( subject );
+        }
+
+        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager, const ConsensusManager::Proposal &proposal )
+        {
+            manager->HandleProposal( proposal );
+        }
+
+        static void HandleVote( const std::shared_ptr<ConsensusManager> &manager, const ConsensusManager::Vote &vote )
+        {
+            manager->HandleVote( vote );
+        }
+
+        static void HandleCertificate( const std::shared_ptr<ConsensusManager> &manager,
+                                       const ConsensusManager::Certificate      &certificate )
+        {
+            manager->HandleCertificate( certificate );
+        }
+    };
+} // namespace sgns
 
 namespace
 {
@@ -207,16 +267,16 @@ namespace sgns::test
 
         auto cert = cert_result.value();
 
-        manager->RegisterSubjectHandler( kNonceSubjectType,
+        manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
-        manager->HandleProposal( proposal_result.value() );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
-        manager->HandleCertificate( cert );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) == manager->proposals_.end() );
+        ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
+        ConsensusManagerTestAccess::HandleCertificate( manager, cert );
+        EXPECT_FALSE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
 
-        manager->HandleProposal( proposal_result.value() );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+        ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
         auto bad_subject = ConsensusManager::DecodeNonceSubject( cert.proposal().subject() );
         ASSERT_TRUE( bad_subject.has_value() );
         bad_subject.value().set_nonce( bad_subject.value().nonce() + 1 );
@@ -224,8 +284,8 @@ namespace sgns::test
         ASSERT_TRUE( bad_subject.value().SerializeToString( &bad_payload ) );
         cert.mutable_proposal()->mutable_subject()->set_payload( bad_payload );
 
-        manager->HandleCertificate( cert );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+        ConsensusManagerTestAccess::HandleCertificate( manager, cert );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
     }
 
     TEST_F( ConsensusCertificateTest, NewRejectsInvalidInputs )
@@ -275,24 +335,22 @@ namespace sgns::test
         auto manager  = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
-        EXPECT_TRUE( manager->RegisterSubjectHandler( kNonceSubjectType,
+        EXPECT_TRUE( manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                                       []( const ConsensusManager::Subject & )
                                                       { return ConsensusManager::Check::Approve; } ) );
         EXPECT_TRUE(
-            manager->RegisterCertificateHandler( kNonceSubjectType,
+            manager->RegisterCertificateHandler( NONCE_SUBJECT_TYPE,
                                                  []( const std::string &, const ConsensusManager::Certificate & )
                                                  { return outcome::success( ConsensusManager::Check::Approve ); } ) );
-        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( kNonceSubjectType );
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( NONCE_SUBJECT_TYPE );
         ASSERT_TRUE( type_hash.has_value() );
-        EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) != manager->subject_handlers_.end() );
-        EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) !=
-                     manager->certificate_subject_handlers_.end() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasSubjectHandler( manager, type_hash.value() ) );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasCertificateSubjectHandler( manager, type_hash.value() ) );
 
-        manager->UnregisterSubjectHandler( kNonceSubjectType );
-        manager->UnregisterCertificateHandler( kNonceSubjectType );
-        EXPECT_TRUE( manager->subject_handlers_.find( type_hash.value() ) == manager->subject_handlers_.end() );
-        EXPECT_TRUE( manager->certificate_subject_handlers_.find( type_hash.value() ) ==
-                     manager->certificate_subject_handlers_.end() );
+        manager->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
+        manager->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
+        EXPECT_FALSE( ConsensusManagerTestAccess::HasSubjectHandler( manager, type_hash.value() ) );
+        EXPECT_FALSE( ConsensusManagerTestAccess::HasCertificateSubjectHandler( manager, type_hash.value() ) );
     }
 
     TEST_F( ConsensusCertificateTest, CreateVoteBundleAndSigningBytes )
@@ -355,7 +413,7 @@ namespace sgns::test
                                                                          12 );
         ASSERT_TRUE( subject_result.has_value() );
         ASSERT_TRUE( subject_result.value().has_subject_type_hash() );
-        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( kTaskResultSubjectType );
+        auto type_hash = ConsensusManager::ComputeSubjectTypeHash( TASK_RESULT_SUBJECT_TYPE );
         ASSERT_TRUE( type_hash.has_value() );
         EXPECT_EQ( type_hash.value(), subject_result.value().subject_type_hash().hash() );
 
@@ -445,13 +503,13 @@ namespace sgns::test
                                                         registry->GetRegistryEpoch() );
         ASSERT_TRUE( proposal_result.has_value() );
 
-        manager->RegisterSubjectHandler( kNonceSubjectType,
+        manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
 
         auto submit_prop = manager->SubmitProposal( proposal_result.value(), false );
         EXPECT_FALSE( submit_prop.has_error() );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
 
         auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
                                                 account->GetAddress(),
@@ -463,12 +521,12 @@ namespace sgns::test
         auto submit_vote = manager->SubmitVote( vote_result.value() );
         EXPECT_FALSE( submit_vote.has_error() );
 
-        manager->HandleProposal( proposal_result.value() );
-        manager->HandleVote( vote_result.value() );
-        EXPECT_TRUE( manager->proposals_.at( proposal_result.value().proposal_id() ).quorum_reached );
+        ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
+        ConsensusManagerTestAccess::HandleVote( manager, vote_result.value() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::IsProposalQuorumReached( manager, proposal_result.value().proposal_id() ) );
 
         manager->ProcessCertificates();
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) == manager->proposals_.end() );
+        EXPECT_FALSE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
     }
 
     TEST_F( ConsensusCertificateTest, ResumeProposalHandlingFromPending )
@@ -493,14 +551,13 @@ namespace sgns::test
                                                         registry->GetRegistryEpoch() );
         ASSERT_TRUE( proposal_result.has_value() );
 
-        manager->RegisterSubjectHandler( kNonceSubjectType,
+        manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Pending; } );
-        manager->HandleProposal( proposal_result.value() );
-        EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) !=
-                     manager->pending_proposals_.end() );
+        ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
 
-        manager->RegisterSubjectHandler( kNonceSubjectType,
+        manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
                                          { return ConsensusManager::Check::Approve; } );
 
@@ -508,9 +565,8 @@ namespace sgns::test
         ASSERT_TRUE( nonce_subject.has_value() );
         auto resume = manager->ResumeProposalHandling( nonce_subject.value().tx_hash() );
         EXPECT_FALSE( resume.has_error() );
-        EXPECT_TRUE( manager->pending_proposals_.find( proposal_result.value().proposal_id() ) ==
-                     manager->pending_proposals_.end() );
-        EXPECT_TRUE( manager->proposals_.find( proposal_result.value().proposal_id() ) != manager->proposals_.end() );
+        EXPECT_FALSE( ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
+        EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
     }
 
     TEST_F( ConsensusCertificateTest, SubmitCertificateStoresInCrdt )
@@ -548,7 +604,7 @@ namespace sgns::test
 
         std::atomic<bool> handler_called{ false };
         manager->RegisterCertificateHandler(
-            kNonceSubjectType,
+            NONCE_SUBJECT_TYPE,
             [&handler_called, &tx_hash]( const std::string &subject_hash, const ConsensusManager::Certificate & )
             {
                 if ( subject_hash == tx_hash )
@@ -588,7 +644,7 @@ namespace sgns::test
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
-        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+        ASSERT_TRUE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         ASSERT_TRUE( nonce_subject.has_value() );
@@ -596,7 +652,7 @@ namespace sgns::test
         std::string bad_payload;
         ASSERT_TRUE( nonce_subject.value().SerializeToString( &bad_payload ) );
         subject.set_payload( bad_payload );
-        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+        EXPECT_FALSE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
     }
 
     TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedSubjectTypeHash )
@@ -616,10 +672,10 @@ namespace sgns::test
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
-        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+        ASSERT_TRUE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
 
         subject.mutable_subject_type_hash()->set_hash( std::string( 32, '\x7f' ) );
-        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+        EXPECT_FALSE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
     }
 
     TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedWitnessWithStaleSubjectId )
@@ -652,7 +708,7 @@ namespace sgns::test
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
-        ASSERT_TRUE( manager->ValidateSubject( subject ) );
+        ASSERT_TRUE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         ASSERT_TRUE( nonce_subject.has_value() );
@@ -661,6 +717,6 @@ namespace sgns::test
         std::string bad_payload;
         ASSERT_TRUE( nonce_subject.value().SerializeToString( &bad_payload ) );
         subject.set_payload( bad_payload );
-        EXPECT_FALSE( manager->ValidateSubject( subject ) );
+        EXPECT_FALSE( ConsensusManagerTestAccess::ValidateSubject( subject ) );
     }
 } // namespace sgns::test

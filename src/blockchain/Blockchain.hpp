@@ -10,6 +10,7 @@
 #include <map>
 #include <functional>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <cstdint>
 #include <atomic>
@@ -148,25 +149,25 @@ namespace sgns
          * @param[in] handler Callback invoked for matching subjects.
          * @return `true` on successful registration.
          */
-        bool RegisterSubjectHandler( const std::string &subject_type, ConsensusManager::SubjectHandler handler );
+        bool RegisterSubjectHandler( std::string_view subject_type, ConsensusManager::SubjectHandler handler );
         /**
          * @brief Unregisters a consensus subject handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to remove.
          */
-        void UnregisterSubjectHandler( const std::string &subject_type );
+        void UnregisterSubjectHandler( std::string_view subject_type );
         /**
          * @brief Registers a consensus certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with certificate callback.
          * @param[in] handler Callback invoked for matching certificates.
          * @return `true` on successful registration.
          */
-        bool RegisterCertificateHandler( const std::string &subject_type,
+        bool RegisterCertificateHandler( std::string_view                         subject_type,
                                          ConsensusManager::CertificateSubjectHandler handler );
         /**
          * @brief Unregisters a consensus certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to remove.
          */
-        void UnregisterCertificateHandler( const std::string &subject_type );
+        void UnregisterCertificateHandler( std::string_view subject_type );
 
         /**
          * @brief Creates a consensus subject for nonce/transaction transition.
@@ -240,6 +241,7 @@ namespace sgns
     protected:
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;
+        friend class MultiAccountTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.

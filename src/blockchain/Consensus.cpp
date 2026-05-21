@@ -219,7 +219,7 @@ namespace sgns
         return outcome::success();
     }
 
-    bool ConsensusManager::RegisterSubjectHandler( const std::string &subject_type, SubjectHandler handler )
+    bool ConsensusManager::RegisterSubjectHandler( std::string_view subject_type, SubjectHandler handler )
     {
         if ( !handler )
         {
@@ -238,7 +238,7 @@ namespace sgns
         return true;
     }
 
-    void ConsensusManager::UnregisterSubjectHandler( const std::string &subject_type )
+    void ConsensusManager::UnregisterSubjectHandler( std::string_view subject_type )
     {
         ConsensusManagerLogger()->debug( "{}: Removing Subject handler with subject_type={}", __func__, subject_type );
         auto type_hash = ComputeSubjectTypeHash( subject_type );
@@ -250,7 +250,7 @@ namespace sgns
         subject_handlers_.erase( type_hash.value() );
     }
 
-    bool ConsensusManager::RegisterCertificateHandler( const std::string        &subject_type,
+    bool ConsensusManager::RegisterCertificateHandler( std::string_view          subject_type,
                                                        CertificateSubjectHandler handler )
     {
         if ( !handler )
@@ -276,7 +276,7 @@ namespace sgns
         return true;
     }
 
-    void ConsensusManager::UnregisterCertificateHandler( const std::string &subject_type )
+    void ConsensusManager::UnregisterCertificateHandler( std::string_view subject_type )
     {
         ConsensusManagerLogger()->debug( "{}: Removing Certificate handler with subject_type={}",
                                          __func__,
@@ -344,8 +344,18 @@ namespace sgns
                                 std::chrono::system_clock::now().time_since_epoch() )
                                 .count();
         const auto window_ms = timestamp_window_.count();
-        const auto ts_ms     = static_cast<std::int64_t>( timestamp_ms );
-        return ( ts_ms >= now_ms - window_ms ) && ( ts_ms <= now_ms + window_ms );
+        if ( now_ms < 0 || window_ms < 0 )
+        {
+            return false;
+        }
+
+        const auto now_u64    = static_cast<uint64_t>( now_ms );
+        const auto window_u64 = static_cast<uint64_t>( window_ms );
+        const auto min_ts     = ( now_u64 > window_u64 ) ? ( now_u64 - window_u64 ) : 0ULL;
+        const auto max_ts     = ( std::numeric_limits<uint64_t>::max() - now_u64 < window_u64 )
+                                    ? std::numeric_limits<uint64_t>::max()
+                                    : now_u64 + window_u64;
+        return ( timestamp_ms >= min_ts ) && ( timestamp_ms <= max_ts );
     }
 
     uint64_t ConsensusManager::GetCurrentRound( uint64_t proposal_ts_ms ) const
@@ -417,7 +427,7 @@ namespace sgns
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
     {
-        if ( SubjectTypeMatches( subject, kNonceSubjectType ) )
+        if ( SubjectTypeMatches( subject, NONCE_SUBJECT_TYPE ) )
         {
             auto payload = DecodeNonceSubject( subject );
             if ( payload.has_error() || payload.value().tx_hash().empty() )
@@ -426,7 +436,7 @@ namespace sgns
             }
             return payload.value().tx_hash();
         }
-        if ( SubjectTypeMatches( subject, kTaskResultSubjectType ) )
+        if ( SubjectTypeMatches( subject, TASK_RESULT_SUBJECT_TYPE ) )
         {
             auto payload = DecodeTaskResultSubject( subject );
             if ( payload.has_error() || payload.value().task_result_hash().empty() )
@@ -435,7 +445,7 @@ namespace sgns
             }
             return payload.value().task_result_hash();
         }
-        if ( SubjectTypeMatches( subject, kRegistryBatchSubjectType ) )
+        if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
         {
             auto payload = DecodeRegistryBatchSubject( subject );
             if ( payload.has_error() || payload.value().batch_root().empty() )
@@ -866,7 +876,7 @@ namespace sgns
 
         uint64_t              total_weight    = ValidatorRegistry::TotalWeight( registry );
         uint64_t              approved_weight = 0;
-        std::set<std::string> seen;
+        std::unordered_set<std::string> seen;
 
         for ( const auto &vote : votes )
         {
@@ -2134,7 +2144,7 @@ namespace sgns
         }
 
         outcome::result<std::string> ExtractBuiltinPayload( const ConsensusSubject &subject,
-                                                            const std::string      &subject_type )
+                                                            std::string_view        subject_type )
         {
             auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
             if ( expected.has_error() || !subject.has_subject_type_hash() ||
@@ -2149,7 +2159,7 @@ namespace sgns
         }
     }
 
-    outcome::result<std::string> ConsensusManager::ComputeSubjectTypeHash( const std::string &subject_type )
+    outcome::result<std::string> ConsensusManager::ComputeSubjectTypeHash( std::string_view subject_type )
     {
         if ( subject_type.empty() )
         {
@@ -2157,13 +2167,11 @@ namespace sgns
         }
 
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( subject_type.data() ),
-                                      subject_type.size() ) );
+        auto                     hash = hasher.sha2_256( subject_type.data(), subject_type.size() );
         return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
     }
 
-    bool ConsensusManager::SubjectTypeMatches( const Subject &subject, const std::string &subject_type )
+    bool ConsensusManager::SubjectTypeMatches( const Subject &subject, std::string_view subject_type )
     {
         auto expected = ComputeSubjectTypeHash( subject_type );
         return expected.has_value() && subject.has_subject_type_hash() &&
@@ -2172,7 +2180,7 @@ namespace sgns
 
     outcome::result<NonceSubject> ConsensusManager::DecodeNonceSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, kNonceSubjectType );
+        auto raw_payload = ExtractBuiltinPayload( subject, NONCE_SUBJECT_TYPE );
         if ( raw_payload.has_error() )
         {
             return outcome::failure( raw_payload.error() );
@@ -2187,7 +2195,7 @@ namespace sgns
 
     outcome::result<TaskResultSubject> ConsensusManager::DecodeTaskResultSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, kTaskResultSubjectType );
+        auto raw_payload = ExtractBuiltinPayload( subject, TASK_RESULT_SUBJECT_TYPE );
         if ( raw_payload.has_error() )
         {
             return outcome::failure( raw_payload.error() );
@@ -2202,7 +2210,7 @@ namespace sgns
 
     outcome::result<RegistryBatchSubject> ConsensusManager::DecodeRegistryBatchSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, kRegistryBatchSubjectType );
+        auto raw_payload = ExtractBuiltinPayload( subject, REGISTRY_BATCH_SUBJECT_TYPE );
         if ( raw_payload.has_error() )
         {
             return outcome::failure( raw_payload.error() );
@@ -2215,7 +2223,7 @@ namespace sgns
         return payload;
     }
 
-    bool ConsensusManager::SetSubjectTypeHash( Subject *subject )
+    bool ConsensusManager::SubjectHasValidTypeHash( Subject *subject )
     {
         return subject != nullptr && subject->has_subject_type_hash() && !subject->subject_type_hash().hash().empty();
     }
@@ -2241,7 +2249,7 @@ namespace sgns
         {
             *payload.mutable_utxo_witness() = utxo_witness.value();
         }
-        auto type_hash = ComputeSubjectTypeHash( kNonceSubjectType );
+        auto type_hash = ComputeSubjectTypeHash( NONCE_SUBJECT_TYPE );
         if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2268,7 +2276,7 @@ namespace sgns
         payload.set_escrow_path( escrow_path );
         payload.set_task_result_hash( task_result_hash.data(), task_result_hash.size() );
         payload.set_result_epoch( result_epoch );
-        auto type_hash = ComputeSubjectTypeHash( kTaskResultSubjectType );
+        auto type_hash = ComputeSubjectTypeHash( TASK_RESULT_SUBJECT_TYPE );
         if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2301,7 +2309,7 @@ namespace sgns
         payload.set_target_registry_epoch( target_registry_epoch );
         payload.set_certificate_count( certificate_count );
         payload.set_batch_root( batch_root.data(), batch_root.size() );
-        auto type_hash = ComputeSubjectTypeHash( kRegistryBatchSubjectType );
+        auto type_hash = ComputeSubjectTypeHash( REGISTRY_BATCH_SUBJECT_TYPE );
         if ( type_hash.has_error() || !SetSubjectPayload( &subject, type_hash.value(), payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -2312,10 +2320,9 @@ namespace sgns
         return subject;
     }
 
-    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject(
-        const std::string          &account_id,
-        const std::string          &subject_type,
-        const std::vector<uint8_t> &payload )
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject( const std::string          &account_id,
+                                                                                        std::string_view            subject_type,
+                                                                                        const std::vector<uint8_t> &payload )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} subject_type={}",
                                          __func__,
@@ -2384,7 +2391,7 @@ namespace sgns
             return false;
         }
 
-        if ( SubjectTypeMatches( subject, kNonceSubjectType ) )
+        if ( SubjectTypeMatches( subject, NONCE_SUBJECT_TYPE ) )
         {
             auto payload = DecodeNonceSubject( subject );
             if ( payload.has_error() || payload.value().tx_hash().empty() )
@@ -2397,12 +2404,12 @@ namespace sgns
             }
             return true;
         }
-        if ( SubjectTypeMatches( subject, kTaskResultSubjectType ) )
+        if ( SubjectTypeMatches( subject, TASK_RESULT_SUBJECT_TYPE ) )
         {
             auto payload = DecodeTaskResultSubject( subject );
             return payload.has_value() && !payload.value().task_result_hash().empty();
         }
-        if ( SubjectTypeMatches( subject, kRegistryBatchSubjectType ) )
+        if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
         {
             auto payload = DecodeRegistryBatchSubject( subject );
             if ( payload.has_error() )
@@ -2490,7 +2497,7 @@ namespace sgns
             return false;
         }
 
-        if ( SubjectTypeMatches( subject, kNonceSubjectType ) )
+        if ( SubjectTypeMatches( subject, NONCE_SUBJECT_TYPE ) )
         {
             auto payload = DecodeNonceSubject( subject );
             if ( payload.has_error() || payload.value().tx_hash().empty() )
@@ -2501,7 +2508,7 @@ namespace sgns
             return true;
         }
 
-        if ( SubjectTypeMatches( subject, kTaskResultSubjectType ) )
+        if ( SubjectTypeMatches( subject, TASK_RESULT_SUBJECT_TYPE ) )
         {
             auto payload = DecodeTaskResultSubject( subject );
             if ( payload.has_error() || payload.value().escrow_path().empty() )
@@ -2517,7 +2524,7 @@ namespace sgns
             return true;
         }
 
-        if ( SubjectTypeMatches( subject, kRegistryBatchSubjectType ) )
+        if ( SubjectTypeMatches( subject, REGISTRY_BATCH_SUBJECT_TYPE ) )
         {
             auto payload = DecodeRegistryBatchSubject( subject );
             if ( payload.has_error() )
@@ -2544,7 +2551,6 @@ namespace sgns
                 ConsensusManagerLogger()->error( "{}: subject registry_batch batch_root is empty", __func__ );
                 return false;
             }
-            return true;
         }
 
         return true;

@@ -567,6 +567,7 @@ namespace sgns
 
     protected:
         friend class TransactionSyncTest;
+        friend class MultiAccountTestAccess;
 
         /**
          * @brief Enqueues a transaction and its proof directly through the transaction manager.

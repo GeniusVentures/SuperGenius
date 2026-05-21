@@ -25,17 +25,30 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
-#define private public
-#define protected public
 #include "account/GeniusNode.hpp"
-#undef private
-#undef protected
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+
+namespace sgns
+{
+    class MultiAccountTestAccess
+    {
+    public:
+        static std::shared_ptr<Blockchain> GetBlockchain( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_ : nullptr;
+        }
+
+        static std::shared_ptr<ConsensusManager> GetConsensusManager( const std::shared_ptr<Blockchain> &blockchain )
+        {
+            return blockchain ? blockchain->consensus_manager_ : nullptr;
+        }
+    };
+} // namespace sgns
 
 class MultiAccountTest : public ::testing::Test
 {
@@ -134,7 +147,7 @@ protected:
     }
 };
 
-TEST_F( MultiAccountTest, DISABLED_SyncThroughEachOther )
+TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
     // Create nodes dynamically
     auto node_full = CreateNode( "node_multi_full",
@@ -423,17 +436,21 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         test::assertWaitForCondition(
             [&]()
             {
-                return node && node->blockchain_ && node->blockchain_->consensus_manager_ &&
+                auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
+                return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
                        node->GetTransactionManagerState() == TransactionManager::State::READY;
             },
             std::chrono::milliseconds( 30000 ),
             "node blockchain not ready for consensus configuration" );
 
-        auto node_registry = node->blockchain_->GetValidatorRegistry();
+        auto blockchain    = sgns::MultiAccountTestAccess::GetBlockchain( node );
+        auto node_registry = blockchain ? blockchain->GetValidatorRegistry() : nullptr;
         ASSERT_TRUE( node_registry );
 
         node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
-        node->blockchain_->consensus_manager_->ConfigureCertificateDelay( kCertificateDelay );
+        auto consensus_manager = sgns::MultiAccountTestAccess::GetConsensusManager( blockchain );
+        ASSERT_TRUE( consensus_manager );
+        consensus_manager->ConfigureCertificateDelay( kCertificateDelay );
     };
 
     auto node_full = CreateNode( "node_consensus_full",
@@ -503,8 +520,9 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     configure_consensus_batch_and_delay( node_peer2 );
     configure_consensus_batch_and_delay( node_peer3 );
 
-    ASSERT_TRUE( node_full->blockchain_ );
-    auto registry = node_full->blockchain_->GetValidatorRegistry();
+    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
+    ASSERT_TRUE( full_blockchain );
+    auto registry = full_blockchain->GetValidatorRegistry();
     ASSERT_TRUE( registry );
 
     fmt::println( "Nodes created. Registry loaded" );
@@ -575,8 +593,9 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto wait_client_registry_caught_up = [&]()
     {
-        ASSERT_TRUE( node_client->blockchain_ );
-        auto client_registry = node_client->blockchain_->GetValidatorRegistry();
+        auto client_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_client );
+        ASSERT_TRUE( client_blockchain );
+        auto client_registry = client_blockchain->GetValidatorRegistry();
         ASSERT_TRUE( client_registry );
 
         test::assertWaitForCondition(
@@ -701,17 +720,21 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         test::assertWaitForCondition(
             [&]()
             {
-                return node && node->blockchain_ && node->blockchain_->consensus_manager_ &&
+                auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
+                return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
                        node->GetTransactionManagerState() == TransactionManager::State::READY;
             },
             std::chrono::milliseconds( 30000 ),
             "node blockchain not ready for consensus configuration" );
 
-        auto node_registry = node->blockchain_->GetValidatorRegistry();
+        auto blockchain    = sgns::MultiAccountTestAccess::GetBlockchain( node );
+        auto node_registry = blockchain ? blockchain->GetValidatorRegistry() : nullptr;
         ASSERT_TRUE( node_registry );
 
         node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
-        node->blockchain_->consensus_manager_->ConfigureCertificateDelay( kCertificateDelay );
+        auto consensus_manager = sgns::MultiAccountTestAccess::GetConsensusManager( blockchain );
+        ASSERT_TRUE( consensus_manager );
+        consensus_manager->ConfigureCertificateDelay( kCertificateDelay );
     };
 
     node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
@@ -742,8 +765,9 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
     configure_consensus_batch_and_delay( node_peer2 );
     configure_consensus_batch_and_delay( node_peer3 );
 
-    ASSERT_TRUE( node_full->blockchain_ );
-    auto registry = node_full->blockchain_->GetValidatorRegistry();
+    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
+    ASSERT_TRUE( full_blockchain );
+    auto registry = full_blockchain->GetValidatorRegistry();
     ASSERT_TRUE( registry );
 
     test::assertWaitForCondition(

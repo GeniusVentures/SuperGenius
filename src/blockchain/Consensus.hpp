@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <shared_mutex>
 #include <thread>
 #include <vector>
@@ -32,9 +33,9 @@
 
 namespace sgns
 {
-    inline constexpr const char *kNonceSubjectType         = "sgns.nonce.v1";
-    inline constexpr const char *kTaskResultSubjectType    = "sgns.task_result.v1";
-    inline constexpr const char *kRegistryBatchSubjectType = "sgns.registry_batch.v1";
+    static constexpr std::string_view NONCE_SUBJECT_TYPE          = "sgns.nonce.v1";
+    static constexpr std::string_view TASK_RESULT_SUBJECT_TYPE    = "sgns.task_result.v1";
+    static constexpr std::string_view REGISTRY_BATCH_SUBJECT_TYPE = "sgns.registry_batch.v1";
 
     /**
      * @brief      Implements Consensus with weighted voting.
@@ -119,24 +120,24 @@ namespace sgns
          * @param[in] handler Callback invoked for matching subject type hash.
          * @return `true` when registered, `false` when input is invalid.
          */
-        bool RegisterSubjectHandler( const std::string &subject_type, SubjectHandler handler );
+        bool RegisterSubjectHandler( std::string_view subject_type, SubjectHandler handler );
         /**
          * @brief Unregisters a subject handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with the handler.
          */
-        void UnregisterSubjectHandler( const std::string &subject_type );
+        void UnregisterSubjectHandler( std::string_view subject_type );
         /**
          * @brief Registers a certificate handling callback by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with certificates.
          * @param[in] handler Callback invoked for matching certificate subjects.
          * @return `true` when registered, `false` when input is invalid.
          */
-        bool RegisterCertificateHandler( const std::string &subject_type, CertificateSubjectHandler handler );
+        bool RegisterCertificateHandler( std::string_view subject_type, CertificateSubjectHandler handler );
         /**
          * @brief Unregisters a certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with the handler.
          */
-        void UnregisterCertificateHandler( const std::string &subject_type );
+        void UnregisterCertificateHandler( std::string_view subject_type );
 
         /**
          * @brief Publishes a consensus envelope to pubsub.
@@ -255,11 +256,11 @@ namespace sgns
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
          * @return 32-byte subject type hash on success, otherwise an error.
          */
-        static outcome::result<std::string> ComputeSubjectTypeHash( const std::string &subject_type );
+        static outcome::result<std::string> ComputeSubjectTypeHash( std::string_view subject_type );
         static outcome::result<NonceSubject> DecodeNonceSubject( const Subject &subject );
         static outcome::result<TaskResultSubject> DecodeTaskResultSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
-        static bool SubjectTypeMatches( const Subject &subject, const std::string &subject_type );
+        static bool SubjectTypeMatches( const Subject &subject, std::string_view subject_type );
         /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.
@@ -311,7 +312,7 @@ namespace sgns
          * @return Constructed subject or an error.
          */
         static outcome::result<Subject> CreateGenericSubject( const std::string          &account_id,
-                                                              const std::string          &subject_type,
+                                                              std::string_view            subject_type,
                                                               const std::vector<uint8_t> &payload );
         /**
          * @brief Returns the lexicographically better hash among two values.
@@ -611,11 +612,11 @@ namespace sgns
          */
         static std::string CreateProposalId( const Proposal &proposal );
         /**
-         * @brief Populates a subject's type hash from its canonical subject type.
-         * @param[in,out] subject Subject to update.
-         * @return `true` when the hash was populated.
+         * @brief Checks if a subject has a valid type hash.
+         * @param[in,out] subject Subject to check
+         * @return `true` if the subject has a valid type hash, otherwise `false`.
          */
-        static bool SetSubjectTypeHash( Subject *subject );
+        static bool SubjectHasValidTypeHash( Subject *subject );
         /**
          * @brief Performs basic subject sanity validation.
          * @param[in] subject Subject to validate.
