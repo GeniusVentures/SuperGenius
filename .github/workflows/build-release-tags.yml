@@ -424,7 +424,7 @@ jobs:
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}
         run: |
-          tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${BUILD_DIRECTORY}/|' SuperGenius/
+          tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{env.BUILD_DIRECTORY}}/|' SuperGenius/
         shell: bash
 
       - name: Release file

@@ -550,7 +550,7 @@ jobs:
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
         shell: bash
-        run: tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${BUILD_DIRECTORY}/|' SuperGenius/
+        run: tar --exclude=.git -czvf ${FILE_NAME} --transform 's|^|${{ env.BUILD_DIRECTORY }}/|' SuperGenius/
 
       - name: Set release tag
         shell: bash
