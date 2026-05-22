@@ -1,5 +1,8 @@
 #include "UTXOManager.hpp"
+#include "UTXOMerkle.hpp"
 
+#include <algorithm>
+#include <chrono>
 #include <numeric>
 #include <stdexcept>
 
@@ -9,6 +12,64 @@
 
 namespace sgns
 {
+    namespace
+    {
+
+        std::string BuildUTXORecordKey( const std::string &owner_address, const OutPoint &outpoint )
+        {
+            return fmt::format( "/utxo/{}/{}:{}",
+                                owner_address,
+                                outpoint.txid_hash_.toReadableString(),
+                                outpoint.output_idx_ );
+        }
+
+        std::string BuildCheckpointRecordKey( const std::string &owner_address, uint64_t epoch )
+        {
+            return fmt::format( "/utxo-checkpoint/{}/{}", owner_address, epoch );
+        }
+
+        std::string BuildLatestCheckpointPointerKey( const std::string &owner_address )
+        {
+            return fmt::format( "/utxo-checkpoint/{}/latest", owner_address );
+        }
+
+        std::optional<std::string> ParseOwnerAddrFromUTXORecordKey( std::string_view key )
+        {
+            constexpr std::string_view prefix = "/utxo/";
+            if ( key.substr( 0, prefix.size() ) != prefix )
+            {
+                return std::nullopt;
+            }
+
+            auto remainder = key.substr( prefix.size() );
+            auto slash_pos = remainder.find( '/' );
+            if ( slash_pos == std::string_view::npos || slash_pos == 0 )
+            {
+                return std::nullopt;
+            }
+
+            return std::string( remainder.substr( 0, slash_pos ) );
+        }
+
+        SGTransaction::UTXOEntryState ToProtoState( UTXOManager::UTXOState state )
+        {
+            return state == UTXOManager::UTXOState::UTXO_CONSUMED ? SGTransaction::UTXO_ENTRY_CONSUMED
+                                                                  : SGTransaction::UTXO_ENTRY_READY;
+        }
+
+        UTXOManager::UTXOState FromProtoState( SGTransaction::UTXOEntryState state )
+        {
+            return state == SGTransaction::UTXO_ENTRY_CONSUMED ? UTXOManager::UTXOState::UTXO_CONSUMED
+                                                               : UTXOManager::UTXOState::UTXO_READY;
+        }
+
+        base::Hash256 ComputeMerkleRootFromUTXOList( std::vector<GeniusUTXO> unspent )
+        {
+            return utxo_merkle::ComputeMerkleRootFromUTXOs( unspent );
+        }
+
+    } // namespace
+
     uint64_t UTXOManager::GetBalance() const
     {
         return GetBalance( address_ );
@@ -26,13 +87,23 @@ namespace sgns
         }
 
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
         {
-            for ( const auto &[state, curr] : it->second )
+            for ( const auto &outpoint : address_it->second )
             {
-                if ( !curr.GetLock() && state == UTXOState::UTXO_READY )
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
                 {
-                    retval += curr.GetAmount();
+                    continue;
+                }
+                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                if ( reserved_outpoints_.find( outpoint ) == reserved_outpoints_.end() )
+                {
+                    //TODO - This should return in Genius Tokens but it's not taking into consideration the tokenID. It needs to multiply by the ratio of it
+                    retval += utxo_it->second.utxo.GetAmount();
                 }
             }
         }
@@ -57,19 +128,33 @@ namespace sgns
         }
 
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
         {
-            for ( const auto &[state, utxo] : it->second )
+            for ( const auto &outpoint : address_it->second )
             {
-                if ( !utxo.GetLock() && token_id.Equals( utxo.GetTokenID() ) && state == UTXOState::UTXO_READY )
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
                 {
-                    balance += utxo.GetAmount();
+                    continue;
+                }
+                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                if ( !token_id.Equals( utxo_it->second.utxo.GetTokenID() ) )
+                {
+                    continue;
+                }
+                if ( reserved_outpoints_.find( outpoint ) == reserved_outpoints_.end() )
+                {
+                    balance += utxo_it->second.utxo.GetAmount();
                 }
             }
         }
         return balance;
     }
 
+    //TODO - Remove the GeniusUTXO from parameters, instead add the necessary fields or IGeniusTransactions
     outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
@@ -79,42 +164,28 @@ namespace sgns
             return false;
         }
 
-        std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[address];
+        new_utxo.SetOwnerAddress( address );
+        const OutPoint outpoint{ new_utxo.GetTxID(), new_utxo.GetOutputIdx() };
 
-        bool is_new = true;
-        for ( auto it = utxo_list.begin(); it != utxo_list.end(); )
         {
-            auto &[state, curr] = *it;
-            if ( new_utxo.GetTxID() != curr.GetTxID() )
+            std::unique_lock lock( utxos_mutex_ );
+            if ( auto existing = utxo_outpoints_.find( outpoint ); existing != utxo_outpoints_.end() )
             {
-                ++it;
-                continue;
+                return false;
             }
-            if ( new_utxo.GetOutputIdx() != curr.GetOutputIdx() )
-            {
-                ++it;
-                continue;
-            }
-            if ( state == UTXOState::UTXO_CONSUMED )
-            {
-                utxo_list.erase( it );
-                is_new = false;
-                break;
-            }
-            //TODO - If it's the same, might be locked, then unlock
-            is_new = false;
-            break;
+
+            utxo_outpoints_[outpoint] =
+                UTXOEntry{ UTXOState::UTXO_READY, new_utxo, 0, std::nullopt, std::nullopt };
+            address_outpoints_[address].push_back( outpoint );
         }
-        if ( is_new )
-        {
-            utxo_list.emplace_back( UTXOState::UTXO_READY, std::move( new_utxo ) );
-            BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
-        }
-        return is_new;
+
+        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
+        return true;
     }
 
-    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id, const std::string &address )
+    outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id,
+                                                   uint32_t             output_idx,
+                                                   const std::string   &address )
     {
         // If not a full node and trying to delete UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -122,66 +193,67 @@ namespace sgns
             logger_->warn( "Non-full node deleting UTXOs for other addresses" );
         }
 
-        std::unique_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
         {
-            bool  deleted   = false;
-            auto &utxo_list = it->second;
-            for ( auto utxo_it = utxo_list.begin(); utxo_it != utxo_list.end(); )
+            std::unique_lock lock( utxos_mutex_ );
+            if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
             {
-                auto &[state, curr] = *utxo_it;
-                if ( curr.GetTxID() == utxo_id )
+                auto &outpoints   = address_it->second;
+                auto  outpoint_it = std::find_if(
+                    outpoints.begin(),
+                    outpoints.end(),
+                    [&]( const OutPoint &outpoint )
+                    { return outpoint.txid_hash_ == utxo_id && outpoint.output_idx_ == output_idx; } );
+                if ( outpoint_it != outpoints.end() )
                 {
-                    utxo_it = utxo_list.erase( utxo_it );
-                    deleted = true;
-                    continue;
+                    const OutPoint outpoint = *outpoint_it;
+                    reserved_outpoints_.erase( outpoint );
+                    utxo_outpoints_.erase( outpoint );
+                    outpoints.erase( outpoint_it );
                 }
-                ++utxo_it;
-            }
-            if ( deleted )
-            {
-                BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
             }
         }
 
+        BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
         return outcome::success();
     }
 
     outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
                                                      const std::string                &address )
     {
-        bool             consumed = true;
-        std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[address];
-        for ( auto &input_info : infos )
+        bool consumed = true;
         {
-            bool utxo_found = false;
-            auto utxo_it    = utxo_list.end();
-            for ( auto it = utxo_list.begin(); it != utxo_list.end(); ++it )
+            std::unique_lock lock( utxos_mutex_ );
+            for ( auto &input_info : infos )
             {
-                auto &[state, curr] = *it;
-                if ( input_info.txid_hash_ != curr.GetTxID() )
+                const OutPoint outpoint{ input_info.txid_hash_, input_info.output_idx_ };
+                bool           utxo_found = false;
+
+                if ( auto canonical_it = utxo_outpoints_.find( outpoint ); canonical_it != utxo_outpoints_.end() )
                 {
-                    continue;
+                    auto &entry = canonical_it->second;
+                    if ( entry.state == UTXOState::UTXO_READY && entry.utxo.GetOwnerAddress() == address )
+                    {
+                        utxo_found  = true;
+                        entry.state = UTXOState::UTXO_CONSUMED;
+                    }
                 }
-                if ( input_info.output_idx_ != curr.GetOutputIdx() )
+
+                reserved_outpoints_.erase( outpoint );
+                if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
                 {
-                    continue;
+                    auto &outpoints_vector = address_it->second;
+                    outpoints_vector.erase( std::remove( outpoints_vector.begin(), outpoints_vector.end(), outpoint ), outpoints_vector.end() );
                 }
-                utxo_found = true;
-                utxo_it    = it;
-                break;
+
+                if ( !utxo_found )
+                {
+                    GeniusUTXO consumed_utxo( input_info.txid_hash_, input_info.output_idx_, 0, TokenID(), address );
+                    utxo_outpoints_[outpoint] =
+                        UTXOEntry{ UTXOState::UTXO_CONSUMED, consumed_utxo, 0, std::nullopt, std::nullopt };
+                }
+
+                consumed = consumed && utxo_found;
             }
-            if ( utxo_found )
-            {
-                utxo_list.erase( utxo_it );
-            }
-            else
-            {
-                GeniusUTXO consumed_utxo( input_info.txid_hash_, input_info.output_idx_, 0, TokenID() );
-                utxo_list.emplace_back( UTXOState::UTXO_CONSUMED, consumed_utxo );
-            }
-            consumed = consumed && utxo_found;
         }
 
         BOOST_OUTCOME_TRY( StoreUTXOs( address ) );
@@ -192,17 +264,55 @@ namespace sgns
     std::vector<GeniusUTXO> UTXOManager::GetUTXOs( const std::string &address ) const
     {
         std::shared_lock lock( utxos_mutex_ );
-        if ( auto it = utxos_.find( address ); it != utxos_.end() )
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
         {
             std::vector<GeniusUTXO> result;
-            result.reserve( it->second.size() );
-            for ( const auto &[state, utxo] : it->second )
+            result.reserve( address_it->second.size() );
+            for ( const auto &outpoint : address_it->second )
             {
-                if ( state == UTXOState::UTXO_CONSUMED )
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
                 {
                     continue;
                 }
-                result.push_back( utxo );
+                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                result.push_back( utxo_it->second.utxo );
+            }
+            return result;
+        }
+        return {};
+    }
+
+    std::vector<GeniusUTXO> UTXOManager::GetUTXOsForReservation( const std::string &address,
+                                                                 const std::string &reservation_id ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+        {
+            std::vector<GeniusUTXO> result;
+            result.reserve( address_it->second.size() );
+            for ( const auto &outpoint : address_it->second )
+            {
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
+                {
+                    continue;
+                }
+                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+
+                auto reservation_it = reserved_outpoints_.find( outpoint );
+                if ( reservation_it != reserved_outpoints_.end() && reservation_it->second != reservation_id )
+                {
+                    continue;
+                }
+
+                result.push_back( utxo_it->second.utxo );
             }
             return result;
         }
@@ -211,8 +321,15 @@ namespace sgns
 
     std::unordered_map<std::string, std::vector<UTXOManager::UTXOData>> UTXOManager::GetAllUTXOs() const
     {
-        std::shared_lock lock( utxos_mutex_ );
-        return utxos_;
+        std::shared_lock                                       lock( utxos_mutex_ );
+        std::unordered_map<std::string, std::vector<UTXOData>> result;
+        for ( const auto &[outpoint, entry] : utxo_outpoints_ )
+        {
+            (void)outpoint;
+            const auto &owner = entry.utxo.GetOwnerAddress();
+            result[owner].emplace_back( entry.state, entry.utxo );
+        }
+        return result;
     }
 
     outcome::result<void> UTXOManager::SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address )
@@ -224,13 +341,31 @@ namespace sgns
             return std::errc::permission_denied;
         }
 
-        std::unique_lock lock( utxos_mutex_ );
-        auto            &utxo_list = utxos_[address];
-        utxo_list.clear();
-        utxo_list.reserve( utxos.size() );
-        for ( const auto &utxo : utxos )
         {
-            utxo_list.emplace_back( UTXOState::UTXO_READY, utxo );
+            std::unique_lock lock( utxos_mutex_ );
+
+            if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+            {
+                for ( const auto &outpoint : address_it->second )
+                {
+                    utxo_outpoints_.erase( outpoint );
+                    reserved_outpoints_.erase( outpoint );
+                }
+                address_it->second.clear();
+            }
+
+            auto &outpoints = address_outpoints_[address];
+            outpoints.clear(); //TODO - Evaluate if this is necessary, since it already clears on the loop above.
+            outpoints.reserve( utxos.size() );
+            for ( const auto &utxo : utxos )
+            {
+                auto owned_utxo = utxo;
+                owned_utxo.SetOwnerAddress( address );
+                const OutPoint outpoint{ owned_utxo.GetTxID(), owned_utxo.GetOutputIdx() };
+                utxo_outpoints_[outpoint] =
+                    UTXOEntry{ UTXOState::UTXO_READY, owned_utxo, 0, std::nullopt, std::nullopt };
+                outpoints.push_back( outpoint );
+            }
         }
 
         if ( auto res = StoreUTXOs( address ); res.has_error() )
@@ -294,75 +429,111 @@ namespace sgns
         return std::make_pair( inputs, outputs );
     }
 
-    void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs )
+    void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id )
     {
         std::unique_lock lock( utxos_mutex_ );
 
-        for ( auto &[state, utxo] : utxos_[address_] )
+        for ( const auto &input_utxo : inputs )
         {
-            for ( auto &input_utxo : inputs )
+            const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
+            auto           it = reserved_outpoints_.find( outpoint );
+            if ( it == reserved_outpoints_.end() )
             {
-                if ( input_utxo.txid_hash_ == utxo.GetTxID() )
-                {
-                    utxo.SetLocked( true );
-                }
+                reserved_outpoints_.emplace( outpoint, reservation_id );
+                continue;
+            }
+            if ( it->second != reservation_id )
+            {
+                logger_->warn( "Outpoint {}:{} already reserved by another tx",
+                               input_utxo.txid_hash_.toReadableString(),
+                               input_utxo.output_idx_ );
             }
         }
     }
 
-    void UTXOManager::RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs )
+    void UTXOManager::RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id )
     {
         std::unique_lock lock( utxos_mutex_ );
 
-        for ( auto &[state, utxo] : utxos_[address_] )
+        for ( const auto &input_utxo : inputs )
         {
-            for ( auto &input_utxo : inputs )
+            const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
+            auto           it = reserved_outpoints_.find( outpoint );
+            if ( it == reserved_outpoints_.end() )
             {
-                if ( input_utxo.txid_hash_ == utxo.GetTxID() )
-                {
-                    utxo.SetLocked( false );
-                }
+                continue;
+            }
+            if ( reservation_id.empty() || it->second == reservation_id )
+            {
+                reserved_outpoints_.erase( it );
             }
         }
     }
 
     bool UTXOManager::VerifyParameters( const UTXOTxParameters &params, const std::string &address ) const
     {
-        size_t   input_amount    = 0;
         uint64_t expected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
 
-        try
-        {
-            for ( const auto &[state, utxo] : utxos_.at( address ) )
-            {
-                for ( auto &input : params.first )
-                {
-                    if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
-                    {
-                        continue;
-                    }
-                    if ( input.txid_hash_ == utxo.GetTxID() )
-                    {
-                        expected_amount += utxo.GetAmount();
-                        input_amount    += 1;
-                    }
-                    if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
-                    {
-                        logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
-                        return false;
-                    }
-                }
-            }
-        }
-        catch ( const std::out_of_range & )
-        {
-            logger_->warn( "Could not find UTXOs from address {}", address );
-            return false;
-        }
+        std::unordered_set<OutPoint, OutPointHash> seen_inputs;
+        seen_inputs.reserve( params.first.size() );
 
-        lock.unlock();
+        for ( const auto &input : params.first )
+        {
+            if ( !verify_signature_( address, input.signature_, input.SerializeForSigning() ) )
+            {
+                logger_->warn( "UTXO {} signing does not match", fmt::join( input.txid_hash_, "" ) );
+                return false;
+            }
+
+            const OutPoint outpoint{ input.txid_hash_, input.output_idx_ };
+            if ( !seen_inputs.insert( outpoint ).second )
+            {
+                logger_->warn( "Duplicate input outpoint detected for {}", input.txid_hash_.toReadableString() );
+                return false;
+            }
+
+            auto utxo_it = utxo_outpoints_.find( outpoint );
+            if ( utxo_it == utxo_outpoints_.end() )
+            {
+                logger_->warn( "Unknown outpoint {}:{}", input.txid_hash_.toReadableString(), input.output_idx_ );
+                return false;
+            }
+
+            if ( utxo_it->second.state != UTXOState::UTXO_READY )
+            {
+                logger_->warn( "Outpoint {}:{} is not spendable",
+                               input.txid_hash_.toReadableString(),
+                               input.output_idx_ );
+                return false;
+            }
+
+            const auto &owner_address = utxo_it->second.utxo.GetOwnerAddress();
+            const bool delegated_escrow_spend = owner_address != address &&
+                                                input.output_idx_ == 0 &&
+                                                utxo_address::IsEscrowLockAddress( owner_address );
+
+            if ( owner_address != address && !delegated_escrow_spend )
+            {
+                logger_->warn( "Outpoint {}:{} does not belong to {}",
+                               input.txid_hash_.toReadableString(),
+                               input.output_idx_,
+                               address );
+                return false;
+            }
+
+            if ( delegated_escrow_spend )
+            {
+                logger_->debug( "Allowing delegated escrow spend for outpoint {}:{} by {} (lock owner: {})",
+                                input.txid_hash_.toReadableString(),
+                                input.output_idx_,
+                                address.substr( 0, 8 ),
+                                owner_address );
+            }
+
+            expected_amount += utxo_it->second.utxo.GetAmount();
+        }
 
         uint64_t real_amount = std::accumulate( params.second.cbegin(),
                                                 params.second.cend(),
@@ -370,7 +541,72 @@ namespace sgns
                                                 []( const uint64_t s, const OutputDestInfo &o )
                                                 { return o.encrypted_amount + s; } );
 
-        return real_amount == expected_amount && input_amount == params.first.size();
+        return real_amount == expected_amount && seen_inputs.size() == params.first.size();
+    }
+
+    std::optional<UTXOManager::UTXOState> UTXOManager::GetOutPointState( const base::Hash256 &utxo_id,
+                                                                          uint32_t             output_idx ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        const OutPoint   outpoint{ utxo_id, output_idx };
+        auto             it = utxo_outpoints_.find( outpoint );
+        if ( it == utxo_outpoints_.end() )
+        {
+            return std::nullopt;
+        }
+        return it->second.state;
+    }
+
+    bool UTXOManager::IsOutPointConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const
+    {
+        auto state = GetOutPointState( utxo_id, output_idx );
+        return state.has_value() && state.value() == UTXOState::UTXO_CONSUMED;
+    }
+
+    base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const
+    {
+        return ComputeUTXOMerkleRoot( address_ );
+    }
+
+    base::Hash256 UTXOManager::ComputeUTXOMerkleRoot( const std::string &address ) const
+    {
+        if ( !is_full_node_ && address != address_ )
+        {
+            logger_->warn( "Non-full node cannot compute UTXO Merkle root for other addresses" );
+            return utxo_merkle::EmptyUTXOMerkleRoot();
+        }
+
+        std::vector<GeniusUTXO> unspent;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            auto             it = address_outpoints_.find( address );
+            if ( it == address_outpoints_.end() )
+            {
+                return utxo_merkle::EmptyUTXOMerkleRoot();
+            }
+
+            unspent.reserve( it->second.size() );
+            for ( const auto &outpoint : it->second )
+            {
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
+                {
+                    continue;
+                }
+                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                unspent.push_back( utxo_it->second.utxo );
+            }
+        }
+
+        return ComputeMerkleRootFromUTXOList( std::move( unspent ) );
+    }
+
+    base::Hash256 UTXOManager::ComputeUTXOMerkleRootFromSnapshot( const std::vector<GeniusUTXO> &utxos ) const
+    {
+        return ComputeMerkleRootFromUTXOList( utxos );
     }
 
     outcome::result<bool> UTXOManager::LoadUTXOs( std::shared_ptr<storage::rocksdb> db )
@@ -381,16 +617,28 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        if ( db_ != nullptr )
         {
-            logger_->warn( "UTXOs were already loaded" );
+            std::unique_lock lock( utxos_mutex_ );
+            if ( db_ != nullptr )
+            {
+                logger_->warn( "UTXOs were already loaded" );
+            }
+            db_ = std::move( db );
+            utxo_outpoints_.clear();
+            address_outpoints_.clear();
+            reserved_outpoints_.clear();
         }
-        db_ = std::move( db );
-        utxos_.clear();
+
+        auto db_handle = AcquireStorage();
+        if ( db_handle == nullptr )
+        {
+            logger_->error( "Tried to query UTXOs without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
 
         base::Buffer key_buf;
         key_buf.put( DB_PREFIX );
-        auto utxo_list = db_->query( key_buf );
+        auto utxo_list = db_handle->query( key_buf );
 
         if ( utxo_list.has_error() )
         {
@@ -409,91 +657,339 @@ namespace sgns
             return false;
         }
 
-        for ( const auto &[key, params] : utxo_list.value() )
         {
-            std::string address( key.subbuffer( DB_PREFIX.size() + 1 ).toString() );
-            logger_->info( "Loading UTXOs of address {}", address );
-
-            SGTransaction::UTXOList utxos;
-
-            if ( !utxos.ParseFromArray( params.data(), params.size() ) )
+            std::unique_lock lock( utxos_mutex_ );
+            for ( const auto &[key, params] : utxo_list.value() )
             {
-                logger_->error( "Failed to deserialize UTXOs" );
-                return std::errc::bad_message;
-            }
+                auto owner_addr_opt = ParseOwnerAddrFromUTXORecordKey( key.toString() );
+                if ( !owner_addr_opt.has_value() )
+                {
+                    logger_->warn( "Skipping malformed UTXO key {}", key.toString() );
+                    continue;
+                }
+                const auto &address = owner_addr_opt.value();
 
-            utxos_[address].reserve( utxos.utxos_size() );
+                SGTransaction::UTXOEntryRecord entry_record;
+                if ( !entry_record.ParseFromArray( params.data(), params.size() ) )
+                {
+                    logger_->error( "Failed to deserialize UTXO record for address {}", address );
+                    return std::errc::bad_message;
+                }
 
-            for ( int i = 0; i < utxos.utxos_size(); ++i )
-            {
-                const auto &utxo = utxos.utxos( i );
-                BOOST_OUTCOME_TRY( auto hash,
-                                   base::Hash256::fromSpan( gsl::span(
-                                       reinterpret_cast<uint8_t *>( const_cast<char *>( utxo.hash().data() ) ),
-                                       utxo.hash().size() ) ) );
+                if ( !entry_record.owner_address().empty() && entry_record.owner_address() != address )
+                {
+                    logger_->warn( "UTXO owner mismatch in key/value for {}", address );
+                }
 
-                auto token_id = TokenID::FromBytes( utxo.token().data(), utxo.token().size() );
+                const auto state = FromProtoState( entry_record.state() );
 
-                utxos_[address].emplace_back( UTXOState::UTXO_READY,
-                                              GeniusUTXO( hash, utxo.output_idx(), utxo.amount(), token_id ) );
+                BOOST_OUTCOME_TRY(
+                    auto hash,
+                          base::Hash256::fromSpan( gsl::span(
+                              reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.utxo().hash().data() ) ),
+                              entry_record.utxo().hash().size() ) ) );
+
+                auto       token_id = TokenID::FromBytes( entry_record.utxo().token().data(),
+                                                    entry_record.utxo().token().size() );
+                GeniusUTXO loaded_utxo( hash,
+                                        entry_record.utxo().output_idx(),
+                                        entry_record.utxo().amount(),
+                                        token_id,
+                                        address );
+                const auto outpoint = loaded_utxo.GetOutPoint();
+                UTXOEntry  loaded_entry;
+                loaded_entry.state         = state;
+                loaded_entry.utxo          = loaded_utxo;
+                loaded_entry.created_epoch = entry_record.created_epoch();
+                if ( entry_record.has_spent_epoch() )
+                {
+                    loaded_entry.spent_epoch = entry_record.spent_epoch();
+                }
+                if ( entry_record.has_spent_by_txid() )
+                {
+                    BOOST_OUTCOME_TRY( auto spent_by_hash,
+                                       base::Hash256::fromSpan( gsl::span(
+                                           reinterpret_cast<uint8_t *>( const_cast<char *>( entry_record.spent_by_txid().data() ) ),
+                                           entry_record.spent_by_txid().size() ) ) );
+                    loaded_entry.spent_by_txid = spent_by_hash;
+                }
+
+                utxo_outpoints_[outpoint] = std::move( loaded_entry );
+                address_outpoints_[address].push_back( outpoint );
             }
         }
 
-        return true;
+        return !utxo_outpoints_.empty();
+    }
+
+    std::shared_ptr<storage::rocksdb> UTXOManager::AcquireStorage() const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        return db_;
+    }
+
+    void UTXOManager::ReleaseStorage()
+    {
+        std::unique_lock lock( utxos_mutex_ );
+        db_.reset();
     }
 
     outcome::result<void> UTXOManager::StoreUTXOs( const std::string &address )
     {
-        if ( db_ == nullptr )
+        auto db = AcquireStorage();
+        if ( db == nullptr )
         {
             logger_->error( "Tried to store UTXOs without loading DB" );
             return storage::DatabaseError::UNITIALIZED;
         }
 
-        SGTransaction::UTXOList utxos;
+        base::Buffer existing_prefix;
+        existing_prefix.put( fmt::format( "{}/{}/", DB_PREFIX, address ) );
 
-        try
+        auto existing_records = db->query( existing_prefix );
+        if ( existing_records.has_error() && existing_records.error() != storage::DatabaseError::NOT_FOUND )
         {
-            for ( const auto &[state, utxo] : utxos_.at( address ) )
+            logger_->error( "Failed to query existing UTXO records for address {}", address );
+            return existing_records.error();
+        }
+
+        if ( existing_records.has_value() )
+        {
+            //TODO - not great because it's not atomic, so we lose the record and if we shutdown before we record it is gone.
+            for ( const auto &[existing_key, _] : existing_records.value() )
             {
-                if ( state != UTXOState::UTXO_READY )
+                if ( auto rem_res = db->remove( existing_key ); rem_res.has_error() )
+                {
+                    logger_->error( "Failed to remove old UTXO record for address {}", address );
+                    return rem_res.error();
+                }
+            }
+        }
+
+        std::vector<std::pair<OutPoint, UTXOEntry>> entries_to_store;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            entries_to_store.reserve( utxo_outpoints_.size() );
+            for ( const auto &[outpoint, entry] : utxo_outpoints_ )
+            {
+                if ( entry.utxo.GetOwnerAddress() != address )
                 {
                     continue;
                 }
-                auto new_utxo = utxos.add_utxos();
-                new_utxo->set_hash( utxo.GetTxID().data(), utxo.GetTxID().size() );
-                new_utxo->set_token( utxo.GetTokenID().bytes().data(), utxo.GetTokenID().size() );
-                new_utxo->set_amount( utxo.GetAmount() );
-                new_utxo->set_output_idx( utxo.GetOutputIdx() );
+                entries_to_store.emplace_back( outpoint, entry );
             }
         }
-        catch ( const std::out_of_range & )
+
+        uint64_t stored = 0;
+        for ( const auto &[outpoint, entry] : entries_to_store )
         {
-            logger_->error( "There are no UTXOs in cache for address {}", address );
-            return std::errc::bad_address;
+            SGTransaction::UTXOEntryRecord entry_record;
+            auto                          *utxo_proto = entry_record.mutable_utxo();
+            const auto                     txid       = entry.utxo.GetTxID();
+            const auto                     token_id   = entry.utxo.GetTokenID();
+            utxo_proto->set_hash( txid.data(), txid.size() );
+            utxo_proto->set_token( token_id.bytes().data(), token_id.size() );
+            utxo_proto->set_amount( entry.utxo.GetAmount() );
+            utxo_proto->set_output_idx( entry.utxo.GetOutputIdx() );
+            entry_record.set_owner_address( address );
+            entry_record.set_state( ToProtoState( entry.state ) );
+            entry_record.set_created_epoch( entry.created_epoch );
+            entry_record.set_has_spent_epoch( entry.spent_epoch.has_value() );
+            if ( entry.spent_epoch.has_value() )
+            {
+                entry_record.set_spent_epoch( entry.spent_epoch.value() );
+            }
+            entry_record.set_has_spent_by_txid( entry.spent_by_txid.has_value() );
+            if ( entry.spent_by_txid.has_value() )
+            {
+                entry_record.set_spent_by_txid( entry.spent_by_txid.value().data(),
+                                                entry.spent_by_txid.value().size() );
+            }
+
+            base::Buffer value_buf( std::vector<uint8_t>( entry_record.ByteSizeLong() ) );
+            if ( !entry_record.SerializeToArray( value_buf.data(), value_buf.size() ) )
+            {
+                logger_->error( "Failed to serialize UTXO record for address {}", address );
+                return std::errc::bad_message;
+            }
+
+            base::Buffer key_buf;
+            key_buf.put( BuildUTXORecordKey( address, outpoint ) );
+
+            if ( auto put_res = db->put( key_buf, value_buf ); put_res.has_error() )
+            {
+                logger_->error( "Error when storing UTXO record for address {}", address );
+                return put_res.error();
+            }
+            ++stored;
         }
 
-        base::Buffer buf( std::vector<uint8_t>( utxos.ByteSizeLong() ) );
-        if ( !utxos.SerializeToArray( buf.data(), buf.size() ) )
+        logger_->info( "Stored {} UTXOs for address {}", stored, address );
+        return outcome::success();
+    }
+
+    outcome::result<void> UTXOManager::CreateCheckpoint( uint64_t             epoch,
+                                                         const base::Hash256 &last_finalized_tx,
+                                                         const base::Hash256 &registry_hash )
+    {
+        return CreateCheckpoint( address_, epoch, last_finalized_tx, registry_hash );
+    }
+
+    outcome::result<void> UTXOManager::CreateCheckpoint( const std::string   &address,
+                                                         uint64_t             epoch,
+                                                         const base::Hash256 &last_finalized_tx,
+                                                         const base::Hash256 &registry_hash )
+    {
+        auto db = AcquireStorage();
+        if ( db == nullptr )
         {
-            logger_->error( "Failed to serialize to array" );
+            logger_->error( "Tried to create checkpoint without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
+
+        if ( !is_full_node_ && address != address_ )
+        {
+            logger_->warn( "Non-full node cannot create checkpoint for other addresses" );
+            return std::errc::permission_denied;
+        }
+
+        std::vector<GeniusUTXO> unspent_snapshot;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+            {
+                unspent_snapshot.reserve( address_it->second.size() );
+                for ( const auto &outpoint : address_it->second )
+                {
+                    auto utxo_it = utxo_outpoints_.find( outpoint );
+                    if ( utxo_it == utxo_outpoints_.end() )
+                    {
+                        continue;
+                    }
+                    if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                    {
+                        continue;
+                    }
+                    unspent_snapshot.push_back( utxo_it->second.utxo );
+                }
+            }
+        }
+
+        SGTransaction::UTXOCheckpointRecord checkpoint_record;
+        checkpoint_record.set_owner_address( address );
+        checkpoint_record.set_epoch( epoch );
+        checkpoint_record.set_last_finalized_tx( last_finalized_tx.data(), last_finalized_tx.size() );
+        checkpoint_record.set_registry_hash( registry_hash.data(), registry_hash.size() );
+        const auto utxo_root = ComputeMerkleRootFromUTXOList( unspent_snapshot );
+        checkpoint_record.set_utxo_merkle_root( utxo_root.data(), utxo_root.size() );
+        checkpoint_record.set_utxo_count( unspent_snapshot.size() );
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch() );
+        checkpoint_record.set_created_at_ms( static_cast<uint64_t>( now_ms.count() ) );
+
+        base::Buffer checkpoint_value_buf( std::vector<uint8_t>( checkpoint_record.ByteSizeLong() ) );
+        if ( !checkpoint_record.SerializeToArray( checkpoint_value_buf.data(), checkpoint_value_buf.size() ) )
+        {
+            logger_->error( "Failed to serialize checkpoint for address {}", address );
             return std::errc::bad_message;
         }
 
-        std::string key( DB_PREFIX );
-        key.push_back( '/' );
-        key.append( address );
-        base::Buffer key_buf;
-        key_buf.put( key );
-
-        if ( auto result = db_->put( key_buf, buf ); result.has_error() )
+        const auto   checkpoint_key = BuildCheckpointRecordKey( address, epoch );
+        base::Buffer checkpoint_key_buf;
+        checkpoint_key_buf.put( checkpoint_key );
+        if ( auto put_res = db->put( checkpoint_key_buf, checkpoint_value_buf ); put_res.has_error() )
         {
-            logger_->error( "Error when storing UTXOs" );
-            return result.error();
+            logger_->error( "Failed to store checkpoint record for address {}", address );
+            return put_res.error();
         }
 
-        logger_->info( "Stored {} UTXOs for address {}", utxos.utxos_size(), address );
+        base::Buffer latest_pointer_key_buf;
+        latest_pointer_key_buf.put( BuildLatestCheckpointPointerKey( address ) );
+        base::Buffer latest_pointer_value_buf;
+        latest_pointer_value_buf.put( checkpoint_key );
+        if ( auto put_latest_res = db->put( latest_pointer_key_buf, latest_pointer_value_buf );
+             put_latest_res.has_error() )
+        {
+            logger_->error( "Failed to store checkpoint latest pointer for address {}", address );
+            return put_latest_res.error();
+        }
+
+        logger_->info( "Created checkpoint owner={} epoch={} utxo_count={}", address, epoch, unspent_snapshot.size() );
         return outcome::success();
+    }
+
+    outcome::result<std::optional<UTXOManager::UTXOCheckpoint>> UTXOManager::LoadLatestCheckpoint(
+        const std::string &address ) const
+    {
+        auto db = AcquireStorage();
+        if ( db == nullptr )
+        {
+            logger_->error( "Tried to load checkpoint without loading DB" );
+            return storage::DatabaseError::UNITIALIZED;
+        }
+
+        if ( !is_full_node_ && address != address_ )
+        {
+            logger_->warn( "Non-full node cannot load checkpoint for other addresses" );
+            return std::errc::permission_denied;
+        }
+
+        base::Buffer latest_pointer_key_buf;
+        latest_pointer_key_buf.put( BuildLatestCheckpointPointerKey( address ) );
+        auto latest_pointer_value = db->get( latest_pointer_key_buf );
+        if ( latest_pointer_value.has_error() )
+        {
+            if ( latest_pointer_value.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return std::optional<UTXOCheckpoint>{};
+            }
+            logger_->error( "Failed to load latest checkpoint pointer for address {}", address );
+            return latest_pointer_value.error();
+        }
+
+        base::Buffer checkpoint_key_buf;
+        checkpoint_key_buf.put( latest_pointer_value.value().toString() );
+        auto checkpoint_value = db->get( checkpoint_key_buf );
+        if ( checkpoint_value.has_error() )
+        {
+            if ( checkpoint_value.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return std::optional<UTXOCheckpoint>{};
+            }
+            logger_->error( "Failed to load checkpoint record for address {}", address );
+            return checkpoint_value.error();
+        }
+
+        SGTransaction::UTXOCheckpointRecord checkpoint_record;
+        if ( !checkpoint_record.ParseFromArray( checkpoint_value.value().data(), checkpoint_value.value().size() ) )
+        {
+            logger_->error( "Failed to deserialize checkpoint record for address {}", address );
+            return std::errc::bad_message;
+        }
+
+        BOOST_OUTCOME_TRY( auto last_finalized_tx_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.last_finalized_tx().data() ) ),
+                                                               checkpoint_record.last_finalized_tx().size() ) ) );
+        BOOST_OUTCOME_TRY( auto registry_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.registry_hash().data() ) ),
+                                                               checkpoint_record.registry_hash().size() ) ) );
+        BOOST_OUTCOME_TRY( auto utxo_root_hash,
+                           base::Hash256::fromSpan( gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>(
+                                                                   checkpoint_record.utxo_merkle_root().data() ) ),
+                                                               checkpoint_record.utxo_merkle_root().size() ) ) );
+
+        UTXOCheckpoint checkpoint;
+        checkpoint.owner_address     = checkpoint_record.owner_address();
+        checkpoint.epoch             = checkpoint_record.epoch();
+        checkpoint.last_finalized_tx = last_finalized_tx_hash;
+        checkpoint.registry_hash     = registry_hash;
+        checkpoint.utxo_merkle_root  = utxo_root_hash;
+        checkpoint.utxo_count        = checkpoint_record.utxo_count();
+        checkpoint.created_at_ms     = checkpoint_record.created_at_ms();
+
+        return std::optional<UTXOCheckpoint>{ checkpoint };
     }
 
     outcome::result<std::pair<std::vector<InputUTXOInfo>, uint64_t>> UTXOManager::SelectUTXOs( uint64_t required_amount,
@@ -503,29 +999,38 @@ namespace sgns
         uint64_t                   selected_amount = 0;
 
         std::shared_lock lock( utxos_mutex_ );
-        for ( const auto &[state, utxo] : utxos_[address_] )
+        if ( auto address_it = address_outpoints_.find( address_ ); address_it != address_outpoints_.end() )
         {
-            if ( selected_amount >= required_amount )
+            for ( const auto &outpoint : address_it->second )
             {
-                break;
-            }
-            if ( utxo.GetLock() )
-            {
-                continue;
-            }
-            if ( state == UTXOState::UTXO_CONSUMED || state == UTXOState::UTXO_RESERVED )
-            {
-                continue;
-            }
-            if ( !token_id.Equals( utxo.GetTokenID() ) )
-            {
-                continue;
-            }
+                if ( selected_amount >= required_amount )
+                {
+                    break;
+                }
 
-            inputs.push_back( { utxo.GetTxID(), utxo.GetOutputIdx(), {} } );
-            selected_amount += utxo.GetAmount();
+                auto utxo_it = utxo_outpoints_.find( outpoint );
+                if ( utxo_it == utxo_outpoints_.end() )
+                {
+                    continue;
+                }
+                const auto &entry = utxo_it->second;
+                if ( entry.state != UTXOState::UTXO_READY )
+                {
+                    continue;
+                }
+                if ( reserved_outpoints_.find( outpoint ) != reserved_outpoints_.end() )
+                {
+                    continue;
+                }
+                if ( !token_id.Equals( entry.utxo.GetTokenID() ) )
+                {
+                    continue;
+                }
+
+                inputs.push_back( { entry.utxo.GetTxID(), entry.utxo.GetOutputIdx(), {} } );
+                selected_amount += entry.utxo.GetAmount();
+            }
         }
-        lock.unlock();
 
         // Abort if insufficient funds
         if ( selected_amount < required_amount || inputs.empty() )

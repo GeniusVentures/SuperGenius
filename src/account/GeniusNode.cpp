@@ -329,6 +329,7 @@ namespace sgns
                     blockchain_    = Blockchain::New(
                         tx_globaldb_,
                         account_,
+                        pubsub_,
                         [weak_self]( outcome::result<void> result )
                         {
                             if ( auto strong = weak_self.lock() )
@@ -390,6 +391,7 @@ namespace sgns
                                                                 io_,
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
+                                                                blockchain_,
                                                                 is_full_node_ );
 
                 transaction_manager_->RegisterStateChangeCallback(
@@ -500,11 +502,11 @@ namespace sgns
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::trace );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::trace );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::debug );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::debug );
         auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -516,16 +518,17 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::debug );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::debug );
-        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::trace );
-        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
-        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
+        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -550,7 +553,7 @@ namespace sgns
         libp2p::log::setLevelOfGroup( "yamux", soralog::Level::DEBUG );
 #else
         // Release mode
-        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::trace );
+        node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::err );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::err );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
         auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
@@ -572,16 +575,18 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
-        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
-        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
-        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
+        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
+
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -780,7 +785,8 @@ namespace sgns
                                                              generator_,        // generator
                                                              write_base_path_,  // writeBasePath
                                                              base58key_,        // base58key
-                                                             account_ );
+                                                             account_,
+                                                             is_full_node_ );
 
         std::thread migration_thread(
             [manager = std::move( migrationManager ), cb = std::move( callback )]
@@ -1708,6 +1714,37 @@ namespace sgns
             return TokenAmount::ConvertFromChildToken( str, dev_config_.TokenValueInGNUS );
         }
         return outcome::failure( make_error_code( GeniusNode::Error::TOKEN_ID_MISMATCH ) );
+    }
+
+    std::vector<std::vector<uint8_t>> GeniusNode::GetInTransactions() const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetInTransactions();
+    }
+
+    std::vector<std::vector<uint8_t>> GeniusNode::GetOutTransactions() const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetOutTransactions();
+    }
+
+    const std::vector<std::vector<uint8_t>> GeniusNode::GetTransactions(
+        std::optional<TransactionManager::TransactionStatus> tx_status ) const
+    {
+        auto manager_result = GetTransactionManager();
+        if ( !manager_result.has_value() )
+        {
+            return {};
+        }
+        return manager_result.value()->GetTransactions( tx_status );
     }
 
     // Wait for a transaction to be processed with a timeout

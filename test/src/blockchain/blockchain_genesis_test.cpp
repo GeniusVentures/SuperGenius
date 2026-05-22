@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <cstdint>
+#include <cstdio>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -22,19 +23,16 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 
 class BlockchainGenesisTest : public ::testing::Test
 {
 protected:
-    static constexpr char FULL_NODE_PUB_ADDRESS[] =
-        "7c51e24e36e1be4c81bcca26ce8cd79d0866c344c1de72b81255964ae93d37cc667f27d41ddc27b45e2250e2ca9e6fa74e7e834c176402f2893982e82c00612b";
-
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &dev_addr,
                                                   const std::string &tokenValue,
@@ -161,9 +159,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
 {
     std::cout << "=== Starting With Authorization Can Sync Test ===" << std::endl;
 
-    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
-    std::cout << "Setting authorized full node address to: " << full_node_pub_address << std::endl;
-    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
     // Create the full node first (this will be the genesis creator)
     auto node_full = CreateNode( "full_node_with_auth",
                                  "0xcafe",
@@ -172,11 +167,12 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                  true, // is full node
                                  true  // is processor
     );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
+    std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
 
-    test::assertWaitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_full not ready" );
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "node_full not ready" );
 
     // Create two regular nodes
     auto node_regular_1 = CreateNode( "regular_node_with_auth_1",
@@ -215,21 +211,19 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     // Wait for all nodes to reach READY state
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
-    test::assertWaitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_full not ready" );
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "node_full not ready" );
 
-    test::assertWaitForCondition(
-        [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_regular_1 not ready" );
+    test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "node_regular_1 not ready" );
 
     std::cout << "All nodes are ready and synchronized!" << std::endl;
 
     // Verify that all nodes have the same authorized address configured
-    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), full_node_pub_address );
-    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), full_node_pub_address );
+    ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
+    ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
     //ASSERT_EQ( node_regular_2->GetAuthorizedFullNodeAddress(), authorized_address );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
@@ -239,10 +233,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 {
     std::cout << "=== Starting With Authorization Sync + Transactions Test ===" << std::endl;
 
-    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
-    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
-    std::cout << "Authorized address set: " << full_node_pub_address << std::endl;
-
     // Create the full node first (this will be the genesis creator)
     auto node_full = CreateNode( "full_node_with_auth",
                                  "0xcafe",
@@ -250,10 +240,10 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                  true,
                                  true );
-    test::assertWaitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_full not ready" );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "node_full not ready" );
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
                                       "0xcafe",
@@ -278,29 +268,26 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     uint64_t mint_amount = 10000000000ULL;
 
-    test::assertWaitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "full node not ready" );
-    test::assertWaitForCondition(
-        [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "regular node 1 not ready" );
-    test::assertWaitForCondition(
-        [&]() { return node_regular_2->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "regular node 2 not ready" );
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "full node not ready" );
+    test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "regular node 1 not ready" );
+    test::assertWaitForCondition( [&]() { return node_regular_2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "regular node 2 not ready" );
 
     auto balance_regular_1_before = node_regular_1->GetBalance();
     auto balance_regular_2_before = node_regular_2->GetBalance();
 
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
-                                                   "",
+                                                   sgns::test::NextMintSourceHash(),
                                                    "",
                                                    token_id,
                                                    "",
-                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -342,9 +329,6 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     std::cout << "=== Starting Wrong Authorization Cannot Sync Test ===" << std::endl;
 
     // Set WRONG authorized address (not matching the full node's address)
-    std::string wrong_address = "wrong_address_that_does_not_match_any_node";
-    Blockchain::SetAuthorizedFullNodeAddress( wrong_address );
-    std::cout << "Wrong authorized address set on all nodes" << std::endl;
     // Create a full node
     auto node_full = CreateNode( "full_node_wrong_auth",
                                  "0xcafe",
@@ -353,6 +337,9 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
                                  true, // is full node
                                  true  // is processor
     );
+    std::cout << "Wrong authorized address set on all nodes" << std::endl;
+    std::string wrong_address = "wrong_address_that_does_not_match_any_node";
+    Blockchain::SetAuthorizedFullNodeAddress( wrong_address );
 
     // Create regular nodes
     auto node_regular_1 = CreateNode( "regular_node_wrong_auth_1",

@@ -77,6 +77,25 @@
         {
             "type": "cppdbg",
             "request": "launch",
+            "name": "Migration Sync Test (macOS)",
+            "program": "${workspaceFolder}/build/OSX/Debug/test_bin/migration_sync_test",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
             "name": "Node Example (macOS)",
             "program": "${workspaceFolder}/build/OSX/Debug/example/node_test/node_example",
             "args": [],

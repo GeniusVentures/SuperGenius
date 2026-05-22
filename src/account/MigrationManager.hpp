@@ -61,7 +61,8 @@ namespace sgns
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
-            std::shared_ptr<GeniusAccount>                                  account );
+            std::shared_ptr<GeniusAccount>                                  account,
+            bool                                                            is_full_node );
 
         /**
          * @brief   Register a migration step.

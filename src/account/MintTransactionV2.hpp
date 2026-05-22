@@ -21,6 +21,7 @@ namespace sgns
     class MintTransactionV2 final : public IGeniusTransactions
     {
     public:
+        using IGeniusTransactions::SerializeByteVector;
         /**
          * @brief      Destroy the Mint Transaction V 2 object
          */
@@ -39,6 +40,7 @@ namespace sgns
          * @param[in]   chain_id The chain ID from where the mint came from
          * @param[in]   token_id The token ID
          * @param[in]   dag The DAG structure with the common transaction data
+         * @param[in]   mint_inputs Explicit input references for the source-chain burn(s)
          * @param[in]   mint_destination The destination of the Mint
          * @return      A @ref MintTransactionV2
          */
@@ -46,13 +48,14 @@ namespace sgns
                                       std::string              chain_id,
                                       TokenID                  token_id,
                                       SGTransaction::DAGStruct dag,
+                                      std::vector<InputUTXOInfo> mint_inputs,
                                       std::string              mint_destination );
 
         /**
          * @brief       Serializes the transaction
          * @return      The serialized byte vector
          */
-        std::vector<uint8_t> SerializeByteVector() override;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
          * @brief       Get the amount of the mint
@@ -65,6 +68,12 @@ namespace sgns
          * @return      The ID which identifies what token was minted
          */
         TokenID GetTokenID() const;
+
+        /**
+         * @brief       Get source chain identifier for bridge mint validation routing
+         * @return      Source chain id
+         */
+        std::string GetChainId() const override;
 
         /**
          * @brief       Returns the UTXOs

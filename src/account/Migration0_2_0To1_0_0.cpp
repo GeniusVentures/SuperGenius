@@ -13,7 +13,6 @@
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
 #include "base/sgns_version.hpp"
@@ -320,11 +319,6 @@ namespace sgns
                     {
                         topics_.emplace( dest_info.dest_address );
                     }
-                }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
                 }
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;

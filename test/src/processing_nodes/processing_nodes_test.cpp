@@ -3,12 +3,14 @@
 #include <memory>
 #include <iostream>
 #include <thread>
+#include <cstdio>
 
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::test;
@@ -28,10 +30,8 @@ protected:
 
     static void SetUpTestSuite()
     {
-        std::string full_node_pub_address =
-            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
+
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
 
         DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
@@ -43,6 +43,7 @@ protected:
                                             true,
                                             40054,
                                             true );
+        Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
                                       std::chrono::milliseconds( 30000 ),
@@ -148,21 +149,21 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                                   std::chrono::milliseconds( 20000 ),
                                   "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
-                           "",
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
-                           "",
+                           sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetOutTransactions().size();
-    int transcount_node1 = node_proc1->GetOutTransactions().size();
-    int transcount_node2 = node_proc2->GetOutTransactions().size();
+    int transcount_main  = node_main->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node1 = node_proc1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node2 = node_proc2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -464,7 +465,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
     auto mint_result = node_main->MintTokens( 50000000000,
-                                              "",
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",
@@ -504,7 +505,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         {
             auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
             auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
-            return balance_node1 + balance_node2 + 2 * expected_peer_gain;
+            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );

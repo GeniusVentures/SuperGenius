@@ -31,7 +31,8 @@ namespace sgns
          * @brief      Serializes the transaction into a byte vector.
          * @return     Serialized bytes.
          */
-        std::vector<uint8_t> SerializeByteVector() override;
+        using IGeniusTransactions::SerializeByteVector;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
          * @brief      Deserializes a TransferTransaction from bytes.

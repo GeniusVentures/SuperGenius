@@ -1,6 +1,10 @@
 #ifndef SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 #define SUPERGENIUS_SRC_HASHER_HASHER_HPP_
 
+#include <cstddef>
+
+#include <gsl/span>
+
 #include "base/blob.hpp"
 #include "singleton/IComponent.hpp"
 
@@ -72,6 +76,18 @@ namespace sgns::crypto {
      * @return 256-bit hash value
      */
        [[nodiscard]] virtual Hash256 sha2_256( gsl::span<const uint8_t> buffer ) const = 0;
+
+       /**
+      * @brief sha2_256 helper for raw memory buffers
+      * @param data pointer to source bytes
+      * @param size source byte size
+      * @return 256-bit hash value
+      */
+       [[nodiscard]] Hash256 sha2_256( const void *data, size_t size ) const
+       {
+           return sha2_256(
+               gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( data ), size ) );
+       }
   };
 }
 

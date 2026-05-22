@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <array>
+
 #include "base/blob.hpp" // for sgns::base::Hash256
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
@@ -181,6 +183,76 @@ TEST_F( UTXOManagerTest, Storage )
     EXPECT_EQ( utxos.size(), 2 );
 }
 
+TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
+{
+    const std::array<uint8_t, 1> seed_a{ 0xA1 };
+    const std::array<uint8_t, 1> seed_b{ 0xB2 };
+    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
+
+    std::vector<GeniusUTXO> ordered_a{
+        GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
+        GeniusUTXO( hash_b, 1, 200, sgns::TokenID::FromBytes( { 0x02 } ) ),
+    };
+
+    std::vector<GeniusUTXO> ordered_b{
+        GeniusUTXO( hash_b, 1, 200, sgns::TokenID::FromBytes( { 0x02 } ) ),
+        GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
+    };
+
+    ASSERT_TRUE( utxo_manager->SetUTXOs( ordered_a ).has_value() );
+    auto root_a = utxo_manager->ComputeUTXOMerkleRoot();
+
+    ASSERT_TRUE( utxo_manager->SetUTXOs( ordered_b ).has_value() );
+    auto root_b = utxo_manager->ComputeUTXOMerkleRoot();
+
+    EXPECT_EQ( root_a, root_b );
+}
+
+TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
+{
+    const std::array<uint8_t, 1> seed_a{ 0xC3 };
+    const std::array<uint8_t, 1> seed_b{ 0xD4 };
+    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
+
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_a, 0, 55, TOKEN_1 ) ) );
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_b, 1, 77, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
+
+    const auto root_before = utxo_manager->ComputeUTXOMerkleRoot();
+
+    InputUTXOInfo spent;
+    spent.txid_hash_  = hash_a;
+    spent.output_idx_ = 0;
+    utxo_manager->ConsumeUTXOs( { spent } );
+
+    const auto root_after = utxo_manager->ComputeUTXOMerkleRoot();
+    EXPECT_NE( root_before, root_after );
+}
+
+TEST_F( UTXOManagerTest, CheckpointRoundtrip )
+{
+    const std::array<uint8_t, 1> seed_tx{ 0x11 };
+    const std::array<uint8_t, 1> seed_registry{ 0x22 };
+    const auto                   tx_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_tx ) );
+    const auto                   registry_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_registry ) );
+
+    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( tx_hash, 0, 123, TOKEN_1 ) ) );
+
+    ASSERT_TRUE( utxo_manager->CreateCheckpoint( 7, tx_hash, registry_hash ).has_value() );
+    auto checkpoint_res = utxo_manager->LoadLatestCheckpoint();
+    ASSERT_TRUE( checkpoint_res.has_value() );
+    ASSERT_TRUE( checkpoint_res.value().has_value() );
+
+    const auto &checkpoint = checkpoint_res.value().value();
+    EXPECT_EQ( checkpoint.owner_address, std::string( PRIV_KEY ) );
+    EXPECT_EQ( checkpoint.epoch, 7u );
+    EXPECT_EQ( checkpoint.last_finalized_tx, tx_hash );
+    EXPECT_EQ( checkpoint.registry_hash, registry_hash );
+    EXPECT_EQ( checkpoint.utxo_count, 1u );
+    EXPECT_GT( checkpoint.created_at_ms, 0u );
+}
+
 TEST( GeniusUTXO, PropertyAccessors )
 {
     uint32_t   idx = 5;
@@ -191,7 +263,7 @@ TEST( GeniusUTXO, PropertyAccessors )
     EXPECT_EQ( utxo.GetOutputIdx(), idx );
     EXPECT_EQ( utxo.GetAmount(), amt );
     EXPECT_EQ( utxo.GetTokenID(), tok );
-    EXPECT_FALSE( utxo.GetLock() );
+    EXPECT_TRUE( utxo.GetOwnerAddress().empty() );
 }
 
 TEST( InputUTXOInfo, FieldAssignment )

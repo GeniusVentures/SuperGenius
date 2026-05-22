@@ -151,6 +151,7 @@ namespace sgns::processing
     {
         std::lock_guard<std::mutex> guard( m_mutexResults );
         auto                        queue = m_subTaskQueueManager->GetQueueSnapshot();
+        auto                        finalization_ret = FinalizationRetVal::NOT_FINALIZED;
 
         std::set<std::string> subTaskIds;
         for ( size_t itemIdx = 0; itemIdx < static_cast<size_t>( queue->subtasks().items_size() ); ++itemIdx )
@@ -171,8 +172,8 @@ namespace sgns::processing
         if ( isFullyProcessed )
         {
             std::set<std::string> invalidSubTaskIds;
-            auto                  finalized_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
-            if ( finalized_ret == FinalizationRetVal::NOT_FINALIZED )
+            finalization_ret = FinalizeQueueProcessing( queue->subtasks(), invalidSubTaskIds );
+            if ( finalization_ret == FinalizationRetVal::NOT_FINALIZED )
             {
                 m_subTaskQueueManager->ChangeSubTaskProcessingStates( processedSubTaskIds, false );
                 isFullyProcessed = false;
@@ -183,6 +184,13 @@ namespace sgns::processing
         if ( !isFullyProcessed )
         {
             m_subTaskQueueManager->GrabSubTask( onSubTaskGrabbedCallback );
+            return;
+        }
+
+        if ( finalization_ret == FinalizationRetVal::FINALIZED_BUT_NOT_OWNER )
+        {
+            // The owner finalized using the received results; signal completion so this worker can shut down cleanly.
+            onSubTaskGrabbedCallback( boost::none );
         }
     }
 

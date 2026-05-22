@@ -11,9 +11,11 @@
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Hash.h>
 #include <WalletCore/PrivateKey.h>
+#include <charconv>
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <algorithm>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 
@@ -155,6 +157,24 @@ namespace
         existing_keys.emplace_back( public_key_hex );
 
         return WritePublicKeysToFile( file_path, existing_keys );
+    }
+
+    bool TryParseUint64( std::string_view input, uint64_t &value, bool allow_suffix = false )
+    {
+        if ( input.empty() )
+        {
+            return false;
+        }
+
+        const auto *begin = input.data();
+        const auto *end   = input.data() + input.size();
+        auto [ptr, ec]    = std::from_chars( begin, end, value );
+        if ( ec != std::errc() || ptr == begin )
+        {
+            return false;
+        }
+
+        return allow_suffix || ptr == end;
     }
 
     outcome::result<std::shared_ptr<ISecureStorage>> MigrateSecureStorage( const boost::filesystem::path &base_path )
@@ -785,14 +805,24 @@ namespace sgns
         return signed_vector;
     }
 
-    void GeniusAccount::SetLocalConfirmedNonce( uint64_t nonce )
+    std::vector<InputUTXOInfo> GeniusAccount::CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const
     {
-        genius_account_logger()->debug( "Setting local confirmed nonce to {}", nonce );
-        SetPeerConfirmedNonce( nonce, eth_keypair_->GetEntirePubValue() );
-        std::lock_guard lock( nonce_mutex_ );
+        std::vector<InputUTXOInfo> inputs;
+        inputs.reserve( utxos.size() );
+
+        for ( const auto &utxo : utxos )
+        {
+            InputUTXOInfo input;
+            input.txid_hash_  = utxo.GetTxID();
+            input.output_idx_ = utxo.GetOutputIdx();
+            input.signature_  = Sign( input.SerializeForSigning() );
+            inputs.emplace_back( std::move( input ) );
+        }
+
+        return inputs;
     }
 
-    void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, const std::string &address )
+    void GeniusAccount::SetPeerConfirmedNonce( uint64_t nonce, const std::string &address, const std::string &tx_hash )
     {
         std::unique_lock lock( nonce_mutex_ );
         auto             current_confirmed_nonce = confirmed_nonces_[address];
@@ -810,6 +840,10 @@ namespace sgns
             {
                 local_confirmed_nonce_ = updated_nonce;
             }
+            if ( !tx_hash.empty() )
+            {
+                UpdateLocalConfirmedTxHistoryLocked( updated_nonce, tx_hash );
+            }
             auto it = pending_nonces_.begin();
             while ( it != pending_nonces_.end() &&
                     ( !local_confirmed_nonce_ || *it <= local_confirmed_nonce_.value() ) )
@@ -824,9 +858,10 @@ namespace sgns
 
     void GeniusAccount::RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address )
     {
-        std::lock_guard lock( nonce_mutex_ );
-        auto            it                      = confirmed_nonces_.find( address );
-        uint64_t        current_confirmed_nonce = 0;
+        std::unique_lock lock( nonce_mutex_ );
+        auto             it                      = confirmed_nonces_.find( address );
+        uint64_t         current_confirmed_nonce = 0;
+        bool             should_persist          = false;
         if ( it != confirmed_nonces_.end() )
         {
             current_confirmed_nonce = it->second;
@@ -845,6 +880,7 @@ namespace sgns
             {
                 confirmed_nonces_.erase( it );
             }
+            should_persist = true;
         }
 
         if ( address == eth_keypair_->GetEntirePubValue() )
@@ -860,7 +896,20 @@ namespace sgns
                     local_confirmed_nonce_.reset();
                 }
             }
+            RollbackLocalConfirmedTxHistoryLocked( nonce );
             pending_nonces_.erase( nonce );
+            should_persist = true;
+        }
+
+        const auto     final_it        = confirmed_nonces_.find( address );
+        const uint64_t persisted_nonce = address == eth_keypair_->GetEntirePubValue()
+                                             ? local_confirmed_nonce_.value_or( 0 )
+                                             : ( final_it != confirmed_nonces_.end() ? final_it->second : 0 );
+
+        lock.unlock();
+        if ( should_persist )
+        {
+            PersistConfirmedNonce( address, persisted_nonce );
         }
     }
 
@@ -912,6 +961,20 @@ namespace sgns
     outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
     {
         return GetPeerNonce( eth_keypair_->GetEntirePubValue() );
+    }
+
+    outcome::result<std::string> GeniusAccount::GetLocalConfirmedTxHash( uint64_t nonce ) const
+    {
+        std::shared_lock lock( nonce_mutex_ );
+        for ( auto it = local_confirmed_transactions_.rbegin(); it != local_confirmed_transactions_.rend(); ++it )
+        {
+            if ( it->nonce == nonce )
+            {
+                return it->hash;
+            }
+        }
+
+        return outcome::failure( std::errc::no_message_available );
     }
 
     outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
@@ -1186,6 +1249,8 @@ namespace sgns
             return;
         }
 
+        const auto self_address = eth_keypair_->GetEntirePubValue();
+
         base::Buffer prefix;
         prefix.put( std::string( NONCE_KEY_PREFIX ) );
         auto query_res = nonce_db_->query( prefix );
@@ -1194,41 +1259,58 @@ namespace sgns
             return;
         }
 
-        std::unordered_map<std::string, uint64_t> loaded;
-        uint64_t                                  max_local = 0;
-        bool                                      has_local = false;
-
+        std::unordered_map<std::string, uint64_t> loaded_nonces;
         for ( const auto &[key_buf, val_buf] : query_res.value() )
         {
             const auto key = std::string( key_buf.toString() );
-
             if ( key.rfind( std::string( NONCE_KEY_PREFIX ) ) != 0 )
             {
                 continue;
             }
 
-            auto address = key.substr( std::string( NONCE_KEY_PREFIX ).size() );
-            try
+            const auto address      = key.substr( std::string( NONCE_KEY_PREFIX ).size() );
+            uint64_t   parsed_nonce = 0;
+            if ( TryParseUint64( val_buf.toString(), parsed_nonce, true ) )
             {
-                uint64_t nonce  = std::stoull( std::string( val_buf.toString() ) );
-                loaded[address] = nonce;
+                loaded_nonces[address] = parsed_nonce;
             }
-            catch ( const std::exception & )
+            else
             {
                 genius_account_logger()->error( "Failed to parse nonce for {:.8}: ", address, val_buf.toString() );
             }
         }
 
-        std::lock_guard lock( nonce_mutex_ );
-        for ( const auto &[address, nonce] : loaded )
+        std::optional<uint64_t> local_nonce;
+        if ( auto it = loaded_nonces.find( self_address ); it != loaded_nonces.end() )
         {
-            confirmed_nonces_[address] = nonce;
+            local_nonce = it->second;
         }
 
-        if ( has_local )
+        std::deque<ConfirmedTxRecord> local_history;
+        base::Buffer                  local_history_key;
+        local_history_key.put( std::string( LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX ) + self_address );
+        if ( auto local_history_res = nonce_db_->get( local_history_key ); local_history_res.has_value() )
         {
-            local_confirmed_nonce_ = max_local;
+            local_history = DeserializeConfirmedTxHistory( std::string( local_history_res.value().toString() ) );
         }
+
+        std::lock_guard lock( nonce_mutex_ );
+        confirmed_nonces_ = std::move( loaded_nonces );
+        if ( local_nonce.has_value() )
+        {
+            confirmed_nonces_[self_address] = local_nonce.value();
+            local_confirmed_nonce_          = local_nonce.value();
+        }
+        else if ( !local_history.empty() )
+        {
+            confirmed_nonces_[self_address] = local_history.back().nonce;
+            local_confirmed_nonce_          = local_history.back().nonce;
+        }
+        else
+        {
+            local_confirmed_nonce_.reset();
+        }
+        local_confirmed_transactions_ = std::move( local_history );
     }
 
     void GeniusAccount::PersistConfirmedNonce( const std::string &address, uint64_t nonce )
@@ -1238,16 +1320,118 @@ namespace sgns
             return;
         }
 
-        base::Buffer key;
+        base::Buffer nonce_key;
+        nonce_key.put( std::string( NONCE_KEY_PREFIX ) + address );
 
-        key.put( std::string( NONCE_KEY_PREFIX ) + address );
-
-        base::Buffer value;
-        value.put( std::to_string( nonce ) );
-        auto put_res = nonce_db_->put( key, value );
-        if ( put_res.has_error() )
+        base::Buffer nonce_value;
+        nonce_value.put( std::to_string( nonce ) );
+        auto nonce_put_res = nonce_db_->put( nonce_key, nonce_value );
+        if ( nonce_put_res.has_error() )
         {
             genius_account_logger()->error( "Failed to persist nonce for {:.8}", address );
+        }
+
+        if ( address != eth_keypair_->GetEntirePubValue() )
+        {
+            return;
+        }
+
+        std::deque<ConfirmedTxRecord> history_copy;
+        {
+            std::shared_lock lock( nonce_mutex_ );
+            history_copy = local_confirmed_transactions_;
+        }
+
+        base::Buffer history_key;
+        history_key.put( std::string( LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX ) + address );
+
+        base::Buffer history_value;
+        history_value.put( SerializeConfirmedTxHistory( history_copy ) );
+        auto history_put_res = nonce_db_->put( history_key, history_value );
+        if ( history_put_res.has_error() )
+        {
+            genius_account_logger()->error( "Failed to persist confirmed tx history for {}", address.substr( 0, 8 ) );
+        }
+    }
+
+    std::string GeniusAccount::SerializeConfirmedTxHistory( const std::deque<ConfirmedTxRecord> &history )
+    {
+        std::ostringstream out;
+        for ( const auto &record : history )
+        {
+            out << record.nonce << '|' << record.hash << '\n';
+        }
+
+        return out.str();
+    }
+
+    std::deque<GeniusAccount::ConfirmedTxRecord> GeniusAccount::DeserializeConfirmedTxHistory(
+        const std::string &serialized )
+    {
+        std::deque<ConfirmedTxRecord> history;
+        std::istringstream            input( serialized );
+        std::string                   line;
+
+        while ( std::getline( input, line ) )
+        {
+            if ( line.empty() )
+            {
+                continue;
+            }
+
+            const auto separator = line.find( '|' );
+            if ( separator == std::string::npos )
+            {
+                continue;
+            }
+
+            uint64_t parsed_nonce = 0;
+            if ( TryParseUint64( line.substr( 0, separator ), parsed_nonce ) )
+            {
+                history.push_back( { parsed_nonce, line.substr( separator + 1 ) } );
+            }
+            else
+            {
+                continue;
+            }
+        }
+
+        while ( history.size() > LOCAL_CONFIRMED_TX_HISTORY_LIMIT )
+        {
+            history.pop_front();
+        }
+
+        return history;
+    }
+
+    void GeniusAccount::UpdateLocalConfirmedTxHistoryLocked( uint64_t nonce, const std::string &tx_hash )
+    {
+        while ( !local_confirmed_transactions_.empty() && local_confirmed_transactions_.back().nonce > nonce )
+        {
+            local_confirmed_transactions_.pop_back();
+        }
+
+        for ( auto &record : local_confirmed_transactions_ )
+        {
+            if ( record.nonce == nonce )
+            {
+                record.hash = tx_hash;
+                return;
+            }
+        }
+
+        local_confirmed_transactions_.push_back( { nonce, tx_hash } );
+        while ( local_confirmed_transactions_.size() > LOCAL_CONFIRMED_TX_HISTORY_LIMIT )
+        {
+            local_confirmed_transactions_.pop_front();
+        }
+    }
+
+    void GeniusAccount::RollbackLocalConfirmedTxHistoryLocked( uint64_t nonce )
+    {
+        while ( !local_confirmed_transactions_.empty() && local_confirmed_transactions_.back().nonce >= nonce )
+        {
+            local_confirmed_transactions_.pop_back();
         }
     }
 }

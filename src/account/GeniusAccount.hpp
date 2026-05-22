@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -149,17 +150,19 @@ namespace sgns
         std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
-         * @brief       Set the local confirmed nonce
-         * @param[in]   nonce The nonce value to be set
+         * @brief       Build signed transaction inputs from UTXOs
+         * @param[in]   utxos UTXOs to turn into transaction inputs
+         * @return      Signed input descriptors
          */
-        void SetLocalConfirmedNonce( uint64_t nonce );
+        std::vector<InputUTXOInfo> CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const;
 
         /**
-         * @brief       Set the local confirmed nonce for a peer
+         * @brief       Set the confirmed nonce for an address
          * @param[in]   nonce The nonce value to be set
-         * @param[in]   address The address of the peer
+         * @param[in]   address The address whose nonce is being updated
+         * @param[in]   tx_hash The confirmed transaction hash. Persisted only for the local address
          */
-        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address );
+        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address, const std::string &tx_hash = "" );
 
         /**
          * @brief       Rollback the local confirmed nonce for a peer
@@ -180,6 +183,13 @@ namespace sgns
          * @return      The local confirmed nonce if exists, error otherwise
          */
         outcome::result<uint64_t> GetLocalConfirmedNonce() const;
+
+        /**
+         * @brief       Get a locally persisted confirmed transaction hash by nonce
+         * @param[in]   nonce The confirmed nonce to search for
+         * @return      The confirmed transaction hash if it exists, error otherwise
+         */
+        outcome::result<std::string> GetLocalConfirmedTxHash( uint64_t nonce ) const;
 
         /**
          * @brief       Get confirmed nonce from the network
@@ -290,7 +300,14 @@ namespace sgns
         void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
     private:
+        struct ConfirmedTxRecord
+        {
+            uint64_t    nonce;
+            std::string hash;
+        };
+
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+        static constexpr size_t LOCAL_CONFIRMED_TX_HISTORY_LIMIT = 5;
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
 
@@ -310,6 +327,7 @@ namespace sgns
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
+        std::deque<ConfirmedTxRecord>                   local_confirmed_transactions_; ///< Recent local confirmed txs
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
         UTXOManager                                     utxo_manager_;
 
@@ -334,9 +352,15 @@ namespace sgns
         std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
         static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
+        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX =
+            "gnus-local-confirmed-tx-history-";
 
         void LoadConfirmedNonces();
         void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
+        static std::string SerializeConfirmedTxHistory( const std::deque<ConfirmedTxRecord> &history );
+        static std::deque<ConfirmedTxRecord> DeserializeConfirmedTxHistory( const std::string &serialized );
+        void UpdateLocalConfirmedTxHistoryLocked( uint64_t nonce, const std::string &tx_hash );
+        void RollbackLocalConfirmedTxHistoryLocked( uint64_t nonce );
 
         uint64_t GetNextNonceLocked() const;
 

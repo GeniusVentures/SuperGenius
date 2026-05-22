@@ -21,10 +21,10 @@ namespace sgns
     {
     }
 
-    std::vector<uint8_t> MintTransactionV2::SerializeByteVector()
+    std::vector<uint8_t> MintTransactionV2::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::MintTxV2 tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_chain_id( chain_id_ );
 
         auto *utxo_proto_params = tx_struct.mutable_utxo_params();
@@ -102,15 +102,6 @@ namespace sgns
             outputs.push_back( { amount, tx_struct.dag_struct().source_addr(), tokenid } );
         }
 
-        if ( inputs.empty() && !tx_struct.dag_struct().previous_hash().empty() )
-        {
-            auto maybe_prev_hash = base::Hash256::fromReadableString( tx_struct.dag_struct().previous_hash() );
-            if ( maybe_prev_hash )
-            {
-                inputs.push_back( { maybe_prev_hash.value(), 0, {} } );
-            }
-        }
-
         return std::make_shared<MintTransactionV2>( MintTransactionV2( { std::move( inputs ), std::move( outputs ) },
                                                                        chainid,
                                                                        tokenid,
@@ -133,6 +124,11 @@ namespace sgns
             return token_id_;
         }
         return utxo_params_.second.front().token_id;
+    }
+
+    std::string MintTransactionV2::GetChainId() const
+    {
+        return chain_id_;
     }
 
     UTXOTxParameters MintTransactionV2::GetUTXOParameters() const
@@ -164,18 +160,9 @@ namespace sgns
                                               std::string              chain_id,
                                               TokenID                  token_id,
                                               SGTransaction::DAGStruct dag,
+                                              std::vector<InputUTXOInfo> mint_inputs,
                                               std::string              mint_destination )
     {
-        std::vector<InputUTXOInfo> mint_inputs;
-        if ( !dag.previous_hash().empty() )
-        {
-            auto maybe_hash = base::Hash256::fromReadableString( dag.previous_hash() );
-            if ( maybe_hash )
-            {
-                mint_inputs.push_back( { maybe_hash.value(), 0, {} } );
-            }
-        }
-
         if ( mint_destination.empty() )
         {
             mint_destination = dag.source_addr();
