@@ -50,6 +50,16 @@ namespace sgns::processing
             return SubTaskListKey( taskId ) + "/" + std::string( subTaskId );
         }
 
+        static std::string ClaimableListKey()
+        {
+            return ProcessingPrefix() + std::string( CLAIMABLE_LIST_SUFFIX );
+        }
+
+        static std::string ClaimableTaskKey( std::string_view taskId )
+        {
+            return ClaimableListKey() + "/" + std::string( taskId );
+        }
+
         static std::string ResultTaskKey( std::string_view taskId )
         {
             return ProcessingPrefix() + std::string( RESULTS_SUFFIX ) + std::string( TASK_LIST_SUFFIX ) +
@@ -65,6 +75,7 @@ namespace sgns::processing
         static constexpr std::string_view PROCESSING_PREFIX_BASE = "/processing_";
         static constexpr std::string_view TASK_LIST_SUFFIX       = "/tasks";
         static constexpr std::string_view SUBTASK_LIST_SUFFIX    = "/subtasks";
+        static constexpr std::string_view CLAIMABLE_LIST_SUFFIX  = "/claimable";
         static constexpr std::string_view RESULTS_SUFFIX         = "/task_results";
         static constexpr std::string_view LOCK_KEY_PREFIX        = "/lock_";
     };

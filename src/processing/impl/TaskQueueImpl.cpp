@@ -117,6 +117,12 @@ namespace sgns::processing
             crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::TaskKey( task.ipfs_block_id() ) ),
                                    std::move( taskValue ) ) );
 
+        sgns::base::Buffer claimableValue;
+        claimableValue.put( task.ipfs_block_id() );
+        BOOST_OUTCOME_TRY(
+            crdt_transaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( task.ipfs_block_id() ) ),
+                                   std::move( claimableValue ) ) );
+
         TaskQueueImplLogger()->debug( "Task with ID: {} enqueued to CRDT transaction", task.ipfs_block_id() );
         BOOST_OUTCOME_TRY( crdt_transaction->Commit( { processing_topic_ } ) );
 
@@ -166,30 +172,28 @@ namespace sgns::processing
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> TaskQueueImpl::GrabTask()
     {
-        BOOST_OUTCOME_TRY( auto queryTasks,
-                           db_->QueryKeyValues( sgns::crdt::HierarchicalKey( TaskKeys::TaskListKey() ) ) );
+        BOOST_OUTCOME_TRY( auto queryClaimable, db_->QueryKeyValues( { TaskKeys::ClaimableListKey() } ) );
 
+        TaskQueueImplLogger()->debug( "GrabTask scanning claimable list with {} candidates", queryClaimable.size() );
         std::set<std::string> lockedTasks;
-        for ( const auto &element : queryTasks )
+        for ( const auto &element : queryClaimable )
         {
-            auto maybeTaskKey = db_->KeyToString( element.first );
-            if ( !maybeTaskKey.has_value() )
+            if ( element.second.size() == 0 )
             {
                 continue;
             }
+            const auto taskId = std::string( reinterpret_cast<const char *>( element.second.data() ),
+                                             element.second.size() );
 
-            SGProcessing::Task task;
-            if ( !task.ParseFromArray( element.second.data(), element.second.size() ) )
+            if ( IsTaskCompleted( taskId ) )
             {
+                // Cleanup stale claimable marker for already completed task.
+                (void)db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskId ) ),
+                                   { processing_topic_ } );
                 continue;
             }
 
-            if ( IsTaskCompleted( task.ipfs_block_id() ) )
-            {
-                continue;
-            }
-
-            const auto &taskKey = maybeTaskKey.value();
+            const auto taskKey = TaskKeys::TaskKey( taskId );
             if ( IsTaskLocked( db_, taskKey ) )
             {
                 lockedTasks.insert( taskKey );
@@ -201,7 +205,12 @@ namespace sgns::processing
                 continue;
             }
 
-            return std::make_pair( task.ipfs_block_id(), task );
+            // Task is no longer claimable once a lock is acquired.
+            (void)db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskId ) ),
+                               { processing_topic_ } );
+
+            BOOST_OUTCOME_TRY( auto task, GetTask( taskId ) );
+            return std::make_pair( taskId, task );
         }
 
         for ( const auto &lockedTask : lockedTasks )
