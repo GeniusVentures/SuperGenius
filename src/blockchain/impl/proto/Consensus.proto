@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package sgns;
+
+// Deterministic hash of a canonical UTF-8 string.
+message HashOfAString {
+  bytes hash = 1;
+}
+
+message ConsensusSubject {
+  string account_id = 3;
+  // Hash of the canonical subject type string for table/switch dispatch.
+  HashOfAString subject_type_hash = 4;
+  // Canonical payload bytes owned by the subject type handler.
+  bytes payload = 5;
+  // Hash of payload bytes.
+  bytes payload_hash = 6;
+}
+
+message UTXOTransitionCommitment {
+  message CommittedOutPoint {
+    bytes tx_id_hash = 1;
+    uint32 output_index = 2;
+  }
+
+  message CommittedOutput {
+    bytes tx_id_hash = 1;
+    uint32 output_index = 2;
+    string owner_address = 3;
+    bytes token_id = 4;
+    uint64 amount = 5;
+  }
+
+  repeated CommittedOutPoint consumed_outpoints = 1;
+  repeated CommittedOutput produced_outputs = 2;
+  bytes consumed_outpoints_root = 3;
+  bytes produced_outputs_root = 4;
+}
+
+message MerkleProofStep {
+  bytes sibling_hash = 1;
+  bool is_left_sibling = 2;
+}
+
+message ConsumedInputProof {
+  bytes tx_id_hash = 1;
+  uint32 output_index = 2;
+  bytes leaf_payload = 3;
+  repeated MerkleProofStep branch = 4;
+  repeated MerkleProofStep produced_branch = 5;
+}
+
+message UTXOWitness {
+  repeated ConsumedInputProof consumed_inputs = 1;
+}
+
+message NonceSubject {
+  uint64 nonce = 1;
+  bytes tx_hash = 2;
+  UTXOTransitionCommitment utxo_commitment = 3;
+  UTXOWitness utxo_witness = 4;
+}
+
+message TaskResultSubject {
+  string escrow_path = 1;
+  bytes task_result_hash = 2;
+  uint64 result_epoch = 3;
+}
+
+message RegistryBatchSubject {
+  string base_registry_cid = 1;
+  uint64 base_registry_epoch = 2;
+  uint64 target_registry_epoch = 3;
+  uint32 certificate_count = 4;
+  bytes batch_root = 5;
+}
+
+message ConsensusProposal {
+  string proposal_id = 1;
+  string proposer_id = 2;
+  uint64 timestamp = 3;
+  string registry_cid = 4;
+  uint64 registry_epoch = 5;
+  ConsensusSubject subject = 6;
+  bytes signature = 7;
+}
+
+message ConsensusVote {
+  string proposal_id = 1;
+  string voter_id = 2;
+  bool approve = 3;
+  uint64 timestamp = 4;
+  bytes signature = 5;
+}
+
+message ConsensusVoteBundle {
+  string proposal_id = 1;
+  string aggregator_id = 2;
+  uint64 timestamp = 3;
+  repeated ConsensusVote votes = 4;
+  bytes signature = 5;
+}
+
+message ConsensusCertificate {
+  string proposal_id = 1;
+  string registry_cid = 2;
+  uint64 registry_epoch = 3;
+  uint64 total_weight = 4;
+  uint64 approved_weight = 5;
+  uint64 timestamp = 6;
+  repeated ConsensusVote votes = 7;
+  ConsensusProposal proposal = 8;
+}
+
+message ConsensusMessage {
+  oneof payload {
+    ConsensusProposal proposal = 1;
+    ConsensusVote vote = 2;
+    ConsensusVoteBundle vote_bundle = 3;
+    ConsensusCertificate certificate = 4;
+  }
+}

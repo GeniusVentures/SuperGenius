@@ -1,12 +1,14 @@
 syntax = "proto3";
 
-package sgns.blockchain.validator;
+package sgns.validator;
 
 message ValidatorEntry {
   string validator_id = 1;
   uint64 weight = 2;
   Role role = 3;
   Status status = 4;
+  uint32 penalty_score = 5;
+  uint32 missed_epochs = 6;
 }
 
 message Registry {
@@ -36,6 +38,8 @@ message RegistryUpdate {
   Registry registry = 1;
   string prev_registry_hash = 2;
   repeated SignatureEntry signatures = 3;
+  bytes certificate = 4; 
+  repeated string batch_certificate_subject_hashes = 5;
 }
 
 message RegistrySigningPayload {

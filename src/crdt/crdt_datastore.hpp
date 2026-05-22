@@ -17,6 +17,7 @@
 #include <map>
 #include <condition_variable>
 #include <optional>
+#include <thread>
 
 #include <boost/asio/steady_timer.hpp>
 #include <ipfs_lite/ipld/ipld_node.hpp>
@@ -30,15 +31,12 @@
 #include "crdt/crdt_options.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/crdt_callback_manager.hpp"
+#include "crdt/globaldb/crdt_work_journal.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 
 namespace sgns
 {
     class Blockchain;
-}
-
-namespace sgns::blockchain
-{
     class ValidatorRegistry;
 }
 
@@ -217,6 +215,10 @@ namespace sgns::crdt
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
+        void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterNewElementCallback( const std::string &pattern );
+        void UnregisterDeletedElementCallback( const std::string &pattern );
+        std::shared_ptr<CRDTWorkJournal> GetWorkJournal() const;
 
         /**
          * @brief Configure which topic this datastore should filter on.
@@ -252,10 +254,13 @@ namespace sgns::crdt
 
         std::unordered_set<std::string> GetTopicNames() const;
 
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetILPDNodeContent(
+            const std::string &cid_string );
+
     protected:
         friend class PubSubBroadcasterExt;
         friend class ::sgns::Blockchain;
-        friend class ::sgns::blockchain::ValidatorRegistry;
+        friend class ::sgns::ValidatorRegistry;
 
         struct RootCIDJob
         {
@@ -270,6 +275,7 @@ namespace sgns::crdt
         {
             std::future<void> dagWorkerFuture_;                /*> Future for DAG worker thread */
             std::atomic<bool> dagWorkerThreadRunning_ = false; /*> Flag used for keep track of thread cycle */
+            std::thread::id   threadId_;                       /*> Worker thread ID */
         };
 
         /**
@@ -399,7 +405,7 @@ namespace sgns::crdt
         outcome::result<CID> WaitForJob( const CID &cid );
 
     private:
-        CrdtDatastore() = default;
+        CrdtDatastore() = delete;
 
         CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
                        const HierarchicalKey       &aKey,
@@ -410,6 +416,9 @@ namespace sgns::crdt
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
         bool ProcessJobs( std::queue<RootCIDJob> &jobs );
         bool SeedNextExternalRoot();
+        void StopWorkerLoops();
+        bool IsCurrentThreadInternalWorker() const;
+        void WaitForWorkersToExit();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
         void HandleJobProcessingFailure( const RootCIDJob &job );
@@ -440,7 +449,11 @@ namespace sgns::crdt
         std::atomic<bool> rebroadcastThreadRunning_ = false;
 
         std::vector<std::unique_ptr<DagWorker>> dagWorkers_;
+        mutable std::mutex                      workerThreadIdsMutex_;
+        std::thread::id                         handleNextThreadId_;
+        std::thread::id                         rebroadcastThreadId_;
 
+        std::atomic<bool>       closeStarted_                  = false;
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         std::mutex              dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
@@ -452,10 +465,11 @@ namespace sgns::crdt
         std::queue<CID>                                      pendingRootQueue_;
         std::optional<CID>                                   activeRootCID_;
 
-        CRDTDataFilter crdt_filter_;
-        bool           started_               = false;
-        bool           broadcast_enabled_     = false;
-        bool           root_cid_sync_enabled_ = false;
+        std::shared_ptr<CRDTWorkJournal> work_journal_;
+        CRDTDataFilter                   crdt_filter_;
+        bool                             started_               = false;
+        bool                             broadcast_enabled_     = false;
+        bool                             root_cid_sync_enabled_ = false;
 
         std::mutex                      rebroadcastMutex_;
         std::mutex                      dagWorkerCvMutex_;

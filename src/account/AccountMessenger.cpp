@@ -1024,8 +1024,7 @@ namespace sgns
 
         std::string              to_hash = address_ + std::to_string( random_value );
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1141,8 +1140,7 @@ namespace sgns
 
         std::string              to_hash = address_ + std::to_string( random_value );
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1269,8 +1267,7 @@ namespace sgns
 
         std::string              to_hash = address_ + std::to_string( random_value );
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( to_hash.data() ), to_hash.size() ) );
+        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );

@@ -292,9 +292,27 @@ find_package(xxHash CONFIG REQUIRED)
 # zlib
 set(ZLIB_ROOT "${_THIRDPARTY_BUILD_DIR}/zlib")
 
+# Prefer package config files while loading Libssh2's dependencies.
+# Libssh2 config calls `find_dependency(ZLIB)` without `CONFIG`, which can
+# otherwise resolve to CMake's FindZLIB module on Windows CI.
+set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED FALSE)
+if(DEFINED CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED TRUE)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+endif()
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
 # libssh2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
 find_package(Libssh2 CONFIG REQUIRED)
+
+if(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED)
+    set(CMAKE_FIND_PACKAGE_PREFER_CONFIG "${_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV}")
+else()
+    unset(CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+endif()
+unset(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV)
+unset(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED)
 
 # AsyncIOManager
 set(AsyncIOManager_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/include")

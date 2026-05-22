@@ -5,11 +5,16 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "crdt/crdt_data_filter.hpp"
+#include "crdt/globaldb/crdt_work_journal.hpp"
 #include <set>
 
 namespace sgns::crdt
 {
-    CRDTDataFilter::CRDTDataFilter( bool accept_by_default ) : accept_by_default_( std::move( accept_by_default ) ) {}
+    CRDTDataFilter::CRDTDataFilter( std::shared_ptr<CRDTWorkJournal> work_journal, bool accept_by_default ) :
+        work_journal_( std::move( work_journal ) ),          //
+        accept_by_default_( std::move( accept_by_default ) ) //
+    {
+    }
 
     bool CRDTDataFilter::RegisterElementFilter( const std::string &pattern, ElementFilterCallback filter )
     {
@@ -72,6 +77,10 @@ namespace sgns::crdt
                                 additional_elements_to_delete.push_back( additional_element.key() );
                             }
                         }
+                    }
+                    else
+                    {
+                        work_journal_->MarkSeen( element.key() );
                     }
                     filter_matched = true;
                     break;

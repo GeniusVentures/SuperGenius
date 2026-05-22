@@ -7,7 +7,6 @@
 
 #include "Migration3_4_0To3_5_0.hpp"
 
-#include "account/EscrowReleaseTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
@@ -132,6 +131,7 @@ namespace sgns
             blockchain_ = Blockchain::New(
                 db_3_5_0_,
                 account_,
+                pubSub_,
                 [wptr( weak_from_this() )]( outcome::result<void> result )
                 {
                     if ( auto strong = wptr.lock() )
@@ -273,11 +273,6 @@ namespace sgns
                     {
                         topics_.emplace( dest_info.dest_address );
                     }
-                }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( record.tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
                 }
 
                 ++migrated_count;

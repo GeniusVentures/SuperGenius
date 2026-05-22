@@ -28,7 +28,8 @@ namespace sgns
 
         ~ProcessingTransaction() override = default;
 
-        std::vector<uint8_t> SerializeByteVector() override;
+        using IGeniusTransactions::SerializeByteVector;
+        std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         uint256_t GetJobHash() const
         {

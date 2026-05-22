@@ -7,12 +7,13 @@
 #endif
 #include <thread>
 #include <chrono>
+#include <cstdio>
 #include <boost/dll.hpp>
 #include "account/GeniusNode.hpp"
+#include "testutil/mint_source_hash.hpp"
 
 namespace sgns
 {
-
     /**
  * @file transaction_crash_sync_test_updated.cpp
  * @brief Verifies transaction synchronization after a node crash and recovery,
@@ -111,7 +112,7 @@ namespace sgns
 
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
-                                              "",
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",

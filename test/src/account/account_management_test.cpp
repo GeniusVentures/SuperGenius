@@ -10,6 +10,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
 #include "testutil/wait_condition.hpp"
+#include "testutil/mint_source_hash.hpp"
 
 using namespace sgns::test;
 
@@ -73,7 +74,7 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 
 TEST_F( AccountManagement, TransferAccount )
 {
-    ASSERT_TRUE( node_->MintTokens( 200, "", "", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT ).has_value() );
+    ASSERT_TRUE( node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT ).has_value() );
     auto         balance = node_->GetBalance();
     TW::HDWallet wallet( 128, "" );
     auto         other_account_address = GeniusAccount::NewFromMnemonic( TOKEN_ID, wallet.getMnemonic(), path, true )
@@ -287,7 +288,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
     boost::replace_all( json_data, "[basepath]", bin_path );
 
     auto mint_result = node_requester->MintTokens( 50000000000,
-                                                   "",
+                                                   sgns::test::NextMintSourceHash(),
                                                    "",
                                                    TOKEN_ID,
                                                    "",

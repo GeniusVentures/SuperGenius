@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <cstdio>
 #include <ostream>
 #include <random>
 #include <thread>
@@ -12,6 +13,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
@@ -58,22 +60,13 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        if ( setAsAuthorized )
-        {
-            auto response = sgns::GeniusAccount::GenerateGeniusAddress( key.c_str(), outPath );
-            if ( !response.has_value() )
-            {
-                ADD_FAILURE() << "Failed to generate full-node address for authorization";
-            }
-            else
-            {
-                const auto &pub_address = response.value().second.second.GetEntirePubValue();
-                sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
-            }
-        }
-
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+
+        if ( setAsAuthorized )
+        {
+            sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+        }
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
@@ -175,7 +168,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 
     // Ensure enough balance with +1 change
     auto mintRes51 = node51->MintTokens( totalMint51 + 1,
-                                         "",
+                                         sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x51 } ),
                                          "",
@@ -184,7 +177,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     std::cout << "Minted total " << ( totalMint51 + 1 ) << " of token51 on node51\n";
 
     auto mintRes52 = node52->MintTokens( totalMint52 + 1,
-                                         "",
+                                         sgns::test::NextMintSourceHash(),
                                          "",
                                          sgns::TokenID::FromBytes( { 0x52 } ),
                                          "",
@@ -277,7 +270,7 @@ TEST_P( GeniusNodeMintMainTest, MintMainBalance )
     ASSERT_TRUE( parsedInitialChild.has_value() );
 
     auto res = node->MintTokens( p.mintMain,
-                                 "",
+                                 sgns::test::NextMintSourceHash(),
                                  "",
                                  p.TokenID,
                                  "",
@@ -354,7 +347,7 @@ TEST_P( GeniusNodeMintChildTest, MintChildBalance )
     ASSERT_TRUE( parsedMint.has_value() );
 
     auto res = node->MintTokens( parsedMint.value(),
-                                 "",
+                                 sgns::test::NextMintSourceHash(),
                                  "",
                                  p.TokenID,
                                  "",
@@ -434,7 +427,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     for ( const auto &tm : mints )
     {
         auto res = node->MintTokens( tm.amount,
-                                     "",
+                                     sgns::test::NextMintSourceHash(),
                                      "",
                                      tm.tokenId,
                                      "",
@@ -491,7 +484,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                                   "node_proc2 not synced" );
 
     auto mintResMain = node_main->MintTokens( 1000,
-                                              "",
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",

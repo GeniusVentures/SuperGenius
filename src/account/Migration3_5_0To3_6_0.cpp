@@ -3,7 +3,6 @@
 #include "account/MigrationManager.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "base/sgns_version.hpp"
@@ -95,7 +94,7 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        BOOST_OUTCOME_TRY( blockchain::ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
         BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
         auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
@@ -162,11 +161,6 @@ namespace sgns
                     {
                         topics_.emplace( dest_info.dest_address );
                     }
-                }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
                 }
 
                 ++migrated_count;

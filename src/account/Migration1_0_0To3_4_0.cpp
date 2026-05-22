@@ -9,7 +9,6 @@
 #include <filesystem>
 
 #include "MigrationManager.hpp"
-#include "EscrowReleaseTransaction.hpp"
 #include "TransactionManager.hpp"
 #include "TransferTransaction.hpp"
 #include "base/sgns_version.hpp"
@@ -160,11 +159,6 @@ namespace sgns
                 {
                     topics_.emplace( dest_info.dest_address );
                 }
-            }
-            if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-            {
-                topics_.emplace( escrow_tx->GetSrcAddress() );
-                topics_.emplace( escrow_tx->GetEscrowSource() );
             }
 
             sgns::crdt::GlobalDB::Buffer data_transaction;

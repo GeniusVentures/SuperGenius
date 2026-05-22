@@ -19,10 +19,10 @@ namespace sgns
     {
     }
 
-    std::vector<uint8_t> MintTransaction::SerializeByteVector()
+    std::vector<uint8_t> MintTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::MintTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_amount( amount );
         tx_struct.set_chain_id( chain_id );
         tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
@@ -62,6 +62,11 @@ namespace sgns
     TokenID MintTransaction::GetTokenID() const
     {
         return token_id;
+    }
+
+    std::string MintTransaction::GetChainId() const
+    {
+        return chain_id;
     }
 
     MintTransaction MintTransaction::New( uint64_t                 new_amount,

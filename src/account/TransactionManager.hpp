@@ -1,6 +1,6 @@
 /**
  * @file       TransactionManager.hpp
- * @brief
+ * @brief      Transaction coordination, CRDT sync, and lifecycle tracking for outgoing and incoming account activity.
  * @date       2024-03-13
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -22,9 +22,12 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "account/IGeniusTransactions.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/InputValidators.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
+
+#include "blockchain/Blockchain.hpp"
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
@@ -33,6 +36,9 @@ namespace sgns
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
+    /**
+     * @brief Coordinates transaction creation, CRDT propagation, verification, and status tracking.
+     */
     class TransactionManager : public std::enable_shared_from_this<TransactionManager>
     {
     public:
@@ -90,18 +96,25 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context> ctx,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<crypto::Hasher>          hasher,
+            std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 0 ),
+            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();
 
         void Start();
+        void RegisterTopicNames();
+        void StartListeningTopics();
+        void StartCore();
 
         void PrintAccountInfo() const;
 
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
+        std::vector<std::vector<uint8_t>> GetTransactions(
+            std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        std::vector<std::vector<uint8_t>> GetTransactions() const;
 
         /**
          * @brief Creates and enqueues a transfer transaction.
@@ -128,6 +141,19 @@ namespace sgns
                                                 std::string destination = "" );
 
         /**
+         * @brief Creates and enqueues a one-time migration mint transaction.
+         * @param[in] amount  Amount to migrate.
+         * @param[in] from_version  Legacy version namespace for the migration source key.
+         * @param[in] tokenid  Token to mint.
+         * @param[in] destination  Recipient address; defaults to the local account address when empty.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> MigrationFunds( uint64_t    amount,
+                                                     std::string from_version,
+                                                     TokenID     tokenid,
+                                                     std::string destination = "" );
+
+        /**
          * @brief Creates and enqueues an escrow-hold transaction.
          *
          * Hashes @p job_id with blake2b-256 to derive the escrow destination address,
@@ -143,24 +169,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-
-        /**
-         * @brief Releases an escrow by paying out subtask workers and the developer.
-         *
-         * Fetches the original EscrowTransaction from the CRDT, splits the escrowed
-         * funds among subtask result nodes (equal shares) with any remainder going to
-         * the developer address. Enqueues a TransferTransaction and an
-         * EscrowReleaseTransaction as an atomic batch together with the supplied
-         * @p crdt_transaction.
-         *
-         * @param[in] escrow_path  CRDT key of the original escrow transaction.
-         * @param[in] task_result  Processing result containing subtask payees.
-         * @param[in] crdt_transaction  Existing CRDT atomic transaction to attach the batch to.
-         * @return Hash of the payout TransferTransaction on success.
-         */
-        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
-                                                const SGProcessing::TaskResult          &task_result,
-                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
+                                                                           const SGProcessing::TaskResult          &task_result,
+                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -259,6 +270,7 @@ namespace sgns
 
     protected:
         friend class GeniusNode;
+        friend class Migration3_6_0To3_7_0;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -268,10 +280,25 @@ namespace sgns
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
+        struct TrackedTx
+        {
+            std::shared_ptr<IGeniusTransactions> tx;
+            TransactionStatus                    status;
+            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
+        };
+
+        struct AccountUTXOState
+        {
+            uint64_t      version{ 0 };
+            base::Hash256 root{};
+            bool          initialized{ false };
+        };
+
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
                             std::shared_ptr<crypto::Hasher>          hasher,
+                            std::shared_ptr<Blockchain>              blockchain,
                             bool                                     full_node,
                             std::chrono::milliseconds                timestamp_tolerance,
                             std::chrono::milliseconds                mutability_window );
@@ -280,7 +307,11 @@ namespace sgns
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
-        SGTransaction::DAGStruct FillDAGStruct( std::string transaction_hash = "" ) const;
+        SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
+        std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
+        std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
          * @brief Commits a TransactionItem to the CRDT.
@@ -295,8 +326,7 @@ namespace sgns
          *
          * @return Set of nonces that were successfully sent.
          */
-        outcome::result<std::unordered_set<uint64_t>> SendTransactionItem( TransactionItem &item );
-        outcome::result<void>                         ConfirmTransactions();
+        outcome::result<void> SendTransactionItem( TransactionItem &item );
 
         /**
          * @brief Rolls back a failed TransactionItem.
@@ -312,8 +342,7 @@ namespace sgns
          * @brief Returns the set of network IDs to monitor.
          *        On DEV_NET, also includes TEST_NET and MAIN_NET.
          */
-        static std::vector<uint16_t> GetMonitoredNetworkIDs();
-
+        static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         /**
@@ -342,6 +371,10 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
+        void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -403,6 +436,8 @@ namespace sgns
 
         std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
                                                                               const std::string &address ) const;
+        std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
+        std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
@@ -416,11 +451,14 @@ namespace sgns
          */
         void TickOnce();
 
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
+
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
         std::shared_ptr<crypto::Hasher>          hasher_m;
+        std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
@@ -442,23 +480,21 @@ namespace sgns
         mutable std::mutex          mutex_m;
         std::deque<TransactionItem> tx_queue_m;
 
-        struct TrackedTx
-        {
-            std::shared_ptr<IGeniusTransactions> tx;
-            TransactionStatus                    status;
-            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
-        };
+        mutable std::shared_mutex                                   tx_mutex_m;
+        std::unordered_map<std::string, TrackedTx>                  tx_processed_m;
+        mutable std::shared_mutex                                   account_utxo_state_mutex_;
+        mutable std::unordered_map<std::string, AccountUTXOState>   account_utxo_state_;
+        std::atomic<uint32_t>                                       utxo_state_tracking_suppression_{ 0 };
+        std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
+        std::function<void()>                                       task_m;
+        std::atomic<bool>                                           stopped_{ false };
+        std::chrono::milliseconds                                   timestamp_tolerance_m;
+        std::chrono::milliseconds                                   mutability_window_m;
+        uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
 
-        mutable std::shared_mutex                  tx_mutex_m;
-        std::unordered_map<std::string, TrackedTx> tx_processed_m;
-        std::atomic<size_t>                        verifying_count_{ 0 }; // Count of VERIFYING transactions
-        std::function<void()>                      task_m;
-        std::atomic<bool>                          stopped_{ false };
-        std::chrono::milliseconds                  timestamp_tolerance_m;
-        std::chrono::milliseconds                  mutability_window_m;
-
-        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE = std::chrono::seconds( 10 );
-        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW   = std::chrono::minutes( 15 );
+        static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
+        static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
+        static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;
 
         std::mutex                                         cv_mutex_;
         std::condition_variable                            cv_;
@@ -466,6 +502,9 @@ namespace sgns
         std::queue<std::string>                            deleted_data_queue_;
 
         std::chrono::steady_clock::time_point last_loop_time_;
+        std::atomic<bool>                     topic_names_registered_{ false };
+        std::atomic<bool>                     listening_topics_started_{ false };
+        std::atomic<bool>                     core_started_{ false };
 
         std::mutex                            missing_tx_mutex_;
         std::unordered_set<std::string>       missing_tx_hashes_;
@@ -475,25 +514,12 @@ namespace sgns
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> ParseEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        outcome::result<void> RevertEscrowReleaseTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
 
-        static inline const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
-            transaction_parsers = {
-                { "transfer",
-                  { &TransactionManager::ParseTransferTransaction, &TransactionManager::RevertTransferTransaction } },
-                { "mint", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
-                { "mint-v2",
-                  { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
-                { "escrow-hold",
-                  { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
-                { "escrow-release",
-                  { &TransactionManager::ParseEscrowReleaseTransaction,
-                    &TransactionManager::RevertEscrowReleaseTransaction } } };
+        static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
+            transaction_parsers;
 
         base::Logger m_logger = base::createLogger( "TransactionManager" );
 
@@ -592,11 +618,49 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
+
+        enum class WitnessValidationResult : uint8_t
+        {
+            VALID,
+            DRIFT,
+            INVALID
+        };
+
         /**
          * @brief Looks up the CID associated with a transaction hash in RocksDB,
          *        searching across all monitored networks.
          */
-        outcome::result<std::string> GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<std::string>             GetTransactionCID( const std::string &tx_hash ) const;
+        outcome::result<ConsensusManager::Check> HandleNonceConsensusSubject(
+            const ConsensusManager::Subject &subject );
+        bool ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool CheckTransactionWellFormed( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionAuthorization( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionTimestamp( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const;
+        bool CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
+            const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool                       ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                   std::vector<GeniusUTXO>                    &snapshot ) const;
+        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                     &subject,
+                                                                const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
+        void SetNonceWindow( uint64_t window );
+        outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                      TransactionStatus                           new_status );
+        bool HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const;
+
+        bool IsGoingToOverwrite( const std::string &key ) const;
+
+    private:
+        static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
+
+        std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
+        GeniusInputValidator      genius_input_validator_;
+        PublicChainInputValidator public_chain_input_validator_;
     };
 }
 

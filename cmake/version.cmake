@@ -1,5 +1,6 @@
-set(PROJECT_VERSION 3.6.0)
+set(PROJECT_VERSION 3.7.0)
 set(SUPERGENIUS_PROCESSING_VERSION 1)
+
 
 if(NOT SGNS_NETWORK STREQUAL "release")
     add_compile_definitions(DEV_NET)

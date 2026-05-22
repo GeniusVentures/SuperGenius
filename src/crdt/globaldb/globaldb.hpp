@@ -140,16 +140,21 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
+        void                  AddTopicName( const std::string &topicName );
         void                  AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
 
         std::shared_ptr<RocksDB>                          GetDataStore();
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
+        std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
+        void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterNewElementCallback( const std::string &pattern );
+        void UnregisterDeletedElementCallback( const std::string &pattern );
 
         void Start();
         void StartCIDReceiving();
@@ -177,6 +182,9 @@ namespace sgns::crdt
         outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
+
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetCIDContent(
+            const std::string &cid_string );
 
     private:
         /**

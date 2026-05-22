@@ -30,6 +30,8 @@ namespace sgns
     class IGeniusTransactions
     {
     public:
+        static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius_chain";
+
         /**
          * @brief   Alias for the de-serializer method type to be implemented in derived classes
          */
@@ -57,7 +59,12 @@ namespace sgns
             return dag;
         }
 
-        virtual std::vector<uint8_t> SerializeByteVector() = 0;
+        virtual std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const = 0;
+
+        std::vector<uint8_t> SerializeByteVector() const
+        {
+            return SerializeByteVector( dag_st );
+        }
 
         /**
          * @brief       Returns if transaction supports UTXOs
@@ -75,6 +82,15 @@ namespace sgns
         virtual std::optional<UTXOTxParameters> GetUTXOParametersOpt() const
         {
             return std::nullopt;
+        }
+
+        /**
+         * @brief       Returns the source chain id for input validation routing
+         * @return      The source chain id
+         */
+        virtual std::string GetChainId() const
+        {
+            return std::string( GENIUS_CHAIN_ID );
         }
 
         virtual std::string GetTransactionSpecificPath() const = 0;
@@ -99,21 +115,28 @@ namespace sgns
             return dag_st.source_addr();
         }
 
-        std::string GetHash() const;
+        [[nodiscard]] std::string GetHash() const;
+        [[nodiscard]] std::string GetPreviousHash() const;
+        [[nodiscard]] std::string GetUncleHash() const;
 
         uint64_t GetTimestamp() const
         {
             return dag_st.timestamp();
         }
 
+        uint64_t GetNonce() const
+        {
+            return dag_st.nonce();
+        }
+
         virtual std::unordered_set<std::string> GetTopics() const;
 
         void FillHash();
-        bool CheckHash();
+        bool CheckHash() const;
 
         std::vector<uint8_t> MakeSignature( GeniusAccount &account );
-        bool                 CheckSignature();
-        bool                 CheckDAGSignatureLegacy();
+        bool                 CheckSignature() const;
+        bool                 CheckDAGSignatureLegacy() const;
 
         SGTransaction::DAGStruct dag_st;
 

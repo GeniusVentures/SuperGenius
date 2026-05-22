@@ -43,6 +43,36 @@ message UTXO
     bytes hash = 3;
     bytes token = 4;
 }
+
+enum UTXOEntryState
+{
+    UTXO_ENTRY_READY = 0;
+    UTXO_ENTRY_CONSUMED = 1;
+}
+
+message UTXOEntryRecord
+{
+    UTXO utxo = 1;
+    string owner_address = 2;
+    UTXOEntryState state = 3;
+    uint64 created_epoch = 4;
+    bool has_spent_epoch = 5;
+    uint64 spent_epoch = 6;
+    bool has_spent_by_txid = 7;
+    bytes spent_by_txid = 8;
+}
+
+message UTXOCheckpointRecord
+{
+    string owner_address = 1;
+    uint64 epoch = 2;
+    bytes last_finalized_tx = 3;
+    bytes registry_hash = 4;
+    bytes utxo_merkle_root = 5;
+    uint64 utxo_count = 6;
+    uint64 created_at_ms = 7;
+}
+
 message UTXOList
 {
     repeated UTXO utxos = 1;
@@ -77,6 +107,14 @@ message MintTxV2
     bytes token_id = 3;
     uint64 amount = 4; //
     UTXOTxParams utxo_params = 5;
+}
+message MigrationTx
+{
+    DAGStruct dag_struct = 1;//
+    bytes token_id = 2;
+    uint64 amount = 3; //
+    UTXOTxParams utxo_params = 4;
+    string from_version = 5;
 }
 message EscrowTx
 {

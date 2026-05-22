@@ -8,6 +8,8 @@ namespace sgns::crypto
     class HasherImpl : public Hasher
     {
     public:
+        using Hasher::sha2_256;
+
         ~HasherImpl() override = default;
 
         [[nodiscard]] Hash64 twox_64( gsl::span<const uint8_t> buffer ) const override;

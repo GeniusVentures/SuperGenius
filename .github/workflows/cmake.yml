@@ -91,7 +91,9 @@ on:
         required: true
         default: true
         type: boolean
-
+permissions:
+  contents: write
+  packages: read
 jobs:
   build:
     env:
@@ -100,7 +102,7 @@ jobs:
     runs-on: ${{ matrix.host }}
     container:
       image: ${{ matrix.container }}
-      options: ${{ '--cap-add=IPC_LOCK' }}
+      options: --cap-add=IPC_LOCK
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GNUS_TOKEN_1 }}
@@ -204,6 +206,27 @@ jobs:
             exit 78
           }
 
+      - name: Configure bash on Windows (use Git Bash, not WSL)
+        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
+        run: |
+          $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
+          $gitBinPath = "C:\Program Files\Git\bin"
+          
+          foreach ($p in @($gitBinPath, $gitUsrBinPath)) {
+            if (Test-Path $p) {
+              Add-Content -Path $env:GITHUB_PATH -Value $p
+              $env:PATH = "$p;$env:PATH"
+            }
+          }
+          
+          Write-Output "Git Bash configured for bash shell commands"
+          $bashLocation = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
+          if ($bashLocation) {
+            Write-Output "Bash location: $bashLocation"
+          } else {
+            Write-Output "WARNING: bash.exe not found in PATH"
+          }
+
       - name: Clean workspace (self-hosted runners - Unix)
         if: ${{ runner.environment == 'self-hosted' && matrix.target != 'Windows' }}
         working-directory: ${{ runner.workspace }}
@@ -211,7 +234,7 @@ jobs:
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Runner workspace: ${{ runner.workspace }}"
+          echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{ github.workspace }}"
 
           echo "=== CLEANUP ARTIFACTS ==="
@@ -245,6 +268,8 @@ jobs:
             echo "SuperGenius directory exists and contains:"
             ls -la SuperGenius/ 2>/dev/null || echo "  (empty)"
           fi
+        env:
+          RUNNER_WORKSPACE: ${{ runner.workspace }}
 
       - name: Clean workspace (self-hosted runners - Windows)
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
@@ -282,31 +307,11 @@ jobs:
           }
 
       - name: Checkout SuperGenius repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           path: "SuperGenius"
           submodules: "recursive"
-
-      - name: Configure bash on Windows (use Git Bash, not WSL)
-        if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
-        run: |
-          $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
-          $gitBinPath = "C:\Program Files\Git\bin"
-          
-          foreach ($p in @($gitBinPath, $gitUsrBinPath)) {
-            if (Test-Path $p) {
-              Add-Content -Path $env:GITHUB_PATH -Value $p
-              $env:PATH = "$p;$env:PATH"
-            }
-          }
-          
-          Write-Output "Git Bash configured for bash shell commands"
-          $bashLocation = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
-          if ($bashLocation) {
-            Write-Output "Bash location: $bashLocation"
-          } else {
-            Write-Output "WARNING: bash.exe not found in PATH"
-          }
+          persist-credentials: true # We need the credentials for uploading the release later
 
       - name: Set build directory
         shell: bash
@@ -321,11 +326,11 @@ jobs:
       - name: Resolve branch/tag
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${{ github.event.inputs.tag }}" ]; then
-            CURRENT_BRANCH="${{ github.event.inputs.tag }}"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ "${GITHUB_EVENT_INPUTS_TAG}" ]; then
+            CURRENT_BRANCH="${GITHUB_EVENT_INPUTS_TAG}"
             IS_TAG=true
           elif ${{ github.event_name == 'pull_request' }}; then
-            CURRENT_BRANCH=${{ github.event.pull_request.head.ref }}
+            CURRENT_BRANCH=${GITHUB_EVENT_PULL_REQUEST_HEAD_REF}
             IS_TAG=false
           else
             CURRENT_BRANCH=$GITHUB_REF_NAME
@@ -350,6 +355,9 @@ jobs:
             FILE_NAME=${{ matrix.target }}-${{ matrix.build-type }}.tar.gz
           fi
           echo "FILE_NAME=${FILE_NAME}" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+          GITHUB_EVENT_PULL_REQUEST_HEAD_REF: ${{ github.event.pull_request.head.ref }}
 
       - name: Download thirdparty release
         working-directory: ${{ github.workspace }}
@@ -547,19 +555,21 @@ jobs:
       - name: Set release tag
         shell: bash
         run: |
-          if ${{ github.event_name == 'workflow_dispatch' }} && [ '${{ github.event.inputs.tag }}' ]; then
-            RELEASE_TAG="${{ github.event.inputs.tag }}"
+          if ${{ github.event_name == 'workflow_dispatch' }} && [ '${GITHUB_EVENT_INPUTS_TAG}' ]; then
+            RELEASE_TAG="${GITHUB_EVENT_INPUTS_TAG}"
             IS_TAG_RELEASE="true"
           else
             if [ '${{ matrix.abi }}' ]; then
-              RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${GITHUB_REF_NAME}-${{ matrix.build-type }}"
             else
-              RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
+              RELEASE_TAG="${{ matrix.target }}-${GITHUB_REF_NAME}-${{ matrix.build-type }}"
             fi
             IS_TAG_RELEASE="false"
           fi
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           echo "IS_TAG_RELEASE=$IS_TAG_RELEASE" >> $GITHUB_ENV
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       - name: Create release tag
         if: github.ref_name == 'main' || github.ref_name == 'develop'
@@ -582,15 +592,15 @@ jobs:
           echo "Creating GitHub release $RELEASE_TAG..."
           gh release create "$RELEASE_TAG" \
             --target "${{ github.sha }}" \
-            -t "${{ matrix.target }} ${{ github.ref_name }} ${{ matrix.build-type }} build" \
-            -n "Branch: ${{ github.ref_name }} | SHA: ${{ github.sha }}" \
+            -t "${{ matrix.target }} ${GITHUB_REF_NAME} ${{ matrix.build-type }} build" \
+            -n "Branch: ${GITHUB_REF_NAME} | SHA: ${{ github.sha }}" \
             $( [ "$IS_TAG_RELEASE" = "true" ] && echo "" || echo "--prerelease" )
 
       - name: Upload file
         if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         shell: bash
-        run: gh release upload ${{ env.RELEASE_TAG }} ${{ env.FILE_NAME }} --clobber
+        run: gh release upload ${RELEASE_TAG} ${FILE_NAME} --clobber
 
       - name: Run tests (Windows)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
