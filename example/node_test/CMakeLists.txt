@@ -45,20 +45,35 @@ if(node_example_with_sentry AND node_example_with_crashpad_handler)
     )
 endif()
 
-if(node_example_with_sentry AND CMAKE_OBJCOPY)
-    add_custom_command(
-        TARGET node_example
-        POST_BUILD
-        WORKING_DIRECTORY $<TARGET_FILE_DIR:node_example>
-        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:node_example>
-        COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE_NAME:node_example> $<TARGET_FILE_BASE_NAME:node_example>.debug
-        COMMAND ${CMAKE_OBJCOPY} --strip-debug $<TARGET_FILE_NAME:node_example>
-        COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_BASE_NAME:node_example>.debug $<TARGET_FILE_NAME:node_example>
-        COMMENT "Generating node_example debug symbol file for Sentry upload"
-        VERBATIM
-    )
-elseif(node_example_with_sentry)
-    message(WARNING "Sentry is enabled for node_example but CMAKE_OBJCOPY is unavailable; .debug file will not be generated")
+if(node_example_with_sentry)
+    if(APPLE)
+        find_program(DSYMUTIL_EXECUTABLE dsymutil)
+        if(DSYMUTIL_EXECUTABLE)
+            add_custom_command(
+                TARGET node_example
+                POST_BUILD
+                COMMAND ${DSYMUTIL_EXECUTABLE} $<TARGET_FILE:node_example> -o $<TARGET_FILE:node_example>.dSYM
+                COMMENT "Generating node_example dSYM bundle for Sentry upload"
+                VERBATIM
+            )
+        else()
+            message(WARNING "Sentry is enabled for node_example but dsymutil is unavailable; .dSYM bundle will not be generated")
+        endif()
+    elseif(CMAKE_OBJCOPY)
+        add_custom_command(
+            TARGET node_example
+            POST_BUILD
+            WORKING_DIRECTORY $<TARGET_FILE_DIR:node_example>
+            COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:node_example>
+            COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE_NAME:node_example> $<TARGET_FILE_BASE_NAME:node_example>.debug
+            COMMAND ${CMAKE_OBJCOPY} --strip-debug $<TARGET_FILE_NAME:node_example>
+            COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_BASE_NAME:node_example>.debug $<TARGET_FILE_NAME:node_example>
+            COMMENT "Generating node_example debug symbol file for Sentry upload"
+            VERBATIM
+        )
+    else()
+        message(WARNING "Sentry is enabled for node_example but CMAKE_OBJCOPY is unavailable; .debug file will not be generated")
+    endif()
 endif()
 
 if(WIN32)
