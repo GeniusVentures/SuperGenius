@@ -6,13 +6,16 @@
  */
 #pragma once
 
-#include <set>
+#include <unordered_set>
 #include <string>
-#include <string_view>
 #include <utility>
+#include <memory>
 
 #include "processing/processing_task_queue.hpp"
+#include "crdt/globaldb/globaldb.hpp"
+#include "crdt/atomic_transaction.hpp"
 #include "processing/impl/TaskKeys.hpp"
+#include "outcome/outcome.hpp"
 
 namespace sgns::processing
 {
@@ -47,5 +50,6 @@ namespace sgns::processing
         std::shared_ptr<sgns::crdt::GlobalDB>          db_;
         std::string                                    processing_topic_;
         std::shared_ptr<sgns::crdt::AtomicTransaction> crdt_transaction_;
+        std::unordered_set<std::string>                incompatible_jobs_;
     };
 }

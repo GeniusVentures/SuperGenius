@@ -1,9 +1,9 @@
-#include "processing/impl/TaskQueueImpl.hpp"
 
 #include <chrono>
 #include <set>
 
-#include "crdt/globaldb/globaldb.hpp"
+#include <processingbase/ProcessingManager.hpp>
+#include "processing/impl/TaskQueueImpl.hpp"
 
 namespace sgns::processing
 {
@@ -148,7 +148,7 @@ namespace sgns::processing
 
     bool TaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
-        auto querySubTasks = db_->QueryKeyValues( sgns::crdt::HierarchicalKey( TaskKeys::SubTaskListKey( taskId ) ) );
+        auto querySubTasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( taskId ) );
         if ( querySubTasks.has_failure() || !querySubTasks.has_value() )
         {
             TaskQueueImplLogger()->error( "No subtasks found for task with ID: {}", taskId );
@@ -163,6 +163,11 @@ namespace sgns::processing
                 TaskQueueImplLogger()->error( "Failed to parse subtask from proto task with ID: {}", taskId );
                 return false;
             }
+            if ( !sgns::sgprocessing::ProcessingManager::IsProcessingModelValid( subTask.json_data() ) )
+            {
+                TaskQueueImplLogger()->error( "Subtask json data is invalid" );
+                return false;
+            }
             subTasks.push_back( std::move( subTask ) );
         }
         TaskQueueImplLogger()->debug( "Successfully fetched subtasks for task with ID: {}", taskId );
@@ -172,7 +177,7 @@ namespace sgns::processing
 
     outcome::result<std::pair<std::string, SGProcessing::Task>> TaskQueueImpl::GrabTask()
     {
-        BOOST_OUTCOME_TRY( auto queryClaimable, db_->QueryKeyValues( { TaskKeys::ClaimableListKey() } ) );
+        BOOST_OUTCOME_TRY( auto queryClaimable, db_->QueryKeyValues( TaskKeys::ClaimableListKey() ) );
 
         TaskQueueImplLogger()->debug( "GrabTask scanning claimable list with {} candidates", queryClaimable.size() );
         std::set<std::string> lockedTasks;
@@ -185,14 +190,11 @@ namespace sgns::processing
             const auto taskId = std::string( reinterpret_cast<const char *>( element.second.data() ),
                                              element.second.size() );
 
-            if ( IsTaskCompleted( taskId ) )
+            if ( incompatible_jobs_.find( taskId ) != incompatible_jobs_.end() )
             {
-                // Cleanup stale claimable marker for already completed task.
-                (void)db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskId ) ),
-                                   { processing_topic_ } );
+                TaskQueueImplLogger()->debug( "Skipping incompatible task with ID: {}", taskId );
                 continue;
             }
-
             const auto taskKey = TaskKeys::TaskKey( taskId );
             if ( IsTaskLocked( db_, taskKey ) )
             {
@@ -205,11 +207,13 @@ namespace sgns::processing
                 continue;
             }
 
-            // Task is no longer claimable once a lock is acquired.
-            (void)db_->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskId ) ),
-                               { processing_topic_ } );
-
             BOOST_OUTCOME_TRY( auto task, GetTask( taskId ) );
+            if ( !sgns::sgprocessing::ProcessingManager::IsProcessingValid( task.json_data() ) )
+            {
+                TaskQueueImplLogger()->error( "Task with ID: {} has invalid processing data", taskId );
+                MarkTaskBad( taskId );
+                continue;
+            }
             return std::make_pair( taskId, task );
         }
 
@@ -237,6 +241,9 @@ namespace sgns::processing
         BOOST_OUTCOME_TRY(
             completionTransaction->Put( sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( taskKey ) ),
                                         std::move( resultData ) ) );
+        BOOST_OUTCOME_TRY(
+            completionTransaction->Remove( sgns::crdt::HierarchicalKey( TaskKeys::ClaimableTaskKey( taskKey ) ) ) );
+        BOOST_OUTCOME_TRY( completionTransaction->AddTopic( processing_topic_ ) );
 
         return completionTransaction;
     }
@@ -248,5 +255,9 @@ namespace sgns::processing
         return resultData.has_value();
     }
 
-    void TaskQueueImpl::MarkTaskBad( const std::string &taskKey ) {}
+    void TaskQueueImpl::MarkTaskBad( const std::string &taskKey )
+    {
+        incompatible_jobs_.insert( taskKey );
+        TaskQueueImplLogger()->debug( "Marked task with ID: {} as incompatible", taskKey );
+    }
 }
