@@ -34,9 +34,17 @@
          │
          ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────┐
-│  External Interfaces                                                                  │
-│  `src/api/transport/` — JSON-RPC WS/HTTP  |  `src/watcher/` — EVM bridge             │
-│  `gRPCForSuperGenius/` — OpenAPI REST      |  `src/coinprices/` — CoinGecko           │
+  │  External Interfaces                                                                  │
+  │  `src/api/transport/` — JSON-RPC WS/HTTP  |  `src/watcher/` — EVM bridge orchestrator │
+  │  `gRPCForSuperGenius/` — OpenAPI REST      |  `src/coinprices/` — CoinGecko           │
+  └──────────────────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────────────────────────────────────────────────────────────────────┐
+│  EVM Relay Submodule (`evmrelay/`)                                                     │
+│  Ethereum P2P watcher service + public RPC list provider + RPC connection maker        │
+│  Peer discovery (discv4/discv5), RLPx transport, ETH subprotocol event watching,       │
+│  RPC endpoint pool management, receipt fetching, bridge event types                    │
 └──────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -72,7 +80,7 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 | `IBasicProof` | Base interface for all proof types (Generate, Verify, Serialize, Deserialize) | `src/proof/IBasicProof.hpp` |
 | `CComponentFactory` | Singleton DI container; RegisterComponent / GetComponent for all IComponent instances | `src/singleton/CComponentFactory.hpp` |
 | `SubscriptionEngine` | Templated publish/subscribe engine for internal events | `src/subscription/subscription_engine.hpp` |
-| `EvmMessagingWatcher` | Monitors EVM chains via WebSocket for cross-chain minting events | `src/watcher/impl/evm_messaging_watcher.hpp` |
+| `EvmMessagingWatcher` | Bridge message handling orchestrator; receives verified observations from evmrelay, manages event lifecycle, triggers mint verification via RPC | `src/watcher/impl/evm_messaging_watcher.hpp` |
 
 ## Pattern Overview
 
@@ -93,7 +101,7 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 - Purpose: Block-lattice UTXO ledger — DAG blocks per account, token transfers, minting, escrow
 - Location: `src/account/`
 - Contains: GeniusAccount, GeniusNode, TransferTransaction, MintTransaction, EscrowTransaction, ProcessingTransaction, UTXOManager, TransactionManager, AccountMessenger, MigrationManager
-- Depends on: CRDT/GlobalDB (persistence), Crypto (signing), Blockchain (consensus integration)
+- Depends on: CRDT/GlobalDB (persistence), Crypto (signing), Blockchain (consensus integration), evmrelay (RPC endpoints for mint verification)
 - Used by: GeniusNode (orchestration), External API
 
 **Blockchain Layer:**
@@ -143,7 +151,15 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 - Location: `src/api/transport/`
 - Contains: HTTP listener (Boost.Asio), WebSocket listener, WebSocket client
 - Depends on: Boost.Asio
-- Used by: External clients, EvmMessagingWatcher (WS client)
+- Used by: External clients
+
+**Watcher / Bridge Orchestrator Layer:**
+- Purpose: EVM bridge message handling orchestration — receives verified observations from evmrelay, manages event lifecycle, coordinates mint verification
+- Location: `src/watcher/`
+- Contains: MessagingWatcher (abstract base), EvmMessagingWatcher (EVM bridge orchestrator)
+- Depends on: evmrelay (Ethereum protocol services: peer discovery, event watching, RPC transport, receipt verification)
+- Used by: GeniusNode (bridge lifecycle management)
+- Note: Current `EvmMessagingWatcher` contains placeholder legacy code using raw WebSocket `eth_subscribe`; being migrated to use evmrelay's `EthWatchService` + `RpcManager`
 
 **Subscription / Event Layer:**
 - Purpose: Templated publish/subscribe engine for internal event propagation
@@ -181,9 +197,15 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 
 ### EVM Minting Flow
 
-1. EVM smart contract event emitted → `EvmMessagingWatcher` (WebSocket to EVM node) detects via topic filters (`src/watcher/impl/evm_messaging_watcher.cpp`)
-2. Parses log (contract_address + topic filters) → callback triggers `MintTransaction::Build()` (`src/account/MintTransaction.cpp`)
-3. `TransactionManager::Submit()` persists to GlobalDB + broadcasts via pubsub (`src/account/TransactionManager.cpp`)
+Concern separation between `evmrelay/` (Ethereum protocol library) and `src/watcher/` (bridge orchestrator):
+
+1. `evmrelay` discovers peers (discv4/discv5) and establishes RLPx sessions → ETH subprotocol receives `NewBlock`/`NewPooledTransactionHashes` → `EthWatchService` applies Bloom prefilter → requests receipts → ABI decodes matched logs → produces `WatchEventNotification` or `BridgeEventClaim` (`evmrelay/src/eth/eth_watch_service.cpp`)
+2. `evmrelay` RPC layer provides `RpcManager` with multi-endpoint pool, `RpcReceiptSource` for independent receipt verification (`evmrelay/src/eth/rpc_manager.cpp`)
+3. Verified observations delivered to `EvmMessagingWatcher` (orchestrator in `src/watcher/impl/`) which manages message lifecycle, dedup, and response dispatch
+4. `EvmMessagingWatcher` triggers mint verification → `src/account/` code uses `evmrelay` RPC endpoints to verify stored messages before constructing `MintTransaction` (`src/account/MintTransaction.cpp`)
+5. `TransactionManager::Submit()` persists to GlobalDB + broadcasts via pubsub (`src/account/TransactionManager.cpp`)
+
+**Boundary:** `evmrelay` provides raw Ethereum protocol services (peer discovery, event watching, RPC transport, receipt fetching). `src/watcher/` orchestrates what happens with those events. `src/account/` performs the mint transactions and uses evmrelay RPC endpoints for verification.
 
 **State Management:**
 - Account state: CRDT-replicated DAG block chain per account (keyed by address in GlobalDB)
@@ -236,10 +258,11 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 - Triggers: External HTTP/WS requests
 - Responsibilities: Handle `account_balance`, `account_block_count`, `room_list`, `room_join`, etc.
 
-**EvmMessagingWatcher:**
+**EvmMessagingWatcher (Bridge Orchestrator):**
 - Location: `src/watcher/impl/evm_messaging_watcher.hpp`
-- Triggers: EVM smart contract events detected via WebSocket
-- Responsibilities: Parse logs, trigger MintTransaction creation
+- Triggers: Verified bridge event observations delivered from evmrelay
+- Responsibilities: Orchestrate message handling lifecycle, dedup, trigger mint verification via evmrelay RPC endpoints, coordinate response dispatch
+- Note: Current implementation is a placeholder using raw WebSocket `eth_subscribe`; being migrated to use evmrelay as the Ethereum protocol library
 
 ## Architectural Constraints
 

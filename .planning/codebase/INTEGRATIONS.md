@@ -6,31 +6,14 @@
 
 ### Ethereum / EVM Networks
 
-The `evmrelay/` submodule provides full Ethereum protocol integration:
+The `evmrelay/` submodule provides the Ethereum protocol library with three responsibilities:
+- **Watcher Service** — P2P peer discovery (discv4/discv5), RLPx transport, ETH subprotocol event watching, bridge event types
+- **Public RPC List Provider** — Ingestion of public RPC endpoint metadata from chain lists
+- **RPC Connection Maker** — Multi-endpoint RPC pool (`RpcManager`), HTTP transport, receipt verification
 
-- **Ethereum Node Discovery (Discv4/Discv5)** - Discovers and maintains peer connections to Ethereum networks
-  - Supported chains: Ethereum Mainnet (chainId 1), Holesky, Sepolia, Base Mainnet (chainId 8453), Base Sepolia
-  - Node lists stored in `evmrelay/rlp_enodes/output/` (JSON with enr/enode records)
-  - Implementation: `evmrelay/src/discv4/`, `evmrelay/src/discv5/`
-- **Ethereum JSON-RPC Client** - Communicates with EVM nodes via HTTP/HTTPS
-  - Transport: `evmrelay/src/eth/rpc_http_transport.cpp` - HTTP/HTTPS POST with JSON bodies
-  - RPC Manager: `evmrelay/src/eth/rpc_manager.cpp` - Multi-endpoint with priority/weight load balancing
-  - Endpoints configured via enode JSON files (networkId, genesisHex, forkId)
-  - RPC methods: `eth_getLogs`, `eth_getTransactionReceipt`, `eth_getBlockByNumber`, etc.
-  - Implementation: `evmrelay/src/eth/json_rpc.cpp`
-- **RLPx Transport Protocol** - Direct peer-to-peer Ethereum protocol communication
-  - Handshake, session management, message framing
-  - Implementation: `evmrelay/src/rlpx/`, `evmrelay/src/eth/eth_handshake.cpp`
-- **Bridge Events** - Cross-chain bridge event observation and verification
-  - `evmrelay/src/eth/bridge_event.cpp` - BridgeEventKey, EventDeduper, receipt log verification
-  - `evmrelay/src/eth/bridge_observation.cpp`
-  - `evmrelay/src/eth/chain_tracker.cpp` - Multi-chain tracking
-- **RLP Encoding** - Recursive Length Prefix encoding for Ethereum data structures
-  - Implementation: `evmrelay/src/rlp/`
-- **Contract ABIs** - ABI decoding for Ethereum smart contracts
-  - `evmrelay/src/eth/abi_decoder.cpp`
-- **Auth:** API keys stored via environment variables (`evmrelay/examples/.env` present)
-  - `evmrelay/src/eth/rpc_manager.cpp` lines 15-24: `default_env_lookup()` reads endpoint URLs from environment
+evmrelay is consumed by SuperGenius as a library:
+- `src/watcher/` orchestrator receives verified observations from evmrelay and manages message handling lifecycle
+- `src/account/` uses evmrelay's `RpcManager` to independently verify bridge events via multiple RPC endpoints before minting
 
 ### CoinGecko Price API
 

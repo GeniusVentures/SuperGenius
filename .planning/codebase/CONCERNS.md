@@ -28,6 +28,12 @@
 - Impact: Every small change to the circuit regenerates a multi-thousand-line diff that is unreviewable in code review. The files bloat the repository and increase clone times. They obscure the fact that these are generated assets.
 - Fix approach: Move circuit bytecode generation to a build step. Store the source circuit definitions (e.g., `.cpp` circuit files) and have CMake invoke the ZK toolchain to generate the IR bytecode at compile time. The generated output should go to the build directory, not the source tree.
 
+### EvmMessagingWatcher Uses Raw WebSocket eth_subscribe (Placeholder, Not evmrelay-Integrated)
+- Issue: `src/watcher/impl/evm_messaging_watcher.*` connects to a single WebSocket endpoint and constructs `eth_subscribe` JSON-RPC payloads via string concatenation. No multi-provider quorum, no receipt verification, no P2P peer discovery. This was a prototype implementation.
+- Files: `src/watcher/impl/evm_messaging_watcher.hpp`, `src/watcher/impl/evm_messaging_watcher.cpp`
+- Impact: Single point of failure for EVM bridge observation. A compromised or unavailable RPC endpoint blocks all cross-chain minting. No independent verification of observed events.
+- Fix approach: Migrate to use `evmrelay` as the Ethereum protocol library. `evmrelay` provides P2P peer discovery (discv4/discv5), multi-peer ETH subprotocol event watching, and `RpcManager` with multi-endpoint pool for independent receipt verification. `EvmMessagingWatcher` in `src/watcher/` becomes the orchestrator that receives verified observations from evmrelay and manages message handling lifecycle.
+
 ### `throw` in Utility Code Violates "No Exceptions" Policy
 - Issue: `src/base/util.hpp` throws `std::invalid_argument` exceptions in `Vector2Num()`, `Vector2Num<uint128_t>()`, and `Vector2Num<uint256_t>()`. The CLAUDE.md explicitly states: "By default, generate code without exception handling. All functions should be declared noexcept unless explicitly required to throw." The `UNREACHABLE` macro in `src/macro/unreachable.hpp` also throws.
 - Files: `src/base/util.hpp` (lines 76, 92, 108), `src/macro/unreachable.hpp` (line 16).
@@ -119,6 +125,12 @@
 - Files: `src/account/TransactionManager.cpp` (`TransferFunds`, `MintFunds`), `src/account/BridgeConsensusAdapter.cpp`.
 - Current mitigation: Some validation exists in `InputValidators.cpp` and within `UTXOManager::CreateTxParameter`, but it's distributed and incomplete.
 - Recommendations: Add a centralized input validation layer at the `TransactionManager` public API boundary that validates all transaction parameters before enqueueing. Validate address format, positive non-zero amounts, known token IDs, and supported chain IDs.
+
+### Bridge Mint Verification Gap — No evmrelay RPC Integration for Transaction Verification
+- Risk: The mint transaction path does not yet use evmrelay's `RpcManager` / `RpcReceiptSource` to independently verify bridge events via multiple RPC endpoints before minting. Mint verification currently depends on the single WebSocket observation from `EvmMessagingWatcher`.
+- Files: `src/account/MintTransaction.cpp`, `src/watcher/impl/evm_messaging_watcher.cpp`
+- Current mitigation: None. The evmrelay integration pipeline is planned but not yet implemented in the mint flow.
+- Recommendations: Integrate evmrelay's `RpcManager` for multi-provider receipt verification before constructing `MintTransaction`. Use evmrelay's `verify_receipt_log()` and `BridgeEventClaim` types to validate observed claims.
 
 ### UPnP Port Mapping Could Expose Internal Services
 - Risk: The UPnP implementation in `GeniusNode.cpp` requests port forwarding on the router. If the wrong port is mapped or the UPnP implementation has a vulnerability, internal services could be exposed to the internet.

@@ -141,9 +141,10 @@ SuperGenius/
 - Key files: `src/subscription/subscription_engine.hpp`, `src/subscription/subscriber.hpp`
 
 **`src/watcher/`:**
-- Purpose: Cross-chain event monitoring
-- Contains: MessagingWatcher (abstract base, background thread), EvmMessagingWatcher (EVM bridge via WebSocket)
+- Purpose: Bridge message handling orchestration
+- Contains: MessagingWatcher (abstract base, background thread), EvmMessagingWatcher (EVM bridge orchestrator — consumes evmrelay library)
 - Key files: `src/watcher/messaging_watcher.hpp`, `src/watcher/impl/evm_messaging_watcher.hpp`
+- Note: Current `EvmMessagingWatcher` contains placeholder code using raw WebSocket `eth_subscribe`; being migrated to use evmrelay as the Ethereum protocol library
 
 **`src/local_secure_storage/`:**
 - Purpose: Platform-native secure key storage
@@ -207,7 +208,8 @@ SuperGenius/
 - Contains: ProcessingManager (base), MNN_Image/Audio/ML processors, ImageSplitter, InputTypes; `generated/` (FlatBuffers-generated model config structs)
 
 **`evmrelay/`:**
-- Purpose: Git submodule — EVM relay bridge for cross-chain operations
+- Purpose: Git submodule — Ethereum protocol library providing watcher service (P2P discovery, event watching), public RPC list provider, and RPC connection maker
+- Consumed by: `src/watcher/` (bridge orchestrator uses evmrelay as a library for Ethereum protocol interaction), `src/account/` (mint code uses evmrelay RPC endpoints for transaction verification)
 
 **`CRDT.Datastore.TEST/`:**
 - Purpose: Standalone CRDT datastore integration test suite
