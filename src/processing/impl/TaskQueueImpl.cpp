@@ -7,6 +7,8 @@
 
 namespace sgns::processing
 {
+    base::Logger TaskQueueImplLogger();
+
     namespace
     {
         constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
@@ -15,7 +17,16 @@ namespace sgns::processing
         {
             const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
             auto                              lockData = db->Get( lockKey );
-            return !lockData.has_failure() && lockData.has_value();
+            const bool                        isLocked = !lockData.has_failure() && lockData.has_value();
+            if ( lockData.has_failure() )
+            {
+                TaskQueueImplLogger()->debug( "Failed to check lock state for task key '{}'", taskKey );
+            }
+            else if ( isLocked )
+            {
+                TaskQueueImplLogger()->debug( "Task key '{}' is currently locked", taskKey );
+            }
+            return isLocked;
         }
 
         bool LockTask( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
@@ -35,7 +46,14 @@ namespace sgns::processing
             lockData.put( lock.SerializeAsString() );
 
             auto result = db->Put( lockKey, lockData, { processingTopic } );
-            return !result.has_failure();
+            if ( result.has_failure() )
+            {
+                TaskQueueImplLogger()->debug( "Failed to lock task key '{}'", taskKey );
+                return false;
+            }
+
+            TaskQueueImplLogger()->debug( "Lock acquired for task key '{}'", taskKey );
+            return true;
         }
 
         bool MoveExpiredTaskLock( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
@@ -48,12 +66,14 @@ namespace sgns::processing
             auto                              lockData = db->Get( lockKey );
             if ( lockData.has_failure() || !lockData.has_value() )
             {
+                TaskQueueImplLogger()->debug( "No lock found to refresh for task key '{}'", taskKey );
                 return false;
             }
 
             SGProcessing::TaskLock lock;
             if ( !lock.ParseFromArray( lockData.value().data(), lockData.value().size() ) )
             {
+                TaskQueueImplLogger()->error( "Failed parsing lock for task key '{}'", taskKey );
                 return false;
             }
 
@@ -62,21 +82,29 @@ namespace sgns::processing
             const auto expirationTime = lockTimePoint + LOCK_TIMEOUT;
             if ( timestamp <= expirationTime )
             {
+                TaskQueueImplLogger()->debug( "Lock for task key '{}' has not expired yet", taskKey );
                 return false;
             }
 
             auto taskData = db->Get( sgns::crdt::HierarchicalKey( taskKey ) );
             if ( taskData.has_failure() || !taskData.has_value() )
             {
+                TaskQueueImplLogger()->error( "Failed to load expired-locked task '{}'", taskKey );
                 return false;
             }
 
             if ( !task.ParseFromArray( taskData.value().data(), taskData.value().size() ) )
             {
+                TaskQueueImplLogger()->error( "Failed parsing expired-locked task '{}'", taskKey );
                 return false;
             }
 
-            return LockTask( db, processingTopic, taskKey );
+            const bool lockMoved = LockTask( db, processingTopic, taskKey );
+            if ( lockMoved )
+            {
+                TaskQueueImplLogger()->debug( "Moved expired lock for task key '{}'", taskKey );
+            }
+            return lockMoved;
         }
     } // namespace
 
@@ -85,6 +113,19 @@ namespace sgns::processing
         // Always call base::createLogger to get the current logger
         // This will return existing logger or create new one as needed
         return base::createLogger( "TaskQueueImpl" );
+    }
+
+    std::shared_ptr<TaskQueueImpl> TaskQueueImpl::New( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                                       std::string                           processing_topic )
+    {
+        auto instance = std::shared_ptr<TaskQueueImpl>(
+            new TaskQueueImpl( std::move( db ), std::move( processing_topic ) ) );
+        return instance;
+    }
+
+    TaskQueueImpl::TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
+        db_( std::move( db ) ), processing_topic_( std::move( processing_topic ) )
+    {
     }
 
     outcome::result<void> TaskQueueImpl::EnqueueTask( const SGProcessing::Task                &task,
@@ -148,6 +189,7 @@ namespace sgns::processing
 
     bool TaskQueueImpl::GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks )
     {
+        TaskQueueImplLogger()->debug( "Fetching subtasks for task with ID: {}", taskId );
         auto querySubTasks = db_->QueryKeyValues( TaskKeys::SubTaskListKey( taskId ) );
         if ( querySubTasks.has_failure() || !querySubTasks.has_value() )
         {
@@ -155,6 +197,9 @@ namespace sgns::processing
             return false;
         }
 
+        TaskQueueImplLogger()->debug( "Found {} subtask records for task with ID: {}",
+                                      querySubTasks.value().size(),
+                                      taskId );
         for ( const auto &element : querySubTasks.value() )
         {
             SGProcessing::SubTask subTask;
@@ -185,10 +230,12 @@ namespace sgns::processing
         {
             if ( element.second.size() == 0 )
             {
+                TaskQueueImplLogger()->debug( "Skipping empty claimable task entry" );
                 continue;
             }
             const auto taskId = std::string( reinterpret_cast<const char *>( element.second.data() ),
                                              element.second.size() );
+            TaskQueueImplLogger()->debug( "Evaluating claimable task candidate with ID: {}", taskId );
 
             if ( incompatible_jobs_.find( taskId ) != incompatible_jobs_.end() )
             {
@@ -204,6 +251,7 @@ namespace sgns::processing
 
             if ( !LockTask( db_, processing_topic_, taskKey ) )
             {
+                TaskQueueImplLogger()->debug( "Skipping task with ID: {} because lock acquisition failed", taskId );
                 continue;
             }
 
@@ -222,10 +270,12 @@ namespace sgns::processing
             SGProcessing::Task task;
             if ( MoveExpiredTaskLock( db_, processing_topic_, lockedTask, task ) )
             {
+                TaskQueueImplLogger()->debug( "Recovered expired-locked task with ID: {}", task.ipfs_block_id() );
                 return std::make_pair( task.ipfs_block_id(), task );
             }
         }
 
+        TaskQueueImplLogger()->debug( "No claimable task could be grabbed" );
         return outcome::failure( boost::system::error_code{} );
     }
 
@@ -252,7 +302,13 @@ namespace sgns::processing
     {
         const sgns::crdt::HierarchicalKey resultKey( TaskKeys::ResultTaskKey( taskId ) );
         auto                              resultData = db_->Get( resultKey );
-        return resultData.has_value();
+        if ( resultData.has_failure() )
+        {
+            TaskQueueImplLogger()->debug( "Task completion lookup failed for ID '{}'", taskId );
+        }
+        const bool isCompleted = resultData.has_value();
+        TaskQueueImplLogger()->debug( "Task completion status for ID '{}': {}", taskId, isCompleted );
+        return isCompleted;
     }
 
     void TaskQueueImpl::MarkTaskBad( const std::string &taskKey )

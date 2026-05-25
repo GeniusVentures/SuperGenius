@@ -22,10 +22,8 @@ namespace sgns::processing
     class TaskQueueImpl : public ProcessingTaskQueue
     {
     public:
-        explicit TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic ) :
-            db_( std::move( db ) ), processing_topic_( std::move( processing_topic ) )
-        {
-        }
+        static std::shared_ptr<TaskQueueImpl> New( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                                                   std::string                           processing_topic );
 
         ~TaskQueueImpl() override = default;
 
@@ -47,6 +45,8 @@ namespace sgns::processing
         void MarkTaskBad( const std::string &taskKey ) override;
 
     private:
+        explicit TaskQueueImpl( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string processing_topic );
+
         std::shared_ptr<sgns::crdt::GlobalDB>          db_;
         std::string                                    processing_topic_;
         std::shared_ptr<sgns::crdt::AtomicTransaction> crdt_transaction_;
