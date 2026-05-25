@@ -253,9 +253,11 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 
 ### CSingleton as Global Service Locator
 
-**What happens:** `CComponentFactory` uses `CSingleton<T>` pattern (Meyers singleton with placement-new initialization) accessed via `SINGLETONINSTANCE(T)` macro from `src/singleton/Singleton.hpp`.
-**Why it's wrong:** Makes components hard to test in isolation without side effects; couples all consumers to the singleton instance.
-**Do this instead:** Continue using `CComponentFactory::GetComponent<T>()` for DI resolution at initialization time; prefer constructor injection of `shared_ptr` dependencies in new code rather than runtime singleton lookups.
+**What happens:** `CComponentFactory` uses `CSingleton<T>` pattern (Meyers singleton with placement-new initialization) accessed via `SINGLETONINSTANCE(T)` macro from `src/singleton/Singleton.hpp`. Components use it as a global registry to look up dependencies at runtime.
+
+**Trade-off:** Singleton service locators are conventionally discouraged because they hide a class's dependencies and can complicate testing. In practice, this codebase works around those concerns by registering mock/fake components into `CComponentFactory` before tests run, and the registry is treated as a lightweight lookup table rather than stateful singletons. The pattern has served the codebase adequately.
+
+**Guidance for new code:** Constructor injection is preferred where practical (makes dependencies explicit), but runtime lookups via `CComponentFactory::GetComponent<T>()` are acceptable given the project's existing patterns.
 
 ### Shared_ptr Everywhere
 

@@ -28,12 +28,6 @@
 - Impact: Every small change to the circuit regenerates a multi-thousand-line diff that is unreviewable in code review. The files bloat the repository and increase clone times. They obscure the fact that these are generated assets.
 - Fix approach: Move circuit bytecode generation to a build step. Store the source circuit definitions (e.g., `.cpp` circuit files) and have CMake invoke the ZK toolchain to generate the IR bytecode at compile time. The generated output should go to the build directory, not the source tree.
 
-### Zip Archives Committed to Source Tree
-- Issue: `src/crdt.zip` and `src/watcher.zip` are actual zip archives containing source code. They are committed to the repository alongside the extracted source.
-- Files: `src/crdt.zip`, `src/watcher.zip`.
-- Impact: Redundant storage (the extracted code already exists in `src/crdt/` and `src/watcher/`). Risk of divergence between the zip and the extracted source. These may be stale snapshots.
-- Fix approach: Remove the zip files from version control. Add `*.zip` to `.gitignore` for source directories. If they serve as distribution artifacts, generate them in a build or release step rather than storing them in source.
-
 ### `throw` in Utility Code Violates "No Exceptions" Policy
 - Issue: `src/base/util.hpp` throws `std::invalid_argument` exceptions in `Vector2Num()`, `Vector2Num<uint128_t>()`, and `Vector2Num<uint256_t>()`. The CLAUDE.md explicitly states: "By default, generate code without exception handling. All functions should be declared noexcept unless explicitly required to throw." The `UNREACHABLE` macro in `src/macro/unreachable.hpp` also throws.
 - Files: `src/base/util.hpp` (lines 76, 92, 108), `src/macro/unreachable.hpp` (line 16).
