@@ -1,13 +1,3 @@
-add_library(block_tree_error
-    block_tree_error.hpp
-    impl/block_tree_error.cpp
-)
-target_link_libraries(block_tree_error
-    PUBLIC
-    outcome
-)
-supergenius_install(block_tree_error)
-
 add_subdirectory(impl)
 
 add_library(block_header_repository
