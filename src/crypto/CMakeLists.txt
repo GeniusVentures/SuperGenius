@@ -11,52 +11,6 @@ target_link_libraries(hasher
 )
 supergenius_install(hasher)
 
-add_library(ed25519_types
-    ed25519_types.cpp
-    ed25519_types.hpp
-)
-target_link_libraries(ed25519_types
-    PUBLIC
-    blob
-    iroha::ed25519
-)
-supergenius_install(ed25519_types)
-
-add_library(ed25519_provider
-    ed25519/ed25519_provider_impl.cpp
-)
-target_link_libraries(ed25519_provider
-    PUBLIC
-    outcome
-    ed25519_types
-)
-supergenius_install(ed25519_provider)
-
-add_library(secp256k1_provider
-    secp256k1/secp256k1_provider_impl.cpp
-)
-target_link_libraries(secp256k1_provider
-    PUBLIC
-    libsecp256k1::secp256k1
-    outcome
-    blob
-)
-supergenius_install(
-    secp256k1_provider
-)
-
-add_library(pbkdf2_provider
-    pbkdf2/impl/pbkdf2_provider_impl.cpp
-)
-target_link_libraries(pbkdf2_provider
-    PUBLIC
-    buffer
-    outcome
-    PRIVATE
-    OpenSSL::Crypto
-)
-supergenius_install(pbkdf2_provider)
-
 add_subdirectory(keccak)
 add_subdirectory(sha)
 add_subdirectory(twox)
