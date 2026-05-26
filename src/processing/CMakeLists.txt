@@ -12,7 +12,6 @@ add_library(processing_service
     processing_subtask_result_storage.hpp
     impl/processing_subtask_result_storage_impl.cpp
     impl/TaskQueueImpl.cpp
-    impl/processing_task_queue_impl.cpp
     processing_validation_core.cpp
     processing_validation_core.hpp
 )
