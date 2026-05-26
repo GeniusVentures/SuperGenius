@@ -1,10 +1,18 @@
-#ifndef GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
-#define GRPC_FOR_SUPERGENIUS_PROCESSING_CORE_IMPL_HPP
+/**
+ * @file       processing_core_impl.hpp
+ * @brief      Header file of the Processing Core implementation that uses the ProcessingManager to execute subtasks.
+ * @date       2024-03-28
+ * @author     Justin Church (jchurch@gnus.ai)
+ *             Henrique A. Klein (hklein@gnus.ai)
+ */
+
+#pragma once
 
 #include <cmath>
 #include <memory>
 #include <iostream>
 #include <utility>
+#include <cstdint>
 
 #include <libp2p/log/configurator.hpp>
 #include <libp2p/log/logger.hpp>
@@ -14,11 +22,13 @@
 #include <libp2p/injector/kademlia_injector.hpp>
 
 #include "processing/processing_core.hpp"
+#include "processing/processing_task_queue.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "account/TokenID.hpp"
 
 // Forward declaration
-namespace sgns::sgprocessing {
+namespace sgns::sgprocessing
+{
     class ProcessingManager;
 }
 
@@ -30,94 +40,51 @@ namespace sgns::processing
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
-
-        enum class Error {
+        enum class Error
+        {
             MAX_NUMBER_SUBTASKS = 1,
             GLOBALDB_READ_ERROR,
             NO_BUFFER_FROM_JOB_DATA,
+            TASK_DESERIALIZATION_ERROR,
+            JOB_INCOMPATIBILITY_ERROR,
+            INVALID_MODEL_ERROR
         };
-        ProcessingCoreImpl(
-            std::shared_ptr<sgns::crdt::GlobalDB> db,
-            size_t maximalProcessingSubTaskCount,
-            TokenID tokenId)
-            : m_db(std::move(db))
-            , m_tokenId(std::move(tokenId))
-            , m_maximalProcessingSubTaskCount(maximalProcessingSubTaskCount)
-            , m_processingSubTaskCount(0)
-        {
-        }
 
-        ~ProcessingCoreImpl()
-        {
-        }
+        static std::shared_ptr<ProcessingCoreImpl> New( std::shared_ptr<ProcessingTaskQueue> task_queue,
+                                                        uint32_t maximalProcessingSubTaskCount,
+                                                        TokenID  tokenId );
+
+        ~ProcessingCoreImpl() = default;
+
         /** Process a single subtask.
         * @param subTask - Subtask that needs to be processed.
         * @param initialHashCode - Initial hash code used to calculate result hash.
         */
-        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
-        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override;
-
-        // Register an available processor.
-        //void RegisterProcessorFactory(const std::string& name, std::function<std::unique_ptr<ProcessingProcessor>()> factoryFunction) {
-        //    m_processorFactories[name] = std::move( factoryFunction );
-        //}
-
-        // Set the current processor by name.
-       // bool SetProcessorByName(const std::string& name) {
-       //     auto factoryFunction = m_processorFactories.find(name);
-       //     if (factoryFunction != m_processorFactories.end()) {
-       //         m_processor = factoryFunction->second();
-       //         return true;
-       //     }
-       //     std::cerr << "Unknown processor name: " << name << std::endl;
-       //     return false;
-       // }
-
-       //bool CheckRegisteredProcessor(const std::string& name)
-       // {
-       //     auto factoryFunction = m_processorFactories.find(name);
-       //     if (factoryFunction == m_processorFactories.end())
-       //     {
-       //         return false;
-       //     }
-       //     else
-       //     {
-       //         return true;
-       //     }
-       // }
-
-        // Get processing type from json data to set processor.
-        // bool SetProcessingTypeFromJson(std::string jsondata) override;
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask( const SGProcessing::SubTask &subTask,
+                                                                     uint32_t initialHashCode ) override;
 
         /** Get current processing progress.
         * @return Progress percentage (0.0 to 100.0).
         */
         float GetProgress() const override;
 
-
-        std::vector<size_t> m_chunkResulHashes;
-        std::vector<size_t> m_validationChunkHashes;
-
     private:
-        std::shared_ptr<sgns::crdt::GlobalDB> m_db;
-        TokenID                              m_tokenId;
-        //std::unique_ptr<ProcessingProcessor> m_processor;
-        //std::unordered_map<std::string, std::function<std::unique_ptr<ProcessingProcessor>()>> m_processorFactories;
-        //size_t m_subTaskProcessingTime;
-        size_t m_maximalProcessingSubTaskCount;
+        explicit ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
+                                     uint32_t                             maximalProcessingSubTaskCount,
+                                     TokenID                              tokenId );
 
-        std::mutex m_subTaskCountMutex;
-        size_t m_processingSubTaskCount;
+        outcome::result<void> IncProcessingSubTaskCount();
+        outcome::result<void> DecProcessingSubTaskCount();
 
-        mutable std::shared_ptr<sgprocessing::ProcessingManager> m_currentProcessingManager;
+        std::shared_ptr<ProcessingTaskQueue> task_queue_;
+        TokenID                              token_ID_;
+        uint32_t                             max_processing_subtask_count_;
 
-        std::map<std::string, std::shared_ptr<std::pair<std::shared_ptr<std::vector<char>>, std::shared_ptr<std::vector<char>>>>> cidData_;
-        
+        std::mutex subtask_count_mutex_;
+        uint32_t   processing_subtask_count_{ 0 };
+
+        mutable std::shared_ptr<sgprocessing::ProcessingManager> processing_manager_;
     };
 }
 
-OUTCOME_HPP_DECLARE_ERROR_2(sgns::processing, ProcessingCoreImpl::Error);
-
-
-
-#endif
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::processing, ProcessingCoreImpl::Error );
