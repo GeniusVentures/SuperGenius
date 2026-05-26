@@ -21,16 +21,20 @@ class ProcessingCore
 public:
     virtual ~ProcessingCore() = default;
 
-    /** Process a single subtask.
-    * @param subTask - Subtask that needs to be processed.
-    * @param initialHashCode - Initial hash code used to calculate result hash.
-    */
+    /**
+     * @brief       Processes a subtask and returns the result.
+     * @param[in]   subTask The subtask to process
+     * @param[in]   initialHashCode An initial hash code that can be used for processing
+     * @return      The result of processing the subtask, or failure if processing failed
+     */
     virtual outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
         const SGProcessing::SubTask& subTask, uint32_t initialHashCode) = 0;
 
-    /** Get current processing progress
-    * @return Progress percentage (0.0 to 100.0)
-    */
+
+    /**
+     * @brief       Returns the progress of the processing core as a float between 0.0 and 100.0
+     * @return      The percentage of the processing of the subtask
+     */
     virtual float GetProgress() const { return 0.0f; }
 };
 

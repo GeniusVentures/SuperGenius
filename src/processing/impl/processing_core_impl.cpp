@@ -31,8 +31,8 @@ namespace sgns::processing
 {
 
     std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
-                                                                 uint32_t                             maximalProcessingSubTaskCount,
-                                                                 TokenID                              tokenID )
+                                                                 uint32_t maximalProcessingSubTaskCount,
+                                                                 TokenID  tokenID )
     {
         if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) )
         {
@@ -100,8 +100,8 @@ namespace sgns::processing
             std::vector<std::vector<uint8_t>> chunk_hashes;
             auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value() );
 
-            BOOST_OUTCOME_TRY( DecProcessingSubTaskCount() );
-            processing_manager_.reset(); //TODO - Consider removing this member
+            DecProcessingSubTaskCount();
+            
             if ( !result_retval.has_value() )
             {
                 return result_retval.error();
@@ -122,7 +122,7 @@ namespace sgns::processing
 
         } while ( 0 );
 
-        BOOST_OUTCOME_TRY( DecProcessingSubTaskCount() );
+        DecProcessingSubTaskCount();
 
         return outcome::failure( error );
     }
@@ -149,14 +149,13 @@ namespace sgns::processing
         return outcome::success();
     }
 
-    outcome::result<void> ProcessingCoreImpl::DecProcessingSubTaskCount()
+    void ProcessingCoreImpl::DecProcessingSubTaskCount()
     {
         std::scoped_lock<std::mutex> subTaskCountLock( subtask_count_mutex_ );
         if ( processing_subtask_count_ > 0 )
         {
             --processing_subtask_count_;
         }
-        return outcome::success();
     }
 
 }
