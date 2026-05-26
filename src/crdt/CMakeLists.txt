@@ -18,6 +18,8 @@ target_link_libraries(crdt_set
     rocksdb
     hierarchical_key
     crdt_delta
+    PRIVATE
+    logger
 )
 supergenius_install(crdt_set)
 

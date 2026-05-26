@@ -506,8 +506,8 @@ namespace sgns
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
-        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::debug );
-        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::debug );
+        auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
+        auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
         auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::trace );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
@@ -530,6 +530,7 @@ namespace sgns
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
+        auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -587,6 +588,7 @@ namespace sgns
         auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
+        auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
