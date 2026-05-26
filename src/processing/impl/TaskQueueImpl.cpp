@@ -2,111 +2,12 @@
 #include <chrono>
 #include <set>
 
-#include <processingbase/ProcessingManager.hpp>
+#include "base/logger.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
+#include <processingbase/ProcessingManager.hpp>
 
 namespace sgns::processing
 {
-    base::Logger TaskQueueImplLogger();
-
-    namespace
-    {
-        constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
-
-        bool IsTaskLocked( const std::shared_ptr<sgns::crdt::GlobalDB> &db, const std::string &taskKey )
-        {
-            const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
-            auto                              lockData = db->Get( lockKey );
-            const bool                        isLocked = !lockData.has_failure() && lockData.has_value();
-            if ( lockData.has_failure() )
-            {
-                TaskQueueImplLogger()->debug( "Failed to check lock state for task key '{}'", taskKey );
-            }
-            else if ( isLocked )
-            {
-                TaskQueueImplLogger()->debug( "Task key '{}' is currently locked", taskKey );
-            }
-            return isLocked;
-        }
-
-        bool LockTask( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
-                       const std::string                           &processingTopic,
-                       const std::string                           &taskKey )
-        {
-            const auto timestamp = std::chrono::system_clock::now();
-
-            const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
-
-            SGProcessing::TaskLock lock;
-            lock.set_task_id( taskKey );
-            lock.set_lock_timestamp(
-                std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
-
-            sgns::base::Buffer lockData;
-            lockData.put( lock.SerializeAsString() );
-
-            auto result = db->Put( lockKey, lockData, { processingTopic } );
-            if ( result.has_failure() )
-            {
-                TaskQueueImplLogger()->debug( "Failed to lock task key '{}'", taskKey );
-                return false;
-            }
-
-            TaskQueueImplLogger()->debug( "Lock acquired for task key '{}'", taskKey );
-            return true;
-        }
-
-        bool MoveExpiredTaskLock( const std::shared_ptr<sgns::crdt::GlobalDB> &db,
-                                  const std::string                           &processingTopic,
-                                  const std::string                           &taskKey,
-                                  SGProcessing::Task                          &task )
-        {
-            const auto                        timestamp = std::chrono::system_clock::now();
-            const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
-            auto                              lockData = db->Get( lockKey );
-            if ( lockData.has_failure() || !lockData.has_value() )
-            {
-                TaskQueueImplLogger()->debug( "No lock found to refresh for task key '{}'", taskKey );
-                return false;
-            }
-
-            SGProcessing::TaskLock lock;
-            if ( !lock.ParseFromArray( lockData.value().data(), lockData.value().size() ) )
-            {
-                TaskQueueImplLogger()->error( "Failed parsing lock for task key '{}'", taskKey );
-                return false;
-            }
-
-            const auto lockTimePoint = std::chrono::system_clock::time_point(
-                std::chrono::milliseconds( lock.lock_timestamp() ) );
-            const auto expirationTime = lockTimePoint + LOCK_TIMEOUT;
-            if ( timestamp <= expirationTime )
-            {
-                TaskQueueImplLogger()->debug( "Lock for task key '{}' has not expired yet", taskKey );
-                return false;
-            }
-
-            auto taskData = db->Get( sgns::crdt::HierarchicalKey( taskKey ) );
-            if ( taskData.has_failure() || !taskData.has_value() )
-            {
-                TaskQueueImplLogger()->error( "Failed to load expired-locked task '{}'", taskKey );
-                return false;
-            }
-
-            if ( !task.ParseFromArray( taskData.value().data(), taskData.value().size() ) )
-            {
-                TaskQueueImplLogger()->error( "Failed parsing expired-locked task '{}'", taskKey );
-                return false;
-            }
-
-            const bool lockMoved = LockTask( db, processingTopic, taskKey );
-            if ( lockMoved )
-            {
-                TaskQueueImplLogger()->debug( "Moved expired lock for task key '{}'", taskKey );
-            }
-            return lockMoved;
-        }
-    } // namespace
 
     base::Logger TaskQueueImplLogger()
     {
@@ -243,13 +144,13 @@ namespace sgns::processing
                 continue;
             }
             const auto taskKey = TaskKeys::TaskKey( taskId );
-            if ( IsTaskLocked( db_, taskKey ) )
+            if ( IsTaskLocked( taskKey ) )
             {
                 lockedTasks.insert( taskKey );
                 continue;
             }
 
-            if ( !LockTask( db_, processing_topic_, taskKey ) )
+            if ( !LockTask( taskKey ) )
             {
                 TaskQueueImplLogger()->debug( "Skipping task with ID: {} because lock acquisition failed", taskId );
                 continue;
@@ -268,7 +169,7 @@ namespace sgns::processing
         for ( const auto &lockedTask : lockedTasks )
         {
             SGProcessing::Task task;
-            if ( MoveExpiredTaskLock( db_, processing_topic_, lockedTask, task ) )
+            if ( MoveExpiredTaskLock( lockedTask, task ) )
             {
                 TaskQueueImplLogger()->debug( "Recovered expired-locked task with ID: {}", task.ipfs_block_id() );
                 return std::make_pair( task.ipfs_block_id(), task );
@@ -315,5 +216,94 @@ namespace sgns::processing
     {
         incompatible_jobs_.insert( taskKey );
         TaskQueueImplLogger()->debug( "Marked task with ID: {} as incompatible", taskKey );
+    }
+
+    bool TaskQueueImpl::IsTaskLocked( const std::string &taskKey )
+    {
+        const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
+        auto                              lockData = db_->Get( lockKey );
+        const bool                        isLocked = !lockData.has_failure() && lockData.has_value();
+        if ( lockData.has_failure() )
+        {
+            TaskQueueImplLogger()->debug( "Failed to check lock state for task key '{}'", taskKey );
+        }
+        else if ( isLocked )
+        {
+            TaskQueueImplLogger()->debug( "Task key '{}' is currently locked", taskKey );
+        }
+        return isLocked;
+    }
+
+    bool TaskQueueImpl::LockTask( const std::string &taskKey )
+    {
+        const auto timestamp = std::chrono::system_clock::now();
+
+        const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
+
+        SGProcessing::TaskLock lock;
+        lock.set_task_id( taskKey );
+        lock.set_lock_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
+
+        sgns::base::Buffer lockData;
+        lockData.put( lock.SerializeAsString() );
+
+        auto result = db_->Put( lockKey, lockData, { processing_topic_ } );
+        if ( result.has_failure() )
+        {
+            TaskQueueImplLogger()->debug( "Failed to lock task key '{}'", taskKey );
+            return false;
+        }
+
+        TaskQueueImplLogger()->debug( "Lock acquired for task key '{}'", taskKey );
+        return true;
+    }
+
+    bool TaskQueueImpl::MoveExpiredTaskLock( const std::string &taskKey, SGProcessing::Task &task )
+    {
+        const auto                        timestamp = std::chrono::system_clock::now();
+        const sgns::crdt::HierarchicalKey lockKey( TaskKeys::LockKey( taskKey ) );
+        auto                              lockData = db_->Get( lockKey );
+        if ( lockData.has_failure() || !lockData.has_value() )
+        {
+            TaskQueueImplLogger()->debug( "No lock found to refresh for task key '{}'", taskKey );
+            return false;
+        }
+
+        SGProcessing::TaskLock lock;
+        if ( !lock.ParseFromArray( lockData.value().data(), lockData.value().size() ) )
+        {
+            TaskQueueImplLogger()->error( "Failed parsing lock for task key '{}'", taskKey );
+            return false;
+        }
+
+        const auto lockTimePoint = std::chrono::system_clock::time_point(
+            std::chrono::milliseconds( lock.lock_timestamp() ) );
+        const auto expirationTime = lockTimePoint + LOCK_TIMEOUT;
+        if ( timestamp <= expirationTime )
+        {
+            TaskQueueImplLogger()->debug( "Lock for task key '{}' has not expired yet", taskKey );
+            return false;
+        }
+
+        auto taskData = db_->Get( sgns::crdt::HierarchicalKey( taskKey ) );
+        if ( taskData.has_failure() || !taskData.has_value() )
+        {
+            TaskQueueImplLogger()->error( "Failed to load expired-locked task '{}'", taskKey );
+            return false;
+        }
+
+        if ( !task.ParseFromArray( taskData.value().data(), taskData.value().size() ) )
+        {
+            TaskQueueImplLogger()->error( "Failed parsing expired-locked task '{}'", taskKey );
+            return false;
+        }
+
+        const bool lockMoved = LockTask( taskKey );
+        if ( lockMoved )
+        {
+            TaskQueueImplLogger()->debug( "Moved expired lock for task key '{}'", taskKey );
+        }
+        return lockMoved;
     }
 }
