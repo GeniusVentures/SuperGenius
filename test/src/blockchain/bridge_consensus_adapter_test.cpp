@@ -2,6 +2,9 @@
 #include <gsl/span>
 
 #include <eth/abi_decoder.hpp>
+#include <eth/bridge_observation.hpp>
+#include <iomanip>
+#include <sstream>
 
 #include "account/BridgeConsensusAdapter.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
@@ -51,6 +54,18 @@ namespace
                 reinterpret_cast<const uint8_t *>( subject.payload().data() ),
                 subject.payload().size() ) );
         subject.set_payload_hash( payload_hash.data(), payload_hash.size() );
+    }
+
+    template <typename Bytes>
+    std::string HexLower( const Bytes &bytes )
+    {
+        std::ostringstream out;
+        out << std::hex << std::setfill( '0' );
+        for ( auto byte : bytes )
+        {
+            out << std::setw( 2 ) << static_cast<unsigned>( byte );
+        }
+        return out.str();
     }
 } // namespace
 
@@ -133,4 +148,73 @@ TEST( BridgeConsensusAdapterTest, DispatchesDecodedClaimToHandler )
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( result.value(), sgns::ConsensusManager::Check::Approve );
     EXPECT_TRUE( handler_called );
+}
+
+TEST( BridgeConsensusAdapterTest, DispatchesDecodedClaimToCertificateHandler )
+{
+    const auto claim = MakeClaim();
+    auto       subject_result = sgns::CreateBridgeEventConsensusSubject( kAccountId, claim );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    sgns::ConsensusManager::Certificate certificate;
+    certificate.mutable_proposal()->mutable_subject()->CopyFrom( subject_result.value() );
+
+    bool handler_called = false;
+    auto handler = sgns::MakeBridgeEventConsensusCertificateHandler(
+        [&handler_called, &claim](
+            const eth::BridgeEventClaim          &decoded,
+            const std::string                    &subject_hash,
+            const sgns::ConsensusManager::Certificate &certificate ) -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            handler_called = true;
+            EXPECT_EQ( subject_hash, "bridge-subject-hash" );
+            EXPECT_TRUE( certificate.has_proposal() );
+            EXPECT_EQ( decoded.tx_hash, claim.tx_hash );
+            EXPECT_EQ( decoded.amount, claim.amount );
+            return sgns::ConsensusManager::Check::Approve;
+        } );
+
+    auto result = handler( "bridge-subject-hash", certificate );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), sgns::ConsensusManager::Check::Approve );
+    EXPECT_TRUE( handler_called );
+}
+
+TEST( BridgeConsensusAdapterTest, CertificateHandlerRejectsMalformedBridgeSubject )
+{
+    auto subject_result = sgns::CreateBridgeEventConsensusSubject( kAccountId, MakeClaim() );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto subject = subject_result.value();
+    subject.set_payload( "\xff\xff\xff", 3 );
+    RefreshPayloadHash( subject );
+
+    sgns::ConsensusManager::Certificate certificate;
+    certificate.mutable_proposal()->mutable_subject()->CopyFrom( subject );
+
+    auto handler = sgns::MakeBridgeEventConsensusCertificateHandler(
+        []( const eth::BridgeEventClaim &,
+            const std::string &,
+            const sgns::ConsensusManager::Certificate & ) -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            ADD_FAILURE() << "malformed bridge subject should not dispatch";
+            return sgns::ConsensusManager::Check::Approve;
+        } );
+
+    auto result = handler( "bridge-subject-hash", certificate );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( result.value(), sgns::ConsensusManager::Check::Reject );
+}
+
+TEST( BridgeConsensusAdapterTest, CreatesMintRequestFromBridgeClaim )
+{
+    const auto claim = MakeClaim();
+    auto request = sgns::CreateBridgeEventMintRequest( claim );
+    ASSERT_TRUE( request.has_value() );
+
+    EXPECT_EQ( request.value().amount, 1000U );
+    EXPECT_EQ( request.value().chain_id, "1" );
+    EXPECT_EQ( request.value().destination, HexLower( claim.recipient ) );
+    EXPECT_EQ( request.value().transaction_hash, HexLower( eth::bridge_event_claim_hash( claim ) ) );
+    EXPECT_EQ( request.value().token_id.ToHex().substr( 62 ), "2a" );
 }

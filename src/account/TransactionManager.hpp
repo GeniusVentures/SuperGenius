@@ -17,6 +17,8 @@
 
 #include <boost/format.hpp>
 
+#include <eth/bridge_event.hpp>
+
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -452,6 +454,13 @@ namespace sgns
         void TickOnce();
 
         outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
+        outcome::result<ConsensusManager::Check> HandleBridgeEventConsensusSubject(
+            const eth::BridgeEventClaim       &claim,
+            const ConsensusManager::Subject   &subject );
+        outcome::result<ConsensusManager::Check> OnBridgeEventConsensusCertificate(
+            const eth::BridgeEventClaim          &claim,
+            const std::string                    &subject_hash,
+            const ConsensusManager::Certificate  &certificate );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
