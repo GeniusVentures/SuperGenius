@@ -37,6 +37,7 @@
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
 #include "processing/processing_subtask_enqueuer_impl.hpp"
+#include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include <Generators.hpp>
@@ -507,7 +508,7 @@ namespace sgns
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::debug );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::debug );
-        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::trace );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
         auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
@@ -518,17 +519,17 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
-        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
-        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
-        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
-        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
+        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -564,7 +565,7 @@ namespace sgns
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::err );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
-        auto loggerQueue          = ConfigureLogger( "ProcessingTaskQueueImpl", logdir, spdlog::level::err );
+        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
         auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
@@ -575,17 +576,17 @@ namespace sgns
         auto loggerUPNP           = ConfigureLogger( "UPNP", logdir, spdlog::level::err );
         auto loggerProcessingNode = ConfigureLogger( "ProcessingNode", logdir, spdlog::level::err );
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
-        auto loggerAccountMessenger  = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
-        auto loggerGeniusAccount     = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
-        auto loggerKeyPair           = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain        = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
-        auto loggerValidator         = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
-        auto loggerProcMgr           = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
-        auto loggerProcessor         = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
-        auto loggerCrdtCallback      = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
-        auto loggerCoinPrices        = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
-        auto loggerUTXOManager       = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
-        auto loggerConsensusManager  = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
+        auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
+        auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
+        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
+        auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
+        auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
+        auto loggerCrdtCallback     = ConfigureLogger( "CRDTCallbackManager", logdir, spdlog::level::err );
+        auto loggerCoinPrices       = ConfigureLogger( "CoinPrices", logdir, spdlog::level::err );
+        auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
+        auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
@@ -768,8 +769,8 @@ namespace sgns
     {
         bool ret = true;
 
-        task_queue_ = std::make_shared<processing::ProcessingTaskQueueImpl>( tx_globaldb_, processing_channel_topic_ );
-        processing_core_ = std::make_shared<processing::ProcessingCoreImpl>( tx_globaldb_, 1, dev_config_.TokenID );
+        task_queue_      = processing::TaskQueueImpl::New( tx_globaldb_, processing_channel_topic_ );
+        processing_core_ = processing::ProcessingCoreImpl::New( task_queue_, 1, dev_config_.TokenID );
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
@@ -1181,7 +1182,8 @@ namespace sgns
 
         task.set_escrow_path( escrow_path );
 
-        BOOST_OUTCOME_TRY(auto crdt_transaction, CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
+        BOOST_OUTCOME_TRY( auto crdt_transaction,
+                           CreateEscrowInfoCRDTTransaction( escrow_path, std::move( escrow_data ) ) );
 
         auto enqueue_task_return = task_queue_->EnqueueTask( task, subTasks, crdt_transaction );
         if ( enqueue_task_return.has_failure() )
@@ -1487,76 +1489,76 @@ namespace sgns
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC = __func__;
-        boost::asio::post(
-            *processing_callback_pool_,
-            [weak_self( weak_from_this() ), task_id, taskresult]()
-            {
-                if ( auto strong = weak_self.lock() )
-                {
-                    strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
-                                                strong->account_->GetAddress().substr( 0, 8 ),
-                                                FUNC,
-                                                task_id );
-                    do
-                    {
-                        if ( strong->task_queue_->IsTaskCompleted( task_id ) )
-                        {
-                            strong->node_logger_->info( "[{}]{}: Task Already completed!",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        FUNC );
-                            break;
-                        }
-                        if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
-                        {
-                            strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        FUNC );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Transactions READY",
-                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                    FUNC );
-                        auto maybe_task = strong->task_queue_->GetTask( task_id );
-                        if ( maybe_task.has_failure() )
-                        {
-                            strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
-                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                        FUNC,
-                                                        task_id );
-                            break;
-                        }
-                        auto escrow_path = maybe_task.value().escrow_path();
-                        auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
-                        if ( complete_task_result.has_failure() )
-                        {
-                            strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
-                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                         FUNC,
-                                                         task_id );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
-                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                    FUNC );
-                        auto pay_result = strong->PayEscrow( escrow_path,
-                                                             taskresult,
-                                                             std::move( complete_task_result.value() ) );
-                        if ( pay_result.has_failure() )
-                        {
-                            strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
-                                                         strong->account_->GetAddress().substr( 0, 8 ),
-                                                         FUNC,
-                                                         task_id );
-                            break;
-                        }
-                        strong->node_logger_->info( "[{}]{}: Paid for task: {}",
-                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                    FUNC,
-                                                    task_id );
+        boost::asio::post( *processing_callback_pool_,
+                           [weak_self( weak_from_this() ), task_id, taskresult]()
+                           {
+                               if ( auto strong = weak_self.lock() )
+                               {
+                                   strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
+                                                               strong->account_->GetAddress().substr( 0, 8 ),
+                                                               FUNC,
+                                                               task_id );
+                                   do
+                                   {
+                                       if ( strong->task_queue_->IsTaskCompleted( task_id ) )
+                                       {
+                                           strong->node_logger_->info( "[{}]{}: Task Already completed!",
+                                                                       strong->account_->GetAddress().substr( 0, 8 ),
+                                                                       FUNC );
+                                           break;
+                                       }
+                                       if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
+                                       {
+                                           strong->node_logger_->info( "[{}]{}: Transactions are not ready",
+                                                                       strong->account_->GetAddress().substr( 0, 8 ),
+                                                                       FUNC );
+                                           break;
+                                       }
+                                       strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                                                   strong->account_->GetAddress().substr( 0, 8 ),
+                                                                   FUNC );
+                                       auto maybe_task = strong->task_queue_->GetTask( task_id );
+                                       if ( maybe_task.has_failure() )
+                                       {
+                                           strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
+                                                                       strong->account_->GetAddress().substr( 0, 8 ),
+                                                                       FUNC,
+                                                                       task_id );
+                                           break;
+                                       }
+                                       auto escrow_path          = maybe_task.value().escrow_path();
+                                       auto complete_task_result = strong->task_queue_->CompleteTask( task_id,
+                                                                                                      taskresult );
+                                       if ( complete_task_result.has_failure() )
+                                       {
+                                           strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
+                                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                                        FUNC,
+                                                                        task_id );
+                                           break;
+                                       }
+                                       strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                                                   strong->account_->GetAddress().substr( 0, 8 ),
+                                                                   FUNC );
+                                       auto pay_result = strong->PayEscrow( escrow_path,
+                                                                            taskresult,
+                                                                            std::move( complete_task_result.value() ) );
+                                       if ( pay_result.has_failure() )
+                                       {
+                                           strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
+                                                                        strong->account_->GetAddress().substr( 0, 8 ),
+                                                                        FUNC,
+                                                                        task_id );
+                                           break;
+                                       }
+                                       strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                                                   strong->account_->GetAddress().substr( 0, 8 ),
+                                                                   FUNC,
+                                                                   task_id );
 
-                    } while ( 0 );
-                }
-            } );
+                                   } while ( 0 );
+                               }
+                           } );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
@@ -1789,8 +1791,9 @@ namespace sgns
         return transaction_manager_;
     }
 
-    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateEscrowInfoCRDTTransaction( std::string        path,
-                                                                                          sgns::base::Buffer value )
+    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateEscrowInfoCRDTTransaction(
+        std::string        path,
+        sgns::base::Buffer value )
     {
         auto crdt_transaction = tx_globaldb_->BeginTransaction();
 

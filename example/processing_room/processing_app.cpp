@@ -75,7 +75,7 @@ namespace
 
         outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
                                            const std::list<SGProcessing::SubTask>  &subTasks,
-                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) override
+                                           std::shared_ptr<sgns::crdt::AtomicTransaction> crdt_transaction ) override
         {
             (void)crdt_transaction;
             m_tasks.push_back( task );
@@ -127,7 +127,7 @@ namespace
             return true;
         }
 
-        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+        outcome::result<std::shared_ptr<sgns::crdt::AtomicTransaction>> CompleteTask(
             const std::string              &taskKey,
             const SGProcessing::TaskResult &task ) override
         {

@@ -17,6 +17,9 @@
 
 namespace fs = std::filesystem;
 
+using namespace sgns;
+
+
 /**
  * @brief Test parameters for migration.
  */

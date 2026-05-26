@@ -19,6 +19,7 @@
 #include <boost/multiprecision/cpp_dec_float.hpp>
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
+using namespace sgns;
 using namespace sgns::test;
 using boost::multiprecision::cpp_dec_float_50;
 

@@ -30,7 +30,7 @@
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
 #include "singleton/IComponent.hpp"
-#include "processing/impl/processing_task_queue_impl.hpp"
+#include "processing/processing_task_queue.hpp"
 #include "coinprices/coinprices.hpp"
 #include "blockchain/Blockchain.hpp"
 #include <boost/algorithm/string/replace.hpp>
@@ -42,11 +42,11 @@
  */
 typedef struct DevConfig
 {
-    std::string Addr;             ///< Developer payout address.
-    std::string Cut;              ///< Developer or peer cut encoded as a string.
-    std::string TokenValueInGNUS; ///< Conversion rate used for child-token.
-    TokenID     TokenID;          ///< Child token identifier configured for this node.
-    std::string BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
+    std::string   Addr;             ///< Developer payout address.
+    std::string   Cut;              ///< Developer or peer cut encoded as a string.
+    std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
+    sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
+    std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;
@@ -594,7 +594,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
         std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
-        std::shared_ptr<processing::ProcessingTaskQueueImpl>  task_queue_;          ///< Processing task queue.
+        std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
@@ -708,7 +708,7 @@ namespace sgns
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
-        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+        outcome::result<std::shared_ptr<TransactionManager>>      GetTransactionManager() const;
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
             sgns::base::Buffer value );

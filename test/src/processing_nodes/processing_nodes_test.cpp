@@ -18,9 +18,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static std::shared_ptr<GeniusNode> node_main;
-    static std::shared_ptr<GeniusNode> node_proc1;
-    static std::shared_ptr<GeniusNode> node_proc2;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -43,9 +43,9 @@ protected:
                                             true,
                                             40054,
                                             true );
-        Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
-        test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+        sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
                                       std::chrono::milliseconds( 30000 ),
                                       "node_proc1 not ready" );
 
@@ -68,10 +68,10 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
-        test::assertWaitForCondition( [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
+        sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
                                       std::chrono::milliseconds( 30000 ),
                                       "node_main not ready" );
-        test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+        sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
                                       std::chrono::milliseconds( 30000 ),
                                       "node_proc2 not ready" );
     }
@@ -139,13 +139,13 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
-    test::assertWaitForCondition( [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
+    sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 20000 ),
                                   "Main node not synced" );
-    test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+    sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 20000 ),
                                   "Node proc 1 not synced" );
-    test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+    sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 20000 ),
                                   "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
@@ -153,17 +153,17 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
-                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
                            "",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
-                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
-    int transcount_node1 = node_proc1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
-    int transcount_node2 = node_proc2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_main  = node_main->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node1 = node_proc1->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node2 = node_proc2->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -469,7 +469,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",
-                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                              std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
@@ -484,7 +484,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
