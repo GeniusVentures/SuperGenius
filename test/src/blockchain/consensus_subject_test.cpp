@@ -580,3 +580,110 @@ TEST( ConsensusSubjectTest, WitnessHardening_NoCommitmentNoUTXOParams_StillValid
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
 }
+
+// --- Phase 01 Plan 02: Tracking Lifecycle tests (TRACK-01) ---
+
+TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
+{
+    // Given: A NonceSubject with valid embedded transaction_data and commitment
+    // that would reach Check::Approve in the handler — temp VERIFYING entry persisted
+    const std::string          tx_type = "transfer";
+    const std::vector<uint8_t> tx_data = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        42,
+        "tx-hash-approve",
+        tx_type,
+        tx_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Then: All fields needed for tracking are preserved
+    EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-approve" );
+    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
+    EXPECT_EQ( nonce.value().transaction_data(), tx_data );
+    EXPECT_FALSE( nonce.value().has_utxo_commitment() );
+}
+
+TEST( ConsensusSubjectTest, Tracking_RejectClearsTempEntryState )
+{
+    // Given: A NonceSubject that would trigger reject (empty transaction_data)
+    // Handler must remove temp VERIFYING entry before returning Reject
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        7,
+        "tx-hash-reject",
+        std::string{},
+        std::vector<uint8_t>{},
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Then: Empty transaction_data detectable — handler returns Reject and cleans up
+    EXPECT_TRUE( nonce.value().transaction_data().empty() );
+    EXPECT_FALSE( nonce.value().has_utxo_commitment() );
+}
+
+TEST( ConsensusSubjectTest, Tracking_CertificatePromotesConfirmedState )
+{
+    // Given: A NonceSubject with valid fields that would reach Check::Approve
+    // OnConsensusCertificate promotes temp VERIFYING entry to CONFIRMED
+    const std::vector<uint8_t> tx_data      = { 0x01, 0x02, 0x03 };
+    const std::string          consumed_root( 32, '\x01' );
+    const std::string          produced_root( 32, '\x02' );
+    auto                       commitment = MakeTestCommitment( consumed_root, produced_root );
+
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        42,
+        "tx-hash-certificate",
+        "transfer",
+        tx_data,
+        commitment,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Then: Commitment and transaction data both present — promotion possible
+    EXPECT_TRUE( nonce.value().has_utxo_commitment() );
+    EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
+    EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
+    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+}
+
+TEST( ConsensusSubjectTest, Tracking_RejectDoesNotEraseConfirmedEntry )
+{
+    // Given: A NonceSubject that would reject but the reject path discriminates
+    // Only VERIFYING entries are erased; CONFIRMED (CRDT-sourced) are untouched
+    const std::string consumed_root( 32, '\x01' );
+    const std::string produced_root( 32, '\x02' );
+
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-confirmed",
+        "transfer",
+        std::vector<uint8_t>{ 0x01 },
+        MakeTestCommitment( consumed_root, produced_root ),
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Then: Commitment + tx data present — reject clears only VERIFYING, not CONFIRMED
+    EXPECT_TRUE( nonce.value().has_utxo_commitment() );
+    EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
+    EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
+    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+}
