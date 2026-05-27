@@ -11,59 +11,87 @@
 #include "crdt/atomic_transaction.hpp"
 #include <list>
 
-using namespace sgns;
-
-class ProcessingTaskQueue
+namespace sgns::processing
 {
-    /**
-     * @brief Distributed task queue interface.
-     *
-     * Provides enqueue, retrieval, and completion tracking for tasks and their
-     * subtasks.
-     */
-public:
-    virtual ~ProcessingTaskQueue() = default;
+    class ProcessingTaskQueue
+    {
+        /**
+         * @brief Distributed task queue interface.
+         *
+         * Provides enqueue, retrieval, and completion tracking for tasks and their
+         * subtasks.
+         */
+    public:
+        virtual ~ProcessingTaskQueue() = default;
 
-    /** Enqueues a task with subtasks that the task has been split to
-    * @param task - task to enqueue
-    * @param subTasks - list of subtasks that the task has been split to
-    */
-    virtual outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                               const std::list<SGProcessing::SubTask> &subTasks ) = 0;
+        /**
+         * @brief       Stores a task with its subtasks
+         * @param[in]   task The task to store
+         * @param[in]   subTasks The subtasks to store
+         * @return      Success if the task and subtasks were stored successfully, failure otherwise
+         */
+        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
+                                           const std::list<SGProcessing::SubTask> &subTasks )
+        {
+            return EnqueueTask( task, subTasks, nullptr );
+        }
 
-    /** Returns a list of subtasks linked to taskId
-    * @param taskId - task id
-    * @param subTasks - list of found subtasks
-    * @return false if task not found
-    */
-    virtual bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) = 0;
+        /**
+         * @brief       Stores a task with its subtasks within an atomic transaction
+         * @param[in]   task The task to store
+         * @param[in]   subTasks The subtasks to store
+         * @param[in]   crdt_transaction The atomic transaction to use
+         * @return      Success if the task and subtasks were stored successfully, failure otherwise
+         */
+        virtual outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
+                                                   const std::list<SGProcessing::SubTask>  &subTasks,
+                                                   std::shared_ptr<crdt::AtomicTransaction> crdt_transaction ) = 0;
 
-    /** Grabs a task from task queue
-    * @return taskId - task id
-    * @return task
-    */
-    virtual outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() = 0;
+        /**
+        * @brief       Returns a task by task id, returns failure if task not found or invalid
+        * @param[in]   taskId the ID of the task
+        * @return      The task if found, failure otherwise
+        */
+        virtual outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) = 0;
 
-    /** Handles task completion
-    * @param taskId - task id
-    * @param result - task result
-    */
-    virtual outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
-        const std::string              &taskId,
-        const SGProcessing::TaskResult &result ) = 0;
+        /**
+         * @brief       Retrieves the subtasks for a given task ID.
+         * @param[in]   taskId The ID of the task for which to retrieve subtasks.
+         * @param[in]   subTasks A reference to a list where the retrieved subtasks will be stored.
+         * @return      true if the subtasks were retrieved successfully, false otherwise.
+         */
+        virtual bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) = 0;
 
-    /**
-     * @brief Checks if the task is completed.
-     * @param[in] taskId Task id.
-     * @return true if the task is completed, false otherwise.
-     */
-    virtual bool IsTaskCompleted( const std::string &taskId ) = 0;
+        /**
+         * @brief       Grabs task from the storage, returning its ID and data.
+         * @return      A pair of task ID and task data if a task is found, failure otherwise.
+         */
+        virtual outcome::result<std::pair<std::string, SGProcessing::Task>> GrabTask() = 0;
+        
+        /**
+         * @brief       Completes a task with its result returning an atomic transaction to commit the completion.
+         * @param[in]   taskId The ID of the task to complete
+         * @param[in]   result The result of the completed task
+         * @return      A CRDT atomic transaction if the task completion was successful, failure otherwise
+         */
+        virtual outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+            const std::string              &taskId,
+            const SGProcessing::TaskResult &result ) = 0;
 
-    /**
-     * @brief Mark a task key as bad to be skipped.
-     * @param[in] taskKey Task key to mark as bad.
-     */
-    virtual void MarkTaskBad( const std::string &taskKey ) = 0;
-};
+        /**
+         * @brief Checks if the task is completed.
+         * @param[in] taskId Task id.
+         * @return true if the task is completed, false otherwise.
+         */
+        virtual bool IsTaskCompleted( const std::string &taskId ) = 0;
+
+        /**
+         * @brief Mark a task key as bad to be skipped.
+         * @param[in] taskKey Task key to mark as bad.
+         */
+        virtual void MarkTaskBad( const std::string &taskKey ) = 0;
+    };
+}
+
 
 #endif // GRPC_FOR_SUPERGENIUS_PROCESSING_TASK_QUEUE_HPP

@@ -13,6 +13,7 @@
 #include "testutil/mint_source_hash.hpp"
 
 using namespace sgns::test;
+using namespace sgns;
 
 static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
@@ -30,7 +31,7 @@ public:
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
         }
-        node_ = GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
+        node_ = sgns::GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
                                  "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
                                  false,
                                  true,
@@ -44,10 +45,10 @@ public:
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
-    std::shared_ptr<GeniusNode> node_;
+    std::shared_ptr<sgns::GeniusNode> node_;
 };
 
-using namespace sgns;
+
 
 TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
 {

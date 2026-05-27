@@ -46,6 +46,9 @@ extern "C"
 /// Patch version number.
 #define SUPERGENIUS_VERSION_PATCH @PROJECT_VERSION_PATCH@
 
+/// Processing schema/data version number for task queue keys.
+#define SUPERGENIUS_PROCESSING_VERSION @SUPERGENIUS_PROCESSING_VERSION@
+
 /**
   * @brief Pre-release identifier.
   *

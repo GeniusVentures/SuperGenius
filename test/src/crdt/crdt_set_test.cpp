@@ -253,4 +253,49 @@ namespace sgns::crdt
     }
 
   }
+
+  TEST(CrdtSetTest, TestTombstoneAcrossDifferentCIDsAndQuery)
+  {
+    const std::string strNamespace = "/namespace";
+    const std::string key = "claimable/task_x";
+    const std::string value = "task_x";
+    const uint64_t priority = 1;
+    const std::string cidA = "CID_A";
+    const std::string cidB = "CID_B";
+
+    std::string databasePath = "supergenius_crdt_set_test_tombstone_diff_cids";
+    fs::remove_all(databasePath);
+
+    rocksdb::Options options;
+    options.create_if_missing = true;
+
+    auto dataStoreResult = rocksdb::create(databasePath, options);
+    auto dataStore = dataStoreResult.value();
+
+    auto crdtSet = CrdtSet(dataStore, HierarchicalKey(strNamespace));
+
+    auto addDelta = std::make_shared<CrdtSet::Delta>();
+    addDelta->set_priority(priority);
+    auto addElement = addDelta->add_elements();
+    addElement->set_key(key);
+    addElement->set_value(value);
+
+    // Simulate creation being merged under CID_A.
+    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge(*addDelta, cidA));
+    EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(key), true);
+
+    EXPECT_OUTCOME_TRUE(removeDelta, crdtSet.CreateDeltaToRemove(key));
+    ASSERT_EQ(removeDelta->tombstones_size(), 1);
+    const auto tombId = removeDelta->tombstones(0).id();
+    EXPECT_FALSE(tombId.empty());
+
+    // Simulate deletion being published under CID_B.
+    EXPECT_OUTCOME_TRUE_1(crdtSet.Merge(*removeDelta, cidB));
+    EXPECT_OUTCOME_EQ(crdtSet.IsValueInSet(key), false);
+    EXPECT_OUTCOME_EQ(crdtSet.InTombsKeyID(key, tombId), true);
+
+    // Prefix query should not return the tombstoned key anymore.
+    EXPECT_OUTCOME_TRUE(queryAfterDelete, crdtSet.QueryElements(key, CrdtSet::QuerySuffix::QUERY_VALUESUFFIX));
+    EXPECT_TRUE(queryAfterDelete.empty());
+  }
 }
