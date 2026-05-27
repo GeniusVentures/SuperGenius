@@ -3715,6 +3715,33 @@ namespace sgns
             return ConsensusManager::Check::Reject;
         }
 
+        // BIND-01: Commitment-tx binding cross-check
+        if ( nonce_subject.value().has_utxo_commitment() )
+        {
+            if ( !tx->HasUTXOParameters() )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Subject has UTXO commitment but deserialized tx lacks "
+                    "UTXO parameters — possible malicious embedding, rejecting tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                return ConsensusManager::Check::Reject;
+            }
+
+            auto reconstructed = BuildUTXOTransitionCommitment( tx );
+            if ( !reconstructed.has_value() ||
+                 reconstructed->consumed_outpoints_root() !=
+                     nonce_subject.value().utxo_commitment().consumed_outpoints_root() ||
+                 reconstructed->produced_outputs_root() !=
+                     nonce_subject.value().utxo_commitment().produced_outputs_root() )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Commitment-tx binding mismatch — "
+                    "reconstructed commitment differs from subject claim for tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                return ConsensusManager::Check::Reject;
+            }
+        }
+
         // TRACK-01: Insert temporary tracking entry (per D-01: on proposal arrival after deserialization)
         uint64_t          tracked_nonce  = tx->GetNonce();
         TransactionStatus tracked_status = TransactionStatus::VERIFYING;
@@ -4301,6 +4328,17 @@ namespace sgns
 
         if ( !tx->HasUTXOParameters() )
         {
+            // BIND-01: Hardened early-return — if subject claims UTXO commitment
+            // but tx lacks UTXO params, this is Pitfall 5 bypass → reject as INVALID
+            if ( nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment() )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Subject has UTXO commitment "
+                    "but tx has no UTXO params — rejecting tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                    tx->GetHash() );
+                return WitnessValidationResult::INVALID;
+            }
             TransactionManagerLogger()->debug( "[{} - full: {}] {}: Tx has no UTXO params, accepting tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
