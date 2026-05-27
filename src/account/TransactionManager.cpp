@@ -3659,28 +3659,63 @@ namespace sgns
         const std::string tx_hash = nonce_subject.value().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
-        std::shared_ptr<IGeniusTransactions> tracked_tx;
-        uint64_t                             tracked_nonce  = 0;
-        TransactionStatus                    tracked_status = TransactionStatus::INVALID;
+        // DESER-01: Deserialize from embedded bytes instead of CRDT lookup
+        const auto &tx_data = nonce_subject.value().transaction_data();
+        if ( tx_data.empty() )
         {
-            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-            auto                                it = tx_processed_m.find( key );
-            if ( it == tx_processed_m.end() )
-            {
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction not found for hash {}, pending",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx_hash );
-                return ConsensusManager::Check::Pending;
-            }
-
-            tracked_tx     = it->second.tx;
-            tracked_nonce  = it->second.cached_nonce;
-            tracked_status = it->second.status;
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty embedded tx data, rejecting",
+                                               account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__ );
+            return ConsensusManager::Check::Reject;
         }
 
-        if ( !tracked_tx )
+        auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
+        if ( tx_result.has_error() )
+        {
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Failed to deserialize embedded tx for hash {}",
+                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+            return ConsensusManager::Check::Reject;
+        }
+        auto tx = tx_result.value();
+
+        // Hash binding verification — cryptographic integrity gate
+        if ( tx->GetHash() != tx_hash )
+        {
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Hash binding mismatch, tx->GetHash() != subject.tx_hash for {}",
+                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+            return ConsensusManager::Check::Reject;
+        }
+
+        // TRACK-01: Insert temporary tracking entry (per D-01: on proposal arrival after deserialization)
+        uint64_t          tracked_nonce  = tx->GetNonce();
+        TransactionStatus tracked_status = TransactionStatus::VERIFYING;
+        {
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto it = tx_processed_m.find( key );
+            if ( it == tx_processed_m.end() )
+            {
+                tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::VERIFYING, tracked_nonce } );
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] {}: Inserted temp tracking entry for embedded tx {}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+            }
+            else if ( it->second.status == TransactionStatus::FAILED )
+            {
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] {}: Transaction {} previously FAILED, rejecting",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                return ConsensusManager::Check::Reject;
+            }
+            else
+            {
+                // Entry already exists with higher-status — use its values for downstream checks
+                tracked_status = it->second.status;
+                tracked_nonce = it->second.cached_nonce;
+            }
+        }
+
+        if ( !tx )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3700,13 +3735,13 @@ namespace sgns
                                                reason );
 
             // Ensure local outgoing invalid transactions don't stay in VERIFYING forever.
-            if ( tracked_tx->GetSrcAddress() == account_m->GetAddress() )
+            if ( tx->GetSrcAddress() == account_m->GetAddress() )
             {
-                auto current_out_status = GetOutgoingStatusByTxId( tracked_tx->GetHash() );
+                auto current_out_status = GetOutgoingStatusByTxId( tx->GetHash() );
                 if ( current_out_status != TransactionStatus::FAILED &&
                      current_out_status != TransactionStatus::CONFIRMED )
                 {
-                    if ( auto fail_result = ChangeTransactionState( tracked_tx, TransactionStatus::FAILED );
+                    if ( auto fail_result = ChangeTransactionState( tx, TransactionStatus::FAILED );
                          fail_result.has_error() )
                     {
                         TransactionManagerLogger()->error(
@@ -3733,7 +3768,7 @@ namespace sgns
             return reject_and_maybe_fail_local( "nonce mismatch" );
         }
 
-        if ( !subject.account_id().empty() && tracked_tx->GetSrcAddress() != subject.account_id() )
+        if ( !subject.account_id().empty() && tx->GetSrcAddress() != subject.account_id() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Account mismatch for hash {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -3753,7 +3788,7 @@ namespace sgns
             return reject_and_maybe_fail_local( "transaction already failed" );
         }
 
-        if ( HasConfirmedInputConflict( tracked_tx ) )
+        if ( HasConfirmedInputConflict( tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Outpoint conflict against finalized transaction "
                                                "for hash {}",
@@ -3764,7 +3799,7 @@ namespace sgns
             return reject_and_maybe_fail_local( "input outpoint already finalized by another transaction" );
         }
 
-        const auto witness_validation = ValidateWitnessForConsensus( subject, tracked_tx );
+        const auto witness_validation = ValidateWitnessForConsensus( subject, tx );
         if ( witness_validation == WitnessValidationResult::INVALID )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Witness validation failed for hash {}",
@@ -3775,7 +3810,7 @@ namespace sgns
             return reject_and_maybe_fail_local( "witness validation failed" );
         }
 
-        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tracked_tx ) )
+        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
             MigrationAllowList allow_list( globaldb_m->GetDataStore(), migration_tx->GetFromVersion() );
             auto eligibility_result = allow_list.IsEligible( migration_tx->GetSrcAddress(), migration_tx->GetAmount() );
@@ -3797,7 +3832,7 @@ namespace sgns
             }
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tracked_tx );
+        auto validate_result = ValidateTransactionForConsensus( tx );
 
         if ( !validate_result )
         {
