@@ -234,3 +234,76 @@ TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
     EXPECT_FALSE( sgns::ConsensusManagerTestAccess::ValidateSubject( subject ) );
     EXPECT_FALSE( sgns::ConsensusManagerTestAccess::CheckSubject( subject ) );
 }
+
+TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataRoundTrip )
+{
+    // Given: A valid transaction's serialized bytes and type tag
+    const std::string         tx_type = "transfer";
+    const std::vector<uint8_t> tx_data = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+    // When: CreateNonceSubject embeds the transaction data in the subject
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        42,
+        "tx-hash-embedded",
+        tx_type,
+        tx_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: DecodeNonceSubject retrieves the embedded transaction_type and transaction_data
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value().nonce(), 42U );
+    EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-embedded" );
+    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
+    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
+}
+
+TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
+{
+    // Given: NonceSubject created with empty transaction_type and empty transaction_data
+    // (default values when transaction data is not available — e.g., test paths or legacy)
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        7,
+        "tx-hash",
+        std::string{},
+        std::vector<uint8_t>{},
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value().nonce(), 7U );
+    EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
+    EXPECT_TRUE( nonce.value().transaction_type().empty() );
+    EXPECT_TRUE( nonce.value().transaction_data().empty() );
+}
+
+TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
+{
+    // Given: Transaction data up to 64KB (max expected embedded size)
+    const std::string         tx_type = "migration";
+    const std::vector<uint8_t> tx_data( 64 * 1024, 0xAA ); // 64KB of 0xAA
+
+    // When: NonceSubject is created with large embedded data
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        999,
+        "tx-hash-large",
+        tx_type,
+        tx_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: Decoded subject preserves all embedded data
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
+    EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
+    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
+}
