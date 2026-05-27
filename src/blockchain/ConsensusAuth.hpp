@@ -105,8 +105,7 @@ namespace sgns
         }
 
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( signing_bytes.value().data(), signing_bytes.value().size() ) );
+        auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 

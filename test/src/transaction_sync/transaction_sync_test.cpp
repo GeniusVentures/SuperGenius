@@ -24,6 +24,8 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 
+using namespace sgns;
+
 namespace sgns
 {
     class TransactionSyncTest : public ::testing::Test

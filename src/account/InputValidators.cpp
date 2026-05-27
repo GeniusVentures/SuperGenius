@@ -23,11 +23,12 @@ namespace sgns
         using utxo_merkle::AppendUInt64BE;
         using utxo_merkle::ReadUInt32BE;
         using utxo_merkle::ReadUInt64BE;
+        using namespace input_validator_constants;
 
         std::vector<uint8_t> SerializeOutpointLeafPayload( const base::Hash256 &txid_hash, uint32_t output_index )
         {
             std::vector<uint8_t> payload;
-            payload.reserve( 32 + 4 );
+            payload.reserve( HASH256_BYTES + SERIALIZED_UINT32_BYTES );
             payload.insert( payload.end(), txid_hash.begin(), txid_hash.end() );
             AppendUInt32BE( payload, output_index );
             return payload;
@@ -40,7 +41,8 @@ namespace sgns
                                                          uint64_t                 amount )
         {
             std::vector<uint8_t> payload;
-            payload.reserve( 32 + 4 + 4 + owner_address.size() + token_bytes.size() + 8 );
+            payload.reserve( HASH256_BYTES + SERIALIZED_UINT32_BYTES + SERIALIZED_UINT32_BYTES + owner_address.size() +
+                             token_bytes.size() + SERIALIZED_UINT64_BYTES );
             payload.insert( payload.end(), txid_hash.begin(), txid_hash.end() );
             AppendUInt32BE( payload, output_index );
             AppendUInt32BE( payload, static_cast<uint32_t>( owner_address.size() ) );
@@ -284,37 +286,43 @@ namespace sgns
             const auto &proof = *proof_it->second;
 
             const auto &payload = proof.leaf_payload();
-            if ( payload.size() < 32 + 4 + 4 + 32 + 8 )
+            if ( payload.size() <
+                 OWNER_ADDRESS_OFFSET + TOKEN_ID_BYTES_IN_PAYLOAD + AMOUNT_BYTES_IN_PAYLOAD )
             {
                 return false;
             }
 
             auto payload_hash_result = base::Hash256::fromSpan(
-                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( payload.data() ) ), 32 ) );
+                gsl::span( reinterpret_cast<uint8_t *>( const_cast<char *>( payload.data() ) ), HASH256_BYTES ) );
             if ( payload_hash_result.has_error() || payload_hash_result.value() != input.txid_hash_ )
             {
                 return false;
             }
-            const auto payload_output_idx = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 32 );
+            const auto payload_output_idx =
+                ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + OUTPUT_INDEX_OFFSET );
             if ( payload_output_idx != input.output_idx_ )
             {
                 return false;
             }
-            const auto owner_len = ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + 36 );
-            if ( payload.size() < 40 + owner_len + 32 + 8 )
+            const auto owner_len =
+                ReadUInt32BE( reinterpret_cast<const uint8_t *>( payload.data() ) + OWNER_ADDRESS_LENGTH_OFFSET );
+            if ( payload.size() <
+                 OWNER_ADDRESS_OFFSET + owner_len + TOKEN_ID_BYTES_IN_PAYLOAD + AMOUNT_BYTES_IN_PAYLOAD )
             {
                 return false;
             }
-            const std::string payload_owner( payload.data() + 40, payload.data() + 40 + owner_len );
+            const std::string payload_owner( payload.data() + OWNER_ADDRESS_OFFSET,
+                                             payload.data() + OWNER_ADDRESS_OFFSET + owner_len );
             const bool delegated_escrow_spend =
-                payload_owner != tx->GetSrcAddress() && tx->GetType() == "transfer" && input.output_idx_ == 0 &&
+                payload_owner != tx->GetSrcAddress() && tx->GetType() == TRANSFER_TX_TYPE &&
+                input.output_idx_ == ESCROW_LOCK_OUTPUT_INDEX &&
                 utxo_address::IsEscrowLockAddress( payload_owner ) && tx->GetUncleHash() == payload_owner;
             if ( payload_owner != tx->GetSrcAddress() && !delegated_escrow_spend )
             {
                 return false;
             }
-            const size_t      token_offset  = 40 + owner_len;
-            const size_t      amount_offset = token_offset + 32;
+            const size_t      token_offset  = OWNER_ADDRESS_OFFSET + owner_len;
+            const size_t      amount_offset = token_offset + TOKEN_ID_BYTES_IN_PAYLOAD;
             const std::string token_key( payload.data() + token_offset, payload.data() + amount_offset );
             const uint64_t    input_amount = ReadUInt64BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
                                                         amount_offset );

@@ -15,7 +15,9 @@ on:
         description: 'Tag for zkLLVM dependencies (defaults to main tag if not specified)'
         required: false
         type: string
-
+permissions:
+  contents: write
+  packages: read
 jobs:
   build:
     env:
@@ -88,7 +90,7 @@ jobs:
         run: |
           echo "=== PRE-CLEANUP DEBUG ==="
           echo "Current working directory: $(pwd)"
-          echo "Runner workspace: ${{runner.workspace}}"
+          echo "Runner workspace: ${RUNNER_WORKSPACE}"
           echo "GitHub workspace: ${{github.workspace}}"
 
           echo "=== CLEANUP ARTIFACTS ==="
@@ -119,6 +121,8 @@ jobs:
             ls -la SuperGenius/ 2>/dev/null || echo "  (empty)"
           fi
         shell: bash
+        env:
+          RUNNER_WORKSPACE: ${{runner.workspace}}
 
       - name: Clean workspace (self-hosted runners - Windows)
         if: ${{ runner.environment == 'self-hosted' && matrix.target == 'Windows' }}
@@ -159,11 +163,12 @@ jobs:
           }
 
       - name: Checkout SuperGenius repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           path: "SuperGenius"
           submodules: "recursive"
           ref: ${{ github.event.inputs.tag }}
+          persist-credentials: true # We need the credentials for uploading the release later
 
       - name: Set build directory
         run: |
@@ -177,9 +182,12 @@ jobs:
 
       - name: Download thirdparty release
         working-directory: ${{github.workspace}}
+        shell: bash
+        env:
+          THIRDPARTY_TAG: ${{github.event.inputs.thirdparty_tag || github.event.inputs.tag}}
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
         run: |
-          TAG_NAME="${{ github.event.inputs.tag }}"
-          THIRDPARTY_TAG="${{ github.event.inputs.thirdparty_tag || github.event.inputs.tag }}"
+          TAG_NAME="${GITHUB_EVENT_INPUTS_TAG}"
           echo "Building for tag: ${TAG_NAME}"
           echo "Using thirdparty tag: ${THIRDPARTY_TAG}"
 
@@ -207,13 +215,11 @@ jobs:
             echo "THIRDPARTY_BUILD_DIR=$(pwd)/${BUILD_DIRECTORY}" >> $GITHUB_ENV
           fi
 
-        shell: bash
-
       - name: Download zkLLVM release
         working-directory: ${{github.workspace}}
+        shell: bash
         run: |
-          TAG_NAME="${{ github.event.inputs.tag }}"
-          ZKLLVM_TAG="${{ github.event.inputs.zkllvm_tag || github.event.inputs.tag }}"
+          TAG_NAME="${GITHUB_EVENT_INPUTS_TAG}"
           echo "Using zkLLVM tag: ${ZKLLVM_TAG}"
           
           mkdir zkLLVM
@@ -236,7 +242,6 @@ jobs:
 
           tar --exclude='*bin/assigner' --exclude='*bin/clang-zkllvm' --exclude='*bin/llvm-link-zkllvm' --exclude='*bin/transpiler' -xzf "${ZKLLVM_FILE_NAME}"
 
-                    
           # Set ZKLLVM_BUILD_DIR to the actual location where files were extracted
 
           if [ "${{ matrix.target }}" = "Windows" ]; then
@@ -245,7 +250,9 @@ jobs:
           else
             echo "ZKLLVM_BUILD_DIR=$(pwd)/${ZKLLVM_BUILD_DIR}" >> $GITHUB_ENV
           fi
-        shell: bash
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+          ZKLLVM_TAG: ${{ github.event.inputs.zkllvm_tag || github.event.inputs.tag }}
 
       - name: Configure Linux host
         if: ${{ runner.os == 'Linux'}}
@@ -391,7 +398,7 @@ jobs:
         shell: bash
         working-directory: ${{github.workspace}}/SuperGenius
         run: |
-          TAG_NAME='${{ github.event.inputs.tag }}'
+          TAG_NAME="${GITHUB_EVENT_INPUTS_TAG}"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
 
           echo "Checking if GitHub release exists for tag: $TAG_NAME"
@@ -411,6 +418,8 @@ jobs:
           else
               echo "Release already exists for tag: $TAG_NAME"
           fi
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       - name: Compress build artifacts
         working-directory: ${{github.workspace}}/SuperGenius/${{env.BUILD_DIRECTORY}}

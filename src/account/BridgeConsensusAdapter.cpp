@@ -31,10 +31,7 @@ namespace sgns
             }
 
             sgns::crypto::HasherImpl hasher;
-            auto                     payload_hash = hasher.sha2_256(
-                gsl::span<const uint8_t>(
-                    reinterpret_cast<const uint8_t *>( subject.payload().data() ),
-                    subject.payload().size() ) );
+            auto                     payload_hash = hasher.sha2_256( subject.payload().data(), subject.payload().size() );
             return subject.payload_hash() == std::string(
                                                  reinterpret_cast<const char *>( payload_hash.data() ),
                                                  payload_hash.size() );

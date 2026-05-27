@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include <fmt/format.h>
+
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
@@ -476,7 +478,11 @@ namespace sgns
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
          */
-        static std::string BuildBatchKey( const std::string &base_registry_cid, uint64_t base_registry_epoch );
+        inline static std::string BuildBatchKey( const std::string &base_registry_cid,
+                                                 uint64_t           base_registry_epoch )
+        {
+            return fmt::format( "{}:{}", base_registry_cid, base_registry_epoch );
+        }
         /**
          * @brief Computes deterministic batch root from subject hashes.
          * @param[in] subject_hashes Subject hashes included in the batch.

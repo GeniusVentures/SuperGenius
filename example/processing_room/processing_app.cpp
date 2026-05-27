@@ -69,14 +69,30 @@ namespace
     class ProcessingTaskQueueImpl : public ProcessingTaskQueue
     {
     public:
+        using ProcessingTaskQueue::EnqueueTask;
+
         ProcessingTaskQueueImpl() {}
 
-        outcome::result<void> EnqueueTask( const SGProcessing::Task               &task,
-                                           const std::list<SGProcessing::SubTask> &subTasks ) override
+        outcome::result<void> EnqueueTask( const SGProcessing::Task                &task,
+                                           const std::list<SGProcessing::SubTask>  &subTasks,
+                                           std::shared_ptr<sgns::crdt::AtomicTransaction> crdt_transaction ) override
         {
+            (void)crdt_transaction;
             m_tasks.push_back( task );
             m_subTasks.emplace( task.ipfs_block_id(), subTasks );
             return outcome::success();
+        }
+
+        outcome::result<SGProcessing::Task> GetTask( const std::string &taskId ) override
+        {
+            for ( const auto &task : m_tasks )
+            {
+                if ( task.ipfs_block_id() == taskId )
+                {
+                    return task;
+                }
+            }
+            return outcome::failure( boost::system::error_code{} );
         }
 
         bool GetSubTasks( const std::string &taskId, std::list<SGProcessing::SubTask> &subTasks ) override
@@ -111,7 +127,7 @@ namespace
             return true;
         }
 
-        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CompleteTask(
+        outcome::result<std::shared_ptr<sgns::crdt::AtomicTransaction>> CompleteTask(
             const std::string              &taskKey,
             const SGProcessing::TaskResult &task ) override
         {

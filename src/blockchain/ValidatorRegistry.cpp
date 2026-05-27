@@ -691,11 +691,6 @@ namespace sgns
         submit_batch_subject_ = std::move( submitter );
     }
 
-    std::string ValidatorRegistry::BuildBatchKey( const std::string &base_registry_cid, uint64_t base_registry_epoch )
-    {
-        return base_registry_cid + ":" + std::to_string( base_registry_epoch );
-    }
-
     outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot(
         const std::vector<std::string> &subject_hashes ) const
     {
@@ -704,17 +699,14 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
         std::string payload;
-        for ( size_t i = 0; i < subject_hashes.size(); ++i )
+        payload += subject_hashes[0];
+        for ( size_t i = 1; i < subject_hashes.size(); ++i )
         {
-            if ( i > 0 )
-            {
-                payload.push_back( '\n' );
-            }
+            payload.push_back( '\n' );
             payload += subject_hashes[i];
         }
         sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256(
-            gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( payload.data() ), payload.size() ) );
+        auto                     hash = hasher.sha2_256( payload.data(), payload.size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
@@ -908,32 +900,16 @@ namespace sgns
     {
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            if ( finalized_batch_subject_ids_.find( subject_hash ) != finalized_batch_subject_ids_.end() )
+            if ( finalized_batch_subject_ids_.find( subject_hash ) != finalized_batch_subject_ids_.end() ||
+                 applying_batch_subject_ids_.find( subject_hash ) != applying_batch_subject_ids_.end() )
             {
                 return BatchCertificateDecision::Approve;
             }
-            if ( applying_batch_subject_ids_.find( subject_hash ) != applying_batch_subject_ids_.end() )
-            {
-                return BatchCertificateDecision::Approve;
-            }
-            applying_batch_subject_ids_.insert( subject_hash );
-        }
-        if ( !certificate.has_proposal() || !certificate.proposal().has_subject() ||
-             ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_error() )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
         }
 
         auto current_registry_result = LoadRegistry();
-        if ( current_registry_result.has_error() )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
-        }
-        if ( !ValidateCertificate( certificate, current_registry_result.value() ) )
+        if ( current_registry_result.has_error() ||
+             !ValidateCertificate( certificate, current_registry_result.value() ) )
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
@@ -1247,10 +1223,9 @@ namespace sgns
             }
 
             Registry expected;
-            auto batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
-                                     ? ConsensusManager::DecodeRegistryBatchSubject(
-                                           certificate.proposal().subject() )
-                                     : outcome::failure( std::errc::invalid_argument );
+            auto     batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
+                                         ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
+                                         : outcome::failure( std::errc::invalid_argument );
             if ( batch_payload.has_value() )
             {
                 const auto &payload = batch_payload.value();
@@ -1550,11 +1525,7 @@ namespace sgns
         if ( !IsQuorum( approved_weight, total_weight ) )
         {
             logger_->error( "{}: quorum not reached approved={} total={}", __func__, approved_weight, total_weight );
-            result.approved.clear();
-            result.unregistered.clear();
-            result.registered_votes.clear();
-            result.unregistered_votes.clear();
-            return result;
+            return {};
         }
 
         logger_->debug( "{}: quorum verified approved={} total={}", __func__, approved_weight, total_weight );

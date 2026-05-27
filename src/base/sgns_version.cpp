@@ -31,6 +31,11 @@ uint32_t sgns::version::SuperGeniusVersionPatch()
     return SUPERGENIUS_VERSION_PATCH;
 }
 
+uint32_t sgns::version::ProcessingVersion()
+{
+    return SUPERGENIUS_PROCESSING_VERSION;
+}
+
 std::string sgns::version::SuperGeniusVersionString()
 {
     return SUPERGENIUS_VERSION_STR;
