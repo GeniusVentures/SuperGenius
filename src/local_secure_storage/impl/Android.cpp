@@ -9,6 +9,7 @@
 #include <rapidjson/writer.h>
 
 #include "outcome/outcome.hpp"
+#include "GeniusSDKAndroid.hpp"
 
 #define LOG_TAG "AndroidSecureStorage"
 #define LOGI( ... ) __android_log_print( ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__ )
@@ -121,6 +122,9 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad( JavaVM *vm, void *_reserved )
         LOGE( "Failed to get JNI environment" );
         return JNI_ERR;
     }
+
+    // Initialize GeniusSDK Android background bridge
+    sgns::InitGeniusSDKAndroid( vm );
 
     LOGI( "SuperGenius SDK initialized successfully" );
     return JNI_VERSION_1_6;
