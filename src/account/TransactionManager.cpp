@@ -3659,7 +3659,10 @@ namespace sgns
         const std::string tx_hash = nonce_subject.value().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
+        // SANTZ-01: Sanitization sandwich — validate before deserializing untrusted PubSub bytes
         // DESER-01: Deserialize from embedded bytes instead of CRDT lookup
+        static constexpr size_t MAX_EMBEDDED_TX_BYTES = 64 * 1024;
+
         const auto &tx_data = nonce_subject.value().transaction_data();
         if ( tx_data.empty() )
         {
@@ -3668,6 +3671,31 @@ namespace sgns
             return ConsensusManager::Check::Reject;
         }
 
+        // SANTZ-01 Stage 1: Hard size cap before any protobuf parse
+        if ( tx_data.size() > MAX_EMBEDDED_TX_BYTES )
+        {
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: Embedded tx data exceeds max size {} > {}, rejecting",
+                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                tx_data.size(), MAX_EMBEDDED_TX_BYTES );
+            return ConsensusManager::Check::Reject;
+        }
+
+        // SANTZ-01 Stage 2: Hash integrity gate before deserialization
+        {
+            auto computed_hash = hasher_m->blake2b_256(
+                gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( tx_data.data() ),
+                                          tx_data.size() ) );
+            if ( computed_hash.toReadableString() != tx_hash )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Embedded tx hash mismatch, rejecting tx_hash={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                return ConsensusManager::Check::Reject;
+            }
+        }
+
+        // SANTZ-01 Stage 3: Bounded protobuf parse
         auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
         if ( tx_result.has_error() )
         {
@@ -3678,7 +3706,7 @@ namespace sgns
         }
         auto tx = tx_result.value();
 
-        // Hash binding verification — cryptographic integrity gate
+        // Hash binding verification — cryptographic integrity gate (defense-in-depth)
         if ( tx->GetHash() != tx_hash )
         {
             TransactionManagerLogger()->error(
