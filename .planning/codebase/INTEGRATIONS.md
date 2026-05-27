@@ -81,7 +81,7 @@
 
 **Auth Provider:**
 - **Self-sovereign** — No third-party identity provider
-  - **Ed25519** key pairs for node/account identity (`ed25519` dependency)
+  - **Ed25519** key pairs for node and account identity (`ed25519` dependency)
   - **secp256k1** for Ethereum-compatible signatures (`libsecp256k1` dependency)
   - Consensus validator identity managed via `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`)
   - Signing callbacks passed as `std::function` to `ConsensusManager` (`src/blockchain/Consensus.hpp` line 62)

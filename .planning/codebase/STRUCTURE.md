@@ -40,9 +40,11 @@ SuperGenius/
 │   ├── storage/                            # RocksDB, in-memory, Trie/MPT, changes trie, storage face interfaces
 │   ├── subscription/                       # Templated publish/subscribe event bus
 │   └── watcher/                            # EVM chain event watcher (WebSocket)
-├── node/                                   # Node CLI entry point, IPFS lite store, AppDelegate
-├── app/                                    # Application factories for DI wiring
-│   └── integration/                        # One factory header per component
+├── example/                                # Runnable example apps (10 entry points with their own main())
+│   ├── node_test/                          # Primary integration example (NodeExample.cpp, 751 lines)
+│   ├── processing_room/                    # Processing service demo
+│   ├── crdt_globaldb/                      # CRDT GlobalDB usage demo
+│   └── ...                                 # ipfs_client, ipfs_pubsub, evm_messaging_dapp, echo_client, etc.
 ├── test/                                   # Unit and integration tests
 │   ├── CMakeLists.txt                      # Test root (includes testutil and test/src)
 │   ├── mock/src/                           # Mock implementations for testing
@@ -131,10 +133,15 @@ SuperGenius/
 - Contains: `Block`, `BlockHeader`, `BlockData`, `Extrinsic`, `Transaction`, `Authority`, `Version`, `ProductionConfiguration`, `InherentData`
 - Key files: `block.hpp`, `block_header.hpp`, `transaction.hpp`
 
-**node/:**
-- Purpose: Application entry point and lifecycle management
-- Contains: Top-level `node` class, `AppDelegate`, `ipfs_lite_store`, CLI argument parsing
-- Key files: (referenced from Architecture.md; directory exists with node entrypoint code)
+**src/account/GeniusNode (node entry point):**
+- Purpose: Application lifecycle management — absorbed all functionality from the deleted `node/` and `app/integration/` directories
+- Contains: `GeniusNode.hpp` (836 lines) / `GeniusNode.cpp` (1953 lines) — God-class facade owning all subsystems, inline DI wiring, node state machine FSM
+- Key files: `src/account/GeniusNode.hpp`, `src/account/GeniusNode.cpp`
+
+**example/:**
+- Purpose: Runnable example applications with individual `main()` functions
+- Contains: 10 examples — `node_test/` (primary), `processing_room/`, `crdt_globaldb/`, `evm_messaging_dapp/`, `ipfs_client/`, `ipfs_pubsub/`, `ipfs_client2/`, `echo_client/`, `mnn_chunkprocess/`, `processing_json/`
+- Key files: `example/node_test/NodeExample.cpp`
 
 **test/src/:**
 - Purpose: Unit/integration test suites organized by subsystem
@@ -157,8 +164,8 @@ SuperGenius/
 ## Key File Locations
 
 **Entry Points:**
-- `node/`: Top-level node CLI, `AppDelegate` for OS lifecycle, `ipfs_lite_store` for IPFS block store
-- `app/integration/`: One factory header per subsystem (DI wiring at startup)
+- `example/node_test/NodeExample.cpp`: Primary integration example — creates node via `GeniusNode::New()` with hand-rolled CLI
+- `src/account/GeniusNode.cpp`: Core lifecycle class — inline constructor wiring, state machine FSM, all subsystem initialization
 - `src/api/transport/`: HTTP/WebSocket JSON-RPC listener
 
 **Configuration:**
@@ -236,12 +243,12 @@ SuperGenius/
 - Primary interface: `src/<feature>/<Feature>.hpp`
 - Implementation: `src/<feature>/impl/<feature>_impl.cpp`, `src/<feature>/impl/<feature>_impl.hpp`
 - Tests: `test/src/<feature>/` (mirror source structure)
-- Integration wiring: `app/integration/<Feature>Factory.hpp`
+- Wiring: Add member and initialization to `GeniusNode::StateTransition()` in `src/account/GeniusNode.cpp`
 - CMake: Add `add_subdirectory(<feature>)` to `src/CMakeLists.txt`
 
 **New Component/Module (pluggable service):**
 - Interface inheriting `IComponent`: `src/<module>/<Module>.hpp`
-- Register in `CComponentFactory` at wiring time via `app/integration/` factory header
+- Wire into `GeniusNode` constructor or `StateTransition()` method in `src/account/GeniusNode.cpp`
 - Follow static `New()` factory pattern returning `std::shared_ptr<T>`
 
 **New Transaction Type:**

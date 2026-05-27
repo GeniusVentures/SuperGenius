@@ -8,8 +8,8 @@
 ```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                        APPLICATION ENTRY POINTS                              │
-│                     `node/`  │  `app/integration/`                           │
-│              (CLI, AppDelegate, DI wiring factories)                         │
+│              `src/account/GeniusNode`  │  `example/node_test/`              │
+│              (God-class facade, state machine, inline DI wiring)            │
 ├──────────────────┬──────────────────┬───────────────────┬───────────────────┤
 │  API Transport   │  Account System  │  Processing Grid  │  EVM Bridge       │
 │ `src/api/`       │ `src/account/`   │ `src/processing/` │ `src/watcher/`    │
@@ -94,9 +94,9 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 ## Layers
 
 **Application Layer:**
-- Purpose: Node entry point, lifecycle management, DI wiring of all subsystems
-- Location: `node/`, `app/integration/`
-- Contains: CLI argument parsing, `AppStateManager` FSM, component factory headers (one per subsystem)
+- Purpose: Node lifecycle management, DI wiring of all subsystems
+- Location: `src/account/GeniusNode.cpp` (1953 lines), example entry points in `example/`
+- Contains: Node state machine FSM (`NodeState` enum), inline constructor wiring, `InitNetwork()`/`InitLoggers()`
 - Depends on: All `src/` subsystems
 
 **API / Transport Layer:**
@@ -213,10 +213,11 @@ SuperGenius is a **block-lattice crypto-token system** (inspired by Nano) extend
 
 ## Entry Points
 
-**Node CLI:**
-- Location: `node/` (top-level node class, AppDelegate, CLI argument parsing)
-- Triggers: Executable launched on host device
-- Responsibilities: Reads config, wires all subsystems via `app/integration/` factories, drives `AppStateManager` lifecycle FSM
+**Node Entry Point:**
+- Location: `example/node_test/NodeExample.cpp` (751 lines, primary example), plus 9 other examples in `example/`
+- Triggers: Executable launched on host device (each example has its own `main()`)
+- Responsibilities: Calls `GeniusNode::New()`, runs hand-rolled CLI loop. `GeniusNode` (`src/account/GeniusNode.cpp`) handles all subsystem wiring inline through its state machine FSM
+
 
 **API Transport (HTTP/WebSocket):**
 - Location: `src/api/transport/`
