@@ -606,7 +606,7 @@ TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
     // Then: All fields needed for tracking are preserved
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-approve" );
     EXPECT_EQ( nonce.value().transaction_type(), tx_type );
-    EXPECT_EQ( nonce.value().transaction_data(), tx_data );
+    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
 }
 
