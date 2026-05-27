@@ -5,10 +5,10 @@
 ## Tech Debt
 
 ### Versioned Migration Chain (6 steps, 5 versions)
-- Issue: Migration steps from v0.2.0 through v3.7.0 are accumulated and must run sequentially on every new install or upgrade. Each step involves database transformations that can fail.
+- Issue: Migration steps from v0.2.0 through v3.7.0 are accumulated and run sequentially when a legacy database is detected during upgrade. Each step involves database transformations that can fail. Brand new installs skip all migrations — they only affect upgrades from old versions.
 - Files: `src/account/Migration0_2_0To1_0_0.{cpp,hpp}`, `src/account/Migration1_0_0To3_4_0.{cpp,hpp}`, `src/account/Migration3_4_0To3_5_0.{cpp,hpp}`, `src/account/Migration3_5_0To3_6_0.{cpp,hpp}`, `src/account/Migration3_5_0To3_5_1.{cpp,hpp}`, `src/account/Migration3_6_0To3_7_0.{cpp,hpp}`, `src/account/MigrationManager.{cpp,hpp}`, `src/account/IMigrationStep.hpp`
-- Impact: Long upgrade times, increased chance of failure during migration, difficulty testing all migration paths.
-- Fix approach: Consider collapsing migrations into a single baseline migration and converting into a schema snapshot for fresh installs. Add integration tests that migrate from every historical version.
+- Impact: Long upgrade times for legacy users, increased chance of failure during multi-step migration, difficulty testing all migration paths from every historical version.
+- Fix approach: Consider collapsing the migration chain into fewer steps for upgrades from very old versions. Add integration tests that migrate from each historical version.
 
 ### ~40+ Unresolved TODO/FIXME Comments in Production Code
 - Issue: TODO/FIXME markers are scattered across critical paths without tracking (no issue numbers or assignees).
@@ -19,14 +19,7 @@
 ### Non-Atomic UTXO Persistence
 - Issue: The UTXO storage snapshot iterates key-by-key with individual `remove` + `put` calls. If the process crashes mid-snapshot, stored state becomes inconsistent with in-memory state.
 - Files: `src/account/UTXOManager.cpp` line 758
-- Impact: Data loss/corruption on abrupt shutdown. Requires full CRDT resync on restart.
-- Fix approach: Use a RocksDB `WriteBatch` to atomically replace all UTXO records for an address in a single commit.
-
-### CRDT Resyncs on Every Boot
-- Issue: The CRDT datastore does not persist its "processed CIDs" state across restarts. On every boot, all CRDT deltas are replayed in full, requiring redundant proof verification.
-- Files: `src/account/TransactionManager.cpp` lines 2816-2817, `src/crdt/impl/crdt_datastore.cpp`
-- Impact: Slow startup times, unnecessary CPU burn re-validating proofs that were already verified before the last shutdown.
-- Fix approach: Persist the processed CID set to RocksDB so that only new deltas need verification on restart. Restore DAGSyncer-based CID tracking as noted in the TODO.
+- Impact: Data loss/corruption on abrupt shutdown. RocksDB state not flushed to disk may be lost.
 
 ### Orphan Block Storage Leak
 - Issue: Side-chain blocks that get rejected by finalization are never deleted from storage.
@@ -60,12 +53,6 @@
 
 ## Known Bugs
 
-### CRDT Tombstone Filtering Throws Runtime Error
-- Symptoms: Any attempt to filter tombstones on a CRDT delta throws `std::runtime_error("Not supported")`.
-- Files: `src/crdt/impl/crdt_data_filter.cpp` lines 117-121
-- Trigger: Calling `FilterTombstonesOnDelta()` (which is a public method that can be called by external code).
-- Workaround: None — callers must never invoke this method.
-
 ### ProductionApiMock Disabled (Compilation Failure)
 - Symptoms: The mock for `ProductionApi` cannot be compiled. The `MOCK_METHOD0` macro line is commented out.
 - Files: `test/mock/src/runtime/production_api_mock.hpp` line 12
@@ -78,12 +65,6 @@
 - Trigger: Whenever `FilterProof` processes elements that aren't already in the DB.
 - Impact: **This is a critical security bug.** All zero-knowledge proof verification is currently skipped. Malicious nodes can inject invalid transaction proofs that will be accepted as valid. The `do { ... } while (0)` block at lines 2814-2847 contains the actual verification code, but a premature `valid_proof = true; break;` at lines 2828-2829 skips it entirely.
 - Fix approach: Remove the premature `valid_proof = true; break;` at lines 2828-2829. Re-enable `VerifyFullProof`. Consider adding unit tests that verify invalid proofs are correctly rejected.
-
-### FilterTombstones Throws Unconditionally
-- Symptoms: The CRDT data filter cannot process tombstone entries and throws an exception.
-- Files: `src/crdt/impl/crdt_data_filter.cpp` lines 117-121
-- Trigger: Any attempt to filter tombstone CRDT delta entries.
-- Workaround: None available — this method is not safe to call.
 
 ## Security Considerations
 
@@ -131,12 +112,6 @@
 - Cause: Auto-generated zkLLVM circuit bytecode embedded as a `static const std::string_view`.
 - Improvement path: Move the bytecode to a `.cpp` file or an extern data file to avoid recompilation on every change in the proof module. Consider whether the string_view can be replaced with a `extern const char[]` to reduce per-TU overhead.
 
-### CRDT Full Resync on Boot
-- Problem: The CRDT subsystem re-processes all deltas on every startup instead of persisting its high-water mark.
-- Files: `src/crdt/impl/crdt_datastore.cpp`, `src/account/TransactionManager.cpp` line 2816
-- Cause: Processed CID tracking is in-memory only.
-- Improvement path: Persist the last processed CID to RocksDB.
-
 ### Unnecessary String-to-Buffer Copies in RocksDB Reads
 - Problem: Every key/value read from RocksDB copies the result string into a Buffer.
 - Files: `src/storage/rocksdb/rocksdb.cpp` line 118, lines 141-144
@@ -159,9 +134,9 @@
 
 ### CRDT Datastore
 - Files: `src/crdt/impl/crdt_datastore.cpp` (1940 lines), `src/crdt/crdt_datastore.hpp` (502 lines)
-- Why fragile: Core data layer for the entire system. Uses weak_ptr callbacks for lifecycle management. Complex interaction with GraphSync, RocksDB, and broadcasting. Tombstone handling is incomplete.
-- Safe modification: Add tests for tombstone scenarios, edge cases with missing CID lookups, and concurrent Put/Delete operations.
-- Test coverage: CRDT unit tests exist in `test/src/crdt/` but tombstone filtering cannot be tested (throws exception).
+- Why fragile: Core data layer for the entire system. Uses weak_ptr callbacks for lifecycle management. Complex interaction with GraphSync, RocksDB, and broadcasting.
+- Safe modification: Add tests for edge cases with missing CID lookups and concurrent Put/Delete operations.
+- Test coverage: CRDT unit tests exist in `test/src/crdt/`.
 
 ### RLPx Session (EVM Relay)
 - Files: `evmrelay/src/rlpx/rlpx_session.cpp` (762 lines)
@@ -249,12 +224,6 @@
 - Files: `src/blockchain/impl/key_value_block_storage.cpp` line 208
 - Priority: Medium for production nodes.
 
-### Tombstone Filtering in CRDT
-- Problem: The CRDT data filter cannot process tombstone delta entries.
-- Blocks: Garbage collection of deleted entries. Correct handling of CRDT "remove" operations in filtered views.
-- Files: `src/crdt/impl/crdt_data_filter.cpp` lines 117-121
-- Priority: Medium — affects correctness of CRDT views.
-
 ## Test Coverage Gaps
 
 ### No Unit Tests for TransactionManager::FilterProof
@@ -280,12 +249,6 @@
 - Files: `src/local_secure_storage/impl/`
 - Risk: Platform-specific bugs in credential storage could lead to key loss on user devices.
 - Priority: Medium
-
-### No Dedicated CRDT Tombstone Tests
-- What's not tested: Tombstone propagation, tombstone filtering, multi-peer tombstone convergence.
-- Files: `src/crdt/impl/crdt_data_filter.cpp`
-- Risk: The tombstone filtering method throws unconditionally. If any caller uses it, the system crashes.
-- Priority: High
 
 ---
 
