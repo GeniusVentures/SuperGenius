@@ -89,8 +89,6 @@ target_link_libraries(genius_node
     evmrelay
     PRIVATE
     component_factory
-    block_header_repository
-    block_storage
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
     p2p::p2p_default_network

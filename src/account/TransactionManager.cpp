@@ -2813,18 +2813,6 @@ namespace sgns
         bool                                          valid_proof = false;
         do
         {
-            //TODO - This verification is only needed because CRDT resyncs every boot up
-            // Remove once we remove the in memory processed_cids on crdt_datastore and use dagsyncer again
-            auto maybe_has_value = globaldb_m->Get( element.key() );
-            if ( maybe_has_value.has_value() )
-            {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Already have the proof {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   element.key() );
-                valid_proof = true;
-                break;
-            }
             valid_proof = true;
             break;
             std::vector<uint8_t> proof_data_vector( element.value().begin(), element.value().end() );
