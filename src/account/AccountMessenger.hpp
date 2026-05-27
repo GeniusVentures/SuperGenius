@@ -168,9 +168,9 @@ namespace sgns
         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;             ///< Pubsub instance
 
         /// Future of the subscription to the receiving topic
-        std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> subs_acc_future_;
+        std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>> subs_acc_future_;
         /// Future of the subscription to the requests topic
-        std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> subs_requests_future_;
+        std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>> subs_requests_future_;
 
         std::unordered_map<uint64_t, std::set<uint64_t>> nonce_responses_; ///< All current nonce responses
         std::unordered_map<uint64_t, std::set<std::string>>

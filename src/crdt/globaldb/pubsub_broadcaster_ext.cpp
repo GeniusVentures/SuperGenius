@@ -114,7 +114,7 @@ namespace sgns::crdt
                 m_logger->debug( "Subscription request sent to topic: " + topicName );
 
                 // Subscribe and capture the topic name in the lambda.
-                std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> future = std::move(
+                std::shared_future<std::shared_ptr<GossipPubSub::Subscription>> future = std::move(
                     pubSub_->Subscribe( topicName,
                                         [weakptr = weak_from_this(),
                                          topicName]( boost::optional<const GossipPubSub::Message &> message )
@@ -363,7 +363,7 @@ namespace sgns::crdt
         m_logger->debug( "Listen request on topic: '{}'", full_topic );
         if ( started_ )
         {
-            std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>> future = std::move( pubSub_->Subscribe(
+            std::shared_future<std::shared_ptr<GossipPubSub::Subscription>> future = std::move( pubSub_->Subscribe(
                 full_topic,
                 [weakptr = weak_from_this(), full_topic]( boost::optional<const GossipPubSub::Message &> message )
                 {
