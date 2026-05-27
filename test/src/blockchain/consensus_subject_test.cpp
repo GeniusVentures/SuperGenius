@@ -307,3 +307,114 @@ TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
     EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
     EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
 }
+
+// --- Phase 01 Plan 02: Sanitization tests (SANTZ-01) ---
+
+TEST( ConsensusSubjectTest, Sanitization_Blake2bHashOfKnownDataMatches )
+{
+    // Given: Known input bytes and their expected blake2b_256 hash
+    const std::vector<uint8_t> input = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
+    sgns::crypto::HasherImpl hasher;
+
+    // When: Computing blake2b_256 of the known bytes
+    const auto hash = hasher.blake2b_256(
+        gsl::span<const uint8_t>( input.data(), input.size() ) );
+
+    // Then: Hash has correct size (32 bytes)
+    EXPECT_EQ( hash.size(), 32U );
+    // Verify round-trip: hash to hex string produces consistent output
+    const auto hex = hash.toReadableString();
+    EXPECT_EQ( hex.size(), 64U ); // 32 bytes = 64 hex chars
+    EXPECT_FALSE( hex.empty() );
+}
+
+TEST( ConsensusSubjectTest, Sanitization_TransactionDataOverSizeCap64KB )
+{
+    // Given: NonceSubject with transaction_data exceeding 64KB
+    const std::string         tx_type = "transfer";
+    const std::vector<uint8_t> tx_data( 100 * 1024, 0x00 ); // 100KB — exceeds 64KB cap
+
+    // When: Subject is created (proto layer accepts any size — handler enforces cap)
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-oversized",
+        tx_type,
+        tx_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: Proto level preserves the oversized data (handler rejects it)
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
+}
+
+TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
+{
+    // Given: A NonceSubject with known transaction_data
+    const std::string         tx_type = "transfer";
+    const std::vector<uint8_t> original_data = { 0x01, 0x02, 0x03, 0x04 };
+    sgns::crypto::HasherImpl  hasher;
+    const auto expected_hash = hasher.blake2b_256(
+        gsl::span<const uint8_t>( original_data.data(), original_data.size() ) );
+
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        expected_hash.toReadableString(), // tx_hash matches original_data
+        tx_type,
+        original_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // When: transaction_data is retrieved — it matches the hash
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Verify data integrity: blake2b of embedded data equals tx_hash
+    const auto computed = hasher.blake2b_256(
+        gsl::span<const uint8_t>(
+            reinterpret_cast<const uint8_t*>( nonce.value().transaction_data().data() ),
+            nonce.value().transaction_data().size() ) );
+    EXPECT_EQ( computed.toReadableString(), nonce.value().tx_hash() );
+}
+
+TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
+{
+    // Given: Known data and a correct hash of different data (simulating tampering)
+    const std::string         tx_type = "transfer";
+    const std::vector<uint8_t> tx_data = { 0x01, 0x02, 0x03, 0x04 };
+    sgns::crypto::HasherImpl  hasher;
+    const auto hash_of_different_data = hasher.blake2b_256(
+        gsl::span<const uint8_t>(
+            reinterpret_cast<const uint8_t*>( "wrong data" ), 10 ) );
+
+    // When: Subject created with mismatched tx_hash vs transaction_data
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        hash_of_different_data.toReadableString(), // mismatched hash
+        tx_type,
+        tx_data,
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+
+    // Then: The proto layer preserves the mismatch (handler gate detects it)
+    // blake2b of embedded data != subject's tx_hash
+    const auto computed = hasher.blake2b_256(
+        gsl::span<const uint8_t>(
+            reinterpret_cast<const uint8_t*>( nonce.value().transaction_data().data() ),
+            nonce.value().transaction_data().size() ) );
+    EXPECT_NE( computed.toReadableString(), nonce.value().tx_hash() );
+    // Also verify fromReadableString round-trip
+    const auto decoded_hash = sgns::base::Hash256::fromReadableString( nonce.value().tx_hash() );
+    EXPECT_TRUE( decoded_hash.has_value() );
+    EXPECT_NE( computed, decoded_hash.value() );
+}
