@@ -1691,21 +1691,27 @@ namespace sgns
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const std::string                             &transaction_type,
+        const std::vector<uint8_t>                    &transaction_data,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
+        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, transaction_type, transaction_data,
+                                                       utxo_commitment, utxo_witness );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const std::string                             &transaction_type,
+        const std::vector<uint8_t>                    &transaction_data,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
         BOOST_OUTCOME_TRY( auto &&nonce_subject,
-                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
+                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, transaction_type, transaction_data,
+                                                        utxo_commitment, utxo_witness ) );
         BOOST_OUTCOME_TRY( auto &&nonce_proposal,
                            consensus_manager_->CreateProposal( nonce_subject,
                                                                account_id,

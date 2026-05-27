@@ -150,6 +150,8 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
         kAccountId,
         7,
         "tx-hash",
+        std::string{},
+        std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
@@ -174,6 +176,8 @@ TEST( ConsensusSubjectTest, RejectsMalformedNoncePayload )
         kAccountId,
         7,
         "tx-hash",
+        std::string{},
+        std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
@@ -193,6 +197,8 @@ TEST( ConsensusSubjectTest, RejectsNonceHashWithTaskResultPayload )
         kAccountId,
         7,
         "tx-hash",
+        std::string{},
+        std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
@@ -213,6 +219,8 @@ TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
         kAccountId,
         7,
         "tx-hash",
+        std::string{},
+        std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );

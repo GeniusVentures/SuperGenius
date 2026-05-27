@@ -1173,10 +1173,16 @@ namespace sgns
                 }
             }
 
+            // Serialize tx for embedding in NonceSubject (per D-04, PROTO-01/SER-01)
+            auto serialized_tx = transaction->SerializeByteVector();
+            auto tx_type       = transaction->GetType();
+
             BOOST_OUTCOME_TRY( auto &&proposal,
                                blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                      transaction->GetNonce(),
                                                                      transaction->GetHash(),
+                                                                     tx_type,
+                                                                     serialized_tx,
                                                                      utxo_commitment,
                                                                      utxo_witness ) );
             BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );

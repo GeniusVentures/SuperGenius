@@ -174,6 +174,8 @@ namespace sgns
          * @param[in] account_id Account identifier.
          * @param[in] nonce Account nonce.
          * @param[in] tx_hash Transaction hash.
+         * @param[in] transaction_type Transaction type tag for deserializer dispatch.
+         * @param[in] transaction_data Full serialized transaction bytes.
          * @param[in] utxo_commitment Optional UTXO commitment payload.
          * @param[in] utxo_witness Optional UTXO witness payload.
          * @return Constructed subject or an error.
@@ -181,6 +183,8 @@ namespace sgns
         outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject( const std::string &account_id,
                                                                                 uint64_t           nonce,
                                                                                 const std::string &tx_hash,
+                                                                                const std::string &transaction_type,
+                                                                                const std::vector<uint8_t> &transaction_data,
                                                                                 const std::optional<UTXOTransitionCommitment> &utxo_commitment,
                                                                                 const std::optional<UTXOWitness>              &utxo_witness );
 
@@ -189,6 +193,8 @@ namespace sgns
          * @param[in] account_id Account identifier.
          * @param[in] nonce Account nonce.
          * @param[in] tx_hash Transaction hash.
+         * @param[in] transaction_type Transaction type tag for deserializer dispatch.
+         * @param[in] transaction_data Full serialized transaction bytes.
          * @param[in] utxo_commitment Optional UTXO commitment payload.
          * @param[in] utxo_witness Optional UTXO witness payload.
          * @return Constructed proposal or an error.
@@ -196,6 +202,8 @@ namespace sgns
         outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
                                                                              uint64_t           nonce,
                                                                              const std::string &tx_hash,
+                                                                             const std::string &transaction_type,
+                                                                             const std::vector<uint8_t> &transaction_data,
                                                                              const std::optional<UTXOTransitionCommitment> &utxo_commitment,
                                                                              const std::optional<UTXOWitness>              &utxo_witness );
 

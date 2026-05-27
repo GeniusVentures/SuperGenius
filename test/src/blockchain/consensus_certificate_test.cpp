@@ -204,8 +204,10 @@ namespace sgns::test
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     1,
                                                                     tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -243,8 +245,10 @@ namespace sgns::test
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     7,
                                                                     tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -365,8 +369,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     2,
                                                                     "0x0a0b0c",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -436,8 +442,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     3,
                                                                     "0x111213",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -493,8 +501,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     4,
                                                                     "0x222324",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -541,8 +551,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     5,
                                                                     "0x333435",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -582,8 +594,10 @@ namespace sgns::test
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     6,
                                                                     tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -639,8 +653,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     11,
                                                                     "0xabc123",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
@@ -667,8 +683,10 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     12,
                                                                     "0xabc124",
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                     std::string{},
+                                                                     std::vector<uint8_t>{},
+                                                                     MakeTestCommitment(),
+                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
         auto subject = subject_result.value();
 
@@ -703,6 +721,8 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     1,
                                                                     "0xdeadbeef",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     commitment,
                                                                     witness );
         ASSERT_TRUE( subject_result.has_value() );
