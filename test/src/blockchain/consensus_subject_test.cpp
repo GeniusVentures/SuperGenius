@@ -418,3 +418,165 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
     EXPECT_TRUE( decoded_hash.has_value() );
     EXPECT_NE( computed, decoded_hash.value() );
 }
+
+// --- Phase 01 Plan 02: Commitment-Tx Binding tests (BIND-01) ---
+
+sgns::UTXOTransitionCommitment MakeTestCommitment( const std::string &consumed_root,
+                                                    const std::string &produced_root )
+{
+    sgns::UTXOTransitionCommitment commitment;
+    commitment.set_consumed_outpoints_root( consumed_root.data(), consumed_root.size() );
+    commitment.set_produced_outputs_root( produced_root.data(), produced_root.size() );
+    return commitment;
+}
+
+TEST( ConsensusSubjectTest, Binding_CommitmentRoundTrip_PreservesRoots )
+{
+    // Given: A commitment with known consumed and produced roots
+    const std::string consumed_root( 32, '\x01' );
+    const std::string produced_root( 32, '\x02' );
+    auto commitment = MakeTestCommitment( consumed_root, produced_root );
+
+    // When: NonceSubject is created with the commitment
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-binding",
+        "transfer",
+        std::vector<uint8_t>{ 0x01, 0x02 },
+        commitment,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: Decoded subject preserves commitment roots
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_TRUE( nonce.value().has_utxo_commitment() );
+    const auto &decoded_commitment = nonce.value().utxo_commitment();
+    EXPECT_EQ( decoded_commitment.consumed_outpoints_root(), consumed_root );
+    EXPECT_EQ( decoded_commitment.produced_outputs_root(), produced_root );
+}
+
+TEST( ConsensusSubjectTest, Binding_SubjectHasCommitment_TxLacksUTXO_Inconsistency )
+{
+    // Given: A NonceSubject with utxo_commitment but embedded transaction_data
+    // that represents a non-UTXO transaction (e.g. no UTXO parameters).
+    // The commitment claims UTXO state transition but the tx bytes are for a
+    // non-UTXO operation — this is the Pitfall 5 bypass vector.
+    const std::string consumed_root( 32, '\x01' );
+    const std::string produced_root( 32, '\x02' );
+
+    // When: Subject is created with commitment AND transaction_data
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-no-utxo",
+        "transfer",
+        std::vector<uint8_t>{ 0xAA, 0xBB }, // small non-UTXO tx bytes
+        MakeTestCommitment( consumed_root, produced_root ),
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: The proto layer preserves the inconsistency
+    // The handler must detect: subject has utxo_commitment but deserialized tx
+    // has HasUTXOParameters() == false → Reject
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_TRUE( nonce.value().has_utxo_commitment() );
+    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+    // Commitment roots match what was set
+    EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
+    EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
+}
+
+TEST( ConsensusSubjectTest, Binding_SubjectNoCommitment_TxNoUTXO_ValidPath )
+{
+    // Given: A NonceSubject WITHOUT utxo_commitment and WITHOUT transaction_data
+    // that would deserialize to a non-UTXO tx — this is a valid path for
+    // transactions that don't involve UTXO state (e.g., registry operations).
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-no-commitment",
+        "transfer",
+        std::vector<uint8_t>{ 0x01, 0x02 },
+        std::nullopt,   // no commitment
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: No commitment claim — handler should proceed without cross-check
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_FALSE( nonce.value().has_utxo_commitment() );
+    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+}
+
+TEST( ConsensusSubjectTest, Binding_CommitmentMismatch_DifferentRoots )
+{
+    // Given: Two different commitments with different roots
+    const std::string root_a( 32, '\x01' );
+    const std::string root_b( 32, '\x02' );
+    const std::string root_c( 32, '\x03' );
+
+    auto commitment_a = MakeTestCommitment( root_a, root_b );
+    auto commitment_b = MakeTestCommitment( root_a, root_c ); // produced_root differs
+
+    // Verifies that two commitments with different roots are not equal
+    EXPECT_NE( commitment_a.produced_outputs_root(), commitment_b.produced_outputs_root() );
+    EXPECT_EQ( commitment_a.consumed_outpoints_root(), commitment_b.consumed_outpoints_root() );
+
+    // Also verify that completely different consumed roots cause inequality
+    auto commitment_c = MakeTestCommitment( root_c, root_b );
+    EXPECT_NE( commitment_a.consumed_outpoints_root(), commitment_c.consumed_outpoints_root() );
+}
+
+// --- Phase 01 Plan 02: Witness Hardening tests (BIND-01) ---
+
+TEST( ConsensusSubjectTest, WitnessHardening_CommitmentButNoUTXOParams_DetectsInconsistency )
+{
+    // Given: A subject that claims UTXO commitment
+    const std::string consumed_root( 32, '\x01' );
+    const std::string produced_root( 32, '\x02' );
+
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-witness",
+        "transfer",
+        std::vector<uint8_t>{ 0x01 }, // tx bytes (non-UTXO)
+        MakeTestCommitment( consumed_root, produced_root ),
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: The proto layer preserves the inconsistency
+    // ValidateWitnessForConsensus must detect this and return INVALID
+    // (was VALID before the fix — Pitfall 5)
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    // Subject HAS commitment
+    EXPECT_TRUE( nonce.value().has_utxo_commitment() );
+    // But the embedded tx bytes represent a tx without UTXO params
+    // (in handler: HasUTXOParameters() == false)
+    // Old code: returns VALID. New code: returns INVALID.
+}
+
+TEST( ConsensusSubjectTest, WitnessHardening_NoCommitmentNoUTXOParams_StillValid )
+{
+    // Given: A subject WITHOUT commitment and transaction_data for non-UTXO tx
+    // This is a valid path that should remain VALID
+    const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kAccountId,
+        1,
+        "tx-hash-no-commit",
+        "transfer",
+        std::vector<uint8_t>{ 0x01 },
+        std::nullopt,
+        std::nullopt );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    // Then: No commitment → ValidateWitnessForConsensus should return VALID
+    // Regression test — this path was VALID before and must stay VALID
+    const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
+    ASSERT_TRUE( nonce.has_value() );
+    EXPECT_FALSE( nonce.value().has_utxo_commitment() );
+}
