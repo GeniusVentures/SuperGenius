@@ -3433,6 +3433,19 @@ namespace sgns
                 tx_hash );
             return ConsensusManager::Check::Approve;
         }
+        // TRACK-01 per D-02: Promote temp embedded-tx entry from VERIFYING to CONFIRMED
+        {
+            std::unique_lock tx_lock( tx_mutex_m );
+            auto it = tx_processed_m.find( GetTransactionPath( tx_hash ) );
+            if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+            {
+                it->second.status = TransactionStatus::CONFIRMED;
+                TransactionManagerLogger()->debug(
+                    "[{} - full: {}] {}: Promoted temp embedded-tx entry to CONFIRMED for tx {}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+            }
+        }
+
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -3807,6 +3820,19 @@ namespace sgns
                             tx_hash,
                             fail_result.error().message() );
                     }
+                }
+            }
+
+            // TRACK-01 per D-02: Cleanup temp tracking entry on reject
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                auto it = tx_processed_m.find( GetTransactionPath( tx_hash ) );
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                {
+                    tx_processed_m.erase( it );
+                    TransactionManagerLogger()->debug(
+                        "[{} - full: {}] {}: Removed temp tracking entry for rejected embedded tx {}",
+                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
                 }
             }
 
