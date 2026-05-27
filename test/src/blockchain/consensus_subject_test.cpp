@@ -150,7 +150,6 @@ TEST( ConsensusSubjectTest, CreatesBuiltInSubjectWithCanonicalStringType )
         kAccountId,
         7,
         "tx-hash",
-        std::string{},
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -176,7 +175,6 @@ TEST( ConsensusSubjectTest, RejectsMalformedNoncePayload )
         kAccountId,
         7,
         "tx-hash",
-        std::string{},
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -197,7 +195,6 @@ TEST( ConsensusSubjectTest, RejectsNonceHashWithTaskResultPayload )
         kAccountId,
         7,
         "tx-hash",
-        std::string{},
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -219,7 +216,6 @@ TEST( ConsensusSubjectTest, RejectsTaskResultHashWithNoncePayload )
         kAccountId,
         7,
         "tx-hash",
-        std::string{},
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -246,30 +242,27 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataRoundTrip )
         kAccountId,
         42,
         "tx-hash-embedded",
-        tx_type,
         tx_data,
         std::nullopt,
         std::nullopt );
     ASSERT_TRUE( subject_result.has_value() );
 
-    // Then: DecodeNonceSubject retrieves the embedded transaction_type and transaction_data
+    // Then: DecodeNonceSubject retrieves the embedded transaction data
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_EQ( nonce.value().nonce(), 42U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-embedded" );
-    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
     EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
 }
 
 TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
 {
-    // Given: NonceSubject created with empty transaction_type and empty transaction_data
+    // Given: NonceSubject created with empty transaction_data
     // (default values when transaction data is not available — e.g., test paths or legacy)
     const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
         kAccountId,
         7,
         "tx-hash",
-        std::string{},
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -279,7 +272,6 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_EQ( nonce.value().nonce(), 7U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
-    EXPECT_TRUE( nonce.value().transaction_type().empty() );
     EXPECT_TRUE( nonce.value().transaction_data().empty() );
 }
 
@@ -294,7 +286,6 @@ TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
         kAccountId,
         999,
         "tx-hash-large",
-        tx_type,
         tx_data,
         std::nullopt,
         std::nullopt );
@@ -303,7 +294,6 @@ TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
     // Then: Decoded subject preserves all embedded data
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
     EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
     EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
 }
@@ -339,7 +329,6 @@ TEST( ConsensusSubjectTest, Sanitization_TransactionDataOverSizeCap64KB )
         kAccountId,
         1,
         "tx-hash-oversized",
-        tx_type,
         tx_data,
         std::nullopt,
         std::nullopt );
@@ -364,7 +353,6 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
         kAccountId,
         1,
         expected_hash.toReadableString(), // tx_hash matches original_data
-        tx_type,
         original_data,
         std::nullopt,
         std::nullopt );
@@ -397,7 +385,6 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
         kAccountId,
         1,
         hash_of_different_data.toReadableString(), // mismatched hash
-        tx_type,
         tx_data,
         std::nullopt,
         std::nullopt );
@@ -442,7 +429,6 @@ TEST( ConsensusSubjectTest, Binding_CommitmentRoundTrip_PreservesRoots )
         kAccountId,
         1,
         "tx-hash-binding",
-        "transfer",
         std::vector<uint8_t>{ 0x01, 0x02 },
         commitment,
         std::nullopt );
@@ -471,7 +457,6 @@ TEST( ConsensusSubjectTest, Binding_SubjectHasCommitment_TxLacksUTXO_Inconsisten
         kAccountId,
         1,
         "tx-hash-no-utxo",
-        "transfer",
         std::vector<uint8_t>{ 0xAA, 0xBB }, // small non-UTXO tx bytes
         MakeTestCommitment( consumed_root, produced_root ),
         std::nullopt );
@@ -498,7 +483,6 @@ TEST( ConsensusSubjectTest, Binding_SubjectNoCommitment_TxNoUTXO_ValidPath )
         kAccountId,
         1,
         "tx-hash-no-commitment",
-        "transfer",
         std::vector<uint8_t>{ 0x01, 0x02 },
         std::nullopt,   // no commitment
         std::nullopt );
@@ -542,7 +526,6 @@ TEST( ConsensusSubjectTest, WitnessHardening_CommitmentButNoUTXOParams_DetectsIn
         kAccountId,
         1,
         "tx-hash-witness",
-        "transfer",
         std::vector<uint8_t>{ 0x01 }, // tx bytes (non-UTXO)
         MakeTestCommitment( consumed_root, produced_root ),
         std::nullopt );
@@ -568,7 +551,6 @@ TEST( ConsensusSubjectTest, WitnessHardening_NoCommitmentNoUTXOParams_StillValid
         kAccountId,
         1,
         "tx-hash-no-commit",
-        "transfer",
         std::vector<uint8_t>{ 0x01 },
         std::nullopt,
         std::nullopt );
@@ -594,7 +576,6 @@ TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
         kAccountId,
         42,
         "tx-hash-approve",
-        tx_type,
         tx_data,
         std::nullopt,
         std::nullopt );
@@ -605,7 +586,6 @@ TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
 
     // Then: All fields needed for tracking are preserved
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-approve" );
-    EXPECT_EQ( nonce.value().transaction_type(), tx_type );
     EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
 }
@@ -617,8 +597,7 @@ TEST( ConsensusSubjectTest, Tracking_RejectClearsTempEntryState )
     const auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
         kAccountId,
         7,
-        "tx-hash-reject",
-        std::string{},
+        "tx-hash",
         std::vector<uint8_t>{},
         std::nullopt,
         std::nullopt );
@@ -645,7 +624,6 @@ TEST( ConsensusSubjectTest, Tracking_CertificatePromotesConfirmedState )
         kAccountId,
         42,
         "tx-hash-certificate",
-        "transfer",
         tx_data,
         commitment,
         std::nullopt );
@@ -672,7 +650,6 @@ TEST( ConsensusSubjectTest, Tracking_RejectDoesNotEraseConfirmedEntry )
         kAccountId,
         1,
         "tx-hash-confirmed",
-        "transfer",
         std::vector<uint8_t>{ 0x01 },
         MakeTestCommitment( consumed_root, produced_root ),
         std::nullopt );

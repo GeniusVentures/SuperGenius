@@ -59,8 +59,7 @@ message NonceSubject {
   bytes tx_hash = 2;
   UTXOTransitionCommitment utxo_commitment = 3;
   UTXOWitness utxo_witness = 4;
-  string transaction_type = 5;   // Transaction type tag for deserializer dispatch
-  bytes transaction_data = 6;    // Full SerializeByteVector() output
+  bytes transaction_data = 5;    // Full SerializeByteVector() output (type extracted via DAG partial deserialization)
 }
 
 message TaskResultSubject {
