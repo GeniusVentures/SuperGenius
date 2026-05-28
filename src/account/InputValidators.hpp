@@ -11,6 +11,8 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 #include "account/GeniusTransaction.hpp"
 #include "account/UTXOManager.hpp"
@@ -122,11 +124,31 @@ namespace sgns
     };
 
     /**
+     * @brief Weighted RPC endpoint used for multi-provider consensus verification.
+     *
+     * Direct (api-key) endpoints contribute 50% weight.
+     * Public endpoints from ChainList contribute 25% weight.
+     * Verification requires >= 75% weighted consensus across queried endpoints.
+     */
+    struct WeightedRpcEndpoint
+    {
+        std::string url;
+        uint8_t     consensus_weight = 25;
+    };
+
+    /**
      * @brief Validator for transactions that reference external public-chain proofs.
      */
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
+        /**
+         * @brief Configure weighted RPC endpoints for a source chain.
+         * @param[in] chain_id  Source chain identifier (e.g. "1" for Ethereum).
+         * @param[in] endpoints Weighted RPC endpoint URLs for verifying burn receipts.
+         */
+        void SetRpcEndpoints( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
         /**
          * @brief Validates local UTXO structure for externally sourced claims.
          * @param[in] params UTXO inputs and outputs carried by the transaction.
@@ -152,23 +174,31 @@ namespace sgns
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
         /**
-         * @brief Public-chain validation does not require consensus UTXO payloads.
-         * @return Always false.
+         * @brief Public-chain validation requires consensus UTXO payloads so
+         *        validators independently verify burn receipts via RPC.
+         * @return Always true.
          */
         bool RequiresConsensusUTXOData() const override
         {
-            return false;
+            return true;
         }
 
     private:
         /**
-         * @brief Verifies that the referenced public-chain smart-contract event matches the transaction.
+         * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
+         *        using a weighted multi-provider RPC quorum.
+         *
+         * Each successful RPC confirmation adds the endpoint's consensus_weight to a running total.
+         * Verification passes when the sum reaches >= 75.  Direct endpoints carry 50% weight;
+         * public endpoints carry 25% weight.
+         *
          * @param[in] tx Transaction claiming the public-chain event.
          * @param[in] source_reference Public-chain transaction hash or external source reference.
-         * @return True when the external source reference is accepted for @p tx.
-         * @note This is currently a placeholder that accepts all references, including empty bootstrap/test references.
+         * @return True when the weighted consensus threshold is met.
          */
         bool VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                              const std::string                           &source_reference ) const;
+
+        std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
     };
 } // namespace sgns

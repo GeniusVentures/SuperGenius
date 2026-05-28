@@ -1,16 +1,123 @@
-# Roadmap: SuperGenius Consensus Voting Decentralization
+# SuperGenius Roadmap
 
-## Overview
+Two active development tracks: **EVM Bridge Integration** and **Consensus Voting Decentralization**.
+
+---
+
+## Track A: EVM Bridge Integration
+
+**Branch:** `evmrelay_integration`
+
+### Completed
+
+| Item | Status | Notes |
+|------|--------|-------|
+| evmrelay v1 (ChainList, RPC infra, tests) | Done | Submodule at `59d1ed2`, 55+ tests |
+| Consensus opaque-payload refactor | Done | `subject_type_hash` dispatch |
+| Bridge consensus adapter (now deleted) | Removed | No separate bridge consensus round |
+| `MintTransactionV2` RPC cleanup | Done | No RPC members — clean value class |
+| `PublicChainInputValidator` RPC verification | Done | `SetRpcEndpoints(chain_id, urls)`, `VerifyPublicChainSmartContract` calls 3+ RPC endpoints |
+| `BridgeRpcWatcher` in src/watcher | Done | RPC-based event detection via evmrelay |
+| SuperGenius build | Passes | 405 targets, consensus + watcher tests pass |
+
+### Phase 1: Wire RPC Endpoints from evmrelay ChainList
+
+**Goal:** Load chain RPC endpoints from evmrelay's ChainList provider (driven by `chains_config.json`) and configure `PublicChainInputValidator` at startup.
+
+**Status:** Implementation complete — in-review ([#293](https://github.com/GeniusVentures/SuperGenius/issues/293))
+**Plan:** [01-PLAN.md](phases/01-rpc-endpoint-wiring/01-PLAN.md)
+**Summary:** [01-SUMMARY.md](phases/01-rpc-endpoint-wiring/01-SUMMARY.md)
+
+**Tasks:**
+- [x] Load `chains_config.json` to determine supported chains
+- [x] For each supported chain, ingest RPC URLs via `eth::rpc::load_chainlist_from_json_text()`
+- [x] Filter/deduplicate by chain ID
+- [x] Call `PublicChainInputValidator::SetRpcEndpoints(chain_id, urls)` for each chain
+- [x] Wire this into the application startup path (GeniusNode or equivalent)
+
+**Success criteria:**
+- Each configured chain has at least 3 RPC endpoints available
+- Endpoints are loaded from data, not hardcoded
+- Build passes
+
+---
+
+### Phase 2: Relayer — Burn Detection → MintFunds
+
+**Goal:** Build the relayer that detects EVM burn events and calls `TransactionManager::MintFunds()` to create `MintTransactionV2` entries.
+
+**Tasks:**
+- [ ] Use `EvmMessagingWatcher` (WebSocket `eth_subscribe`) or `BridgeRpcWatcher` (RPC polling) to detect burn events
+- [ ] Parse the burn event log to extract: amount, recipient, burn tx hash, token ID
+- [ ] Call `MintFunds(amount, burn_tx_hash, chain_id, token_id, destination)` on the local TransactionManager
+- [ ] The `MintTransactionV2` enters standard UTXO/nonce consensus
+- [ ] Validators independently verify the burn via `PublicChainInputValidator::VerifyPublicChainSmartContract`
+
+**Success criteria:**
+- Burn event on Ethereum Sepolia GNUS contract triggers `MintFunds`
+- `MintTransactionV2` created with correct chain_id, amount, burn_tx_hash
+- Transaction enters nonce consensus
+
+---
+
+### Phase 3: Burn Deduplication Cache
+
+**Goal:** Prevent double-minting by tracking which burn transaction hashes have already been processed.
+
+**Tasks:**
+- [ ] Add a `burn_cache[burn_tx_hash].used` map to `PublicChainInputValidator`
+- [ ] Check the cache in `VerifyPublicChainSmartContract` before RPC verification
+- [ ] Mark the burn hash as used after successful mint consensus certificate
+- [ ] Persist cache across restarts (CRDT or local RocksDB)
+
+**Success criteria:**
+- Same burn tx hash cannot produce two mint transactions
+- Cache survives node restart
+- Unit tests for duplicate rejection
+
+---
+
+### Phase 4: End-to-End Integration Test
+
+**Goal:** Demonstrate the full pipeline: EVM burn → detection → MintTransactionV2 → UTXO consensus → RPC verification → minted tokens.
+
+**Tasks:**
+- [ ] Live test against Ethereum Sepolia GNUS contract
+- [ ] Send a test burn transaction via `send_test_transactions.sh`
+- [ ] Relayer detects the burn, creates MintTransactionV2
+- [ ] Validator(s) verify the burn receipt via RPC
+- [ ] UTXO consensus produces certificate
+- [ ] Minted tokens appear in recipient's UTXO set
+
+**Success criteria:**
+- Single end-to-end test script or C++ integration test demonstrating the complete flow
+- RPC verification succeeds with 3+ independent endpoints
+- No manual steps beyond sending the initial burn tx
+
+---
+
+### Phase 5: Startup Catch-Up for Unprocessed Burns
+
+**Goal:** On node startup (especially full/archive nodes), after syncing CRDT data, grab the last mint message transaction by date and use RPC to check the contract for any unprocessed bridged transactions that need to be minted.
+
+**Depends on:** Phase 4
+**Plans:** 0 plans
+
+- [ ] TBD (run /gsd-plan-phase 5 to break down)
+
+---
+
+## Track B: Consensus Voting Decentralization
+
+### Overview
 
 A three-phase protocol change to make SuperGenius consensus truly decentralized. Phase 1 embeds full serialized transaction bytes in `NonceSubject` messages so any validator can validate and vote from the proposal alone — no CRDT dependency. Phase 2 hardens security for standalone validators by closing double-spend and nonce-replay detection gaps using the certificate chain. Phase 3 hardens network resilience with message size enforcement, clock-skew tolerance, memory cleanup, and operational metrics.
 
-## Phases
+### Phases
 
 - [x] **Phase 1: Core Embedded-Transaction Validation Path** — Validators validate and vote from embedded tx bytes, no CRDT needed (completed 2026-05-27)
 - [ ] **Phase 2: Conflict and Replay Detection Hardening** — Standalone validators detect double-spends and nonce replays via certificate chain
 - [ ] **Phase 3: Network Hardening and Operational Readiness** — Robust at scale: size enforcement, clock tolerance, cleanup, metrics
-
-## Phase Details
 
 ### Phase 1: Core Embedded-Transaction Validation Path
 
@@ -24,10 +131,10 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
   2. **Non-CRDT validation works:** A validator that lacks the transaction in its local CRDT store successfully deserializes the embedded data and progresses beyond `Check::Pending` — reaching `Check::Approve` for valid proposals and `Check::Reject` for invalid ones.
   3. **Integrity and binding verified:** The validator rejects proposals where the deserialized transaction's hash does not match `NonceSubject.tx_hash`, or where the reconstructed UTXO commitment from the embedded tx params does not match `subject.utxo_commitment` — preventing commitment-tx binding bypass.
   4. **DoS resistant:** Maliciously oversized or malformed `transaction_data` payloads are safely rejected without crashing, hanging, or leaking resources (sanitization sandwich: size cap → hash verify → bounded parse).
-   5. **All checks pass from embedded data:** All 12 existing validation checks (well-formed, authorization, timestamp, replay protection, type rules, witness, input conflict, nonce/address consistency, transaction status, migration eligibility) produce correct results when the transaction is sourced from embedded bytes. Re-proposals (vote bundles) find the temporarily tracked transaction and reach `Check::Approve`, enabling the validator to cast a vote.
+  5. **All checks pass from embedded data:** All 12 existing validation checks (well-formed, authorization, timestamp, replay protection, type rules, witness, input conflict, nonce/address consistency, transaction status, migration eligibility) produce correct results when the transaction is sourced from embedded bytes. Re-proposals (vote bundles) find the temporarily tracked transaction and reach `Check::Approve`, enabling the validator to cast a vote.
 
 **Plans**: 2 plans
-Plans:
+
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Walking Skeleton: proto schema + serialization threading + handler deserialization + temp tracking + all 12 validation checks (PROTO-01, SER-01, DESER-01, TRACK-01, VALID-ALL)
@@ -78,12 +185,41 @@ Plans:
 
 - [ ] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
 
-## Progress
+---
 
-**Execution Order:** Phases execute in numeric order: 1 → 2 → 3
+## Design Notes
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Core Embedded-Transaction Validation Path | 2/2 | Complete   | 2026-05-27 |
-| 2. Conflict and Replay Detection Hardening | 0/TBD | Not started | - |
-| 3. Network Hardening and Operational Readiness | 0/2 | Planned | - |
+### Consensus Trust Model for Bridge Mints
+
+Public-chain mint validation differs from internal transfers: a compromised validator can skip RPC verification and vote `Approve` without detection. Reputation-based voting alone is insufficient — a quorum of colluding nodes could mint fake tokens.
+
+**Proposed safeguard:** Require at least **N validators** to independently and verifiably confirm the burn receipt via RPC before the certificate is produced. Each validator's vote should include a commitment to the RPC result (e.g., `sha256(rpc_response)`) so other nodes can detect fabricated votes. This moves trust from "reputation" to "independent verification count."
+
+**Current state:** `VerifyPublicChainSmartContract` queries 3+ RPC endpoints per validator. This protects against RPC endpoint compromise but does not protect against validator compromise. The consensus protocol layer needs an additional quorum rule for bridge mints.
+
+---
+
+## Out of Scope (v1)
+
+| Concern | Disposition |
+|---------|-------------|
+| Multi-provider quorum (`RpcQuorumClient`, `ProviderVote<T>`) | SuperGenius builds on evmrelay's endpoint pool |
+| `SecurityDecision` structured evidence | Deferred — validator uses simple majority |
+| P2P RLPx burn event gossip | Deferred — WebSocket/RPC polling for v1 |
+| `EthWatchService` integration into watcher | Deferred — uses dedicated BridgeRpcWatcher |
+| Burn contract deployment/management | External concern |
+
+---
+
+## Progress Summary
+
+| Track | Phase | Status | Completed |
+|-------|-------|--------|-----------|
+| A. EVM Bridge | 1. Wire RPC Endpoints | Complete | 2026-05-27 |
+| A. EVM Bridge | 2. Relayer — Burn Detection | Not started | - |
+| A. EVM Bridge | 3. Burn Dedup Cache | Not started | - |
+| A. EVM Bridge | 4. E2E Integration Test | Not started | - |
+| A. EVM Bridge | 5. Startup Catch-Up | Not started | - |
+| B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
+| B. Consensus | 2. Conflict and Replay Hardening | Not started | - |
+| B. Consensus | 3. Network Hardening | Planned | - |

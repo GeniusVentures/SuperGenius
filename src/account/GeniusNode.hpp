@@ -707,6 +707,19 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
+         * @brief Loads RPC endpoints from the evmrelay ChainList provider and wires
+         *        them into the transaction manager's public-chain input validator.
+         *
+         * This is called once during startup after the transaction manager reaches
+         * the READY state and before processing modules are initialized.  It reads
+         * @c chains_config.json to discover configured chains, maps their names to
+         * well-known EVM chain IDs, parses the ChainList data to extract verified
+         * public RPC endpoint URLs, and calls @c PublicChainInputValidator::SetRpcEndpoints
+         * for each configured chain.
+         */
+        void InitializeRpcEndpoints();
+
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */

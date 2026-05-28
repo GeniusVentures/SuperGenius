@@ -12,6 +12,13 @@
 #include "account/GeniusAccount.hpp"
 #include "account/UTXOMerkle.hpp"
 
+#include <eth/json_rpc.hpp>
+#include <eth/rpc_http_transport.hpp>
+#include <base/parse_utility.hpp>
+#include <base/rlp-logger.hpp>
+
+#include <algorithm>
+
 namespace sgns
 {
     namespace
@@ -414,13 +421,30 @@ namespace sgns
     }
 
     bool PublicChainInputValidator::ValidateWitness( const ConsensusSubject                     &subject,
-                                                     const std::shared_ptr<GeniusTransaction> &tx,
+                                                     const std::shared_ptr<IGeniusTransactions> &tx,
                                                      const UTXOTxParameters                     &params,
                                                      const std::shared_ptr<Blockchain>          &blockchain ) const
     {
-        (void)subject;
         (void)blockchain;
         if ( !tx || params.first.empty() || params.second.empty() )
+        {
+            return false;
+        }
+
+        auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce_subject.has_error() )
+        {
+            return false;
+        }
+
+        if ( !nonce_subject.value().has_utxo_commitment() )
+        {
+            return false;
+        }
+
+        const auto &commitment = nonce_subject.value().utxo_commitment();
+        if ( commitment.consumed_outpoints_size() != static_cast<int>( params.first.size() ) ||
+             commitment.produced_outputs_size() != static_cast<int>( params.second.size() ) )
         {
             return false;
         }
@@ -441,13 +465,94 @@ namespace sgns
         return VerifyPublicChainSmartContract( tx, source_reference );
     }
 
-    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                    const std::string &source_reference ) const
+    void PublicChainInputValidator::SetRpcEndpoints( const std::string &chain_id,
+                                                        std::vector<WeightedRpcEndpoint> endpoints )
     {
-        (void)tx;
-        (void)source_reference;
-        // Placeholder for real burn/finality/contract validation.
-        // Empty source_reference is accepted for bootstrap/test mints where no external source hash is provided yet.
-        return true;
+        rpc_endpoints_[chain_id] = std::move( endpoints );
+    }
+
+    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                                      const std::string &source_reference ) const
+    {
+        if ( source_reference.empty() )
+        {
+            return true;
+        }
+
+        const auto chain_id = tx->GetChainId();
+        if ( chain_id.empty() || chain_id == "supergenius" )
+        {
+            return true;
+        }
+
+        auto chain_it = rpc_endpoints_.find( chain_id );
+        if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
+        {
+            return true;
+        }
+
+        const auto &endpoints = chain_it->second;
+        auto        logger    = rlp::base::createLogger( "public_chain_validator" );
+
+        static constexpr int32_t kRequiredConsensusWeight = 75;
+        static constexpr auto    kTimeout                 = std::chrono::seconds( 10 );
+
+        int32_t total_weight   = 0;
+        int32_t success_weight = 0;
+        size_t  tried          = 0;
+
+        for ( const auto &ep : endpoints )
+        {
+            total_weight += ep.consensus_weight;
+
+            eth::rpc::RpcHttpTransportOptions opts;
+            opts.timeout = kTimeout;
+            eth::rpc::RpcHttpTransport transport( ep.url, opts );
+
+            eth::Hash256 tx_hash_parsed{};
+            if ( !rlp::base::parse::hex_array( source_reference, tx_hash_parsed ) )
+            {
+                ++tried;
+                continue;
+            }
+
+            const auto request  = eth::rpc::make_get_transaction_receipt_request( tx_hash_parsed, 1 );
+            const auto response = transport.call( request );
+            if ( !response.has_value() )
+            {
+                logger->debug( "RPC transport failed for url={}", ep.url );
+                ++tried;
+                continue;
+            }
+
+            const auto receipt = eth::rpc::parse_transaction_receipt_response( response.value() );
+            if ( !receipt.has_value() )
+            {
+                logger->debug( "Failed to parse receipt from url={}", ep.url );
+                ++tried;
+                continue;
+            }
+
+            if ( !receipt->receipt.status.has_value() || !receipt->receipt.status.value() )
+            {
+                logger->warn( "Receipt status is not success for tx={} via url={}",
+                              source_reference.substr( 0, 10 ), ep.url );
+                return false;
+            }
+
+            success_weight += ep.consensus_weight;
+            ++tried;
+
+            if ( success_weight >= kRequiredConsensusWeight )
+            {
+                logger->info( "Burn receipt verified: {}/{} weight via {} endpoints for tx={}",
+                              success_weight, total_weight, tried, source_reference.substr( 0, 10 ) );
+                return true;
+            }
+        }
+
+        logger->warn( "Insufficient weighted RPC consensus for tx={}: {}/{} weight (need >= {})",
+                      source_reference.substr( 0, 10 ), success_weight, total_weight, kRequiredConsensusWeight );
+        return false;
     }
 } // namespace sgns

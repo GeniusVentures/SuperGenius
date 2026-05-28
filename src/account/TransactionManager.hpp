@@ -17,8 +17,6 @@
 
 #include <boost/format.hpp>
 
-#include <eth/bridge_event.hpp>
-
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -453,8 +451,7 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash,
-                                                                          const ConsensusCertificate &certificate );
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
         /**
          * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
@@ -682,10 +679,28 @@ namespace sgns
 
         bool IsGoingToOverwrite( const std::string &key ) const;
 
+        /**
+         * @brief Obtains the public-chain input validator for RPC endpoint wiring.
+         * @return Mutable reference to the PublicChainInputValidator.
+         */
+        PublicChainInputValidator &GetPublicChainInputValidator() noexcept
+        {
+            return public_chain_input_validator_;
+        }
+
+        /**
+         * @brief Obtains the public-chain input validator for RPC endpoint wiring (const).
+         * @return Const reference to the PublicChainInputValidator.
+         */
+        const PublicChainInputValidator &GetPublicChainInputValidator() const noexcept
+        {
+            return public_chain_input_validator_;
+        }
+
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        std::string               GetValidationChainId( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;

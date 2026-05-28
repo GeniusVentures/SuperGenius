@@ -11,6 +11,7 @@
 #include <memory>
 #include <exception>
 #include <random>
+#include <filesystem>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -32,6 +33,7 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/ChainRpcEndpointProvider.hpp"
 #include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -1893,6 +1895,35 @@ namespace sgns
             std::cerr << "Log rotation error: " << e.what() << std::endl;
             // Continue execution - don't let log rotation failure stop the application
         }
+    }
+
+    void GeniusNode::InitializeRpcEndpoints()
+    {
+        if ( !transaction_manager_ )
+        {
+            node_logger_->warn( "InitializeRpcEndpoints called before transaction manager is ready" );
+            return;
+        }
+
+        ChainRpcEndpointProvider::ChainIdMap chain_id_map = {
+            { "ethereum-mainnet", 1 },
+            { "polygon-mainnet", 137 },
+            { "bnb-smart-chain", 56 },
+            { "base-mainnet", 8453 },
+        };
+
+        ChainRpcProviderConfig config;
+        config.chains_json_path = std::filesystem::current_path() / "chains.json";
+
+        // Direct API-key endpoints are not wired here — the app layer
+        // (desktop launcher or mobile host) supplies them through secure
+        // storage and populates config.direct_endpoints before constructing
+        // the provider.  API keys are never tracked in git.
+
+        ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
+        provider.Initialize( transaction_manager_->GetPublicChainInputValidator(),
+                             config,
+                             node_logger_ );
     }
 
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
