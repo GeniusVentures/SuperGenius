@@ -1,6 +1,8 @@
 package ai.gnus.sdk
 
 import android.content.Context
+import android.os.Build
+import android.os.PowerManager
 import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
@@ -113,6 +115,30 @@ class GeniusBackgroundWorker(
     override suspend fun doWork(): Result {
         Log.i(TAG, "doWork() triggered (attempt ${runAttemptCount}) — " +
                 "waking native GeniusSDK node")
+
+        val config = BackgroundServiceManager.getConfig()
+
+        // D-05: Thermal gate — skip inference on critical/emergency thermal status (API 29+)
+        if (config.thermalCheckEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val powerManager = applicationContext.getSystemService(
+                Context.POWER_SERVICE) as PowerManager
+            val thermalStatus = powerManager.currentThermalStatus
+            if (thermalStatus == PowerManager.THERMAL_STATUS_CRITICAL ||
+                thermalStatus == PowerManager.THERMAL_STATUS_EMERGENCY) {
+                Log.i(TAG, "Thermal status $thermalStatus — skipping inference this cycle")
+                return Result.success()
+            }
+        }
+
+        // D-06: Battery saver gate — skip inference when battery saver is active
+        if (config.batterySaverCheckEnabled) {
+            val powerManager = applicationContext.getSystemService(
+                Context.POWER_SERVICE) as PowerManager
+            if (powerManager.isPowerSaveMode) {
+                Log.i(TAG, "Battery saver active — skipping inference this cycle")
+                return Result.success()
+            }
+        }
 
         return try {
             val hasPendingWork = nativeOnWorkManagerWakeUp()

@@ -53,7 +53,6 @@ class GeniusForegroundService : Service() {
     companion object {
         private const val TAG = "GeniusForeground"
         const val NOTIFICATION_ID = 1001
-        private const val IDLE_STOP_THRESHOLD = 60  // 60 consecutive polls = ~60 seconds
 
         /**
          * Processing status returned from C++ via JNI.
@@ -75,6 +74,7 @@ class GeniusForegroundService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var statusPollJob: Job? = null
     private var idlePollCount: Int = 0
+    private var idleStopThreshold: Int = 60  // default; overridden from BackgroundServiceManager config
 
     override fun onCreate() {
         super.onCreate()
@@ -127,6 +127,14 @@ class GeniusForegroundService : Service() {
 
         // Reset idle counter on service start
         idlePollCount = 0
+
+        // D-02: Read configurable idle timeout from BackgroundServiceManager
+        val config = BackgroundServiceManager.getConfig()
+        idleStopThreshold = config.inferenceIdleTimeoutSeconds.toInt()
+        if (idleStopThreshold <= 0) {
+            idleStopThreshold = 60
+        }
+        Log.i(TAG, "Idle stop threshold set to $idleStopThreshold seconds from config")
 
         // Start polling C++ for live processing status
         startStatusPolling()
@@ -249,12 +257,24 @@ class GeniusForegroundService : Service() {
                 try {
                     val status = nativeGetProcessingStatus()
                     val statusText = statusToString(status)
-                    val contentText = when (status.status) {
-                        2 -> "$statusText: ${status.percentage.toInt()}%"
+
+                    // D-04: Dynamic notification text from C++ signals
+                    // Read last notification title/text set by C++ via
+                    // AndroidRequestForegroundService → BackgroundServiceManager
+                    val notifyTitle = BackgroundServiceManager.lastNotificationTitle
+                        ?: "SuperGenius Processing"
+                    val notifyText = BackgroundServiceManager.lastNotificationText
+
+                    val contentText = when {
+                        status.status == 2 && notifyText != null ->
+                            "$notifyText: ${status.percentage.toInt()}%"
+                        status.status == 2 ->
+                            "$statusText: ${status.percentage.toInt()}%"
+                        notifyText != null -> notifyText
                         else -> statusText
                     }
 
-                    updateNotification(contentText, status)
+                    updateNotification(contentText, status, notifyTitle)
 
                     // Battery drain prevention: auto-stop logic
                     when (status.status) {
@@ -268,9 +288,9 @@ class GeniusForegroundService : Service() {
                         1 -> {
                             // IDLE — increment counter, stop if threshold reached
                             idlePollCount++
-                            if (idlePollCount >= IDLE_STOP_THRESHOLD) {
+                            if (idlePollCount >= idleStopThreshold) {
                                 Log.i(TAG, "Node idle for $idlePollCount polls " +
-                                        "(>= $IDLE_STOP_THRESHOLD) — stopping service")
+                                        "(>= $idleStopThreshold) — stopping service")
                                 stopForeground(STOP_FOREGROUND_REMOVE)
                                 stopSelf()
                                 return@launch
@@ -300,11 +320,13 @@ class GeniusForegroundService : Service() {
      *
      * @param contentText Status text for notification content
      * @param status      Current ProcessingStatusInfo
+     * @param notifyTitle Dynamic notification title from C++ signal (D-04)
      */
-    private fun updateNotification(contentText: String, status: ProcessingStatusInfo) {
+    private fun updateNotification(contentText: String, status: ProcessingStatusInfo,
+                                   notifyTitle: String) {
         val notification = buildNotification(
             channelId = BackgroundServiceManager.NOTIFICATION_CHANNEL_ID,
-            contentTitle = "SuperGenius Processing",
+            contentTitle = notifyTitle,
             contentText = contentText
         )
 
@@ -314,7 +336,7 @@ class GeniusForegroundService : Service() {
                 this,
                 BackgroundServiceManager.NOTIFICATION_CHANNEL_ID
             )
-                .setContentTitle("SuperGenius Processing")
+                .setContentTitle(notifyTitle)
                 .setContentText(contentText)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setOngoing(true)

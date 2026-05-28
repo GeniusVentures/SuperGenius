@@ -31,7 +31,10 @@ data class BackgroundConfigData(
     val wakeupIntervalMinutes: Long = 15,
     val networkRequired: Boolean = true,
     val batteryNotLow: Boolean = true,
-    val idleOnly: Boolean = false
+    val idleOnly: Boolean = false,
+    val thermalCheckEnabled: Boolean = true,
+    val batterySaverCheckEnabled: Boolean = true,
+    val inferenceIdleTimeoutSeconds: Long = 120
 )
 
 /**
@@ -62,6 +65,11 @@ object BackgroundServiceManager {
 
     // Application context stored for foreground service lifecycle
     private var appContext: Context? = null
+
+    // Notification text passthrough — set by C++ via requestForegroundService(),
+    // read by GeniusForegroundService for dynamic notification content (D-04)
+    @Volatile var lastNotificationTitle: String? = null
+    @Volatile var lastNotificationText: String? = null
 
     // JNI native initialization — called after notification channel setup
     private external fun nativeInit(context: Context)
@@ -111,13 +119,19 @@ object BackgroundServiceManager {
                         wakeupIntervalMinutes = json.optLong("wakeupIntervalMinutes", 15),
                         networkRequired = json.optBoolean("networkRequired", true),
                         batteryNotLow = json.optBoolean("batteryNotLow", true),
-                        idleOnly = json.optBoolean("idleOnly", false)
+                        idleOnly = json.optBoolean("idleOnly", false),
+                        thermalCheckEnabled = json.optBoolean("thermalCheckEnabled", true),
+                        batterySaverCheckEnabled = json.optBoolean("batterySaverCheckEnabled", true),
+                        inferenceIdleTimeoutSeconds = json.optLong("inferenceIdleTimeoutSeconds", 120)
                     )
                     Log.i(TAG, "Config loaded from native: mode=${backgroundConfig.mode}, " +
                             "interval=${backgroundConfig.wakeupIntervalMinutes}min, " +
                             "network=${backgroundConfig.networkRequired}, " +
                             "batteryNotLow=${backgroundConfig.batteryNotLow}, " +
-                            "idleOnly=${backgroundConfig.idleOnly}")
+                            "idleOnly=${backgroundConfig.idleOnly}, " +
+                            "thermalCheck=${backgroundConfig.thermalCheckEnabled}, " +
+                            "batterySaverCheck=${backgroundConfig.batterySaverCheckEnabled}, " +
+                            "inferenceIdleTimeout=${backgroundConfig.inferenceIdleTimeoutSeconds}s")
                 } else {
                     Log.w(TAG, "nativeGetConfigJson returned null/empty — using defaults")
                 }
@@ -240,6 +254,14 @@ object BackgroundServiceManager {
     }
 
     /**
+     * Get the current BackgroundConfigData (used by GeniusForegroundService for
+     * configurable idle timeout and by GeniusBackgroundWorker for thermal/battery gates).
+     *
+     * @return Current BackgroundConfigData with all fields
+     */
+    fun getConfig(): BackgroundConfigData = backgroundConfig
+
+    /**
      * Start the GeniusForegroundService.
      *
      * Called from C++ via JNI upcall when the node detects pending CRDT work.
@@ -293,6 +315,12 @@ object BackgroundServiceManager {
             return false
         }
         Log.i(TAG, "Foreground service requested from C++: title='$title', text='$text'")
+
+        // D-04: Store notification title/text for GeniusForegroundService to use
+        // in dynamic notification content. Read from startStatusPolling() poll loop.
+        lastNotificationTitle = title
+        lastNotificationText = text
+
         startForegroundService(ctx)
         return true
     }
