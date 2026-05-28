@@ -3431,18 +3431,26 @@ namespace sgns
                 tx_hash );
             return ConsensusManager::Check::Approve;
         }
-        // TRACK-01 per D-02: Promote temp embedded-tx entry from VERIFYING to CONFIRMED
+        // TRACK-01: Confirm via ChangeTransactionState lifecycle (promote temp embedded-tx entry)
         {
-            std::unique_lock tx_lock( tx_mutex_m );
-            auto it = tx_processed_m.find( GetTransactionPath( tx_hash ) );
-            if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+            auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
+            if ( result.has_error() )
             {
-                it->second.status = TransactionStatus::CONFIRMED;
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] {}: Promoted temp embedded-tx entry to CONFIRMED for tx {}",
-                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Failed to change transaction state to CONFIRMED for hash {}: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx_hash,
+                    result.error().message() );
+                return outcome::failure( result.error() );
             }
         }
+        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
+                                           account_m->GetAddress().substr( 0, 8 ),
+                                           full_node_m,
+                                           __func__,
+                                           tx_hash );
 
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -3524,24 +3532,6 @@ namespace sgns
                 }
             }
         }
-
-        auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
-        if ( result.has_error() )
-        {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Failed to change transaction state to CONFIRMED for hash {}: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx_hash,
-                result.error().message() );
-            return outcome::failure( result.error() );
-        }
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx_hash );
 
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
         if ( tx_hash_bin.has_error() )
@@ -3753,7 +3743,7 @@ namespace sgns
             }
         }
 
-        // TRACK-01: Insert temporary tracking entry (per D-01: on proposal arrival after deserialization)
+        // TRACK-01: Insert temporary tracking entry via ChangeTransactionState lifecycle
         uint64_t          tracked_nonce  = tx->GetNonce();
         TransactionStatus tracked_status = TransactionStatus::VERIFYING;
         {
@@ -3761,10 +3751,30 @@ namespace sgns
             auto it = tx_processed_m.find( key );
             if ( it == tx_processed_m.end() )
             {
-                tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::VERIFYING, tracked_nonce } );
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] {}: Inserted temp tracking entry for embedded tx {}",
-                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                tx_lock.unlock();
+                // Proper state machine: CREATED → VERIFYING (no direct tx_processed_m manipulation)
+                auto create_result = ChangeTransactionState( tx, TransactionStatus::CREATED );
+                if ( create_result.has_error() )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] {}: CREATE failed for embedded tx {}, entry may exist via race: {}",
+                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                        tx_hash, create_result.error().message() );
+                    // Re-read in case another thread inserted it
+                    std::unique_lock tx_lock2( tx_mutex_m );
+                    auto it2 = tx_processed_m.find( key );
+                    if ( it2 != tx_processed_m.end() )
+                    {
+                        if ( it2->second.status == TransactionStatus::FAILED )
+                            return ConsensusManager::Check::Reject;
+                        tracked_status = it2->second.status;
+                        tracked_nonce = it2->second.cached_nonce;
+                    }
+                }
+                else
+                {
+                    ChangeTransactionState( tx, TransactionStatus::VERIFYING );
+                }
             }
             else if ( it->second.status == TransactionStatus::FAILED )
             {
@@ -3820,17 +3830,20 @@ namespace sgns
                     }
                 }
             }
-
-            // TRACK-01 per D-02: Cleanup temp tracking entry on reject
+            else
             {
-                std::unique_lock tx_lock( tx_mutex_m );
-                auto it = tx_processed_m.find( GetTransactionPath( tx_hash ) );
-                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                // TRACK-01 per D-02: Mark remote embedded temp entry as FAILED via ChangeTransactionState
                 {
-                    tx_processed_m.erase( it );
-                    TransactionManagerLogger()->debug(
-                        "[{} - full: {}] {}: Removed temp tracking entry for rejected embedded tx {}",
-                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                    std::unique_lock tx_lock( tx_mutex_m );
+                    auto it = tx_processed_m.find( GetTransactionPath( tx_hash ) );
+                    if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+                    {
+                        tx_lock.unlock();
+                        ChangeTransactionState( tx, TransactionStatus::FAILED );
+                        TransactionManagerLogger()->debug(
+                            "[{} - full: {}] {}: Marked rejected embedded tx as FAILED for {}",
+                            account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                    }
                 }
             }
 
