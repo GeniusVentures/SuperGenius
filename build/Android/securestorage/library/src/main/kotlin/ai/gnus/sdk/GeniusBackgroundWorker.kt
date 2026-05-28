@@ -8,7 +8,6 @@ import androidx.work.BackoffPolicy
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
@@ -25,7 +24,8 @@ import java.util.concurrent.TimeUnit
  * Per D-08: WorkManager wake-up re-checks node state.
  * Per D-12: no polling of node readiness — just call and handle errors.
  * Per ANDN-03: exponential backoff retry on failure (3 attempts max).
- * Per ANDN-04: setExpedited for Doze maintenance window priority.
+ * Per ANDN-04: PeriodicWorkRequest — expedited work not supported; WorkManager
+ * handles Doze maintenance windows with the periodic schedule natively.
  *
  * Pattern: RESEARCH.md Pattern 2 (WorkManager-JNI Wake-Up Bridge)
  */
@@ -51,8 +51,9 @@ class GeniusBackgroundWorker(
          *
          * Configures WorkManager with:
          *   - BackoffPolicy.EXPONENTIAL for automatic retry backoff (ANDN-03)
-         *   - setExpedited for Doze maintenance window priority (ANDN-04)
          *   - ExistingPeriodicWorkPolicy.KEEP to preserve existing work
+         *   - Note: PeriodicWorkRequest does not support setExpedited (ANDN-04)
+         *     — WorkManager handles Doze natively for periodic work.
          *
          * Per RESEARCH.md Don't Hand-Roll: WorkManager handles retry and
          * Doze natively — no custom retry loops or power-state checks needed.
@@ -69,6 +70,7 @@ class GeniusBackgroundWorker(
             val request = PeriodicWorkRequestBuilder<GeniusBackgroundWorker>(
                 intervalMinutes, TimeUnit.MINUTES
             )
+                .addTag(UNIQUE_WORK_NAME)
                 .setConstraints(constraints)
                 // ANDN-03: exponential backoff starting at ~10 seconds per
                 // RESEARCH.md Don't Hand-Roll guidance (MIN_BACKOFF_MILLIS)
@@ -77,10 +79,6 @@ class GeniusBackgroundWorker(
                     WorkRequest.MIN_BACKOFF_MILLIS,
                     TimeUnit.MILLISECONDS
                 )
-                // ANDN-04: prioritize in Doze maintenance windows
-                // RUN_AS_NON_EXPEDITED_WORK_REQUEST ensures task still
-                // executes even if expedited quota is exhausted
-                .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setInitialDelay(0, TimeUnit.MINUTES)
                 .build()
 
@@ -92,7 +90,7 @@ class GeniusBackgroundWorker(
                 )
 
             Log.i(TAG, "Periodic work enqueued: interval=$intervalMinutes min, " +
-                    "backoff=EXPONENTIAL, expedited=true")
+                    "backoff=EXPONENTIAL")
         }
     }
 
@@ -151,8 +149,8 @@ class GeniusBackgroundWorker(
             }
 
             Result.success()
-        } catch (e: Exception) {
-            Log.e(TAG, "doWork() failed with exception (attempt ${runAttemptCount}/3)", e)
+        } catch (e: Throwable) {
+            Log.e(TAG, "doWork() failed with ${e::class.simpleName} (attempt ${runAttemptCount}/3)", e)
 
             if (runAttemptCount < 3) {
                 // ANDN-03: retry with exponential backoff (WorkManager handles timing)

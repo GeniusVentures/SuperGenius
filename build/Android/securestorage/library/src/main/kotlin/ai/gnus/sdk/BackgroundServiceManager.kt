@@ -11,7 +11,6 @@ import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.BackoffPolicy
-import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
@@ -104,15 +103,18 @@ object BackgroundServiceManager {
             // GeniusForegroundService.onCreate() per RESEARCH.md Pitfall 4
             createNotificationChannel(appContext)
 
-            // Initialize native side (JNI class caching + config loading)
-            nativeInit(appContext)
-
-            // Retrieve parsed config from native layer
-            // nativeGetConfigJson returns a JSON string serialized from
-            // the BackgroundConfig struct loaded by LoadBackgroundConfig()
+            // Initialize native side (JNI class caching + config loading).
+            // Wrapped in try-catch: if native .so is not loaded (e.g. test
+            // environment or ContentProvider runs before System.loadLibrary),
+            // we fall back to defaults without crashing the app.
             try {
+                nativeInit(appContext)
+
+                // Retrieve parsed config from native layer
+                // nativeGetConfigJson returns a JSON string serialized from
+                // the BackgroundConfig struct loaded by LoadBackgroundConfig()
                 val configJson = nativeGetConfigJson()
-                if (configJson != null && configJson.isNotEmpty()) {
+                if (configJson.isNotEmpty()) {
                     val json = JSONObject(configJson)
                     backgroundConfig = BackgroundConfigData(
                         mode = json.optString("mode", "on_demand"),
@@ -135,8 +137,11 @@ object BackgroundServiceManager {
                 } else {
                     Log.w(TAG, "nativeGetConfigJson returned null/empty — using defaults")
                 }
+            } catch (e: UnsatisfiedLinkError) {
+                Log.w(TAG, "Native library not loaded — using safe defaults for all config", e)
+                // backgroundConfig already has safe defaults from BackgroundConfigData()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to parse native config JSON — using defaults", e)
+                Log.e(TAG, "Failed to initialize native side — using defaults", e)
             }
 
             // Enqueue WorkManager periodic work with config-driven constraints
@@ -229,6 +234,7 @@ object BackgroundServiceManager {
         val request = PeriodicWorkRequestBuilder<GeniusBackgroundWorker>(
             intervalMinutes, TimeUnit.MINUTES
         )
+            .addTag(UNIQUE_WORK_NAME)
             .setConstraints(constraints)
             // ANDN-03: exponential backoff starting at ~10 seconds
             .setBackoffCriteria(
@@ -236,8 +242,6 @@ object BackgroundServiceManager {
                 WorkRequest.MIN_BACKOFF_MILLIS,
                 TimeUnit.MILLISECONDS
             )
-            // ANDN-04: prioritize in Doze maintenance windows
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .setInitialDelay(0, TimeUnit.MINUTES)
             .build()
 
@@ -250,7 +254,7 @@ object BackgroundServiceManager {
         Log.i(TAG, "Periodic work enqueued: interval=$intervalMinutes min, " +
                 "constraints=[network=${config.networkRequired}, " +
                 "batteryNotLow=${config.batteryNotLow}, idleOnly=${config.idleOnly}], " +
-                "backoff=EXPONENTIAL, expedited=true")
+                "backoff=EXPONENTIAL")
     }
 
     /**
