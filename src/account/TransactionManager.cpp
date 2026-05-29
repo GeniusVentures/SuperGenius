@@ -154,6 +154,16 @@ namespace sgns
                 }
                 return outcome::failure( std::errc::owner_dead );
             } );
+        instance->blockchain_->RegisterProposalCleanupHandler(
+            NONCE_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::string &tx_hash )
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    strong->OnProposalTimeoutCleanup( tx_hash );
+                }
+            } );
         RegisterBridgeEventConsensusHandler(
             instance->blockchain_,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
@@ -3448,6 +3458,34 @@ namespace sgns
             }
         }
         return false;
+    }
+
+    void TransactionManager::OnProposalTimeoutCleanup( const std::string &tx_hash )
+    {
+        auto tx = GetTransactionByHash( tx_hash );
+        if ( !tx )
+        {
+            // D-10: Entry not found — silently return, nothing to clean up.
+            return;
+        }
+
+        std::shared_lock tx_lock( tx_mutex_m );
+        const auto key = GetTransactionPath( *tx );
+        auto it = tx_processed_m.find( key );
+        if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
+        {
+            tx_lock.unlock(); // ChangeTransactionState acquires its own lock
+            TransactionManagerLogger()->info(
+                "[{} - full: {}] {}: Proposal timeout — transitioning temp entry to FAILED tx={}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                tx_hash );
+            // D-09: Only VERIFYING entries can reach this point per the condition above.
+            // CONFIRMED entries (line above would skip them) are left untouched.
+            (void)ChangeTransactionState( tx, TransactionStatus::FAILED );
+        }
+        // D-10: Entry not in map OR entry status is not VERIFYING → silently skip.
     }
 
     outcome::result<ConsensusManager::Check> TransactionManager::OnConsensusCertificate(

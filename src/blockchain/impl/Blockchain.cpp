@@ -1687,6 +1687,12 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( subject_type );
     }
 
+    bool Blockchain::RegisterProposalCleanupHandler( std::string_view                             subject_type,
+                                                      ConsensusManager::ProposalCleanupHandler     handler )
+    {
+        return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
+    }
+
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
         const std::string                             &account_id,
         uint64_t                                       nonce,

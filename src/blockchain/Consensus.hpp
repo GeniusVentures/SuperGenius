@@ -103,6 +103,10 @@ namespace sgns
         /// @brief      Alias for a certificate handler method type
         using CertificateSubjectHandler =
             std::function<outcome::result<Check>( const std::string &subject_hash, const Certificate &certificate )>;
+        /// @brief      Alias for a proposal cleanup handler method type
+        ///             Callback invoked when a proposal slot is cleaned up due to timeout.
+        ///             Receives the transaction hash so the handler can clean up associated tracking entries.
+        using ProposalCleanupHandler = std::function<void( const std::string &tx_hash )>;
 
         /**
          * @brief      Quorum tally structure
@@ -138,6 +142,18 @@ namespace sgns
          * @param[in] subject_type Canonical subject type associated with the handler.
          */
         void UnregisterCertificateHandler( std::string_view subject_type );
+        /**
+         * @brief Registers a proposal cleanup callback by canonical subject type string.
+         * @param[in] subject_type Canonical subject type to handle.
+         * @param[in] handler Callback invoked when a proposal is cleaned up due to timeout.
+         * @return `true` on successful registration.
+         */
+        bool RegisterProposalCleanupHandler( std::string_view subject_type, ProposalCleanupHandler handler );
+        /**
+         * @brief Unregisters all proposal cleanup handlers for a canonical subject type string.
+         * @param[in] subject_type Canonical subject type to remove.
+         */
+        void UnregisterProposalCleanupHandler( std::string_view subject_type );
 
         /**
          * @brief Publishes a consensus envelope to pubsub.
@@ -479,6 +495,13 @@ namespace sgns
          */
         void HandleCertificate( const Certificate &certificate );
         /**
+         * @brief Fires all registered proposal cleanup callbacks for a proposal being cleaned up.
+         *        Decodes the NonceSubject payload, extracts tx_hash, and dispatches to all handlers
+         *        registered for the subject type under a shared lock.
+         * @param[in] proposal Proposal whose slot is about to be cleared on timeout.
+         */
+        void FireProposalCleanupCallbacks( const Proposal &proposal );
+        /**
          * @brief Computes proposal slot key used for conflict resolution.
          * @param[in] proposal Proposal to map to a slot.
          * @return Slot key.
@@ -668,6 +691,9 @@ namespace sgns
         std::unordered_map<std::string, CertificateSubjectHandler>
                                   certificate_subject_handlers_;   ///< Certificate handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;      ///< Guards `certificate_subject_handlers_`.
+        std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
+                                  proposal_cleanup_handlers_;         ///< Proposal cleanup handlers by subject type hash.
+        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
         Signer                    signer_;                            ///< Local signing callback.
         std::string               account_address_;                   ///< Local validator/account id.
         std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.

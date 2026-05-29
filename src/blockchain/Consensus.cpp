@@ -290,6 +290,80 @@ namespace sgns
         certificate_subject_handlers_.erase( type_hash.value() );
     }
 
+    bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view         subject_type,
+                                                            ProposalCleanupHandler   handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty cleanup handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid cleanup handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering cleanup handler subject_type={}",
+                                         __func__,
+                                         subject_type );
+        std::unique_lock lock( cleanup_handlers_mutex_ );
+        proposal_cleanup_handlers_[type_hash.value()].push_back( std::move( handler ) );
+        return true;
+    }
+
+    void ConsensusManager::UnregisterProposalCleanupHandler( std::string_view subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing cleanup handler with subject_type={}",
+                                         __func__,
+                                         subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( cleanup_handlers_mutex_ );
+        proposal_cleanup_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::FireProposalCleanupCallbacks( const Proposal &proposal )
+    {
+        auto subject_hash = GetSubjectHash( proposal.subject() );
+        if ( subject_hash.has_error() )
+        {
+            return;
+        }
+        auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+        if ( nonce_payload.has_error() )
+        {
+            return;
+        }
+        auto tx_hash = nonce_payload.value().tx_hash();
+        if ( tx_hash.empty() )
+        {
+            return;
+        }
+
+        std::vector<ProposalCleanupHandler> handlers_copy;
+        {
+            std::shared_lock lock( cleanup_handlers_mutex_ );
+            auto it = proposal_cleanup_handlers_.find(
+                proposal.subject().subject_type_hash().hash() );
+            if ( it != proposal_cleanup_handlers_.end() )
+            {
+                handlers_copy = it->second;
+            }
+        }
+        for ( auto &handler : handlers_copy )
+        {
+            handler( tx_hash );
+        }
+    }
+
     void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
     {
         if ( window.count() <= 0 )
@@ -1389,6 +1463,7 @@ namespace sgns
                                                  __func__,
                                                  subject_hash.value().substr( 0, 8 ),
                                                  state.proposal.proposal_id().substr( 0, 8 ) );
+                FireProposalCleanupCallbacks( state.proposal );
                 ClearProposalSlot( state.proposal );
                 continue;
             }
@@ -1473,6 +1548,7 @@ namespace sgns
             }
 
             (void)SubmitCertificate( certificate_result.value() );
+            FireProposalCleanupCallbacks( state.proposal );
             ClearProposalSlot( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,

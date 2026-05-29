@@ -168,6 +168,14 @@ namespace sgns
          * @param[in] subject_type Canonical subject type to remove.
          */
         void UnregisterCertificateHandler( std::string_view subject_type );
+        /**
+         * @brief Registers a proposal cleanup callback by canonical subject type string.
+         * @param[in] subject_type Canonical subject type to handle.
+         * @param[in] handler Callback invoked when a proposal slot is cleaned up due to timeout.
+         * @return `true` on successful registration via the consensus manager.
+         */
+        bool RegisterProposalCleanupHandler( std::string_view subject_type,
+                                             ConsensusManager::ProposalCleanupHandler handler );
 
         /**
          * @brief Creates a consensus subject for nonce/transaction transition.

@@ -454,7 +454,14 @@ namespace sgns
         void TickOnce();
 
         outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash,
-                                                                         const ConsensusCertificate &certificate );
+                                                                          const ConsensusCertificate &certificate );
+        /**
+         * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
+         *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
+         *        up due to timeout. CONFIRMED entries are left untouched. Missing entries are skipped silently.
+         * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
+         */
+        void OnProposalTimeoutCleanup( const std::string &tx_hash );
         outcome::result<ConsensusManager::Check> HandleBridgeEventConsensusSubject(
             const eth::BridgeEventClaim       &claim,
             const ConsensusManager::Subject   &subject );
