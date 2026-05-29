@@ -86,6 +86,11 @@ namespace sgns
         return base::createLogger( "TransactionManager" );
     }
 
+    // SIZE-01: Pre-publish size enforcement — reject transactions exceeding PubSub
+    // message size limit before they enter the consensus pipeline. Matches the
+    // handler-level MAX_EMBEDDED_TX_BYTES for defense-in-depth (per D-02).
+    static constexpr size_t MAX_PUBSUB_TX_BYTES = 64 * 1024; // 65536 bytes
+
     const std::unordered_map<
         std::string,
         std::pair<TransactionManager::TransactionParserFn, TransactionManager::TransactionParserFn>>
@@ -1175,6 +1180,23 @@ namespace sgns
 
             // Serialize tx for embedding in NonceSubject (per D-04, PROTO-01/SER-01)
             auto serialized_tx = transaction->SerializeByteVector();
+
+            // SIZE-01: Pre-publish size enforcement gate
+            // Reject oversized transactions (>64KB) before they enter the consensus
+            // pipeline to prevent silent PubSub message drops. Defense-in-depth with
+            // the handler-level MAX_EMBEDDED_TX_BYTES check (per D-02).
+            if ( serialized_tx.size() > MAX_PUBSUB_TX_BYTES )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Transaction exceeds PubSub size limit tx={} size={} max={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    transaction->GetHash(),
+                    serialized_tx.size(),
+                    MAX_PUBSUB_TX_BYTES );
+                return outcome::failure( std::errc::message_size );
+            }
 
             BOOST_OUTCOME_TRY( auto &&proposal,
                                blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
