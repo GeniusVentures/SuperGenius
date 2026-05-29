@@ -4,8 +4,7 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#ifndef _IGENIUS_TRANSACTIONS_HPP_
-#define _IGENIUS_TRANSACTIONS_HPP_
+#pragma once
 
 #include <utility>
 #include <vector>
@@ -24,8 +23,6 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
-
-    //class GeniusBlockHeader; //TODO - Design new header or rework old one
 
     class IGeniusTransactions
     {
@@ -138,6 +135,11 @@ namespace sgns
         bool                 CheckSignature() const;
         bool                 CheckDAGSignatureLegacy() const;
 
+        virtual std::string GetSlotID() const
+        {
+            return GetSrcAddress() + ":" + std::to_string( GetNonce() );
+        }
+
         SGTransaction::DAGStruct dag_st;
 
     private:
@@ -161,5 +163,3 @@ namespace sgns
         }
     };
 }
-
-#endif
