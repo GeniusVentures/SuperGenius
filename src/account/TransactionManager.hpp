@@ -502,6 +502,17 @@ namespace sgns
         std::chrono::milliseconds                                   mutability_window_m;
         uint64_t                                                    nonce_window_m = DEFAULT_NONCE_WINDOW;
 
+        // METRICS-01: Operational metrics counters
+        // Atomic counters tracking vote rates, validation breakdown, and transaction lifecycle.
+        // Flushed to log on TransactionManager destruction (per D-12/D-13/D-14).
+        std::atomic<uint64_t> metrics_cert_fallback_success_{ 0 };
+        std::atomic<uint64_t> metrics_cert_fallback_failure_{ 0 };
+        std::atomic<uint64_t> metrics_validation_approve_{ 0 };
+        std::atomic<uint64_t> metrics_validation_reject_{ 0 };
+        std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
+        std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
+        std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
+
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
         static constexpr uint64_t                  DEFAULT_NONCE_WINDOW = 5;

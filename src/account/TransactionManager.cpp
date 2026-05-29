@@ -288,6 +288,21 @@ namespace sgns
             }
         }
         account_m->ClearGetTransactionCIDMethod();
+
+        // METRICS-01: Flush all operational metrics counters on destruction (per D-14)
+        TransactionManagerLogger()->info(
+            "[{} - full: {}] ~TransactionManager: Metrics — cert_fallback(success={} failure={}) "
+            "validation(approve={} reject={}) tracking(insert={} confirm={} fail={})",
+            account_m->GetAddress().substr( 0, 8 ),
+            full_node_m,
+            metrics_cert_fallback_success_.load(),
+            metrics_cert_fallback_failure_.load(),
+            metrics_validation_approve_.load(),
+            metrics_validation_reject_.load(),
+            metrics_tracking_insert_.load(),
+            metrics_tracking_confirm_.load(),
+            metrics_tracking_fail_.load() );
+
         Stop();
     }
 
@@ -3457,6 +3472,8 @@ namespace sgns
                     "[{} - full: {}] {}: Certificate for hash {} has no decodable NonceSubject, "
                     "accepting",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                // METRICS-01: Certificate fallback deserialization failure
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
             const auto &nonce_subject = nonce_subject_result.value();
@@ -3478,6 +3495,7 @@ namespace sgns
                     "[{} - full: {}] {}: Failed to deserialize tx from certificate for hash {}, "
                     "accepting certificate",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
             tx = tx_result.value();
@@ -3489,6 +3507,7 @@ namespace sgns
                     "[{} - full: {}] {}: Certificate-embedded tx hash mismatch for {}, "
                     "accepting certificate without processing embedded data",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
 
@@ -3499,8 +3518,12 @@ namespace sgns
                     "[{} - full: {}] {}: Failed to confirm certificate-deserialized tx for hash {}: {}",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
                     tx_hash, result.error().message() );
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return outcome::failure( result.error() );
             }
+
+            // METRICS-01: Certificate fallback deserialization and confirmation succeeded
+            metrics_cert_fallback_success_.fetch_add( 1, std::memory_order_relaxed );
 
             TransactionManagerLogger()->info(
                 "[{} - full: {}] {}: Standalone validator confirmed tx {} from certificate "
@@ -3869,6 +3892,15 @@ namespace sgns
 
         auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::Check
         {
+            // METRICS-01: Validation reject counter with reason logged at info level
+            metrics_validation_reject_.fetch_add( 1, std::memory_order_relaxed );
+            TransactionManagerLogger()->info( "[{} - full: {}] {}: Proposal rejected for hash {}: {}",
+                                             account_m->GetAddress().substr( 0, 8 ),
+                                             full_node_m,
+                                             __func__,
+                                             tx_hash,
+                                             reason );
+
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting nonce subject for hash {}: {}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
@@ -3997,6 +4029,8 @@ namespace sgns
             return reject_and_maybe_fail_local( "transaction validation failed" );
         }
 
+        // METRICS-01: Validation approve counter
+        metrics_validation_approve_.fetch_add( 1, std::memory_order_relaxed );
         return ConsensusManager::Check::Approve;
     }
 
@@ -4875,6 +4909,11 @@ namespace sgns
                                                    __func__,
                                                    tx->GetHash() );
                 tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::CREATED, tx->GetNonce() } );
+                // METRICS-01: Tracking insert — temp entry created in tx_processed_m
+                metrics_tracking_insert_.fetch_add( 1, std::memory_order_relaxed );
+                TransactionManagerLogger()->info(
+                    "[{} - full: {}] {}: Temp tracking entry created tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx->GetHash() );
             }
             break;
             case TransactionStatus::SENDING:
@@ -4980,6 +5019,12 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
+                // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
+                metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
+                TransactionManagerLogger()->info(
+                    "[{} - full: {}] {}: Tracking entry confirmed tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx->GetHash() );
+
                 TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of CONFIRMED to transaction {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
@@ -5033,6 +5078,13 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
+
+                // METRICS-01: Tracking fail — entry transitioned to FAILED
+                metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
+                TransactionManagerLogger()->info(
+                    "[{} - full: {}] {}: Tracking entry failed tx={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx->GetHash() );
+
                 account_m->ReleaseNonce( tx->GetNonce() );
 
                 TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of FAILED to transaction {}",
