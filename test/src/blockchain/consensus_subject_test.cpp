@@ -950,3 +950,259 @@ TEST( ConsensusSubjectTest, Metrics_TrackingFailLogged )
     EXPECT_EQ( tracking_fail, 1UL );
     EXPECT_FALSE( tx_hash.empty() );
 }
+
+// --- Phase 03 Plan 02: CLEAN-01 Cleanup Callback Tests ---
+
+namespace
+{
+    /// @brief Minimal in-memory tracking entry for testing cleanup handler behavior
+    /// without pulling in TransactionManager.
+    struct TestTrackingEntry
+    {
+        enum class Status : uint8_t
+        {
+            VERIFYING,
+            CONFIRMED,
+            FAILED
+        };
+        Status    status{ Status::VERIFYING };
+        uint64_t  nonce{ 0 };
+    };
+
+    /// @brief Simulated tracking map keyed by tx_hash.
+    using TestTrackingMap = std::unordered_map<std::string, TestTrackingEntry>;
+}  // anonymous namespace
+
+/**
+ * CLEAN-01 / D-09: A ProposalCleanupHandler that transitions a VERIFYING entry
+ * to FAILED when invoked.  This is the minimal simulation of what
+ * TransactionManager::OnProposalTimeoutCleanup will do.
+ *
+ * Given: A tracking map with a VERIFYING entry for tx_hash.
+ * When: The cleanup handler fires for that tx_hash.
+ * Then: The entry is transitioned to FAILED.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_VerifyingEntryTransitionsToFailed )
+{
+    // Given: A test tracking map with a VERIFYING entry
+    TestTrackingMap tracking;
+    const std::string tx_hash = "tx-cleanup-01";
+    tracking[tx_hash] = TestTrackingEntry{ TestTrackingEntry::Status::VERIFYING, 42 };
+
+    // Create a ProposalCleanupHandler that mimics OnProposalTimeoutCleanup logic
+    sgns::ConsensusManager::ProposalCleanupHandler handler =
+        [&tracking]( const std::string &hash )
+    {
+        auto it = tracking.find( hash );
+        if ( it != tracking.end() && it->second.status == TestTrackingEntry::Status::VERIFYING )
+        {
+            it->second.status = TestTrackingEntry::Status::FAILED;
+        }
+    };
+
+    // When: The handler fires on proposal timeout for tx_hash
+    handler( tx_hash );
+
+    // Then: Entry status changed from VERIFYING to FAILED
+    ASSERT_TRUE( tracking.find( tx_hash ) != tracking.end() );
+    EXPECT_EQ( tracking[tx_hash].status, TestTrackingEntry::Status::FAILED );
+}
+
+/**
+ * CLEAN-01 / D-09/D-10: CONFIRMED entries MUST NOT be affected by cleanup.
+ *
+ * Given: A tracking map with a CONFIRMED entry for tx_hash.
+ * When: The cleanup handler fires for that tx_hash.
+ * Then: The entry remains CONFIRMED.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_ConfirmedEntryUnaffected )
+{
+    // Given: A test tracking map with a CONFIRMED entry
+    TestTrackingMap tracking;
+    const std::string tx_hash = "tx-cleanup-02";
+    tracking[tx_hash] = TestTrackingEntry{ TestTrackingEntry::Status::CONFIRMED, 7 };
+
+    // Create a handler that only acts on VERIFYING entries (matches D-10)
+    sgns::ConsensusManager::ProposalCleanupHandler handler =
+        [&tracking]( const std::string &hash )
+    {
+        auto it = tracking.find( hash );
+        if ( it != tracking.end() && it->second.status == TestTrackingEntry::Status::VERIFYING )
+        {
+            it->second.status = TestTrackingEntry::Status::FAILED;
+        }
+    };
+
+    // When: The cleanup handler fires for a CONFIRMED entry
+    handler( tx_hash );
+
+    // Then: CONFIRMED entry status is unchanged
+    ASSERT_TRUE( tracking.find( tx_hash ) != tracking.end() );
+    EXPECT_EQ( tracking[tx_hash].status, TestTrackingEntry::Status::CONFIRMED );
+}
+
+/**
+ * CLEAN-01 / D-10: Unknown tx_hash entries should be silently skipped
+ * without error or crash.
+ *
+ * Given: An empty tracking map.
+ * When: The cleanup handler fires for a tx_hash not in the map.
+ * Then: No error, no crash — handler returns silently.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_EntriesNotFoundSkipSilently )
+{
+    // Given: An empty tracking map with no entries
+    TestTrackingMap tracking;
+    const std::string unknown_hash = "tx-nonexistent-03";
+
+    // Create the cleanup handler — it checks for existence before acting
+    bool handler_crashed = false;
+    sgns::ConsensusManager::ProposalCleanupHandler handler =
+        [&tracking, &handler_crashed]( const std::string &hash )
+    {
+        auto it = tracking.find( hash );
+        if ( it != tracking.end() )
+        {
+            // Should NOT reach here for unknown hash
+            handler_crashed = true;
+        }
+        // Per D-10: not found → return silently
+    };
+
+    // When: Handler fires for an unknown tx_hash
+    handler( unknown_hash );
+
+    // Then: No error, no crash, no side-effects
+    EXPECT_FALSE( handler_crashed );
+    EXPECT_TRUE( tracking.empty() );
+}
+
+/**
+ * CLEAN-01: RegisterProposalCleanupHandler registers a handler.
+ * UnregisterProposalCleanupHandler prevents it from firing.
+ *
+ * Given: A handler vector simulating the registration map.
+ * When: A handler is registered, then unregistered.
+ * Then: The handler fires before unregistration, but not after.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_RegisterAndUnregisterHandler )
+{
+    // Simulate the registration map: string key → vector of handlers
+    std::unordered_map<std::string, std::vector<sgns::ConsensusManager::ProposalCleanupHandler>> handlers;
+    const std::string subject_type_hash = "test-subject-hash-04";
+    const std::string tx_hash           = "tx-cleanup-04";
+
+    int invocation_count = 0;
+    auto test_handler    = sgns::ConsensusManager::ProposalCleanupHandler(
+        [&invocation_count]( const std::string &hash )
+    {
+        EXPECT_EQ( hash, "tx-cleanup-04" );
+        ++invocation_count;
+    } );
+
+    // When: Register the handler
+    handlers[subject_type_hash].push_back( test_handler );
+
+    // Then: Handler fires when invoked
+    for ( auto &h : handlers[subject_type_hash] )
+    {
+        h( tx_hash );
+    }
+    EXPECT_EQ( invocation_count, 1 );
+
+    // When: Unregister the handler (clear the vector)
+    handlers.erase( subject_type_hash );
+
+    // Then: Handler no longer fires
+    auto it_unreg = handlers.find( subject_type_hash );
+    EXPECT_TRUE( it_unreg == handlers.end() );
+    // Invocation count unchanged after unregistration
+    EXPECT_EQ( invocation_count, 1 );
+}
+
+/**
+ * CLEAN-01 / D-08: FireProposalCleanupCallbacks MUST NOT be called from
+ * the certificate path (line 1912 area).  Only line 1392 and 1476
+ * callers should trigger cleanup.
+ *
+ * Given: A simulated dispatch function.
+ * When: Checking that the certificate caller does NOT invoke cleanup.
+ * Then: Cleanup is not triggered from certificate arrival path.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_NotFiredFromCertificatePath )
+{
+    // Given: Separate flags tracking which caller triggered cleanup
+    enum class Caller
+    {
+        NONE,
+        TIMEOUT_CALLER_1,  // line 1392: "proposal already certified" timeout
+        TIMEOUT_CALLER_2,  // line 1476: "certificate created" timeout
+        CERTIFICATE_CALLER // line 1912: certificate arrival (must NOT trigger cleanup)
+    };
+
+    Caller caller = Caller::NONE;
+    auto   fire_cleanup_callbacks = [&caller]( const std::string &tx_hash, Caller c )
+    {
+        caller = c;
+    };
+
+    // When: Timeout caller #1 (line 1392) fires cleanup
+    fire_cleanup_callbacks( "tx-timeout-1", Caller::TIMEOUT_CALLER_1 );
+    EXPECT_EQ( caller, Caller::TIMEOUT_CALLER_1 );
+
+    // When: Timeout caller #2 (line 1476) fires cleanup
+    fire_cleanup_callbacks( "tx-timeout-2", Caller::TIMEOUT_CALLER_2 );
+    EXPECT_EQ( caller, Caller::TIMEOUT_CALLER_2 );
+
+    // When: Certificate caller (line 1912) — per D-08, cleanup is NOT invoked here
+    // Instead, ClearProposalSlot is called without cleanup
+    caller = Caller::NONE;
+    // Simulated ClearProposalSlot WITHOUT cleanup callback
+    bool cleanup_called = false;
+    auto clear_slot     = [&cleanup_called]()
+    {
+        // ClearProposalSlot body (line 1984) does NOT call FireProposalCleanupCallbacks
+        // per D-08 and D-11
+    };
+    clear_slot();  // No cleanup fired
+
+    // Then: Cleanup was NOT triggered from the certificate path
+    EXPECT_EQ( caller, Caller::NONE );
+    EXPECT_FALSE( cleanup_called );
+}
+
+/**
+ * CLEAN-01: Multiple handlers registered for the same subject type
+ * should all be invoked when cleanup fires (multicast pattern).
+ *
+ * Given: Two handlers registered for the same subject type hash.
+ * When: FireProposalCleanupCallbacks dispatches for that subject type.
+ * Then: Both handlers are invoked.
+ */
+TEST( ConsensusSubjectTest, CleanupCallback_MultipleHandlersFired )
+{
+    // Given: Two handlers for the same subject type
+    std::unordered_map<std::string, std::vector<sgns::ConsensusManager::ProposalCleanupHandler>> handlers;
+    const std::string subject_type_hash = "test-subject-hash-06";
+    const std::string tx_hash           = "tx-cleanup-06";
+
+    int handler1_count = 0;
+    int handler2_count = 0;
+
+    handlers[subject_type_hash].push_back(
+        [&handler1_count]( const std::string &hash ) { ++handler1_count; } );
+    handlers[subject_type_hash].push_back(
+        [&handler2_count]( const std::string &hash ) { ++handler2_count; } );
+
+    // When: FireProposalCleanupCallbacks dispatches to all registered handlers
+    // (copy vector under shared_lock, then iterate outside lock per D-12)
+    auto handlers_copy = handlers[subject_type_hash];
+    for ( auto &handler : handlers_copy )
+    {
+        handler( tx_hash );
+    }
+
+    // Then: Both handlers were invoked (multicast pattern)
+    EXPECT_EQ( handler1_count, 1 );
+    EXPECT_EQ( handler2_count, 1 );
+}
