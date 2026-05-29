@@ -2318,7 +2318,7 @@ namespace sgns
         NonceSubject payload;
         payload.set_nonce( nonce );
         payload.set_tx_hash( tx_hash.data(), tx_hash.size() );
-        payload.set_transaction_data( transaction_data.data(), transaction_data.size() );
+        payload.mutable_transaction()->set_data( transaction_data.data(), transaction_data.size() );
         if ( utxo_commitment.has_value() )
         {
             *payload.mutable_utxo_commitment() = utxo_commitment.value();

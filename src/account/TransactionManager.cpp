@@ -3501,7 +3501,7 @@ namespace sgns
         if ( !tx )
         {
             // CONFLICT-01 / NONCE-01: Standalone validator without local transaction state.
-            // Deserialize from the certificate's embedded proposal (Phase 1 transaction_data).
+            // Deserialize from the certificate's embedded proposal (Phase 1 transaction).
             auto nonce_subject_result =
                 ConsensusManager::DecodeNonceSubject( certificate.proposal().subject() );
             if ( nonce_subject_result.has_error() )
@@ -3516,7 +3516,7 @@ namespace sgns
             }
             const auto &nonce_subject = nonce_subject_result.value();
 
-            const auto &tx_data = nonce_subject.transaction_data();
+            const auto &tx_data = nonce_subject.transaction().data();
             if ( tx_data.empty() )
             {
                 TransactionManagerLogger()->warn(
@@ -3805,7 +3805,7 @@ namespace sgns
         // DESER-01: Deserialize from embedded bytes instead of CRDT lookup
         static constexpr size_t MAX_EMBEDDED_TX_BYTES = 64 * 1024;
 
-        const auto &tx_data = nonce_subject.value().transaction_data();
+        const auto &tx_data = nonce_subject.value().transaction().data();
         if ( tx_data.empty() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty embedded tx data, rejecting",

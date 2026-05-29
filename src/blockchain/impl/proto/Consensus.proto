@@ -59,7 +59,11 @@ message NonceSubject {
   bytes tx_hash = 2;
   UTXOTransitionCommitment utxo_commitment = 3;
   UTXOWitness utxo_witness = 4;
-  bytes transaction_data = 5;    // Full SerializeByteVector() output (type extracted via DAG partial deserialization)
+  EmbeddedTransaction transaction = 5;
+}
+
+message EmbeddedTransaction {
+  bytes data = 1;
 }
 
 message TaskResultSubject {

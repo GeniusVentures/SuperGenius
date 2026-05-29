@@ -252,7 +252,7 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataRoundTrip )
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_EQ( nonce.value().nonce(), 42U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-embedded" );
-    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
+    EXPECT_EQ( nonce.value().transaction().data(), std::string( tx_data.begin(), tx_data.end() ) );
 }
 
 TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
@@ -272,7 +272,7 @@ TEST( ConsensusSubjectTest, E2E_EmbeddedTransactionDataEmptyDefaults )
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_EQ( nonce.value().nonce(), 7U );
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash" );
-    EXPECT_TRUE( nonce.value().transaction_data().empty() );
+    EXPECT_TRUE( nonce.value().transaction().data().empty() );
 }
 
 TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
@@ -294,8 +294,8 @@ TEST( ConsensusSubjectTest, E2E_NonceSubjectPreservesLargeTransactionData )
     // Then: Decoded subject preserves all embedded data
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
-    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
+    EXPECT_EQ( nonce.value().transaction().data().size(), tx_data.size() );
+    EXPECT_EQ( nonce.value().transaction().data(), std::string( tx_data.begin(), tx_data.end() ) );
 }
 
 // --- Phase 01 Plan 02: Sanitization tests (SANTZ-01) ---
@@ -337,7 +337,7 @@ TEST( ConsensusSubjectTest, Sanitization_TransactionDataOverSizeCap64KB )
     // Then: Proto level preserves the oversized data (handler rejects it)
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
+    EXPECT_EQ( nonce.value().transaction().data().size(), tx_data.size() );
 }
 
 TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
@@ -365,8 +365,8 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_DataTamperedAfterHash )
     // Verify data integrity: blake2b of embedded data equals tx_hash
     const auto computed = hasher.blake2b_256(
         gsl::span<const uint8_t>(
-            reinterpret_cast<const uint8_t*>( nonce.value().transaction_data().data() ),
-            nonce.value().transaction_data().size() ) );
+            reinterpret_cast<const uint8_t*>( nonce.value().transaction().data().data() ),
+            nonce.value().transaction().data().size() ) );
     EXPECT_EQ( computed.toReadableString(), nonce.value().tx_hash() );
 }
 
@@ -397,8 +397,8 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
     // blake2b of embedded data != subject's tx_hash
     const auto computed = hasher.blake2b_256(
         gsl::span<const uint8_t>(
-            reinterpret_cast<const uint8_t*>( nonce.value().transaction_data().data() ),
-            nonce.value().transaction_data().size() ) );
+            reinterpret_cast<const uint8_t*>( nonce.value().transaction().data().data() ),
+            nonce.value().transaction().data().size() ) );
     EXPECT_NE( computed.toReadableString(), nonce.value().tx_hash() );
     // Also verify fromReadableString round-trip
     const auto decoded_hash = sgns::base::Hash256::fromReadableString( nonce.value().tx_hash() );
@@ -468,7 +468,7 @@ TEST( ConsensusSubjectTest, Binding_SubjectHasCommitment_TxLacksUTXO_Inconsisten
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_TRUE( nonce.value().has_utxo_commitment() );
-    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+    EXPECT_FALSE( nonce.value().transaction().data().empty() );
     // Commitment roots match what was set
     EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
     EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
@@ -492,7 +492,7 @@ TEST( ConsensusSubjectTest, Binding_SubjectNoCommitment_TxNoUTXO_ValidPath )
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
-    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+    EXPECT_FALSE( nonce.value().transaction().data().empty() );
 }
 
 TEST( ConsensusSubjectTest, Binding_CommitmentMismatch_DifferentRoots )
@@ -586,7 +586,7 @@ TEST( ConsensusSubjectTest, Tracking_ValidDataPreservedForApprove )
 
     // Then: All fields needed for tracking are preserved
     EXPECT_EQ( nonce.value().tx_hash(), "tx-hash-approve" );
-    EXPECT_EQ( nonce.value().transaction_data(), std::string( tx_data.begin(), tx_data.end() ) );
+    EXPECT_EQ( nonce.value().transaction().data(), std::string( tx_data.begin(), tx_data.end() ) );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
 }
 
@@ -607,7 +607,7 @@ TEST( ConsensusSubjectTest, Tracking_RejectClearsTempEntryState )
     ASSERT_TRUE( nonce.has_value() );
 
     // Then: Empty transaction_data detectable — handler returns Reject and cleans up
-    EXPECT_TRUE( nonce.value().transaction_data().empty() );
+    EXPECT_TRUE( nonce.value().transaction().data().empty() );
     EXPECT_FALSE( nonce.value().has_utxo_commitment() );
 }
 
@@ -636,7 +636,7 @@ TEST( ConsensusSubjectTest, Tracking_CertificatePromotesConfirmedState )
     EXPECT_TRUE( nonce.value().has_utxo_commitment() );
     EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
     EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
-    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+    EXPECT_FALSE( nonce.value().transaction().data().empty() );
 }
 
 TEST( ConsensusSubjectTest, Tracking_RejectDoesNotEraseConfirmedEntry )
@@ -662,7 +662,7 @@ TEST( ConsensusSubjectTest, Tracking_RejectDoesNotEraseConfirmedEntry )
     EXPECT_TRUE( nonce.value().has_utxo_commitment() );
     EXPECT_EQ( nonce.value().utxo_commitment().consumed_outpoints_root(), consumed_root );
     EXPECT_EQ( nonce.value().utxo_commitment().produced_outputs_root(), produced_root );
-    EXPECT_FALSE( nonce.value().transaction_data().empty() );
+    EXPECT_FALSE( nonce.value().transaction().data().empty() );
 }
 
 // --- Phase 03 Plan 01: SIZE-01 Pre-Publish Size Gate Tests ---
@@ -689,8 +689,8 @@ TEST( ConsensusSubjectTest, SizeGate_OversizedTransactionRejected )
     ASSERT_TRUE( subject_result.has_value() );
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), tx_data.size() );
-    EXPECT_GT( nonce.value().transaction_data().size(), MAX_PUBSUB_TX_BYTES );
+    EXPECT_EQ( nonce.value().transaction().data().size(), tx_data.size() );
+    EXPECT_GT( nonce.value().transaction().data().size(), MAX_PUBSUB_TX_BYTES );
 }
 
 TEST( ConsensusSubjectTest, SizeGate_NormalTransactionPasses )
@@ -712,8 +712,8 @@ TEST( ConsensusSubjectTest, SizeGate_NormalTransactionPasses )
     ASSERT_TRUE( subject_result.has_value() );
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), 1024UL );
-    EXPECT_LT( nonce.value().transaction_data().size(), MAX_PUBSUB_TX_BYTES );
+    EXPECT_EQ( nonce.value().transaction().data().size(), 1024UL );
+    EXPECT_LT( nonce.value().transaction().data().size(), MAX_PUBSUB_TX_BYTES );
 }
 
 TEST( ConsensusSubjectTest, SizeGate_ExactBoundary )
@@ -736,7 +736,7 @@ TEST( ConsensusSubjectTest, SizeGate_ExactBoundary )
     ASSERT_TRUE( subject_result.has_value() );
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), MAX_PUBSUB_TX_BYTES );
+    EXPECT_EQ( nonce.value().transaction().data().size(), MAX_PUBSUB_TX_BYTES );
 }
 
 TEST( ConsensusSubjectTest, SizeGate_EmptyTransactionPasses )
@@ -758,8 +758,8 @@ TEST( ConsensusSubjectTest, SizeGate_EmptyTransactionPasses )
     ASSERT_TRUE( subject_result.has_value() );
     const auto nonce = sgns::ConsensusManager::DecodeNonceSubject( subject_result.value() );
     ASSERT_TRUE( nonce.has_value() );
-    EXPECT_EQ( nonce.value().transaction_data().size(), 0UL );
-    EXPECT_LT( nonce.value().transaction_data().size(), MAX_PUBSUB_TX_BYTES );
+    EXPECT_EQ( nonce.value().transaction().data().size(), 0UL );
+    EXPECT_LT( nonce.value().transaction().data().size(), MAX_PUBSUB_TX_BYTES );
 }
 
 // --- Phase 03 Plan 01: TS-01 Configurable Timestamp Tolerance Tests ---
