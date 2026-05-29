@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "account/UTXOManager.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
@@ -66,7 +66,7 @@ namespace sgns
          * @return True when the witness proves that @p params are valid for @p tx.
          */
         virtual bool ValidateWitness( const ConsensusSubject                     &subject,
-                                      const std::shared_ptr<IGeniusTransactions> &tx,
+                                      const std::shared_ptr<GeniusTransaction> &tx,
                                       const UTXOTxParameters                     &params,
                                       const std::shared_ptr<Blockchain>          &blockchain ) const = 0;
 
@@ -107,7 +107,7 @@ namespace sgns
          * @return True when the witness and transaction UTXO parameters are consistent.
          */
         bool ValidateWitness( const ConsensusSubject                     &subject,
-                              const std::shared_ptr<IGeniusTransactions> &tx,
+                              const std::shared_ptr<GeniusTransaction> &tx,
                               const UTXOTxParameters                     &params,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
@@ -147,7 +147,7 @@ namespace sgns
          * @return True when @p tx is present, @p params are non-empty, and the source reference verification succeeds.
          */
         bool ValidateWitness( const ConsensusSubject                     &subject,
-                              const std::shared_ptr<IGeniusTransactions> &tx,
+                              const std::shared_ptr<GeniusTransaction> &tx,
                               const UTXOTxParameters                     &params,
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
@@ -168,7 +168,7 @@ namespace sgns
          * @return True when the external source reference is accepted for @p tx.
          * @note This is currently a placeholder that accepts all references, including empty bootstrap/test references.
          */
-        bool VerifyPublicChainSmartContract( const std::shared_ptr<IGeniusTransactions> &tx,
+        bool VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                              const std::string                           &source_reference ) const;
     };
 } // namespace sgns

@@ -154,7 +154,7 @@ namespace sgns
         return balance;
     }
 
-    //TODO - Remove the GeniusUTXO from parameters, instead add the necessary fields or IGeniusTransactions
+    //TODO - Remove the GeniusUTXO from parameters, instead add the necessary fields or GeniusTransaction
     outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject

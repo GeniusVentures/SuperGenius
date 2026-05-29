@@ -158,7 +158,7 @@ namespace sgns
             return &node.account_->GetUTXOManager();
         }
 
-        void SendPair( sgns::GeniusNode &node, std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
+        void SendPair( sgns::GeniusNode &node, std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
         {
             node.SendTransactionAndProof( std::move( tx ), std::move( proof ) );
         }

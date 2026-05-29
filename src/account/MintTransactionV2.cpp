@@ -14,7 +14,7 @@ namespace sgns
                                           std::string              chain_id,
                                           TokenID                  token_id,
                                           SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "mint-v2", SetDAGWithType( std::move( dag ), "mint-v2" ) ),
+        GeniusTransaction( "mint-v2", SetDAGWithType( std::move( dag ), "mint-v2" ) ),
         utxo_params_( std::move( utxo_params ) ),
         chain_id_( std::move( chain_id ) ),
         token_id_( std::move( token_id ) )
@@ -148,7 +148,7 @@ namespace sgns
 
     std::unordered_set<std::string> MintTransactionV2::GetTopics() const
     {
-        auto topics = IGeniusTransactions::GetTopics();
+        auto topics = GeniusTransaction::GetTopics();
         for ( const auto &output : utxo_params_.second )
         {
             topics.emplace( output.dest_address );

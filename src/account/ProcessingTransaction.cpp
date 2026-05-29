@@ -17,7 +17,7 @@ namespace sgns
                                                   std::vector<std::string> node_addresses,
                                                   SGTransaction::DAGStruct dag ) :
 
-        IGeniusTransactions( "process", SetDAGWithType( std::move( dag ), "process" ) ), //
+        GeniusTransaction( "process", SetDAGWithType( std::move( dag ), "process" ) ), //
         job_id_( std::move( job_id ) ),
         subtask_ids_( std::move( subtask_ids ) ),
         node_addresses_( std::move( node_addresses ) )

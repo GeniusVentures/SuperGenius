@@ -11,16 +11,16 @@
 #include <unordered_set>
 #include <vector>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "account/TokenID.hpp"
 #include "account/UTXOStructs.hpp"
 
 namespace sgns
 {
-    class MigrationTransaction final : public IGeniusTransactions
+    class MigrationTransaction final : public GeniusTransaction
     {
     public:
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
 
         ~MigrationTransaction() override = default;
 

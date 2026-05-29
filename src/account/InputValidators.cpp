@@ -84,7 +84,7 @@ namespace sgns
     }
 
     bool GeniusInputValidator::ValidateWitness( const ConsensusSubject                     &subject,
-                                                const std::shared_ptr<IGeniusTransactions> &tx,
+                                                const std::shared_ptr<GeniusTransaction> &tx,
                                                 const UTXOTxParameters                     &params,
                                                 const std::shared_ptr<Blockchain>          &blockchain ) const
     {
@@ -414,7 +414,7 @@ namespace sgns
     }
 
     bool PublicChainInputValidator::ValidateWitness( const ConsensusSubject                     &subject,
-                                                     const std::shared_ptr<IGeniusTransactions> &tx,
+                                                     const std::shared_ptr<GeniusTransaction> &tx,
                                                      const UTXOTxParameters                     &params,
                                                      const std::shared_ptr<Blockchain>          &blockchain ) const
     {
@@ -441,7 +441,7 @@ namespace sgns
         return VerifyPublicChainSmartContract( tx, source_reference );
     }
 
-    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<IGeniusTransactions> &tx,
+    bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                                                     const std::string &source_reference ) const
     {
         (void)tx;

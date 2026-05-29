@@ -12,7 +12,7 @@ namespace sgns
                                       std::string              chain_id,
                                       TokenID                  token_id,
                                       SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "mint", SetDAGWithType( std::move( dag ), "mint" ) ),
+        GeniusTransaction( "mint", SetDAGWithType( std::move( dag ), "mint" ) ),
         amount( new_amount ),
         chain_id( std::move( chain_id ) ),
         token_id( std::move( token_id ) )

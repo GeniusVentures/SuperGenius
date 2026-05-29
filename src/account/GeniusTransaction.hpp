@@ -1,5 +1,5 @@
 /**
- * @file       IGeniusTransactions.hpp
+ * @file       GeniusTransaction.hpp
  * @brief      Transaction interface class
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -23,8 +23,10 @@
 namespace sgns
 {
     using namespace boost::multiprecision;
-
-    class IGeniusTransactions
+    /**
+     * @brief      Base class of the GeniusTransaction
+     */
+    class GeniusTransaction
     {
     public:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius_chain";
@@ -33,14 +35,14 @@ namespace sgns
          * @brief   Alias for the de-serializer method type to be implemented in derived classes
          */
         using TransactionDeserializeFn =
-            std::function<std::shared_ptr<IGeniusTransactions>( const std::vector<uint8_t> & )>;
+            std::function<std::shared_ptr<GeniusTransaction>( const std::vector<uint8_t> & )>;
 
-        IGeniusTransactions( std::string type, SGTransaction::DAGStruct dag ) :
+        GeniusTransaction( std::string type, SGTransaction::DAGStruct dag ) :
             dag_st( std::move( dag ) ), transaction_type( std::move( type ) )
         {
         }
 
-        virtual ~IGeniusTransactions() = default;
+        virtual ~GeniusTransaction() = default;
 
         [[nodiscard]] std::string GetType() const
         {

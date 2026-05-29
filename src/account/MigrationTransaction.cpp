@@ -16,7 +16,7 @@ namespace sgns
                                                 std::string              from_version,
                                                 TokenID                  token_id,
                                                 SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "migration", SetDAGWithType( std::move( dag ), "migration" ) ),
+        GeniusTransaction( "migration", SetDAGWithType( std::move( dag ), "migration" ) ),
         utxo_params_( std::move( utxo_params ) ),
         from_version_( std::move( from_version ) ),
         token_id_( std::move( token_id ) )
@@ -155,7 +155,7 @@ namespace sgns
 
     std::unordered_set<std::string> MigrationTransaction::GetTopics() const
     {
-        auto topics = IGeniusTransactions::GetTopics();
+        auto topics = GeniusTransaction::GetTopics();
         for ( const auto &output : utxo_params_.second )
         {
             topics.emplace( output.dest_address );

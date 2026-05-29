@@ -576,7 +576,7 @@ namespace sgns
          * @param[in] tx Transaction to enqueue.
          * @param[in] proof Serialized proof bytes associated with @p tx.
          */
-        void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
+        void SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
 
         /**
          * @brief Configures transaction filtering time windows for tests.

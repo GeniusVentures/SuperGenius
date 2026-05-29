@@ -9,7 +9,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "account/TokenID.hpp"
 #include "account/UTXOStructs.hpp"
 
@@ -18,10 +18,10 @@ namespace sgns
     /**
      * @brief      Implements a Mint Version 2 transaction
      */
-    class MintTransactionV2 final : public IGeniusTransactions
+    class MintTransactionV2 final : public GeniusTransaction
     {
     public:
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
         /**
          * @brief      Destroy the Mint Transaction V 2 object
          */

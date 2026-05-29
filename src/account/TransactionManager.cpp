@@ -44,7 +44,7 @@ namespace sgns
         using input_validator_constants::HASH256_BYTES;
         using input_validator_constants::SERIALIZED_UINT32_BYTES;
 
-        bool ExtractProducedUTXOs( const IGeniusTransactions &tx, std::vector<GeniusUTXO> &outputs )
+        bool ExtractProducedUTXOs( const GeniusTransaction &tx, std::vector<GeniusUTXO> &outputs )
         {
             auto tx_hash = base::Hash256::fromReadableString( tx.GetHash() );
             if ( tx_hash.has_error() )
@@ -1022,7 +1022,7 @@ namespace sgns
         return "";
     }
 
-    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         if ( !tx )
         {
@@ -1085,7 +1085,7 @@ namespace sgns
                                                expected_next_nonce.value() );
         }
         std::unordered_set<std::string>                topicSet;
-        std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
+        std::set<std::shared_ptr<GeniusTransaction>> transactions_sent;
         if ( !transaction_batch.empty() )
         {
             topicSet.emplace( full_node_topic_m );
@@ -1249,20 +1249,20 @@ namespace sgns
 
     std::string TransactionManager::GetTransactionPath( uint16_t base, const std::string &tx_hash )
     {
-        return GetBlockChainBase( base ) + IGeniusTransactions::GetTransactionFullPath( tx_hash );
+        return GetBlockChainBase( base ) + GeniusTransaction::GetTransactionFullPath( tx_hash );
     }
 
-    std::string TransactionManager::GetTransactionPath( const IGeniusTransactions &element )
+    std::string TransactionManager::GetTransactionPath( const GeniusTransaction &element )
     {
         return GetBlockChainBase() + element.GetTransactionFullPath();
     }
 
     std::string TransactionManager::GetTransactionPath( const std::string &tx_hash )
     {
-        return GetBlockChainBase() + IGeniusTransactions::GetTransactionFullPath( tx_hash );
+        return GetBlockChainBase() + GeniusTransaction::GetTransactionFullPath( tx_hash );
     }
 
-    std::string TransactionManager::GetTransactionProofPath( const IGeniusTransactions &element )
+    std::string TransactionManager::GetTransactionProofPath( const GeniusTransaction &element )
     {
         auto proof_path = GetBlockChainBase() + element.GetProofFullPath();
 
@@ -1296,7 +1296,7 @@ namespace sgns
 
     outcome::result<std::string> TransactionManager::GetExpectedProofKey(
         const std::string                          &tx_key,
-        const std::shared_ptr<IGeniusTransactions> &tx )
+        const std::shared_ptr<GeniusTransaction> &tx )
     {
         if ( tx )
         {
@@ -1339,20 +1339,20 @@ namespace sgns
         return tx_key;
     }
 
-    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeTransaction(
         std::string tx_data )
     {
-        BOOST_OUTCOME_TRY( auto dag, IGeniusTransactions::DeSerializeDAGStruct( tx_data ) );
+        BOOST_OUTCOME_TRY( auto dag, GeniusTransaction::DeSerializeDAGStruct( tx_data ) );
 
-        auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
-        if ( it == IGeniusTransactions::GetDeSerializers().end() )
+        auto it = GeniusTransaction::GetDeSerializers().find( dag.type() );
+        if ( it == GeniusTransaction::GetDeSerializers().end() )
         {
             return std::errc::invalid_argument;
         }
         return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
     }
 
-    outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
         if ( it == transaction_parsers.end() )
@@ -1371,7 +1371,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::RevertTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto it = transaction_parsers.find( tx->GetType() );
         if ( it == transaction_parsers.end() )
@@ -1393,7 +1393,7 @@ namespace sgns
         return outcome::success();
     }
 
-    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         if ( !tx )
         {
@@ -1410,7 +1410,7 @@ namespace sgns
     }
 
     std::unordered_set<std::string> TransactionManager::CollectTouchedAccounts(
-        const std::shared_ptr<IGeniusTransactions> &tx ) const
+        const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         std::unordered_set<std::string> addresses;
         if ( !tx )
@@ -1506,7 +1506,7 @@ namespace sgns
         }
     }
 
-    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::FetchTransaction(
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::FetchTransaction(
         const std::shared_ptr<crdt::GlobalDB> &db,
         std::string_view                       transaction_key )
     {
@@ -1515,22 +1515,22 @@ namespace sgns
         return DeSerializeTransaction( transaction_data );
     }
 
-    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeTransaction(
         const base::Buffer &tx_data )
     {
         const auto &transaction_data_vector = tx_data.toVector();
 
-        BOOST_OUTCOME_TRY( auto dag, IGeniusTransactions::DeSerializeDAGStruct( transaction_data_vector ) );
+        BOOST_OUTCOME_TRY( auto dag, GeniusTransaction::DeSerializeDAGStruct( transaction_data_vector ) );
 
-        auto it = IGeniusTransactions::GetDeSerializers().find( dag.type() );
-        if ( it == IGeniusTransactions::GetDeSerializers().end() )
+        auto it = GeniusTransaction::GetDeSerializers().find( dag.type() );
+        if ( it == GeniusTransaction::GetDeSerializers().end() )
         {
             return std::errc::invalid_argument;
         }
         return it->second( transaction_data_vector );
     }
 
-    outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto proof_path = GetTransactionProofPath( *tx );
         TransactionManagerLogger()->debug( "[{} - full: {}] Checking the proof in {}",
@@ -1665,7 +1665,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -1699,7 +1699,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
@@ -1766,7 +1766,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
         if ( !escrow_tx )
@@ -1793,7 +1793,7 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::RevertTransferTransaction(
-        const std::shared_ptr<IGeniusTransactions> &tx )
+        const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
         auto dest_infos  = transfer_tx->GetDstInfos();
@@ -1840,7 +1840,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
@@ -1910,7 +1910,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> TransactionManager::RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
+    outcome::result<void> TransactionManager::RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )
     {
         auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( tx );
         if ( !escrow_tx )
@@ -2692,13 +2692,13 @@ namespace sgns
         return outcome::success();
     }
 
-    std::shared_ptr<IGeniusTransactions> TransactionManager::GetTransactionByHash( const std::string &tx_hash ) const
+    std::shared_ptr<GeniusTransaction> TransactionManager::GetTransactionByHash( const std::string &tx_hash ) const
     {
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
         return GetTransactionByHashNoLock( tx_hash );
     }
 
-    std::shared_ptr<IGeniusTransactions> TransactionManager::GetTransactionByHashNoLock(
+    std::shared_ptr<GeniusTransaction> TransactionManager::GetTransactionByHashNoLock(
         const std::string &tx_hash ) const
     {
         for ( const auto &[_, tracked] : tx_processed_m )
@@ -2715,7 +2715,7 @@ namespace sgns
         return nullptr;
     }
 
-    std::shared_ptr<IGeniusTransactions> TransactionManager::GetTransactionByNonceAndAddress(
+    std::shared_ptr<GeniusTransaction> TransactionManager::GetTransactionByNonceAndAddress(
         uint64_t           nonce,
         const std::string &address ) const
     {
@@ -2789,7 +2789,7 @@ namespace sgns
     bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
     {
         bool                                 ret = false;
-        std::shared_ptr<IGeniusTransactions> tx;
+        std::shared_ptr<GeniusTransaction> tx;
         std::unique_lock<std::shared_mutex>  tx_lock( tx_mutex_m );
         for ( auto &[_, tracked] : tx_processed_m )
         {
@@ -2832,7 +2832,7 @@ namespace sgns
     {
         std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
         bool                                          should_delete = true;
-        std::shared_ptr<IGeniusTransactions>          new_tx;
+        std::shared_ptr<GeniusTransaction>          new_tx;
         do
         {
             auto maybe_new_tx = DeSerializeTransaction( element.value() );
@@ -2928,8 +2928,8 @@ namespace sgns
         return maybe_tombstones;
     }
 
-    bool TransactionManager::ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
-                                                       const IGeniusTransactions &new_tx ) const
+    bool TransactionManager::ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
+                                                       const GeniusTransaction &new_tx ) const
     {
         TransactionManagerLogger()->debug(
             "[{} - full: {}] {}: Checking if new transaction {} should replace existing one {}",
@@ -2982,7 +2982,7 @@ namespace sgns
         return GetElapsedTime( timestamp, GetCurrentTimestamp() );
     }
 
-    bool TransactionManager::IsTransactionImmutable( const IGeniusTransactions &tx ) const
+    bool TransactionManager::IsTransactionImmutable( const GeniusTransaction &tx ) const
     {
         // mutability window of zero => always mutable
         if ( mutability_window_m.count() == 0 )
@@ -3401,8 +3401,8 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::GetConflictingTransaction(
-        const IGeniusTransactions &element ) const
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransaction(
+        const GeniusTransaction &element ) const
     {
         auto tx = GetTransactionByNonceAndAddress( element.GetNonce(), element.GetSrcAddress() );
         if ( tx && tx->GetHash() != element.GetHash() )
@@ -3413,7 +3413,7 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    bool TransactionManager::HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const
+    bool TransactionManager::HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const
     {
         if ( !candidate_tx || !candidate_tx->HasUTXOParameters() )
         {
@@ -4107,7 +4107,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4177,7 +4177,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::CheckTransactionWellFormed( const IGeniusTransactions &tx ) const
+    bool TransactionManager::CheckTransactionWellFormed( const GeniusTransaction &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking well-formed tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4232,7 +4232,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::CheckTransactionAuthorization( const IGeniusTransactions &tx ) const
+    bool TransactionManager::CheckTransactionAuthorization( const GeniusTransaction &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking authorization tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4256,7 +4256,7 @@ namespace sgns
         return false;
     }
 
-    bool TransactionManager::CheckTransactionTimestamp( const IGeniusTransactions &tx ) const
+    bool TransactionManager::CheckTransactionTimestamp( const GeniusTransaction &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking timestamp tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4299,7 +4299,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const
+    bool TransactionManager::CheckTransactionReplayProtection( const GeniusTransaction &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking replay protection tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4422,7 +4422,7 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking type rules",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4461,7 +4461,7 @@ namespace sgns
 
     TransactionManager::WitnessValidationResult TransactionManager::ValidateWitnessForConsensus(
         const ConsensusSubject                     &subject,
-        const std::shared_ptr<IGeniusTransactions> &tx ) const
+        const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         if ( !tx )
         {
@@ -4597,7 +4597,7 @@ namespace sgns
     }
 
     std::optional<UTXOTransitionCommitment> TransactionManager::BuildUTXOTransitionCommitment(
-        const std::shared_ptr<IGeniusTransactions> &tx ) const
+        const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         if ( !tx )
         {
@@ -4681,7 +4681,7 @@ namespace sgns
     }
 
     std::optional<UTXOWitness> TransactionManager::BuildUTXOWitness(
-        const std::shared_ptr<IGeniusTransactions> &tx ) const
+        const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         if ( !tx )
         {
@@ -4841,7 +4841,7 @@ namespace sgns
         return witness;
     }
 
-    bool TransactionManager::ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
+    bool TransactionManager::ApplyTransactionToUTXOSnapshot( const std::shared_ptr<GeniusTransaction> &tx,
                                                              std::vector<GeniusUTXO> &snapshot ) const
     {
         if ( !tx )
@@ -4915,7 +4915,7 @@ namespace sgns
         nonce_window_m = window;
     }
 
-    outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
+    outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                                       TransactionStatus new_status )
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Changing transaction state to {} for transaction {}",

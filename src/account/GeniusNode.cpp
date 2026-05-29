@@ -1820,7 +1820,7 @@ namespace sgns
         return manager_result.value()->GetState();
     }
 
-    void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
+    void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
     {
         auto manager_result = GetTransactionManager();
         if ( manager_result.has_value() )

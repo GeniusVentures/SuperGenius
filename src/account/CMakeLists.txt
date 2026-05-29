@@ -54,7 +54,7 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
 add_library(genius_node
-    IGeniusTransactions.cpp
+    GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp

@@ -8,7 +8,7 @@
 #define _ESCROW_TRANSACTION_HPP_
 
 #include <string>
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "UTXOStructs.hpp"
 
 namespace sgns
@@ -16,7 +16,7 @@ namespace sgns
     /**
      * @brief Transaction that reserves funds for a job escrow while tracking peer payout metadata.
      */
-    class EscrowTransaction : public IGeniusTransactions
+    class EscrowTransaction : public GeniusTransaction
     {
     public:
         /**
@@ -46,7 +46,7 @@ namespace sgns
          */
         ~EscrowTransaction() override = default;
 
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
 
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 

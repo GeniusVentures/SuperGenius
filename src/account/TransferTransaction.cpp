@@ -13,7 +13,7 @@ namespace sgns
     TransferTransaction::TransferTransaction( std::vector<OutputDestInfo> destinations,
                                               std::vector<InputUTXOInfo>  inputs,
                                               SGTransaction::DAGStruct    dag ) :
-        IGeniusTransactions( "transfer", SetDAGWithType( std::move( dag ), "transfer" ) ), //
+        GeniusTransaction( "transfer", SetDAGWithType( std::move( dag ), "transfer" ) ), //
         input_tx_( std::move( inputs ) ),                                                  //
         outputs_( std::move( destinations ) )                                              //
     {
@@ -114,7 +114,7 @@ namespace sgns
 
     std::unordered_set<std::string> TransferTransaction::GetTopics() const
     {
-        auto topics = IGeniusTransactions::GetTopics();
+        auto topics = GeniusTransaction::GetTopics();
 
         for ( const auto &dest : GetDstInfos() )
         {
