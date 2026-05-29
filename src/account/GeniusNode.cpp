@@ -408,7 +408,7 @@ namespace sgns
                 // TS-01: Wire configurable timestamp tolerance from DevConfig_st
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
                 // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
-                transaction_manager_->SetTimeFrameToleranceMs( dev_config_.timestamp_tolerance_ms );
+                transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
                 break;
             }
             case NodeState::INITIALIZING_PROCESSING:

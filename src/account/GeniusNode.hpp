@@ -47,10 +47,11 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-    uint64_t      timestamp_tolerance_ms = 300000; ///< Timestamp tolerance window in milliseconds for CheckTransactionTimestamp (default: 5 minutes).
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;
+
+constexpr uint64_t kDefaultTimestampToleranceMs = 300000;  // ±5 minutes
 
 #define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
 #define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
