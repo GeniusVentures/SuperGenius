@@ -453,7 +453,8 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash,
+                                                                         const ConsensusCertificate &certificate );
         outcome::result<ConsensusManager::Check> HandleBridgeEventConsensusSubject(
             const eth::BridgeEventClaim       &claim,
             const ConsensusManager::Subject   &subject );
