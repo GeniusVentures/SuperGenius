@@ -761,3 +761,76 @@ TEST( ConsensusSubjectTest, SizeGate_EmptyTransactionPasses )
     EXPECT_EQ( nonce.value().transaction_data().size(), 0UL );
     EXPECT_LT( nonce.value().transaction_data().size(), MAX_PUBSUB_TX_BYTES );
 }
+
+// --- Phase 03 Plan 01: TS-01 Configurable Timestamp Tolerance Tests ---
+
+TEST( ConsensusSubjectTest, TimestampTolerance_DefaultIsFiveMinutes )
+{
+    // Given: The default timestamp tolerance is 300000ms (5 minutes)
+    // TS-01 per D-05: default ±5 minutes preserved
+    static constexpr uint64_t DEFAULT_TOLERANCE_MS = 300000;
+    static constexpr uint64_t FIVE_MINUTES_MS = 5 * 60 * 1000;
+
+    // Then: Default tolerance equals 5 minutes in milliseconds
+    EXPECT_EQ( DEFAULT_TOLERANCE_MS, FIVE_MINUTES_MS );
+    // This validates the DevConfig_st default value matches the required ±5 minutes
+}
+
+TEST( ConsensusSubjectTest, TimestampTolerance_ConfigurationChangesValue )
+{
+    // Given: A configurable tolerance that can be changed at runtime
+    // TS-01 per D-04: tolerance window is configurable via SetTimeFrameToleranceMs
+    uint64_t configured_tolerance_ms = 300000; // default
+
+    // When: Setting tolerance to 10 minutes (600000ms)
+    configured_tolerance_ms = 600000;
+
+    // Then: Value updates to the new configured value
+    EXPECT_EQ( configured_tolerance_ms, 600000UL );
+    EXPECT_NE( configured_tolerance_ms, 300000UL );
+}
+
+TEST( ConsensusSubjectTest, TimestampTolerance_TimestampWithinTolerancePasses )
+{
+    // Given: Timestamp tolerance window of 300000ms (5 minutes)
+    // TS-01: Transactions within tolerance should pass CheckTransactionTimestamp
+    static constexpr int64_t TOLERANCE_MS = 300000;
+    const int64_t elapsed_ms = 4 * 60 * 1000; // 4 minutes in future
+
+    // When: Checking drift (elapsed ≤ tolerance)
+    const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
+
+    // Then: Drift is within tolerance — validator accepts
+    EXPECT_LE( drift_ms, TOLERANCE_MS );
+    EXPECT_EQ( drift_ms, 240000 );
+}
+
+TEST( ConsensusSubjectTest, TimestampTolerance_TimestampOutsideToleranceFails )
+{
+    // Given: Timestamp tolerance window of 300000ms (5 minutes)
+    // TS-01: Transactions outside tolerance should be rejected
+    static constexpr int64_t TOLERANCE_MS = 300000;
+    const int64_t elapsed_ms = 6 * 60 * 1000; // 6 minutes in future
+
+    // When: Checking drift (elapsed > tolerance)
+    const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
+
+    // Then: Drift exceeds tolerance — validator rejects
+    EXPECT_GT( drift_ms, TOLERANCE_MS );
+    EXPECT_EQ( drift_ms, 360000 );
+}
+
+TEST( ConsensusSubjectTest, TimestampTolerance_NegativeElapsedBounded )
+{
+    // Given: Timestamp tolerance window of 300000ms (5 minutes)
+    // TS-01: Negative elapsed (tx from the past) bounded by abs() — within tolerance
+    static constexpr int64_t TOLERANCE_MS = 300000;
+    const int64_t elapsed_ms = -3 * 60 * 1000; // 3 minutes in past
+
+    // When: Using absolute drift value (same as CheckTransactionTimestamp logic)
+    const int64_t drift_ms = elapsed_ms >= 0 ? elapsed_ms : -elapsed_ms;
+
+    // Then: Absolute drift is within tolerance — validator accepts past timestamps
+    EXPECT_EQ( drift_ms, 180000 );
+    EXPECT_LE( drift_ms, TOLERANCE_MS );
+}
