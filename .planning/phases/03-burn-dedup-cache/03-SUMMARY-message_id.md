@@ -3,6 +3,7 @@ phase: 03
 task: "Define canonical message_id for EVM bridge source events"
 github_issue: "https://github.com/GeniusVentures/SuperGenius/issues/269"
 generated: "2026-05-27"
+status: "done"
 ---
 
 # Canonical message_id — Summary

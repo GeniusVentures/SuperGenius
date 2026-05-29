@@ -4,7 +4,7 @@ phase_name: "Wire RPC Endpoints from evmrelay ChainList"
 project: "SuperGenius"
 github_issue: "https://github.com/GeniusVentures/SuperGenius/issues/293"
 generated: "2026-05-27"
-status: "in-review"
+status: "complete"
 ---
 
 # Phase 1 Summary: Wire RPC Endpoints from evmrelay ChainList
