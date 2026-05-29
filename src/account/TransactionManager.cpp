@@ -3449,21 +3449,6 @@ namespace sgns
                 return ConsensusManager::Check::Approve;
             }
 
-            // Defensive hash integrity check
-            {
-                auto computed_hash = hasher_m->blake2b_256(
-                    gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( tx_data.data() ),
-                                              tx_data.size() ) );
-                if ( computed_hash.toReadableString() != tx_hash )
-                {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Certificate-embedded tx hash mismatch for {}, "
-                        "accepting certificate without processing embedded data",
-                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
-                    return ConsensusManager::Check::Approve;
-                }
-            }
-
             auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
             if ( tx_result.has_error() )
             {
@@ -3474,6 +3459,16 @@ namespace sgns
                 return ConsensusManager::Check::Approve;
             }
             tx = tx_result.value();
+
+            // Verify hash binding — deserialized tx must match certificate's tx_hash
+            if ( tx->GetHash() != tx_hash || !tx->CheckHash() )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Certificate-embedded tx hash mismatch for {}, "
+                    "accepting certificate without processing embedded data",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
+                return ConsensusManager::Check::Approve;
+            }
 
             auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
             if ( result.has_error() )
@@ -3745,21 +3740,7 @@ namespace sgns
             return ConsensusManager::Check::Reject;
         }
 
-        // SANTZ-01 Stage 2: Hash integrity gate before deserialization
-        {
-            auto computed_hash = hasher_m->blake2b_256(
-                gsl::span<const uint8_t>( reinterpret_cast<const uint8_t *>( tx_data.data() ),
-                                          tx_data.size() ) );
-            if ( computed_hash.toReadableString() != tx_hash )
-            {
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] {}: Embedded tx hash mismatch, rejecting tx_hash={}",
-                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
-                return ConsensusManager::Check::Reject;
-            }
-        }
-
-        // SANTZ-01 Stage 3: Bounded protobuf parse
+        // SANTZ-01 Stage 2: Bounded protobuf parse (hash integrity verified post-deser via CheckHash)
         auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
         if ( tx_result.has_error() )
         {
