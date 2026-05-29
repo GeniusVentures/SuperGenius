@@ -1,7 +1,7 @@
 {
   "model_profile": "balanced",
   "commit_docs": true,
-  "parallelization": true,
+  "parallelization": false,
   "search_gitignored": false,
   "brave_search": false,
   "firecrawl": false,

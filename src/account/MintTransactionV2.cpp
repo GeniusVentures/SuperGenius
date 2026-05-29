@@ -157,11 +157,11 @@ namespace sgns
     }
 
     MintTransactionV2 MintTransactionV2::New( uint64_t                 new_amount,
-                                              std::string              chain_id,
-                                              TokenID                  token_id,
-                                              SGTransaction::DAGStruct dag,
-                                              std::vector<InputUTXOInfo> mint_inputs,
-                                              std::string              mint_destination )
+                                               std::string              chain_id,
+                                               TokenID                  token_id,
+                                               SGTransaction::DAGStruct dag,
+                                               std::vector<InputUTXOInfo> mint_inputs,
+                                               std::string              mint_destination )
     {
         if ( mint_destination.empty() )
         {
@@ -170,10 +170,11 @@ namespace sgns
 
         std::vector<OutputDestInfo> mint_outputs{ { new_amount, mint_destination, token_id } };
         MintTransactionV2           instance( { std::move( mint_inputs ), std::move( mint_outputs ) },
-                                    std::move( chain_id ),
-                                    std::move( token_id ),
-                                    std::move( dag ) );
+                                     std::move( chain_id ),
+                                     std::move( token_id ),
+                                     std::move( dag ) );
         instance.FillHash();
         return instance;
     }
+
 }

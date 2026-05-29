@@ -13,7 +13,6 @@
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
 
-#include "account/BridgeConsensusAdapter.hpp"
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
@@ -3713,75 +3712,6 @@ namespace sgns
                 registry_epoch,
                 checkpoint_res.error().message() );
         }
-        return ConsensusManager::Check::Approve;
-    }
-
-    outcome::result<ConsensusManager::Check> TransactionManager::HandleBridgeEventConsensusSubject(
-        const eth::BridgeEventClaim       &claim,
-        const ConsensusManager::Subject   &subject )
-    {
-        (void)subject;
-        if ( claim.src_chain_id == 0 || claim.dest_chain_id == 0 )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting bridge event with empty chain id",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
-            return ConsensusManager::Check::Reject;
-        }
-        if ( CreateBridgeEventMintRequest( claim ).has_error() )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting bridge event that cannot map to mint input",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
-            return ConsensusManager::Check::Reject;
-        }
-        return ConsensusManager::Check::Approve;
-    }
-
-    outcome::result<ConsensusManager::Check> TransactionManager::OnBridgeEventConsensusCertificate(
-        const eth::BridgeEventClaim          &claim,
-        const std::string                    &subject_hash,
-        const ConsensusManager::Certificate  &certificate )
-    {
-        (void)certificate;
-        if ( GetState() != State::READY )
-        {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Bridge event certificate {} arrived before transaction manager is ready",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                subject_hash.substr( 0, 8 ) );
-            return ConsensusManager::Check::Stalled;
-        }
-
-        BOOST_OUTCOME_TRY( auto mint_request, CreateBridgeEventMintRequest( claim ) );
-        auto tx_result = MintFunds( mint_request.amount,
-                                    mint_request.transaction_hash,
-                                    mint_request.chain_id,
-                                    mint_request.token_id,
-                                    mint_request.destination );
-        if ( tx_result.has_error() )
-        {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Failed to route bridge event certificate {} to mint path: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                subject_hash.substr( 0, 8 ),
-                tx_result.error().message() );
-            return outcome::failure( tx_result.error() );
-        }
-
-        TransactionManagerLogger()->info(
-            "[{} - full: {}] {}: Routed bridge event certificate {} to mint transaction {}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            __func__,
-            subject_hash.substr( 0, 8 ),
-            tx_result.value() );
         return ConsensusManager::Check::Approve;
     }
 
