@@ -68,7 +68,15 @@ Plans:
   3. **Tracking cleanup:** Temporary `tx_processed_m` entries from Phase 1's TRACK-01 are removed after the voting lifecycle completes (certificate produced, proposal rejected, or proposal timed out), with no memory leak observed over sustained multi-hour operation.
   4. **Observability:** Operational logs/metrics show standalone validator voting rate, proposal validation success/failure breakdown (by check type), and tracking entry lifecycle events — enabling troubleshooting in production.
 
-**Plans**: TBD
+**Plans**: 2 plans
+
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Size Enforcement + Timestamp Tolerance + Metrics: pre-publish 64KB gate at SendTransactionItem, configurable DevConfig_st timestamp tolerance, atomic metrics counters + lifecycle logging + destructor flush (SIZE-01, TS-01, METRICS-01)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
 
 ## Progress
 
@@ -78,4 +86,4 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Core Embedded-Transaction Validation Path | 2/2 | Complete   | 2026-05-27 |
 | 2. Conflict and Replay Detection Hardening | 0/TBD | Not started | - |
-| 3. Network Hardening and Operational Readiness | 0/TBD | Not started | - |
+| 3. Network Hardening and Operational Readiness | 0/2 | Planned | - |
