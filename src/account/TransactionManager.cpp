@@ -631,6 +631,27 @@ namespace sgns
             bridge_mint_reservations_.insert( reservation_key );
         }
 
+        // Persistence check — reject if this burn was already executed (survives restart)
+        {
+            auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+            if ( datastore )
+            {
+                crdt::GlobalDB::Buffer key_buffer;
+                key_buffer.put( "/bridge/executed/" + reservation_key );
+                auto existing = datastore->get( key_buffer );
+                if ( existing.has_value() )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={}",
+                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                        chainid, transaction_hash );
+                    std::lock_guard lock( bridge_mint_reservation_mutex_ );
+                    bridge_mint_reservations_.erase( reservation_key );
+                    return outcome::failure( std::errc::already_connected );
+                }
+            }
+        }
+
         auto          source_hash = base::Hash256::fromReadableString( transaction_hash );
         base::Hash256 source_input_hash;
         if ( source_hash.has_error() )
@@ -5023,15 +5044,34 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
-                // Clear bridge mint reservation on confirmation
+                // Clear bridge mint reservation and persist executed state
                 if ( tx->GetType() == "mint-v2" )
                 {
                     auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
                     if ( mint_tx )
                     {
                         const std::string reservation_key = mint_tx->GetChainId() + ":" + tx->dag_st.uncle_hash();
-                        std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
-                        bridge_mint_reservations_.erase( reservation_key );
+                        {
+                            std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
+                            bridge_mint_reservations_.erase( reservation_key );
+                        }
+                        // Persist executed state to RocksDB — survives restart
+                        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+                        if ( datastore )
+                        {
+                            crdt::GlobalDB::Buffer key_buffer;
+                            key_buffer.put( "/bridge/executed/" + reservation_key );
+                            crdt::GlobalDB::Buffer value_buffer;
+                            value_buffer.put( "1" );
+                            auto put_result = datastore->put( key_buffer, value_buffer );
+                            if ( put_result.has_error() )
+                            {
+                                TransactionManagerLogger()->error(
+                                    "[{} - full: {}] {}: Failed to persist executed bridge mint for {}",
+                                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                                    reservation_key );
+                            }
+                        }
                     }
                 }
 
