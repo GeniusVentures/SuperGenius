@@ -14,7 +14,7 @@ progress:
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 3 — Burn Deduplication Cache (1/4 tasks done, 1 designed)
+**Current Phase:** Phase 3 — Burn Deduplication Cache (2/4 tasks done)
 
 ## Phase Status
 
@@ -31,22 +31,19 @@ progress:
 | Task | Status |
 |------|--------|
 | 1 — Canonical message_id | done |
-| 2 — Deterministic slot keys | **designed, needs review** |
+| 2 — Deterministic slot keys | done |
 | 3 — Processing reservation state | pending |
 | 4 — Persist executed bridge state | pending |
 
-### Task 2 Design (ready for Henrique review)
+### Task 2 Implementation
 
-**Problem:** `GetSlotKey()` uses `account_id:nonce` for all nonce subjects.
-Two validators minting for the same burn get different slots → no dedup.
+**Approach:** Detect MintV2 subjects via `EmbeddedTransaction` oneof (`transaction_case() == kMintV2`).
+Build deterministic slot key from chain_id, token_id, amount, dest_address.
 
-**Approach:** Detect bridge mint nonce subjects in `GetSlotKey()` by checking
-for a UTXO commitment with a consumed outpoint referencing an external tx hash
-(the burn). Use that hash as the slot key instead of `account_id:nonce`.
+**Slot key format:** `mint-v2:{chain_id}:{token_id}:{amount}:{dest_address}`
 
-**Open question:** Best way to distinguish bridge mint consumed outpoints from
-native transfer consumed outpoints without a blockchain lookup on the hot path.
-(3 options documented in Phase 3 PLAN)
+**Resolved:** The proto cleanup (Phase 4) enabled direct oneof detection — no deserialization needed.
+See `Consensus.cpp:GetSlotKey()` and issue #297.
 
 ## Deferred Items (from Phase 1 review 2026-05-28)
 

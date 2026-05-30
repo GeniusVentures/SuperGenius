@@ -27,7 +27,7 @@ a separate `gnus.bridge_event.v1` consensus subject.  The burn tx hash flows fro
 | # | GitHub | Task | Status |
 |---|--------|------|--------|
 | 1 | [#269](https://github.com/GeniusVentures/SuperGenius/issues/269) | Define canonical message_id for EVM bridge source events | done |
-| 2 | [#270](https://github.com/GeniusVentures/SuperGenius/issues/270) | Map bridge mints to deterministic consensus slot keys | pending |
+| 2 | [#270](https://github.com/GeniusVentures/SuperGenius/issues/270) | Map bridge mints to deterministic consensus slot keys | done |
 | 3 | [#271](https://github.com/GeniusVentures/SuperGenius/issues/271) | Add processing reservation state | pending |
 | 4 | [#286](https://github.com/GeniusVentures/SuperGenius/issues/286) | Persist executed bridge message state | pending |
 
