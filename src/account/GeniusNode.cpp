@@ -265,6 +265,11 @@ namespace sgns
             case NodeState::MIGRATING_DATABASE:
             {
                 account_->InitMessenger( pubsub_ );
+                if ( !bootstrap_fullnodes_.empty() )
+                {
+                    pubsub_->AddPeers( bootstrap_fullnodes_ );
+                    node_logger_->info( "Added {} bootstrap fullnodes", bootstrap_fullnodes_.size() );
+                }
                 MigrateDatabase(
                     [weak_self( weak_from_this() )]( outcome::result<void> result )
                     {
@@ -598,16 +603,17 @@ namespace sgns
     {
         bool ret = true;
         std::string config_path = write_base_path_ + "/network_config.json";
-        bool config_found = false;
         rapidjson::Document config_json;
         std::string pubsub_bind_address = "0.0.0.0";
-        std::vector<std::string> bootstrap_addresses;
         std::string authorized_full_node;
         bool upnp_enabled = use_upnp_;
         int high_water = is_full_node ? 400 : 300;
         int low_water = is_full_node ? 200 : 150;
         std::string port_str;
         uint16_t config_port = 0;
+
+        bootstrap_peers_.clear();
+        bootstrap_fullnodes_.clear();
 
         // Try to read config file
         std::ifstream config_file(config_path);
@@ -616,7 +622,6 @@ namespace sgns
             buffer << config_file.rdbuf();
             config_json.Parse(buffer.str().c_str());
             if (!config_json.HasParseError() && config_json.IsObject()) {
-                config_found = true;
                 if (config_json.HasMember("pubsub_port") && config_json["pubsub_port"].IsString()) {
                     port_str = config_json["pubsub_port"].GetString();
                     if (!port_str.empty()) {
@@ -632,9 +637,15 @@ namespace sgns
                 }
                 if (config_json.HasMember("bootstrap_addresses") && config_json["bootstrap_addresses"].IsArray()) {
                     for (auto& v : config_json["bootstrap_addresses"].GetArray()) {
-                        if (v.IsString()) bootstrap_addresses.push_back(v.GetString());
+                        if (v.IsString()) bootstrap_peers_.push_back(v.GetString());
                     }
                 }
+                if (config_json.HasMember("bootstrap_fullnodes") && config_json["bootstrap_fullnodes"].IsArray()) {
+                    for (auto& v : config_json["bootstrap_fullnodes"].GetArray()) {
+                        if (v.IsString()) bootstrap_fullnodes_.push_back(v.GetString());
+                    }
+                }
+
                 if (config_json.HasMember("upnp_enabled") && config_json["upnp_enabled"].IsBool()) {
                     upnp_enabled = config_json["upnp_enabled"].GetBool();
                 }
@@ -697,18 +708,9 @@ namespace sgns
                 crdt::KeyPairFileStorage(write_base_path_ + pubsubKeyPath).GetKeyPair().value(),
                 config);
 
-            // Bootstrapper logic
-            std::vector<std::string> bootstrappers;
-            if (config_found) {
-                bootstrappers = bootstrap_addresses;
-            } else {
-                // If no config, do not bootstrap sg-fullnode-1
-                bootstrappers = {};
-            }
-
             auto pubs = pubsub_->Start(
                 pubsubport_,
-                bootstrappers,
+                bootstrap_peers_,
                 pubsub_bind_address,
                 {});
             pubs.wait();
