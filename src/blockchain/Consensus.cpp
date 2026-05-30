@@ -2131,6 +2131,25 @@ namespace sgns
         auto nonce_payload = DecodeNonceSubject( proposal.subject() );
         if ( nonce_payload.has_value() )
         {
+            // Bridge mint detection via EmbeddedTransaction oneof — deterministic slot key
+            // ensures all validators minting for the same burn compete in the same slot.
+            const auto &embedded = nonce_payload.value().transaction();
+            if ( embedded.transaction_case() == EmbeddedTransaction::kMintV2 )
+            {
+                const auto &mint = embedded.mint_v2();
+                std::string key = "mint-v2:";
+                key += mint.chain_id();
+                key += ":";
+                key += mint.token_id();
+                key += ":";
+                key += std::to_string( mint.amount() );
+                if ( mint.utxo_params().outputs_size() > 0 )
+                {
+                    key += ":";
+                    key += mint.utxo_params().outputs( 0 ).dest_addr();
+                }
+                return key;
+            }
             return proposal.subject().account_id() + ":" + std::to_string( nonce_payload.value().nonce() );
         }
         auto subject_id = ComputeSubjectId( proposal.subject() );
