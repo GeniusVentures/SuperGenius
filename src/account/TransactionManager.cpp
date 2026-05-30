@@ -616,6 +616,21 @@ namespace sgns
             chainid = "public";
         }
 
+        // Reservation check — prevent duplicate mint creation for the same burn
+        const std::string reservation_key = chainid + ":" + transaction_hash;
+        {
+            std::lock_guard lock( bridge_mint_reservation_mutex_ );
+            if ( bridge_mint_reservations_.count( reservation_key ) )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Bridge mint already reserved for chain={} tx_hash={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                    chainid, transaction_hash );
+                return outcome::failure( std::errc::already_connected );
+            }
+            bridge_mint_reservations_.insert( reservation_key );
+        }
+
         auto          source_hash = base::Hash256::fromReadableString( transaction_hash );
         base::Hash256 source_input_hash;
         if ( source_hash.has_error() )
@@ -5008,6 +5023,18 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
+                // Clear bridge mint reservation on confirmation
+                if ( tx->GetType() == "mint-v2" )
+                {
+                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
+                    if ( mint_tx )
+                    {
+                        const std::string reservation_key = mint_tx->GetChainId() + ":" + tx->dag_st.uncle_hash();
+                        std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
+                        bridge_mint_reservations_.erase( reservation_key );
+                    }
+                }
+
                 // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
                 metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
                 TransactionManagerLogger()->info(
@@ -5067,6 +5094,18 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
+
+                // Clear bridge mint reservation on failure
+                if ( tx->GetType() == "mint-v2" )
+                {
+                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
+                    if ( mint_tx )
+                    {
+                        const std::string reservation_key = mint_tx->GetChainId() + ":" + tx->dag_st.uncle_hash();
+                        std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
+                        bridge_mint_reservations_.erase( reservation_key );
+                    }
+                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );

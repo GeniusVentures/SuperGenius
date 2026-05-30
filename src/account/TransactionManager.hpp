@@ -537,6 +537,10 @@ namespace sgns
         std::chrono::steady_clock::time_point last_init_tx_request_time_{};
         static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
 
+        /// @brief In-flight bridge mint reservations — prevents duplicate mint creation for the same burn.
+        mutable std::mutex                bridge_mint_reservation_mutex_;
+        std::unordered_set<std::string>   bridge_mint_reservations_;
+
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
