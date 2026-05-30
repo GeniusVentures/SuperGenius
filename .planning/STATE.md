@@ -14,7 +14,7 @@ progress:
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 3 — Burn Deduplication Cache (3/4 tasks done)
+**Current Phase:** Phase 3 — Burn Deduplication Cache (4/4 tasks done — complete)
 
 ## Phase Status
 
@@ -22,7 +22,7 @@ progress:
 |-------|------|--------|
 | Phase 1 | Wire RPC Endpoints from evmrelay ChainList | complete |
 | Phase 2 | Relayer — Burn Detection → MintFunds | Not Started |
-| Phase 3 | Burn Deduplication Cache | in-progress |
+| Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | Not Started |
 | Phase 5 | Startup Bridge Recovery | Not Started |
 
@@ -33,7 +33,7 @@ progress:
 | 1 — Canonical message_id | done |
 | 2 — Deterministic slot keys | done |
 | 3 — Processing reservation state | done |
-| 4 — Persist executed bridge state | pending |
+| 4 — Persist executed bridge state | done |
 
 ### Task 2 Implementation
 
