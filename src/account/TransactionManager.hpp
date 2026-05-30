@@ -346,6 +346,13 @@ namespace sgns
         static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
 
         /**
+         * @brief Deserializes from EmbeddedTransaction proto oneof field.
+         *        Dispatches on the oneof case instead of manual type string lookup.
+         */
+        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
+            const EmbeddedTransaction &embedded );
+
+        /**
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
@@ -451,7 +458,8 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash );
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
+                                                                          const ConsensusCertificate &certificate );
         /**
          * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
@@ -459,13 +467,6 @@ namespace sgns
          * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
          */
         void OnProposalTimeoutCleanup( const std::string &tx_hash );
-        outcome::result<ConsensusManager::Check> HandleBridgeEventConsensusSubject(
-            const eth::BridgeEventClaim       &claim,
-            const ConsensusManager::Subject   &subject );
-        outcome::result<ConsensusManager::Check> OnBridgeEventConsensusCertificate(
-            const eth::BridgeEventClaim          &claim,
-            const std::string                    &subject_hash,
-            const ConsensusManager::Certificate  &certificate );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -700,7 +701,7 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        std::string               GetValidationChainId( const std::shared_ptr<GeniusTransaction> &tx ) const;
         const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;

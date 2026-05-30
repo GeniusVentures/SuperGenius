@@ -34,6 +34,9 @@ namespace sgns
         using GeniusTransaction::SerializeByteVector;
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
+
         /**
          * @brief      Deserializes a TransferTransaction from bytes.
          * @param[in]  data Serialized bytes.

@@ -2308,7 +2308,7 @@ namespace sgns
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
-        const std::vector<uint8_t>                    &transaction_data,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
@@ -2318,7 +2318,7 @@ namespace sgns
         NonceSubject payload;
         payload.set_nonce( nonce );
         payload.set_tx_hash( tx_hash.data(), tx_hash.size() );
-        payload.mutable_transaction()->set_data( transaction_data.data(), transaction_data.size() );
+        *payload.mutable_transaction() = std::move( transaction );
         if ( utxo_commitment.has_value() )
         {
             *payload.mutable_utxo_commitment() = utxo_commitment.value();

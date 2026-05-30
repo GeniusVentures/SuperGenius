@@ -38,6 +38,19 @@ namespace sgns
         return serialized_proto;
     }
 
+    sgns::EmbeddedTransaction MintTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        sgns::EmbeddedTransaction embedded;
+        SGTransaction::MintTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+        tx_struct.set_amount( amount );
+        tx_struct.set_chain_id( chain_id );
+        tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
+
+        *embedded.mutable_mint() = tx_struct;
+        return embedded;
+    }
+
     std::shared_ptr<MintTransaction> MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
         SGTransaction::MintTx tx_struct;

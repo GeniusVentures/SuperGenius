@@ -59,6 +59,31 @@ namespace sgns
         return serialized_proto;
     }
 
+    sgns::EmbeddedTransaction TransferTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        sgns::EmbeddedTransaction embedded;
+        SGTransaction::TransferTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+        SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
+
+        for ( const auto &[txid_hash_, output_idx_, signature_] : input_tx_ )
+        {
+            SGTransaction::TransferUTXOInput *input_proto = utxo_proto_params->add_inputs();
+            input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
+            input_proto->set_output_index( output_idx_ );
+            input_proto->set_signature( signature_.data(), signature_.size() );
+        }
+        for ( const auto &[encrypted_amount, dest_address, token_id] : outputs_ )
+        {
+            SGTransaction::TransferOutput *output_proto = utxo_proto_params->add_outputs();
+            output_proto->set_encrypted_amount( encrypted_amount );
+            output_proto->set_dest_addr( dest_address );
+            output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
+        }
+        *embedded.mutable_transfer() = tx_struct;
+        return embedded;
+    }
+
     std::shared_ptr<TransferTransaction> TransferTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
     {
         SGTransaction::TransferTx tx_struct;

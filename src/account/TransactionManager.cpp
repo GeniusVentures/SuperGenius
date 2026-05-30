@@ -163,31 +163,6 @@ namespace sgns
                     strong->OnProposalTimeoutCleanup( tx_hash );
                 }
             } );
-        RegisterBridgeEventConsensusHandler(
-            instance->blockchain_,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const eth::BridgeEventClaim       &claim,
-                const ConsensusManager::Subject   &subject ) -> outcome::result<ConsensusManager::Check>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->HandleBridgeEventConsensusSubject( claim, subject );
-                }
-                return outcome::failure( std::errc::owner_dead );
-            } );
-        RegisterBridgeEventConsensusCertificateHandler(
-            instance->blockchain_,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const eth::BridgeEventClaim          &claim,
-                const std::string                    &subject_hash,
-                const ConsensusManager::Certificate  &certificate ) -> outcome::result<ConsensusManager::Check>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->OnBridgeEventConsensusCertificate( claim, subject_hash, certificate );
-                }
-                return outcome::failure( std::errc::owner_dead );
-            } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
@@ -1202,13 +1177,14 @@ namespace sgns
                 }
             }
 
-            // Serialize tx for embedding in NonceSubject (per D-04, PROTO-01/SER-01)
-            auto serialized_tx = transaction->SerializeByteVector();
+            // Serialize tx into EmbeddedTransaction proto with typed oneof field
+            auto embedded_tx = transaction->SerializeToEmbeddedTransaction();
 
             // SIZE-01: Pre-publish size enforcement gate
             // Reject oversized transactions (>64KB) before they enter the consensus
             // pipeline to prevent silent PubSub message drops. Defense-in-depth with
             // the handler-level MAX_EMBEDDED_TX_BYTES check (per D-02).
+            auto serialized_tx = transaction->SerializeByteVector();
             if ( serialized_tx.size() > MAX_PUBSUB_TX_BYTES )
             {
                 TransactionManagerLogger()->error(
@@ -1226,7 +1202,7 @@ namespace sgns
                                blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                      transaction->GetNonce(),
                                                                      transaction->GetHash(),
-                                                                     serialized_tx,
+                                                                     embedded_tx,
                                                                      utxo_commitment,
                                                                      utxo_witness ) );
             BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
@@ -1349,6 +1325,67 @@ namespace sgns
             return std::errc::invalid_argument;
         }
         return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
+    }
+
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeEmbeddedTransaction(
+        const EmbeddedTransaction &embedded )
+    {
+        // Dispatch on the oneof case — protobuf handles the type routing
+        switch ( embedded.transaction_case() )
+        {
+            case EmbeddedTransaction::kTransfer:
+            {
+                std::string bytes;
+                embedded.transfer().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "transfer" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMintV2:
+            {
+                std::string bytes;
+                embedded.mint_v2().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "mint-v2" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMint:
+            {
+                std::string bytes;
+                embedded.mint().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "mint" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kProcessing:
+            {
+                std::string bytes;
+                embedded.processing().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "process" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMigration:
+            {
+                std::string bytes;
+                embedded.migration().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "migration" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kEscrow:
+            {
+                std::string bytes;
+                embedded.escrow().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "escrow-hold" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kEscrowRelease:
+            {
+                std::string bytes;
+                embedded.escrow_release().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::TRANSACTION_NOT_SET:
+            default:
+                return std::errc::invalid_argument;
+        }
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
@@ -3515,17 +3552,16 @@ namespace sgns
             }
             const auto &nonce_subject = nonce_subject_result.value();
 
-            const auto &tx_data = nonce_subject.transaction().data();
-            if ( tx_data.empty() )
+            if ( nonce_subject.transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
             {
                 TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Certificate for hash {} has no embedded transaction_data "
+                    "[{} - full: {}] {}: Certificate for hash {} has no embedded transaction "
                     "(pre-Phase-1 certificate), accepting",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
                 return ConsensusManager::Check::Approve;
             }
 
-            auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
+            auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.transaction() );
             if ( tx_result.has_error() )
             {
                 TransactionManagerLogger()->warn(
@@ -3731,30 +3767,15 @@ namespace sgns
         const std::string tx_hash = nonce_subject.value().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
-        // SANTZ-01: Sanitization sandwich — validate before deserializing untrusted PubSub bytes
-        // DESER-01: Deserialize from embedded bytes instead of CRDT lookup
-        static constexpr size_t MAX_EMBEDDED_TX_BYTES = 64 * 1024;
-
-        const auto &tx_data = nonce_subject.value().transaction().data();
-        if ( tx_data.empty() )
+        // DESER-01: Deserialize from EmbeddedTransaction oneof field
+        if ( nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty embedded tx data, rejecting",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: No embedded transaction set, rejecting",
                                                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__ );
             return ConsensusManager::Check::Reject;
         }
 
-        // SANTZ-01 Stage 1: Hard size cap before any protobuf parse
-        if ( tx_data.size() > MAX_EMBEDDED_TX_BYTES )
-        {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Embedded tx data exceeds max size {} > {}, rejecting",
-                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
-                tx_data.size(), MAX_EMBEDDED_TX_BYTES );
-            return ConsensusManager::Check::Reject;
-        }
-
-        // SANTZ-01 Stage 2: Bounded protobuf parse (hash integrity verified post-deser via CheckHash)
-        auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
+        auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
         if ( tx_result.has_error() )
         {
             TransactionManagerLogger()->error(

@@ -291,7 +291,7 @@ namespace sgns
             const std::string                             &account_id,
             uint64_t                                       nonce,
             const std::string                             &tx_hash,
-            const std::vector<uint8_t>                    &transaction_data,
+            const EmbeddedTransaction                     &transaction,
             const std::optional<UTXOTransitionCommitment> &utxo_commitment,
             const std::optional<UTXOWitness>              &utxo_witness );
         /**

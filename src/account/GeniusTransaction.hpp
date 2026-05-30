@@ -15,6 +15,7 @@
 
 #include "outcome/outcome.hpp"
 #include "account/proto/SGTransaction.pb.h"
+#include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/UTXOStructs.hpp"
 #include "GeniusAccount.hpp"
 
@@ -96,6 +97,22 @@ namespace sgns
          * @note        This should be defined in the derived class, but the version without parameters is to used
          */
         virtual std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const = 0;
+
+        /**
+         * @brief       Serializes the transaction into an EmbeddedTransaction proto with the
+         *              appropriate oneof field set.
+         * @param[in]   dag The DAG metadata to be included in the serialization.
+         * @return      EmbeddedTransaction proto with the typed transaction field set.
+         */
+        virtual sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const = 0;
+
+        /**
+         * @brief       Serializes using internal DAG metadata.
+         */
+        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction() const
+        {
+            return SerializeToEmbeddedTransaction( dag_st );
+        }
 
         /**
          * @brief       Serializes the transaction using the internal DAG metadata.
