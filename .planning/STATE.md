@@ -14,7 +14,7 @@ progress:
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 3 — Burn Deduplication Cache (2/4 tasks done)
+**Current Phase:** Phase 3 — Burn Deduplication Cache (3/4 tasks done)
 
 ## Phase Status
 
@@ -32,7 +32,7 @@ progress:
 |------|--------|
 | 1 — Canonical message_id | done |
 | 2 — Deterministic slot keys | done |
-| 3 — Processing reservation state | pending |
+| 3 — Processing reservation state | done |
 | 4 — Persist executed bridge state | pending |
 
 ### Task 2 Implementation
