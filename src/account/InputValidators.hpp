@@ -134,6 +134,8 @@ namespace sgns
     {
         std::string url;
         uint8_t     consensus_weight = 25;
+        std::string bridge_contract_address;  ///< Expected bridge contract (hex, "0x...")
+        std::string event_topic0;             ///< Expected event topic0 (hex, "0x...")
     };
 
     /**

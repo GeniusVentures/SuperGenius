@@ -540,6 +540,31 @@ namespace sgns
                 return false;
             }
 
+            // Defense-in-depth: verify receipt logs match expected bridge contract and event topic0.
+            // If bridge_contract_address is configured, at least one log must match.
+            if ( !ep.bridge_contract_address.empty() )
+            {
+                bool log_matched = false;
+                for ( const auto &log_entry : receipt->receipt.logs )
+                {
+                    std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
+                    if ( log_addr_hex == ep.bridge_contract_address &&
+                         !log_entry.topics.empty() &&
+                         rlp::base::parse::hex_array_string( log_entry.topics.front() ) == ep.event_topic0 )
+                    {
+                        log_matched = true;
+                        break;
+                    }
+                }
+                if ( !log_matched )
+                {
+                    logger->warn( "No receipt log matches bridge contract {} topic0 {} for tx={} via url={}",
+                                  ep.bridge_contract_address, ep.event_topic0,
+                                  source_reference.substr( 0, 10 ), ep.url );
+                    return false;
+                }
+            }
+
             success_weight += ep.consensus_weight;
             ++tried;
 
