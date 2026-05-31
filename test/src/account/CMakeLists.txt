@@ -57,3 +57,24 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+addtest(bridge_relayer_test
+    bridge_relayer_test.cpp
+)
+
+target_link_libraries(bridge_relayer_test
+    genius_node
+    evmrelay
+)
+
+if(MSVC)
+    target_link_options(bridge_relayer_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(bridge_relayer_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(bridge_relayer_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
