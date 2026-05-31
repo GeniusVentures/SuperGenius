@@ -20,6 +20,14 @@ target_link_libraries(consensus_subject_test
 #    base_crdt_test
 #)
 
+addtest(consensus_slot_key_test
+    consensus_slot_key_test.cpp
+)
+target_link_libraries(consensus_slot_key_test
+    blockchain_genesis
+    rapidjson
+)
+
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test

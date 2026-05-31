@@ -413,6 +413,7 @@ namespace sgns
 
     private:
         friend class ConsensusManagerTestAccess;
+        friend class ConsensusSlotKeyTestAccess;
 
         /**
          * @brief Constructs a consensus manager.

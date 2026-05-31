@@ -2151,6 +2151,23 @@ namespace sgns
                     key += kSlotSeparator;
                     key += mint.utxo_params().outputs( 0 ).dest_addr();
                 }
+
+                // Append burn tx hash from UTXO commitment for collision resistance.
+                // Two distinct burns with identical chain/token/amount/dest must
+                // produce different slot keys (addresses Codex P1 #3 from PR #298).
+                const auto &commitment = nonce_payload.value().utxo_commitment();
+                if ( commitment.consumed_outpoints_size() > 0 )
+                {
+                    key += kSlotSeparator;
+                    static constexpr char kHexDigits[] = "0123456789abcdef";
+                    const auto &burn_hash = commitment.consumed_outpoints( 0 ).tx_id_hash();
+                    for ( uint8_t byte : burn_hash )
+                    {
+                        key += kHexDigits[( byte >> 4 ) & 0x0F];
+                        key += kHexDigits[byte & 0x0F];
+                    }
+                }
+
                 return key;
             }
             return proposal.subject().account_id() + std::string( kSlotSeparator ) + std::to_string( nonce_payload.value().nonce() );
