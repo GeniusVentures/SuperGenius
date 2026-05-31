@@ -14,14 +14,14 @@ progress:
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 3 — Burn Deduplication Cache (4/4 tasks done — complete)
+**Current Phase:** Phase 2 — Relayer — Burn Detection → MintFunds
 
 ## Phase Status
 
 | Phase | Name | Status |
 |-------|------|--------|
 | Phase 1 | Wire RPC Endpoints from evmrelay ChainList | complete |
-| Phase 2 | Relayer — Burn Detection → MintFunds | Not Started |
+| Phase 2 | Relayer — Burn Detection → MintFunds | in-progress |
 | Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | Not Started |
 | Phase 5 | Startup Bridge Recovery | Not Started |
