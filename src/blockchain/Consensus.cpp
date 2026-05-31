@@ -2133,24 +2133,27 @@ namespace sgns
         {
             // Bridge mint detection via EmbeddedTransaction oneof — deterministic slot key
             // ensures all validators minting for the same burn compete in the same slot.
+            static constexpr std::string_view kSlotSeparator = ":";
             const auto &embedded = nonce_payload.value().transaction();
             if ( embedded.transaction_case() == EmbeddedTransaction::kMintV2 )
             {
+                static constexpr std::string_view kMintV2SlotPrefix = "mint-v2:";
+
                 const auto &mint = embedded.mint_v2();
-                std::string key = "mint-v2:";
+                std::string key( kMintV2SlotPrefix );
                 key += mint.chain_id();
-                key += ":";
+                key += kSlotSeparator;
                 key += mint.token_id();
-                key += ":";
+                key += kSlotSeparator;
                 key += std::to_string( mint.amount() );
                 if ( mint.utxo_params().outputs_size() > 0 )
                 {
-                    key += ":";
+                    key += kSlotSeparator;
                     key += mint.utxo_params().outputs( 0 ).dest_addr();
                 }
                 return key;
             }
-            return proposal.subject().account_id() + ":" + std::to_string( nonce_payload.value().nonce() );
+            return proposal.subject().account_id() + std::string( kSlotSeparator ) + std::to_string( nonce_payload.value().nonce() );
         }
         auto subject_id = ComputeSubjectId( proposal.subject() );
         return subject_id.has_value() ? subject_id.value() : proposal.proposal_id();

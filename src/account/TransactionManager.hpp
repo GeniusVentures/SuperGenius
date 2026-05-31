@@ -537,6 +537,10 @@ namespace sgns
         std::chrono::steady_clock::time_point last_init_tx_request_time_{};
         static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
 
+        /// @brief Bridge mint reservation/persistence constants.
+        static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
+        static constexpr std::string_view kBridgeKeySeparator   = ":";
+
         /// @brief In-flight bridge mint reservations — prevents duplicate mint creation for the same burn.
         mutable std::mutex                bridge_mint_reservation_mutex_;
         std::unordered_set<std::string>   bridge_mint_reservations_;

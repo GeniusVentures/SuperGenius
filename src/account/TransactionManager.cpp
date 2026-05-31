@@ -617,7 +617,7 @@ namespace sgns
         }
 
         // Reservation check — prevent duplicate mint creation for the same burn
-        const std::string reservation_key = chainid + ":" + transaction_hash;
+        const std::string reservation_key = chainid + std::string( kBridgeKeySeparator ) + transaction_hash;
         {
             std::lock_guard lock( bridge_mint_reservation_mutex_ );
             if ( bridge_mint_reservations_.count( reservation_key ) )
@@ -637,7 +637,7 @@ namespace sgns
             if ( datastore )
             {
                 crdt::GlobalDB::Buffer key_buffer;
-                key_buffer.put( "/bridge/executed/" + reservation_key );
+                key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
                 auto existing = datastore->get( key_buffer );
                 if ( existing.has_value() )
                 {
@@ -5050,7 +5050,7 @@ namespace sgns
                     auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
                     if ( mint_tx )
                     {
-                        const std::string reservation_key = mint_tx->GetChainId() + ":" + tx->dag_st.uncle_hash();
+                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
                         {
                             std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
                             bridge_mint_reservations_.erase( reservation_key );
@@ -5060,7 +5060,7 @@ namespace sgns
                         if ( datastore )
                         {
                             crdt::GlobalDB::Buffer key_buffer;
-                            key_buffer.put( "/bridge/executed/" + reservation_key );
+                            key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
                             crdt::GlobalDB::Buffer value_buffer;
                             value_buffer.put( "1" );
                             auto put_result = datastore->put( key_buffer, value_buffer );
@@ -5141,7 +5141,7 @@ namespace sgns
                     auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
                     if ( mint_tx )
                     {
-                        const std::string reservation_key = mint_tx->GetChainId() + ":" + tx->dag_st.uncle_hash();
+                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
                         std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
                         bridge_mint_reservations_.erase( reservation_key );
                     }
