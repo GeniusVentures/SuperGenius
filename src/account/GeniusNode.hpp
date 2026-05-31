@@ -24,6 +24,7 @@
 #include "account/GeniusAccount.hpp"
 #include "base/buffer.hpp"
 #include "account/TransactionManager.hpp"
+#include "account/BridgeRelayer.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
@@ -596,6 +597,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
         std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
+        std::unique_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.

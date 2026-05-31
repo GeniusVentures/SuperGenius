@@ -411,6 +411,10 @@ namespace sgns
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
                 // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
+
+                // Initialize bridge relayer — wires BridgeRpcWatcher → MintFunds
+                bridge_relayer_ = std::make_unique<BridgeRelayer>( transaction_manager_, node_logger_ );
+
                 break;
             }
             case NodeState::INITIALIZING_PROCESSING:

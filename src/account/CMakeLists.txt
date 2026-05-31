@@ -72,6 +72,7 @@ add_library(genius_node
     Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
     ChainRpcEndpointProvider.cpp
+    BridgeRelayer.cpp
 )
 
 target_link_libraries(genius_node
