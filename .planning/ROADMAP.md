@@ -67,16 +67,29 @@ Two active development tracks: **EVM Bridge Integration** and **Consensus Voting
 
 **Goal:** Prevent double-minting by tracking which burn transaction hashes have already been processed.
 
+**Status:** Gap closure — fixing 4 Codex review findings from PR #298
+**Plans:** 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md — Gap closure: slot key collision, fail-closed endpoints, UTXO witness fix, receipt log verification
+
 **Tasks:**
-- [ ] Add a `burn_cache[burn_tx_hash].used` map to `PublicChainInputValidator`
-- [ ] Check the cache in `VerifyPublicChainSmartContract` before RPC verification
-- [ ] Mark the burn hash as used after successful mint consensus certificate
-- [ ] Persist cache across restarts (CRDT or local RocksDB)
+- [x] Define canonical message_id for EVM bridge source events
+- [x] Map bridge mints to deterministic consensus slot keys
+- [x] Add processing reservation state
+- [x] Persist executed bridge message state
+- [ ] Fix 1: Add burn tx hash to GetSlotKey() slot key (P1 #3)
+- [ ] Fix 2: Fail-closed on missing RPC endpoints (P2 #4)
+- [ ] Fix 3: Disable UTXO witness requirement for bridge mints (P1 #1)
+- [ ] Fix 4: Add receipt log verification for bridge contract + topic0 (P1 #2)
 
 **Success criteria:**
 - Same burn tx hash cannot produce two mint transactions
-- Cache survives node restart
-- Unit tests for duplicate rejection
+- Two distinct burns with identical chain/token/amount/dest produce different slot keys
+- Missing RPC endpoints cause rejection (fail-closed)
+- Bridge mints do not require UTXO witness data
+- Receipt logs are verified against configured bridge contract and event topic0
+- Unit tests for all fixes
 
 ---
 
@@ -220,7 +233,7 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 |-------|-------|--------|-----------|
 | A. EVM Bridge | 1. Wire RPC Endpoints | Complete | 2026-05-27 |
 | A. EVM Bridge | 2. Relayer — Burn Detection | Complete | 2026-05-31 |
-| A. EVM Bridge | 3. Burn Dedup Cache | Not started | - |
+| A. EVM Bridge | 3. Burn Dedup Cache | Gap closure | - |
 | A. EVM Bridge | 4. E2E Integration Test | Not started | - |
 | A. EVM Bridge | 5. Startup Catch-Up | Not started | - |
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
