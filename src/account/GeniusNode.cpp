@@ -412,8 +412,12 @@ namespace sgns
                 // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
-                // Initialize bridge relayer — wires BridgeRpcWatcher → MintFunds
-                bridge_relayer_ = std::make_unique<BridgeRelayer>( transaction_manager_, node_logger_ );
+                // Initialize shared EthWatchService for EVM event detection
+                eth_watch_service_ = std::make_shared<eth::EthWatchService>();
+
+                // Initialize bridge relayer — wires evmrelay burn events → MintFunds
+                bridge_relayer_ = std::make_unique<BridgeRelayer>(
+                    transaction_manager_, eth_watch_service_, node_logger_ );
 
                 break;
             }

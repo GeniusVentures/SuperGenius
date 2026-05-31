@@ -1,25 +1,22 @@
 /**
  * @file       BridgeRelayer.hpp
- * @brief      Processes bridge burn claims and submits MintFunds transactions.
+ * @brief      Wires evmrelay burn events to MintFunds via shared EthWatchService.
  * @date       2026-05-30
  */
 #pragma once
 
-#include <functional>
 #include <memory>
 #include <string>
 
 #include "account/TransactionManager.hpp"
 #include "base/logger.hpp"
-#include "eth/bridge_event.hpp"
+#include "eth/eth_watch_service.hpp"
 
 namespace sgns
 {
     /**
-     * @brief Processes BridgeEventClaim objects and calls MintFunds.
-     *
-     * The BridgeRelayer is a callback receiver — it does not own watchers.
-     * Callers wire it to BridgeRpcWatcher::BridgeClaimCallback or similar.
+     * @brief Registers a BridgeSourceBurned watch on a shared EthWatchService
+     *        and calls MintFunds when burns are detected.
      */
     class BridgeRelayer
     {
@@ -27,23 +24,31 @@ namespace sgns
         /**
          * @brief Construct a BridgeRelayer.
          * @param[in] tx_manager TransactionManager to call MintFunds on.
+         * @param[in] watch_service Shared EthWatchService for event detection.
          * @param[in] logger Logger instance.
          */
-        BridgeRelayer( std::shared_ptr<TransactionManager> tx_manager, base::Logger logger );
+        BridgeRelayer( std::shared_ptr<TransactionManager>  tx_manager,
+                       std::shared_ptr<eth::EthWatchService> watch_service,
+                       base::Logger                          logger );
 
         /**
-         * @brief Process a bridge burn claim — calls MintFunds if not duplicate.
-         * @param[in] claim The bridge event claim from a watcher.
+         * @brief Register the BridgeSourceBurned watch on the EthWatchService.
+         * @param[in] chain_name Chain name for logging (e.g. "ethereum-mainnet").
+         * @param[in] contract_address GNUS bridge contract address.
          */
-        void OnBridgeClaim( const eth::BridgeEventClaim &claim );
+        void Start( const std::string &chain_name, const std::string &contract_address );
 
         /**
-         * @brief Returns a callback suitable for BridgeRpcWatcher::BridgeClaimCallback.
+         * @brief Stop watching (currently a no-op — EthWatchService lifecycle is external).
          */
-        std::function<void( const eth::BridgeEventClaim & )> GetClaimCallback();
+        void Stop();
 
     private:
-        std::shared_ptr<TransactionManager> tx_manager_;
-        base::Logger                        logger_;
+        void OnWatchEvent( const eth::WatchEventNotification &notification );
+
+        std::shared_ptr<TransactionManager>  tx_manager_;
+        std::shared_ptr<eth::EthWatchService> watch_service_;
+        base::Logger                          logger_;
+        eth::EventWatchId                     watch_id_{ 0 };
     };
 } // namespace sgns
