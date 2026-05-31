@@ -292,3 +292,92 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 
     spdlog::info( "bridge_e2e: BurnToMintPipeline test complete" );
 }
+
+/**
+ * @brief Verifies that the Phase 3 collision-resistance fix in GetSlotKey()
+ *        correctly includes the burn tx hash in the MintV2 slot key.
+ *
+ * Two distinct burns with identical chain/token/amount/dest must produce
+ * different consensus slot keys, preventing double-mint via slot collision.
+ * The test proves this indirectly: if the fix were absent, the second mint
+ * would be rejected as a duplicate.
+ */
+TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
+{
+    // --- Step 1: Generate two distinct burn tx hashes ---
+    std::string burn_hash_1 = sgns::test::NextMintSourceHash();
+    std::string burn_hash_2 = sgns::test::NextMintSourceHash();
+
+    ASSERT_NE( burn_hash_1, burn_hash_2 ) << "NextMintSourceHash() must produce unique hashes";
+    spdlog::info( "bridge_e2e: burn_hash_1 = {}", burn_hash_1 );
+    spdlog::info( "bridge_e2e: burn_hash_2 = {}", burn_hash_2 );
+
+    // --- Step 2: Record initial balance ---
+    std::string dest_addr      = node_main->GetAddress();
+    uint64_t    initial_balance = node_main->GetBalance( dest_addr );
+    spdlog::info( "bridge_e2e: initial balance = {} for {}", initial_balance, dest_addr );
+
+    // --- Step 3: First mint (burn_hash_1) ---
+    constexpr uint64_t              kSlotMintAmount = 500;
+    constexpr std::chrono::milliseconds kSlotKeyTimeout{ 10000 };
+
+    spdlog::info( "bridge_e2e: first MintTokens with burn_hash_1" );
+    EXPECT_OUTCOME_TRUE(
+        mint_result_1,
+        node_main->MintTokens( kSlotMintAmount,
+                                burn_hash_1,
+                                "11155111",
+                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                dest_addr,
+                                kSlotKeyTimeout ) );
+    spdlog::info( "bridge_e2e: first MintTokens completed" );
+
+    // --- Step 4: Wait for first mint to propagate ---
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]()
+        {
+            return node_main->GetBalance( dest_addr ) > initial_balance;
+        },
+        kSlotKeyTimeout,
+        "First mint balance increase on node_main",
+        nullptr );
+
+    uint64_t balance_after_first = node_main->GetBalance( dest_addr );
+    spdlog::info( "bridge_e2e: balance after first mint = {} (delta = {})",
+                  balance_after_first,
+                  balance_after_first - initial_balance );
+    EXPECT_GE( balance_after_first - initial_balance, kSlotMintAmount );
+
+    // --- Step 5: Second mint (burn_hash_2) — same chain/token/amount/dest ---
+    spdlog::info( "bridge_e2e: second MintTokens with burn_hash_2" );
+    EXPECT_OUTCOME_TRUE(
+        mint_result_2,
+        node_main->MintTokens( kSlotMintAmount,
+                                burn_hash_2,
+                                "11155111",
+                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                dest_addr,
+                                kSlotKeyTimeout ) );
+    spdlog::info( "bridge_e2e: second MintTokens completed" );
+
+    // --- Step 6: Wait for second mint to propagate ---
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]()
+        {
+            return node_main->GetBalance( dest_addr ) > balance_after_first;
+        },
+        kSlotKeyTimeout,
+        "Second mint balance increase on node_main (collision resistance proof)",
+        nullptr );
+
+    uint64_t final_balance = node_main->GetBalance( dest_addr );
+    spdlog::info( "bridge_e2e: final balance = {} (total delta = {})",
+                  final_balance,
+                  final_balance - initial_balance );
+
+    // --- Step 7: Verify final balance = initial + 2 * kSlotMintAmount ---
+    EXPECT_GE( final_balance - initial_balance, 2 * kSlotMintAmount )
+        << "Both mints must succeed — if slot keys collided, the second would be rejected";
+
+    spdlog::info( "bridge_e2e: SlotKeyCollisionResistance test complete" );
+}
