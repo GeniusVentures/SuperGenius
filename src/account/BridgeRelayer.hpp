@@ -12,6 +12,9 @@
 #include "base/logger.hpp"
 #include "eth/eth_watch_service.hpp"
 
+/// @brief Forward declaration for unit test access to private members.
+class BridgeRelayerTestAccess;
+
 namespace sgns
 {
     /**
@@ -44,7 +47,14 @@ namespace sgns
         void Stop();
 
     private:
+        /**
+         * @brief Processes a matched burn event and calls MintFunds.
+         * @param[in] notification Watch event with decoded ABI values.
+         */
         void OnWatchEvent( const eth::WatchEventNotification &notification );
+
+        /// @brief Friend accessor for unit testing OnWatchEvent.
+        friend class ::BridgeRelayerTestAccess;
 
         std::shared_ptr<TransactionManager>  tx_manager_;
         std::shared_ptr<eth::EthWatchService> watch_service_;

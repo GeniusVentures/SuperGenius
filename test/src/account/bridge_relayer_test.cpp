@@ -14,6 +14,19 @@
 
 using namespace sgns;
 
+// ─── Test Accessor ──────────────────────────────────────────────────────────
+
+/// @brief Friend accessor for private BridgeRelayer::OnWatchEvent.
+class BridgeRelayerTestAccess
+{
+public:
+    static void OnWatchEvent( BridgeRelayer                          &relayer,
+                              const eth::WatchEventNotification &notification )
+    {
+        relayer.OnWatchEvent( notification );
+    }
+};
+
 // ─── Test Helpers ───────────────────────────────────────────────────────────
 
 /// @brief Build a WatchEventNotification simulating a BridgeSourceBurned event.
@@ -166,4 +179,85 @@ TEST( BridgeRelayerTest, AddressToHexRoundTrip )
     // Verify round-trip (hex_array_string includes "0x" prefix)
     std::string hex = rlp::base::parse::hex_array_string( addr );
     EXPECT_EQ( hex.size(), 42U ); // "0x" + 40 hex chars
+}
+
+// ─── OnWatchEvent Behavior Tests ────────────────────────────────────────────
+
+TEST( BridgeRelayerTest, OnWatchEventHandlesNullTransactionManager )
+{
+    // Verify that OnWatchEvent gracefully handles null TransactionManager
+    // without crashing — logs error and returns.
+
+    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
+    BridgeRelayer relayer( nullptr, nullptr, logger );
+
+    auto notification = MakeBurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        42,
+        1000000,
+        11155111,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" );
+
+    // Should not crash — logs error and returns
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
+}
+
+TEST( BridgeRelayerTest, OnWatchEventRejectsInsufficientValues )
+{
+    // Verify that OnWatchEvent rejects notifications with fewer than 5 ABI values.
+
+    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
+    BridgeRelayer relayer( nullptr, nullptr, logger );
+
+    eth::WatchEventNotification notification;
+    notification.values.push_back( intx::uint256( 1 ) );
+    notification.values.push_back( intx::uint256( 2 ) );
+    // Only 2 values — needs 5
+
+    // Should not crash — logs error and returns
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
+}
+
+TEST( BridgeRelayerTest, OnWatchEventHandlesZeroAmount )
+{
+    // Verify that OnWatchEvent processes zero-amount burns without error.
+
+    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
+    BridgeRelayer relayer( nullptr, nullptr, logger );
+
+    auto notification = MakeBurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        1,
+        0,  // zero amount
+        1,
+        "1111111111111111111111111111111111111111111111111111111111111111" );
+
+    // Should not crash — zero amount is valid (though MintFunds may reject it)
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
+}
+
+TEST( BridgeRelayerTest, OnWatchEventHandlesAmountOverflow )
+{
+    // Verify that OnWatchEvent detects uint256 > uint64 overflow and returns early.
+
+    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
+    BridgeRelayer relayer( nullptr, nullptr, logger );
+
+    eth::WatchEventNotification notification;
+
+    eth::codec::Address sender_addr{};
+    rlp::base::parse::hex_array( "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045", sender_addr );
+
+    notification.event.tx_hash = {};
+    rlp::base::parse::hex_array( "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+                                  notification.event.tx_hash );
+
+    notification.values.push_back( sender_addr );
+    notification.values.push_back( intx::uint256( 1 ) );  // token_id
+    notification.values.push_back( intx::uint256( 1 ) << 255 ); // amount overflows uint64
+    notification.values.push_back( intx::uint256( 1 ) );  // srcChainID
+    notification.values.push_back( intx::uint256( 0 ) );  // destChainID
+
+    // Should not crash — overflow detected, logs error and returns
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
 }
