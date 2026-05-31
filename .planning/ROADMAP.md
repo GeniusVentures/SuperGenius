@@ -44,18 +44,21 @@ Two active development tracks: **EVM Bridge Integration** and **Consensus Voting
 
 ### Phase 2: Relayer — Burn Detection → MintFunds
 
-**Goal:** Build the relayer that detects EVM burn events and calls `TransactionManager::MintFunds()` to create `MintTransactionV2` entries.
+**Goal:** Wire evmrelay burn event detection to `TransactionManager::MintFunds()` via `BridgeRelayer`.
+
+**Architecture:** `BridgeRelayer` takes a shared `EthWatchService` (DI), registers a `BridgeSourceBurned` watch, and calls `MintFunds` when burns are detected.
 
 **Tasks:**
-- [ ] Use `EvmMessagingWatcher` (WebSocket `eth_subscribe`) or `BridgeRpcWatcher` (RPC polling) to detect burn events
-- [ ] Parse the burn event log to extract: amount, recipient, burn tx hash, token ID
-- [ ] Call `MintFunds(amount, burn_tx_hash, chain_id, token_id, destination)` on the local TransactionManager
-- [ ] The `MintTransactionV2` enters standard UTXO/nonce consensus
+- [x] Create `BridgeRelayer` with DI `EthWatchService`
+- [x] Register `BridgeSourceBurned` watch via `eth::cli::event_registry()`
+- [x] Extract burn details from decoded ABI values (sender, token_id, amount, srcChainID, tx_hash)
+- [x] Call `MintFunds(amount, tx_hash, chain_id, token_id, destination)`
+- [ ] Unit test for BridgeRelayer
 - [ ] Validators independently verify the burn via `PublicChainInputValidator::VerifyPublicChainSmartContract`
 
 **Success criteria:**
-- Burn event on Ethereum Sepolia GNUS contract triggers `MintFunds`
-- `MintTransactionV2` created with correct chain_id, amount, burn_tx_hash
+- Burn event on EVM chain triggers `MintFunds` via evmrelay signal
+- `MintTransactionV2` created with correct chain_id, amount, token_id, burn_tx_hash
 - Transaction enters nonce consensus
 
 ---
