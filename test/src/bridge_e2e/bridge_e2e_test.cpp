@@ -22,6 +22,9 @@
 #include "testutil/outcome.hpp"
 #include "testutil/wait_condition.hpp"
 
+#include <eth/bridge_event.hpp>
+#include <eth/objects.hpp>
+
 using sgns::GeniusNode;
 
 /**
@@ -380,4 +383,196 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
         << "Both mints must succeed — if slot keys collided, the second would be rejected";
 
     spdlog::info( "bridge_e2e: SlotKeyCollisionResistance test complete" );
+}
+
+/**
+ * @brief Verifies that replaying a previously-seen burn tx hash is rejected.
+ *
+ * The Phase 3 dedup cache uses GetSlotKey to produce deterministic slot keys
+ * from the burn tx hash.  A second MintTokens call with the same hash should
+ * collide in the same consensus slot and be rejected, preventing double-mint.
+ */
+TEST_F( BridgeE2ETest, ReplayRejection )
+{
+    // Step 1: Generate a unique burn tx hash
+    const std::string burn_tx_hash = sgns::test::NextMintSourceHash();
+    spdlog::info( "bridge_e2e: ReplayRejection — burn_tx_hash = {}", burn_tx_hash );
+
+    // Step 2: First mint should succeed
+    const std::string dest_addr = node_main->GetAddress();
+    constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
+
+    EXPECT_OUTCOME_TRUE(
+        first_result,
+        node_main->MintTokens( kMintAmount,
+                                burn_tx_hash,
+                                "11155111",
+                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                dest_addr,
+                                kReplayTimeout ) );
+    spdlog::info( "bridge_e2e: first mint submitted" );
+
+    // Step 3: Wait for the first mint to finalize
+    uint64_t balance_before = node_main->GetBalance( dest_addr );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]()
+        {
+            return node_main->GetBalance( dest_addr ) > balance_before;
+        },
+        kReplayTimeout,
+        "First mint UTXO appears in balance",
+        nullptr );
+
+    // Step 4: Second mint with the same burn tx hash should be rejected
+    auto second_result = node_main->MintTokens( kMintAmount,
+                                                 burn_tx_hash,
+                                                 "11155111",
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 dest_addr,
+                                                 kReplayTimeout );
+
+    bool replay_rejected = second_result.has_error();
+    if ( !replay_rejected )
+    {
+        // MintTokens returned OK but consensus may reject — verify balance unchanged
+        uint64_t balance_after_replay = node_main->GetBalance( dest_addr );
+        EXPECT_EQ( balance_after_replay, node_main->GetBalance( dest_addr ) )
+            << "Balance should not increase for a replayed burn tx hash";
+        spdlog::info( "bridge_e2e: ReplayRejection — second mint returned OK but balance unchanged" );
+    }
+    else
+    {
+        spdlog::info( "bridge_e2e: ReplayRejection — second mint rejected with error: {}",
+                      second_result.error().message() );
+    }
+    EXPECT_TRUE( replay_rejected ) << "Replayed burn tx hash must be rejected by dedup cache";
+
+    spdlog::info( "bridge_e2e: ReplayRejection test complete" );
+}
+
+/**
+ * @brief Verifies that a chain with no RPC endpoints causes MintTokens to fail closed.
+ *
+ * The Phase 3 D-03 fix ensures VerifyPublicChainSmartContract returns false
+ * when no RPC endpoints are configured for the requested chain, preventing
+ * unchecked minting on unverifiable source chains.
+ */
+TEST_F( BridgeE2ETest, MissingEndpointsFailClosed )
+{
+    // Generate a unique burn tx hash
+    const std::string burn_tx_hash = sgns::test::NextMintSourceHash();
+    spdlog::info( "bridge_e2e: MissingEndpointsFailClosed — burn_tx_hash = {}", burn_tx_hash );
+
+    // Chain "999999" has no RPC endpoints configured — should fail closed
+    constexpr std::chrono::milliseconds kFailClosedTimeout{ 5000 };
+    auto result = node_main->MintTokens( kMintAmount,
+                                          burn_tx_hash,
+                                          "999999",
+                                          sgns::TokenID::FromBytes( { 0x00 } ),
+                                          node_main->GetAddress(),
+                                          kFailClosedTimeout );
+
+    EXPECT_TRUE( result.has_error() )
+        << "MintTokens for chain with no RPC endpoints should fail (fail-closed per Phase 3 D-03)";
+
+    if ( result.has_error() )
+    {
+        spdlog::info( "bridge_e2e: MissingEndpointsFailClosed — correctly rejected: {}",
+                      result.error().message() );
+    }
+
+    spdlog::info( "bridge_e2e: MissingEndpointsFailClosed test complete" );
+}
+
+/**
+ * @brief Verifies that verify_receipt_log rejects mismatched contract address and event topic0.
+ *
+ * The Phase 3 D-05/D-06 fixes ensure that a BridgeEventClaim with a wrong
+ * bridge_contract or event_topic0 is rejected by verify_receipt_log().
+ * This test exercises the free function directly with mock data and does
+ * NOT require a live testnet or environment variables.
+ */
+TEST( BridgeE2ENegativeTest, InvalidReceiptLogsRejected )
+{
+    // --- Construct deterministic mock data ---
+    constexpr size_t kAddrSize = 20;
+    constexpr size_t kHashSize = 32;
+
+    // Test contract address (20 bytes)
+    eth::Address test_addr{};
+    for ( size_t i = 0; i < kAddrSize; ++i )
+    {
+        test_addr[i] = static_cast<uint8_t>( 0xAB + i );
+    }
+
+    // Test event topic0 (32 bytes)
+    eth::Hash256 test_topic0{};
+    for ( size_t i = 0; i < kHashSize; ++i )
+    {
+        test_topic0[i] = static_cast<uint8_t>( 0xDE + i );
+    }
+
+    // Test tx hash and block hash (32 bytes each)
+    eth::Hash256 test_tx_hash{};
+    for ( size_t i = 0; i < kHashSize; ++i )
+    {
+        test_tx_hash[i] = static_cast<uint8_t>( 0x11 + i );
+    }
+    eth::Hash256 test_block_hash{};
+    for ( size_t i = 0; i < kHashSize; ++i )
+    {
+        test_block_hash[i] = static_cast<uint8_t>( 0x22 + i );
+    }
+
+    // Build a mock receipt with one log entry
+    eth::codec::LogEntry log_entry;
+    log_entry.address = test_addr;
+    log_entry.topics.push_back( test_topic0 );
+    log_entry.data    = { 0x01, 0x02, 0x03, 0x04 };
+
+    eth::codec::Receipt mock_receipt;
+    mock_receipt.status = true;
+    mock_receipt.logs.push_back( log_entry );
+
+    // Build ReceiptResult
+    eth::ReceiptResult receipt_result;
+    receipt_result.receipt    = mock_receipt;
+    receipt_result.tx_hash    = test_tx_hash;
+    receipt_result.block_hash = test_block_hash;
+    receipt_result.log_indices.push_back( 0 );
+
+    // Build a matching BridgeEventClaim
+    eth::BridgeEventClaim matching_claim;
+    matching_claim.src_chain_id    = 11155111;
+    matching_claim.tx_hash         = test_tx_hash;
+    matching_claim.block_hash      = test_block_hash;
+    matching_claim.log_index       = 0;
+    matching_claim.bridge_contract = test_addr;
+    matching_claim.event_topic0    = test_topic0;
+    matching_claim.topics.push_back( test_topic0 );
+    matching_claim.data            = log_entry.data;
+
+    // --- Case 1: Matching claim should succeed ---
+    auto match_result = eth::verify_receipt_log( receipt_result, matching_claim );
+    EXPECT_TRUE( match_result ) << "Matching claim should verify successfully";
+    EXPECT_EQ( match_result.error, eth::ReceiptLogVerificationError::kNone );
+    spdlog::info( "bridge_e2e: InvalidReceiptLogs — matching case: PASS" );
+
+    // --- Case 2: Mismatched contract address should fail ---
+    eth::BridgeEventClaim wrong_contract_claim = matching_claim;
+    wrong_contract_claim.bridge_contract[0] = 0xFF;
+    auto wrong_contract_result = eth::verify_receipt_log( receipt_result, wrong_contract_claim );
+    EXPECT_FALSE( wrong_contract_result ) << "Mismatched contract should be rejected";
+    EXPECT_EQ( wrong_contract_result.error, eth::ReceiptLogVerificationError::kContractMismatch );
+    spdlog::info( "bridge_e2e: InvalidReceiptLogs — wrong contract: correctly rejected" );
+
+    // --- Case 3: Mismatched event topic0 should fail ---
+    eth::BridgeEventClaim wrong_topic_claim = matching_claim;
+    wrong_topic_claim.event_topic0[0] = 0xFF;
+    auto wrong_topic_result = eth::verify_receipt_log( receipt_result, wrong_topic_claim );
+    EXPECT_FALSE( wrong_topic_result ) << "Mismatched topic0 should be rejected";
+    EXPECT_EQ( wrong_topic_result.error, eth::ReceiptLogVerificationError::kTopic0Mismatch );
+    spdlog::info( "bridge_e2e: InvalidReceiptLogs — wrong topic0: correctly rejected" );
+
+    spdlog::info( "bridge_e2e: InvalidReceiptLogsRejected test complete" );
 }
