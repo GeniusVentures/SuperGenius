@@ -97,11 +97,11 @@ Plans:
 
 **Goal:** Demonstrate the full pipeline: EVM burn → detection → MintTransactionV2 → UTXO consensus → RPC verification → minted tokens.
 
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 04-01-PLAN.md — Test infrastructure + positive E2E test (fixture, burn-to-mint pipeline)
-- [ ] 04-02-PLAN.md — Negative tests (replay rejection, missing endpoints, invalid logs)
+- [x] 04-02-PLAN.md — Negative tests (replay rejection, missing endpoints, invalid logs)
 - [x] 04-03-PLAN.md — Slot key collision resistance verification
 
 **Tasks:**
