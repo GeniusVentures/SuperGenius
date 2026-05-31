@@ -58,7 +58,16 @@ namespace sgns
 
         // Map BridgeEventClaim → MintFunds parameters
         const std::string chain_id = std::to_string( claim.src_chain_id );
-        const TokenID     token_id = TokenID::FromBytes( { 0x00 } ); // GNUS token
+
+        // ERC-1155 token ID from the burn event — consensus validators verify
+        // this matches the on-chain log via RPC (PublicChainInputValidator).
+        // intx::uint256 → 32 bytes big-endian → TokenID
+        std::array<uint8_t, 32> token_bytes{};
+        for ( size_t i = 0; i < 32; ++i )
+        {
+            token_bytes[i] = static_cast<uint8_t>( ( claim.token_id_or_nonce >> ( 248 - i * 8 ) ) & 0xFF );
+        }
+        const TokenID token_id = TokenID::FromBytes( token_bytes.data(), token_bytes.size() );
 
         // Amount: uint256 → uint64 (bridge amounts must fit)
         if ( claim.amount > std::numeric_limits<uint64_t>::max() )
