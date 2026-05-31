@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: "Bridge Integration"
 current_phase: 3
 status: in-progress
-last_updated: "2026-05-28T00:00:00Z"
+last_updated: "2026-05-31T00:00:00Z"
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 3
+  total_plans: 4
   completed_plans: 1
 ---
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 2 — Relayer — Burn Detection → MintFunds
+**Current Phase:** Phase 3 — Burn Deduplication Cache (Gap Closure)
 
 ## Phase Status
 
@@ -22,7 +22,7 @@ progress:
 |-------|------|--------|
 | Phase 1 | Wire RPC Endpoints from evmrelay ChainList | complete |
 | Phase 2 | Relayer — Burn Detection → MintFunds | complete |
-| Phase 3 | Burn Deduplication Cache | complete |
+| Phase 3 | Burn Deduplication Cache | in-progress (gap closure) |
 | Phase 4 | End-to-End Integration Test | Not Started |
 | Phase 5 | Startup Bridge Recovery | Not Started |
 
@@ -34,13 +34,26 @@ progress:
 | 2 — Deterministic slot keys | done |
 | 3 — Processing reservation state | done |
 | 4 — Persist executed bridge state | done |
+| Gap: Fix 1 — Slot key collision (P1 #3) | planned |
+| Gap: Fix 2 — Fail-closed on missing endpoints (P2 #4) | planned |
+| Gap: Fix 3 — UTXO witness for bridge mints (P1 #1) | planned |
+| Gap: Fix 4 — Receipt log verification (P1 #2) | planned |
+
+### Gap Closure Plan
+
+Plan 03-01 addresses 4 Codex review findings from PR #298:
+- **Fix 1 (D-01/D-02):** Add burn tx hash to GetSlotKey() — `consumed_outpoints[0].tx_id_hash`
+- **Fix 2 (D-03):** Return false when rpc_endpoints_ has no entry for chain ID
+- **Fix 3 (D-04):** RequiresConsensusUTXOData() returns false for PublicChainInputValidator
+- **Fix 4 (D-05/D-06):** Verify receipt logs match configured bridge_contract_address + event_topic0
 
 ### Task 2 Implementation
 
 **Approach:** Detect MintV2 subjects via `EmbeddedTransaction` oneof (`transaction_case() == kMintV2`).
 Build deterministic slot key from chain_id, token_id, amount, dest_address.
 
-**Slot key format:** `mint-v2:{chain_id}:{token_id}:{amount}:{dest_address}`
+**Slot key format (current):** `mint-v2:{chain_id}:{token_id}:{amount}:{dest_address}`
+**Slot key format (after Fix 1):** `mint-v2:{chain_id}:{token_id}:{amount}:{dest_address}:{burn_tx_hash}`
 
 **Resolved:** The proto cleanup (Phase 4) enabled direct oneof detection — no deserialization needed.
 See `Consensus.cpp:GetSlotKey()` and issue #297.
