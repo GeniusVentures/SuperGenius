@@ -1,15 +1,16 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: "Bridge Integration"
-current_phase: 3
+milestone_name: Bridge Integration
+current_phase: Phase 3 — Burn Deduplication Cache (Gap Closure)
 status: in-progress
-last_updated: "2026-05-31T00:00:00Z"
+last_updated: "2026-05-31T22:46:22.607Z"
 progress:
-  total_phases: 5
-  completed_phases: 1
-  total_plans: 4
-  completed_plans: 1
+  total_phases: 9
+  completed_phases: 4
+  total_plans: 8
+  completed_plans: 7
+  percent: 44
 ---
 
 # Project State: SuperGenius Bridge Integration
@@ -42,6 +43,7 @@ progress:
 ### Gap Closure Plan
 
 Plan 03-01 addresses 4 Codex review findings from PR #298:
+
 - **Fix 1 (D-01/D-02):** Add burn tx hash to GetSlotKey() — `consumed_outpoints[0].tx_id_hash`
 - **Fix 2 (D-03):** Return false when rpc_endpoints_ has no entry for chain ID
 - **Fix 3 (D-04):** RequiresConsensusUTXOData() returns false for PublicChainInputValidator
@@ -69,8 +71,10 @@ See `Consensus.cpp:GetSlotKey()` and issue #297.
 ## Accumulated Context
 
 ### Architecture (2026-05-28)
+
 - `BridgeConsensusAdapter` deleted — bridge flow now operates on mint nonce subjects directly
 - Burn tx hash flows: `MintFunds` → `MintTransactionV2` → UTXO commitment → `consumed_outpoints[0].tx_id_hash`
 
 ### Roadmap Evolution
+
 - Phase 5 added: on node startup after it has got all the crdt data, especially if a full or archive node, it should grab the last mint message transaction by the date and then use RPC to check the contract for any unprocessed bridged transactions that need to be minted
