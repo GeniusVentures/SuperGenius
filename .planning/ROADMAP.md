@@ -53,7 +53,7 @@ Two active development tracks: **EVM Bridge Integration** and **Consensus Voting
 - [x] Register `BridgeSourceBurned` watch via `eth::cli::event_registry()`
 - [x] Extract burn details from decoded ABI values (sender, token_id, amount, srcChainID, tx_hash)
 - [x] Call `MintFunds(amount, tx_hash, chain_id, token_id, destination)`
-- [ ] Unit test for BridgeRelayer
+- [x] Unit test for BridgeRelayer
 - [ ] Validators independently verify the burn via `PublicChainInputValidator::VerifyPublicChainSmartContract`
 
 **Success criteria:**
@@ -219,7 +219,7 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | Track | Phase | Status | Completed |
 |-------|-------|--------|-----------|
 | A. EVM Bridge | 1. Wire RPC Endpoints | Complete | 2026-05-27 |
-| A. EVM Bridge | 2. Relayer — Burn Detection | Not started | - |
+| A. EVM Bridge | 2. Relayer — Burn Detection | Complete | 2026-05-31 |
 | A. EVM Bridge | 3. Burn Dedup Cache | Not started | - |
 | A. EVM Bridge | 4. E2E Integration Test | Not started | - |
 | A. EVM Bridge | 5. Startup Catch-Up | Not started | - |
