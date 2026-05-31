@@ -97,18 +97,29 @@ Plans:
 
 **Goal:** Demonstrate the full pipeline: EVM burn → detection → MintTransactionV2 → UTXO consensus → RPC verification → minted tokens.
 
+**Plans:** 2/3 plans executed
+
+Plans:
+- [x] 04-01-PLAN.md — Test infrastructure + positive E2E test (fixture, burn-to-mint pipeline)
+- [ ] 04-02-PLAN.md — Negative tests (replay rejection, missing endpoints, invalid logs)
+- [x] 04-03-PLAN.md — Slot key collision resistance verification
+
 **Tasks:**
-- [ ] Live test against Ethereum Sepolia GNUS contract
-- [ ] Send a test burn transaction via `send_test_transactions.sh`
-- [ ] Relayer detects the burn, creates MintTransactionV2
-- [ ] Validator(s) verify the burn receipt via RPC
-- [ ] UTXO consensus produces certificate
-- [ ] Minted tokens appear in recipient's UTXO set
+- [ ] Create test/src/bridge_e2e/ directory with CMakeLists.txt and BridgeE2ETest fixture
+- [ ] Wire into test/src/CMakeLists.txt via add_subdirectory
+- [ ] Positive E2E: burn on Sepolia via cast send -> detection -> MintTransactionV2 -> UTXO consensus -> minted tokens
+- [ ] Negative: replay rejection (same burn tx hash twice -> deduplicated)
+- [ ] Negative: missing RPC endpoints -> fail-closed (Phase 3 D-03)
+- [ ] Negative: invalid receipt logs -> rejected (Phase 3 D-05/D-06)
+- [ ] Slot key: two distinct burns with identical chain/token/amount/dest -> different slot keys (Phase 3 collision fix)
 
 **Success criteria:**
-- Single end-to-end test script or C++ integration test demonstrating the complete flow
+- Single C++ integration test demonstrating the complete flow
 - RPC verification succeeds with 3+ independent endpoints
-- No manual steps beyond sending the initial burn tx
+- Negative tests validate Phase 3 security fixes
+- Slot key collision resistance verified
+- Test guarded by RUN_E2E_BRIDGE env var (skipped by default)
+- No manual steps beyond setting env vars and installing cast
 
 ---
 
@@ -234,7 +245,7 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | A. EVM Bridge | 1. Wire RPC Endpoints | Complete | 2026-05-27 |
 | A. EVM Bridge | 2. Relayer — Burn Detection | Complete | 2026-05-31 |
 | A. EVM Bridge | 3. Burn Dedup Cache | Gap closure | - |
-| A. EVM Bridge | 4. E2E Integration Test | Not started | - |
+| A. EVM Bridge | 4. E2E Integration Test | Planned | - |
 | A. EVM Bridge | 5. Startup Catch-Up | Not started | - |
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
 | B. Consensus | 2. Conflict and Replay Hardening | Not started | - |
