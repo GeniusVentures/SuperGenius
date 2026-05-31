@@ -174,13 +174,16 @@ namespace sgns
                               const std::shared_ptr<Blockchain>          &blockchain ) const override;
 
         /**
-         * @brief Public-chain validation requires consensus UTXO payloads so
-         *        validators independently verify burn receipts via RPC.
-         * @return Always true.
+         * @brief Public-chain validation does not require local UTXO witness data.
+         *
+         * Bridge mints use the EVM transaction hash as input, not a local UTXO.
+         * Receipt verification is handled via RPC in VerifyPublicChainSmartContract.
+         *
+         * @return Always false.
          */
         bool RequiresConsensusUTXOData() const override
         {
-            return true;
+            return false;
         }
 
     private:

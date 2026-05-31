@@ -488,7 +488,7 @@ namespace sgns
         auto chain_it = rpc_endpoints_.find( chain_id );
         if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
         {
-            return true;
+            return false;
         }
 
         const auto &endpoints = chain_it->second;
