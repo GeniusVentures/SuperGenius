@@ -607,6 +607,8 @@ namespace sgns
         std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
         std::string                 processing_channel_topic_;     ///< Processing task channel topic.
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                              bootstrap_peers_;
+        std::vector<std::string>                              bootstrap_fullnodes_;
         uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
 
