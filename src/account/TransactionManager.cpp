@@ -1213,15 +1213,15 @@ namespace sgns
                 }
             }
 
-            // Serialize tx into EmbeddedTransaction proto with typed oneof field
-            auto embedded_tx = transaction->SerializeToEmbeddedTransaction();
+
 
             // SIZE-01: Pre-publish size enforcement gate
             // Reject oversized transactions (>64KB) before they enter the consensus
             // pipeline to prevent silent PubSub message drops. Defense-in-depth with
             // the handler-level MAX_EMBEDDED_TX_BYTES check (per D-02).
-            auto serialized_tx = transaction->SerializeByteVector();
-            if ( serialized_tx.size() > MAX_PUBSUB_TX_BYTES )
+            // Serialize tx into EmbeddedTransaction proto with typed oneof field
+            auto embedded_tx = transaction->SerializeToEmbeddedTransaction();
+            if ( embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
             {
                 TransactionManagerLogger()->error(
                     "[{} - full: {}] {}: Transaction exceeds PubSub size limit tx={} size={} max={}",
@@ -1229,7 +1229,7 @@ namespace sgns
                     full_node_m,
                     __func__,
                     transaction->GetHash(),
-                    serialized_tx.size(),
+                    embedded_tx.ByteSizeLong(),
                     MAX_PUBSUB_TX_BYTES );
                 return outcome::failure( std::errc::message_size );
             }
