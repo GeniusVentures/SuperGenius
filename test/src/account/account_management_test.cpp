@@ -9,6 +9,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/mint_source_hash.hpp"
 
@@ -31,6 +32,14 @@ public:
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
         }
+
+        // Inject in-memory secure storage to avoid OS keychain prompts during tests
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            {
+                return std::make_shared<MemorySecureStorage>( identifier );
+            } );
+
         node_ = sgns::GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
                                  "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
                                  false,

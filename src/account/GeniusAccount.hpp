@@ -52,6 +52,29 @@ namespace sgns
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
+         * @brief   Factory function type for creating secure storage instances.
+         * @param   identifier  Storage identifier (typically base58-encoded public key).
+         * @return  Shared pointer to the created secure storage backend.
+         */
+        using SecureStorageFactory = std::function<std::shared_ptr<ISecureStorage>( const std::string &identifier )>;
+
+        /**
+         * @brief   Sets the secure storage factory used by all GeniusAccount factory methods.
+         *
+         * By default, the factory creates OS-specific secure storage (Apple Keychain,
+         * Linux secret service, etc.).  Tests can override this to inject
+         * MemorySecureStorage, eliminating keychain prompts entirely.
+         *
+         * @param   factory  Factory function; pass nullptr to restore the default.
+         */
+        static void SetSecureStorageFactory( SecureStorageFactory factory );
+
+        /**
+         * @brief   Returns the current secure storage factory (default if none set).
+         */
+        static const SecureStorageFactory &GetSecureStorageFactory();
+
+        /**
          * @brief       Factory constructor of new GeniusAccount.
          * @param[in]   token_id Token ID of the account.
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...).

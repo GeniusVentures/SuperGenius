@@ -53,8 +53,9 @@ if(MSVC)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
+
 set(GENIUS_NODE_SOURCES
-    GeniusTransaction.cpp
+    IGeniusTransactions.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp
@@ -64,6 +65,7 @@ set(GENIUS_NODE_SOURCES
     InputValidators.cpp
     TransactionManager.cpp
     TokenAmount.cpp
+    BridgeConsensusAdapter.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
@@ -71,8 +73,6 @@ set(GENIUS_NODE_SOURCES
     Migration3_5_0To3_6_0.cpp
     Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
-    ChainRpcEndpointProvider.cpp
-    BridgeRelayer.cpp
 )
 
 set(GENIUS_NODE_LIBS
@@ -120,10 +120,9 @@ set(GENIUS_NODE_LIBS
 add_library(genius_node ${GENIUS_NODE_SOURCES})
 target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
 
-# Test library — uses in-memory secure storage (no keychain prompts)
+# Test library — uses in-memory secure storage via DI factory (no keychain prompts)
 add_library(genius_node_test ${GENIUS_NODE_SOURCES})
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
-target_compile_definitions(genius_node_test PUBLIC SGNS_USE_MEMORY_SECURE_STORAGE)
 
 add_dependencies(genius_node rlp)
 
@@ -134,6 +133,6 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
 endif()
 
-# Install both libraries
+# Install production library only
 supergenius_install(sgns_genius_account)
 supergenius_install(genius_node)

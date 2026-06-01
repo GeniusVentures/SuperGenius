@@ -11,6 +11,14 @@ target_link_libraries(consensus_subject_test
     rapidjson
 )
 
+addtest(bridge_consensus_adapter_test
+    bridge_consensus_adapter_test.cpp
+)
+target_link_libraries(bridge_consensus_adapter_test
+    genius_node
+    rapidjson
+)
+
 #addtest(consensus_certificate_test
 #    consensus_certificate_test.cpp
 #)
@@ -18,17 +26,6 @@ target_link_libraries(consensus_subject_test
 #    blockchain_genesis
 #    rapidjson
 #    base_crdt_test
-#)
-
-# ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
-# GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
-# Test deferred to E2E integration (Phase 4).
-#addtest(consensus_slot_key_test
-#    consensus_slot_key_test.cpp
-#)
-#target_link_libraries(consensus_slot_key_test
-#    blockchain_genesis
-#    rapidjson
 #)
 
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
