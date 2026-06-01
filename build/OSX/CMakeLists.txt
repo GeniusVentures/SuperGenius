@@ -31,3 +31,17 @@ set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
 set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework/macos-arm64_x86_64/libMoltenVK.a")
 
 include(../CommonBuildParameters.cmake)
+
+# ─── macOS Keychain Unlock Target ────────────────────────────────────────────
+# Unlocks the login keychain for 1 hour before running tests.
+# Usage: ninja test-unlocked
+# This prevents repeated password prompts when test binaries access crypto keys.
+if(BUILD_TESTING)
+    add_custom_target(test-unlocked
+        COMMAND security unlock-keychain -p "$ENV{USER}" ~/Library/Keychains/login.keychain-db
+        COMMAND security set-keychain-settings -t 3600 ~/Library/Keychains/login.keychain-db
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -j4
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Unlocking keychain (1hr timeout) and running tests..."
+    )
+endif()
