@@ -59,9 +59,9 @@ namespace sgns
         return serialized_proto;
     }
 
-    sgns::EmbeddedTransaction MigrationTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    EmbeddedTransaction MigrationTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
     {
-        sgns::EmbeddedTransaction embedded;
+        EmbeddedTransaction embedded;
         SGTransaction::MigrationTx tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( dag );
 

@@ -66,9 +66,9 @@ namespace sgns
         return serialized_proto;
     }
 
-    sgns::EmbeddedTransaction ProcessingTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    EmbeddedTransaction ProcessingTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
     {
-        sgns::EmbeddedTransaction embedded;
+        EmbeddedTransaction embedded;
         SGTransaction::ProcessingTx tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_mpc_magic_key( 0 );

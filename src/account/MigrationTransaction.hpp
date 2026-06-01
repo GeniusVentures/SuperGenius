@@ -23,7 +23,7 @@ namespace sgns
         using GeniusTransaction::SerializeByteVector;
 
         using GeniusTransaction::SerializeToEmbeddedTransaction;
-        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
 
         ~MigrationTransaction() override = default;
 

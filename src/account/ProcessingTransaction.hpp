@@ -31,7 +31,7 @@ namespace sgns
         using GeniusTransaction::SerializeByteVector;
 
         using GeniusTransaction::SerializeToEmbeddedTransaction;
-        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         uint256_t GetJobHash() const

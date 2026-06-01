@@ -49,7 +49,7 @@ namespace sgns
         using GeniusTransaction::SerializeByteVector;
 
         using GeniusTransaction::SerializeToEmbeddedTransaction;
-        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
         /**
          * @brief Serializes the mint transaction payload and DAG metadata.
          * @param[in] dag DAG metadata to serialize into the transaction payload.

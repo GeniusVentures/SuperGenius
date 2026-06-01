@@ -58,9 +58,9 @@ namespace sgns
         return serialized_proto;
     }
 
-    sgns::EmbeddedTransaction MintTransactionV2::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    EmbeddedTransaction MintTransactionV2::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
     {
-        sgns::EmbeddedTransaction embedded;
+        EmbeddedTransaction embedded;
         SGTransaction::MintTxV2 tx_struct;
         tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_chain_id( chain_id_ );

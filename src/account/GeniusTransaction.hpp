@@ -104,12 +104,12 @@ namespace sgns
          * @param[in]   dag The DAG metadata to be included in the serialization.
          * @return      EmbeddedTransaction proto with the typed transaction field set.
          */
-        virtual sgns::EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const = 0;
+        virtual EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const = 0;
 
         /**
          * @brief       Serializes using internal DAG metadata.
          */
-        sgns::EmbeddedTransaction SerializeToEmbeddedTransaction() const
+        EmbeddedTransaction SerializeToEmbeddedTransaction() const
         {
             return SerializeToEmbeddedTransaction( dag_st );
         }
