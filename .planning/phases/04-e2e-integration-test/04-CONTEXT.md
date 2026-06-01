@@ -128,7 +128,20 @@ Demonstrate the full EVM bridge pipeline in a single test: EVM burn on Sepolia �
 <deferred>
 ## Deferred Ideas
 
-None — discussion stayed within phase scope.
+### D-DEF-1: RPC Endpoint Initialization Tests (new phase)
+Validate that `InitializeRpcEndpoints()` correctly configures minimum 3 RPC endpoints per chain:
+- **Public ChainList endpoints** from `chainid.network/chains.json` (weight 25 each)
+- **Optional API-key'd direct endpoints** (weight 50 each) supplied via `ChainRpcProviderConfig::direct_endpoints`
+- **Testnets** (Sepolia, Amoy, BNB testnet, Base Sepolia) must also be covered — currently `InitializeRpcEndpoints()` only maps 4 mainnet chains
+- **ChainList caching** — currently `ChainRpcEndpointProvider::Initialize()` reads from disk on every call with no in-memory cache or TTL
+- Test should verify: each chain (mainnet + testnet) reaches the 75-weight consensus threshold with its configured endpoints
+
+### D-DEF-2: Multi-Chain Bridge Stress Test (new phase)
+Stress test the bridge pipeline under concurrent multi-chain load:
+- Mock bridge signals on ALL configured chains simultaneously
+- Fire bridge events every 2-3 seconds across all chains
+- Verify: correct UTXO consensus per chain, no cross-chain message confusion, no dropped events, correct chain_id in MintTransactionV2
+- Validates the system handles realistic multi-chain bridge traffic
 
 </deferred>
 
