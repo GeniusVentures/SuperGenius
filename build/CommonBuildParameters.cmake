@@ -471,6 +471,9 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 if(BUILD_TESTING)
     enable_testing()
+    # Use in-memory secure storage for tests — avoids macOS keychain prompts
+    # and Windows/Linux credential store access during test runs.
+    add_compile_definitions(SGNS_USE_MEMORY_SECURE_STORAGE)
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
 
