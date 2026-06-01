@@ -1,5 +1,5 @@
 ---
-status: complete
+status: testing
 phase: 02-conflict-and-replay-detection-hardening
 source: 02-01-SUMMARY.md
 started: 2026-05-29T00:00:00Z

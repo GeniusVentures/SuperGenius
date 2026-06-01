@@ -1905,6 +1905,17 @@ namespace sgns
         }
     }
 
+    void GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
+    {
+        if ( !transaction_manager_ )
+        {
+            node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
+            return;
+        }
+        transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoints.size(), chain_id );
+    }
+
     void GeniusNode::InitializeRpcEndpoints()
     {
         if ( !transaction_manager_ )

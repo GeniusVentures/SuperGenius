@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -18,12 +19,94 @@
 #include <spdlog/spdlog.h>
 
 #include "account/GeniusNode.hpp"
+#include "account/TransactionManager.hpp"
+#include "base/hexutil.hpp"
+#include "blockchain/Blockchain.hpp"
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+
+#include <TrustWalletCore/TWPrivateKey.h>
+#include <TrustWalletCore/TWHash.h>
+#include <TrustWalletCore/TWCurve.h>
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include <eth/bridge_event.hpp>
 #include <eth/objects.hpp>
+
+
+/**
+ * @brief Decodes a base64-encoded string to raw bytes.
+ * @param input  Base64-encoded string (standard alphabet, optional '=' padding).
+ * @return Decoded bytes, or empty vector on invalid input.
+ */
+static std::vector<uint8_t> Base64Decode( const std::string &input )
+{
+    static const std::array<int8_t, 256> kLookup = []()
+    {
+        std::array<int8_t, 256> table{};
+        table.fill( -1 );
+        for ( int i = 'A'; i <= 'Z'; ++i )
+        {
+            table[i] = static_cast<int8_t>( i - 'A' );
+        }
+        for ( int i = 'a'; i <= 'z'; ++i )
+        {
+            table[i] = static_cast<int8_t>( i - 'a' + 26 );
+        }
+        for ( int i = '0'; i <= '9'; ++i )
+        {
+            table[i] = static_cast<int8_t>( i - '0' + 52 );
+        }
+        table[static_cast<int>( '+' )] = 62;
+        table[static_cast<int>( '/' )] = 63;
+        return table;
+    }();
+
+    std::vector<uint8_t> result;
+    result.reserve( ( input.size() * 3 ) / 4 );
+
+    uint32_t accum  = 0;
+    int      bits   = 0;
+    for ( char c : input )
+    {
+        if ( c == '=' )
+        {
+            break;
+        }
+        int val = kLookup[static_cast<uint8_t>( c )];
+        if ( val < 0 )
+        {
+            return {};
+        }
+        accum = ( accum << 6 ) | static_cast<uint32_t>( val );
+        bits += 6;
+        if ( bits >= 8 )
+        {
+            bits -= 8;
+            result.push_back( static_cast<uint8_t>( ( accum >> bits ) & 0xFF ) );
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief Converts raw bytes to a lowercase hex string.
+ * @param bytes  Input byte vector.
+ * @return Hex-encoded string (no "0x" prefix).
+ */
+static std::string BytesToHex( const std::vector<uint8_t> &bytes )
+{
+    static constexpr char kHexDigits[] = "0123456789abcdef";
+    std::string           hex;
+    hex.reserve( bytes.size() * 2 );
+    for ( uint8_t byte : bytes )
+    {
+        hex += kHexDigits[( byte >> 4 ) & 0x0F];
+        hex += kHexDigits[byte & 0x0F];
+    }
+    return hex;
+}
 
 using sgns::GeniusNode;
 
@@ -110,13 +193,56 @@ void BridgeE2ETest::SetUpTestSuite()
         GTEST_SKIP() << "Set RUN_E2E_BRIDGE=1 to run E2E bridge tests";
     }
 
-    // Guard 2: PRIVATE_KEY required for Sepolia transactions
-    const char *private_key_env = std::getenv( "PRIVATE_KEY" );
+    // Guard 2: signing key required for Sepolia transactions
+    // Support both SIGNING_KEY and PRIVATE_KEY env vars
+    const char *private_key_env = std::getenv( "SIGNING_KEY" );
     if ( !private_key_env )
     {
-        GTEST_SKIP() << "PRIVATE_KEY env var required for E2E bridge tests";
+        private_key_env = std::getenv( "PRIVATE_KEY" );
     }
-    s_eth_private_key = private_key_env;
+    if ( !private_key_env )
+    {
+        GTEST_SKIP() << "SIGNING_KEY or PRIVATE_KEY env var required for E2E bridge tests";
+    }
+
+    std::string raw_key( private_key_env );
+
+    // Strip 0x prefix if present (Ethereum convention)
+    if ( raw_key.size() >= 2 && raw_key[0] == '0' && raw_key[1] == 'x' )
+    {
+        raw_key = raw_key.substr( 2 );
+    }
+
+    // GeniusNode expects a 64-char hex string (32 bytes).
+    // If the key is not 64 hex chars, try base64 decoding then re-encoding as hex.
+    bool is_hex = ( raw_key.size() == 64 );
+    if ( is_hex )
+    {
+        for ( char c : raw_key )
+        {
+            if ( !std::isxdigit( static_cast<unsigned char>( c ) ) )
+            {
+                is_hex = false;
+                break;
+            }
+        }
+    }
+
+    if ( is_hex )
+    {
+        s_eth_private_key = raw_key;
+    }
+    else
+    {
+        // Attempt base64 decode → hex encode
+        auto decoded = Base64Decode( raw_key );
+        if ( decoded.size() != 32 )
+        {
+            GTEST_SKIP() << "SIGNING_KEY/PRIVATE_KEY is not valid hex or base64-encoded 32-byte key";
+        }
+        s_eth_private_key = BytesToHex( decoded );
+        spdlog::info( "bridge_e2e: decoded base64 signing key to hex ({} chars)", s_eth_private_key.size() );
+    }
 
     // Guard 3: cast binary must be installed
     constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
@@ -142,28 +268,71 @@ void BridgeE2ETest::SetUpTestSuite()
 
     spdlog::info( "bridge_e2e: creating 3-node cluster for E2E test" );
 
-    // Create nodes — main node (non-processor)
-    node_main = GeniusNode::New( DEV_CONFIG, s_eth_private_key.c_str(), false, false );
+    // Create the full node FIRST — it will create the genesis block.
+    // Pattern from blockchain_genesis_test.cpp: WithAuthorizationCanSync
+    node_main = GeniusNode::New( DEV_CONFIG, s_eth_private_key.c_str(), false, false, 40001, true );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    // Processor nodes (isprocessor=true per processing_multi pattern)
-    node_proc1 = GeniusNode::New( DEV_CONFIG2, s_eth_private_key.c_str(), false, true );
+    // Set authorized address to match the full node — triggers StoreGenesisRegistry
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
+    spdlog::info( "bridge_e2e: set authorized full node address to {}", node_main->GetAddress().substr( 0, 16 ) );
+
+    // Wait for the full node to reach READY state (creates genesis + account-creation blocks)
+    constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            return node_main->GetState() == GeniusNode::NodeState::READY;
+        },
+        kBlockchainInitTimeout,
+        "node_main not ready" );
+
+    spdlog::info( "bridge_e2e: node_main READY, creating processor nodes" );
+
+    // Create regular nodes — they will sync genesis from node_main via PubSub.
+    // is_processor=false matches the blockchain_genesis_test.cpp pattern.
+    node_proc1 = GeniusNode::New( DEV_CONFIG2, s_eth_private_key.c_str(), false, false, 40002 );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    node_proc2 = GeniusNode::New( DEV_CONFIG3, s_eth_private_key.c_str(), false, true );
+    node_proc2 = GeniusNode::New( DEV_CONFIG3, s_eth_private_key.c_str(), false, false, 40003 );
 
-    node_proc1->StopProcessing();
-    node_proc2->StopProcessing();
+    // Bootstrap PubSub — match blockchain_genesis_test pattern
+    node_proc1->GetPubSub()->AddPeers(
+        { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
+    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
-    // Bootstrap PubSub mesh — match processing_multi_test pattern exactly
-    std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
-                                  node_proc2->GetPubSub()->GetLocalAddress() };
-    node_main->GetPubSub()->AddPeers( bootstrappers );
-
-    bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
-    node_proc1->GetPubSub()->AddPeers( bootstrappers );
+    // Wait for processor nodes to sync and reach READY
+    auto sync_deadline = std::chrono::steady_clock::now() + kBlockchainInitTimeout;
+    while ( std::chrono::steady_clock::now() < sync_deadline )
+    {
+        if ( node_proc1->GetState() == GeniusNode::NodeState::READY &&
+             node_proc2->GetState() == GeniusNode::NodeState::READY )
+        {
+            spdlog::info( "bridge_e2e: all processor nodes synced and READY" );
+            break;
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+    }
+    if ( node_proc1->GetState() != GeniusNode::NodeState::READY )
+    {
+        spdlog::warn( "bridge_e2e: node_proc1 did not sync within timeout — proceeding with node_main only" );
+    }
 
     spdlog::info( "bridge_e2e: 3-node cluster ready" );
+
+    // Configure Sepolia RPC endpoints on node_main's input validator.
+    // Without this, VerifyPublicChainSmartContract fails for chain_id=11155111.
+    {
+        sgns::WeightedRpcEndpoint sepolia_ep;
+        sepolia_ep.url                     = kSepoliaRpc;
+        sepolia_ep.consensus_weight        = 25;
+        sepolia_ep.bridge_contract_address = kSepoliaContract;
+        sepolia_ep.event_topic0 =
+            "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
+
+        node_main->ConfigureRpcEndpoint( "11155111", { sepolia_ep } );
+        spdlog::info( "bridge_e2e: configured Sepolia RPC endpoint" );
+    }
 }
 
 void BridgeE2ETest::TearDownTestSuite()

@@ -542,6 +542,18 @@ namespace sgns
         TransactionManager::State GetTransactionManagerState() const;
 
         /**
+         * @brief Configures RPC endpoints for a specific EVM chain on the public-chain input validator.
+         *
+         * Allows callers (including E2E tests) to register RPC endpoints for chains
+         * that are not in the default mainnet set (e.g. Sepolia testnet).
+         * The transaction manager must be in READY state.
+         *
+         * @param[in] chain_id  Numeric EVM chain ID as a string (e.g. "11155111" for Sepolia).
+         * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
+         */
+        void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
+        /**
          * @brief Returns a tracked transaction status by transaction hash.
          * @param[in] txId Transaction hash to look up.
          * @return Outgoing status when present, then incoming status, or INVALID when unknown/not ready.
