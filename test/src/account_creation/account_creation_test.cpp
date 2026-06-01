@@ -12,6 +12,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -21,6 +22,12 @@ static const TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
 TEST( AccountCreationTest, CreationWithEthereumKey )
 {
+    // Inject in-memory secure storage to avoid OS keychain prompts during tests
+    GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+        {
+            return std::make_shared<MemorySecureStorage>( identifier );
+        } );
     const auto dir   = boost::dll::program_location().parent_path();
     const auto path1 = dir / "account1";
     const auto path2 = dir / "account2";
