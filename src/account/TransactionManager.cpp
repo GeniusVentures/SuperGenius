@@ -20,6 +20,7 @@
 #include "MigrationTransaction.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
+#include "ProcessingTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -162,6 +163,26 @@ namespace sgns
                 {
                     strong->OnProposalTimeoutCleanup( tx_hash );
                 }
+            } );
+
+        instance->blockchain_->RegisterSlotKeyHandler(
+            NONCE_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
+            {
+                auto nonce = ConsensusManager::DecodeNonceSubject( subject );
+                if ( nonce.has_value() &&
+                     nonce.value().transaction().transaction_case() !=
+                         EmbeddedTransaction::TRANSACTION_NOT_SET )
+                {
+                    auto tx = TransactionManager::DeSerializeEmbeddedTransaction(
+                        nonce.value().transaction() );
+                    if ( tx.has_value() )
+                    {
+                        return tx.value()->GetSlotID();
+                    }
+                }
+                return subject.account_id() + ":" +
+                       std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
             } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
@@ -1366,7 +1387,22 @@ namespace sgns
     outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeEmbeddedTransaction(
         const EmbeddedTransaction &embedded )
     {
-        // Dispatch on the oneof case — protobuf handles the type routing
+        // Ensure all deserializers are registered in the map
+        // (also needed by DeSerializeTransaction for DAG-type lookups).
+        static const bool registered = []
+        {
+            GeniusTransaction::RegisterDeserializer( "transfer", &TransferTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "mint-v2", &MintTransactionV2::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            return true;
+        }();
+        (void)registered;
+
+        // Dispatch on the oneof case — each branch calls the deserializer directly.
         switch ( embedded.transaction_case() )
         {
             case EmbeddedTransaction::kTransfer:

@@ -178,6 +178,16 @@ namespace sgns
                                              ConsensusManager::ProposalCleanupHandler handler );
 
         /**
+         * @brief Registers a slot key handler for a specific embedded transaction oneof case.
+         * @param[in] transaction_case EmbeddedTransaction oneof case number (e.g. kMintV2).
+         * @param[in] handler Callback that produces a deterministic slot key for proposals
+         *                    carrying this embedded transaction type.
+         */
+        void RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler );
+
+        void UnregisterSlotKeyHandler( std::string_view subject_type );
+
+        /**
          * @brief Creates a consensus subject for nonce/transaction transition.
          * @param[in] account_id Account identifier.
          * @param[in] nonce Account nonce.

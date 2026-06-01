@@ -1688,9 +1688,20 @@ namespace sgns
     }
 
     bool Blockchain::RegisterProposalCleanupHandler( std::string_view                             subject_type,
-                                                      ConsensusManager::ProposalCleanupHandler     handler )
+                                                       ConsensusManager::ProposalCleanupHandler     handler )
     {
         return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::RegisterSlotKeyHandler( std::string_view                    subject_type,
+                                             ConsensusManager::SlotKeyHandler     handler )
+    {
+        ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterSlotKeyHandler( std::string_view subject_type )
+    {
+        ConsensusManager::UnregisterSlotKeyHandler( subject_type );
     }
 
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(

@@ -210,4 +210,29 @@ namespace sgns
         return instance;
     }
 
+    std::string MintTransactionV2::GetSlotID() const
+    {
+        static constexpr std::string_view kPrefix    = "mint-v2:";
+        static constexpr std::string_view kSeparator = ":";
+
+        std::string key( kPrefix );
+        key += chain_id_;
+        key += kSeparator;
+        key += token_id_.ToHex();
+        key += kSeparator;
+        key += std::to_string( GetAmount() );
+        if ( !utxo_params_.second.empty() )
+        {
+            key += kSeparator;
+            key += utxo_params_.second.front().dest_address;
+        }
+        if ( !utxo_params_.first.empty() )
+        {
+            key += kSeparator;
+            key += utxo_params_.first.front().txid_hash_.toReadableString();
+        }
+
+        return key;
+    }
+
 }

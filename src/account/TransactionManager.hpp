@@ -268,6 +268,15 @@ namespace sgns
         outcome::result<void> FetchAndProcessTransaction( const std::string          &tx_key,
                                                           std::optional<base::Buffer> tx_data = std::nullopt );
 
+        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
+
+        /**
+         * @brief Deserializes from EmbeddedTransaction proto oneof field.
+         *        Dispatches on the oneof case instead of manual type string lookup.
+         */
+        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
+            const EmbeddedTransaction &embedded );
+
     protected:
         friend class GeniusNode;
         friend class Migration3_6_0To3_7_0;
@@ -344,14 +353,6 @@ namespace sgns
          *        On DEV_NET, also includes TEST_NET and MAIN_NET.
          */
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
-        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
-
-        /**
-         * @brief Deserializes from EmbeddedTransaction proto oneof field.
-         *        Dispatches on the oneof case instead of manual type string lookup.
-         */
-        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
-            const EmbeddedTransaction &embedded );
 
         /**
          * @brief Derives the proof key that corresponds to a transaction key by

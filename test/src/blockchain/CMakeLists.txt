@@ -23,13 +23,15 @@ target_link_libraries(consensus_subject_test
 # ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
 # GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
 # Test deferred to E2E integration (Phase 4).
-#addtest(consensus_slot_key_test
-#    consensus_slot_key_test.cpp
-#)
-#target_link_libraries(consensus_slot_key_test
-#    blockchain_genesis
-#    rapidjson
-#)
+# GetSlotKey dispatches via registered handler map — no ConsensusManager instance needed.
+addtest(consensus_slot_key_test
+    consensus_slot_key_test.cpp
+)
+target_link_libraries(consensus_slot_key_test
+    blockchain_genesis
+    genius_node
+    rapidjson
+)
 
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 

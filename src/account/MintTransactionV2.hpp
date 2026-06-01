@@ -111,6 +111,12 @@ namespace sgns
          */
         std::unordered_set<std::string> GetTopics() const override;
 
+        /**
+         * @brief       Generates a slot ID for consensus slot key determination.
+         * @return      Deterministic slot key derived from chain/token/amount/dest/burn_tx_hash.
+         */
+        std::string GetSlotID() const override;
+
     private:
         /**
          * @brief       Construct a new Mint Transaction V2
