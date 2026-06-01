@@ -306,6 +306,8 @@ namespace sgns
         std::string                                           gnus_network_full_path_;
         std::string                                           processing_channel_topic_;
         std::string                                           processing_grid_chanel_topic_;
+        std::vector<std::string>                              bootstrap_peers_;
+        std::vector<std::string>                              bootstrap_fullnodes_;
         uint16_t                                              pubsubport_;
         std::shared_ptr<Blockchain>                           blockchain_;
 
@@ -416,7 +418,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: error
+      level: trace                         
       children:
         - name: libp2p
         - name: Gossip
