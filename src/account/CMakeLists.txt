@@ -53,7 +53,7 @@ if(MSVC)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
-add_library(genius_node
+set(GENIUS_NODE_SOURCES
     GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
@@ -75,7 +75,7 @@ add_library(genius_node
     BridgeRelayer.cpp
 )
 
-target_link_libraries(genius_node
+set(GENIUS_NODE_LIBS
     PUBLIC
     Boost::headers
     ProofSystem
@@ -86,7 +86,7 @@ target_link_libraries(genius_node
     gnus_upnp
     sgns_genius_account
     blockchain_genesis
-	ProcessingBase
+    ProcessingBase
     evmrelay
     PRIVATE
     component_factory
@@ -115,6 +115,15 @@ target_link_libraries(genius_node
     transfer_proof
     processing_proof
 )
+
+# Production library — uses OS keychain (Apple/Windows/Linux secure storage)
+add_library(genius_node ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
+
+# Test library — uses in-memory secure storage (no keychain prompts)
+add_library(genius_node_test ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
+target_compile_definitions(genius_node_test PUBLIC SGNS_USE_MEMORY_SECURE_STORAGE)
 
 add_dependencies(genius_node rlp)
 

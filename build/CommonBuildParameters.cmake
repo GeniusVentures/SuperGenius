@@ -462,13 +462,6 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
-# Use in-memory secure storage for tests — avoids macOS keychain prompts
-# and Windows/Linux credential store access during test runs.
-# Must be set BEFORE add_subdirectory(src) so the library also gets the flag.
-if(BUILD_TESTING)
-    add_compile_definitions(SGNS_USE_MEMORY_SECURE_STORAGE)
-endif()
-
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
