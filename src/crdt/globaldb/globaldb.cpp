@@ -11,6 +11,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/graphsync_impl.hpp>
 
 #include <rocksdb/db.h>
+#include <rocksdb/utilities/backup_engine.h>
 
 #include <libp2p/host/host.hpp>
 #include <libp2p/injector/host_injector.hpp>
@@ -71,7 +72,8 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
         std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        std::shared_ptr<RocksDB>                                              datastore )
+        std::shared_ptr<RocksDB>                                              datastore,
+        BackupOptions                                                         backup_options )
     {
         if ( ( !context ) || ( !generator ) || ( !pubsub ) || ( !graphsyncnetwork ) )
         {
@@ -122,12 +124,16 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
         std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        std::shared_ptr<RocksDB>                                              datastore )
+        std::shared_ptr<RocksDB>                                              datastore,
+        BackupOptions                                                         backup_options )
     {
+        backup_options_ = backup_options;
+
         std::shared_ptr<RocksDB> dataStore = std::move( datastore );
         if ( dataStore == nullptr )
         {
             auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
+            backup_directory_         = ResolveBackupDirectory( databasePathAbsolute );
 
             // Create new database
             m_logger->info( "Opening database " + databasePathAbsolute );
@@ -155,33 +161,75 @@ namespace sgns::crdt
                 int  lock_retry_count = 0;
                 auto dataStoreResult  = RocksDB::create( databasePathAbsolute, options );
 
-                while ( !dataStoreResult.has_value() )
+                // One-shot restore-from-backup on corruption — must not retry inside the lock loop.
+                if ( !dataStoreResult.has_value() )
                 {
                     std::string errorMsg = dataStoreResult.error().message();
-                    auto        errorCode =
-                        static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
                     if ( errorMsg.find( "corruption" ) != std::string::npos ||
                          errorMsg.find( "Corruption" ) != std::string::npos )
                     {
-                        m_logger->warn( "Database corruption detected, attempting repair: {}", databasePathAbsolute );
-                        auto repairStatus = ::ROCKSDB_NAMESPACE::RepairDB( databasePathAbsolute, options );
-                        if ( repairStatus.ok() )
-                        {
-                            m_logger->info( "Database repair successful, retrying open" );
-                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
-                        }
-                        else
-                        {
-                            m_logger->error( "Database repair failed: {}", repairStatus.ToString() );
-                        }
+                        m_logger->warn( "Database corruption detected, attempting restore from latest backup: {}",
+                                        databasePathAbsolute );
 
-                        if ( dataStoreResult.has_value() )
+                        auto restoreFromLatestBackup = [&]() -> bool
                         {
-                            break;
+                            if ( !( backup_options_.enabled && backup_options_.auto_restore_on_repair_failure ) )
+                            {
+                                m_logger->error( "Backup restore is disabled; cannot recover corrupted DB from backup" );
+                                return false;
+                            }
+
+                            ::ROCKSDB_NAMESPACE::BackupEngineReadOnly *backup_engine = nullptr;
+                            ::ROCKSDB_NAMESPACE::BackupEngineOptions    backup_options_engine( backup_directory_ );
+                            auto open_backup_status = ::ROCKSDB_NAMESPACE::BackupEngineReadOnly::Open(
+                                ::ROCKSDB_NAMESPACE::Env::Default(),
+                                backup_options_engine,
+                                &backup_engine );
+
+                            if ( !open_backup_status.ok() || backup_engine == nullptr )
+                            {
+                                m_logger->error( "Could not open backup engine at {}: {}",
+                                                 backup_directory_,
+                                                 open_backup_status.ToString() );
+                                return false;
+                            }
+
+                            std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngineReadOnly> backup_guard( backup_engine );
+
+                            ::ROCKSDB_NAMESPACE::RestoreOptions restore_options;
+                            restore_options.keep_log_files = false;
+
+                            auto restore_status =
+                                backup_guard->RestoreDBFromLatestBackup( databasePathAbsolute,
+                                                                         databasePathAbsolute,
+                                                                         restore_options );
+                            if ( !restore_status.ok() )
+                            {
+                                m_logger->error( "Restore from latest backup failed: {}", restore_status.ToString() );
+                                return false;
+                            }
+
+                            m_logger->warn( "Database restored from latest backup, retrying open" );
+                            dataStoreResult = RocksDB::create( databasePathAbsolute, options );
+                            return dataStoreResult.has_value();
+                        };
+
+                        if ( !restoreFromLatestBackup() )
+                        {
+                            m_logger->critical(
+                                "Restore from backup failed for corrupted DB {}. "
+                                "Terminating process to preserve on-disk state for forensic analysis.",
+                                databasePathAbsolute );
+                            std::abort();
                         }
-                        errorMsg = dataStoreResult.error().message();
-                        errorCode = static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
                     }
+                }
+
+                // Lock-retry loop: only for transient / retryable errors (lock, busy, etc.)
+                while ( !dataStoreResult.has_value() )
+                {
+                    auto errorCode =
+                        static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
 
                     if ( is_retryable_open_error( errorCode ) && lock_retry_count < kMaxLockRetries )
                     {
@@ -189,7 +237,7 @@ namespace sgns::crdt
                         m_logger->warn(
                             "Database {} not open yet ({}). Retrying open in {}ms ({}/{})",
                             databasePathAbsolute,
-                            errorMsg,
+                            dataStoreResult.error().message(),
                             kRetrySleep.count(),
                             lock_retry_count,
                             kMaxLockRetries );
@@ -270,6 +318,114 @@ namespace sgns::crdt
         return outcome::success();
     }
 
+    std::string GlobalDB::ResolveBackupDirectory( const std::string &databasePathAbsolute ) const
+    {
+        return ( std::filesystem::path( databasePathAbsolute ) / "backups" ).string();
+    }
+
+    bool GlobalDB::CreateBackupNow()
+    {
+        std::lock_guard<std::mutex> lock( backup_mutex_ );
+
+        if ( !backup_options_.enabled || !m_datastore )
+        {
+            return false;
+        }
+
+        if ( backup_directory_.empty() )
+        {
+            auto databasePathAbsolute = boost::filesystem::absolute( m_databasePath ).string();
+            backup_directory_         = ResolveBackupDirectory( databasePathAbsolute );
+        }
+
+        std::error_code fs_error;
+        std::filesystem::create_directories( backup_directory_, fs_error );
+        if ( fs_error )
+        {
+            m_logger->error( "Failed to create backup directory {}: {}", backup_directory_, fs_error.message() );
+            return false;
+        }
+
+        ::ROCKSDB_NAMESPACE::BackupEngine *backup_engine = nullptr;
+        ::ROCKSDB_NAMESPACE::BackupEngineOptions backup_options_engine( backup_directory_ );
+        auto open_status = ::ROCKSDB_NAMESPACE::BackupEngine::Open( ::ROCKSDB_NAMESPACE::Env::Default(),
+                                                                    backup_options_engine,
+                                                                    &backup_engine );
+        if ( !open_status.ok() || backup_engine == nullptr )
+        {
+            m_logger->error( "Failed to open backup engine at {}: {}", backup_directory_, open_status.ToString() );
+            return false;
+        }
+
+        std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngine> backup_guard( backup_engine );
+
+        auto create_status = backup_guard->CreateNewBackup( m_datastore->getDB().get(), true );
+        if ( !create_status.ok() )
+        {
+            m_logger->error( "CreateNewBackup failed: {}", create_status.ToString() );
+            return false;
+        }
+
+        auto purge_status = backup_guard->PurgeOldBackups( backup_options_.keep_count );
+        if ( !purge_status.ok() )
+        {
+            m_logger->warn( "PurgeOldBackups failed: {}", purge_status.ToString() );
+        }
+
+        m_logger->info( "Backup created successfully in {}", backup_directory_ );
+        return true;
+    }
+
+    void GlobalDB::StartBackupLoop()
+    {
+        if ( !backup_options_.enabled || backup_thread_.joinable() || !m_pubsub )
+        {
+            return;
+        }
+
+        if ( backup_options_.interval_minutes == 0 )
+        {
+            backup_options_.interval_minutes = 15;
+        }
+        if ( backup_options_.keep_count == 0 )
+        {
+            backup_options_.keep_count = 12;
+        }
+
+        stop_backup_thread_.store( false );
+        backup_thread_ = std::thread(
+            [this]()
+            {
+                CreateBackupNow();
+
+                while ( !stop_backup_thread_.load() )
+                {
+                    std::unique_lock<std::mutex> lock( backup_wait_mutex_ );
+                    const bool stop_requested = backup_wait_cv_.wait_for(
+                        lock,
+                        std::chrono::minutes( backup_options_.interval_minutes ),
+                        [this]() { return stop_backup_thread_.load(); } );
+                    lock.unlock();
+
+                    if ( stop_requested )
+                    {
+                        break;
+                    }
+                    CreateBackupNow();
+                }
+            } );
+    }
+
+    void GlobalDB::StopBackupLoop()
+    {
+        stop_backup_thread_.store( true );
+        backup_wait_cv_.notify_all();
+        if ( backup_thread_.joinable() )
+        {
+            backup_thread_.join();
+        }
+    }
+
     void GlobalDB::Start()
     {
         if ( started_ )
@@ -280,6 +436,7 @@ namespace sgns::crdt
         StartCICSync();
         StartRebroadcastHeads();
         started_ = true;
+        StartBackupLoop();
     }
 
     void GlobalDB::StartCIDReceiving()

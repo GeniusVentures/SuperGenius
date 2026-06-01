@@ -660,6 +660,11 @@ namespace sgns
         bool InitNetwork( uint16_t base_port, bool is_full_node );
 
         /**
+         * @brief Loads the CRDT configuration.
+         */
+         void         LoadCrdtConfig();
+
+        /**
          * @brief Attempts initial UPnP port mapping for the PubSub port.
          * @return True when no gateway exists or a usable port is mapped.
          */
@@ -744,6 +749,16 @@ namespace sgns
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
 
+        struct CrdtBackupConfig
+        {
+            bool     enabled{ true };
+            uint32_t interval_minutes{ 15 };
+            uint32_t keep_count{ 12 };
+            bool     auto_restore_on_repair_failure{ true };
+        };
+
+        CrdtBackupConfig crdt_backup_config_{};
+        
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.
          * @param[in] escrow_path Escrow address/path associated with the completed task.
