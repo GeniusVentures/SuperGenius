@@ -29,7 +29,7 @@ addtest(consensus_slot_key_test
 )
 target_link_libraries(consensus_slot_key_test
     blockchain_genesis
-    genius_node
+    genius_node_test
     rapidjson
 )
 
