@@ -33,15 +33,35 @@ set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframe
 include(../CommonBuildParameters.cmake)
 
 # ─── macOS Keychain Unlock Target ────────────────────────────────────────────
-# Unlocks the login keychain for 1 hour before running tests.
+# Creates a temporary test keychain with no ACL restrictions, runs tests, then
+# restores the original keychain search list.
 # Usage: ninja test-unlocked
-# This prevents repeated password prompts when test binaries access crypto keys.
+# This prevents repeated password prompts when test binaries access crypto keys
+# (each executable has its own macOS ACL entry, so unlocking login keychain alone
+# doesn't help — we need a keychain with no ACL at all).
 if(BUILD_TESTING)
+    set(TEST_KEYCHAIN "${CMAKE_BINARY_DIR}/sg_test.keychain-db")
+    set(TEST_KEYCHAIN_PASSWORD "test-only-$(date +%s)")
+
     add_custom_target(test-unlocked
-        COMMAND security unlock-keychain -p "$ENV{USER}" ~/Library/Keychains/login.keychain-db
-        COMMAND security set-keychain-settings -t 3600 ~/Library/Keychains/login.keychain-db
+        # Save current keychain search list
+        COMMAND bash -c "security list-keychains -d user | tr -d '\"' > ${CMAKE_BINARY_DIR}/.keychain_backup"
+        # Create test keychain (replaces if exists)
+        COMMAND bash -c "security delete-keychain ${TEST_KEYCHAIN} 2>/dev/null || true"
+        COMMAND security create-keychain -p "${TEST_KEYCHAIN_PASSWORD}" ${TEST_KEYCHAIN}
+        # Set test keychain as default + only keychain (no login keychain ACL prompts)
+        COMMAND security list-keychains -d user -s ${TEST_KEYCHAIN}
+        COMMAND security default-keychain -d user -s ${TEST_KEYCHAIN}
+        COMMAND security unlock-keychain -p "${TEST_KEYCHAIN_PASSWORD}" ${TEST_KEYCHAIN}
+        COMMAND security set-keychain-settings -t 3600 ${TEST_KEYCHAIN}
+        # Run tests (test binaries will use test keychain, no ACL prompts)
         COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -j4
+        # Restore original keychain search list
+        COMMAND bash -c "ORIG=\$(cat ${CMAKE_BINARY_DIR}/.keychain_backup); security list-keychains -d user -s \$ORIG"
+        COMMAND bash -c "security default-keychain -d user -s \$(head -1 ${CMAKE_BINARY_DIR}/.keychain_backup)"
+        COMMAND bash -c "security delete-keychain ${TEST_KEYCHAIN} 2>/dev/null || true"
+        COMMAND bash -c "rm -f ${CMAKE_BINARY_DIR}/.keychain_backup"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Unlocking keychain (1hr timeout) and running tests..."
+        COMMENT "Creating test keychain (no ACL), running tests, restoring keychain..."
     )
 endif()
