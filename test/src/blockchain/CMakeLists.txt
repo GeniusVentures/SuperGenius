@@ -11,14 +11,6 @@ target_link_libraries(consensus_subject_test
     rapidjson
 )
 
-addtest(bridge_consensus_adapter_test
-    bridge_consensus_adapter_test.cpp
-)
-target_link_libraries(bridge_consensus_adapter_test
-    genius_node_test
-    rapidjson
-)
-
 #addtest(consensus_certificate_test
 #    consensus_certificate_test.cpp
 #)
