@@ -55,7 +55,7 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
 endif()
 
 set(GENIUS_NODE_SOURCES
-    IGeniusTransactions.cpp
+    GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp
@@ -65,7 +65,6 @@ set(GENIUS_NODE_SOURCES
     InputValidators.cpp
     TransactionManager.cpp
     TokenAmount.cpp
-    BridgeConsensusAdapter.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
@@ -73,6 +72,8 @@ set(GENIUS_NODE_SOURCES
     Migration3_5_0To3_6_0.cpp
     Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
+    ChainRpcEndpointProvider.cpp
+    BridgeRelayer.cpp
 )
 
 set(GENIUS_NODE_LIBS
