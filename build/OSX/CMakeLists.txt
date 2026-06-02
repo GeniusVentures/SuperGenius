@@ -31,3 +31,28 @@ set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/include")
 set(Vulkan_LIBRARY "${_THIRDPARTY_BUILD_DIR}/moltenvk/build/lib/MoltenVK.xcframework/macos-arm64_x86_64/libMoltenVK.a")
 
 include(../CommonBuildParameters.cmake)
+
+# ─── macOS Keychain Unlock Target ────────────────────────────────────────────
+# Unlocks the login keychain and sets the partition list so all test binaries
+# can access crypto keys without per-executable ACL prompts.
+# Usage: ninja test-unlocked
+#
+# The issue: macOS keychain ACLs are per-application (by executable path).
+# Each test binary is a separate app, so unlocking the keychain alone doesn't
+# help — we also need to set the partition list to allow test binaries access.
+#
+# The fix: security set-key-partition-list -S apple-tool:,apple: allows all
+# Apple crypto framework consumers (including our test binaries) to access
+# the keychain without individual ACL prompts.
+if(BUILD_TESTING)
+    add_custom_target(test-unlocked
+        # Unlock login keychain
+        COMMAND security unlock-keychain ~/Library/Keychains/login.keychain-db
+        # Set partition list: allow apple-tool: and apple: consumers (covers test binaries)
+        COMMAND security set-key-partition-list -S apple-tool:,apple: -k "" ~/Library/Keychains/login.keychain-db
+        # Run tests
+        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure -j4
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Unlocking keychain and running tests..."
+    )
+endif()

@@ -59,12 +59,29 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
+    /// Global factory override (null = use default SecureStorageImpl)
+    GeniusAccount::SecureStorageFactory g_storage_factory;
+
     outcome::result<std::shared_ptr<JSONBackend>> CreateSecureStorage( std::string_view public_key_hex )
     {
         BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key_hex ) );
 
-        return std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
-                                                    libp2p::multi::detail::encodeBase58( vec ) );
+        const std::string identifier( std::string( SECURE_STORAGE_PREFIX ) +
+                                      libp2p::multi::detail::encodeBase58( vec ) );
+
+        if ( g_storage_factory )
+        {
+            auto storage = g_storage_factory( identifier );
+            auto backend = std::dynamic_pointer_cast<JSONBackend>( storage );
+            if ( backend )
+            {
+                return backend;
+            }
+            genius_account_logger()->error( "Custom secure storage factory did not return a JSONBackend" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::make_shared<SecureStorageImpl>( identifier );
     }
 
     bool IsValidPublicKey( std::string_view key )
@@ -256,6 +273,16 @@ namespace
 namespace sgns
 {
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
+
+    void GeniusAccount::SetSecureStorageFactory( SecureStorageFactory factory )
+    {
+        g_storage_factory = std::move( factory );
+    }
+
+    const GeniusAccount::SecureStorageFactory &GeniusAccount::GetSecureStorageFactory()
+    {
+        return g_storage_factory;
+    }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
                                                                               StorageWithAddress response_value,

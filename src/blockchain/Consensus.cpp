@@ -290,8 +290,8 @@ namespace sgns
         certificate_subject_handlers_.erase( type_hash.value() );
     }
 
-    bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view         subject_type,
-                                                            ProposalCleanupHandler   handler )
+    bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view       subject_type,
+                                                           ProposalCleanupHandler handler )
     {
         if ( !handler )
         {
@@ -308,9 +308,7 @@ namespace sgns
                                              subject_type );
             return false;
         }
-        ConsensusManagerLogger()->debug( "{}: Registering cleanup handler subject_type={}",
-                                         __func__,
-                                         subject_type );
+        ConsensusManagerLogger()->debug( "{}: Registering cleanup handler subject_type={}", __func__, subject_type );
         std::unique_lock lock( cleanup_handlers_mutex_ );
         proposal_cleanup_handlers_[type_hash.value()].push_back( std::move( handler ) );
         return true;
@@ -318,9 +316,7 @@ namespace sgns
 
     void ConsensusManager::UnregisterProposalCleanupHandler( std::string_view subject_type )
     {
-        ConsensusManagerLogger()->debug( "{}: Removing cleanup handler with subject_type={}",
-                                         __func__,
-                                         subject_type );
+        ConsensusManagerLogger()->debug( "{}: Removing cleanup handler with subject_type={}", __func__, subject_type );
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
@@ -328,6 +324,38 @@ namespace sgns
         }
         std::unique_lock lock( cleanup_handlers_mutex_ );
         proposal_cleanup_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty slot key handler subject_type={}",
+                                             __func__, subject_type );
+            return;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid slot key handler subject_type={}",
+                                             __func__, subject_type );
+            return;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering slot key handler subject_type={}", __func__, subject_type );
+        std::unique_lock lock( slot_key_handlers_mutex_ );
+        slot_key_handlers_[type_hash.value()] = std::move( handler );
+    }
+
+    void ConsensusManager::UnregisterSlotKeyHandler( std::string_view subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing slot key handler subject_type={}", __func__, subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( slot_key_handlers_mutex_ );
+        slot_key_handlers_.erase( type_hash.value() );
     }
 
     void ConsensusManager::FireProposalCleanupCallbacks( const Proposal &proposal )
@@ -351,8 +379,7 @@ namespace sgns
         std::vector<ProposalCleanupHandler> handlers_copy;
         {
             std::shared_lock lock( cleanup_handlers_mutex_ );
-            auto it = proposal_cleanup_handlers_.find(
-                proposal.subject().subject_type_hash().hash() );
+            auto             it = proposal_cleanup_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( it != proposal_cleanup_handlers_.end() )
             {
                 handlers_copy = it->second;
@@ -486,7 +513,7 @@ namespace sgns
 
         sgns::crypto::HasherImpl hasher;
         auto                     hash = hasher.sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
-        uint64_t base_index = 0;
+        uint64_t                 base_index = 0;
         for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
         {
             base_index = ( base_index << 8 ) | hash[i];
@@ -570,7 +597,7 @@ namespace sgns
                                                  proposal.proposal_id().substr( 0, 8 ),
                                                  slot_key );
                 slot_state.best_proposal_id = proposal.proposal_id();
-                auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+                auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
                 if ( nonce_payload.has_value() )
                 {
                     slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -594,7 +621,7 @@ namespace sgns
                                                      proposal.proposal_id().substr( 0, 8 ),
                                                      slot_key );
                     slot_state.best_proposal_id = proposal.proposal_id();
-                    auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+                    auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
                     if ( nonce_payload.has_value() )
                     {
                         slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -948,8 +975,8 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        uint64_t              total_weight    = ValidatorRegistry::TotalWeight( registry );
-        uint64_t              approved_weight = 0;
+        uint64_t                        total_weight    = ValidatorRegistry::TotalWeight( registry );
+        uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
 
         for ( const auto &vote : votes )
@@ -1306,12 +1333,12 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( handler_it == subject_handlers_.end() )
             {
-                ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type_hash={}",
-                                                 __func__,
-                                                 base::hex_lower( gsl::span<const uint8_t>(
-                                                     reinterpret_cast<const uint8_t *>(
-                                                         proposal.subject().subject_type_hash().hash().data() ),
-                                                     proposal.subject().subject_type_hash().hash().size() ) ) );
+                ConsensusManagerLogger()->error(
+                    "{}: rejected: subject handler missing type_hash={}",
+                    __func__,
+                    base::hex_lower( gsl::span<const uint8_t>(
+                        reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                        proposal.subject().subject_type_hash().hash().size() ) ) );
                 return;
             }
             subject_handler = handler_it->second;
@@ -1379,12 +1406,12 @@ namespace sgns
                 auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
                 if ( handler_it == subject_handlers_.end() )
                 {
-                    ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type_hash={}",
-                                                     __func__,
-                                                     base::hex_lower( gsl::span<const uint8_t>(
-                                                         reinterpret_cast<const uint8_t *>(
-                                                             proposal.subject().subject_type_hash().hash().data() ),
-                                                         proposal.subject().subject_type_hash().hash().size() ) ) );
+                    ConsensusManagerLogger()->error(
+                        "{}: rejected: subject handler missing type_hash={}",
+                        __func__,
+                        base::hex_lower( gsl::span<const uint8_t>(
+                            reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                            proposal.subject().subject_type_hash().hash().size() ) ) );
                     continue;
                 }
                 subject_handler = handler_it->second;
@@ -1675,8 +1702,7 @@ namespace sgns
         CertificateSubjectHandler handler;
         {
             std::shared_lock lock( certificate_handlers_mutex_ );
-            auto it =
-                certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
+            auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
             if ( it == certificate_subject_handlers_.end() )
             {
                 (void)certificate_work_journal_->MarkDone( key );
@@ -2012,7 +2038,7 @@ namespace sgns
         if ( slot_state.best_proposal_id.empty() )
         {
             slot_state.best_proposal_id = new_state.proposal.proposal_id();
-            auto nonce_payload = DecodeNonceSubject( new_state.proposal.subject() );
+            auto nonce_payload          = DecodeNonceSubject( new_state.proposal.subject() );
             if ( nonce_payload.has_value() )
             {
                 slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -2125,15 +2151,27 @@ namespace sgns
         }
     }
 
-    std::string ConsensusManager::GetSlotKey( const Proposal &proposal ) const
+    std::string ConsensusManager::GetSlotKey( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
-        auto nonce_payload = DecodeNonceSubject( proposal.subject() );
-        if ( nonce_payload.has_value() )
+
+        if ( !proposal.subject().has_subject_type_hash() )
         {
-            return proposal.subject().account_id() + ":" + std::to_string( nonce_payload.value().nonce() );
+            return proposal.proposal_id();
         }
-        auto subject_id = ComputeSubjectId( proposal.subject() );
+        const auto &subject = proposal.subject();
+        const auto &hash    = subject.subject_type_hash().hash();
+
+        {
+            std::shared_lock lock( slot_key_handlers_mutex_ );
+            auto             it = slot_key_handlers_.find( hash );
+            if ( it != slot_key_handlers_.end() )
+            {
+                return it->second( subject );
+            }
+        }
+
+        auto subject_id = ComputeSubjectId( subject );
         return subject_id.has_value() ? subject_id.value() : proposal.proposal_id();
     }
 
@@ -2195,8 +2233,8 @@ namespace sgns
             return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
         }
 
-        bool SetSubjectPayload( ConsensusSubject                 *subject,
-                                const std::string                &subject_type_hash,
+        bool SetSubjectPayload( ConsensusSubject                    *subject,
+                                const std::string                   &subject_type_hash,
                                 const google::protobuf::MessageLite &payload )
         {
             if ( subject == nullptr || subject_type_hash.size() != kSubjectTypeHashSize )
@@ -2225,8 +2263,7 @@ namespace sgns
             auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
             if ( expected.has_error() || !subject.has_subject_type_hash() ||
                  subject.subject_type_hash().hash() != expected.value() ||
-                 subject.payload().size() <= kSubjectTypeHashSize ||
-                 expected.value().size() != kSubjectTypeHashSize ||
+                 subject.payload().size() <= kSubjectTypeHashSize || expected.value().size() != kSubjectTypeHashSize ||
                  subject.payload().compare( 0, kSubjectTypeHashSize, expected.value() ) != 0 )
             {
                 return outcome::failure( std::errc::invalid_argument );
@@ -2308,7 +2345,7 @@ namespace sgns
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
-        const std::vector<uint8_t>                    &transaction_data,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
@@ -2318,7 +2355,7 @@ namespace sgns
         NonceSubject payload;
         payload.set_nonce( nonce );
         payload.set_tx_hash( tx_hash.data(), tx_hash.size() );
-        payload.mutable_transaction()->set_data( transaction_data.data(), transaction_data.size() );
+        *payload.mutable_transaction() = std::move( transaction );
         if ( utxo_commitment.has_value() )
         {
             *payload.mutable_utxo_commitment() = utxo_commitment.value();
@@ -2398,9 +2435,10 @@ namespace sgns
         return subject;
     }
 
-    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject( const std::string          &account_id,
-                                                                                        std::string_view            subject_type,
-                                                                                        const std::vector<uint8_t> &payload )
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject(
+        const std::string          &account_id,
+        std::string_view            subject_type,
+        const std::vector<uint8_t> &payload )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} subject_type={}",
                                          __func__,
@@ -2443,7 +2481,7 @@ namespace sgns
 
         sgns::crypto::HasherImpl hasher;
         auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
-        auto proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        auto                     proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
         ConsensusManagerLogger()->debug( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
         return proposal_id;
     }
@@ -2496,8 +2534,7 @@ namespace sgns
             }
             return !payload.value().base_registry_cid().empty() &&
                    payload.value().target_registry_epoch() == payload.value().base_registry_epoch() + 1 &&
-                   payload.value().certificate_count() > 0 &&
-                   !payload.value().batch_root().empty();
+                   payload.value().certificate_count() > 0 && !payload.value().batch_root().empty();
         }
         return true;
     }

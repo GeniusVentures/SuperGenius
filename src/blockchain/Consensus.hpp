@@ -107,6 +107,9 @@ namespace sgns
         ///             Callback invoked when a proposal slot is cleaned up due to timeout.
         ///             Receives the transaction hash so the handler can clean up associated tracking entries.
         using ProposalCleanupHandler = std::function<void( const std::string &tx_hash )>;
+        /// @brief      Alias for a slot key handler — produces a deterministic slot key for a proposal.
+        ///             Takes the raw subject, called from GetSlotKey by subject type hash.
+        using SlotKeyHandler = std::function<std::string( const Subject &subject )>;
 
         /**
          * @brief      Quorum tally structure
@@ -154,6 +157,20 @@ namespace sgns
          * @param[in] subject_type Canonical subject type to remove.
          */
         void UnregisterProposalCleanupHandler( std::string_view subject_type );
+
+        /** RegisterSlotKeyHandler also changed to match subject type pattern: */
+        /**
+         * @brief Registers a slot key handler for a canonical subject type.
+         * @param[in] subject_type Canonical subject type (e.g. "sgns.nonce.v1").
+         * @param[in] handler Callback that produces a slot key from the raw subject.
+         */
+        static void RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler );
+
+        /**
+         * @brief Unregisters the slot key handler for a canonical subject type.
+         * @param[in] subject_type Canonical subject type to remove.
+         */
+        static void UnregisterSlotKeyHandler( std::string_view subject_type );
 
         /**
          * @brief Publishes a consensus envelope to pubsub.
@@ -291,7 +308,7 @@ namespace sgns
             const std::string                             &account_id,
             uint64_t                                       nonce,
             const std::string                             &tx_hash,
-            const std::vector<uint8_t>                    &transaction_data,
+            const EmbeddedTransaction                     &transaction,
             const std::optional<UTXOTransitionCommitment> &utxo_commitment,
             const std::optional<UTXOWitness>              &utxo_witness );
         /**
@@ -413,6 +430,7 @@ namespace sgns
 
     private:
         friend class ConsensusManagerTestAccess;
+        friend class ConsensusSlotKeyTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
@@ -506,7 +524,7 @@ namespace sgns
          * @param[in] proposal Proposal to map to a slot.
          * @return Slot key.
          */
-        std::string GetSlotKey( const Proposal &proposal ) const;
+        static std::string GetSlotKey( const Proposal &proposal );
         /**
          * @brief Compares competing proposals for the same slot.
          * @param[in] candidate Candidate proposal.
@@ -693,6 +711,9 @@ namespace sgns
         mutable std::shared_mutex certificate_handlers_mutex_;      ///< Guards `certificate_subject_handlers_`.
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
                                   proposal_cleanup_handlers_;         ///< Proposal cleanup handlers by subject type hash.
+        static inline std::unordered_map<std::string, SlotKeyHandler>
+                                  slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
+        static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
         mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
         Signer                    signer_;                            ///< Local signing callback.
         std::string               account_address_;                   ///< Local validator/account id.

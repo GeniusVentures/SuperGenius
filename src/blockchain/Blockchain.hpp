@@ -126,12 +126,12 @@ namespace sgns
          * @brief Returns the stored CID of the selected genesis block.
          * @return Genesis CID on success, otherwise an error.
          */
-        outcome::result<std::string>       GetGenesisCID() const;
+        outcome::result<std::string> GetGenesisCID() const;
         /**
          * @brief Returns the stored CID of the selected account-creation block.
          * @return Account-creation CID on success, otherwise an error.
          */
-        outcome::result<std::string>       GetAccountCreationCID() const;
+        outcome::result<std::string> GetAccountCreationCID() const;
         /**
          * @brief Returns validator registry owned by this blockchain instance.
          * @return Shared pointer to validator registry, possibly null when unavailable.
@@ -161,7 +161,7 @@ namespace sgns
          * @param[in] handler Callback invoked for matching certificates.
          * @return `true` on successful registration.
          */
-        bool RegisterCertificateHandler( std::string_view                         subject_type,
+        bool RegisterCertificateHandler( std::string_view                            subject_type,
                                          ConsensusManager::CertificateSubjectHandler handler );
         /**
          * @brief Unregisters a consensus certificate handler by canonical subject type string.
@@ -174,42 +174,54 @@ namespace sgns
          * @param[in] handler Callback invoked when a proposal slot is cleaned up due to timeout.
          * @return `true` on successful registration via the consensus manager.
          */
-        bool RegisterProposalCleanupHandler( std::string_view subject_type,
+        bool RegisterProposalCleanupHandler( std::string_view                         subject_type,
                                              ConsensusManager::ProposalCleanupHandler handler );
+
+        /**
+         * @brief Registers a slot key handler for a specific embedded transaction oneof case.
+         * @param[in] transaction_case EmbeddedTransaction oneof case number (e.g. kMintV2).
+         * @param[in] handler Callback that produces a deterministic slot key for proposals
+         *                    carrying this embedded transaction type.
+         */
+        void RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler );
+
+        void UnregisterSlotKeyHandler( std::string_view subject_type );
 
         /**
          * @brief Creates a consensus subject for nonce/transaction transition.
          * @param[in] account_id Account identifier.
          * @param[in] nonce Account nonce.
          * @param[in] tx_hash Transaction hash.
-         * @param[in] transaction_data Full serialized transaction bytes.
+         * @param[in] transaction EmbeddedTransaction proto with typed oneof field set.
          * @param[in] utxo_commitment Optional UTXO commitment payload.
          * @param[in] utxo_witness Optional UTXO witness payload.
          * @return Constructed subject or an error.
          */
-        outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject( const std::string &account_id,
-                                                                                uint64_t           nonce,
-                                                                                const std::string &tx_hash,
-                                                                                const std::vector<uint8_t> &transaction_data,
-                                                                                const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                                const std::optional<UTXOWitness>              &utxo_witness );
+        outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject(
+            const std::string                             &account_id,
+            uint64_t                                       nonce,
+            const std::string                             &tx_hash,
+            const EmbeddedTransaction                     &transaction,
+            const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+            const std::optional<UTXOWitness>              &utxo_witness );
 
         /**
          * @brief Creates a signed proposal for nonce/transaction transition.
          * @param[in] account_id Account identifier.
          * @param[in] nonce Account nonce.
          * @param[in] tx_hash Transaction hash.
-         * @param[in] transaction_data Full serialized transaction bytes.
+         * @param[in] transaction EmbeddedTransaction proto with typed oneof field set.
          * @param[in] utxo_commitment Optional UTXO commitment payload.
          * @param[in] utxo_witness Optional UTXO witness payload.
          * @return Constructed proposal or an error.
          */
-        outcome::result<ConsensusManager::Proposal> CreateConsensusProposal( const std::string &account_id,
-                                                                             uint64_t           nonce,
-                                                                             const std::string &tx_hash,
-                                                                             const std::vector<uint8_t> &transaction_data,
-                                                                             const std::optional<UTXOTransitionCommitment> &utxo_commitment,
-                                                                             const std::optional<UTXOWitness>              &utxo_witness );
+        outcome::result<ConsensusManager::Proposal> CreateConsensusProposal(
+            const std::string                             &account_id,
+            uint64_t                                       nonce,
+            const std::string                             &tx_hash,
+            const EmbeddedTransaction                     &transaction,
+            const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+            const std::optional<UTXOWitness>              &utxo_witness );
 
         /**
          * @brief Submits a proposal through consensus manager.
@@ -229,26 +241,27 @@ namespace sgns
          * @param[in] subject_hash Subject hash key.
          * @return `true` when certificate exists.
          */
-        bool                  CheckCertificate( const std::string &subject_hash ) const;
+        bool CheckCertificate( const std::string &subject_hash ) const;
         /**
          * @brief Performs strict certificate check for a specific subject object.
          * @param[in] subject Subject to evaluate.
          * @return `true` when certificate exists and matches strictly.
          */
-        bool                  CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
+        bool CheckCertificateStrict( const ConsensusManager::Subject &subject ) const;
         /**
          * @brief Loads certificate by subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return Certificate on success, otherwise an error.
          */
-        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
+            const std::string &subject_hash ) const;
         /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.
          * @return Reference to selected hash.
          */
-        const std::string    &BestHash( const std::string &a, const std::string &b ) const;
+        const std::string &BestHash( const std::string &a, const std::string &b ) const;
 
     protected:
         friend class Migration3_5_0To3_6_0;
@@ -317,13 +330,13 @@ namespace sgns
          * @param[in] g Genesis block.
          * @return `true` when signature is valid.
          */
-        bool                 VerifySignature( const GenesisBlock &g ) const;
+        bool VerifySignature( const GenesisBlock &g ) const;
         /**
          * @brief Verifies account-creation block signature.
          * @param[in] ac Account-creation block.
          * @return `true` when signature is valid.
          */
-        bool                 VerifySignature( const AccountCreationBlock &ac ) const;
+        bool VerifySignature( const AccountCreationBlock &ac ) const;
 
         /**
          * @brief Creates and publishes a genesis block when needed.
@@ -417,22 +430,28 @@ namespace sgns
          * @param[in] error_on_failure Error code to emit on timeout/failure.
          * @param[in] timeout_ms Timeout in milliseconds.
          */
-        void                  WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
+        void WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms );
         /**
          * @brief Ensures validator registry is initialized and available.
          * @return outcome::success when registry is ready, otherwise an error.
          */
         outcome::result<void> EnsureValidatorRegistry() const;
 
-        static constexpr std::string_view BLOCKCHAIN_TOPIC = "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
+        static constexpr std::string_view BLOCKCHAIN_TOPIC =
+            "gnus-blockchain"; ///< Topic used for blockchain CRDT data.
         static constexpr std::string_view DEFAULT_FULL_NODE_PUB_ADDRESS =
             "8a33bdf1445a68736429d1773be8682362753a0efc6fb9d8b3e8dffe3b74fc91e26b203fd521547a5219eddf1d3ac51fd17a7646c9bca5ef065da131add4e5a2"; ///< Default authorized full-node public key.
-        static constexpr std::string_view GENESIS_KEY = "gnus-genesis-block"; ///< Datastore key for genesis block payload.
-        static constexpr std::string_view GENESIS_CID_KEY = "gnus-genesis-block-cid"; ///< Datastore key for selected genesis CID.
-        static constexpr std::string_view ACCOUNT_CREATION_KEY_PREFIX = "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
-        static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX = "gnus-account-creation-cid-"; ///< Prefix for account-creation CID keys.
+        static constexpr std::string_view GENESIS_KEY =
+            "gnus-genesis-block"; ///< Datastore key for genesis block payload.
+        static constexpr std::string_view GENESIS_CID_KEY =
+            "gnus-genesis-block-cid"; ///< Datastore key for selected genesis CID.
+        static constexpr std::string_view ACCOUNT_CREATION_KEY_PREFIX =
+            "gnus-account-creation-"; ///< Prefix for account-creation payload keys.
+        static constexpr std::string_view ACCOUNT_CREATION_CID_KEY_PREFIX =
+            "gnus-account-creation-cid-";                          ///< Prefix for account-creation CID keys.
         static constexpr uint64_t TIMEOUT_GENESIS_BLOCK_MS = 8000; ///< Genesis CID download timeout in milliseconds.
-        static constexpr uint64_t TIMEOUT_ACC_CREATION_BLOCK_MS = 8000; ///< Account-creation CID download timeout in milliseconds.
+        static constexpr uint64_t TIMEOUT_ACC_CREATION_BLOCK_MS =
+            8000; ///< Account-creation CID download timeout in milliseconds.
 
         std::shared_ptr<crdt::GlobalDB> db_;      ///< CRDT database instance
         std::shared_ptr<GeniusAccount>  account_; ///< GeniusAccount instance
@@ -443,8 +462,9 @@ namespace sgns
 
         struct BlockchainCIDs
         {
-            std::optional<std::string>                   genesis_; ///< Selected genesis CID.
-            std::unordered_map<std::string, std::string> account_creation_; ///< Selected account-creation CIDs keyed by address.
+            std::optional<std::string> genesis_; ///< Selected genesis CID.
+            std::unordered_map<std::string, std::string>
+                account_creation_; ///< Selected account-creation CIDs keyed by address.
 
             /**
              * @brief Checks whether a genesis CID is available.
@@ -498,11 +518,11 @@ namespace sgns
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
         bool              created_successfully_ = false; ///< Indicates successful initialization/creation flow.
-        bool              filters_registered_ = false; ///< Indicates CRDT filters were registered.
+        bool              filters_registered_   = false; ///< Indicates CRDT filters were registered.
         bool              callbacks_registered_ = false; ///< Indicates CRDT callbacks were registered.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
-        bool              genesis_ready_ = false; ///< Indicates genesis block is ready.
-        bool              account_creation_ready_ = false; ///< Indicates account-creation block is ready.
+        bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
+        bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
 
         std::shared_ptr<ConsensusManager> consensus_manager_; ///< Consensus manager used for proposals/certificates.
     };

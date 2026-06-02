@@ -11,6 +11,7 @@
 #include <memory>
 #include <exception>
 #include <random>
+#include <filesystem>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -32,6 +33,7 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/ChainRpcEndpointProvider.hpp"
 #include "account/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -136,14 +138,18 @@ namespace sgns
                                                  bool                is_full_node,
                                                  bool                use_upnp )
     {
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config,
-                            GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node ),
-                            autodht,
-                            isprocessor,
-                            base_port,
-                            is_full_node,
-                            use_upnp ) );
+        auto account = GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node );
+        if ( account == nullptr )
+        {
+            return nullptr;
+        }
+        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config,
+                                                                     std::move( account ),
+                                                                     autodht,
+                                                                     isprocessor,
+                                                                     base_port,
+                                                                     is_full_node,
+                                                                     use_upnp ) );
 
         if ( instance )
         {
@@ -161,14 +167,22 @@ namespace sgns
                                                  bool                is_full_node,
                                                  bool                use_upnp )
     {
-        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
-            dev_config,
-            GeniusAccount::New( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
-            autodht,
-            isprocessor,
-            base_port,
-            is_full_node,
-            use_upnp ) );
+        auto account = GeniusAccount::New( dev_config.TokenID,
+                                           eth_private_key,
+                                           dev_config.BaseWritePath,
+                                           is_full_node );
+        if ( account == nullptr )
+        {
+            return nullptr;
+        }
+
+        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config,
+                                                                     std::move( account ),
+                                                                     autodht,
+                                                                     isprocessor,
+                                                                     base_port,
+                                                                     is_full_node,
+                                                                     use_upnp ) );
 
         if ( instance )
         {
@@ -409,6 +423,15 @@ namespace sgns
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
                 // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
+
+                // Initialize shared EthWatchService for EVM event detection
+                eth_watch_service_ = std::make_shared<eth::EthWatchService>();
+
+                // Initialize bridge relayer — wires evmrelay burn events → MintFunds
+                bridge_relayer_ = std::make_unique<BridgeRelayer>( transaction_manager_,
+                                                                   eth_watch_service_,
+                                                                   node_logger_ );
+
                 break;
             }
             case NodeState::INITIALIZING_PROCESSING:
@@ -1026,23 +1049,43 @@ namespace sgns
 
         if ( account == nullptr )
         {
+            node_logger_->error( "Account not created" );
             return std::errc::address_not_available;
         }
 
         ResetProcessingMembers();
 
-        this->transaction_manager_->Stop();
-        this->transaction_manager_.reset();
+        auto tx_manager_result = GetTransactionManager();
+        if ( tx_manager_result.has_value() )
+        {
+            auto manager = std::move( tx_manager_result.value() );
+            manager->Stop();
+        }
+        transaction_manager_.reset();
 
-        BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
-        this->blockchain_.reset();
+        bridge_relayer_.reset();
 
-        this->tx_globaldb_.reset();
+        eth_watch_service_.reset();
 
-        this->account_.swap( account );
+        if ( blockchain_ )
+        {
+            BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
+        }
+        blockchain_.reset();
+
+        tx_globaldb_.reset();
+
+        if ( account_ )
+        {
+            account_.swap( account );
+        }
+        else
+        {
+            account_ = account;
+        }
         account.reset();
 
-        this->BeginDBInitialization();
+        BeginDBInitialization();
 
         return outcome::success();
     }
@@ -1753,6 +1796,16 @@ namespace sgns
         return manager_result.value()->GetTransactions( tx_status );
     }
 
+    std::string GeniusNode::GetAddress() const
+    {
+        std::string address = "UNVAILABLE";
+        if ( account_ )
+        {
+            address = account_->GetAddress();
+        }
+        return address;
+    }
+
     // Wait for a transaction to be processed with a timeout
     TransactionManager::TransactionStatus GeniusNode::WaitForTransactionOutgoing( const std::string        &txId,
                                                                                   std::chrono::milliseconds timeout )
@@ -1893,6 +1946,44 @@ namespace sgns
             std::cerr << "Log rotation error: " << e.what() << std::endl;
             // Continue execution - don't let log rotation failure stop the application
         }
+    }
+
+    void GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
+    {
+        if ( !transaction_manager_ )
+        {
+            node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
+            return;
+        }
+        transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoints.size(), chain_id );
+    }
+
+    void GeniusNode::InitializeRpcEndpoints()
+    {
+        if ( !transaction_manager_ )
+        {
+            node_logger_->warn( "InitializeRpcEndpoints called before transaction manager is ready" );
+            return;
+        }
+
+        ChainRpcEndpointProvider::ChainIdMap chain_id_map = {
+            { "ethereum-mainnet", 1 },
+            { "polygon-mainnet", 137 },
+            { "bnb-smart-chain", 56 },
+            { "base-mainnet", 8453 },
+        };
+
+        ChainRpcProviderConfig config;
+        config.chains_json_path = std::filesystem::current_path() / "chains.json";
+
+        // Direct API-key endpoints are not wired here — the app layer
+        // (desktop launcher or mobile host) supplies them through secure
+        // storage and populates config.direct_endpoints before constructing
+        // the provider.  API keys are never tracked in git.
+
+        ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
+        provider.Initialize( transaction_manager_->GetPublicChainInputValidator(), config, node_logger_ );
     }
 
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const

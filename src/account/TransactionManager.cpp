@@ -13,7 +13,6 @@
 #include <boost/asio/post.hpp>
 #include <openssl/err.h>
 
-#include "account/BridgeConsensusAdapter.hpp"
 #include <ProofSystem/EthereumKeyPairParams.hpp>
 #include "TransferTransaction.hpp"
 #include "MintTransaction.hpp"
@@ -21,6 +20,7 @@
 #include "MigrationTransaction.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
+#include "ProcessingTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -164,30 +164,25 @@ namespace sgns
                     strong->OnProposalTimeoutCleanup( tx_hash );
                 }
             } );
-        RegisterBridgeEventConsensusHandler(
-            instance->blockchain_,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const eth::BridgeEventClaim       &claim,
-                const ConsensusManager::Subject   &subject ) -> outcome::result<ConsensusManager::Check>
+
+        instance->blockchain_->RegisterSlotKeyHandler(
+            NONCE_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> std::string
             {
-                if ( auto strong = weak_ptr.lock() )
+                auto nonce = ConsensusManager::DecodeNonceSubject( subject );
+                if ( nonce.has_value() &&
+                     nonce.value().transaction().transaction_case() !=
+                         EmbeddedTransaction::TRANSACTION_NOT_SET )
                 {
-                    return strong->HandleBridgeEventConsensusSubject( claim, subject );
+                    auto tx = TransactionManager::DeSerializeEmbeddedTransaction(
+                        nonce.value().transaction() );
+                    if ( tx.has_value() )
+                    {
+                        return tx.value()->GetSlotID();
+                    }
                 }
-                return outcome::failure( std::errc::owner_dead );
-            } );
-        RegisterBridgeEventConsensusCertificateHandler(
-            instance->blockchain_,
-            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const eth::BridgeEventClaim          &claim,
-                const std::string                    &subject_hash,
-                const ConsensusManager::Certificate  &certificate ) -> outcome::result<ConsensusManager::Check>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->OnBridgeEventConsensusCertificate( claim, subject_hash, certificate );
-                }
-                return outcome::failure( std::errc::owner_dead );
+                return subject.account_id() + ":" +
+                       std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
             } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
@@ -640,6 +635,42 @@ namespace sgns
         {
             // MintV2 represents bridge/public-chain input. Empty chain id must not fall back to Genius validation.
             chainid = "public";
+        }
+
+        // Reservation check — prevent duplicate mint creation for the same burn
+        const std::string reservation_key = chainid + std::string( kBridgeKeySeparator ) + transaction_hash;
+        {
+            std::lock_guard lock( bridge_mint_reservation_mutex_ );
+            if ( bridge_mint_reservations_.count( reservation_key ) )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Bridge mint already reserved for chain={} tx_hash={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                    chainid, transaction_hash );
+                return outcome::failure( std::errc::already_connected );
+            }
+            bridge_mint_reservations_.insert( reservation_key );
+        }
+
+        // Persistence check — reject if this burn was already executed (survives restart)
+        {
+            auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+            if ( datastore )
+            {
+                crdt::GlobalDB::Buffer key_buffer;
+                key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+                auto existing = datastore->get( key_buffer );
+                if ( existing.has_value() )
+                {
+                    TransactionManagerLogger()->warn(
+                        "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={}",
+                        account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                        chainid, transaction_hash );
+                    std::lock_guard lock( bridge_mint_reservation_mutex_ );
+                    bridge_mint_reservations_.erase( reservation_key );
+                    return outcome::failure( std::errc::already_connected );
+                }
+            }
         }
 
         auto          source_hash = base::Hash256::fromReadableString( transaction_hash );
@@ -1203,14 +1234,15 @@ namespace sgns
                 }
             }
 
-            // Serialize tx for embedding in NonceSubject (per D-04, PROTO-01/SER-01)
-            auto serialized_tx = transaction->SerializeByteVector();
+
 
             // SIZE-01: Pre-publish size enforcement gate
             // Reject oversized transactions (>64KB) before they enter the consensus
             // pipeline to prevent silent PubSub message drops. Defense-in-depth with
             // the handler-level MAX_EMBEDDED_TX_BYTES check (per D-02).
-            if ( serialized_tx.size() > MAX_PUBSUB_TX_BYTES )
+            // Serialize tx into EmbeddedTransaction proto with typed oneof field
+            auto embedded_tx = transaction->SerializeToEmbeddedTransaction();
+            if ( embedded_tx.ByteSizeLong() > MAX_PUBSUB_TX_BYTES )
             {
                 TransactionManagerLogger()->error(
                     "[{} - full: {}] {}: Transaction exceeds PubSub size limit tx={} size={} max={}",
@@ -1218,7 +1250,7 @@ namespace sgns
                     full_node_m,
                     __func__,
                     transaction->GetHash(),
-                    serialized_tx.size(),
+                    embedded_tx.ByteSizeLong(),
                     MAX_PUBSUB_TX_BYTES );
                 return outcome::failure( std::errc::message_size );
             }
@@ -1227,7 +1259,7 @@ namespace sgns
                                blockchain_->CreateConsensusProposal( transaction->GetSrcAddress(),
                                                                      transaction->GetNonce(),
                                                                      transaction->GetHash(),
-                                                                     serialized_tx,
+                                                                     embedded_tx,
                                                                      utxo_commitment,
                                                                      utxo_witness ) );
             BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, TransactionStatus::SENDING ) );
@@ -1350,6 +1382,82 @@ namespace sgns
             return std::errc::invalid_argument;
         }
         return it->second( std::vector<uint8_t>( tx_data.begin(), tx_data.end() ) );
+    }
+
+    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::DeSerializeEmbeddedTransaction(
+        const EmbeddedTransaction &embedded )
+    {
+        // Ensure all deserializers are registered in the map
+        // (also needed by DeSerializeTransaction for DAG-type lookups).
+        static const bool registered = []
+        {
+            GeniusTransaction::RegisterDeserializer( "transfer", &TransferTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "mint-v2", &MintTransactionV2::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            return true;
+        }();
+        (void)registered;
+
+        // Dispatch on the oneof case — each branch calls the deserializer directly.
+        switch ( embedded.transaction_case() )
+        {
+            case EmbeddedTransaction::kTransfer:
+            {
+                std::string bytes;
+                embedded.transfer().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "transfer" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMintV2:
+            {
+                std::string bytes;
+                embedded.mint_v2().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "mint-v2" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMint:
+            {
+                std::string bytes;
+                embedded.mint().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "mint" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kProcessing:
+            {
+                std::string bytes;
+                embedded.processing().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "process" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kMigration:
+            {
+                std::string bytes;
+                embedded.migration().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "migration" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kEscrow:
+            {
+                std::string bytes;
+                embedded.escrow().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "escrow-hold" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kEscrowRelease:
+            {
+                std::string bytes;
+                embedded.escrow_release().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::TRANSACTION_NOT_SET:
+            default:
+                return std::errc::invalid_argument;
+        }
     }
 
     outcome::result<void> TransactionManager::ParseTransaction( const std::shared_ptr<GeniusTransaction> &tx )
@@ -3516,17 +3624,16 @@ namespace sgns
             }
             const auto &nonce_subject = nonce_subject_result.value();
 
-            const auto &tx_data = nonce_subject.transaction().data();
-            if ( tx_data.empty() )
+            if ( nonce_subject.transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
             {
                 TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Certificate for hash {} has no embedded transaction_data "
+                    "[{} - full: {}] {}: Certificate for hash {} has no embedded transaction "
                     "(pre-Phase-1 certificate), accepting",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__, tx_hash );
                 return ConsensusManager::Check::Approve;
             }
 
-            auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
+            auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.transaction() );
             if ( tx_result.has_error() )
             {
                 TransactionManagerLogger()->warn(
@@ -3716,75 +3823,6 @@ namespace sgns
         return ConsensusManager::Check::Approve;
     }
 
-    outcome::result<ConsensusManager::Check> TransactionManager::HandleBridgeEventConsensusSubject(
-        const eth::BridgeEventClaim       &claim,
-        const ConsensusManager::Subject   &subject )
-    {
-        (void)subject;
-        if ( claim.src_chain_id == 0 || claim.dest_chain_id == 0 )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting bridge event with empty chain id",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
-            return ConsensusManager::Check::Reject;
-        }
-        if ( CreateBridgeEventMintRequest( claim ).has_error() )
-        {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting bridge event that cannot map to mint input",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
-            return ConsensusManager::Check::Reject;
-        }
-        return ConsensusManager::Check::Approve;
-    }
-
-    outcome::result<ConsensusManager::Check> TransactionManager::OnBridgeEventConsensusCertificate(
-        const eth::BridgeEventClaim          &claim,
-        const std::string                    &subject_hash,
-        const ConsensusManager::Certificate  &certificate )
-    {
-        (void)certificate;
-        if ( GetState() != State::READY )
-        {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Bridge event certificate {} arrived before transaction manager is ready",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                subject_hash.substr( 0, 8 ) );
-            return ConsensusManager::Check::Stalled;
-        }
-
-        BOOST_OUTCOME_TRY( auto mint_request, CreateBridgeEventMintRequest( claim ) );
-        auto tx_result = MintFunds( mint_request.amount,
-                                    mint_request.transaction_hash,
-                                    mint_request.chain_id,
-                                    mint_request.token_id,
-                                    mint_request.destination );
-        if ( tx_result.has_error() )
-        {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Failed to route bridge event certificate {} to mint path: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                subject_hash.substr( 0, 8 ),
-                tx_result.error().message() );
-            return outcome::failure( tx_result.error() );
-        }
-
-        TransactionManagerLogger()->info(
-            "[{} - full: {}] {}: Routed bridge event certificate {} to mint transaction {}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            __func__,
-            subject_hash.substr( 0, 8 ),
-            tx_result.value() );
-        return ConsensusManager::Check::Approve;
-    }
-
     outcome::result<ConsensusManager::Check> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
     {
@@ -3801,30 +3839,15 @@ namespace sgns
         const std::string tx_hash = nonce_subject.value().tx_hash();
         const auto        key     = GetTransactionPath( tx_hash );
 
-        // SANTZ-01: Sanitization sandwich — validate before deserializing untrusted PubSub bytes
-        // DESER-01: Deserialize from embedded bytes instead of CRDT lookup
-        static constexpr size_t MAX_EMBEDDED_TX_BYTES = 64 * 1024;
-
-        const auto &tx_data = nonce_subject.value().transaction().data();
-        if ( tx_data.empty() )
+        // DESER-01: Deserialize from EmbeddedTransaction oneof field
+        if ( nonce_subject.value().transaction().transaction_case() == EmbeddedTransaction::TRANSACTION_NOT_SET )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty embedded tx data, rejecting",
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: No embedded transaction set, rejecting",
                                                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__ );
             return ConsensusManager::Check::Reject;
         }
 
-        // SANTZ-01 Stage 1: Hard size cap before any protobuf parse
-        if ( tx_data.size() > MAX_EMBEDDED_TX_BYTES )
-        {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Embedded tx data exceeds max size {} > {}, rejecting",
-                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
-                tx_data.size(), MAX_EMBEDDED_TX_BYTES );
-            return ConsensusManager::Check::Reject;
-        }
-
-        // SANTZ-01 Stage 2: Bounded protobuf parse (hash integrity verified post-deser via CheckHash)
-        auto tx_result = DeSerializeTransaction( std::string( tx_data.begin(), tx_data.end() ) );
+        auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
         if ( tx_result.has_error() )
         {
             TransactionManagerLogger()->error(
@@ -5057,6 +5080,37 @@ namespace sgns
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
+                // Clear bridge mint reservation and persist executed state
+                if ( tx->GetType() == "mint-v2" )
+                {
+                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
+                    if ( mint_tx )
+                    {
+                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
+                        {
+                            std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
+                            bridge_mint_reservations_.erase( reservation_key );
+                        }
+                        // Persist executed state to RocksDB — survives restart
+                        auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+                        if ( datastore )
+                        {
+                            crdt::GlobalDB::Buffer key_buffer;
+                            key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+                            crdt::GlobalDB::Buffer value_buffer;
+                            value_buffer.put( "1" );
+                            auto put_result = datastore->put( key_buffer, value_buffer );
+                            if ( put_result.has_error() )
+                            {
+                                TransactionManagerLogger()->error(
+                                    "[{} - full: {}] {}: Failed to persist executed bridge mint for {}",
+                                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                                    reservation_key );
+                            }
+                        }
+                    }
+                }
+
                 // METRICS-01: Tracking confirm — entry promoted to CONFIRMED
                 metrics_tracking_confirm_.fetch_add( 1, std::memory_order_relaxed );
                 TransactionManagerLogger()->info(
@@ -5116,6 +5170,18 @@ namespace sgns
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
+
+                // Clear bridge mint reservation on failure
+                if ( tx->GetType() == "mint-v2" )
+                {
+                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
+                    if ( mint_tx )
+                    {
+                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
+                        std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
+                        bridge_mint_reservations_.erase( reservation_key );
+                    }
+                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );

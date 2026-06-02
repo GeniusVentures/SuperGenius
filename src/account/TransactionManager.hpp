@@ -17,14 +17,14 @@
 
 #include <boost/format.hpp>
 
-#include <eth/bridge_event.hpp>
-
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "account/proto/SGTransaction.pb.h"
 #include "account/GeniusTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/GeniusInputValidator.hpp"
 #include "account/InputValidators.hpp"
+#include "account/PublicChainInputValidator.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
 #include "crypto/hasher.hpp"
@@ -270,9 +270,19 @@ namespace sgns
         outcome::result<void> FetchAndProcessTransaction( const std::string          &tx_key,
                                                           std::optional<base::Buffer> tx_data = std::nullopt );
 
+        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
+
+        /**
+         * @brief Deserializes from EmbeddedTransaction proto oneof field.
+         *        Dispatches on the oneof case instead of manual type string lookup.
+         */
+        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeEmbeddedTransaction(
+            const EmbeddedTransaction &embedded );
+
     protected:
         friend class GeniusNode;
         friend class Migration3_6_0To3_7_0;
+        friend class CertificateFallbackTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -345,7 +355,6 @@ namespace sgns
          *        On DEV_NET, also includes TEST_NET and MAIN_NET.
          */
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
-        static outcome::result<std::shared_ptr<GeniusTransaction>> DeSerializeTransaction( std::string tx_data );
 
         /**
          * @brief Derives the proof key that corresponds to a transaction key by
@@ -453,7 +462,7 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string &tx_hash,
+        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
                                                                           const ConsensusCertificate &certificate );
         /**
          * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
@@ -462,13 +471,6 @@ namespace sgns
          * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
          */
         void OnProposalTimeoutCleanup( const std::string &tx_hash );
-        outcome::result<ConsensusManager::Check> HandleBridgeEventConsensusSubject(
-            const eth::BridgeEventClaim       &claim,
-            const ConsensusManager::Subject   &subject );
-        outcome::result<ConsensusManager::Check> OnBridgeEventConsensusCertificate(
-            const eth::BridgeEventClaim          &claim,
-            const std::string                    &subject_hash,
-            const ConsensusManager::Certificate  &certificate );
 
         std::shared_ptr<crdt::GlobalDB> globaldb_m;
 
@@ -538,6 +540,14 @@ namespace sgns
         std::unordered_set<std::string>       missing_tx_hashes_;
         std::chrono::steady_clock::time_point last_init_tx_request_time_{};
         static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
+
+        /// @brief Bridge mint reservation/persistence constants.
+        static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
+        static constexpr std::string_view kBridgeKeySeparator   = ":";
+
+        /// @brief In-flight bridge mint reservations — prevents duplicate mint creation for the same burn.
+        mutable std::mutex                bridge_mint_reservation_mutex_;
+        std::unordered_set<std::string>   bridge_mint_reservations_;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
@@ -681,6 +691,24 @@ namespace sgns
         bool HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
 
         bool IsGoingToOverwrite( const std::string &key ) const;
+
+        /**
+         * @brief Obtains the public-chain input validator for RPC endpoint wiring.
+         * @return Mutable reference to the PublicChainInputValidator.
+         */
+        PublicChainInputValidator &GetPublicChainInputValidator() noexcept
+        {
+            return public_chain_input_validator_;
+        }
+
+        /**
+         * @brief Obtains the public-chain input validator for RPC endpoint wiring (const).
+         * @return Const reference to the PublicChainInputValidator.
+         */
+        const PublicChainInputValidator &GetPublicChainInputValidator() const noexcept
+        {
+            return public_chain_input_validator_;
+        }
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";

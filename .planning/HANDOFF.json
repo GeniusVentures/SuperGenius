@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-06-01T19:45:00Z",
+  "phase": "03",
+  "phase_name": "Burn Deduplication Cache (Gap Closure)",
+  "phase_dir": ".planning/phases/03-burn-dedup-cache",
+  "plan": 1,
+  "task": 4,
+  "total_tasks": 4,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Fail-closed on missing endpoints + Disable UTXO witness", "status": "done", "commit": "9eb54ee5"},
+    {"id": 2, "name": "Add burn tx hash to MintV2 slot key", "status": "done", "commit": "a45ea1a1"},
+    {"id": 3, "name": "Add bridge contract/topic0 log verification", "status": "done", "commit": "3296a193"},
+    {"id": 4, "name": "Codex review fixes + test library split", "status": "done", "commit": "3d86c975"}
+  ],
+  "remaining_tasks": [],
+  "blockers": [],
+  "human_actions_pending": [
+    {"action": "Review and merge PR #298", "context": "Bridge integration PR with all Codex review fixes", "blocking": false},
+    {"action": "Review and merge PR #299", "context": "MemorySecureStorage for test keychain elimination", "blocking": false},
+    {"action": "Address failing tests #300-#307", "context": "8 tests failing, assigned to @henriqueaklein", "blocking": false}
+  ],
+  "decisions": [
+    {"decision": "Split genius_node into production and test libraries", "rationale": "Codex review P1: keep memory storage out of non-test targets", "phase": "03"},
+    {"decision": "Use MemorySecureStorage for tests", "rationale": "Eliminates ~20 keychain password prompts per test run", "phase": "03"},
+    {"decision": "Configure OpenAI Codex for code review", "rationale": "Automated review via GitHub Codex bot", "phase": "03"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "Wait for PR #298 and #299 reviews, then proceed to Phase 4 (E2E Integration Test)",
+  "context_notes": "Phase 3 gap closure complete. All 4 Codex review findings addressed. PR #298 pushed with all fixes. PR #299 for MemorySecureStorage. 8 failing tests tracked as GitHub issues."
+}

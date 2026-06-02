@@ -22,6 +22,9 @@ namespace sgns
     public:
         using GeniusTransaction::SerializeByteVector;
 
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
+
         ~MigrationTransaction() override = default;
 
         static std::shared_ptr<MigrationTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );

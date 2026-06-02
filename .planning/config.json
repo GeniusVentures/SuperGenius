@@ -38,8 +38,9 @@
     "subagent_timeout": 300000,
     "context_coverage_gate": true,
     "code_review": true,
-    "code_review_depth": "standard",
-    "code_review_command": null,
+    "code_review_depth": "thorough",
+    "code_review_command": "",
+    "code_review_auto_fix": true,
     "pattern_mapper": true,
     "plan_bounce": false,
     "plan_bounce_script": null,
@@ -55,10 +56,12 @@
     "workflow_guard": false
   },
   "ship": {
+    "review_before_pr": true,
+    "auto_fix_review_issues": true,
     "pr_body_sections": []
   },
   "agent_skills": {},
   "features": {},
   "resolve_model_ids": "omit",
-  "runtime": "opencode"
+  "runtime": "claude"
 }

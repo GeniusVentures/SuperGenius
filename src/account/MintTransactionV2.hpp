@@ -22,6 +22,9 @@ namespace sgns
     {
     public:
         using GeniusTransaction::SerializeByteVector;
+
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
         /**
          * @brief      Destroy the Mint Transaction V 2 object
          */
@@ -107,6 +110,12 @@ namespace sgns
          * @return      A set of topics
          */
         std::unordered_set<std::string> GetTopics() const override;
+
+        /**
+         * @brief       Generates a slot ID for consensus slot key determination.
+         * @return      Deterministic slot key derived from chain/token/amount/dest/burn_tx_hash.
+         */
+        std::string GetSlotID() const override;
 
     private:
         /**

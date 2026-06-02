@@ -23,7 +23,10 @@
 
 #include "account/GeniusAccount.hpp"
 #include "base/buffer.hpp"
+#include "account/PublicChainInputValidator.hpp"
 #include "account/TransactionManager.hpp"
+#include "account/BridgeRelayer.hpp"
+#include "eth/eth_watch_service.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
 #include "processing/impl/processing_core_impl.hpp"
@@ -342,10 +345,7 @@ namespace sgns
          * @brief Returns the active account public address.
          * @return Public address of the active account.
          */
-        std::string GetAddress() const
-        {
-            return account_->GetAddress();
-        }
+        std::string GetAddress() const;
 
         /**
          * @brief Returns the configured child token identifier.
@@ -540,6 +540,18 @@ namespace sgns
         TransactionManager::State GetTransactionManagerState() const;
 
         /**
+         * @brief Configures RPC endpoints for a specific EVM chain on the public-chain input validator.
+         *
+         * Allows callers (including E2E tests) to register RPC endpoints for chains
+         * that are not in the default mainnet set (e.g. Sepolia testnet).
+         * The transaction manager must be in READY state.
+         *
+         * @param[in] chain_id  Numeric EVM chain ID as a string (e.g. "11155111" for Sepolia).
+         * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
+         */
+        void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
+        /**
          * @brief Returns a tracked transaction status by transaction hash.
          * @param[in] txId Transaction hash to look up.
          * @return Outgoing status when present, then incoming status, or INVALID when unknown/not ready.
@@ -596,6 +608,8 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
         std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
+        std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
+        std::unique_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
@@ -705,6 +719,19 @@ namespace sgns
          * @brief Schedules a delayed blockchain initialization retry.
          */
         void ScheduleBlockchainRetry();
+
+        /**
+         * @brief Loads RPC endpoints from the evmrelay ChainList provider and wires
+         *        them into the transaction manager's public-chain input validator.
+         *
+         * This is called once during startup after the transaction manager reaches
+         * the READY state and before processing modules are initialized.  It reads
+         * @c chains_config.json to discover configured chains, maps their names to
+         * well-known EVM chain IDs, parses the ChainList data to extract verified
+         * public RPC endpoint URLs, and calls @c PublicChainInputValidator::SetRpcEndpoints
+         * for each configured chain.
+         */
+        void InitializeRpcEndpoints();
 
         /**
          * @brief Returns the transaction manager when initialized.
