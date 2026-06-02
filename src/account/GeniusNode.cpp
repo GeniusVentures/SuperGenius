@@ -40,6 +40,9 @@
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/event/bus.hpp>
+#include <libp2p/network/connection_manager.hpp>
 #include <Generators.hpp>
 
 namespace
@@ -360,6 +363,8 @@ namespace sgns
                 {
                     io_threads_.emplace_back( [ctx = io_]() { ctx->run(); } );
                 }
+                InitBootstrapReconnect();
+                StartBootstrapHealthCheck();
                 StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
                 break;
             }
@@ -661,11 +666,69 @@ namespace sgns
             }
         }
 
+        // ── Parse bootstrap fullnode multiaddrs into PeerInfo cache for reconnection ──
+        bootstrap_fullnode_infos_.clear();
+        bootstrap_fullnode_ids_.clear();
+        for ( const auto &addr : bootstrap_fullnodes_ )
+        {
+            auto peer_info = ParsePeerInfoFromString( addr );
+            if ( peer_info )
+            {
+                bootstrap_fullnode_infos_.push_back( peer_info.value() );
+                bootstrap_fullnode_ids_.insert( peer_info->id );
+            }
+            else
+            {
+                node_logger_->warn( "Failed to parse bootstrap fullnode multiaddr: {}", addr );
+            }
+        }
+        if ( !bootstrap_fullnode_infos_.empty() )
+        {
+            node_logger_->info( "Parsed {} bootstrap fullnode(s) for reconnection tracking",
+                                bootstrap_fullnode_infos_.size() );
+        }
+
+        // ── Parse reconnect config from network_config.json ──
+        if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
+             config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
+        {
+            reconnect_config_.base_delay =
+                std::chrono::seconds( config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
+        }
+        if ( config_json.HasMember( "bootstrap_reconnect_max_delay_sec" ) &&
+             config_json["bootstrap_reconnect_max_delay_sec"].IsInt() )
+        {
+            reconnect_config_.max_delay =
+                std::chrono::seconds( config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
+        }
+        if ( config_json.HasMember( "bootstrap_health_check_interval_sec" ) &&
+             config_json["bootstrap_health_check_interval_sec"].IsInt() )
+        {
+            reconnect_config_.health_check_interval =
+                std::chrono::seconds( config_json["bootstrap_health_check_interval_sec"].GetInt() );
+        }
+        if ( config_json.HasMember( "bootstrap_health_check_disconnected_interval_sec" ) &&
+             config_json["bootstrap_health_check_disconnected_interval_sec"].IsInt() )
+        {
+            reconnect_config_.health_check_disconnected_interval =
+                std::chrono::seconds(
+                    config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
+        }
+        if ( config_json.HasMember( "bootstrap_background_multiplier" ) &&
+             config_json["bootstrap_background_multiplier"].IsDouble() )
+        {
+            reconnect_config_.background_multiplier =
+                config_json["bootstrap_background_multiplier"].GetDouble();
+        }
+
         // Port selection logic
-        if (config_port != 0) {
+        if ( config_port != 0 )
+        {
             pubsubport_ = config_port;
-        } else {
-            pubsubport_ = GenerateRandomPort(base_port, account_->GetAddress());
+        }
+        else
+        {
+            pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
         }
 
         do {
@@ -929,6 +992,20 @@ namespace sgns
         }
 
         node_logger_->info( "GeniusNode shutdown start" );
+
+        // Cancel bootstrap health check timer
+        if ( health_check_handle_ )
+        {
+            health_check_handle_->cancel();
+            health_check_handle_.reset();
+        }
+
+        // Unsubscribe from bootstrap disconnect events
+        if ( bootstrap_disconnect_subscription_ )
+        {
+            bootstrap_disconnect_subscription_->unsubscribe();
+            bootstrap_disconnect_subscription_.reset();
+        }
 
         if ( tx_globaldb_ )
         {
@@ -1927,5 +2004,293 @@ namespace sgns
     const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
     {
         return Blockchain::GetAuthorizedFullNodeAddress();
+    }
+
+    // ── Bootstrap Fullnode Reconnection ──
+
+    boost::optional<libp2p::peer::PeerInfo> GeniusNode::ParsePeerInfoFromString( const std::string &multiaddr_str )
+    {
+        if ( multiaddr_str.empty() )
+        {
+            return boost::none;
+        }
+
+        auto ma_res = libp2p::multi::Multiaddress::create( multiaddr_str );
+        if ( !ma_res )
+        {
+            return boost::none;
+        }
+
+        auto ma = std::move( ma_res.value() );
+
+        auto peer_id_str = ma.getPeerId();
+        if ( !peer_id_str )
+        {
+            return boost::none;
+        }
+
+        auto peer_id_res = libp2p::peer::PeerId::fromBase58( *peer_id_str );
+        if ( !peer_id_res )
+        {
+            return boost::none;
+        }
+
+        std::vector<libp2p::multi::Multiaddress> multiaddresses;
+        multiaddresses.push_back( std::move( ma ) );
+
+        return libp2p::peer::PeerInfo{ peer_id_res.value(), std::move( multiaddresses ) };
+    }
+
+    void GeniusNode::InitBootstrapReconnect()
+    {
+        if ( bootstrap_fullnode_ids_.empty() )
+        {
+            node_logger_->debug( "No bootstrap fullnodes configured, skipping reconnect subscription" );
+            return;
+        }
+
+        auto host = pubsub_->GetHost();
+        bootstrap_disconnect_subscription_.emplace(
+            host->getBus()
+                .getChannel<libp2p::event::network::OnPeerDisconnectedChannel>()
+                .subscribe(
+                    [weak_self = weak_from_this()]( const libp2p::peer::PeerId &peer_id )
+                    {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            if ( strong->shutdown_started_.load() )
+                            {
+                                return;
+                            }
+                            if ( strong->bootstrap_fullnode_ids_.count( peer_id ) )
+                            {
+                                strong->node_logger_->info(
+                                    "Bootstrap fullnode {} disconnected, scheduling reconnect",
+                                    peer_id.toBase58() );
+                                unsigned attempt = 0;
+                                {
+                                    std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
+                                    auto                          it = strong->reconnect_attempts_.find( peer_id );
+                                    if ( it != strong->reconnect_attempts_.end() )
+                                    {
+                                        attempt = it->second;
+                                    }
+                                }
+                                strong->ScheduleBootstrapReconnect( peer_id, attempt );
+                            }
+                        }
+                    } ) );
+
+        node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s)",
+                            bootstrap_fullnode_ids_.size() );
+    }
+
+    void GeniusNode::StartBootstrapHealthCheck()
+    {
+        if ( bootstrap_fullnode_infos_.empty() )
+        {
+            node_logger_->debug( "No bootstrap fullnodes to health-check" );
+            return;
+        }
+        ScheduleNextHealthCheck();
+        node_logger_->info( "Bootstrap fullnode health check started (interval: {}s)",
+                            reconnect_config_.health_check_interval.count() );
+    }
+
+    void GeniusNode::ScheduleNextHealthCheck()
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        auto interval = reconnect_config_.health_check_interval;
+        {
+            std::lock_guard<std::mutex> lock( reconnect_mutex_ );
+            if ( !reconnect_attempts_.empty() )
+            {
+                interval = reconnect_config_.health_check_disconnected_interval;
+            }
+        }
+
+        // Apply background multiplier
+        if ( background_mode_.load() )
+        {
+            interval = std::chrono::duration_cast<std::chrono::seconds>(
+                interval * reconnect_config_.background_multiplier );
+        }
+
+        auto weak_self = weak_from_this();
+        health_check_handle_.emplace( scheduler_->scheduleWithHandle(
+            [weak_self]()
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->PerformHealthCheck();
+                }
+            },
+            interval ) );
+    }
+
+    void GeniusNode::PerformHealthCheck()
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        auto host = pubsub_->GetHost();
+        for ( const auto &peer_info : bootstrap_fullnode_infos_ )
+        {
+            auto connectedness = host->connectedness( peer_info );
+            if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
+                 connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
+            {
+                node_logger_->debug( "Health check: bootstrap fullnode {} is {}",
+                                     peer_info.id.toBase58(),
+                                     connectedness == libp2p::Host::Connectedness::NOT_CONNECTED
+                                         ? "NOT_CONNECTED"
+                                         : "CAN_NOT_CONNECT" );
+
+                unsigned attempt = 0;
+                {
+                    std::lock_guard<std::mutex> lock( reconnect_mutex_ );
+                    auto                          it = reconnect_attempts_.find( peer_info.id );
+                    if ( it != reconnect_attempts_.end() )
+                    {
+                        attempt = it->second;
+                    }
+                }
+                ScheduleBootstrapReconnect( peer_info.id, attempt );
+            }
+        }
+
+        ScheduleNextHealthCheck();
+    }
+
+    void GeniusNode::ScheduleBootstrapReconnect( const libp2p::peer::PeerId &peer_id, unsigned attempt )
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        // Calculate exponential backoff: base_delay * 2^attempt, capped at max_delay
+        auto delay_sec = reconnect_config_.base_delay.count() * ( 1ull << std::min( attempt, 10u ) );
+        if ( delay_sec > static_cast<uint64_t>( reconnect_config_.max_delay.count() ) )
+        {
+            delay_sec = reconnect_config_.max_delay.count();
+        }
+        auto delay = std::chrono::seconds( delay_sec );
+
+        if ( background_mode_.load() )
+        {
+            delay = std::chrono::duration_cast<std::chrono::seconds>(
+                delay * reconnect_config_.background_multiplier );
+        }
+
+        // Update attempt counter
+        {
+            std::lock_guard<std::mutex> lock( reconnect_mutex_ );
+            reconnect_attempts_[peer_id] = attempt + 1;
+        }
+
+        node_logger_->info( "Scheduling reconnect to bootstrap fullnode {} in {}s (attempt {})",
+                            peer_id.toBase58(),
+                            delay.count(),
+                            attempt + 1 );
+
+        auto weak_self = weak_from_this();
+        scheduler_->schedule(
+            [weak_self, peer_id]()
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->DoReconnectToBootstrapPeer( peer_id );
+                }
+            },
+            delay );
+    }
+
+    void GeniusNode::DoReconnectToBootstrapPeer( const libp2p::peer::PeerId &peer_id )
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        // Find the PeerInfo for this peer_id
+        const libp2p::peer::PeerInfo *peer_info_ptr = nullptr;
+        for ( const auto &info : bootstrap_fullnode_infos_ )
+        {
+            if ( info.id == peer_id )
+            {
+                peer_info_ptr = &info;
+                break;
+            }
+        }
+
+        if ( !peer_info_ptr )
+        {
+            node_logger_->error( "Cannot reconnect: PeerInfo not found for {}", peer_id.toBase58() );
+            return;
+        }
+
+        auto connectedness = pubsub_->GetHost()->connectedness( *peer_info_ptr );
+        if ( connectedness == libp2p::Host::Connectedness::CONNECTED )
+        {
+            node_logger_->info( "Bootstrap fullnode {} already connected, resetting attempt counter",
+                                peer_id.toBase58() );
+            std::lock_guard<std::mutex> lock( reconnect_mutex_ );
+            reconnect_attempts_.erase( peer_id );
+            return;
+        }
+
+        node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
+
+        auto weak_self = weak_from_this();
+        pubsub_->GetHost()->connect(
+            *peer_info_ptr,
+            [weak_self, peer_id]( auto result )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    if ( result.has_value() )
+                    {
+                        strong->node_logger_->info( "Successfully reconnected to bootstrap fullnode {}",
+                                                    peer_id.toBase58() );
+                        std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
+                        strong->reconnect_attempts_.erase( peer_id );
+                    }
+                    else
+                    {
+                        strong->node_logger_->warn( "Reconnect to bootstrap fullnode {} failed: {}",
+                                                    peer_id.toBase58(),
+                                                    result.error().message() );
+                        unsigned attempt = 0;
+                        {
+                            std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
+                            auto                          it = strong->reconnect_attempts_.find( peer_id );
+                            if ( it != strong->reconnect_attempts_.end() )
+                            {
+                                attempt = it->second;
+                            }
+                        }
+                        strong->ScheduleBootstrapReconnect( peer_id, attempt );
+                    }
+                }
+            },
+            std::chrono::seconds( 15 ) );
+    }
+
+    void GeniusNode::SetBackgroundMode( bool is_background )
+    {
+        if ( background_mode_.exchange( is_background ) == is_background )
+        {
+            return; // No change
+        }
+        node_logger_->info( "Background mode set to {} (reconnect multiplier: {})",
+                            is_background,
+                            reconnect_config_.background_multiplier );
     }
 }
