@@ -58,6 +58,7 @@ object BackgroundServiceManager {
 
     private var initialized = false
     private val lock = Any()
+    private var nativeLibraryLoaded = false
 
     // Config values loaded from native layer after nativeInit
     private var backgroundConfig: BackgroundConfigData = BackgroundConfigData()
@@ -75,6 +76,34 @@ object BackgroundServiceManager {
 
     // JNI native config retrieval — returns JSON string from C++ layer
     private external fun nativeGetConfigJson(): String
+
+    /**
+     * Ensure the process has loaded the JNI library that exports
+     * BackgroundServiceManager native methods.
+     *
+     * The securestorage AAR currently does not package JNI binaries, so the
+     * app-level native library must be loaded before calling external methods.
+     */
+    private fun ensureNativeLibraryLoaded(): Boolean {
+        if (nativeLibraryLoaded) {
+            return true
+        }
+
+        val candidates = arrayOf("GeniusWallet", "securestorage", "SuperGenius")
+        for (libraryName in candidates) {
+            try {
+                System.loadLibrary(libraryName)
+                nativeLibraryLoaded = true
+                Log.i(TAG, "Loaded native library: $libraryName")
+                return true
+            } catch (_: UnsatisfiedLinkError) {
+                // Try the next candidate.
+            }
+        }
+
+        Log.w(TAG, "Could not load native library for BackgroundServiceManager JNI")
+        return false
+    }
 
     /**
      * Initialize the background service manager.
@@ -107,41 +136,45 @@ object BackgroundServiceManager {
             // Wrapped in try-catch: if native .so is not loaded (e.g. test
             // environment or ContentProvider runs before System.loadLibrary),
             // we fall back to defaults without crashing the app.
-            try {
-                nativeInit(appContext)
+            if (ensureNativeLibraryLoaded()) {
+                try {
+                    nativeInit(appContext)
 
-                // Retrieve parsed config from native layer
-                // nativeGetConfigJson returns a JSON string serialized from
-                // the BackgroundConfig struct loaded by LoadBackgroundConfig()
-                val configJson = nativeGetConfigJson()
-                if (configJson.isNotEmpty()) {
-                    val json = JSONObject(configJson)
-                    backgroundConfig = BackgroundConfigData(
-                        mode = json.optString("mode", "on_demand"),
-                        wakeupIntervalMinutes = json.optLong("wakeupIntervalMinutes", 15),
-                        networkRequired = json.optBoolean("networkRequired", true),
-                        batteryNotLow = json.optBoolean("batteryNotLow", true),
-                        idleOnly = json.optBoolean("idleOnly", false),
-                        thermalCheckEnabled = json.optBoolean("thermalCheckEnabled", true),
-                        batterySaverCheckEnabled = json.optBoolean("batterySaverCheckEnabled", true),
-                        inferenceIdleTimeoutSeconds = json.optLong("inferenceIdleTimeoutSeconds", 120)
-                    )
-                    Log.i(TAG, "Config loaded from native: mode=${backgroundConfig.mode}, " +
-                            "interval=${backgroundConfig.wakeupIntervalMinutes}min, " +
-                            "network=${backgroundConfig.networkRequired}, " +
-                            "batteryNotLow=${backgroundConfig.batteryNotLow}, " +
-                            "idleOnly=${backgroundConfig.idleOnly}, " +
-                            "thermalCheck=${backgroundConfig.thermalCheckEnabled}, " +
-                            "batterySaverCheck=${backgroundConfig.batterySaverCheckEnabled}, " +
-                            "inferenceIdleTimeout=${backgroundConfig.inferenceIdleTimeoutSeconds}s")
-                } else {
-                    Log.w(TAG, "nativeGetConfigJson returned null/empty — using defaults")
+                    // Retrieve parsed config from native layer
+                    // nativeGetConfigJson returns a JSON string serialized from
+                    // the BackgroundConfig struct loaded by LoadBackgroundConfig()
+                    val configJson = nativeGetConfigJson()
+                    if (configJson.isNotEmpty()) {
+                        val json = JSONObject(configJson)
+                        backgroundConfig = BackgroundConfigData(
+                            mode = json.optString("mode", "on_demand"),
+                            wakeupIntervalMinutes = json.optLong("wakeupIntervalMinutes", 15),
+                            networkRequired = json.optBoolean("networkRequired", true),
+                            batteryNotLow = json.optBoolean("batteryNotLow", true),
+                            idleOnly = json.optBoolean("idleOnly", false),
+                            thermalCheckEnabled = json.optBoolean("thermalCheckEnabled", true),
+                            batterySaverCheckEnabled = json.optBoolean("batterySaverCheckEnabled", true),
+                            inferenceIdleTimeoutSeconds = json.optLong("inferenceIdleTimeoutSeconds", 120)
+                        )
+                        Log.i(TAG, "Config loaded from native: mode=${backgroundConfig.mode}, " +
+                                "interval=${backgroundConfig.wakeupIntervalMinutes}min, " +
+                                "network=${backgroundConfig.networkRequired}, " +
+                                "batteryNotLow=${backgroundConfig.batteryNotLow}, " +
+                                "idleOnly=${backgroundConfig.idleOnly}, " +
+                                "thermalCheck=${backgroundConfig.thermalCheckEnabled}, " +
+                                "batterySaverCheck=${backgroundConfig.batterySaverCheckEnabled}, " +
+                                "inferenceIdleTimeout=${backgroundConfig.inferenceIdleTimeoutSeconds}s")
+                    } else {
+                        Log.w(TAG, "nativeGetConfigJson returned null/empty — using defaults")
+                    }
+                } catch (e: UnsatisfiedLinkError) {
+                    Log.w(TAG, "Native JNI symbols unavailable — using safe defaults for all config", e)
+                    // backgroundConfig already has safe defaults from BackgroundConfigData()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to initialize native side — using defaults", e)
                 }
-            } catch (e: UnsatisfiedLinkError) {
-                Log.w(TAG, "Native library not loaded — using safe defaults for all config", e)
-                // backgroundConfig already has safe defaults from BackgroundConfigData()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize native side — using defaults", e)
+            } else {
+                Log.w(TAG, "Native library not loaded — using safe defaults for all config")
             }
 
             // Enqueue WorkManager periodic work with config-driven constraints
