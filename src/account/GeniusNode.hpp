@@ -23,6 +23,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "base/buffer.hpp"
+#include "account/PublicChainInputValidator.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/BridgeRelayer.hpp"
 #include "eth/eth_watch_service.hpp"
