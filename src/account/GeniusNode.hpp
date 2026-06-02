@@ -344,10 +344,7 @@ namespace sgns
          * @brief Returns the active account public address.
          * @return Public address of the active account.
          */
-        std::string GetAddress() const
-        {
-            return account_->GetAddress();
-        }
+        std::string GetAddress() const;
 
         /**
          * @brief Returns the configured child token identifier.
