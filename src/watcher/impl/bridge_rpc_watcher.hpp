@@ -36,29 +36,46 @@ namespace sgns::evmwatcher
     public:
         using BridgeClaimCallback = std::function<void( const eth::BridgeEventClaim & )>;
 
+        /**
+         * @brief      Configuration structure for BridgeRpcWatcher.
+         */
         struct Config
         {
-            std::string          rpc_url;
-            uint64_t             chain_id      = 0;
-            uint64_t             dest_chain_id = 0;
-            std::string          contract_address;
-            std::string          event_signature;
-            uint64_t             confirmation_depth = 12;
-            std::chrono::seconds poll_interval{ 4 };
-            uint64_t             max_log_range = 1000;
+            std::string rpc_url;                 ///< URL of the RPC
+            uint64_t    chain_id      = 0;       ///< The source chain ID
+            uint64_t    dest_chain_id = 0;       ///< The destination chain ID (Genius)
+            std::string contract_address;        ///< The address of the bridge contract
+            std::string event_signature;         ///< The signature of the event to listen for
+            uint64_t    confirmation_depth = 12; ///< The number of blocks to wait before considering an event confirmed
+            std::chrono::seconds poll_interval{ 4 };   ///< The interval at which to poll for new events
+            uint64_t             max_log_range = 1000; ///< The maximum range of blocks to query for logs
         };
 
+        /**
+         * @brief       Constructs a BridgeRpcWatcher with the specified configuration and callbacks.
+         * @param[in]   config Configuration parameters for the watcher.
+         * @param[in]   message_callback Callback for raw message handling (inherited from MessagingWatcher).
+         * @param[in]   claim_callback Typed callback invoked with parsed BridgeEventClaim objects when events are detected.
+         */
         BridgeRpcWatcher( const Config &config, MessageCallback message_callback, BridgeClaimCallback claim_callback );
 
         void startWatching() override;
         void stopWatching() override;
 
-        [[nodiscard]] const Config &config() const noexcept
+        /**
+         * @brief       Returns the watcher's configuration.
+         * @return      Reference to the Config struct used by this watcher.
+         */
+        [[nodiscard]] const Config &GetConfig() const noexcept
         {
             return config_;
         }
 
-        [[nodiscard]] uint64_t last_processed_block() const noexcept
+        /**
+         * @brief       Returns the last processed block number.
+         * @return      Returns the last block number that was processed by the watcher.
+         */
+        [[nodiscard]] uint64_t GetLastProcessedBlock() const noexcept
         {
             return last_block_;
         }
@@ -67,12 +84,15 @@ namespace sgns::evmwatcher
         void watch() override;
 
     private:
-        bool poll_once();
+        /**
+         * @brief       Performs a single polling cycle: fetches logs from the RPC, verifies receipts, and emits claims.
+         */
+        void poll_once();
 
-        Config                     config_;
-        BridgeClaimCallback        claim_callback_;
-        eth::rpc::RpcHttpTransport transport_;
-        uint64_t                   last_block_ = 0;
+        Config                     config_;         ///< Configuration parameters for the watcher
+        BridgeClaimCallback        claim_callback_; ///< Callback for handling parsed bridge event claims
+        eth::rpc::RpcHttpTransport transport_;      ///< RPC transport for making HTTP requests
+        uint64_t                   last_block_ = 0; ///< Last processed block number
     };
 
 } // namespace sgns::evmwatcher

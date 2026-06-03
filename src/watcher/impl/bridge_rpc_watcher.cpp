@@ -3,6 +3,7 @@
  * @brief      Implementation of the bridge RPC watcher
  * @date       2026-02-03
  * @author     SuperGenius (ken@gnus.ai)
+ * Copyright 2026 Genius Ventures, Inc.
  * SPDX-License-Identifier: MIT
  */
 
@@ -30,8 +31,7 @@ namespace sgns::evmwatcher
         watcher::MessagingWatcher( std::move( message_callback ) ),
         config_( config ),
         claim_callback_( std::move( claim_callback ) ),
-        transport_( config.rpc_url ),
-        last_block_( 0 )
+        transport_( config.rpc_url )
     {
     }
 
@@ -62,7 +62,7 @@ namespace sgns::evmwatcher
         }
     }
 
-    bool BridgeRpcWatcher::poll_once()
+    void BridgeRpcWatcher::poll_once()
     {
         auto logger = rlp::base::createLogger( "bridge_rpc_watcher" );
 
@@ -70,7 +70,7 @@ namespace sgns::evmwatcher
         if ( !parsed_contract.has_value() || parsed_contract->size() != 20 )
         {
             logger->error( "Invalid contract address: {}", config_.contract_address );
-            return false;
+            return;
         }
         eth::Address contract{};
         std::copy_n( parsed_contract->begin(), 20, contract.begin() );
@@ -83,13 +83,13 @@ namespace sgns::evmwatcher
         if ( !latest_block_resp.has_value() )
         {
             logger->warn( "Failed to get latest block number" );
-            return false;
+            return;
         }
         const auto latest_block = eth::rpc::parse_block_number_response( latest_block_resp.value() );
         if ( !latest_block.has_value() )
         {
             logger->warn( "Failed to parse block number response" );
-            return false;
+            return;
         }
 
         // 2. Ensure safe block range
@@ -104,7 +104,7 @@ namespace sgns::evmwatcher
 
         if ( last_block_ > safe_latest )
         {
-            return true;
+            return;
         }
 
         const auto to_block = std::min( safe_latest, last_block_ + config_.max_log_range - 1 );
@@ -119,14 +119,14 @@ namespace sgns::evmwatcher
         if ( !get_logs_resp.has_value() )
         {
             logger->warn( "Failed to fetch logs for blocks {}-{}", last_block_, to_block );
-            return false;
+            return;
         }
 
         const auto logs = eth::rpc::parse_get_logs_response( get_logs_resp.value() );
         if ( !logs.has_value() )
         {
             logger->warn( "Failed to parse logs response for blocks {}-{}", last_block_, to_block );
-            return false;
+            return;
         }
 
         // 4. For each log, fetch receipt and build BridgeEventClaim
@@ -202,7 +202,6 @@ namespace sgns::evmwatcher
         }
 
         last_block_ = to_block + 1;
-        return true;
     }
 
 } // namespace sgns::evmwatcher
