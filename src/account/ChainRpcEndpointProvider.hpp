@@ -14,7 +14,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "account/InputValidators.hpp"
+#include "account/PublicChainInputValidator.hpp"
 #include "base/logger.hpp"
 
 namespace sgns
