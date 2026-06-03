@@ -1,3 +1,7 @@
+addtest(token_id_test
+    token_id_test.cpp
+)
+
 addtest(token_amount_test
     token_amount_test.cpp
 )
@@ -57,4 +61,3 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
-

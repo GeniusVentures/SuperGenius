@@ -7,12 +7,12 @@
 #pragma once
 
 #include <array>
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <string>
 #include <sstream>
-#include <algorithm>
 
 namespace sgns
 {
@@ -26,6 +26,16 @@ namespace sgns
          * @brief Fixed-size byte storage used for token identifiers.
          */
         using ByteArray = std::array<uint8_t, 32>;
+
+        /**
+         * @brief Byte order used when converting integer token identifiers.
+         */
+        enum class Endianness
+        {
+            HOST,
+            BIG,
+            LITTLE
+        };
 
         /**
          * @brief Constructs an invalid or legacy-default token identifier.
@@ -42,7 +52,7 @@ namespace sgns
          * @brief Move-constructs a token identifier.
          * @param[in] other Token identifier to move from.
          */
-        TokenID( TokenID &&other )      = default;
+        TokenID( TokenID &&other ) = default;
 
         /**
          * @brief Copy-assigns a token identifier.
@@ -91,6 +101,31 @@ namespace sgns
                 id.valid_ = true;
             }
 
+            return id;
+        }
+
+        /**
+         * @brief Builds a token identifier from a 256-bit integer value.
+         * @tparam Uint256 256-bit unsigned integer type with 64-bit word access.
+         * @param[in] value Integer value to convert.
+         * @param[in] endianness Byte order to use for the resulting token bytes.
+         * @return Valid token identifier containing the 32-byte representation of @p value.
+         */
+        template <typename Uint256>
+        static TokenID FromUint256( const Uint256 &value, Endianness endianness = Endianness::HOST )
+        {
+            static_assert( Uint256::num_bits == 256, "FromUint256 requires a 256-bit unsigned integer type" );
+
+            const Endianness resolved_endianness = ResolveEndianness( endianness );
+
+            TokenID id;
+            for ( size_t i = 0; i < id.data_.size(); ++i )
+            {
+                const size_t byte_index = resolved_endianness == Endianness::BIG ? id.data_.size() - 1 - i : i;
+                id.data_[i]             = static_cast<uint8_t>( ( value >> ( byte_index * 8 ) ) & 0xFF );
+            }
+
+            id.valid_ = true;
             return id;
         }
 
@@ -180,6 +215,22 @@ namespace sgns
         }
 
     private:
+        /**
+         * @brief Resolves HOST to the actual runtime byte order.
+         * @param[in] endianness Requested byte order.
+         * @return BIG or LITTLE byte order.
+         */
+        static Endianness ResolveEndianness( Endianness endianness )
+        {
+            if ( endianness != Endianness::HOST )
+            {
+                return endianness;
+            }
+
+            const uint16_t value = 0x0001;
+            return *reinterpret_cast<const uint8_t *>( &value ) == 0x01 ? Endianness::LITTLE : Endianness::BIG;
+        }
+
         ByteArray data_;  ///< Raw 32-byte token identifier storage.
         bool      valid_; ///< Whether the identifier was constructed from non-empty byte input.
     };
