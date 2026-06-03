@@ -4,7 +4,7 @@ milestone: v1.0
 milestone_name: Bridge Integration
 current_phase: Phase 3 — Burn Deduplication Cache (Gap Closure)
 status: in-progress
-last_updated: "2026-06-01T19:28:37.697Z"
+last_updated: "2026-06-03T12:51:18.416Z"
 progress:
   total_phases: 9
   completed_phases: 5
@@ -26,6 +26,15 @@ progress:
 | Phase 3 | Burn Deduplication Cache | in-progress (gap closure) |
 | Phase 4 | End-to-End Integration Test | Not Started |
 | Phase 5 | Startup Bridge Recovery | Not Started |
+
+## Quick Tasks Completed
+
+| Date | Task | Status |
+|------|------|--------|
+| 2026-06-03 | Implement full TokenID FromUint256 tests for both little and big endian | complete |
+| 2026-06-03 | Add configurable TokenID FromUint256 endianness parameter defaulting to host | complete |
+| 2026-06-03 | Fix TokenID::FromUint256 to use host-independent big-endian value serialization | complete |
+| 2026-06-03 | Add TokenID::FromUint256 with endian detection and use it in BridgeRelayer | complete |
 
 ## Phase 3 Progress
 
