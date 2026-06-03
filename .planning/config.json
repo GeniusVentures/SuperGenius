@@ -63,5 +63,10 @@
   "agent_skills": {},
   "features": {},
   "resolve_model_ids": "omit",
-  "runtime": "claude"
+  "runtime": "claude",
+  "review": {
+    "models": {
+      "codex": "gpt-5.3-codex"
+    }
+  }
 }

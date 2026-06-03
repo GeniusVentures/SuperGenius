@@ -123,14 +123,33 @@ Plans:
 
 ---
 
-### Phase 5: Startup Catch-Up for Unprocessed Burns
+### Phase 5: Startup Wiring + Mock RPC Transport
 
-**Goal:** On node startup (especially full/archive nodes), after syncing CRDT data, grab the last mint message transaction by date and use RPC to check the contract for any unprocessed bridged transactions that need to be minted.
+**Goal:** Wire `BridgeRelayer::Start()` and `InitializeRpcEndpoints()` into the node startup path so the burn→MintFunds pipeline actually runs in normal nodes. Add in-process mock RPC transport for Tier 1 verification testing. On startup (especially full/archive nodes), after syncing CRDT data, check for unprocessed bridged transactions that need to be minted.
+
+**Source:** PR #298 Codex review (June 2, 2026) — 3 deferred P1 findings
 
 **Depends on:** Phase 4
 **Plans:** 0 plans
 
-- [ ] TBD (run /gsd-plan-phase 5 to break down)
+**Tasks:**
+- [ ] Wire `BridgeRelayer::Start(chain, contract)` call site into GeniusNode startup — registers `BridgeSourceBurned` watch
+- [ ] Wire `InitializeRpcEndpoints()` call site into GeniusNode startup — populates ChainList endpoints with `bridge_contract_address` and `event_topic0`
+- [ ] Mock RPC transport: in-process, per-node config, data/behavioral/stateful variance, multi-chain, majority verification (≥2 of 3)
+- [ ] Startup catch-up: after CRDT sync, grab last mint message by date, check contract via RPC for unprocessed burns
+
+**Architecture note:** See `.planning/notes/rpc-verification-tiers.md`
+
+---
+
+### Phase 6: Network Voting Weight Classes (Tier 2)
+
+**Goal:** Implement two-tier network voting for bridge mints — direct API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight. Reputation scoring identifies full nodes. Final approval requires both cohorts to independently meet thresholds.
+
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+- [ ] TBD (run /gsd-plan-phase 6 to break down)
 
 ---
 
@@ -246,7 +265,8 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | A. EVM Bridge | 2. Relayer — Burn Detection | Complete | 2026-05-31 |
 | A. EVM Bridge | 3. Burn Dedup Cache | Gap closure | - |
 | A. EVM Bridge | 4. E2E Integration Test | Planned | - |
-| A. EVM Bridge | 5. Startup Catch-Up | Not started | - |
+| A. EVM Bridge | 5. Startup Wiring + Mock RPC | Planned | - |
+| A. EVM Bridge | 6. Network Voting (Tier 2) | Not started | - |
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
 | B. Consensus | 2. Conflict and Replay Hardening | Not started | - |
 | B. Consensus | 3. Network Hardening | Planned | - |
