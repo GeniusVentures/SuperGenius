@@ -721,6 +721,28 @@ namespace sgns
                                 bootstrap_fullnode_infos_.size() );
         }
 
+        // ── Parse bootstrap peer multiaddrs into PeerInfo cache for reconnection ──
+        bootstrap_peer_infos_.clear();
+        bootstrap_peer_ids_.clear();
+        for ( const auto &addr : bootstrap_peers_ )
+        {
+            auto peer_info = ParsePeerInfoFromString( addr );
+            if ( peer_info )
+            {
+                bootstrap_peer_infos_.push_back( peer_info.value() );
+                bootstrap_peer_ids_.insert( peer_info->id );
+            }
+            else
+            {
+                node_logger_->warn( "Failed to parse bootstrap peer multiaddr: {}", addr );
+            }
+        }
+        if ( !bootstrap_peer_infos_.empty() )
+        {
+            node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking",
+                                bootstrap_peer_infos_.size() );
+        }
+
         // Port selection logic
         if ( config_port != 0 )
         {
@@ -2043,9 +2065,9 @@ namespace sgns
 
     void GeniusNode::InitBootstrapReconnect()
     {
-        if ( bootstrap_fullnode_ids_.empty() )
+        if ( bootstrap_fullnode_ids_.empty() && bootstrap_peer_ids_.empty() )
         {
-            node_logger_->debug( "No bootstrap fullnodes configured, skipping reconnect subscription" );
+            node_logger_->debug( "No bootstrap peers configured, skipping reconnect subscription" );
             return;
         }
 
@@ -2062,10 +2084,16 @@ namespace sgns
                             {
                                 return;
                             }
-                            if ( strong->bootstrap_fullnode_ids_.count( peer_id ) )
+                            bool is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
+                                                strong->bootstrap_peer_ids_.count( peer_id );
+                            if ( is_bootstrap )
                             {
+                                const char *kind = strong->bootstrap_fullnode_ids_.count( peer_id )
+                                                       ? "fullnode"
+                                                       : "peer";
                                 strong->node_logger_->info(
-                                    "Bootstrap fullnode {} disconnected, scheduling reconnect",
+                                    "Bootstrap {} {} disconnected, scheduling reconnect",
+                                    kind,
                                     peer_id.toBase58() );
                                 unsigned attempt = 0;
                                 {
@@ -2081,20 +2109,23 @@ namespace sgns
                         }
                     } ) );
 
-        node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s)",
-                            bootstrap_fullnode_ids_.size() );
+        node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s) + {} peer(s)",
+                            bootstrap_fullnode_ids_.size(),
+                            bootstrap_peer_ids_.size() );
     }
 
     void GeniusNode::StartBootstrapHealthCheck()
     {
-        if ( bootstrap_fullnode_infos_.empty() )
+        if ( bootstrap_fullnode_infos_.empty() && bootstrap_peer_infos_.empty() )
         {
-            node_logger_->debug( "No bootstrap fullnodes to health-check" );
+            node_logger_->debug( "No bootstrap peers to health-check" );
             return;
         }
         ScheduleNextHealthCheck();
-        node_logger_->info( "Bootstrap fullnode health check started (interval: {}s)",
-                            reconnect_config_.health_check_interval.count() );
+        node_logger_->info( "Bootstrap health check started (interval: {}s, tracking {} fullnodes + {} peers)",
+                            reconnect_config_.health_check_interval.count(),
+                            bootstrap_fullnode_infos_.size(),
+                            bootstrap_peer_infos_.size() );
     }
 
     void GeniusNode::ScheduleNextHealthCheck()
@@ -2140,28 +2171,33 @@ namespace sgns
         }
 
         auto host = pubsub_->GetHost();
-        for ( const auto &peer_info : bootstrap_fullnode_infos_ )
-        {
-            auto connectedness = host->connectedness( peer_info );
-            if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
-                 connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
-            {
-                node_logger_->debug( "Health check: bootstrap fullnode {} is {}",
-                                     peer_info.id.toBase58(),
-                                     connectedness == libp2p::Host::Connectedness::NOT_CONNECTED
-                                         ? "NOT_CONNECTED"
-                                         : "CAN_NOT_CONNECT" );
 
-                unsigned attempt = 0;
+        // Check both fullnodes and peers
+        for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
+        {
+            for ( const auto &peer_info : *infos )
+            {
+                auto connectedness = host->connectedness( peer_info );
+                if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
+                     connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
                 {
-                    std::lock_guard<std::mutex> lock( reconnect_mutex_ );
-                    auto                          it = reconnect_attempts_.find( peer_info.id );
-                    if ( it != reconnect_attempts_.end() )
+                    node_logger_->debug( "Health check: bootstrap peer {} is {}",
+                                         peer_info.id.toBase58(),
+                                         connectedness == libp2p::Host::Connectedness::NOT_CONNECTED
+                                             ? "NOT_CONNECTED"
+                                             : "CAN_NOT_CONNECT" );
+
+                    unsigned attempt = 0;
                     {
-                        attempt = it->second;
+                        std::lock_guard<std::mutex> lock( reconnect_mutex_ );
+                        auto                          it = reconnect_attempts_.find( peer_info.id );
+                        if ( it != reconnect_attempts_.end() )
+                        {
+                            attempt = it->second;
+                        }
                     }
+                    ScheduleBootstrapReconnect( peer_info.id, attempt );
                 }
-                ScheduleBootstrapReconnect( peer_info.id, attempt );
             }
         }
 
@@ -2219,13 +2255,20 @@ namespace sgns
             return;
         }
 
-        // Find the PeerInfo for this peer_id
+        // Find the PeerInfo for this peer_id (search fullnodes then peers)
         const libp2p::peer::PeerInfo *peer_info_ptr = nullptr;
-        for ( const auto &info : bootstrap_fullnode_infos_ )
+        for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
         {
-            if ( info.id == peer_id )
+            for ( const auto &info : *infos )
             {
-                peer_info_ptr = &info;
+                if ( info.id == peer_id )
+                {
+                    peer_info_ptr = &info;
+                    break;
+                }
+            }
+            if ( peer_info_ptr )
+            {
                 break;
             }
         }

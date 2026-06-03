@@ -323,6 +323,8 @@ namespace sgns
         std::vector<std::string>                              bootstrap_fullnodes_;
         std::vector<libp2p::peer::PeerInfo>                   bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId>              bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>                   bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId>              bootstrap_peer_ids_;
         uint16_t                                              pubsubport_;
         std::shared_ptr<Blockchain>                           blockchain_;
 
