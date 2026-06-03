@@ -126,9 +126,10 @@ namespace sgns
 
     void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification )
     {
-        if ( notification.values.size() < 5 )
+        static constexpr size_t BRIDGE_SOURCE_BURNED_PARAM_COUNT = 5;
+        if ( notification.values.size() < BRIDGE_SOURCE_BURNED_PARAM_COUNT )
         {
-            logger_->error( "BridgeRelayer: expected 5 event params, got {}", notification.values.size() );
+            logger_->error( "BridgeRelayer: expected {} event params, got {}", BRIDGE_SOURCE_BURNED_PARAM_COUNT, notification.values.size() );
             return;
         }
 
