@@ -21,18 +21,17 @@ namespace sgns
      * @brief Registers a BridgeSourceBurned watch on a shared EthWatchService
      *        and calls MintFunds when burns are detected.
      */
-    class BridgeRelayer
+    class BridgeRelayer : public std::enable_shared_from_this<BridgeRelayer>
     {
     public:
         /**
-         * @brief Construct a BridgeRelayer.
-         * @param[in] tx_manager TransactionManager to call MintFunds on.
-         * @param[in] watch_service Shared EthWatchService for event detection.
-         * @param[in] logger Logger instance.
+         * @brief       Factory method to create a BridgeRelayer instance with weak TransactionManager reference.
+         * @param[in]   tx_manager Weak pointer to the TransactionManager to call MintFunds on.
+         * @param[in]   watch_service Shared EthWatchService for event detection.
+         * @return      If successful, a shared pointer to the created BridgeRelayer; otherwise, a nullptr
          */
-        BridgeRelayer( std::shared_ptr<TransactionManager>  tx_manager,
-                       std::shared_ptr<eth::EthWatchService> watch_service,
-                       base::Logger                          logger );
+        static std::shared_ptr<BridgeRelayer> Create( std::weak_ptr<TransactionManager>     tx_manager,
+                                                      std::shared_ptr<eth::EthWatchService> watch_service );
 
         /**
          * @brief Register the BridgeSourceBurned watch on the EthWatchService.
@@ -47,18 +46,24 @@ namespace sgns
         void Stop();
 
     private:
+        /// @brief Friend accessor for unit testing OnWatchEvent.
+        friend class ::BridgeRelayerTestAccess;
+        /**
+         * @brief Construct a BridgeRelayer.
+         * @param[in] tx_manager TransactionManager to call MintFunds on.
+         * @param[in] watch_service Shared EthWatchService for event detection.
+         */
+        explicit BridgeRelayer( std::weak_ptr<TransactionManager>     tx_manager,
+                                std::shared_ptr<eth::EthWatchService> watch_service );
         /**
          * @brief Processes a matched burn event and calls MintFunds.
          * @param[in] notification Watch event with decoded ABI values.
          */
         void OnWatchEvent( const eth::WatchEventNotification &notification );
 
-        /// @brief Friend accessor for unit testing OnWatchEvent.
-        friend class ::BridgeRelayerTestAccess;
-
-        std::shared_ptr<TransactionManager>  tx_manager_;
-        std::shared_ptr<eth::EthWatchService> watch_service_;
-        base::Logger                          logger_;
-        eth::EventWatchId                     watch_id_{ 0 };
+        std::weak_ptr<TransactionManager> tx_manager_; ///< Weak reference to TransactionManager for calling MintFunds
+        std::shared_ptr<eth::EthWatchService> watch_service_; ///< Shared EthWatchService for event detection
+        base::Logger                          logger_;        ///< Logger instance for logging within BridgeRelayer
+        eth::EventWatchId watch_id_{ 0 }; ///< ID of the registered watch, used for unwatching if needed
     };
 } // namespace sgns
