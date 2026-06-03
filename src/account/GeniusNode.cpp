@@ -428,9 +428,8 @@ namespace sgns
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
 
                 // Initialize bridge relayer — wires evmrelay burn events → MintFunds
-                bridge_relayer_ = std::make_unique<BridgeRelayer>( transaction_manager_,
-                                                                   eth_watch_service_,
-                                                                   node_logger_ );
+                bridge_relayer_ = BridgeRelayer::Create( std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                                                         eth_watch_service_ );
 
                 break;
             }

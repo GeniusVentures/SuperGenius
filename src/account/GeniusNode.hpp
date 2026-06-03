@@ -609,7 +609,7 @@ namespace sgns
         std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
         std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
         std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
-        std::unique_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
+        std::shared_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
