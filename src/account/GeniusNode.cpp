@@ -663,6 +663,39 @@ namespace sgns
                 if (config_json.HasMember("authorized_full_node") && config_json["authorized_full_node"].IsString()) {
                     authorized_full_node = config_json["authorized_full_node"].GetString();
                 }
+
+                // ── Parse reconnect config ──
+                if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
+                     config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
+                {
+                    reconnect_config_.base_delay =
+                        std::chrono::seconds( config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
+                }
+                if ( config_json.HasMember( "bootstrap_reconnect_max_delay_sec" ) &&
+                     config_json["bootstrap_reconnect_max_delay_sec"].IsInt() )
+                {
+                    reconnect_config_.max_delay =
+                        std::chrono::seconds( config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
+                }
+                if ( config_json.HasMember( "bootstrap_health_check_interval_sec" ) &&
+                     config_json["bootstrap_health_check_interval_sec"].IsInt() )
+                {
+                    reconnect_config_.health_check_interval =
+                        std::chrono::seconds( config_json["bootstrap_health_check_interval_sec"].GetInt() );
+                }
+                if ( config_json.HasMember( "bootstrap_health_check_disconnected_interval_sec" ) &&
+                     config_json["bootstrap_health_check_disconnected_interval_sec"].IsInt() )
+                {
+                    reconnect_config_.health_check_disconnected_interval =
+                        std::chrono::seconds(
+                            config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
+                }
+                if ( config_json.HasMember( "bootstrap_background_multiplier" ) &&
+                     config_json["bootstrap_background_multiplier"].IsDouble() )
+                {
+                    reconnect_config_.background_multiplier =
+                        config_json["bootstrap_background_multiplier"].GetDouble();
+                }
             }
         }
 
@@ -686,39 +719,6 @@ namespace sgns
         {
             node_logger_->info( "Parsed {} bootstrap fullnode(s) for reconnection tracking",
                                 bootstrap_fullnode_infos_.size() );
-        }
-
-        // ── Parse reconnect config from network_config.json ──
-        if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
-             config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
-        {
-            reconnect_config_.base_delay =
-                std::chrono::seconds( config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
-        }
-        if ( config_json.HasMember( "bootstrap_reconnect_max_delay_sec" ) &&
-             config_json["bootstrap_reconnect_max_delay_sec"].IsInt() )
-        {
-            reconnect_config_.max_delay =
-                std::chrono::seconds( config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
-        }
-        if ( config_json.HasMember( "bootstrap_health_check_interval_sec" ) &&
-             config_json["bootstrap_health_check_interval_sec"].IsInt() )
-        {
-            reconnect_config_.health_check_interval =
-                std::chrono::seconds( config_json["bootstrap_health_check_interval_sec"].GetInt() );
-        }
-        if ( config_json.HasMember( "bootstrap_health_check_disconnected_interval_sec" ) &&
-             config_json["bootstrap_health_check_disconnected_interval_sec"].IsInt() )
-        {
-            reconnect_config_.health_check_disconnected_interval =
-                std::chrono::seconds(
-                    config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
-        }
-        if ( config_json.HasMember( "bootstrap_background_multiplier" ) &&
-             config_json["bootstrap_background_multiplier"].IsDouble() )
-        {
-            reconnect_config_.background_multiplier =
-                config_json["bootstrap_background_multiplier"].GetDouble();
         }
 
         // Port selection logic
