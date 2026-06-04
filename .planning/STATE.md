@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Bridge Integration
 current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
-status: planned
-last_updated: "2026-06-03T13:11:20.000Z"
+status: discussed
+last_updated: "2026-06-03T14:00:00Z"
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 14
   completed_plans: 13
-  percent: 50
+  percent: 52
 ---
 
 # Project State: SuperGenius Bridge Integration
@@ -25,7 +25,7 @@ progress:
 | Phase 2 | Relayer — Burn Detection → MintFunds | complete |
 | Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | planned |
-| Phase 5 | Startup Wiring + Mock RPC Transport | planned |
+| Phase 5 | Startup Wiring + Mock RPC Transport | discussed (branch: bridge_phase5) |
 | Phase 6 | Network Voting Weight Classes (Tier 2) | not-started |
 
 ## Quick Tasks Completed
@@ -82,3 +82,29 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 - Phase 5: Wire BridgeRelayer::Start() and InitializeRpcEndpoints() into node startup, add mock RPC transport for testing
 - Phase 6 (follow-up): Tier 2 network voting weight classes with reputation scoring
 - See `.planning/notes/rpc-verification-tiers.md` for architecture decisions
+
+## Phase 5 Progress
+
+| Part | Topic | Status |
+|------|-------|--------|
+| 1 | BridgeRelayer::Start() — multi-chain from chains_config.json | discussed |
+| 2 | InitializeRpcEndpoints() + async startup wiring | discussed |
+| 3 | Mock RPC Transport — design & interface | discussed |
+| — | Implementation | not started |
+
+**Branch:** `bridge_phase5` (pushed to origin)
+
+**Discussion artifacts:**
+- `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART1.md`
+- `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART2.md`
+- `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART3.md`
+
+**Key decisions:**
+- `bridge_contract_address` added as optional field to `chains_config.json`
+- Both fire as async during CREATING — no state machine coupling
+- `Start()` awaits `InitializeRpcEndpoints()` completion
+- Mock implements `RpcHttpTransport` interface — drop-in replacement
+- Per-node JSON config <binary_dir>/mock_rpc_config.json
+- Stateful ordered responses keyed by tx_hash
+- 6 failure modes: success, timeout, connection_refused, bad_json, wrong_status, wrong_logs
+
