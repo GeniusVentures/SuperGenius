@@ -69,26 +69,19 @@ namespace sgns
     }
 
     BridgeRelayer::BridgeRelayer( std::weak_ptr<TransactionManager>     tx_manager,
-                                  std::shared_ptr<eth::EthWatchService> watch_service ) :
+                                  std::shared_ptr<eth::EthWatchService> watch_service,
+                                  base::Logger                          logger ) :
         tx_manager_( std::move( tx_manager ) ),
         watch_service_( std::move( watch_service ) ),
-        logger_( std::move( BridgeRelayerLogger() ) )
+        logger_( logger ? std::move( logger ) : std::move( BridgeRelayerLogger() ) )
     {
     }
 
-    void BridgeRelayer::Start( const std::string &chain_name, const std::string &contract_address )
+    void BridgeRelayer::Start( std::vector<ChainContractPair> chains )
     {
         if ( !watch_service_ )
         {
             logger_->error( "BridgeRelayer: no EthWatchService" );
-            return;
-        }
-
-        // Parse contract address
-        eth::Address addr{};
-        if ( !rlp::base::parse::hex_array( contract_address, addr ) )
-        {
-            logger_->error( "BridgeRelayer: invalid contract address {}", contract_address );
             return;
         }
 
@@ -97,24 +90,73 @@ namespace sgns
         const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
         auto              params    = eth::cli::event_registry().params_for( event_sig );
 
-        watch_id_ = watch_service_->watch_event(
-            addr,
-            event_sig,
-            params,
-            [weakptr{ weak_from_this() }]( const eth::MatchedEvent               &event,
-                                           const std::vector<eth::abi::AbiValue> &values )
-            {
-                eth::WatchEventNotification notification;
-                notification.event  = event;
-                notification.values = values;
-                auto self           = weakptr.lock();
-                if ( self )
-                {
-                    self->OnWatchEvent( notification );
-                }
-            } );
+        size_t registered = 0;
+        size_t skipped    = 0;
 
-        logger_->info( "BridgeRelayer: watching {} contract={} watch_id={}", chain_name, contract_address, watch_id_ );
+        for ( const auto &chain : chains )
+        {
+            // Skip chains with empty or whitespace-only contract address
+            if ( chain.chain_name.empty() )
+            {
+                logger_->warn( "BridgeRelayer: skipping chain with empty name" );
+                ++skipped;
+                continue;
+            }
+
+            if ( chain.contract_address.empty() )
+            {
+                logger_->debug( "BridgeRelayer: no contract address for chain {}, skipping", chain.chain_name );
+                ++skipped;
+                continue;
+            }
+
+            // Parse contract address
+            eth::Address addr{};
+            if ( !rlp::base::parse::hex_array( chain.contract_address, addr ) )
+            {
+                logger_->warn( "BridgeRelayer: invalid contract address {} for chain {}, skipping",
+                               chain.contract_address,
+                               chain.chain_name );
+                ++skipped;
+                continue;
+            }
+
+            // Register watch for this chain (best-effort per D-21)
+            try
+            {
+                const auto chain_name = chain.chain_name;
+                auto       watch_id   = watch_service_->watch_event(
+                    addr,
+                    event_sig,
+                    params,
+                    [ weakptr{ weak_from_this() }, chain_name ]( const eth::MatchedEvent               &event,
+                                                                  const std::vector<eth::abi::AbiValue> &values )
+                    {
+                        eth::WatchEventNotification notification;
+                        notification.event  = event;
+                        notification.values = values;
+                        auto self           = weakptr.lock();
+                        if ( self )
+                        {
+                            self->OnWatchEvent( notification, chain_name );
+                        }
+                    } );
+
+                chain_watches_[chain_name] = watch_id;
+                ++registered;
+                logger_->info( "BridgeRelayer: watching {} contract={} watch_id={}", chain_name, chain.contract_address, watch_id );
+            }
+            catch ( const std::exception &e )
+            {
+                logger_->warn( "BridgeRelayer: failed to watch {} ({}) — skipping", chain.chain_name, e.what() );
+                ++skipped;
+            }
+        }
+
+        logger_->info( "BridgeRelayer: started watching {} of {} chains ({} skipped)",
+                       registered,
+                       chains.size(),
+                       skipped );
     }
 
     void BridgeRelayer::Stop()
@@ -124,12 +166,16 @@ namespace sgns
         logger_->info( "BridgeRelayer: stopped" );
     }
 
-    void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification )
+    void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification,
+                                       const std::string                 &chain_name )
     {
         static constexpr size_t BRIDGE_SOURCE_BURNED_PARAM_COUNT = 5;
         if ( notification.values.size() < BRIDGE_SOURCE_BURNED_PARAM_COUNT )
         {
-            logger_->error( "BridgeRelayer: expected {} event params, got {}", BRIDGE_SOURCE_BURNED_PARAM_COUNT, notification.values.size() );
+            logger_->error( "BridgeRelayer: expected {} event params for chain {}, got {}",
+                            BRIDGE_SOURCE_BURNED_PARAM_COUNT,
+                            chain_name,
+                            notification.values.size() );
             return;
         }
 
@@ -151,7 +197,7 @@ namespace sgns
         const auto amount_result = Uint256ToUint64( amount_val, "amount" );
         if ( !amount_result )
         {
-            logger_->error( "BridgeRelayer: {} exceeds uint64", "amount" );
+            logger_->error( "BridgeRelayer: {} exceeds uint64 for chain {}", "amount", chain_name );
             return;
         }
         const uint64_t amount = amount_result.value();
@@ -164,8 +210,9 @@ namespace sgns
         // Destination: sender of the burn (the user who bridged out)
         const std::string destination = AddressToHex( sender );
 
-        logger_->info( "BridgeRelayer: burn detected chain={} tx={} token={} amount={} dest={}",
+        logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} token={} amount={} dest={}",
                        chain_id,
+                       chain_name,
                        tx_hash.substr( 0, 16 ),
                        mint_token_id.ToHex().substr( 0, 16 ),
                        amount,
@@ -174,7 +221,7 @@ namespace sgns
         auto strong_tx_manager = tx_manager_.lock();
         if ( !strong_tx_manager )
         {
-            logger_->error( "BridgeRelayer: no TransactionManager available" );
+            logger_->error( "BridgeRelayer: no TransactionManager available for chain {}", chain_name );
             return;
         }
 
@@ -183,18 +230,20 @@ namespace sgns
         {
             if ( result.error() == std::errc::already_connected )
             {
-                logger_->debug( "BridgeRelayer: duplicate burn rejected tx={}", tx_hash.substr( 0, 16 ) );
+                logger_->debug( "BridgeRelayer: duplicate burn rejected chain={} tx={}", chain_name, tx_hash.substr( 0, 16 ) );
             }
             else
             {
-                logger_->error( "BridgeRelayer: MintFunds failed for tx={} error={}",
+                logger_->error( "BridgeRelayer: MintFunds failed for chain={} tx={} error={}",
+                                chain_name,
                                 tx_hash.substr( 0, 16 ),
                                 result.error().message() );
             }
             return;
         }
 
-        logger_->info( "BridgeRelayer: mint submitted tx_hash={} mint_id={}",
+        logger_->info( "BridgeRelayer: mint submitted chain={} tx_hash={} mint_id={}",
+                       chain_name,
                        tx_hash.substr( 0, 16 ),
                        result.value().substr( 0, 16 ) );
     }
