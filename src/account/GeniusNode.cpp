@@ -256,6 +256,13 @@ namespace sgns
         }
         node_logger_->debug( "Account Address {}", account_->GetAddress() );
 
+        // Initializes the thread pool for IO context
+        io_threads_.reserve( io_thread_count_ );
+        for ( unsigned i = 0; i < io_thread_count_; ++i )
+        {
+            io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
+        }
+        
         LoadCrdtConfig();
     }
 
