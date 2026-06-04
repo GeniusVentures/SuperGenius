@@ -5,6 +5,9 @@
  */
 #include <gtest/gtest.h>
 
+#include <unordered_map>
+#include <string>
+
 #include "account/BridgeRelayer.hpp"
 #include "account/TokenID.hpp"
 #include "base/logger.hpp"
@@ -20,10 +23,28 @@ using namespace sgns;
 class BridgeRelayerTestAccess
 {
 public:
-    static void OnWatchEvent( BridgeRelayer                          &relayer,
-                              const eth::WatchEventNotification &notification )
+    static void OnWatchEvent( BridgeRelayer                       &relayer,
+                              const eth::WatchEventNotification   &notification,
+                              const std::string                   &chain_name = "test-chain" )
     {
-        relayer.OnWatchEvent( notification );
+        relayer.OnWatchEvent( notification, chain_name );
+    }
+
+    /// @brief Access chain_watches_ for test verification.
+    static const std::unordered_map<std::string, eth::EventWatchId> &
+    ChainWatches( const BridgeRelayer &relayer )
+    {
+        return relayer.chain_watches_;
+    }
+
+    /// @brief Construct a BridgeRelayer for unit testing with a test logger.
+    static BridgeRelayer CreateForTest( base::Logger logger = nullptr )
+    {
+        if ( !logger )
+        {
+            logger = base::createLogger( "bridge_relayer_test" );
+        }
+        return BridgeRelayer( std::weak_ptr<TransactionManager>(), nullptr, std::move( logger ) );
     }
 };
 
@@ -188,8 +209,8 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesNullTransactionManager )
     // Verify that OnWatchEvent gracefully handles null TransactionManager
     // without crashing — logs error and returns.
 
-    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
-    BridgeRelayer relayer( nullptr, nullptr, logger );
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
 
     auto notification = MakeBurnNotification(
         "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
@@ -206,8 +227,8 @@ TEST( BridgeRelayerTest, OnWatchEventRejectsInsufficientValues )
 {
     // Verify that OnWatchEvent rejects notifications with fewer than 5 ABI values.
 
-    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
-    BridgeRelayer relayer( nullptr, nullptr, logger );
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
 
     eth::WatchEventNotification notification;
     notification.values.push_back( intx::uint256( 1 ) );
@@ -222,8 +243,8 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesZeroAmount )
 {
     // Verify that OnWatchEvent processes zero-amount burns without error.
 
-    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
-    BridgeRelayer relayer( nullptr, nullptr, logger );
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
 
     auto notification = MakeBurnNotification(
         "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
@@ -240,8 +261,8 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesAmountOverflow )
 {
     // Verify that OnWatchEvent detects uint256 > uint64 overflow and returns early.
 
-    auto logger = rlp::base::createLogger( "bridge_relayer_test" );
-    BridgeRelayer relayer( nullptr, nullptr, logger );
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
 
     eth::WatchEventNotification notification;
 
