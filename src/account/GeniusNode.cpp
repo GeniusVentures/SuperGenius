@@ -2303,46 +2303,32 @@ namespace sgns
                 }
 
                 // D-20: Check UTXO set (not in-memory TransactionManager state)
-                // Build OutPoint from burn tx hash — the burn UTXO is indexed
-                // by (tx_hash, output_idx=0) when inserted via MintFunds.
-                OutPoint burn_outpoint{ burn_tx_hash, 0 };
+                // Use UTXOManager to determine if this burn is already tracked
+                auto &utxo_mgr = account_->GetUTXOManager();
 
-                auto utxo_mgr = transaction_manager_->GetUTXOManager();
-                if ( utxo_mgr.has_value() )
+                // Check if burn outpoint (tx_hash, output_idx=0) is already consumed or reserved
+                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
                 {
-                    auto &mgr = *utxo_mgr.value();
-                    // Check if a UTXO already exists for this burn outpoint
-                    auto existing = mgr.GetUTXO( burn_outpoint );
-                    if ( existing.has_value() )
-                    {
-                        auto &entry = existing.value();
-                        if ( entry.state == UTXOState::UTXO_CONSUMED ||
-                             entry.state == UTXOState::UTXO_RESERVED )
-                        {
-                            ++total_skipped;
-                            node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED/RESERVED — skipping",
-                                                 tx_hash_hex );
-                            continue;
-                        }
-                        if ( entry.state == UTXOState::UTXO_READY &&
-                             entry.type == UTXOType::UTXO_BRIDGE )
-                        {
-                            ++total_skipped;
-                            node_logger_->debug( "CatchUpScan: burn tx {} already READY — skipping",
-                                                 tx_hash_hex );
-                            continue;
-                        }
-                    }
+                    ++total_skipped;
+                    node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping",
+                                         tx_hash_hex );
+                    continue;
+                }
+                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                {
+                    ++total_skipped;
+                    node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping",
+                                         tx_hash_hex );
+                    continue;
                 }
 
-                // Insert missing burn UTXO as READY with UTXO_BRIDGE type (D-20)
-                // via MintFunds, which creates a MintTransactionV2 and persists
-                // a UTXO with UTXOType::UTXO_BRIDGE.
+                // Insert burn UTXO as READY with UTXO_BRIDGE type (D-20)
+                // MintFunds will later transition it to RESERVED → CONSUMED
                 try
                 {
                     auto result = transaction_manager_->MintFunds(
                         0,              // amount — derived from burn event data on full decode
-                        tx_hash_hex,    // source-chain tx hash as prev hash in DAG
+                        tx_hash_hex,    // source-chain tx hash
                         std::to_string( chain_id ),
                         dev_config_.TokenID,
                         ""              // destination defaults to local account
