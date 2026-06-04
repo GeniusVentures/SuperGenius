@@ -1984,28 +1984,28 @@ namespace sgns
             return {};
         }
 
-        // ── Pitfall #3: Resolve chains_config.json path relative to binary ──
+        // ── Pitfall #3: Resolve chains_config.json path using writable base path ──
         std::filesystem::path chains_path;
-        try
-        {
-            auto bin_dir = boost::dll::program_location().parent_path();
-            chains_path   = std::filesystem::path( bin_dir.string() ) / "chains_config.json";
-        }
-        catch ( const std::exception &e )
-        {
-            node_logger_->warn( "InitializeRpcEndpoints: cannot determine binary location ({}), "
-                                "falling back to CWD",
-                                e.what() );
-            chains_path = std::filesystem::current_path() / "chains_config.json";
-        }
 
-        // Override from DevConfig_st if a custom path was provided.
+        // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
         if ( !dev_config_.BaseWritePath.empty() )
         {
-            auto custom = std::filesystem::path( dev_config_.BaseWritePath ) / "chains_config.json";
-            if ( std::filesystem::exists( custom ) )
+            chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "chains_config.json";
+        }
+        else
+        {
+            // Fallback: binary directory (works on desktop platforms)
+            try
             {
-                chains_path = std::move( custom );
+                auto bin_dir = boost::dll::program_location().parent_path();
+                chains_path   = std::filesystem::path( bin_dir.string() ) / "chains_config.json";
+            }
+            catch ( const std::exception &e )
+            {
+                node_logger_->warn( "InitializeRpcEndpoints: cannot determine binary location ({}), "
+                                    "falling back to CWD",
+                                    e.what() );
+                chains_path = std::filesystem::current_path() / "chains_config.json";
             }
         }
 
@@ -2263,12 +2263,11 @@ namespace sgns
             filter.addresses.push_back( contract_addr );
             filter.topics.push_back( topic0_hash256 );
 
-            // from_block: scan latest N blocks; use 0 to indicate "from genesis offset"
+            // from_block: cap at scan_depth blocks from latest (D-20)
             // to_block: "latest" (indicated by 0 in make_get_logs_request)
-            // The actual depth cap is enforced via from_block calculation below.
-            uint64_t from_block = 0; // Will be clamped; use 0 for breadth
+            uint64_t from_block = scan_depth > 0 ? scan_depth : 10000;
 
-            // Create request — from_block=0, to_block=0 means "full range" to "latest"
+            // Create request — from_block=N means "scan last N blocks"; to_block=0 = "latest"
             auto request = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
             auto response = transport.call( request );
 
@@ -2295,22 +2294,50 @@ namespace sgns
                 std::string tx_hash_hex = rlp::base::parse::hex_bytes(
                     rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
 
-                // Check if this burn tx is already known (incoming transaction tracking)
-                auto status = transaction_manager_->GetIncomingStatusByTxId( tx_hash_hex );
-
-                if ( status == TransactionManager::TransactionStatus::CONFIRMED ||
-                     status == TransactionManager::TransactionStatus::VERIFYING ||
-                     status == TransactionManager::TransactionStatus::SENDING )
+                // Parse tx_hash_hex to Hash256 for UTXO query
+                base::Hash256 burn_tx_hash;
+                if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
                 {
                     ++total_skipped;
-                    node_logger_->debug( "CatchUpScan: burn tx {} already tracking — skipping",
-                                         tx_hash_hex );
                     continue;
                 }
 
-                // Insert missing burn via MintFunds (D-20: backfill as READY with UTXO_BRIDGE)
-                // The MintFunds call creates a mint transaction that will be processed
-                // by the CRDT layer and result in a UTXO_BRIDGE entry.
+                // D-20: Check UTXO set (not in-memory TransactionManager state)
+                // Build OutPoint from burn tx hash — the burn UTXO is indexed
+                // by (tx_hash, output_idx=0) when inserted via MintFunds.
+                OutPoint burn_outpoint{ burn_tx_hash, 0 };
+
+                auto utxo_mgr = transaction_manager_->GetUTXOManager();
+                if ( utxo_mgr.has_value() )
+                {
+                    auto &mgr = *utxo_mgr.value();
+                    // Check if a UTXO already exists for this burn outpoint
+                    auto existing = mgr.GetUTXO( burn_outpoint );
+                    if ( existing.has_value() )
+                    {
+                        auto &entry = existing.value();
+                        if ( entry.state == UTXOState::UTXO_CONSUMED ||
+                             entry.state == UTXOState::UTXO_RESERVED )
+                        {
+                            ++total_skipped;
+                            node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED/RESERVED — skipping",
+                                                 tx_hash_hex );
+                            continue;
+                        }
+                        if ( entry.state == UTXOState::UTXO_READY &&
+                             entry.type == UTXOType::UTXO_BRIDGE )
+                        {
+                            ++total_skipped;
+                            node_logger_->debug( "CatchUpScan: burn tx {} already READY — skipping",
+                                                 tx_hash_hex );
+                            continue;
+                        }
+                    }
+                }
+
+                // Insert missing burn UTXO as READY with UTXO_BRIDGE type (D-20)
+                // via MintFunds, which creates a MintTransactionV2 and persists
+                // a UTXO with UTXOType::UTXO_BRIDGE.
                 try
                 {
                     auto result = transaction_manager_->MintFunds(
