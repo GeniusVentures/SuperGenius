@@ -25,7 +25,7 @@ progress:
 | Phase 2 | Relayer — Burn Detection → MintFunds | complete |
 | Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | planned |
-| Phase 5 | Startup Wiring + Mock RPC Transport | planned (5 plans, 2 waves) |
+| Phase 5 | Startup Wiring + Mock RPC Transport | complete |
 | Phase 6 | Network Voting Weight Classes (Tier 2) | not-started |
 
 ## Quick Tasks Completed
