@@ -730,8 +730,21 @@ namespace sgns
          * well-known EVM chain IDs, parses the ChainList data to extract verified
          * public RPC endpoint URLs, and calls @c PublicChainInputValidator::SetRpcEndpoints
          * for each configured chain.
+         *
+         * @return ChainContractPair vector for chains with bridge_contract_address (D-02).
          */
-        void InitializeRpcEndpoints();
+        std::vector<ChainContractPair> InitializeRpcEndpoints();
+
+        /**
+         * @brief Async bridge initialization launched from INITIALIZING_TRANSACTIONS.
+         *
+         * Called via boost::asio::post to execute non-blocking on the io_context.
+         * First calls InitializeRpcEndpoints() to wire RPC endpoints into the validator
+         * and collect ChainContractPair entries for chains with bridge contracts.
+         * Then calls BridgeRelayer::Start() with those pairs (D-04: ordering guaranteed).
+         * Best-effort: log warnings and continue if bridge startup fails.
+         */
+        void InitializeAndStartBridge();
 
         /**
          * @brief Returns the transaction manager when initialized.
