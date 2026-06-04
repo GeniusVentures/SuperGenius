@@ -626,7 +626,6 @@ int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
     bool        is_processor     = true;  // Default value for the last parameter
-    bool        use_upnp         = true;  // Default UPNP usage
     bool        is_full_node     = false;
     bool        terminal_mode    = false; // Enable terminal input mode
     std::string path_override    = "";    // Path override for DEV_CONFIG
@@ -639,14 +638,12 @@ int main( int argc, char *argv[] )
         {
             start_processing = true;
             is_processor     = false;
-            use_upnp         = false;
             is_full_node     = true;
         }
         else if ( arg == "jobposter" )
         {
             start_processing = true;
             is_processor     = false;
-            use_upnp         = true;
             is_full_node     = false;
         }
 
@@ -682,7 +679,7 @@ int main( int argc, char *argv[] )
 
     //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
 
     std::thread input_thread;
     std::thread status_thread;

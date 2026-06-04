@@ -73,15 +73,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node bound to the provided Ethereum private key.
@@ -91,7 +89,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
@@ -99,8 +96,7 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node from an existing mnemonic phrase.
@@ -110,7 +106,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
          */
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
@@ -118,8 +113,7 @@ namespace sgns
                                                             bool                autodht      = true,
                                                             bool                isprocessor  = true,
                                                             uint16_t            base_port    = 40001,
-                                                            bool                is_full_node = false,
-                                                            bool                use_upnp     = true );
+                                                            bool                is_full_node = false );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -627,15 +621,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
                     bool                           isprocessor,
                     uint16_t                       base_port,
-                    bool                           is_full_node,
-                    bool                           use_upnp );
+                    bool                           is_full_node );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
@@ -722,7 +714,7 @@ namespace sgns
          * @brief Shuts down
          */
         void         ShutdownForDestruction();
-        
+
         /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
@@ -796,7 +788,6 @@ namespace sgns
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
          std::atomic_bool       shutdown_started_{ false }; ///< Whether shutdown has been initiated.
-        bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
 
     
         // ── Bootstrap fullnode reconnection ──

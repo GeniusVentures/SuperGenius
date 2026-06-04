@@ -135,8 +135,7 @@ namespace sgns
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
-                                                 bool                is_full_node,
-                                                 bool                use_upnp )
+                                                 bool                is_full_node )
     {
         auto instance = std::shared_ptr<GeniusNode>(
             new GeniusNode( dev_config,
@@ -144,8 +143,7 @@ namespace sgns
                             autodht,
                             isprocessor,
                             base_port,
-                            is_full_node,
-                            use_upnp ) );
+                            is_full_node ) );
 
         if ( instance )
         {
@@ -160,8 +158,7 @@ namespace sgns
                                                  bool                autodht,
                                                  bool                isprocessor,
                                                  uint16_t            base_port,
-                                                 bool                is_full_node,
-                                                 bool                use_upnp )
+                                                 bool                is_full_node )
     {
         auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
             dev_config,
@@ -169,8 +166,7 @@ namespace sgns
             autodht,
             isprocessor,
             base_port,
-            is_full_node,
-            use_upnp ) );
+            is_full_node ) );
 
         if ( instance )
         {
@@ -185,8 +181,7 @@ namespace sgns
                                                              bool                autodht,
                                                              bool                isprocessor,
                                                              uint16_t            base_port,
-                                                             bool                is_full_node,
-                                                             bool                use_upnp )
+                                                             bool                is_full_node )
     {
         try
         {
@@ -205,8 +200,7 @@ namespace sgns
                                                                          autodht,
                                                                          isprocessor,
                                                                          base_port,
-                                                                         is_full_node,
-                                                                         use_upnp ) );
+                                                                         is_full_node ) );
 
             if ( instance )
             {
@@ -227,8 +221,7 @@ namespace sgns
                             bool                           autodht,
                             bool                           isprocessor,
                             uint16_t                       base_port,
-                            bool                           is_full_node,
-                            bool                           use_upnp ) :
+                            bool                           is_full_node ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( std::move( account ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
@@ -244,8 +237,7 @@ namespace sgns
             std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
             libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
         generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
-        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) ),
-        use_upnp_( use_upnp )
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
     {
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
@@ -670,7 +662,7 @@ namespace sgns
         rapidjson::Document config_json;
         std::string pubsub_bind_address = "0.0.0.0";
         std::string authorized_full_node;
-        bool upnp_enabled = use_upnp_;
+        bool upnp_enabled = true;
         int high_water = is_full_node ? 400 : 300;
         int low_water = is_full_node ? 200 : 150;
         std::string port_str;
@@ -815,8 +807,7 @@ namespace sgns
         do {
             // Never block node construction on UPnP/IGD discovery.
             // RefreshUPNP() runs on its own thread and will try immediately.
-            use_upnp_ = upnp_enabled;
-            if ( use_upnp_ )
+            if ( upnp_enabled )
             {
                 node_logger_->info( "UPnP enabled: startup port mapping will run in background" );
             }
@@ -860,7 +851,7 @@ namespace sgns
             pubs.wait();
             node_logger_->info("PubSub started at address: {}", pubsub_->GetInterfaceAddress());
 
-            if ( use_upnp_ )
+            if ( upnp_enabled )
             {
                 RefreshUPNP( pubsubport_ );
             }
