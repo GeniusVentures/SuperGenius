@@ -340,13 +340,13 @@ namespace sgns::crdt
         return ( std::filesystem::path( databasePathAbsolute ) / "backups" ).string();
     }
 
-    bool GlobalDB::CreateBackupNow()
+    void GlobalDB::CreateBackupNow()
     {
         std::lock_guard<std::mutex> lock( backup_mutex_ );
 
         if ( !backup_options_.enabled || !m_datastore )
         {
-            return false;
+            return;
         }
 
         if ( backup_directory_.empty() )
@@ -360,7 +360,7 @@ namespace sgns::crdt
         if ( fs_error )
         {
             m_logger->error( "Failed to create backup directory {}: {}", backup_directory_, fs_error.message() );
-            return false;
+            return;
         }
 
         ::ROCKSDB_NAMESPACE::BackupEngine *backup_engine = nullptr;
@@ -371,7 +371,7 @@ namespace sgns::crdt
         if ( !open_status.ok() || backup_engine == nullptr )
         {
             m_logger->error( "Failed to open backup engine at {}: {}", backup_directory_, open_status.ToString() );
-            return false;
+            return;
         }
 
         std::unique_ptr<::ROCKSDB_NAMESPACE::BackupEngine> backup_guard( backup_engine );
@@ -380,7 +380,7 @@ namespace sgns::crdt
         if ( !create_status.ok() )
         {
             m_logger->error( "CreateNewBackup failed: {}", create_status.ToString() );
-            return false;
+            return;
         }
 
         auto purge_status = backup_guard->PurgeOldBackups( backup_options_.keep_count );
@@ -390,7 +390,6 @@ namespace sgns::crdt
         }
 
         m_logger->info( "Backup created successfully in {}", backup_directory_ );
-        return true;
     }
 
     void GlobalDB::StartBackupLoop()

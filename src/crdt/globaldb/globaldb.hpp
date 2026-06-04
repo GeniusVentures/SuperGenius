@@ -313,7 +313,7 @@ namespace sgns::crdt
         /** @brief Resolves the backup directory path based on the database path. */
         std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;
         /** @brief Creates a backup immediately. */
-        bool        CreateBackupNow();
+        void        CreateBackupNow();
         /** @brief Starts the backup loop in a separate thread. */
         void        StartBackupLoop();
         /** @brief Stops the backup loop and waits for the thread to finish. */
