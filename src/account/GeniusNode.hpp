@@ -36,6 +36,9 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/event/bus.hpp>
+#include <libp2p/network/connection_manager.hpp>
 
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
@@ -609,6 +612,10 @@ namespace sgns
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
         std::vector<std::string>                              bootstrap_peers_;
         std::vector<std::string>                              bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>                   bootstrap_fullnode_infos_;
+        std::unordered_set<libp2p::peer::PeerId>              bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>                   bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId>              bootstrap_peer_ids_;
         uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
 
@@ -712,6 +719,11 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
+         * @brief Shuts down
+         */
+        void         ShutdownForDestruction();
+        
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
@@ -725,6 +737,40 @@ namespace sgns
          */
         void DHTInit();
 
+        /**
+         * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
+         */
+        static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
+         */
+        void InitBootstrapReconnect();
+
+        /**
+         * @brief Start the periodic health-check polling for bootstrap fullnode connections
+         */
+        void StartBootstrapHealthCheck();
+
+        /**
+         * @brief Schedule a reconnection attempt with exponential backoff
+         */
+        void ScheduleBootstrapReconnect( const libp2p::peer::PeerId &peer_id, unsigned attempt );
+
+        /**
+         * @brief Perform the actual reconnection to a bootstrap peer
+         */
+        void DoReconnectToBootstrapPeer( const libp2p::peer::PeerId &peer_id );
+
+        /**
+         * @brief Schedule the next periodic health check
+         */
+        void ScheduleNextHealthCheck();
+
+        /**
+         * @brief Perform a health check on all bootstrap fullnode connections
+         */
+        void PerformHealthCheck();
         struct PriceInfo
         {
             double                                             price;      ///< Cached USD token price.
@@ -749,7 +795,25 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
+         std::atomic_bool       shutdown_started_{ false }; ///< Whether shutdown has been initiated.
         bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
+
+    
+        // ── Bootstrap fullnode reconnection ──
+        struct BootstrapReconnectConfig
+        {
+            std::chrono::seconds base_delay{ 5 };
+            std::chrono::seconds max_delay{ 300 };
+            std::chrono::seconds health_check_interval{ 60 };
+            std::chrono::seconds health_check_disconnected_interval{ 15 };
+            double               background_multiplier{ 3.0 };
+        };
+        BootstrapReconnectConfig                                       reconnect_config_;
+        std::atomic<bool>                                              background_mode_{ false };
+        std::optional<libp2p::event::Handle>                           bootstrap_disconnect_subscription_;
+        std::optional<libp2p::basic::Scheduler::Handle>                health_check_handle_;
+        std::unordered_map<libp2p::peer::PeerId, unsigned>             reconnect_attempts_;
+        std::mutex                                                     reconnect_mutex_;
 
         struct CrdtBackupConfig
         {

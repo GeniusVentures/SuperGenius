@@ -466,28 +466,87 @@ namespace sgns::crdt
 
     void CrdtDatastore::Close()
     {
+        CancelAndCloseNow();
+    }
+
+    void CrdtDatastore::CancelAndCloseNow()
+    {
         bool expected = false;
-        if ( !closeStarted_.compare_exchange_strong( expected, true ) )
+        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
         {
+            logger_->warn( "CancelAndCloseNow called but shutdown has already started" );
             return;
         }
 
-        StopWorkerLoops();
-
-        if ( IsCurrentThreadInternalWorker() )
         {
-            logger_->error( "{}: Close called from CRDT worker thread; deferring waits to helper thread", __func__ );
-            auto keep_alive = shared_from_this();
-            std::thread(
-                [keep_alive = std::move( keep_alive )]()
+            std::lock_guard lock( dagWorkerMutex_ );
+            logger_->info( "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+                           pending_jobs_.size(),
+                           selfCreatedJobList_.size(),
+                           rootCIDJobList_.size(),
+                           pendingRootQueue_.size(),
+                           activeRootCID_.has_value() );
+        }
+
+        if ( handleNextThreadRunning_ )
+        {
+            handleNextThreadRunning_ = false;
+        }
+
+        if ( rebroadcastThreadRunning_ )
+        {
+            rebroadcastThreadRunning_ = false;
+            rebroadcastCv_.notify_all();
+        }
+
+        // Stop graphsync after cancellation signals are raised so workers
+        // observe shutdown intent first.
+        dagSyncer_->Stop();
+
+        if ( dagWorkerJobListThreadRunning_ )
+        {
+            dagWorkerJobListThreadRunning_ = false;
+            dagWorkerCv_.notify_all();
+            for ( auto &dagWorker : dagWorkers_ )
+            {
+                dagWorker->dagWorkerThreadRunning_ = false;
+                if ( dagWorker->dagWorkerFuture_.valid() )
                 {
-                    keep_alive->WaitForWorkersToExit();
-                } )
-                .detach();
-            return;
+                    dagWorker->dagWorkerFuture_.wait();
+                }
+            }
+
+            // Clear both job queues
+            {
+                std::lock_guard        lock( dagWorkerMutex_ );
+                std::queue<RootCIDJob> empty1, empty2;
+                std::queue<CID>        empty_roots;
+                std::swap( rootCIDJobList_, empty1 );
+                std::swap( selfCreatedJobList_, empty2 );
+                std::swap( pendingRootQueue_, empty_roots );
+                activeRootCID_.reset();
+                pending_jobs_.clear();
+            }
         }
 
-        WaitForWorkersToExit();
+        if ( handleNextFuture_.valid() )
+        {
+            handleNextFuture_.wait();
+        }
+
+        if ( rebroadcastFuture_.valid() )
+        {
+            rebroadcastFuture_.wait();
+        }
+
+        started_ = false;
+        logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
+        logger_->debug( "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+                       pending_jobs_.size(),
+                       selfCreatedJobList_.size(),
+                       rootCIDJobList_.size(),
+                       pendingRootQueue_.size(),
+                       activeRootCID_.has_value() );
     }
 
     void CrdtDatastore::StopWorkerLoops()

@@ -106,17 +106,34 @@ namespace sgns::crdt
     GlobalDB::~GlobalDB()
     {
         m_logger->debug( "~GlobalDB CALLED with count {} on {} ", m_datastore.use_count(), m_databasePath );
+        ShutdownNow();
+    }
+
+    void GlobalDB::ShutdownNow()
+    {
+        bool expected = false;
+        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
+        {
+            return;
+        }
+
+        m_logger->info( "GlobalDB shutdown start" );
+
+        //SetIncomingBroadcastEnabled( false );
+        StopBackupLoop();
+
         if ( m_broadcaster )
         {
             m_broadcaster->Stop();
         }
+
         if ( m_crdtDatastore )
         {
-            m_crdtDatastore->Close();
-            m_crdtDatastore.reset();
+            m_crdtDatastore->CancelAndCloseNow();
         }
-        m_broadcaster.reset();
-        m_datastore.reset();
+
+        started_.store( false );
+        m_logger->info( "GlobalDB shutdown finished" );
     }
 
     outcome::result<void> GlobalDB::Init(

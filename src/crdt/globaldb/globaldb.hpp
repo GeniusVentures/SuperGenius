@@ -159,16 +159,68 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
+        /** Registers a filter callback for elements matching a pattern.
+         * @param pattern The pattern to match elements against.
+         * @param filter The callback to invoke for matching elements.
+         * @return true if the filter was successfully registered, false otherwise.
+         */
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
+
+        /** Registers a callback for new elements matching a pattern.
+         * @param pattern The pattern to match new elements against.
+         * @param callback The callback to invoke for matching new elements.
+         * @return true if the callback was successfully registered, false otherwise.
+         */
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
+
+        /** Registers a callback for deleted elements matching a pattern.
+         * @param pattern The pattern to match deleted elements against.
+         * @param callback The callback to invoke for matching deleted elements.
+         * @return true if the callback was successfully registered, false otherwise.
+         */
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
+
+        /** Unregisters the filter callback for a pattern.
+         * @param pattern The pattern to unregister the filter for.
+         */
         void UnregisterElementFilter( const std::string &pattern );
+
+        /**
+         * @brief Unregisters the new element callback for a pattern.
+         * @param pattern The pattern to unregister the new element callback for.
+         */
+        
         void UnregisterNewElementCallback( const std::string &pattern );
+        /**
+         * @brief Unregisters the deleted element callback for a pattern.
+         * @param pattern The pattern to unregister the deleted element callback for.
+         */
         void UnregisterDeletedElementCallback( const std::string &pattern );
 
+        /**
+         * @brief Starts the GlobalDB instance.
+         */
         void Start();
+
+        /**
+         * @brief Immediately quiesce and shut down CRDT intake and workers.
+         * Safe to call multiple times.
+         */
+        void ShutdownNow();
+
+        /**
+         * @brief Starts receiving CIDs.
+         */
         void StartCIDReceiving();
+
+        /**
+         * @brief Starts CIC synchronization.
+         */
         void StartCICSync();
+
+        /**
+         * @brief Starts rebroadcasting heads.
+         */
         void StartRebroadcastHeads();
 
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
@@ -242,6 +294,7 @@ namespace sgns::crdt
         BackupOptions                                     backup_options_{};
         std::string                                       backup_directory_;
         std::atomic_bool                                  stop_backup_thread_{ false };
+        std::atomic_bool                                  shutdown_started_{ false };
         std::thread                                       backup_thread_;
         std::mutex                                        backup_mutex_;
         std::mutex                                        backup_wait_mutex_;
