@@ -155,7 +155,9 @@ namespace sgns
     }
 
     //TODO - Remove the GeniusUTXO from parameters, instead add the necessary fields or GeniusTransaction
-    outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO new_utxo, const std::string &address )
+    outcome::result<bool> UTXOManager::PutUTXO( GeniusUTXO              new_utxo,
+                                                const std::string      &address,
+                                                UTXOManager::UTXOType   type )
     {
         // If not a full node and trying to store UTXOs for other addresses, reject
         if ( !is_full_node_ && address != address_ )
@@ -174,8 +176,14 @@ namespace sgns
                 return false;
             }
 
-            utxo_outpoints_[outpoint] =
-                UTXOEntry{ UTXOState::UTXO_READY, new_utxo, 0, std::nullopt, std::nullopt };
+            UTXOEntry entry;
+            entry.state         = UTXOState::UTXO_READY;
+            entry.utxo          = new_utxo;
+            entry.created_epoch = 0;
+            entry.spent_epoch   = std::nullopt;
+            entry.spent_by_txid = std::nullopt;
+            entry.type          = type;
+            utxo_outpoints_[outpoint] = entry;
             address_outpoints_[address].push_back( outpoint );
         }
 
