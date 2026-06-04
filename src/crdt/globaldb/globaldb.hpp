@@ -266,15 +266,13 @@ namespace sgns::crdt
          * @param[in]   scheduler libp2p scheduler
          * @param[in]   generator The request ID generator from graphsync
          * @param[in]   datastore datastore to be used. If not defined, created using databasePath
-         * @param[in]   backup_options Backup options for CRDT data
          * @return      outcome::success on success, or outcome::failure on error
          */
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
                                     std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                                    std::shared_ptr<RocksDB> datastore = nullptr,
-                                    BackupOptions backup_options = BackupOptions{ false, 15, 12, true } );
+                                    std::shared_ptr<RocksDB> datastore = nullptr );
 
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );

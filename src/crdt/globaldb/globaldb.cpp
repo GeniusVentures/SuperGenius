@@ -81,6 +81,7 @@ namespace sgns::crdt
         }
         auto new_instance = std::shared_ptr<GlobalDB>(
             new GlobalDB( std::move( context ), std::move( databasePath ), std::move( pubsub ) ) );
+        new_instance->backup_options_ = backup_options;
 
         BOOST_OUTCOME_TRY( new_instance->Init( std::move( crdtOptions ),
                                                std::move( graphsyncnetwork ),
@@ -141,11 +142,8 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
         std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        std::shared_ptr<RocksDB>                                              datastore,
-        BackupOptions                                                         backup_options )
+        std::shared_ptr<RocksDB>                                              datastore )
     {
-        backup_options_ = backup_options;
-
         std::shared_ptr<RocksDB> dataStore = std::move( datastore );
         if ( dataStore == nullptr )
         {
