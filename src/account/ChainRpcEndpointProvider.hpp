@@ -48,6 +48,23 @@ namespace sgns
          * file on desktop — never from environment variables or tracked files.
          */
         std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> direct_endpoints;
+
+        /**
+         * @brief Bridge contract addresses keyed by numeric chain ID.
+         *
+         * Sourced from chains_config.json's optional "bridge_contract_address" field.
+         * Chains not present in this map have no bridge deployed (D-02: skip signal).
+         */
+        std::unordered_map<uint64_t, std::string> bridge_contract_addresses;
+
+        /**
+         * @brief Bridge event topic0 hashes keyed by numeric chain ID.
+         *
+         * Computed from the BridgeSourceBurned event signature via
+         * eth::cli::event_registry(). The topic0 is used by the catch-up scan
+         * to construct eth_getLogs queries for historical burns.
+         */
+        std::unordered_map<uint64_t, std::string> bridge_event_topic0;
     };
 
     /**
