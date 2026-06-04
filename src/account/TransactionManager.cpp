@@ -656,12 +656,13 @@ namespace sgns
         }
 
         // Persistence check — reject if this burn was already executed (survives restart)
+        const std::string persistence_key = chainid + std::string( kBridgeKeySeparator ) + transaction_hash;
         {
             auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
             if ( datastore )
             {
                 crdt::GlobalDB::Buffer key_buffer;
-                key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+                key_buffer.put( std::string( kBridgeExecutedPrefix ) + persistence_key );
                 auto existing = datastore->get( key_buffer );
                 if ( existing.has_value() )
                 {
@@ -671,24 +672,6 @@ namespace sgns
                         chainid, transaction_hash );
                     return outcome::failure( std::errc::already_connected );
                 }
-            }
-        }
-
-        // D-18/D-19: Insert burn UTXO as RESERVED with UTXO_BRIDGE type
-        // This replaces the in-memory bridge_mint_reservations_ set.
-        // The UTXO is consumed later in ParseMintTransactionV2 when the mint confirms.
-        if ( source_hash.has_value() )
-        {
-            GeniusUTXO burn_utxo( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
-            auto put_result = account_m->GetUTXOManager().PutUTXO( burn_utxo,
-                                                                    account_m->GetAddress(),
-                                                                    UTXOType::UTXO_BRIDGE );
-            if ( put_result.has_error() || !put_result.value() )
-            {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Failed to reserve burn UTXO for chain={} tx_hash={}",
-                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
-                    chainid, transaction_hash );
             }
         }
 
@@ -706,6 +689,17 @@ namespace sgns
         else
         {
             source_input_hash = source_hash.value();
+        }
+
+        // D-18/D-19: Insert burn UTXO as RESERVED with UTXO_BRIDGE type
+        // Replaces the in-memory bridge_mint_reservations_ set.
+        // The UTXO is consumed later in ParseMintTransactionV2 when the mint confirms.
+        if ( !source_hash.has_error() )
+        {
+            GeniusUTXO burn_utxo( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
+            account_m->GetUTXOManager().PutUTXO( burn_utxo,
+                                                  account_m->GetAddress(),
+                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
         }
 
         std::vector<GeniusUTXO> source_utxos;
