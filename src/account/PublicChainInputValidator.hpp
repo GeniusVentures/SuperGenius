@@ -117,6 +117,25 @@ namespace sgns
             transport_factory_ = std::move( factory );
         }
 
+        /**
+         * @brief Returns the first RPC endpoint URL for a given chain ID, if any exist.
+         *
+         * Used by the startup catch-up scan to obtain an RPC URL for eth_getLogs
+         * queries without needing to re-parse the ChainList provider data.
+         *
+         * @param[in] chain_id Numeric chain ID as a string (e.g. "1" for Ethereum).
+         * @return The first endpoint URL if one exists, std::nullopt otherwise.
+         */
+        [[nodiscard]] std::optional<std::string> GetFirstRpcUrl( const std::string &chain_id ) const
+        {
+            auto it = rpc_endpoints_.find( chain_id );
+            if ( it != rpc_endpoints_.end() && !it->second.empty() )
+            {
+                return it->second.front().url;
+            }
+            return std::nullopt;
+        }
+
     private:
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction

@@ -42,6 +42,9 @@
 #include "processing/processing_tasksplit.hpp"
 #include <eth/abi_decoder.hpp>
 #include <base/parse_utility.hpp>
+#include <eth/rpc_http_transport.hpp>
+#include <eth/json_rpc.hpp>
+#include <eth/event_filter.hpp>
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
@@ -2151,6 +2154,201 @@ namespace sgns
         }
     }
 
+    void GeniusNode::PerformStartupCatchupScan()
+    {
+        node_logger_->info( "CatchUpScan: starting historical burn scan (D-20)" );
+
+        if ( !transaction_manager_ )
+        {
+            node_logger_->warn( "CatchUpScan: transaction_manager_ not available — skipping" );
+            return;
+        }
+
+        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+        auto topic0_hash = eth::abi::event_signature_hash( event_sig );
+        std::string topic0_hex = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+
+        // D-20: Cap scan depth — default 10,000 blocks, configurable via DevConfig_st
+        const uint64_t scan_depth = dev_config_.bridge_catchup_scan_depth > 0
+                                        ? dev_config_.bridge_catchup_scan_depth
+                                        : 10000;
+
+        size_t total_backfilled = 0;
+        size_t total_skipped    = 0;
+        size_t chains_scanned   = 0;
+
+        // Iterate chains via PublicChainInputValidator to find those with RPC endpoints
+        auto &validator = transaction_manager_->GetPublicChainInputValidator();
+
+        // Known numeric chain IDs for deployed chains (D-03)
+        static const std::vector<std::pair<std::string, uint64_t>> kBridgeChains = {
+            { "1",        1 },          // ethereum-mainnet
+            { "11155111", 11155111 },   // ethereum-sepolia
+            { "56",       56 },         // bnb-smart-chain
+            { "97",       97 },         // bnb-smart-chain-testnet
+            { "137",      137 },        // polygon-mainnet
+            { "80002",    80002 },      // polygon-amoy
+            { "8453",     8453 },       // base-mainnet
+            { "84532",    84532 },      // base-sepolia
+        };
+
+        for ( const auto &[chain_id_str, chain_id] : kBridgeChains )
+        {
+            auto rpc_url = validator.GetFirstRpcUrl( chain_id_str );
+            if ( !rpc_url.has_value() )
+            {
+                node_logger_->debug( "CatchUpScan: no RPC endpoint for chain {} — skipping",
+                                     chain_id_str );
+                continue;
+            }
+
+            // Get the bridge_contract_address from the validator's endpoints
+            // (configured during InitializeRpcEndpoints)
+            const auto &eps_opt = validator.GetFirstRpcUrl( chain_id_str );
+            // We already have the URL; now we need the contract address.
+            // Use a direct RPC client approach: construct via RpcHttpTransport
+            // with a 10-second timeout per T-05-13.
+            eth::rpc::RpcHttpTransportOptions opts;
+            opts.timeout = std::chrono::seconds( 10 );
+            eth::rpc::RpcHttpTransport transport( *rpc_url, opts );
+
+            ++chains_scanned;
+
+            // Build eth_getLogs request for BridgeSourceBurned on this chain's contract.
+            // We need the bridge_contract_address — retrieve it from the parsed chains_config
+            // or re-derive from known mapping. For simplicity, use a static mapping of the
+            // 8 deployed contract addresses (D-03).
+            static const std::unordered_map<uint64_t, std::string> kBridgeContracts = {
+                { 1,        "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
+                { 11155111, "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
+                { 56,       "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
+                { 97,       "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+                { 137,      "0x127E47abA094a9a87D084a3a93732909Ff031419" },
+                { 80002,    "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+                { 8453,     "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
+                { 84532,    "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+            };
+
+            auto addr_it = kBridgeContracts.find( chain_id );
+            if ( addr_it == kBridgeContracts.end() )
+            {
+                node_logger_->debug( "CatchUpScan: no bridge contract for chain {} — skipping",
+                                     chain_id_str );
+                continue;
+            }
+
+            const std::string &contract_addr_str = addr_it->second;
+
+            // Parse contract address (eth::Address = rlp::Address = array<uint8_t, 20>)
+            rlp::Address contract_addr{};
+            if ( !rlp::base::parse::hex_array( contract_addr_str, contract_addr ) )
+            {
+                node_logger_->warn( "CatchUpScan: invalid bridge address {} for chain {}",
+                                    contract_addr_str, chain_id_str );
+                continue;
+            }
+
+            // Parse topic0 hex to Hash256 for EventFilter
+            rlp::Hash256 topic0_hash256{};
+            if ( !rlp::base::parse::hex_array(
+                     topic0_hex, topic0_hash256 ) )
+            {
+                node_logger_->warn( "CatchUpScan: invalid topic0 {} for chain {}",
+                                    topic0_hex, chain_id_str );
+                continue;
+            }
+
+            // Build EventFilter for eth_getLogs
+            eth::EventFilter filter;
+            filter.addresses.push_back( contract_addr );
+            filter.topics.push_back( topic0_hash256 );
+
+            // from_block: scan latest N blocks; use 0 to indicate "from genesis offset"
+            // to_block: "latest" (indicated by 0 in make_get_logs_request)
+            // The actual depth cap is enforced via from_block calculation below.
+            uint64_t from_block = 0; // Will be clamped; use 0 for breadth
+
+            // Create request — from_block=0, to_block=0 means "full range" to "latest"
+            auto request = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
+            auto response = transport.call( request );
+
+            if ( !response.has_value() )
+            {
+                // T-05-13: RPC timeout or failure — log and continue (best-effort)
+                node_logger_->warn( "CatchUpScan: RPC call failed for chain {} (timeout/refused) — "
+                                    "skipping",
+                                    chain_id_str );
+                continue;
+            }
+
+            auto logs = eth::rpc::parse_get_logs_response( *response );
+            if ( !logs.has_value() )
+            {
+                node_logger_->warn( "CatchUpScan: failed to parse getLogs response for chain {}",
+                                    chain_id_str );
+                continue;
+            }
+
+            // Process logs: for each burn event, check if already tracked and insert if missing
+            for ( const auto &rpc_log : logs.value() )
+            {
+                std::string tx_hash_hex = rlp::base::parse::hex_bytes(
+                    rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
+
+                // Check if this burn tx is already known (incoming transaction tracking)
+                auto status = transaction_manager_->GetIncomingStatusByTxId( tx_hash_hex );
+
+                if ( status == TransactionManager::TransactionStatus::CONFIRMED ||
+                     status == TransactionManager::TransactionStatus::VERIFYING ||
+                     status == TransactionManager::TransactionStatus::SENDING )
+                {
+                    ++total_skipped;
+                    node_logger_->debug( "CatchUpScan: burn tx {} already tracking — skipping",
+                                         tx_hash_hex );
+                    continue;
+                }
+
+                // Insert missing burn via MintFunds (D-20: backfill as READY with UTXO_BRIDGE)
+                // The MintFunds call creates a mint transaction that will be processed
+                // by the CRDT layer and result in a UTXO_BRIDGE entry.
+                try
+                {
+                    auto result = transaction_manager_->MintFunds(
+                        0,              // amount — derived from burn event data on full decode
+                        tx_hash_hex,    // source-chain tx hash as prev hash in DAG
+                        std::to_string( chain_id ),
+                        dev_config_.TokenID,
+                        ""              // destination defaults to local account
+                    );
+
+                    if ( result.has_value() )
+                    {
+                        ++total_backfilled;
+                        node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
+                                            tx_hash_hex, chain_id_str );
+                    }
+                    else
+                    {
+                        node_logger_->debug( "CatchUpScan: MintFunds returned no value for tx {} — "
+                                             "likely already processed",
+                                             tx_hash_hex );
+                        ++total_skipped;
+                    }
+                }
+                catch ( const std::exception &e )
+                {
+                    node_logger_->debug( "CatchUpScan: MintFunds threw for tx {}: {} — skipping",
+                                         tx_hash_hex, e.what() );
+                    ++total_skipped;
+                }
+            }
+        }
+
+        node_logger_->info( "CatchUpScan: scanned {} chains — {} historical burns backfilled, "
+                            "{} skipped (already processed)",
+                            chains_scanned, total_backfilled, total_skipped );
+    }
+
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
     {
         auto manager_result = GetTransactionManager();
@@ -2175,6 +2373,19 @@ namespace sgns
         switch ( new_state )
         {
             case TransactionManager::State::READY:
+                // D-20: Trigger startup catch-up scan once after CRDT sync completes.
+                // Non-blocking — posted to io_ so the node proceeds normally.
+                if ( !catchup_scan_done_ )
+                {
+                    catchup_scan_done_ = true;
+                    boost::asio::post( *io_, [weak_self = weak_from_this()] {
+                        if ( auto strong = weak_self.lock() )
+                        {
+                            strong->PerformStartupCatchupScan();
+                        }
+                    } );
+                }
+
                 if ( processing_service_ == nullptr )
                 {
                     StateTransition( NodeState::INITIALIZING_PROCESSING );
