@@ -79,8 +79,22 @@ namespace sgns
 
                         for ( const auto &ep : filtered )
                         {
-                            endpoints_by_chain[ep.chain_id].push_back(
-                                { ep.url_template, kPublicEndpointWeight } );
+                            WeightedRpcEndpoint wrep{ ep.url_template, kPublicEndpointWeight };
+
+                            // D-02, D-05: carry bridge contract address and event topic0
+                            // when configured for this chain.
+                            if ( auto it = config.bridge_contract_addresses.find( ep.chain_id );
+                                 it != config.bridge_contract_addresses.end() )
+                            {
+                                wrep.bridge_contract_address = it->second;
+                            }
+                            if ( auto it = config.bridge_event_topic0.find( ep.chain_id );
+                                 it != config.bridge_event_topic0.end() )
+                            {
+                                wrep.event_topic0 = it->second;
+                            }
+
+                            endpoints_by_chain[ep.chain_id].push_back( std::move( wrep ) );
                         }
                     }
                 }
@@ -105,7 +119,22 @@ namespace sgns
             auto &target = endpoints_by_chain[chain_id];
             for ( const auto &ep : eps )
             {
-                target.push_back( { ep.url, kDirectEndpointWeight } );
+                WeightedRpcEndpoint wrep{ ep.url, kDirectEndpointWeight };
+
+                // D-02, D-05: carry bridge contract address and event topic0
+                // when configured for this chain.
+                if ( auto it = config.bridge_contract_addresses.find( chain_id );
+                     it != config.bridge_contract_addresses.end() )
+                {
+                    wrep.bridge_contract_address = it->second;
+                }
+                if ( auto it = config.bridge_event_topic0.find( chain_id );
+                     it != config.bridge_event_topic0.end() )
+                {
+                    wrep.event_topic0 = it->second;
+                }
+
+                target.push_back( std::move( wrep ) );
             }
         }
 
