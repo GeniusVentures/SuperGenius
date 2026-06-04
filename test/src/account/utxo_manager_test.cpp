@@ -274,3 +274,109 @@ TEST( InputUTXOInfo, FieldAssignment )
     EXPECT_EQ( info.txid_hash_, DUMMY_HASH );
     EXPECT_EQ( info.output_idx_, 2u );
 }
+
+// ── Phase 5: Startup Wiring + Mock RPC Transport tests ─────────────────────
+
+TEST_F( UTXOManagerTest, IsOutPointReservedRejectsReadyState )
+{
+    // Insert a UTXO (always enters READY state via PutUTXO)
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
+    // IsOutPointReserved should return false for READY entries
+    EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 0 ) );
+}
+
+TEST_F( UTXOManagerTest, IsOutPointReservedRejectsConsumedState )
+{
+    // Insert a UTXO, then consume it
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 200, TOKEN_1 ) ).value() );
+    InputUTXOInfo info;
+    info.txid_hash_  = DUMMY_HASH;
+    info.output_idx_ = 1;
+    utxo_manager->ConsumeUTXOs( { info } );
+    // IsOutPointReserved should return false for CONSUMED entries
+    EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 1 ) );
+}
+
+TEST_F( UTXOManagerTest, IsOutPointReservedRejectsNonexistent )
+{
+    // Non-existent outpoint should return false (not crash)
+    EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 999 ) );
+}
+
+TEST_F( UTXOManagerTest, PutUTXOWithBridgeType )
+{
+    // Insert a UTXO with UTXO_BRIDGE type for a foreign address
+    const std::string foreign = "bridge_test_address";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 10, 500, TOKEN_1 ),
+                                foreign,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
+    // Verify the UTXO appears in GetUTXOs for that address
+    auto utxos = utxo_manager->GetUTXOs( foreign );
+    EXPECT_EQ( utxos.size(), 1u );
+    EXPECT_EQ( utxos[0].GetAmount(), 500u );
+
+    // Also verify we can insert with default UTXO_NORMAL type
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 11, 300, TOKEN_1 ),
+                                foreign,
+                                UTXOManager::UTXOType::UTXO_NORMAL )
+                     .value() );
+    EXPECT_EQ( utxo_manager->GetUTXOs( foreign ).size(), 2u );
+}
+
+TEST_F( UTXOManagerTest, ForeignAddressPutUTXO )
+{
+    // Insert a UTXO for an address that is NOT the node's own address
+    const std::string foreign = "0xdeadbeef_foreign_address";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 20, 777, TOKEN_1 ), foreign )
+                     .value() );
+    // Verify the UTXO is tracked under the foreign address
+    auto foreign_utxos = utxo_manager->GetUTXOs( foreign );
+    EXPECT_EQ( foreign_utxos.size(), 1u );
+    EXPECT_EQ( foreign_utxos[0].GetAmount(), 777u );
+    EXPECT_EQ( foreign_utxos[0].GetOutputIdx(), 20u );
+
+    // Verify the node's own UTXOs are not affected
+    EXPECT_EQ( utxo_manager->GetUTXOs().size(), 0u );
+}
+
+TEST_F( UTXOManagerTest, ConsumedUTXOsExcludedFromBalance )
+{
+    // Insert UTXOs and consume one; verify balance excludes consumed entries
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 200, TOKEN_1 ) ).value() );
+    EXPECT_EQ( utxo_manager->GetBalance(), 300u );
+
+    InputUTXOInfo consumed;
+    consumed.txid_hash_  = DUMMY_HASH;
+    consumed.output_idx_ = 0;
+    utxo_manager->ConsumeUTXOs( { consumed } );
+
+    // Balance should now exclude the consumed UTXO
+    EXPECT_EQ( utxo_manager->GetBalance(), 200u );
+    // GetUTXOs should also exclude it (state != UTXO_READY)
+    EXPECT_EQ( utxo_manager->GetUTXOs().size(), 1u );
+}
+
+TEST_F( UTXOManagerTest, GetAllUTXOsIncludesBridgeTypeEntries )
+{
+    // Insert a BRIDGE-type UTXO and verify GetAllUTXOs tracks it
+    const std::string bridge_addr = "bridge_catchup_address";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 30, 1000, TOKEN_1 ),
+                                bridge_addr,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
+
+    auto all = utxo_manager->GetAllUTXOs();
+    // Verify the bridge address exists in the map
+    auto it = all.find( bridge_addr );
+    ASSERT_NE( it, all.end() );
+    EXPECT_EQ( it->second.size(), 1u );
+    // Verify the state is READY (PutUTXO always sets READY)
+    EXPECT_EQ( it->second[0].first, UTXOManager::UTXOState::UTXO_READY );
+    EXPECT_EQ( it->second[0].second.GetAmount(), 1000u );
+}
