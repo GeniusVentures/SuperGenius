@@ -340,8 +340,6 @@ namespace sgns::crdt
 
     void GlobalDB::CreateBackupNow()
     {
-        std::lock_guard<std::mutex> lock( backup_mutex_ );
-
         if ( !backup_options_.enabled || !m_datastore )
         {
             return;

@@ -294,7 +294,6 @@ namespace sgns::crdt
         std::atomic_bool                                  stop_backup_thread_{ false };
         std::atomic_bool                                  shutdown_started_{ false };
         std::thread                                       backup_thread_;
-        std::mutex                                        backup_mutex_;
         std::mutex                                        backup_wait_mutex_;
         std::condition_variable                           backup_wait_cv_;
 
