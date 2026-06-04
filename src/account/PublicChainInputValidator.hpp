@@ -6,13 +6,20 @@
  */
 #pragma once
 
+#include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "account/InputValidators.hpp"
+
+namespace eth::rpc
+{
+    class JsonRpcTransport;
+} // namespace eth::rpc
 
 namespace sgns
 {
@@ -30,6 +37,21 @@ namespace sgns
         std::string bridge_contract_address;  ///< Expected bridge contract (hex, "0x...")
         std::string event_topic0;             ///< Expected event topic0 (hex, "0x...")
     };
+
+    /**
+     * @brief Factory callable that produces a JsonRpcTransport from a URL and timeout.
+     *
+     * Injected via SetTransportFactory(). When not set, the default factory creates
+     * real RpcHttpTransport instances (production path per D-16). Tests inject a
+     * factory that returns MockRpcTransport instances (D-07, D-14).
+     *
+     * @param url    RPC endpoint URL.
+     * @param timeout Transport operation timeout.
+     * @return Unique ownership of a transport implementing JsonRpcTransport.
+     */
+    using TransportFactory = std::function<std::unique_ptr<eth::rpc::JsonRpcTransport>(
+        const std::string    &url,
+        std::chrono::seconds  timeout)>;
 
     /**
      * @brief Validator for transactions that reference external public-chain proofs.
@@ -81,6 +103,20 @@ namespace sgns
             return false;
         }
 
+        /**
+         * @brief Inject a custom transport factory for DI-based mock support.
+         *
+         * When set, every call to VerifyPublicChainSmartContract() will use this
+         * factory to create transport instances instead of the default
+         * RpcHttpTransport factory. Not called in production (D-16).
+         *
+         * @param[in] factory Callable taking (url, timeout) → unique_ptr<JsonRpcTransport>.
+         */
+        void SetTransportFactory( TransportFactory factory )
+        {
+            transport_factory_ = std::move( factory );
+        }
+
     private:
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
@@ -98,5 +134,9 @@ namespace sgns
                                              const std::string                        &source_reference ) const;
 
         std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
+
+        /// @brief Pluggable transport factory for DI-based mock injection (D-07, D-14).
+        /// When empty, VerifyPublicChainSmartContract uses the default RpcHttpTransport factory.
+        mutable TransportFactory transport_factory_;
     };
 } // namespace sgns
