@@ -654,7 +654,7 @@ void GeniusNode::PerformStartupCatchupScan() {
 | A6 | TransactionManager's `INITIALIZING`→`SYNCING`→`READY` state machine allows `MintFunds()` calls before READY | Common Pitfalls #2 | If `MintFunds()` returns error during SYNCING, burns detected early would be lost — queue them |
 | A7 | `MockRpcTransport` in `test/src/mock/` can be built as a separate CMake target not linked by production binary | Common Pitfalls #6 | If CMakeLists.txt links mock lib into a common library, production binary gets mock code |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **EthWatchService initialization requirement**
    - What we know: Created as `std::make_shared<eth::EthWatchService>()` (GeniusNode.cpp:428) — default-constructed, no `initialize()` called. Works in Phase 4 E2E tests.
