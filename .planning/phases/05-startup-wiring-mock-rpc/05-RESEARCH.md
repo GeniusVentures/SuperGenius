@@ -509,7 +509,7 @@ void GeniusNode::PerformStartupCatchupScan() {
 
 **If this table is empty:** N/A — assumptions exist and need validation.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **EthWatchService initialization requirement**
    - What we know: `EthWatchService` is created as `std::make_shared<eth::EthWatchService>()` (GeniusNode.cpp:428) — default-constructed, never `initialize()`'d
