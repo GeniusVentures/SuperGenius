@@ -637,19 +637,22 @@ namespace sgns
             chainid = "public";
         }
 
-        // Reservation check — prevent duplicate mint creation for the same burn
-        const std::string reservation_key = chainid + std::string( kBridgeKeySeparator ) + transaction_hash;
+        // UTXO reservation check — prevent duplicate mint creation for the same burn
+        // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
+        base::Hash256 burn_tx_hash;
+        if ( auto parsed = base::Hash256::fromReadableString( transaction_hash ); parsed.has_value() )
         {
-            std::lock_guard lock( bridge_mint_reservation_mutex_ );
-            if ( bridge_mint_reservations_.count( reservation_key ) )
+            burn_tx_hash = parsed.value();
+            auto &utxo_mgr = account_m->GetUTXOManager();
+            if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) ||
+                 utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
             {
                 TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Bridge mint already reserved for chain={} tx_hash={}",
+                    "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={}",
                     account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
                     chainid, transaction_hash );
                 return outcome::failure( std::errc::already_connected );
             }
-            bridge_mint_reservations_.insert( reservation_key );
         }
 
         // Persistence check — reject if this burn was already executed (survives restart)
@@ -666,10 +669,26 @@ namespace sgns
                         "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={}",
                         account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
                         chainid, transaction_hash );
-                    std::lock_guard lock( bridge_mint_reservation_mutex_ );
-                    bridge_mint_reservations_.erase( reservation_key );
                     return outcome::failure( std::errc::already_connected );
                 }
+            }
+        }
+
+        // D-18/D-19: Insert burn UTXO as RESERVED with UTXO_BRIDGE type
+        // This replaces the in-memory bridge_mint_reservations_ set.
+        // The UTXO is consumed later in ParseMintTransactionV2 when the mint confirms.
+        if ( source_hash.has_value() )
+        {
+            GeniusUTXO burn_utxo( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
+            auto put_result = account_m->GetUTXOManager().PutUTXO( burn_utxo,
+                                                                    account_m->GetAddress(),
+                                                                    UTXOType::UTXO_BRIDGE );
+            if ( put_result.has_error() || !put_result.value() )
+            {
+                TransactionManagerLogger()->warn(
+                    "[{} - full: {}] {}: Failed to reserve burn UTXO for chain={} tx_hash={}",
+                    account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                    chainid, transaction_hash );
             }
         }
 
@@ -5087,10 +5106,6 @@ namespace sgns
                     if ( mint_tx )
                     {
                         const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
-                        {
-                            std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
-                            bridge_mint_reservations_.erase( reservation_key );
-                        }
                         // Persist executed state to RocksDB — survives restart
                         auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
                         if ( datastore )
@@ -5175,12 +5190,8 @@ namespace sgns
                 if ( tx->GetType() == "mint-v2" )
                 {
                     auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    if ( mint_tx )
-                    {
-                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) + tx->dag_st.uncle_hash();
-                        std::lock_guard res_lock( bridge_mint_reservation_mutex_ );
-                        bridge_mint_reservations_.erase( reservation_key );
-                    }
+                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
+                    (void) mint_tx;
                 }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED

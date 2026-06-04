@@ -545,10 +545,6 @@ namespace sgns
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
 
-        /// @brief In-flight bridge mint reservations — prevents duplicate mint creation for the same burn.
-        mutable std::mutex                bridge_mint_reservation_mutex_;
-        std::unordered_set<std::string>   bridge_mint_reservations_;
-
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
