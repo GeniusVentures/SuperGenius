@@ -4,11 +4,11 @@ milestone: v1.0
 milestone_name: Bridge Integration
 current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
 status: context-gathered
-last_updated: "2026-06-04T15:30:00Z"
+last_updated: "2026-06-04T16:18:14.555Z"
 progress:
   total_phases: 9
   completed_phases: 5
-  total_plans: 7
+  total_plans: 12
   completed_plans: 11
   percent: 56
 ---
@@ -25,7 +25,7 @@ progress:
 | Phase 2 | Relayer — Burn Detection → MintFunds | complete |
 | Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | planned |
-| Phase 5 | Startup Wiring + Mock RPC Transport | context-gathered (branch: bridge_phase5) |
+| Phase 5 | Startup Wiring + Mock RPC Transport | planned (5 plans, 2 waves) |
 | Phase 6 | Network Voting Weight Classes (Tier 2) | not-started |
 
 ## Quick Tasks Completed
