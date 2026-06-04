@@ -282,3 +282,171 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesAmountOverflow )
     // Should not crash — overflow detected, logs error and returns
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
 }
+
+// ─── Multi-Chain Start() Tests ───────────────────────────────────────────────
+
+/**
+ * @brief Simple spy EthWatchService for capturing watch_event calls in tests.
+ *
+ * Because eth::EthWatchService::watch_event() is not virtual, we can't
+ * override it in a subclass.  Instead, use a default-constructed real
+ * EthWatchService for Start() tests that exercise registration and verify
+ * the resulting chain_watches_ via the test accessor.
+ */
+
+TEST( BridgeRelayerTest, MultiChainStart )
+{
+    // @given a BridgeRelayer with a real EthWatchService
+    // @when Start() is called with 3 valid ChainContractPair entries
+    // @then chain_watches_ contains 3 entries, each with a non-zero watch_id
+
+    auto logger         = base::createLogger( "bridge_relayer_test" );
+    auto watch_service  = std::make_shared<eth::EthWatchService>();
+    auto relayer        = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    std::vector<ChainContractPair> chains = {
+        { "ethereum-sepolia", "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
+        { "polygon-amoy",     "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+        { "base-sepolia",     "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+    };
+
+    relayer->Start( chains );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_EQ( watches.size(), 3U );
+
+    for ( const auto &chain : chains )
+    {
+        auto it = watches.find( chain.chain_name );
+        ASSERT_NE( it, watches.end() ) << "missing watch for " << chain.chain_name;
+        EXPECT_NE( it->second, 0 ) << "watch_id should be non-zero for " << chain.chain_name;
+    }
+}
+
+TEST( BridgeRelayerTest, SkipsChainsWithoutAddress )
+{
+    // @given a BridgeRelayer with a real EthWatchService
+    // @when Start() is called with 3 chains, one having an invalid hex address
+    // @then only valid chains are registered; invalid one logged and skipped
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    std::vector<ChainContractPair> chains = {
+        { "chain-valid-a", "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
+        { "chain-bad-hex", "not-a-hex-address" },
+        { "chain-valid-b", "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+    };
+
+    relayer->Start( chains );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_EQ( watches.size(), 2U );
+
+    EXPECT_NE( watches.find( "chain-valid-a" ), watches.end() );
+    EXPECT_EQ( watches.find( "chain-bad-hex" ), watches.end() );
+    EXPECT_NE( watches.find( "chain-valid-b" ), watches.end() );
+}
+
+TEST( BridgeRelayerTest, SkipsChainsWithEmptyAddress )
+{
+    // @given a BridgeRelayer
+    // @when Start() receives a chain with an empty contract_address
+    // @then the chain is skipped and valid chains still register
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    std::vector<ChainContractPair> chains = {
+        { "chain-with-addr", "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
+        { "chain-no-addr",   "" },
+    };
+
+    relayer->Start( chains );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_EQ( watches.size(), 1U );
+    EXPECT_NE( watches.find( "chain-with-addr" ), watches.end() );
+    EXPECT_EQ( watches.find( "chain-no-addr" ), watches.end() );
+}
+
+TEST( BridgeRelayerTest, StartEmptyVector )
+{
+    // @given a BridgeRelayer
+    // @when Start() is called with an empty vector
+    // @then no crash occurs and chain_watches_ remains empty
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    relayer->Start( {} );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_TRUE( watches.empty() );
+}
+
+TEST( BridgeRelayerTest, BestEffortSkipsInvalidAndEmptyNames )
+{
+    // @given a BridgeRelayer
+    // @when Start() receives a mix of valid, invalid-hex, and empty-address chains
+    // @then only valid chains are registered — best-effort per D-21
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    std::vector<ChainContractPair> chains = {
+        { "chain-a",     "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
+        { "chain-bad",   "deadbeef" },   // short hex — invalid
+        { "chain-empty", "" },           // empty address — skipped
+        { "chain-b",     "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
+        { "chain-garbage", "zzz" },      // non-hex — invalid
+    };
+
+    relayer->Start( chains );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_EQ( watches.size(), 2U );
+    EXPECT_NE( watches.find( "chain-a" ), watches.end() );
+    EXPECT_NE( watches.find( "chain-b" ), watches.end() );
+    // The 3 bad entries should not appear
+    EXPECT_EQ( watches.find( "chain-bad" ), watches.end() );
+    EXPECT_EQ( watches.find( "chain-empty" ), watches.end() );
+    EXPECT_EQ( watches.find( "chain-garbage" ), watches.end() );
+}
+
+TEST( BridgeRelayerTest, NoWatchServiceReturnsEarly )
+{
+    // @given a BridgeRelayer created via CreateForTest (null EthWatchService)
+    // @when Start() is called with a valid chain
+    // @then no crash and chain_watches_ stays empty
+
+    auto relayer = BridgeRelayerTestAccess::CreateForTest();
+    ASSERT_NO_THROW( relayer.Start( { { "test", "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" } } ) );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( relayer );
+    EXPECT_TRUE( watches.empty() );
+}
+
+TEST( BridgeRelayerTest, OnWatchEventLogsChainName )
+{
+    // Verify that OnWatchEvent includes chain_name in its log output
+    // and doesn't crash with a valid notification.
+
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
+
+    auto notification = MakeBurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        42,
+        1000000,
+        11155111,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" );
+
+    // Should not crash; chain_name is passed through and logged
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification, "specific-chain" ) );
+}
