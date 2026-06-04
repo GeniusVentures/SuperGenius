@@ -1,3 +1,0 @@
-add_subdirectory(supergenius_trie)
-add_subdirectory(serialization)
-add_subdirectory(impl)
