@@ -50,6 +50,7 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
+    uint64_t      bridge_catchup_scan_depth = 10000; ///< Max historical blocks to scan for unprocessed bridge burns (D-20).
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;
@@ -620,6 +621,7 @@ namespace sgns
         bool                        is_full_node_;                 ///< Whether this node runs in full-node mode.
         base::Logger                node_logger_;                  ///< Main node logger.
         DevConfig_st                dev_config_;                   ///< Runtime node configuration.
+        bool                        catchup_scan_done_ = false;    ///< Guards single-shot startup catch-up scan (D-20).
         std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
         std::string                 processing_channel_topic_;     ///< Processing task channel topic.
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
@@ -745,6 +747,19 @@ namespace sgns
          * Best-effort: log warnings and continue if bridge startup fails.
          */
         void InitializeAndStartBridge();
+
+        /**
+         * @brief Scans historical blocks for unprocessed bridge burn events after CRDT sync.
+         *
+         * Called once after TransactionManager reaches READY state (D-20). Probes RPC
+         * endpoints for each chain with bridge_contract_address, constructs eth_getLogs
+         * queries filtered to BridgeSourceBurned topic0, and inserts any missing burns
+         * via MintFunds() with UTXOType::UTXO_BRIDGE.
+         *
+         * Best-effort: failures on one chain do not block others.
+         * Scan depth capped at dev_config_.bridge_catchup_scan_depth blocks (default 10,000).
+         */
+        void PerformStartupCatchupScan();
 
         /**
          * @brief Returns the transaction manager when initialized.
