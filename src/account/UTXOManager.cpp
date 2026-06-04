@@ -53,8 +53,10 @@ namespace sgns
 
         SGTransaction::UTXOEntryState ToProtoState( UTXOManager::UTXOState state )
         {
+            // UTXO_RESERVED has no protobuf equivalent — serialize as UTXO_READY.
+            // On deserialization RESERVED becomes READY; catch-up scan re-detects them.
             return state == UTXOManager::UTXOState::UTXO_CONSUMED ? SGTransaction::UTXO_ENTRY_CONSUMED
-                                                                  : SGTransaction::UTXO_ENTRY_READY;
+                                                                   : SGTransaction::UTXO_ENTRY_READY;
         }
 
         UTXOManager::UTXOState FromProtoState( SGTransaction::UTXOEntryState state )
@@ -79,12 +81,7 @@ namespace sgns
     {
         uint64_t retval = 0;
 
-        // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->error( "Non-full node cannot get balance for other addresses" );
-            return 0;
-        }
+        // D-17: foreign-address guard removed — all nodes track UTXOs for all peers
 
         std::shared_lock lock( utxos_mutex_ );
         if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
@@ -120,12 +117,7 @@ namespace sgns
     {
         uint64_t balance = 0;
 
-        // If not a full node and trying to get balance for other addresses, return 0
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node cannot get balance for other addresses" );
-            return 0;
-        }
+        // D-17: foreign-address guard removed — all nodes track UTXOs for all peers
 
         std::shared_lock lock( utxos_mutex_ );
         if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
@@ -159,12 +151,7 @@ namespace sgns
                                                 const std::string      &address,
                                                 UTXOManager::UTXOType   type )
     {
-        // If not a full node and trying to store UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->debug( "Non-full node cannot store UTXOs for other addresses" );
-            return false;
-        }
+        // D-17: foreign-address guard removed — all nodes store UTXOs for all peers
 
         new_utxo.SetOwnerAddress( address );
         const OutPoint outpoint{ new_utxo.GetTxID(), new_utxo.GetOutputIdx() };
@@ -192,14 +179,10 @@ namespace sgns
     }
 
     outcome::result<void> UTXOManager::DeleteUTXO( const base::Hash256 &utxo_id,
-                                                   uint32_t             output_idx,
-                                                   const std::string   &address )
+                                                    uint32_t             output_idx,
+                                                    const std::string   &address )
     {
-        // If not a full node and trying to delete UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node deleting UTXOs for other addresses" );
-        }
+        // D-17: foreign-address guard removed — all nodes manage UTXOs for all peers
 
         {
             std::unique_lock lock( utxos_mutex_ );
@@ -342,12 +325,7 @@ namespace sgns
 
     outcome::result<void> UTXOManager::SetUTXOs( const std::vector<GeniusUTXO> &utxos, const std::string &address )
     {
-        // If not a full node and trying to set UTXOs for other addresses, reject
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node cannot set UTXOs for other addresses" );
-            return std::errc::permission_denied;
-        }
+        // D-17: foreign-address guard removed — all nodes manage UTXOs for all peers
 
         {
             std::unique_lock lock( utxos_mutex_ );
@@ -571,6 +549,12 @@ namespace sgns
         return state.has_value() && state.value() == UTXOState::UTXO_CONSUMED;
     }
 
+    bool UTXOManager::IsOutPointReserved( const base::Hash256 &utxo_id, uint32_t output_idx ) const
+    {
+        auto state = GetOutPointState( utxo_id, output_idx );
+        return state.has_value() && state.value() == UTXOState::UTXO_RESERVED;
+    }
+
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot() const
     {
         return ComputeUTXOMerkleRoot( address_ );
@@ -578,11 +562,7 @@ namespace sgns
 
     base::Hash256 UTXOManager::ComputeUTXOMerkleRoot( const std::string &address ) const
     {
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node cannot compute UTXO Merkle root for other addresses" );
-            return utxo_merkle::EmptyUTXOMerkleRoot();
-        }
+        // D-17: foreign-address guard removed — validators need Merkle roots for all addresses
 
         std::vector<GeniusUTXO> unspent;
         {
@@ -855,11 +835,7 @@ namespace sgns
             return storage::DatabaseError::UNITIALIZED;
         }
 
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node cannot create checkpoint for other addresses" );
-            return std::errc::permission_denied;
-        }
+        // D-17: foreign-address guard removed — all nodes manage checkpoints for all peers
 
         std::vector<GeniusUTXO> unspent_snapshot;
         {
@@ -936,11 +912,7 @@ namespace sgns
             return storage::DatabaseError::UNITIALIZED;
         }
 
-        if ( !is_full_node_ && address != address_ )
-        {
-            logger_->warn( "Non-full node cannot load checkpoint for other addresses" );
-            return std::errc::permission_denied;
-        }
+        // D-17: foreign-address guard removed — all nodes manage checkpoints for all peers
 
         base::Buffer latest_pointer_key_buf;
         latest_pointer_key_buf.put( BuildLatestCheckpointPointerKey( address ) );
