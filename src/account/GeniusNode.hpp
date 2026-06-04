@@ -806,15 +806,7 @@ namespace sgns
         std::unordered_map<libp2p::peer::PeerId, unsigned>             reconnect_attempts_;
         std::mutex                                                     reconnect_mutex_;
 
-        struct CrdtBackupConfig
-        {
-            bool     enabled{ true };
-            uint32_t interval_minutes{ 15 };
-            uint32_t keep_count{ 12 };
-            bool     auto_restore_on_repair_failure{ true };
-        };
-
-        CrdtBackupConfig crdt_backup_config_{};
+        crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
         
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.
