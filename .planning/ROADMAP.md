@@ -130,13 +130,21 @@ Plans:
 **Source:** PR #298 Codex review (June 2, 2026) — 3 deferred P1 findings
 
 **Depends on:** Phase 4
-**Plans:** 0 plans
+**Status:** Planned
+**Plans:** 5 plans in 2 waves
 
-**Tasks:**
-- [ ] Wire `BridgeRelayer::Start(chain, contract)` call site into GeniusNode startup — registers `BridgeSourceBurned` watch
-- [ ] Wire `InitializeRpcEndpoints()` call site into GeniusNode startup — populates ChainList endpoints with `bridge_contract_address` and `event_topic0`
-- [ ] Mock RPC transport: in-process, per-node config, data/behavioral/stateful variance, multi-chain, majority verification (≥2 of 3)
-- [ ] Startup catch-up: after CRDT sync, grab last mint message by date, check contract via RPC for unprocessed burns
+**Wave 1** (parallel — independent subsystems):
+
+Plans:
+- [ ] 05-01-PLAN.md — BridgeRelayer multi-chain Start(): per-chain watch tracking, best-effort registration, updated tests
+- [ ] 05-02-PLAN.md — Mock RPC Transport: JsonRpcTransport implementation, 6 failure modes, stateful sequences, config parser, behavioral tests
+- [ ] 05-03-PLAN.md — Transport Factory DI: pluggable TransportFactory in PublicChainInputValidator, replaces hard RpcHttpTransport construction
+- [ ] 05-04-PLAN.md — UTXO Changes: remove 8 foreign-address guards, add UTXO_RESERVED state, add UTXOType::UTXO_BRIDGE marker
+
+**Wave 2** (blocked on Wave 1 completion):
+
+Plans:
+- [ ] 05-05-PLAN.md — GeniusNode Startup Wiring: InitializeAndStartBridge() async init, rewritten InitializeRpcEndpoints() from chains_config.json, startup catch-up scan for historical burns, CWD path fix
 
 **Architecture note:** See `.planning/notes/rpc-verification-tiers.md`
 
