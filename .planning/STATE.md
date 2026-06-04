@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Bridge Integration
 current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
-status: discussed
-last_updated: "2026-06-03T14:00:00Z"
+status: context-gathered
+last_updated: "2026-06-04T15:30:00Z"
 progress:
-  total_phases: 10
+  total_phases: 9
   completed_phases: 5
-  total_plans: 14
-  completed_plans: 13
-  percent: 52
+  total_plans: 7
+  completed_plans: 11
+  percent: 56
 ---
 
 # Project State: SuperGenius Bridge Integration
@@ -25,7 +25,7 @@ progress:
 | Phase 2 | Relayer — Burn Detection → MintFunds | complete |
 | Phase 3 | Burn Deduplication Cache | complete |
 | Phase 4 | End-to-End Integration Test | planned |
-| Phase 5 | Startup Wiring + Mock RPC Transport | discussed (branch: bridge_phase5) |
+| Phase 5 | Startup Wiring + Mock RPC Transport | context-gathered (branch: bridge_phase5) |
 | Phase 6 | Network Voting Weight Classes (Tier 2) | not-started |
 
 ## Quick Tasks Completed
@@ -90,21 +90,32 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 | 1 | BridgeRelayer::Start() — multi-chain from chains_config.json | discussed |
 | 2 | InitializeRpcEndpoints() + async startup wiring | discussed |
 | 3 | Mock RPC Transport — design & interface | discussed |
+| 4 | Startup catch-up scan, mock enablement, failure handling | discussed |
+| — | CONTEXT.md | written (21 decisions captured) |
 | — | Implementation | not started |
 
 **Branch:** `bridge_phase5` (pushed to origin)
 
 **Discussion artifacts:**
+
 - `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART1.md`
 - `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART2.md`
 - `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART3.md`
+- `.planning/phases/05-startup-wiring-mock-rpc/05-DISCUSSION-PART4.md`
+
+**Context:** `.planning/phases/05-startup-wiring-mock-rpc/05-CONTEXT.md` (21 decisions)
 
 **Key decisions:**
+
 - `bridge_contract_address` added as optional field to `chains_config.json`
 - Both fire as async during CREATING — no state machine coupling
 - `Start()` awaits `InitializeRpcEndpoints()` completion
 - Mock implements `RpcHttpTransport` interface — drop-in replacement
-- Per-node JSON config <binary_dir>/mock_rpc_config.json
+- Per-node JSON config `<binary_dir>/mock_rpc_config.json`
 - Stateful ordered responses keyed by tx_hash
 - 6 failure modes: success, timeout, connection_refused, bad_json, wrong_status, wrong_logs
-
+- Remove `!is_full_node_ && address != address_` guards — all nodes store all UTXOs
+- Add `UTXO_RESERVED` state to Burn UTXO lifecycle (READY → RESERVED → CONFIRMED)
+- Startup catch-up: probe RPC for historical burns, backfill missing UTXOs
+- Test executables default to mock; real RPC opt-in via runtime switch
+- BridgeRelayer multi-chain Start() uses best-effort (skip failed chains)
