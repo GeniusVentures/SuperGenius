@@ -130,23 +130,24 @@ Plans:
 **Source:** PR #298 Codex review (June 2, 2026) — 3 deferred P1 findings
 
 **Depends on:** Phase 4
-**Status:** Planned (replanned 2026-06-04)
-**Plans:** 5 plans in 2 waves
+**Status:** Complete (implemented 2026-06-04)
+**Plans:** 6 plans (5 implementation + 1 test generation)
 
 **Requirements:** REQ-WIRE-01, REQ-WIRE-02, REQ-WIRE-03, REQ-MOCK-01, REQ-MOCK-02, REQ-MOCK-03, REQ-MOCK-04, REQ-UTXO-01, REQ-UTXO-02, REQ-UTXO-03, REQ-CATCH-01, REQ-CATCH-02
 
 **Wave 1** (parallel — independent subsystems):
 
 Plans:
-- [ ] 05-01-PLAN.md — BridgeRelayer multi-chain Start(): ChainContractPair struct, per-chain watch_id tracking, best-effort registration (D-01, D-21); REQ-WIRE-01, REQ-CATCH-02
-- [ ] 05-02-PLAN.md — Mock RPC Transport: MockRpcTransport implements JsonRpcTransport, 6 failure modes (D-13), stateful sequences (D-10), config parser (D-08/D-09), behavioral tests; REQ-MOCK-01, REQ-MOCK-02, REQ-MOCK-03
-- [ ] 05-03-PLAN.md — Transport Factory DI: TransportFactory + SetTransportFactory() in PublicChainInputValidator, replaces hard RpcHttpTransport construction, SGNS_E2E_REAL_RPC=1 env var (D-15); REQ-MOCK-01, REQ-MOCK-03, REQ-MOCK-04
-- [ ] 05-04-PLAN.md — UTXO Changes: remove 8 foreign-address guards (D-17), add UTXO_RESERVED state (D-18), add UTXOType::UTXO_BRIDGE marker (D-19); REQ-UTXO-01, REQ-UTXO-02, REQ-UTXO-03
+- [x] 05-01-PLAN.md — BridgeRelayer multi-chain Start(): ChainContractPair struct, per-chain watch_id tracking, best-effort registration (D-01, D-21); REQ-WIRE-01, REQ-CATCH-02
+- [x] 05-02-PLAN.md — Mock RPC Transport: MockRpcTransport implements JsonRpcTransport, 6 failure modes (D-13), stateful sequences (D-10), config parser (D-08/D-09), behavioral tests; REQ-MOCK-01, REQ-MOCK-02, REQ-MOCK-03
+- [x] 05-03-PLAN.md — Transport Factory DI: TransportFactory + SetTransportFactory() in PublicChainInputValidator, replaces hard RpcHttpTransport construction, SGNS_E2E_REAL_RPC=1 env var (D-15); REQ-MOCK-01, REQ-MOCK-03, REQ-MOCK-04
+- [x] 05-04-PLAN.md — UTXO Changes: remove 8 foreign-address guards (D-17), add UTXO_RESERVED state (D-18), add UTXOType::UTXO_BRIDGE marker (D-19); REQ-UTXO-01, REQ-UTXO-02, REQ-UTXO-03
 
 **Wave 2** (blocked on Wave 1 completion — depends on 05-01, 05-03, 05-04):
 
 Plans:
-- [ ] 05-05-PLAN.md — GeniusNode Startup Wiring: InitializeAndStartBridge() async init from INITIALIZING_TRANSACTIONS (D-04), rewritten InitializeRpcEndpoints() from chains_config.json (D-02/D-05), startup catch-up scan (D-20), CWD path fix; REQ-WIRE-02, REQ-WIRE-03, REQ-CATCH-01
+- [x] 05-05-PLAN.md — GeniusNode Startup Wiring: InitializeAndStartBridge() async init from INITIALIZING_TRANSACTIONS (D-04), rewritten InitializeRpcEndpoints() from chains_config.json (D-02/D-05), startup catch-up scan (D-20), CWD path fix; REQ-WIRE-02, REQ-WIRE-03, REQ-CATCH-01
+- [x] 05-06-SUMMARY.md — Unit Test Generation: 28 GTest tests across 3 modules (UTXOManager, GeniusNode startup, ChainRpcEndpointProvider)
 
 **Architecture note:** See `.planning/notes/rpc-verification-tiers.md`
 
