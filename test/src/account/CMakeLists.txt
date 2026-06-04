@@ -11,11 +11,11 @@ target_link_libraries(token_amount_test
 )
 
 if(MSVC)
-    target_link_options(token_amount_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+    target_link_options(chain_rpc_endpoint_provider_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
-    target_link_options(token_amount_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+    target_link_options(chain_rpc_endpoint_provider_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
-    target_link_options(token_amount_test PUBLIC
+    target_link_options(chain_rpc_endpoint_provider_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
@@ -67,6 +67,26 @@ addtest(bridge_relayer_test
 )
 
 target_link_libraries(bridge_relayer_test
+    genius_node_test
+)
+
+if(MSVC)
+    target_link_options(bridge_relayer_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(bridge_relayer_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(bridge_relayer_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+addtest(chain_rpc_endpoint_provider_test
+    chain_rpc_endpoint_provider_test.cpp
+)
+
+target_link_libraries(chain_rpc_endpoint_provider_test
     genius_node_test
 )
 
