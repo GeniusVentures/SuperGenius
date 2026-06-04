@@ -50,8 +50,18 @@ namespace sgns
          */
         enum class UTXOState : uint8_t
         {
-            UTXO_READY,   ///< UTXO is unspent and available for use
-            UTXO_CONSUMED ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_READY,    ///< UTXO is unspent and available for use
+            UTXO_RESERVED, ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
+            UTXO_CONSUMED  ///< UTXO has been consumed by a transaction and is no longer available
+        };
+
+        /**
+         * @brief Type classification for UTXOs to distinguish standard UTXOs from cross-chain bridge burns.
+         */
+        enum class UTXOType : uint8_t
+        {
+            UTXO_NORMAL = 0, ///< Standard UTXO from local transfers or mints
+            UTXO_BRIDGE = 1  ///< UTXO from cross-chain bridge burn event
         };
 
         /**
@@ -69,6 +79,7 @@ namespace sgns
             uint64_t                     created_epoch{ 0 };             ///< Epoch when the UTXO was created
             std::optional<uint64_t>      spent_epoch;   ///< Epoch when the UTXO was consumed, if applicable
             std::optional<base::Hash256> spent_by_txid; ///< Transaction ID that consumed this UTXO, if applicable
+            UTXOType                     type{ UTXOType::UTXO_NORMAL };  ///< Type classification for the UTXO
         };
 
         /**
@@ -147,9 +158,12 @@ namespace sgns
          * @brief       Add a new UTXO to the account
          * @param[in]   new_utxo The new UTXO to be added
          * @param       address Address to add the UTXO to
+         * @param[in]   type UTXO type classification (default UTXO_NORMAL for standard UTXOs)
          * @return      true if the UTXO was added, false otherwise
          */
-        outcome::result<bool> PutUTXO( GeniusUTXO new_utxo, const std::string &address );
+        outcome::result<bool> PutUTXO( GeniusUTXO    new_utxo,
+                                       const std::string &address,
+                                       UTXOType      type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Adds a new UTXO to the account using the manager's default address.
@@ -303,6 +317,14 @@ namespace sgns
          * @return      true if the outpoint is consumed, false otherwise
          */
         bool IsOutPointConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
+        /**
+         * @brief       Indicates whether a specific outpoint is in the RESERVED state (burn UTXO awaiting consensus).
+         * @param[in]   utxo_id The transaction hash that created the UTXO
+         * @param[in]   output_idx The output index of the UTXO within the transaction
+         * @return      true if the outpoint exists and is in UTXO_RESERVED state
+         */
+        bool IsOutPointReserved( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
 
         /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address
