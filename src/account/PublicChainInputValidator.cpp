@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <memory>
 #include <utility>
 
 #include <base/parse_utility.hpp>
@@ -170,6 +171,16 @@ namespace sgns
         static constexpr int32_t kRequiredConsensusWeight = 75;
         static constexpr auto    kTimeout                 = std::chrono::seconds( 10 );
 
+        // Resolve transport factory: use injected factory if set (D-07, D-14),
+        // otherwise default to real RpcHttpTransport (production path per D-16).
+        auto factory = transport_factory_
+                           ? transport_factory_
+                           : []( const std::string &url, std::chrono::seconds timeout ) {
+                                 eth::rpc::RpcHttpTransportOptions opts;
+                                 opts.timeout = timeout;
+                                 return std::make_unique<eth::rpc::RpcHttpTransport>( url, opts );
+                             };
+
         int32_t total_weight   = 0;
         int32_t success_weight = 0;
         size_t  tried          = 0;
@@ -178,9 +189,7 @@ namespace sgns
         {
             total_weight += ep.consensus_weight;
 
-            eth::rpc::RpcHttpTransportOptions opts;
-            opts.timeout = kTimeout;
-            eth::rpc::RpcHttpTransport transport( ep.url, opts );
+            auto transport = factory( ep.url, kTimeout );
 
             eth::Hash256 tx_hash_parsed{};
             if ( !rlp::base::parse::hex_array( source_reference, tx_hash_parsed ) )
@@ -192,7 +201,7 @@ namespace sgns
             }
 
             const auto request  = eth::rpc::make_get_transaction_receipt_request( tx_hash_parsed, 1 );
-            const auto response = transport.call( request );
+            const auto response = transport->call( request );
             if ( !response.has_value() )
             {
                 logger->debug( "VerifyPublicChainSmartContract RPC transport failed for url={}", ep.url );
