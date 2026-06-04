@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "test/src/mock/mock_rpc_config.hpp"
+#include "src/mock/mock_rpc_config.hpp"
 
 namespace sgns::test
 {

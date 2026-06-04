@@ -1,7 +1,7 @@
 // Copyright 2026 Genius Ventures, Inc.
 // SPDX-License-Identifier: MIT
 
-#include "test/src/mock/mock_rpc_transport.hpp"
+#include "src/mock/mock_rpc_transport.hpp"
 
 #include <boost/json.hpp>
 #include <fstream>
