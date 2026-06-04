@@ -12,6 +12,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include <boost/asio.hpp>
+#include <boost/json.hpp>
+
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "account/TokenID.hpp"
