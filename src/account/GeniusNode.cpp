@@ -2223,7 +2223,6 @@ namespace sgns
 
     void GeniusNode::InitBootstrapReconnect()
     {
-        if ( bootstrap_fullnode_ids_.empty() )
         if ( bootstrap_fullnode_ids_.empty() && bootstrap_peer_ids_.empty() )
         {
             node_logger_->debug( "No bootstrapers configured, skipping reconnect subscription" );
@@ -2271,8 +2270,6 @@ namespace sgns
                         }
                     } ) );
 
-        node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s)",
-                            bootstrap_fullnode_ids_.size() );
         node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s) + {} peer(s)",
                             bootstrap_fullnode_ids_.size(),
                             bootstrap_peer_ids_.size() );
@@ -2280,15 +2277,12 @@ namespace sgns
 
     void GeniusNode::StartBootstrapHealthCheck()
     {
-        if ( bootstrap_fullnode_infos_.empty() )
         if ( bootstrap_fullnode_infos_.empty() && bootstrap_peer_infos_.empty() )
         {
             node_logger_->debug( "No bootstrappers to health-check" );
             return;
         }
         ScheduleNextHealthCheck();
-        node_logger_->info( "Bootstrap fullnode health check started (interval: {}s)",
-                            reconnect_config_.health_check_interval.count() );
         node_logger_->info( "Bootstrap health check started (interval: {}s, tracking {} fullnodes + {} peers)",
                             reconnect_config_.health_check_interval.count(),
                             bootstrap_fullnode_infos_.size(),
