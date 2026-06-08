@@ -38,7 +38,7 @@ namespace sgns::crdt
         // New peer registry types
         using PeerKey      = size_t; // Unique identifier for a peer in our registry
         using PeerEntry    = std::pair<PeerId, std::vector<Multiaddress>>;
-        using RouteMapType = std::map<CID, std::vector<PeerKey>>; // Maps CIDs to ordered peer registry keys
+        using RouteMapType = std::map<CID, PeerKey>; // Maps CIDs to peer registry keys
 
         enum class Error
         {
@@ -150,17 +150,9 @@ namespace sgns::crdt
 
         outcome::result<std::shared_ptr<ipfs_lite::ipld::IPLDNode>> GetNodeFromMerkleDAG( const CID &cid ) const;
 
-        outcome::result<std::vector<PeerKey>> GetRouteKeys( const CID &cid ) const;
-        
         outcome::result<PeerEntry> GetRoute( const CID &cid ) const;
-        void                       MoveRoutePeerToFront( const CID &cid, PeerKey peerKey ) const;
         void                       EraseRoutesFromPeerID( const PeerId &peer ) const;
         void                       EraseRoute( const CID &cid );
-
-        static bool IsConnectionFailureStatus( ResponseStatusCode code );
-        void        SetRequestStatus( const CID &cid, ResponseStatusCode code ) const;
-        boost::optional<ResponseStatusCode> GetRequestStatus( const CID &cid ) const;
-        void                             ClearRequestStatus( const CID &cid ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -168,7 +160,7 @@ namespace sgns::crdt
         static uint64_t getBackoffTimeout( uint64_t attempts, bool ever_connected );
 
         /// record successful connections
-        void RecordSuccessfulConnection( const PeerId &peer ) const;
+        void RecordSuccessfulConnection( const PeerId &peer );
 
         /// CID-specific failure tracking methods
         void RecordCIDFailure( const PeerId &peer, const CID &cid ) const;
@@ -209,10 +201,6 @@ namespace sgns::crdt
         // Track CID-specific failures per peer to avoid re-requesting CIDs that peers don't have
         mutable std::map<std::pair<Multihash, CID>, uint64_t> cid_failures_; // peer+cid -> timestamp of failure
         mutable std::mutex                                    cid_failures_mutex_;
-
-        // Track last graphsync response code per CID to distinguish connectivity from content failures
-        mutable std::map<CID, ResponseStatusCode> request_status_;
-        mutable std::mutex                        request_status_mutex_;
 
         std::map<CID, std::shared_ptr<ipfs_lite::ipld::IPLDNode>> received_blocks_;
 
