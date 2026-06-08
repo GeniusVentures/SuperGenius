@@ -2226,8 +2226,7 @@ namespace sgns
         if ( bootstrap_fullnode_ids_.empty() )
         if ( bootstrap_fullnode_ids_.empty() && bootstrap_peer_ids_.empty() )
         {
-            node_logger_->debug( "No bootstrap fullnodes configured, skipping reconnect subscription" );
-            node_logger_->debug( "No bootstrap peers configured, skipping reconnect subscription" );
+            node_logger_->debug( "No bootstrapers configured, skipping reconnect subscription" );
             return;
         }
 
@@ -2284,8 +2283,7 @@ namespace sgns
         if ( bootstrap_fullnode_infos_.empty() )
         if ( bootstrap_fullnode_infos_.empty() && bootstrap_peer_infos_.empty() )
         {
-            node_logger_->debug( "No bootstrap fullnodes to health-check" );
-            node_logger_->debug( "No bootstrap peers to health-check" );
+            node_logger_->debug( "No bootstrappers to health-check" );
             return;
         }
         ScheduleNextHealthCheck();
