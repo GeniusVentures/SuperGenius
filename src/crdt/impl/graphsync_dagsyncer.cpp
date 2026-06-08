@@ -6,6 +6,14 @@
 #include <utility>
 #include <thread>
 #include <deque>
+#include <condition_variable>
+#include <algorithm>
+
+namespace
+{
+    std::mutex              g_request_wait_mutex;
+    std::condition_variable g_request_wait_cv;
+}
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, GraphsyncDAGSyncer::Error, e )
 {
@@ -120,10 +128,12 @@ namespace sgns::crdt
             root_cid,
             {},
             extensions,
-            [weakptr = weak_from_this()]( const ResponseStatusCode code, const std::vector<Extension> &extensions )
+            [weakptr = weak_from_this(), root_cid]( const ResponseStatusCode code,
+                                                    const std::vector<Extension> &extensions )
             {
                 if ( auto self = weakptr.lock() )
                 {
+                    self->SetRequestStatus( root_cid, code );
                     self->RequestProgressCallback( code, extensions );
                 }
             } );
@@ -146,7 +156,11 @@ namespace sgns::crdt
 
         // Add the CID route to the routing table
         std::lock_guard lock( routing_mutex_ );
-        routing_[cid] = peerKey;
+        auto           &routes = routing_[cid];
+        if ( std::find( routes.begin(), routes.end(), peerKey ) == routes.end() )
+        {
+            routes.push_back( peerKey );
+        }
 
         logger_->debug( "Added route for CID {} to peer {} (key {})",
                         cid.toString().value(),
@@ -194,80 +208,56 @@ namespace sgns::crdt
             return node;
         }
 
-        bool already_requested = false;
+        BOOST_OUTCOME_TRY( auto route_keys, GetRouteKeys( cid ) );
 
-        if ( auto initial_state = graphsync_->getRequestState( cid ) )
+        for ( const auto peer_key : route_keys )
         {
-            if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
+            BOOST_OUTCOME_TRY( auto peerEntry, GetPeerById( peer_key ) );
+            auto &peerID  = peerEntry.first;
+            auto &address = peerEntry.second;
+
+            if ( IsOnBlackList( peerID ) )
             {
-                already_requested = true;
-                logger_->debug( "We already started trying to get this CID {}", cid.toString().value() );
-            }
-        }
-        ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
-
-        OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
-
-        auto &peerID  = peerEntry.first;
-        auto &address = peerEntry.second;
-        // Check if this peer recently failed to provide this specific CID
-        if ( HasRecentCIDFailure( peerID, cid ) )
-        {
-            logger_->error( "Skipping request for CID {} from peer {} due to recent failure",
-                            cid.toString().value(),
-                            peerID.toBase58() );
-            return outcome::failure( Error::CID_NOT_FOUND );
-        }
-        if ( already_requested == false )
-        {
-            logger_->debug( "Requesting CID {}", cid.toString().value() );
-            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
-            curr_subscription = std::move( subscription );
-        }
-
-        while ( true )
-        {
-            if ( is_stopped_ )
-            {
-                logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
+                logger_->debug( "Skipping blacklisted peer {} for CID {}",
+                                peerID.toBase58(),
                                 cid.toString().value() );
-                return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
-            }
-            // Check request state
-            auto state_result = graphsync_->getRequestState( cid );
-            if ( !state_result )
-            {
-                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check cache or storage to see if we have the block
-                if ( auto result = GrabCIDBlock( cid ) )
-                {
-                    logger_->debug( "Return node for CID {} instance={}",
-                                    cid.toString().value(),
-                                    reinterpret_cast<size_t>( this ) );
-                    return result;
-                }
-                if ( auto result = GetNodeWithoutRequest( cid ) )
-                {
-                    logger_->debug( "Return node for CID {} instance={}",
-                                    cid.toString().value(),
-                                    reinterpret_cast<size_t>( this ) );
-                    return result;
-                }
-                logger_->error( "Request state not found for CID {}", cid.toString().value() );
-                OUTCOME_TRY( BlackListPeer( peerID ) );
-                return outcome::failure( Error::ROUTE_NOT_FOUND );
+                continue;
             }
 
-            switch ( state_result.value() )
+            if ( HasRecentCIDFailure( peerID, cid ) )
             {
-                case Graphsync::RequestState::COMPLETED:
+                logger_->debug( "Skipping peer {} for CID {} due to recent CID-specific failure",
+                                peerID.toBase58(),
+                                cid.toString().value() );
+                continue;
+            }
+
+            ClearRequestStatus( cid );
+            BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
+
+            while ( true )
+            {
+                bool try_next_peer = false;
+
+                if ( is_stopped_ )
                 {
-                    // Request completed but we don't have the block?
-                    // Try one more cache grab
+                    logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
+                                    cid.toString().value() );
+                    return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
+                }
+                // Check request state
+                auto state_result = graphsync_->getRequestState( cid );
+                if ( !state_result )
+                {
+                    // Request not found - This could indicate a failure, but it's also possible it just got cleaned up,
+                    // so check cache or storage to see if we have the block.
                     if ( auto result = GrabCIDBlock( cid ) )
                     {
                         logger_->debug( "Return node for CID {} instance={}",
                                         cid.toString().value(),
                                         reinterpret_cast<size_t>( this ) );
+                        MoveRoutePeerToFront( cid, peer_key );
+                        ClearRequestStatus( cid );
                         return result;
                     }
                     if ( auto result = GetNodeWithoutRequest( cid ) )
@@ -275,34 +265,108 @@ namespace sgns::crdt
                         logger_->debug( "Return node for CID {} instance={}",
                                         cid.toString().value(),
                                         reinterpret_cast<size_t>( this ) );
+                        MoveRoutePeerToFront( cid, peer_key );
+                        ClearRequestStatus( cid );
                         return result;
                     }
-                    // If still not found, this is strange but we'll fail
-                    logger_->error( "Request marked COMPLETED but block not in cache or storage: {}",
-                                    cid.toString().value() );
-                    return outcome::failure( Error::CID_NOT_FOUND );
-                }
-                case Graphsync::RequestState::FAILED:
-                {
-                    // Request explicitly failed - record that this peer doesn't have this specific CID
-                    // but don't blacklist the entire peer since they might have other content
-                    logger_->debug( "Request failed for CID {} from peer {} - recording CID-specific failure",
+
+                    logger_->error( "Request state not found for CID {} from peer {}",
                                     cid.toString().value(),
                                     peerID.toBase58() );
-                    RecordCIDFailure( peerID, cid );
-                    return outcome::failure( Error::CID_NOT_FOUND );
+                    (void)BlackListPeer( peerID );
+                    ClearRequestStatus( cid );
+                    try_next_peer = true;
                 }
-                case Graphsync::RequestState::IN_PROGRESS:
+
+                if ( try_next_peer )
                 {
-                    // Still in progress, keep waiting
-                    logger_->trace( "Request for CID {} from peer {} - In Progress",
-                                    cid.toString().value(),
-                                    peerID.toBase58() );
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+                    break;
+                }
+
+                switch ( state_result.value() )
+                {
+                    case Graphsync::RequestState::COMPLETED:
+                    {
+                        // Request completed but we don't have the block?
+                        // Try one more cache grab
+                        if ( auto result = GrabCIDBlock( cid ) )
+                        {
+                            logger_->debug( "Return node for CID {} instance={}",
+                                            cid.toString().value(),
+                                            reinterpret_cast<size_t>( this ) );
+                            RecordSuccessfulConnection( peerID );
+                            ClearCIDFailure( peerID, cid );
+                            MoveRoutePeerToFront( cid, peer_key );
+                            ClearRequestStatus( cid );
+                            return result;
+                        }
+                        if ( auto result = GetNodeWithoutRequest( cid ) )
+                        {
+                            logger_->debug( "Return node for CID {} instance={}",
+                                            cid.toString().value(),
+                                            reinterpret_cast<size_t>( this ) );
+                            RecordSuccessfulConnection( peerID );
+                            ClearCIDFailure( peerID, cid );
+                            MoveRoutePeerToFront( cid, peer_key );
+                            ClearRequestStatus( cid );
+                            return result;
+                        }
+                        // If still not found, this is strange but we'll fail over
+                        logger_->error( "Request marked COMPLETED but block not in cache or storage: {} from peer {}",
+                                        cid.toString().value(),
+                                        peerID.toBase58() );
+                        RecordCIDFailure( peerID, cid );
+                        ClearRequestStatus( cid );
+                        try_next_peer = true;
+                        break;
+                    }
+                    case Graphsync::RequestState::FAILED:
+                    {
+                        auto status = GetRequestStatus( cid );
+                        if ( status && IsConnectionFailureStatus( *status ) )
+                        {
+                            logger_->warn( "Request failed for CID {} from peer {} with connection error {}. "
+                                           "Blacklisting peer and trying fallback.",
+                                           cid.toString().value(),
+                                           peerID.toBase58(),
+                                           statusCodeToString( *status ) );
+                            (void)BlackListPeer( peerID );
+                        }
+                        else
+                        {
+                            logger_->debug( "Request failed for CID {} from peer {} - recording CID-specific failure",
+                                            cid.toString().value(),
+                                            peerID.toBase58() );
+                            RecordCIDFailure( peerID, cid );
+                        }
+                        ClearRequestStatus( cid );
+                        try_next_peer = true;
+                        break;
+                    }
+                    case Graphsync::RequestState::IN_PROGRESS:
+                    {
+                        // Still in progress, keep waiting
+                        logger_->trace( "Request for CID {} from peer {} - In Progress",
+                                        cid.toString().value(),
+                                        peerID.toBase58() );
+
+                        std::unique_lock<std::mutex> wait_lock( g_request_wait_mutex );
+                        g_request_wait_cv.wait_for( wait_lock,
+                                                    std::chrono::milliseconds( 100 ),
+                                                    [this]() { return this->is_stopped_.load(); } );
+                        break;
+                    }
+                }
+
+                if ( try_next_peer )
+                {
                     break;
                 }
             }
         }
+
+        logger_->error( "No usable route candidates left for CID {}", cid.toString().value() );
+        return outcome::failure( Error::ROUTE_NOT_FOUND );
     }
 
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
@@ -406,6 +470,7 @@ namespace sgns::crdt
         }
         host_->start();
 
+        is_stopped_ = false;
         started_ = true;
 
         return outcome::success();
@@ -413,6 +478,7 @@ namespace sgns::crdt
 
     void GraphsyncDAGSyncer::StopSync()
     {
+        is_stopped_ = true;
         if ( graphsync_ != nullptr )
         {
             graphsync_->stop();
@@ -421,6 +487,7 @@ namespace sgns::crdt
         {
             host_->stop();
         }
+        g_request_wait_cv.notify_all();
         started_ = false;
     }
 
@@ -810,7 +877,7 @@ namespace sgns::crdt
     }
 
     // Record successful connections
-    void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer )
+    void GraphsyncDAGSyncer::RecordSuccessfulConnection( const PeerId &peer ) const
     {
         std::lock_guard lock( blacklist_mutex_ );
         if ( auto it = blacklist_.find( peer.toMultihash() ); it != blacklist_.end() )
@@ -842,21 +909,50 @@ namespace sgns::crdt
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const
     {
-        PeerKey peerKey;
-        // First find the peer key in the routing table
+        BOOST_OUTCOME_TRY( auto routeKeys, GetRouteKeys( cid ) );
+        for ( const auto key : routeKeys )
         {
-            std::lock_guard lock( routing_mutex_ );
-            auto            it = routing_.find( cid );
-            if ( it == routing_.end() )
+            auto peerEntry = GetPeerById( key );
+            if ( peerEntry.has_value() )
             {
-                logger_->error( "No route for the requested CID  {}", cid.toString().value() );
-                return outcome::failure( Error::ROUTE_NOT_FOUND );
+                return peerEntry.value();
             }
-
-            peerKey = it->second;
         }
-        // Now get the actual peer entry from the registry
-        return GetPeerById( peerKey );
+        logger_->error( "No route for the requested CID  {}", cid.toString().value() );
+        return outcome::failure( Error::ROUTE_NOT_FOUND );
+    }
+
+    outcome::result<std::vector<GraphsyncDAGSyncer::PeerKey>> GraphsyncDAGSyncer::GetRouteKeys( const CID &cid ) const
+    {
+        std::lock_guard lock( routing_mutex_ );
+        auto            it = routing_.find( cid );
+        if ( it == routing_.end() || it->second.empty() )
+        {
+            logger_->error( "No route for the requested CID  {}", cid.toString().value() );
+            return outcome::failure( Error::ROUTE_NOT_FOUND );
+        }
+
+        return it->second;
+    }
+
+    void GraphsyncDAGSyncer::MoveRoutePeerToFront( const CID &cid, PeerKey peerKey ) const
+    {
+        std::lock_guard lock( routing_mutex_ );
+        auto            it = routing_.find( cid );
+        if ( it == routing_.end() )
+        {
+            return;
+        }
+
+        auto &routes = it->second;
+        auto  pos    = std::find( routes.begin(), routes.end(), peerKey );
+        if ( pos == routes.end() || pos == routes.begin() )
+        {
+            return;
+        }
+
+        routes.erase( pos );
+        routes.insert( routes.begin(), peerKey );
     }
 
     void GraphsyncDAGSyncer::EraseRoutesFromPeerID( const PeerId &peer ) const
@@ -879,7 +975,9 @@ namespace sgns::crdt
         std::lock_guard routing_lock( routing_mutex_ );
         for ( auto it = routing_.begin(); it != routing_.end(); )
         {
-            if ( it->second == peerKeyToRemove )
+            auto &route_keys = it->second;
+            route_keys.erase( std::remove( route_keys.begin(), route_keys.end(), peerKeyToRemove ), route_keys.end() );
+            if ( route_keys.empty() )
             {
                 logger_->debug( "Erasing route for CID {} to blacklisted peer", it->first.toString().value() );
                 it = routing_.erase( it );
@@ -890,6 +988,7 @@ namespace sgns::crdt
             }
         }
     }
+
 
     void GraphsyncDAGSyncer::EraseRoute( const CID &cid )
     {
@@ -956,6 +1055,36 @@ namespace sgns::crdt
                             peer.toBase58(),
                             cid.toString().value() );
         }
+    }
+
+    bool GraphsyncDAGSyncer::IsConnectionFailureStatus( ResponseStatusCode code )
+    {
+        return code == ipfs_lite::ipfs::graphsync::RS_NO_PEERS ||
+               code == ipfs_lite::ipfs::graphsync::RS_CANNOT_CONNECT ||
+               code == ipfs_lite::ipfs::graphsync::RS_TIMEOUT ||
+               code == ipfs_lite::ipfs::graphsync::RS_CONNECTION_ERROR;
+    }
+
+    void GraphsyncDAGSyncer::SetRequestStatus( const CID &cid, ResponseStatusCode code ) const
+    {
+        std::lock_guard lock( request_status_mutex_ );
+        request_status_[cid] = code;
+    }
+
+    boost::optional<GraphsyncDAGSyncer::ResponseStatusCode> GraphsyncDAGSyncer::GetRequestStatus( const CID &cid ) const
+    {
+        std::lock_guard lock( request_status_mutex_ );
+        if ( auto it = request_status_.find( cid ); it != request_status_.end() )
+        {
+            return it->second;
+        }
+        return boost::none;
+    }
+
+    void GraphsyncDAGSyncer::ClearRequestStatus( const CID &cid ) const
+    {
+        std::lock_guard lock( request_status_mutex_ );
+        request_status_.erase( cid );
     }
 
     void GraphsyncDAGSyncer::LRUCIDCache::init( const CID &cid )
@@ -1077,7 +1206,12 @@ namespace sgns::crdt
     {
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
-        graphsync_->stop();
+        if ( graphsync_ != nullptr )
+        {
+            graphsync_->stop();
+        }
+
+        g_request_wait_cv.notify_all();
     }
 
 }
