@@ -76,11 +76,11 @@ namespace sgns
 
     outcome::result<void> Migration1_0_0To3_4_0::Init()
     {
-        BOOST_OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
         db_1_0_0_ = std::move( legacy_db );
         if ( db_1_0_0_ )
         {
-            BOOST_OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
             db_3_4_0_ = std::move( new_db );
         }
         return outcome::success();
@@ -101,7 +101,7 @@ namespace sgns
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         const std::string BASE = "/bc-963/";
-        BOOST_OUTCOME_TRY( auto &&entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
+        OUTCOME_TRY( auto &&entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
         logger_->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
@@ -168,7 +168,7 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = db_3_4_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
@@ -179,7 +179,7 @@ namespace sgns
         }
         if ( migrated_count )
         {
-            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );
         }
 
@@ -188,7 +188,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        BOOST_OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
+        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

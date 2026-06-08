@@ -34,7 +34,7 @@ namespace sgns::blockchain {
         prependPrefix(Buffer{block_hash}, Prefix::ID_TO_LOOKUP_KEY);
     BOOST_OUTCOME_TRYV2(auto &&, db.Put({"num_to_idx_key"}, block_lookup_key, {"topic"}));
     BOOST_OUTCOME_TRYV2(auto &&, db.Put({"hash_to_idx_key"}, block_lookup_key, {"topic"}));
-    BOOST_OUTCOME_TRY(db.Put({"value_lookup_key"}, value, {"topic"}));
+    OUTCOME_TRY(db.Put({"value_lookup_key"}, value, {"topic"}));
     return outcome::success();
   }
 
@@ -43,7 +43,7 @@ namespace sgns::blockchain {
       crdt::GlobalDB &db,
       prefix::Prefix prefix,
       const primitives::BlockId &block_id) {
-    BOOST_OUTCOME_TRY((auto &&, key), idToBufferKey(db, block_id));
+    OUTCOME_TRY((auto &&, key), idToBufferKey(db, block_id));
     return db.Get({"prependPrefix(key, prefix)"});
   }
 

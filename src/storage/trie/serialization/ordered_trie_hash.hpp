@@ -34,11 +34,11 @@ namespace sgns::storage::trie {
     It it = begin;
     scale::CompactInteger key = 0;
     while (it != end) {
-      BOOST_OUTCOME_TRY((auto &&, enc), scale::encode(key++));
+      OUTCOME_TRY((auto &&, enc), scale::encode(key++));
       BOOST_OUTCOME_TRYV2(auto &&, trie.put(base::Buffer{enc}, *it));
       it++;
     }
-    BOOST_OUTCOME_TRY((auto &&, enc), codec.encodeNode(*trie.getRoot()));
+    OUTCOME_TRY((auto &&, enc), codec.encodeNode(*trie.getRoot()));
     return base::Buffer{codec.hash256(enc)};
   }
 

@@ -59,8 +59,8 @@ namespace sgns::processing
 
         task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
         //Parse main json data
-        BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
-        m_currentProcessingManager = procmgr;
+        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
+        m_currentProcessingManager = procmgr; // Store for progress tracking
         //Parse subtask json
         auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
         sgns::ModelNode                 model;

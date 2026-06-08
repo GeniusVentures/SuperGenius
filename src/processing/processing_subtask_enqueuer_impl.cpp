@@ -13,7 +13,7 @@ namespace sgns::processing
         std::string                      &subTaskQueueId,
         std::list<SGProcessing::SubTask> &subTasks )
     {
-        BOOST_OUTCOME_TRY( ( auto &&, task_result ), m_taskQueue->GrabTask() );
+        OUTCOME_TRY( ( auto &&, task_result ), m_taskQueue->GrabTask() );
 
         auto [taskKey, task] = task_result;
 

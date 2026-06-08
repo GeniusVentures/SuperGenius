@@ -85,7 +85,7 @@ namespace sgns
 
         if ( db_0_0_2_out_ && db_0_0_2_in_ )
         {
-            BOOST_OUTCOME_TRY( auto &&target_db, InitTargetDb() );
+            OUTCOME_TRY( auto &&target_db, InitTargetDb() );
             db_1_0_0_ = std::move( target_db );
         }
 
@@ -164,7 +164,7 @@ namespace sgns
 
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
-        BOOST_OUTCOME_TRY( auto &&db,
+        OUTCOME_TRY( auto &&db,
                      crdt::GlobalDB::New( ioContext_,
                                           fullPath,
                                           pubSub_,
@@ -333,7 +333,7 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = db_1_0_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
@@ -363,7 +363,7 @@ namespace sgns
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
-        BOOST_OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
+        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
 
         if ( remainder_outdb > 0 )
         {
@@ -371,7 +371,7 @@ namespace sgns
             {
                 m_logger->debug( "Commiting migrating to topics {}", topic );
             }
-            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = db_1_0_0_->BeginTransaction();
             topics_.clear();
             topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -379,7 +379,7 @@ namespace sgns
         }
 
         m_logger->debug( "Migrating input DB into new DB" );
-        BOOST_OUTCOME_TRY( auto &&remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
+        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
 
         if ( remainder_indb > 0 )
         {
@@ -387,14 +387,14 @@ namespace sgns
             {
                 m_logger->debug( "Commiting migrating to topics {}", topic );
             }
-            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
         }
         sgns::crdt::GlobalDB::Buffer version_buffer;
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        BOOST_OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
+        OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
 
