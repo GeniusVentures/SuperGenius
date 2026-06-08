@@ -8,7 +8,7 @@ namespace sgns
 {
     outcome::result<ISecureStorage::SecureBufferType> JSONBackend::Load( const std::string &key )
     {
-        BOOST_OUTCOME_TRY( rj::Document d, LoadJSON() );
+        OUTCOME_TRY( rj::Document d, LoadJSON() );
 
         if ( !d.HasMember( key.c_str() ) )
         {
@@ -28,7 +28,7 @@ namespace sgns
 
     outcome::result<void> JSONBackend::Save( const std::string &key, const SecureBufferType &buffer )
     {
-        BOOST_OUTCOME_TRY( rj::Document d, LoadJSON() );
+        OUTCOME_TRY( rj::Document d, LoadJSON() );
 
         rj::Value val( rj::StringRef( buffer.c_str(), buffer.length() ), d.GetAllocator() );
 
@@ -46,11 +46,11 @@ namespace sgns
 
     outcome::result<bool> JSONBackend::DeleteKey( const std::string &key )
     {
-        BOOST_OUTCOME_TRY( rj::Document d, LoadJSON() );
+        OUTCOME_TRY( rj::Document d, LoadJSON() );
 
         bool ret = d.RemoveMember( key.c_str() );
 
-        BOOST_OUTCOME_TRY( SaveJSON( std::move( d ) ) );
+        OUTCOME_TRY( SaveJSON( std::move( d ) ) );
 
         return ret;
     }

@@ -125,14 +125,13 @@ namespace sgns::crdt
             std::shared_ptr<Delta> delta;
             if ( op.type == Operation::PUT )
             {
-                total_value_size += op.value.size();
-                BOOST_OUTCOME_TRY( ( auto &&, result ),
+                OUTCOME_TRY( ( auto &&, result ),
                              datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
                 delta = result;
             }
             else // REMOVE
             {
-                BOOST_OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
+                OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
                 delta = result;
             }
 

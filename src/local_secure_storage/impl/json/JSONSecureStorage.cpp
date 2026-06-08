@@ -44,7 +44,7 @@ namespace sgns
 
     outcome::result<JSONSecureStorage::SecureBufferType> JSONSecureStorage::Load( const std::string &key )
     {
-        BOOST_OUTCOME_TRY( auto document, LoadJSON() );
+        OUTCOME_TRY( auto document, LoadJSON() );
         auto maybe_field = document.FindMember( "GeniusAccount" );
 
         if ( maybe_field == document.MemberEnd() || !maybe_field->value.IsObject() )

@@ -52,12 +52,12 @@ namespace sgns
             std::vector<std::uint8_t> v;
             if ( binary )
             {
-                BOOST_OUTCOME_TRY( ( auto &&, result ), ReadFromBin( in ) );
+                OUTCOME_TRY( ( auto &&, result ), ReadFromBin( in ) );
                 v = std::move( result );
             }
             else
             {
-                BOOST_OUTCOME_TRY( ( auto &&, result ), ReadFromHex( in ) );
+                OUTCOME_TRY( ( auto &&, result ), ReadFromHex( in ) );
                 v = std::move( result );
             }
 

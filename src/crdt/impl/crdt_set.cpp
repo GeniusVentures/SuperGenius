@@ -90,7 +90,7 @@ namespace sgns::crdt
 
         Buffer keyPrefixBuffer;
         keyPrefixBuffer.put( strElemsPrefix );
-        BOOST_OUTCOME_TRY( auto queryResult, this->dataStore_->query( keyPrefixBuffer ) );
+        OUTCOME_TRY( auto queryResult, this->dataStore_->query( keyPrefixBuffer ) );
 
         for ( const auto &[key, _] : queryResult )
         {
@@ -524,10 +524,10 @@ namespace sgns::crdt
         Buffer valueKeyBuffer;
         valueKeyBuffer.put( valueK.GetKey() );
 
-        BOOST_OUTCOME_TRY( aDataStore->put( valueKeyBuffer, aValue ) );
+        OUTCOME_TRY( aDataStore->put( valueKeyBuffer, aValue ) );
 
         // store priority
-        BOOST_OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
+        OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
 
         // trigger add hook
         if ( putHookFunc_ != nullptr )
@@ -566,7 +566,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            BOOST_OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
+            OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
             // update the value if applicable:
             // * higher priority than we currently have.
             // * not tombstoned before.
@@ -615,7 +615,7 @@ namespace sgns::crdt
             Buffer keyBuffer;
             keyBuffer.put( kNamespace.GetKey() );
 
-            BOOST_OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
+            OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
 
             // run delete hook only once for all
             // versions of the same element tombstoned
@@ -623,7 +623,7 @@ namespace sgns::crdt
             deletedKeys.push_back( key );
         }
 
-        BOOST_OUTCOME_TRY( batchDatastore->commit() );
+        OUTCOME_TRY( batchDatastore->commit() );
 
         if ( deleteHookFunc_ )
         {
@@ -638,7 +638,7 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtSet::Merge( const Delta &aDelta, const std::string &aID )
     {
-        BOOST_OUTCOME_TRY( this->PutTombs( std::vector( aDelta.tombstones().cbegin(), aDelta.tombstones().cend() ), aID ) );
+        OUTCOME_TRY( this->PutTombs( std::vector( aDelta.tombstones().cbegin(), aDelta.tombstones().cend() ), aID ) );
 
         std::vector elements( aDelta.elements().cbegin(), aDelta.elements().cend() );
         return this->PutElems( elements, aID, aDelta.priority() );

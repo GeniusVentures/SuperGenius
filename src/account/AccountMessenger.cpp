@@ -273,7 +273,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        BOOST_OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
         accountComm::SignedNonceRequest signed_req;
         *signed_req.mutable_data() = req;
         signed_req.set_signature( signature.data(), signature.size() );
@@ -330,7 +330,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        BOOST_OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedBlockRequest signed_req;
         *signed_req.mutable_data() = req;
@@ -361,7 +361,7 @@ namespace sgns
         }
 
         std::vector<uint8_t> serialized_vec( encoded.begin(), encoded.end() );
-        BOOST_OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
+        OUTCOME_TRY( auto &&signature, methods_.sign_( serialized_vec ) );
 
         accountComm::SignedBlockCidRequest signed_req;
         *signed_req.mutable_data() = req;
@@ -883,7 +883,7 @@ namespace sgns
             first_response_time_.erase( req_id );
         }
 
-        BOOST_OUTCOME_TRY( RequestNonce( req_id ) );
+        OUTCOME_TRY( RequestNonce( req_id ) );
 
         const auto start_time        = std::chrono::steady_clock::now();
         const auto full_timeout      = std::chrono::milliseconds( timeout_ms );

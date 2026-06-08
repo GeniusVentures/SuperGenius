@@ -92,7 +92,7 @@ namespace sgns::crdt
             return outcome::failure( Error::HOST_IS_NULL );
         }
 
-        BOOST_OUTCOME_TRY( host_->listen( listen_to ) );
+        OUTCOME_TRY( host_->listen( listen_to ) );
 
         auto startResult = this->StartSync();
 
@@ -216,76 +216,64 @@ namespace sgns::crdt
 
         for ( const auto peer_key : route_keys )
         {
-            BOOST_OUTCOME_TRY( auto peerEntry, GetPeerById( peer_key ) );
-            auto &peerID  = peerEntry.first;
-            auto &address = peerEntry.second;
-
-            if ( IsOnBlackList( peerID ) )
+            if ( initial_state.value() == Graphsync::RequestState::IN_PROGRESS )
             {
-                logger_->debug( "Skipping blacklisted peer {} for CID {}",
-                                peerID.toBase58(),
-                                cid.toString().value() );
-                continue;
+                already_requested = true;
+                logger_->debug( "We already started trying to get this CID {}", cid.toString().value() );
             }
+        }
+        ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
 
-            if ( HasRecentCIDFailure( peerID, cid ) )
+        OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
+
+        auto &peerID  = peerEntry.first;
+        auto &address = peerEntry.second;
+        // Check if this peer recently failed to provide this specific CID
+        if ( HasRecentCIDFailure( peerID, cid ) )
+        {
+            logger_->error( "Skipping request for CID {} from peer {} due to recent failure",
+                            cid.toString().value(),
+                            peerID.toBase58() );
+            return outcome::failure( Error::CID_NOT_FOUND );
+        }
+        if ( already_requested == false )
+        {
+            logger_->debug( "Requesting CID {}", cid.toString().value() );
+            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+            curr_subscription = std::move( subscription );
+        }
+
+        while ( true )
+        {
+            if ( is_stopped_ )
             {
-                logger_->debug( "Skipping peer {} for CID {} due to recent CID-specific failure",
-                                peerID.toBase58(),
+                logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
                                 cid.toString().value() );
-                continue;
+                return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
             }
-
-            ClearRequestStatus( cid );
-            BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
-
-            while ( true )
+            // Check request state
+            auto state_result = graphsync_->getRequestState( cid );
+            if ( !state_result )
             {
-                bool try_next_peer = false;
-
-                if ( is_stopped_ )
+                // Request not found - This could indicate a failure, but it's also possible it just got cleaned up, so check cache or storage to see if we have the block
+                if ( auto result = GrabCIDBlock( cid ) )
                 {
-                    logger_->error( "We exited while trying to sync {} as it must have been still in progress.",
-                                    cid.toString().value() );
-                    return outcome::failure( Error::DAGSYNCER_NOT_STARTED );
-                }
-                // Check request state
-                auto state_result = graphsync_->getRequestState( cid );
-                if ( !state_result )
-                {
-                    // Request not found - This could indicate a failure, but it's also possible it just got cleaned up,
-                    // so check cache or storage to see if we have the block.
-                    if ( auto result = GrabCIDBlock( cid ) )
-                    {
-                        logger_->debug( "Return node for CID {} instance={}",
-                                        cid.toString().value(),
-                                        reinterpret_cast<size_t>( this ) );
-                        MoveRoutePeerToFront( cid, peer_key );
-                        ClearRequestStatus( cid );
-                        return result;
-                    }
-                    if ( auto result = GetNodeWithoutRequest( cid ) )
-                    {
-                        logger_->debug( "Return node for CID {} instance={}",
-                                        cid.toString().value(),
-                                        reinterpret_cast<size_t>( this ) );
-                        MoveRoutePeerToFront( cid, peer_key );
-                        ClearRequestStatus( cid );
-                        return result;
-                    }
-
-                    logger_->error( "Request state not found for CID {} from peer {}",
+                    logger_->debug( "Return node for CID {} instance={}",
                                     cid.toString().value(),
-                                    peerID.toBase58() );
-                    (void)BlackListPeer( peerID );
-                    ClearRequestStatus( cid );
-                    try_next_peer = true;
+                                    reinterpret_cast<size_t>( this ) );
+                    return result;
                 }
-
-                if ( try_next_peer )
+                if ( auto result = GetNodeWithoutRequest( cid ) )
                 {
-                    break;
+                    logger_->debug( "Return node for CID {} instance={}",
+                                    cid.toString().value(),
+                                    reinterpret_cast<size_t>( this ) );
+                    return result;
                 }
+                logger_->error( "Request state not found for CID {}", cid.toString().value() );
+                OUTCOME_TRY( BlackListPeer( peerID ) );
+                return outcome::failure( Error::ROUTE_NOT_FOUND );
+            }
 
                 switch ( state_result.value() )
                 {

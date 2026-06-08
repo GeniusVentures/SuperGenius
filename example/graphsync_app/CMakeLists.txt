@@ -6,6 +6,7 @@ add_executable(graphsync_app
 target_link_libraries(graphsync_app
     ipfs-lite-cpp::graphsync
     ipfs-lite-cpp::ipfs_merkledag_service
+    p2p::asio_scheduler
     Boost::program_options
     ${WIN_CRYPT_LIBRARY}
     )

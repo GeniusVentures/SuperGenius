@@ -15,8 +15,7 @@
 #include <libp2p/injector/host_injector.hpp>
 #include <libp2p/injector/kademlia_injector.hpp>
 #include <libp2p/host/host.hpp>
-#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
-#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 #include <libp2p/multi/content_identifier_codec.hpp>
 #include <libp2p/protocol/identify/identify.hpp>
 #include <libp2p/log/configurator.hpp>

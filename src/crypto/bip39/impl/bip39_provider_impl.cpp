@@ -17,17 +17,17 @@ namespace sgns::crypto {
   outcome::result<std::vector<uint8_t>> Bip39ProviderImpl::calculateEntropy(
       const std::vector<std::string> &word_list) {
     // make entropy accumulator
-    BOOST_OUTCOME_TRY((auto &&, entropy_accumulator),
+    OUTCOME_TRY((auto &&, entropy_accumulator),
                 bip39::EntropyAccumulator::create(word_list.size()));
 
     // accumulate entropy
     for (const auto &w : word_list) {
-      BOOST_OUTCOME_TRY((auto &&, entropy_token), dictionary_.findValue(w));
+      OUTCOME_TRY((auto &&, entropy_token), dictionary_.findValue(w));
       BOOST_OUTCOME_TRYV2(auto &&, entropy_accumulator.append(entropy_token));
     }
 
-    BOOST_OUTCOME_TRY((auto &&, mnemonic_checksum), entropy_accumulator.getChecksum());
-    BOOST_OUTCOME_TRY((auto &&, calculated_checksum), entropy_accumulator.calculateChecksum());
+    OUTCOME_TRY((auto &&, mnemonic_checksum), entropy_accumulator.getChecksum());
+    OUTCOME_TRY((auto &&, calculated_checksum), entropy_accumulator.calculateChecksum());
 
     if (mnemonic_checksum != calculated_checksum) {
       return bip39::MnemonicError::INVALID_MNEMONIC;

@@ -97,7 +97,7 @@ namespace
         nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
         ethereum::EthereumKeyGenerator          eth_key( key_seed );
         auto                                    pub_key = eth_key.GetEntirePubValue();
-        BOOST_OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
+        OUTCOME_TRY( std::vector<uint8_t> pub_key_vec, base::unhex( pub_key ) );
 
         auto secure_storage = std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
                                                                    libp2p::multi::detail::encodeBase58( pub_key_vec ) );
@@ -109,7 +109,7 @@ namespace
 
         rj::Document new_doc;
         new_doc.CopyFrom( maybe_field->value, new_doc.GetAllocator() );
-        BOOST_OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
+        OUTCOME_TRY( secure_storage->SaveJSON( std::move( new_doc ) ) );
         genius_account_logger()->debug( "Successfully migrated JSON secure storage" );
 
         return secure_storage;
@@ -413,7 +413,7 @@ namespace sgns
                                            public_key.substr( 0, 16 ) + "...",
                                            public_key.length() );
 
-            BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key ) );
 
             genius_account_logger()->info( "Unhexed public key vector size: {}", vec.size() );
 
@@ -481,7 +481,7 @@ namespace sgns
                 return outcome::failure( std::errc::invalid_argument );
             }
 
-            BOOST_OUTCOME_TRY( auto as_vec, base::unhex( eth_private_key ) );
+            OUTCOME_TRY( auto as_vec, base::unhex( eth_private_key ) );
             TW::PrivateKey private_key( as_vec );
 
             auto signed_secret = private_key.sign(
@@ -499,7 +499,7 @@ namespace sgns
             // Create storage with loaded key
             ethereum::EthereumKeyGenerator temp_eth_key( key_seed );
             auto                           pub_key = temp_eth_key.GetEntirePubValue();
-            BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
+            OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( pub_key ) );
             storage = std::make_shared<SecureStorageImpl>( std::string( PREFIX ) +
                                                            libp2p::multi::detail::encodeBase58( vec ) );
 

@@ -687,7 +687,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
         dagSyncer_->InitCIDBlock( aRootCID );
-        BOOST_OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
+        OUTCOME_TRY( auto &&root_node, dagSyncer_->getNode( aRootCID ) );
 
         logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
 
@@ -806,7 +806,7 @@ namespace sgns::crdt
             }
 
             dagSyncer_->InitCIDBlock( cid );
-            BOOST_OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
+            OUTCOME_TRY( auto &&node, dagSyncer_->getNode( cid ) );
 
             RootCIDJob newRootJob;
 
@@ -856,9 +856,9 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
     {
-        BOOST_OUTCOME_TRY( auto &&cid_string, node_cid.toString() );
+        OUTCOME_TRY( auto &&cid_string, node_cid.toString() );
         logger_->debug( "{}: Merging node {} On CRDT", __func__, cid_string );
-        BOOST_OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
+        OUTCOME_TRY( set_->Merge( aDelta, cid_string ) );
         return outcome::success();
     }
 
@@ -866,7 +866,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Starting to process Root CID", __func__ );
 
-        BOOST_OUTCOME_TRY( auto &&root_cid_string, job_to_process.root_node_->getCID().toString() );
+        OUTCOME_TRY( auto &&root_cid_string, job_to_process.root_node_->getCID().toString() );
         logger_->debug( "{}: Processing Root CID job {}", __func__, root_cid_string );
 
         auto node_to_process = job_to_process.node_;
@@ -877,63 +877,20 @@ namespace sgns::crdt
             is_root         = true;
         }
 
-        BOOST_OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
+        OUTCOME_TRY( auto &&cid_string, node_to_process->getCID().toString() );
 
-        auto delta_result = GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ );
-        if ( delta_result.has_failure() )
-        {
-            logger_->error( "{}: GetDeltaFromNode failed for root CID {} node CID {} (created_by_self={}, error='{}')",
-                            __func__,
-                            root_cid_string,
-                            cid_string,
-                            job_to_process.created_by_self_,
-                            delta_result.error().message() );
-            return delta_result.as_failure();
-        }
-        auto delta = std::move( delta_result.value() );
+        OUTCOME_TRY( auto &&delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
-        auto merge_result = MergeDataFromDelta( node_to_process->getCID(), delta );
-        if ( merge_result.has_failure() )
-        {
-            logger_->error( "{}: MergeDataFromDelta failed for root CID {} node CID {} (created_by_self={}, error='{}')",
-                            __func__,
-                            root_cid_string,
-                            cid_string,
-                            job_to_process.created_by_self_,
-                            merge_result.error().message() );
-            return merge_result.as_failure();
-        }
+        OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
 
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
-        auto add_node_result = dagSyncer_->addNode( node_to_process );
-        if ( add_node_result.has_failure() )
-        {
-            logger_->error( "{}: dagSyncer->addNode failed for root CID {} node CID {} (created_by_self={}, "
-                            "error='{}')",
-                            __func__,
-                            root_cid_string,
-                            cid_string,
-                            job_to_process.created_by_self_,
-                            add_node_result.error().message() );
-            return add_node_result.as_failure();
-        }
+        OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
 
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
 
-        auto links_result = GetLinksToFetch( job_to_process );
-        if ( links_result.has_failure() )
-        {
-            logger_->error( "{}: GetLinksToFetch failed for root CID {} node CID {} (created_by_self={}, error='{}')",
-                            __func__,
-                            root_cid_string,
-                            cid_string,
-                            job_to_process.created_by_self_,
-                            links_result.error().message() );
-            return links_result.as_failure();
-        }
-        auto links                  = std::move( links_result.value() );
+        OUTCOME_TRY( auto &&links, GetLinksToFetch( job_to_process ) );
         const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
@@ -949,19 +906,7 @@ namespace sgns::crdt
         else if ( should_fetch_links )
         {
             logger_->debug( "{}: Fetching {} links for Root job: {}", __func__, links.size(), root_cid_string );
-            auto fetch_result = FetchNodes( job_to_process, links );
-            if ( fetch_result.has_failure() )
-            {
-                logger_->error( "{}: FetchNodes failed for root CID {} node CID {} (created_by_self={}, links={}, "
-                                "error='{}')",
-                                __func__,
-                                root_cid_string,
-                                cid_string,
-                                job_to_process.created_by_self_,
-                                links.size(),
-                                fetch_result.error().message() );
-                return fetch_result.as_failure();
-            }
+            OUTCOME_TRY( FetchNodes( job_to_process, links ) );
             logger_->debug( "{}: Nodes fetched for Root job: {}", __func__, root_cid_string );
         }
         else if ( is_root )
@@ -1340,7 +1285,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta> &aDelta,
                                                  const std::set<std::string>  &topics )
     {
-        BOOST_OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
+        OUTCOME_TRY( auto &&newCID, AddDAGNode( aDelta, topics ) );
         return newCID;
     }
 
@@ -1431,13 +1376,7 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<Delta> &aDelta,
                                                     const std::set<std::string>  &topics )
     {
-        if ( shutdown_started_.load() )
-        {
-            logger_->warn( "AddDAGNode rejected because shutdown is in progress" );
-            return outcome::failure( Error::INVALID_JOB );
-        }
-
-        BOOST_OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
+        OUTCOME_TRY( auto &&head_list, heads_->GetList( topics ) );
         auto [head_map, height] = head_list;
 
         height = height + 1; // This implies our minimum height is 1
@@ -1453,7 +1392,7 @@ namespace sgns::crdt
             }
         }
 
-        BOOST_OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
+        OUTCOME_TRY( auto &&node, PutBlock( headsWithTopics, aDelta, topics ) );
 
         //Log expensive toString only if trace enabled
         if ( logger_->level() == spdlog::level::trace )

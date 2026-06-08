@@ -28,8 +28,7 @@
 #include "testutil/wait_condition.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
-#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include "libp2p/protocol/common/asio/asio_scheduler.hpp"
 
 std::string GetLoggingSystem( const std::string & )
 {
@@ -129,12 +128,12 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
         &resultTime
 
     );
-    auto backend = std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_context);
-    auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(backend, libp2p::basic::Scheduler::Config{});
+    auto scheduler         = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+                                                                        libp2p::protocol::SchedulerConfig{} );
     auto graphsyncnetwork  = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs1->GetHost(), scheduler );
     auto generator         = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
-    auto backend2 = std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_context);
-    auto scheduler2 = std::make_shared<libp2p::basic::SchedulerImpl>(backend2, libp2p::basic::Scheduler::Config{});
+    auto scheduler2        = std::make_shared<libp2p::protocol::AsioScheduler>( io_context,
+                                                                         libp2p::protocol::SchedulerConfig{} );
     auto graphsyncnetwork2 = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubs2->GetHost(),
                                                                                           scheduler2 );
 

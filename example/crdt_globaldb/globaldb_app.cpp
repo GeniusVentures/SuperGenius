@@ -15,8 +15,7 @@
 #include <libp2p/log/logger.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
-#include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
 
 using Buffer           = sgns::base::Buffer;
 using HierarchicalKey  = sgns::crdt::HierarchicalKey;
@@ -120,8 +119,7 @@ int main( int argc, char **argv )
         sgns::crdt::KeyPairFileStorage( strDatabasePath + "/pubsub" ).GetKeyPair().value() );
     pubsub->Start( pubsubListeningPort, pubsubBootstrapPeers );
 
-    auto backend = std::make_shared<libp2p::basic::AsioSchedulerBackend>(io);
-    auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(backend, libp2p::basic::Scheduler::Config{});
+    auto scheduler = std::make_shared<libp2p::protocol::AsioScheduler>( io, libp2p::protocol::SchedulerConfig{} );
     auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(), scheduler );
     auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
     auto crdtOptions      = sgns::crdt::CrdtOptions::DefaultOptions();
