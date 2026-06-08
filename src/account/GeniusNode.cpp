@@ -2332,7 +2332,6 @@ namespace sgns
         }
 
         auto host = pubsub_->GetHost();
-        for ( const auto &peer_info : bootstrap_fullnode_infos_ )
 
         // Check both fullnodes and peers
         for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
@@ -2342,12 +2341,6 @@ namespace sgns
                  connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
             for ( const auto &peer_info : *infos )
             {
-                node_logger_->debug( "Health check: bootstrap fullnode {} is {}",
-                                     peer_info.id.toBase58(),
-                                     connectedness == libp2p::Host::Connectedness::NOT_CONNECTED
-                                         ? "NOT_CONNECTED"
-                                         : "CAN_NOT_CONNECT" );
-
                 unsigned attempt = 0;
                 auto connectedness = host->connectedness( peer_info );
                 if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
@@ -2374,7 +2367,6 @@ namespace sgns
                     }
                     ScheduleBootstrapReconnect( peer_info.id, attempt );
                 }
-                ScheduleBootstrapReconnect( peer_info.id, attempt );
             }
         }
 
@@ -2432,10 +2424,8 @@ namespace sgns
             return;
         }
 
-        // Find the PeerInfo for this peer_id
         // Find the PeerInfo for this peer_id (search fullnodes then peers)
         const libp2p::peer::PeerInfo *peer_info_ptr = nullptr;
-        for ( const auto &info : bootstrap_fullnode_infos_ )
         for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
         {
             if ( info.id == peer_id )
@@ -2449,7 +2439,6 @@ namespace sgns
             }
             if ( peer_info_ptr )
             {
-                peer_info_ptr = &info;
                 break;
             }
         }
