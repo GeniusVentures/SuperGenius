@@ -110,16 +110,13 @@ namespace sgns
 
         /**
          * @brief       Construct a new UTXOManager object
-         * @param[in]   is_full_node True if the node is a full node
          * @param[in]   address The address of the node
          * @param[in]   sign The signer method
          * @param[in]   verify_signature The verifier method
          */
-        UTXOManager( const bool          is_full_node,
-                     std::string         address,
+        UTXOManager( std::string         address,
                      SignFunc            sign,
                      VerifySignatureFunc verify_signature ) :
-            is_full_node_( is_full_node ),
             address_( std::move( address ) ),
             sign_( std::move( sign ) ),
             verify_signature_( std::move( verify_signature ) )
@@ -433,7 +430,7 @@ namespace sgns
         /// Logger instance for UTXOManager
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-        bool                is_full_node_;     ///< Flag that indicates if this is a full node
+
         std::string         address_;          ///< Address of the account this manager is responsible for
         SignFunc            sign_;             ///< Signer method for authorizing UTXO spends
         VerifySignatureFunc verify_signature_; ///< Verifier method for validating signatures on UTXO spends

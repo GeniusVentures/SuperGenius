@@ -79,7 +79,7 @@ namespace sgns
 
                         for ( const auto &ep : filtered )
                         {
-                            WeightedRpcEndpoint wrep{ ep.url_template, kPublicEndpointWeight };
+                            WeightedRpcEndpoint wrep{ ep.url_template, kPublicEndpointWeight, {}, {} };
 
                             // D-02, D-05: carry bridge contract address and event topic0
                             // when configured for this chain.
@@ -119,7 +119,7 @@ namespace sgns
             auto &target = endpoints_by_chain[chain_id];
             for ( const auto &ep : eps )
             {
-                WeightedRpcEndpoint wrep{ ep.url, kDirectEndpointWeight };
+                WeightedRpcEndpoint wrep{ ep.url, kDirectEndpointWeight, {}, {} };
 
                 // D-02, D-05: carry bridge contract address and event topic0
                 // when configured for this chain.

@@ -272,7 +272,7 @@ TEST( ChainRpcEndpointProviderTest, DirectEndpointsWired )
 
     // Provide direct endpoints
     config.direct_endpoints["11155111"] = {
-        { "https://sepolia.custom.rpc/v3/key123", 50 },
+        { "https://sepolia.custom.rpc/v3/key123", 50, {}, {} },
     };
 
     ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
@@ -372,7 +372,7 @@ TEST( ChainRpcEndpointProviderTest, BadChainIdDoesNotCrash )
     config.chains_json_path = "";
     // Invalid chain ID string (not a number)
     config.direct_endpoints["not_a_number"] = {
-        { "https://example.com/rpc", 50 },
+        { "https://example.com/rpc", 50, {}, {} },
     };
 
     ChainRpcEndpointProvider provider( std::move( chain_id_map ) );

@@ -1142,7 +1142,7 @@ TEST( ConsensusSubjectTest, CleanupCallback_NotFiredFromCertificatePath )
     caller = Caller::NONE;
     // Simulated ClearProposalSlot WITHOUT cleanup callback
     bool cleanup_called = false;
-    auto clear_slot     = [&cleanup_called]()
+    auto clear_slot     = []()
     {
         // ClearProposalSlot body (line 1984) does NOT call FireProposalCleanupCallbacks
         // per D-08 and D-11

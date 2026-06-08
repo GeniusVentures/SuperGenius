@@ -24,7 +24,6 @@ public:
     UTXOManagerTest() : CRDTFixture( "utxo_crdt_test" )
     {
         utxo_manager = std::make_shared<UTXOManager>(
-            true,
             std::string( PRIV_KEY ),
             []( const std::vector<uint8_t> &data )
             {

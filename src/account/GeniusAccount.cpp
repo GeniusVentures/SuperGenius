@@ -742,7 +742,6 @@ namespace sgns
         eth_keypair_( std::move( eth_keypair ) ),
         storage_( std::move( storage ) ),
         utxo_manager_(
-            is_full_node_,
             GetAddress(),
             [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
             []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
@@ -1001,7 +1000,7 @@ namespace sgns
             }
         }
 
-        return outcome::failure( std::errc::no_message_available );
+        return outcome::failure( std::errc::no_message );
     }
 
     outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
