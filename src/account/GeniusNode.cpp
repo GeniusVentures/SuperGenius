@@ -2305,13 +2305,6 @@ namespace sgns
             }
         }
 
-        // Apply background multiplier
-        if ( background_mode_.load() )
-        {
-            interval = std::chrono::duration_cast<std::chrono::seconds>(
-                interval * reconnect_config_.background_multiplier );
-        }
-
         auto weak_self = weak_from_this();
         health_check_handle_.emplace( scheduler_->scheduleWithHandle(
             [weak_self]()
@@ -2387,12 +2380,6 @@ namespace sgns
             delay_sec = reconnect_config_.max_delay.count();
         }
         auto delay = std::chrono::seconds( delay_sec );
-
-        if ( background_mode_.load() )
-        {
-            delay = std::chrono::duration_cast<std::chrono::seconds>(
-                delay * reconnect_config_.background_multiplier );
-        }
 
         // Update attempt counter
         {

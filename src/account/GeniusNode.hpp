@@ -800,7 +800,6 @@ namespace sgns
             double               background_multiplier{ 3.0 };
         };
         BootstrapReconnectConfig                                       reconnect_config_;
-        std::atomic<bool>                                              background_mode_{ false };
         std::optional<libp2p::event::Handle>                           bootstrap_disconnect_subscription_;
         std::optional<libp2p::basic::Scheduler::Handle>                health_check_handle_;
         std::unordered_map<libp2p::peer::PeerId, unsigned>             reconnect_attempts_;
