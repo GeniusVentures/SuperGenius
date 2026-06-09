@@ -2093,7 +2093,7 @@ namespace sgns
                     config.bridge_contract_addresses[chain_id] = contract_addr;
                     config.bridge_event_topic0[chain_id]       = topic0_hex;
 
-                    bridge_chains.push_back( { chain_name, contract_addr } );
+                    bridge_chains.push_back( { chain_name, contract_addr, chain_id } );
 
                     node_logger_->info( "InitializeRpcEndpoints: chain {} (id={}) bridge={} topic0={}",
                                         chain_name, chain_id, contract_addr, topic0_hex );
@@ -2135,6 +2135,7 @@ namespace sgns
         // 1. Initialize RPC endpoints — wires PublicChainInputValidator and
         //    returns chain/contract pairs for chains with bridge addresses.
         auto bridge_chains = InitializeRpcEndpoints();
+        bridge_chains_ = bridge_chains;  // Store for catch-up scan (D-02)
 
         // 2. Start BridgeRelayer with discoverd chains (D-04: ordering guaranteed —
         //    Start() only called AFTER endpoints are wired).
@@ -2175,74 +2176,35 @@ namespace sgns
         size_t total_skipped    = 0;
         size_t chains_scanned   = 0;
 
-        // Iterate chains via PublicChainInputValidator to find those with RPC endpoints
+        // Iterate chains discovered during InitializeRpcEndpoints (D-02, D-03)
+        // Uses bridge_chains_ stored during startup — no hardcoded maps.
         auto &validator = transaction_manager_->GetPublicChainInputValidator();
 
-        // Known numeric chain IDs for deployed chains (D-03)
-        static const std::vector<std::pair<std::string, uint64_t>> kBridgeChains = {
-            { "1",        1 },          // ethereum-mainnet
-            { "11155111", 11155111 },   // ethereum-sepolia
-            { "56",       56 },         // bnb-smart-chain
-            { "97",       97 },         // bnb-smart-chain-testnet
-            { "137",      137 },        // polygon-mainnet
-            { "80002",    80002 },      // polygon-amoy
-            { "8453",     8453 },       // base-mainnet
-            { "84532",    84532 },      // base-sepolia
-        };
-
-        for ( const auto &[chain_id_str, chain_id] : kBridgeChains )
+        for ( const auto &chain_entry : bridge_chains_ )
         {
-            auto rpc_url = validator.GetFirstRpcUrl( chain_id_str );
+            auto rpc_url = validator.GetFirstRpcUrl( std::to_string( chain_entry.chain_id ) );
             if ( !rpc_url.has_value() )
             {
-                node_logger_->debug( "CatchUpScan: no RPC endpoint for chain {} — skipping",
-                                     chain_id_str );
+                node_logger_->debug( "CatchUpScan: no RPC endpoint for chain {} (id={}) — skipping",
+                                     chain_entry.chain_name, chain_entry.chain_id );
                 continue;
             }
 
-            // Get the bridge_contract_address from the validator's endpoints
-            // (configured during InitializeRpcEndpoints)
-            const auto &eps_opt = validator.GetFirstRpcUrl( chain_id_str );
-            // We already have the URL; now we need the contract address.
-            // Use a direct RPC client approach: construct via RpcHttpTransport
-            // with a 10-second timeout per T-05-13.
+            const std::string &contract_addr_str = chain_entry.contract_address;
+
+            // RPC transport with 10-second timeout per T-05-13
             eth::rpc::RpcHttpTransportOptions opts;
             opts.timeout = std::chrono::seconds( 10 );
             eth::rpc::RpcHttpTransport transport( *rpc_url, opts );
 
             ++chains_scanned;
 
-            // Build eth_getLogs request for BridgeSourceBurned on this chain's contract.
-            // We need the bridge_contract_address — retrieve it from the parsed chains_config
-            // or re-derive from known mapping. For simplicity, use a static mapping of the
-            // 8 deployed contract addresses (D-03).
-            static const std::unordered_map<uint64_t, std::string> kBridgeContracts = {
-                { 1,        "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
-                { 11155111, "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" },
-                { 56,       "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
-                { 97,       "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
-                { 137,      "0x127E47abA094a9a87D084a3a93732909Ff031419" },
-                { 80002,    "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
-                { 8453,     "0x614577036F0a024DBC1C88BA616b394DD65d105a" },
-                { 84532,    "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB" },
-            };
-
-            auto addr_it = kBridgeContracts.find( chain_id );
-            if ( addr_it == kBridgeContracts.end() )
-            {
-                node_logger_->debug( "CatchUpScan: no bridge contract for chain {} — skipping",
-                                     chain_id_str );
-                continue;
-            }
-
-            const std::string &contract_addr_str = addr_it->second;
-
             // Parse contract address (eth::Address = rlp::Address = array<uint8_t, 20>)
             rlp::Address contract_addr{};
             if ( !rlp::base::parse::hex_array( contract_addr_str, contract_addr ) )
             {
                 node_logger_->warn( "CatchUpScan: invalid bridge address {} for chain {}",
-                                    contract_addr_str, chain_id_str );
+                                    contract_addr_str, chain_entry.chain_name );
                 continue;
             }
 

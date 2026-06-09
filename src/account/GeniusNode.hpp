@@ -622,6 +622,7 @@ namespace sgns
         base::Logger                node_logger_;                  ///< Main node logger.
         DevConfig_st                dev_config_;                   ///< Runtime node configuration.
         bool                        catchup_scan_done_ = false;    ///< Guards single-shot startup catch-up scan (D-20).
+        std::vector<ChainContractPair> bridge_chains_;             ///< Chain/contract pairs discovered during startup (D-02).
         std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
         std::string                 processing_channel_topic_;     ///< Processing task channel topic.
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.

@@ -26,6 +26,7 @@ namespace sgns
     {
         std::string chain_name;
         std::string contract_address;
+        uint64_t    chain_id = 0;
     };
 
     /**
