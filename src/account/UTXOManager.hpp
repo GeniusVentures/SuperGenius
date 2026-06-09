@@ -439,8 +439,6 @@ namespace sgns
         mutable std::shared_mutex utxos_mutex_;       ///< Mutex for UTXO state structures
         UTXOOutPointMap           utxo_outpoints_;    ///< Maps outpoints to their UTXO entries for efficient lookup
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
-        /// Maps outpoints to their reservation IDs
-        std::unordered_map<OutPoint, std::string, OutPointHash> reserved_outpoints_;
     };
 
 }

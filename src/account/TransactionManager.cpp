@@ -691,9 +691,7 @@ namespace sgns
             source_input_hash = source_hash.value();
         }
 
-        // D-18/D-19: Insert burn UTXO as RESERVED with UTXO_BRIDGE type
-        // Replaces the in-memory bridge_mint_reservations_ set.
-        // The UTXO is consumed later in ParseMintTransactionV2 when the mint confirms.
+        // D-18/D-19: Insert burn UTXO, then reserve via ReserveUTXOs (sets RESERVED state)
         if ( !source_hash.has_error() )
         {
             GeniusUTXO burn_utxo( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
@@ -705,6 +703,9 @@ namespace sgns
         std::vector<GeniusUTXO> source_utxos;
         source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
+
+        // Reserve the burn UTXO — transitions READY → RESERVED via ReserveUTXOs (D-18)
+        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs, transaction_hash );
 
         auto mint_transaction = std::make_shared<MintTransactionV2>(
             MintTransactionV2::New( amount,

@@ -53,16 +53,22 @@ namespace sgns
 
         SGTransaction::UTXOEntryState ToProtoState( UTXOManager::UTXOState state )
         {
-            // UTXO_RESERVED has no protobuf equivalent — serialize as UTXO_READY.
-            // On deserialization RESERVED becomes READY; catch-up scan re-detects them.
-            return state == UTXOManager::UTXOState::UTXO_CONSUMED ? SGTransaction::UTXO_ENTRY_CONSUMED
-                                                                   : SGTransaction::UTXO_ENTRY_READY;
+            switch ( state )
+            {
+            case UTXOManager::UTXOState::UTXO_RESERVED: return SGTransaction::UTXO_ENTRY_RESERVED;
+            case UTXOManager::UTXOState::UTXO_CONSUMED: return SGTransaction::UTXO_ENTRY_CONSUMED;
+            default:                                    return SGTransaction::UTXO_ENTRY_READY;
+            }
         }
 
         UTXOManager::UTXOState FromProtoState( SGTransaction::UTXOEntryState state )
         {
-            return state == SGTransaction::UTXO_ENTRY_CONSUMED ? UTXOManager::UTXOState::UTXO_CONSUMED
-                                                               : UTXOManager::UTXOState::UTXO_READY;
+            switch ( state )
+            {
+            case SGTransaction::UTXO_ENTRY_RESERVED: return UTXOManager::UTXOState::UTXO_RESERVED;
+            case SGTransaction::UTXO_ENTRY_CONSUMED: return UTXOManager::UTXOState::UTXO_CONSUMED;
+            default:                                 return UTXOManager::UTXOState::UTXO_READY;
+            }
         }
 
         base::Hash256 ComputeMerkleRootFromUTXOList( std::vector<GeniusUTXO> unspent )
@@ -97,11 +103,8 @@ namespace sgns
                 {
                     continue;
                 }
-                if ( reserved_outpoints_.find( outpoint ) == reserved_outpoints_.end() )
-                {
-                    //TODO - This should return in Genius Tokens but it's not taking into consideration the tokenID. It needs to multiply by the ratio of it
-                    retval += utxo_it->second.utxo.GetAmount();
-                }
+                //TODO - This should return in Genius Tokens but it's not taking into consideration the tokenID. It needs to multiply by the ratio of it
+                retval += utxo_it->second.utxo.GetAmount();
             }
         }
 
@@ -137,10 +140,7 @@ namespace sgns
                 {
                     continue;
                 }
-                if ( reserved_outpoints_.find( outpoint ) == reserved_outpoints_.end() )
-                {
-                    balance += utxo_it->second.utxo.GetAmount();
-                }
+                balance += utxo_it->second.utxo.GetAmount();
             }
         }
         return balance;
@@ -197,7 +197,6 @@ namespace sgns
                 if ( outpoint_it != outpoints.end() )
                 {
                     const OutPoint outpoint = *outpoint_it;
-                    reserved_outpoints_.erase( outpoint );
                     utxo_outpoints_.erase( outpoint );
                     outpoints.erase( outpoint_it );
                 }
@@ -222,14 +221,14 @@ namespace sgns
                 if ( auto canonical_it = utxo_outpoints_.find( outpoint ); canonical_it != utxo_outpoints_.end() )
                 {
                     auto &entry = canonical_it->second;
-                    if ( entry.state == UTXOState::UTXO_READY && entry.utxo.GetOwnerAddress() == address )
+                    if ( ( entry.state == UTXOState::UTXO_READY || entry.state == UTXOState::UTXO_RESERVED )
+                         && entry.utxo.GetOwnerAddress() == address )
                     {
                         utxo_found  = true;
                         entry.state = UTXOState::UTXO_CONSUMED;
                     }
                 }
 
-                reserved_outpoints_.erase( outpoint );
                 if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
                 {
                     auto &outpoints_vector = address_it->second;
@@ -297,12 +296,6 @@ namespace sgns
                     continue;
                 }
 
-                auto reservation_it = reserved_outpoints_.find( outpoint );
-                if ( reservation_it != reserved_outpoints_.end() && reservation_it->second != reservation_id )
-                {
-                    continue;
-                }
-
                 result.push_back( utxo_it->second.utxo );
             }
             return result;
@@ -335,7 +328,6 @@ namespace sgns
                 for ( const auto &outpoint : address_it->second )
                 {
                     utxo_outpoints_.erase( outpoint );
-                    reserved_outpoints_.erase( outpoint );
                 }
                 address_it->second.clear();
             }
@@ -422,17 +414,13 @@ namespace sgns
         for ( const auto &input_utxo : inputs )
         {
             const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
-            auto           it = reserved_outpoints_.find( outpoint );
-            if ( it == reserved_outpoints_.end() )
+
+            if ( auto entry_it = utxo_outpoints_.find( outpoint ); entry_it != utxo_outpoints_.end() )
             {
-                reserved_outpoints_.emplace( outpoint, reservation_id );
-                continue;
-            }
-            if ( it->second != reservation_id )
-            {
-                logger_->warn( "Outpoint {}:{} already reserved by another tx",
-                               input_utxo.txid_hash_.toReadableString(),
-                               input_utxo.output_idx_ );
+                if ( entry_it->second.state == UTXOState::UTXO_READY )
+                {
+                    entry_it->second.state = UTXOState::UTXO_RESERVED;
+                }
             }
         }
     }
@@ -444,14 +432,11 @@ namespace sgns
         for ( const auto &input_utxo : inputs )
         {
             const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
-            auto           it = reserved_outpoints_.find( outpoint );
-            if ( it == reserved_outpoints_.end() )
+
+            if ( auto entry_it = utxo_outpoints_.find( outpoint );
+                 entry_it != utxo_outpoints_.end() && entry_it->second.state == UTXOState::UTXO_RESERVED )
             {
-                continue;
-            }
-            if ( reservation_id.empty() || it->second == reservation_id )
-            {
-                reserved_outpoints_.erase( it );
+                entry_it->second.state = UTXOState::UTXO_READY;
             }
         }
     }
@@ -614,7 +599,6 @@ namespace sgns
             db_ = std::move( db );
             utxo_outpoints_.clear();
             address_outpoints_.clear();
-            reserved_outpoints_.clear();
         }
 
         auto db_handle = AcquireStorage();
@@ -995,10 +979,6 @@ namespace sgns
                 }
                 const auto &entry = utxo_it->second;
                 if ( entry.state != UTXOState::UTXO_READY )
-                {
-                    continue;
-                }
-                if ( reserved_outpoints_.find( outpoint ) != reserved_outpoints_.end() )
                 {
                     continue;
                 }
