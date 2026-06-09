@@ -1001,8 +1001,33 @@ namespace sgns
         return GeniusAccount::GetAvailableAccounts( write_base_path_ );
     }
 
+    outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key )
+    {
+        auto new_account = GeniusAccount::New( this->GetTokenID(), private_key, write_base_path_, is_full_node_ );
+        if ( new_account == nullptr )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> GeniusNode::AddAccountWithMnemonic( const std::string &mnemonic )
+    {
+        auto new_account = GeniusAccount::NewFromMnemonic( this->GetTokenID(),
+                                                           mnemonic,
+                                                           write_base_path_,
+                                                           is_full_node_ );
+        if ( new_account == nullptr )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return outcome::success();
+    }
+
     outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
     {
+        public_address = GeniusAccount::NormalizeAddress( public_address );
+
         if ( public_address == GetAddress() )
         {
             node_logger_->warn( "Address already active" );
@@ -1027,18 +1052,35 @@ namespace sgns
 
         ResetProcessingMembers();
 
-        this->transaction_manager_->Stop();
-        this->transaction_manager_.reset();
+        if ( this->transaction_manager_ )
+        {
+            this->transaction_manager_->Stop();
+            this->transaction_manager_.reset();
+        }
 
-        BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
-        this->blockchain_.reset();
+        if ( this->blockchain_ )
+        {
+            BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
+            this->blockchain_.reset();
+        }
 
-        this->tx_globaldb_.reset();
+        this->account_->DeconfigureDatabaseDependencies();
 
         this->account_.swap( account );
         account.reset();
 
-        this->BeginDBInitialization();
+        if ( this->tx_globaldb_ )
+        {
+            // Database is already initialized (keyed by node ID, not account).
+            // Keep it alive, configure it for the new account, and restart the
+            // account-dependent layers. We must replicate what MIGRATING_DATABASE
+            // and INITIALIZING_DATABASE do for a new account, without recreating
+            // the database itself.
+            this->account_->InitMessenger( this->pubsub_ );
+            this->account_->ConfigureDatabaseDependencies( this->tx_globaldb_ );
+            this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
+            StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+        }
 
         return outcome::success();
     }
@@ -1053,6 +1095,8 @@ namespace sgns
 
     outcome::result<void> GeniusNode::TransferAccount( std::string_view public_address )
     {
+        public_address = GeniusAccount::NormalizeAddress( public_address );
+
         auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
 
         if ( std::find( addresses.cbegin(), addresses.cend(), public_address ) == addresses.cend() )
@@ -1098,6 +1142,11 @@ namespace sgns
 
     outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
     {
+        if ( !GeniusAccount::IsValidPublicKey( payout_address ) )
+        {
+            return outcome::failure( std::errc::bad_address );
+        }
+
         BOOST_OUTCOME_TRY( account_->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );

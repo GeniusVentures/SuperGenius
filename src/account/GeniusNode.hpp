@@ -174,6 +174,10 @@ namespace sgns
          */
         std::vector<std::string> GetAvailableAccounts();
 
+        outcome::result<void> AddAccountWithKey( const char *private_key );
+
+        outcome::result<void> AddAccountWithMnemonic( const std::string &mnemonic );
+
         /**
          * @brief Selects the active account for subsequent node operations.
          * @param[in] public_address Stored account address to activate.

@@ -5,6 +5,8 @@
 
 #include "GeniusAccount.hpp"
 
+#include <fmt/std.h>
+#include <fmt/ranges.h>
 #include <TrustWalletCore/TWCoinType.h>
 #include <TrustWalletCore/TWDerivation.h>
 #include <WalletCore/Coin.h>
@@ -67,18 +69,6 @@ namespace
                                                     libp2p::multi::detail::encodeBase58( vec ) );
     }
 
-    bool IsValidPublicKey( std::string_view key )
-    {
-        if ( key.length() != PUBLIC_KEY_HEX_LENGTH )
-        {
-            return false;
-        }
-        return std::all_of(
-            key.begin(),
-            key.end(),
-            []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
-    }
-
     std::vector<std::string> ReadPublicKeysFromFile( const boost::filesystem::path &file_path )
     {
         std::ifstream file( file_path.string() );
@@ -98,7 +88,7 @@ namespace
                 continue;
             }
 
-            if ( !IsValidPublicKey( line ) )
+            if ( !GeniusAccount::IsValidPublicKey( line ) )
             {
                 genius_account_logger()->warn( "Skipping invalid public key in storage file: {}",
                                                line.substr( 0, 16 ) );
@@ -141,7 +131,7 @@ namespace
                                                  std::string_view               public_key_hex )
     {
         auto file_path = SetupStoragePath( base_path );
-        if ( !IsValidPublicKey( public_key_hex ) )
+        if ( !GeniusAccount::IsValidPublicKey( public_key_hex ) )
         {
             genius_account_logger()->error( "Can't write invalid public key" );
             return std::errc::invalid_argument;
@@ -255,6 +245,18 @@ namespace
 
 namespace sgns
 {
+    bool GeniusAccount::IsValidPublicKey( std::string_view key ) noexcept
+    {
+        if ( key.length() != PUBLIC_KEY_HEX_LENGTH )
+        {
+            return false;
+        }
+        return std::all_of(
+            key.begin(),
+            key.end(),
+            []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
+    }
+
     const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
@@ -365,6 +367,15 @@ namespace sgns
         return GeniusAccount::NewFromMnemonic( token_id, wallet.getMnemonic(), base_path, full_node );
     }
 
+    std::string_view GeniusAccount::NormalizeAddress( std::string_view address ) noexcept
+    {
+        if ( address.size() >= 2 && address[0] == '0' && address[1] == 'x' )
+        {
+            return address.substr( 2 );
+        }
+        return address;
+    }
+
     std::vector<std::string> GeniusAccount::GetAvailableAccounts( const boost::filesystem::path &base_path )
     {
         auto file_path = SetupStoragePath( base_path );
@@ -389,7 +400,8 @@ namespace sgns
         auto file_path = SetupStoragePath( base_path );
         auto addresses = ReadPublicKeysFromFile( file_path );
 
-        auto it = std::find( addresses.begin(), addresses.end(), public_address );
+        public_address = NormalizeAddress( public_address );
+        auto it        = std::find( addresses.begin(), addresses.end(), public_address );
         if ( it == addresses.end() )
         {
             genius_account_logger()->warn( "Can't delete account that was not added" );
