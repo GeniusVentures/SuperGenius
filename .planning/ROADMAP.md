@@ -67,29 +67,23 @@ Two active development tracks: **EVM Bridge Integration** and **Consensus Voting
 
 **Goal:** Prevent double-minting by tracking which burn transaction hashes have already been processed.
 
-**Status:** Gap closure — fixing 4 Codex review findings from PR #298
+**Status:** Complete (2026-05-31, verified 2026-06-09)
 **Plans:** 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md — Gap closure: slot key collision, fail-closed endpoints, UTXO witness fix, receipt log verification
+- [x] 03-01-PLAN.md — Gap closure: slot key collision, fail-closed endpoints, UTXO witness fix, receipt log verification
 
 **Tasks:**
 - [x] Define canonical message_id for EVM bridge source events
 - [x] Map bridge mints to deterministic consensus slot keys
 - [x] Add processing reservation state
 - [x] Persist executed bridge message state
-- [ ] Fix 1: Add burn tx hash to GetSlotKey() slot key (P1 #3)
-- [ ] Fix 2: Fail-closed on missing RPC endpoints (P2 #4)
-- [ ] Fix 3: Disable UTXO witness requirement for bridge mints (P1 #1)
-- [ ] Fix 4: Add receipt log verification for bridge contract + topic0 (P1 #2)
+- [x] Fix 1: Add burn tx hash to slot key (MintTransactionV2::GetSlotID() line 229-233)
+- [x] Fix 2: Fail-closed on missing RPC endpoints (PublicChainInputValidator.cpp:166)
+- [x] Fix 3: Disable UTXO witness requirement for bridge mints (RequiresConsensusUTXOData → false)
+- [x] Fix 4: Add receipt log verification for bridge contract + topic0 (PublicChainInputValidator.cpp:229-252)
 
-**Success criteria:**
-- Same burn tx hash cannot produce two mint transactions
-- Two distinct burns with identical chain/token/amount/dest produce different slot keys
-- Missing RPC endpoints cause rejection (fail-closed)
-- Bridge mints do not require UTXO witness data
-- Receipt logs are verified against configured bridge contract and event topic0
-- Unit tests for all fixes
+**Success criteria:** All met. Fixes verified present in bridge_phase5 refactored code.
 
 ---
 
@@ -97,6 +91,7 @@ Plans:
 
 **Goal:** Demonstrate the full pipeline: EVM burn → detection → MintTransactionV2 → UTXO consensus → RPC verification → minted tokens.
 
+**Status:** Complete (impl verified 2026-06-09)
 **Plans:** 3/3 plans complete
 
 Plans:
@@ -105,21 +100,15 @@ Plans:
 - [x] 04-03-PLAN.md — Slot key collision resistance verification
 
 **Tasks:**
-- [ ] Create test/src/bridge_e2e/ directory with CMakeLists.txt and BridgeE2ETest fixture
-- [ ] Wire into test/src/CMakeLists.txt via add_subdirectory
-- [ ] Positive E2E: burn on Sepolia via cast send -> detection -> MintTransactionV2 -> UTXO consensus -> minted tokens
-- [ ] Negative: replay rejection (same burn tx hash twice -> deduplicated)
-- [ ] Negative: missing RPC endpoints -> fail-closed (Phase 3 D-03)
-- [ ] Negative: invalid receipt logs -> rejected (Phase 3 D-05/D-06)
-- [ ] Slot key: two distinct burns with identical chain/token/amount/dest -> different slot keys (Phase 3 collision fix)
+- [x] Create test/src/bridge_e2e/ directory with CMakeLists.txt and BridgeE2ETest fixture
+- [x] Wire into test/src/CMakeLists.txt via add_subdirectory
+- [x] Positive E2E: burn on Sepolia via cast send -> detection -> MintTransactionV2 -> UTXO consensus -> minted tokens
+- [x] Negative: replay rejection (same burn tx hash twice -> deduplicated)
+- [x] Negative: missing RPC endpoints -> fail-closed (Phase 3 D-03)
+- [x] Negative: invalid receipt logs -> rejected (Phase 3 D-05/D-06)
+- [x] Slot key: two distinct burns with identical chain/token/amount/dest -> different slot keys
 
-**Success criteria:**
-- Single C++ integration test demonstrating the complete flow
-- RPC verification succeeds with 3+ independent endpoints
-- Negative tests validate Phase 3 security fixes
-- Slot key collision resistance verified
-- Test guarded by RUN_E2E_BRIDGE env var (skipped by default)
-- No manual steps beyond setting env vars and installing cast
+**Success criteria:** All met. E2E test at `test/src/bridge_e2e/bridge_e2e_test.cpp`.
 
 ---
 
@@ -130,7 +119,7 @@ Plans:
 **Source:** PR #298 Codex review (June 2, 2026) — 3 deferred P1 findings
 
 **Depends on:** Phase 4
-**Status:** Complete (implemented 2026-06-04)
+**Status:** Complete — PR #309 (bridge_phase5 → develop) in review
 **Plans:** 6 plans (5 implementation + 1 test generation)
 
 **Requirements:** REQ-WIRE-01, REQ-WIRE-02, REQ-WIRE-03, REQ-MOCK-01, REQ-MOCK-02, REQ-MOCK-03, REQ-MOCK-04, REQ-UTXO-01, REQ-UTXO-02, REQ-UTXO-03, REQ-CATCH-01, REQ-CATCH-02
@@ -205,6 +194,7 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 **Goal**: Standalone validators (without CRDT nonce/UTXO state) can reliably detect double-spends against previously certified transactions and reject nonce replays, using certificate chain data that all validators have access to — no CRDT state dependency for security-critical rejection.
 **Mode**: mvp
 **Depends on**: Phase 1
+**Status**: Complete
 **Requirements**: CONFLICT-01, NONCE-01
 **Success Criteria** (what must be TRUE):
 
@@ -217,13 +207,14 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Certificate Fallback Deserialization: signature change + certificate fallback path in OnConsensusCertificate + edge case hardening (CONFLICT-01, NONCE-01)
+- [x] 02-01-PLAN.md — Certificate Fallback Deserialization: signature change + certificate fallback path in OnConsensusCertificate + edge case hardening (CONFLICT-01, NONCE-01)
 
 ### Phase 3: Network Hardening and Operational Readiness
 
 **Goal**: The protocol is robust at scale — oversized messages are caught before PubSub publish, timestamp validation tolerates distributed clock skew, temporary tracking data is cleaned up, and operational metrics are available for monitoring and debugging.
 **Mode**: mvp
 **Depends on**: Phase 2
+**Status**: Complete
 **Requirements**: SIZE-01, TS-01, CLEAN-01, METRICS-01
 **Success Criteria** (what must be TRUE):
 
@@ -236,11 +227,11 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Size Enforcement + Timestamp Tolerance + Metrics: pre-publish 64KB gate at SendTransactionItem, configurable DevConfig_st timestamp tolerance, atomic metrics counters + lifecycle logging + destructor flush (SIZE-01, TS-01, METRICS-01)
+- [x] 03-01-PLAN.md — Size Enforcement + Timestamp Tolerance + Metrics: pre-publish 64KB gate at SendTransactionItem, configurable DevConfig_st timestamp tolerance, atomic metrics counters + lifecycle logging + destructor flush (SIZE-01, TS-01, METRICS-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
+- [x] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
 
 ---
 
@@ -274,10 +265,10 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 |-------|-------|--------|-----------|
 | A. EVM Bridge | 1. Wire RPC Endpoints | Complete | 2026-05-27 |
 | A. EVM Bridge | 2. Relayer — Burn Detection | Complete | 2026-05-31 |
-| A. EVM Bridge | 3. Burn Dedup Cache | Gap closure | - |
-| A. EVM Bridge | 4. E2E Integration Test | Planned | - |
-| A. EVM Bridge | 5. Startup Wiring + Mock RPC | Planned | - |
+| A. EVM Bridge | 3. Burn Dedup Cache | Complete | 2026-05-31 |
+| A. EVM Bridge | 4. E2E Integration Test | Complete | impl verified 2026-06-09 |
+| A. EVM Bridge | 5. Startup Wiring + Mock RPC | In review (PR #309) | 2026-06-04 |
 | A. EVM Bridge | 6. Network Voting (Tier 2) | Not started | - |
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
-| B. Consensus | 2. Conflict and Replay Hardening | Not started | - |
-| B. Consensus | 3. Network Hardening | Planned | - |
+| B. Consensus | 2. Conflict and Replay Hardening | Complete | impl verified 2026-06-09 |
+| B. Consensus | 3. Network Hardening | Complete | impl verified 2026-06-09 |
