@@ -13,7 +13,7 @@ namespace sgns::test
     class TestMintInputValidator final : public IInputValidator
     {
     public:
-        static void RegisterTestValidator()
+        static bool RegisterTestValidator()
         {
             static TestMintInputValidator instance;
             IInputValidator::Register( "test", &instance );
