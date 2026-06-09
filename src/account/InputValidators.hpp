@@ -79,5 +79,25 @@ namespace sgns
          * @return True when the validator needs UTXO witness and commitment data from consensus.
          */
         virtual bool RequiresConsensusUTXOData() const = 0;
+
+        using ValidatorPtr = const IInputValidator *;
+
+        static void Register( const std::string &chain_id, ValidatorPtr validator )
+        {
+            registry()[chain_id] = validator;
+        }
+
+        static ValidatorPtr Get( const std::string &chain_id )
+        {
+            auto it = registry().find( chain_id );
+            return it != registry().end() ? it->second : nullptr;
+        }
+
+    private:
+        static std::unordered_map<std::string, ValidatorPtr> &registry()
+        {
+            static std::unordered_map<std::string, ValidatorPtr> map;
+            return map;
+        }
     };
 } // namespace sgns

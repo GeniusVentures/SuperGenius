@@ -1100,6 +1100,11 @@ namespace sgns
 
     const IInputValidator &TransactionManager::GetInputValidator( const std::string &chain_id ) const
     {
+        if ( auto *validator = IInputValidator::Get( chain_id ) )
+        {
+            return *validator;
+        }
+
         if ( chain_id.empty() || chain_id == GENIUS_CHAIN_ID )
         {
             return genius_input_validator_;
