@@ -1102,6 +1102,8 @@ namespace sgns
     {
         if ( auto *validator = IInputValidator::Get( chain_id ) )
         {
+            TransactionManagerLogger()->debug( "{}: Returning validator registered for chain_id={}",
+                                           __func__, chain_id );
             return *validator;
         }
 
