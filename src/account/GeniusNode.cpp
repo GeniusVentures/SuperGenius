@@ -2242,9 +2242,8 @@ namespace sgns
                             {
                                 return;
                             }
-                            bool is_bootstrap = false;
-                            if ( strong->bootstrap_fullnode_ids_.count( peer_id ) )
-                            is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
+
+                            bool is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
                                                 strong->bootstrap_peer_ids_.count( peer_id );
                             if ( is_bootstrap )
                             {
