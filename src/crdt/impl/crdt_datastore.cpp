@@ -82,7 +82,7 @@ namespace sgns::crdt
         crdtInstance->dagWorkers_.reserve( crdtInstance->numberOfDagWorkers );
         for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
-            auto dagWorker = std::make_unique<DagWorker>();
+            auto  dagWorker  = std::make_unique<DagWorker>();
             auto *worker_ptr = dagWorker.get();
 
             dagWorker->dagWorkerThreadRunning_ = true;
@@ -478,29 +478,23 @@ namespace sgns::crdt
             return;
         }
 
-        {
-            std::lock_guard lock( dagWorkerMutex_ );
-            logger_->info( "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
-                           pending_jobs_.size(),
-                           selfCreatedJobList_.size(),
-                           rootCIDJobList_.size(),
-                           pendingRootQueue_.size(),
-                           activeRootCID_.has_value() );
-        }
+        logger_->info(
+            "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+            pending_jobs_.size(),
+            selfCreatedJobList_.size(),
+            rootCIDJobList_.size(),
+            pendingRootQueue_.size(),
+            activeRootCID_.has_value() );
 
         closeStarted_ = true;
         StopWorkerLoops();
 
         if ( IsCurrentThreadInternalWorker() )
         {
-            logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread", __func__ );
+            logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
+                            __func__ );
             auto keep_alive = shared_from_this();
-            std::thread(
-                [keep_alive = std::move( keep_alive )]()
-                {
-                    keep_alive->WaitForWorkersToExit();
-                } )
-                .detach();
+            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
             return;
         }
 
@@ -508,12 +502,13 @@ namespace sgns::crdt
 
         started_ = false;
         logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
-        logger_->debug( "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
-                       pending_jobs_.size(),
-                       selfCreatedJobList_.size(),
-                       rootCIDJobList_.size(),
-                       pendingRootQueue_.size(),
-                       activeRootCID_.has_value() );
+        logger_->debug(
+            "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+            pending_jobs_.size(),
+            selfCreatedJobList_.size(),
+            rootCIDJobList_.size(),
+            pendingRootQueue_.size(),
+            activeRootCID_.has_value() );
     }
 
     void CrdtDatastore::StopWorkerLoops()
@@ -548,7 +543,7 @@ namespace sgns::crdt
 
     bool CrdtDatastore::IsCurrentThreadInternalWorker() const
     {
-        const auto caller_id = std::this_thread::get_id();
+        const auto      caller_id = std::this_thread::get_id();
         std::lock_guard lock( workerThreadIdsMutex_ );
 
         if ( caller_id == handleNextThreadId_ || caller_id == rebroadcastThreadId_ )
@@ -596,8 +591,8 @@ namespace sgns::crdt
 
         {
             std::lock_guard lock( workerThreadIdsMutex_ );
-            handleNextThreadId_   = {};
-            rebroadcastThreadId_  = {};
+            handleNextThreadId_  = {};
+            rebroadcastThreadId_ = {};
             for ( auto &dagWorker : dagWorkers_ )
             {
                 dagWorker->threadId_ = {};
