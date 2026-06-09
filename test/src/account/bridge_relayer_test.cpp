@@ -15,7 +15,11 @@
 #include "eth/abi_decoder.hpp"
 #include "eth/event_filter.hpp"
 
+#include "testutil/TestMintInputValidator.hpp"
+
 using namespace sgns;
+
+static bool kRegisterTestValidator = sgns::test::TestMintInputValidator::RegisterTestValidator();
 
 // ─── Test Accessor ──────────────────────────────────────────────────────────
 

@@ -42,7 +42,3 @@ namespace sgns::test
         }
     };
 } // namespace sgns::test
-
-#ifndef NDEBUG
-static inline bool kTestMintValidatorRegistered = sgns::test::TestMintInputValidator::RegisterTestValidator();
-#endif
