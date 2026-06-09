@@ -734,6 +734,8 @@ namespace sgns
                 transaction_hash, e.what() );
             return outcome::failure( std::errc::operation_canceled );
         }
+
+        return txId;
     }
 
     outcome::result<std::string> TransactionManager::MigrationFunds( uint64_t    amount,

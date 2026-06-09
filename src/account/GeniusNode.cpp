@@ -2214,7 +2214,7 @@ namespace sgns
                      topic0_hex, topic0_hash256 ) )
             {
                 node_logger_->warn( "CatchUpScan: invalid topic0 {} for chain {}",
-                                    topic0_hex, chain_id_str );
+                                    topic0_hex, chain_entry.chain_name );
                 continue;
             }
 
@@ -2236,7 +2236,7 @@ namespace sgns
                 // T-05-13: RPC timeout or failure — log and continue (best-effort)
                 node_logger_->warn( "CatchUpScan: RPC call failed for chain {} (timeout/refused) — "
                                     "skipping",
-                                    chain_id_str );
+                                    chain_entry.chain_name );
                 continue;
             }
 
@@ -2244,7 +2244,7 @@ namespace sgns
             if ( !logs.has_value() )
             {
                 node_logger_->warn( "CatchUpScan: failed to parse getLogs response for chain {}",
-                                    chain_id_str );
+                                    chain_entry.chain_name );
                 continue;
             }
 
@@ -2289,7 +2289,7 @@ namespace sgns
                     auto result = transaction_manager_->MintFunds(
                         0,              // amount — derived from burn event data on full decode
                         tx_hash_hex,    // source-chain tx hash
-                        std::to_string( chain_id ),
+                        std::to_string( chain_entry.chain_id ),
                         dev_config_.TokenID,
                         ""              // destination defaults to local account
                     );
