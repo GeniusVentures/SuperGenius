@@ -2298,7 +2298,7 @@ namespace sgns
                     {
                         ++total_backfilled;
                         node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
-                                            tx_hash_hex, chain_id_str );
+                                            tx_hash_hex, chain_entry.chain_name );
                     }
                     else
                     {
