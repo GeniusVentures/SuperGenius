@@ -54,5 +54,16 @@ namespace sgns
         {
             return true;
         }
+
+        static bool Register()
+        {
+            static GeniusInputValidator instance;
+            IInputValidator::Register( "supergenius", &instance );
+            IInputValidator::Register( "supergenius_chain", &instance );
+            IInputValidator::Register( "", &instance );
+            return true;
+        }
     };
+
+    static inline bool kGeniusValidatorRegistered = GeniusInputValidator::Register();
 } // namespace sgns
