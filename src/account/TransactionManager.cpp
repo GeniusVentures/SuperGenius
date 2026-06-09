@@ -704,25 +704,36 @@ namespace sgns
         source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
-        // Reserve the burn UTXO — transitions READY → RESERVED via ReserveUTXOs (D-18)
+        // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
         account_m->GetUTXOManager().ReserveUTXOs( mint_inputs, transaction_hash );
 
-        auto mint_transaction = std::make_shared<MintTransactionV2>(
-            MintTransactionV2::New( amount,
-                                    std::move( chainid ),
-                                    tokenid,
-                                    FillDAGStruct( std::move( transaction_hash ) ),
-                                    std::move( mint_inputs ),
-                                    destination ) );
+        // Capture input info for potential rollback (mint_inputs may be moved below)
+        auto rollback_inputs = mint_inputs;
 
-        mint_transaction->MakeSignature( *account_m );
+        auto txId = std::string{};
+        try
+        {
+            auto mint_transaction = std::make_shared<MintTransactionV2>(
+                MintTransactionV2::New( amount,
+                                        std::move( chainid ),
+                                        tokenid,
+                                        FillDAGStruct( std::move( transaction_hash ) ),
+                                        std::move( mint_inputs ),
+                                        destination ) );
 
-        // Store the transaction ID before moving the transaction
-        auto txId = mint_transaction->GetHash();
-
-        EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
-
-        return txId;
+            mint_transaction->MakeSignature( *account_m );
+            txId = mint_transaction->GetHash();
+            EnqueueTransaction( std::make_pair( std::move( mint_transaction ), std::nullopt ) );
+        }
+        catch ( const std::exception &e )
+        {
+            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs, transaction_hash );
+            TransactionManagerLogger()->error(
+                "[{} - full: {}] {}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
+                account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
+                transaction_hash, e.what() );
+            return outcome::failure( std::errc::operation_canceled );
+        }
     }
 
     outcome::result<std::string> TransactionManager::MigrationFunds( uint64_t    amount,

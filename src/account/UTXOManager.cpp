@@ -224,6 +224,12 @@ namespace sgns
                     if ( ( entry.state == UTXOState::UTXO_READY || entry.state == UTXOState::UTXO_RESERVED )
                          && entry.utxo.GetOwnerAddress() == address )
                     {
+                        // UTXO_BRIDGE UTXOs must be RESERVED (via MintFunds→ReserveUTXOs)
+                        // before consumption — guards against non-mint transactions spending them.
+                        if ( entry.type == UTXOType::UTXO_BRIDGE && entry.state != UTXOState::UTXO_RESERVED )
+                        {
+                            continue;
+                        }
                         utxo_found  = true;
                         entry.state = UTXOState::UTXO_CONSUMED;
                     }
@@ -981,6 +987,10 @@ namespace sgns
                 if ( entry.state != UTXOState::UTXO_READY )
                 {
                     continue;
+                }
+                if ( entry.type == UTXOType::UTXO_BRIDGE )
+                {
+                    continue; // UTXO_BRIDGE UTXOs are only spendable by MintTransactionV2
                 }
                 if ( !token_id.Equals( entry.utxo.GetTokenID() ) )
                 {
