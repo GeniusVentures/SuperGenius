@@ -133,6 +133,7 @@ namespace sgns
     {
         auto logger = InputValidatorLogger();
         rpc_endpoints_[chain_id] = std::move( endpoints );
+        IInputValidator::Register( chain_id, this );
         logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
                       chain_id, rpc_endpoints_[chain_id].size() );
     }
