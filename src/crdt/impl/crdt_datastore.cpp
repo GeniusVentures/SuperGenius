@@ -488,56 +488,23 @@ namespace sgns::crdt
                            activeRootCID_.has_value() );
         }
 
-        if ( handleNextThreadRunning_ )
-        {
-            handleNextThreadRunning_ = false;
-        }
+        closeStarted_ = true;
+        StopWorkerLoops();
 
-        if ( rebroadcastThreadRunning_ )
+        if ( IsCurrentThreadInternalWorker() )
         {
-            rebroadcastThreadRunning_ = false;
-            rebroadcastCv_.notify_all();
-        }
-
-        // Stop graphsync after cancellation signals are raised so workers
-        // observe shutdown intent first.
-        dagSyncer_->Stop();
-
-        if ( dagWorkerJobListThreadRunning_ )
-        {
-            dagWorkerJobListThreadRunning_ = false;
-            dagWorkerCv_.notify_all();
-            for ( auto &dagWorker : dagWorkers_ )
-            {
-                dagWorker->dagWorkerThreadRunning_ = false;
-                if ( dagWorker->dagWorkerFuture_.valid() )
+            logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread", __func__ );
+            auto keep_alive = shared_from_this();
+            std::thread(
+                [keep_alive = std::move( keep_alive )]()
                 {
-                    dagWorker->dagWorkerFuture_.wait();
-                }
-            }
-
-            // Clear both job queues
-            {
-                std::lock_guard        lock( dagWorkerMutex_ );
-                std::queue<RootCIDJob> empty1, empty2;
-                std::queue<CID>        empty_roots;
-                std::swap( rootCIDJobList_, empty1 );
-                std::swap( selfCreatedJobList_, empty2 );
-                std::swap( pendingRootQueue_, empty_roots );
-                activeRootCID_.reset();
-                pending_jobs_.clear();
-            }
+                    keep_alive->WaitForWorkersToExit();
+                } )
+                .detach();
+            return;
         }
 
-        if ( handleNextFuture_.valid() )
-        {
-            handleNextFuture_.wait();
-        }
-
-        if ( rebroadcastFuture_.valid() )
-        {
-            rebroadcastFuture_.wait();
-        }
+        WaitForWorkersToExit();
 
         started_ = false;
         logger_->info( "CancelAndCloseNow: CRDT workers stopped" );

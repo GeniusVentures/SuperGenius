@@ -2225,7 +2225,7 @@ namespace sgns
     {
         if ( bootstrap_fullnode_ids_.empty() && bootstrap_peer_ids_.empty() )
         {
-            node_logger_->debug( "No bootstrapers configured, skipping reconnect subscription" );
+            node_logger_->debug( "No bootstrap peers configured, skipping reconnect subscription" );
             return;
         }
 
@@ -2242,7 +2242,6 @@ namespace sgns
                             {
                                 return;
                             }
-
                             bool is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
                                                 strong->bootstrap_peer_ids_.count( peer_id );
                             if ( is_bootstrap )
@@ -2251,7 +2250,6 @@ namespace sgns
                                                        ? "fullnode"
                                                        : "peer";
                                 strong->node_logger_->info(
-                                    "Bootstrap fullnode {} disconnected, scheduling reconnect",
                                     "Bootstrap {} {} disconnected, scheduling reconnect",
                                     kind,
                                     peer_id.toBase58() );
@@ -2278,7 +2276,7 @@ namespace sgns
     {
         if ( bootstrap_fullnode_infos_.empty() && bootstrap_peer_infos_.empty() )
         {
-            node_logger_->debug( "No bootstrappers to health-check" );
+            node_logger_->debug( "No bootstrap peers to health-check" );
             return;
         }
         ScheduleNextHealthCheck();
@@ -2316,6 +2314,7 @@ namespace sgns
             interval ) );
     }
 
+
     void GeniusNode::PerformHealthCheck()
     {
         if ( shutdown_started_.load() )
@@ -2328,19 +2327,12 @@ namespace sgns
         // Check both fullnodes and peers
         for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
         {
-            auto connectedness = host->connectedness( peer_info );
-            if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
-                 connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
             for ( const auto &peer_info : *infos )
             {
-                unsigned attempt = 0;
                 auto connectedness = host->connectedness( peer_info );
                 if ( connectedness == libp2p::Host::Connectedness::NOT_CONNECTED ||
                      connectedness == libp2p::Host::Connectedness::CAN_NOT_CONNECT )
                 {
-                    std::lock_guard<std::mutex> lock( reconnect_mutex_ );
-                    auto                          it = reconnect_attempts_.find( peer_info.id );
-                    if ( it != reconnect_attempts_.end() )
                     node_logger_->debug( "Health check: bootstrap peer {} is {}",
                                          peer_info.id.toBase58(),
                                          connectedness == libp2p::Host::Connectedness::NOT_CONNECTED
@@ -2349,7 +2341,6 @@ namespace sgns
 
                     unsigned attempt = 0;
                     {
-                        attempt = it->second;
                         std::lock_guard<std::mutex> lock( reconnect_mutex_ );
                         auto                          it = reconnect_attempts_.find( peer_info.id );
                         if ( it != reconnect_attempts_.end() )
@@ -2414,7 +2405,6 @@ namespace sgns
         const libp2p::peer::PeerInfo *peer_info_ptr = nullptr;
         for ( const auto &infos : { &bootstrap_fullnode_infos_, &bootstrap_peer_infos_ } )
         {
-            if ( info.id == peer_id )
             for ( const auto &info : *infos )
             {
                 if ( info.id == peer_id )
