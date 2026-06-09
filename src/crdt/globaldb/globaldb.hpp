@@ -47,7 +47,7 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub>                      pubsub,
             std::shared_ptr<CrdtOptions>                                          crdtOptions,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
-            std::shared_ptr<libp2p::protocol::Scheduler>                          scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr );
 
@@ -67,7 +67,7 @@ namespace sgns::crdt
          * @enum        Error
          * @brief       Enumeration of error codes used in the proof classes.
          */
-        enum class Error: uint8_t
+        enum class Error : uint8_t
         {
             ROCKSDB_IO = 0,                 ///< RocksDB wasn't opened
             IPFS_DB_NOT_CREATED,            ///< IPFS datastore not created
@@ -140,18 +140,26 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
+        void                  AddTopicName( const std::string &topicName );
         void                  AddListenTopic( const std::string &topicName );
 
         void PrintDataStore();
 
         std::shared_ptr<RocksDB>                          GetDataStore();
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
+        std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
+        void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterNewElementCallback( const std::string &pattern );
+        void UnregisterDeletedElementCallback( const std::string &pattern );
 
         void Start();
+        void StartCIDReceiving();
+        void StartCICSync();
+        void StartRebroadcastHeads();
 
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
 
@@ -169,11 +177,14 @@ namespace sgns::crdt
 
         /**
          * @brief       Get the topics that are being listened to
-         * @return      A set of the monitored topic names 
+         * @return      A set of the monitored topic names
          */
         outcome::result<std::unordered_set<std::string>> GetMonitoredTopics() const;
 
         std::shared_ptr<crdt::CrdtDatastore> GetCRDTDataStore();
+
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetCIDContent(
+            const std::string &cid_string );
 
     private:
         /**
@@ -188,7 +199,7 @@ namespace sgns::crdt
 
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
-                                    std::shared_ptr<libp2p::protocol::Scheduler>               scheduler,
+                                    std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                     std::shared_ptr<RocksDB> datastore = nullptr );
 
@@ -204,6 +215,9 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> m_broadcaster;
         std::shared_ptr<RocksDB>                          m_datastore;
         std::atomic_bool                                  started_;
+        bool                                              cid_sync_started_;
+        bool                                              cid_receiving_started_;
+        bool                                              head_broadcasting_started_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;

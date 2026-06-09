@@ -11,6 +11,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 #include <primitives/cid/cid.hpp>
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "outcome/outcome.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, Blockchain::Error, err )
 {
@@ -63,12 +64,42 @@ namespace sgns
         return address;
     }
 
-    std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB> global_db,
-                                                 std::shared_ptr<GeniusAccount>  account,
-                                                 BlockchainCallback              callback )
+    std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
+                                                 std::shared_ptr<GeniusAccount>             account,
+                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
+                                                 BlockchainCallback                         callback )
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
+        auto request_validator_registry = []( const std::shared_ptr<Blockchain> &self )
+        {
+            if ( !self )
+            {
+                return;
+            }
+            auto request_result = self->account_->RequestValidatorRegistry(
+                TIMEOUT_GENESIS_BLOCK_MS,
+                [weak_ptr( std::weak_ptr<Blockchain>( self ) )]( outcome::result<std::string> registry_cid_res )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        if ( registry_cid_res.has_error() )
+                        {
+                            strong->logger_->warn( "[{}] Validator registry request finished with error",
+                                                   strong->account_->GetAddress().substr( 0, 8 ) );
+                            return;
+                        }
+                        strong->logger_->debug( "[{}] Validator registry request finished with CID {}",
+                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                registry_cid_res.value().substr( 0, 8 ) );
+                    }
+                } );
+            if ( request_result.has_error() )
+            {
+                self->logger_->warn( "[{}] Failed to request validator registry during blockchain init",
+                                     self->account_->GetAddress().substr( 0, 8 ) );
+            }
+        };
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
@@ -97,11 +128,11 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        instance->validator_registry_ = blockchain::ValidatorRegistry::New(
+        instance->validator_registry_ = ValidatorRegistry::New(
             instance->db_,
             2,
             3,
-            blockchain::ValidatorRegistry::WeightConfig{},
+            ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress(),
 
             [weak_ptr( std::weak_ptr<Blockchain>(
@@ -112,7 +143,7 @@ namespace sgns
                     (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( bool initialized )
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -121,6 +152,7 @@ namespace sgns
                     {
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
+                        request_validator_registry( strong );
                     }
                 }
             } );
@@ -132,11 +164,115 @@ namespace sgns
             return nullptr;
         }
 
+        instance->consensus_manager_ = ConsensusManager::New(
+            instance->validator_registry_,
+            instance->db_,
+            std::move( pubsub ),
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    return strong->account_->Sign( std::move( payload ) );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            },
+            instance->account_->GetAddress() );
+
+        instance->validator_registry_->SetBatchSubjectSubmitter(
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const ConsensusSubject &subject ) -> outcome::result<void>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto weight_result = strong->validator_registry_->GetValidatorWeight(
+                        strong->account_->GetAddress() );
+                    if ( weight_result.has_error() )
+                    {
+                        return outcome::failure( weight_result.error() );
+                    }
+                    if ( !weight_result.value().has_value() )
+                    {
+                        return outcome::success();
+                    }
+                    auto proposal_result = strong->consensus_manager_->CreateProposal(
+                        subject,
+                        strong->account_->GetAddress(),
+                        strong->validator_registry_->GetRegistryCid(),
+                        strong->validator_registry_->GetRegistryEpoch() );
+                    if ( proposal_result.has_error() )
+                    {
+                        return outcome::failure( proposal_result.error() );
+                    }
+                    return strong->consensus_manager_->SubmitProposal( proposal_result.value(), true );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
+        instance->consensus_manager_->RegisterSubjectHandler(
+            REGISTRY_BATCH_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto decision_result = strong->validator_registry_->EvaluateBatchSubject( subject );
+                    if ( decision_result.has_error() )
+                    {
+                        return outcome::failure( decision_result.error() );
+                    }
+                    switch ( decision_result.value() )
+                    {
+                        case ValidatorRegistry::BatchSubjectDecision::Approve:
+                            return ConsensusManager::Check::Approve;
+                        case ValidatorRegistry::BatchSubjectDecision::Pending:
+                            return ConsensusManager::Check::Pending;
+                        case ValidatorRegistry::BatchSubjectDecision::Reject:
+                        default:
+                            return ConsensusManager::Check::Reject;
+                    }
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
+        instance->consensus_manager_->RegisterCertificateHandler(
+            REGISTRY_BATCH_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const std::string          &subject_hash,
+                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto decision = strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
+                    if ( decision.has_error() )
+                    {
+                        return outcome::failure( decision.error() );
+                    }
+                    switch ( decision.value() )
+                    {
+                        case ValidatorRegistry::BatchCertificateDecision::Approve:
+                            return ConsensusManager::Check::Approve;
+                        case ValidatorRegistry::BatchCertificateDecision::Pending:
+                            return ConsensusManager::Check::Pending;
+                        case ValidatorRegistry::BatchCertificateDecision::Stalled:
+                            return ConsensusManager::Check::Stalled;
+                        case ValidatorRegistry::BatchCertificateDecision::Reject:
+                        default:
+                            return ConsensusManager::Check::Reject;
+                    }
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         auto ensure_registry_result = instance->EnsureValidatorRegistry();
         if ( ensure_registry_result.has_error() )
         {
             instance->logger_->error( "[{}] Failed to ensure validator registry during init",
                                       instance->account_->GetAddress().substr( 0, 8 ) );
+        }
+        if ( !instance->validator_registry_initialized_.load() )
+        {
+            request_validator_registry( instance );
         }
 
         if ( !genesis_filter_initialized )
@@ -199,6 +335,17 @@ namespace sgns
                             }
                             break;
                         }
+                        case 2:
+                        {
+                            sgns::crdt::GlobalDB::Buffer registry_cid_key;
+                            registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
+                            auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                            if ( registry_cid.has_value() )
+                            {
+                                return std::string( registry_cid.value().toString() );
+                            }
+                            break;
+                        }
                         default:
                             break;
                     }
@@ -208,8 +355,8 @@ namespace sgns
             } );
 
         instance->account_->SetGetValidatorWeightMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>(
-                instance ) )]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+                const std::string &address ) -> outcome::result<std::optional<uint64_t>>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -254,9 +401,9 @@ namespace sgns
             }
             blockchain_logger()->debug( " Migrating CID: {}", cid_string );
 
-            OUTCOME_TRY( auto &&cid, CID::fromString( cid_string ) );
-            OUTCOME_TRY( auto &&node, old_syncer->GetNodeFromMerkleDAG( cid ) );
-            OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
+            BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );
+            BOOST_OUTCOME_TRY( auto node, old_syncer->GetNodeFromMerkleDAG( cid ) );
+            BOOST_OUTCOME_TRY( new_crdt->AddDAGNode( node ) );
             return outcome::success();
         };
 
@@ -274,7 +421,7 @@ namespace sgns
             crdt::GlobalDB::Buffer genesis_cid_value;
             genesis_cid_value.putBuffer( genesis_cid.value() );
             (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
-            OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
+            BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
         }
 
         blockchain_logger()->debug( "{}: Getting the account creation CIDs from old database", __func__ );
@@ -288,7 +435,7 @@ namespace sgns
                 blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
 
                 (void)new_store->put( entry.first, entry.second );
-                OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
+                BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
             }
         }
         blockchain_logger()->debug( "{}: Finalized migrating the blockchain", __func__ );
@@ -314,7 +461,21 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->Close();
+        }
+        if ( db_ )
+        {
+            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
+            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
+            db_->UnregisterNewElementCallback( genesis_pattern );
+            db_->UnregisterElementFilter( genesis_pattern );
+            db_->UnregisterNewElementCallback( account_pattern );
+            db_->UnregisterElementFilter( account_pattern );
+        }
         account_->ClearGetBlockChainCIDMethod();
+        account_->ClearGetValidatorWeightMethod();
     }
 
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
@@ -367,11 +528,11 @@ namespace sgns
             }
             logger_->info( "[{}] Genesis block also found locally, verifying account creation block",
                            account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
-            OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
-            OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnAccountCreationBlockReceived( get_account_creation_result.value() ) );
+            BOOST_OUTCOME_TRY( InitAccountCreationCID( account_->GetAddress() ) );
 
             auto query_result = db_->QueryKeyValues( std::string( ACCOUNT_CREATION_KEY_PREFIX ) );
             if ( query_result.has_error() )
@@ -422,8 +583,7 @@ namespace sgns
             logger_->info( "[{}] Account creation block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
 
-            InformBlockchainResult( outcome::success() );
-            return outcome::success();
+            return InformBlockchainResult( outcome::success() );
         }
         logger_->info( "[{}] Account creation block not found locally, proceeding to check genesis block",
                        account_->GetAddress().substr( 0, 8 ) );
@@ -432,15 +592,15 @@ namespace sgns
         if ( !get_genesis_result.has_error() )
         {
             logger_->info( "[{}] Genesis block found locally, verifying", account_->GetAddress().substr( 0, 8 ) );
-            OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
-            OUTCOME_TRY( InitGenesisCID() );
-            OUTCOME_TRY( EnsureValidatorRegistry() );
+            BOOST_OUTCOME_TRY( OnGenesisBlockReceived( get_genesis_result.value() ) );
+            BOOST_OUTCOME_TRY( InitGenesisCID() );
+            BOOST_OUTCOME_TRY( EnsureValidatorRegistry() );
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
-            account_->RequestAccountCreation(
+            return account_->RequestAccountCreation(
                 TIMEOUT_ACC_CREATION_BLOCK_MS,
                 [weakptr( weak_from_this() )]( outcome::result<std::string> creation_cid_res )
                 {
@@ -453,39 +613,36 @@ namespace sgns
                     }
                 } );
         }
-        else
+
+        logger_->info( "[{}] Genesis block not found locally, proceeding to creation/request",
+                       account_->GetAddress().substr( 0, 8 ) );
+        // Genesis block not found locally
+        if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
         {
-            logger_->info( "[{}] Genesis block not found locally, proceeding to creation/request",
-                           account_->GetAddress().substr( 0, 8 ) );
-            // Genesis block not found locally
-            if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
-            {
-                logger_->info( "[{}] Full node detected, creating genesis block",
-                               account_->GetAddress().substr( 0, 8 ) );
-                auto create_result = CreateGenesisBlock();
-                return create_result;
-            }
-            logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
-                           account_->GetAddress().substr( 0, 8 ) );
-            auto genesis_request_result = account_->RequestGenesis(
-                TIMEOUT_GENESIS_BLOCK_MS,
-                [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
-                {
-                    if ( auto self = weakptr.lock() )
-                    {
-                        self->logger_->debug( "[{}] Genesis request finished",
-                                              self->account_->GetAddress().substr( 0, 8 ) );
-                        self->InformGenesisResult( std::move( genesis_cid_res ) );
-                    }
-                } );
-            if ( genesis_request_result.has_error() )
-            {
-                logger_->error( "[{}] Genesis request failed: no response received",
-                                account_->GetAddress().substr( 0, 8 ) );
-                return outcome::failure( Error::GENESIS_BLOCK_MISSING );
-            }
-            logger_->info( "[{}] Request succeeded for Genesis", account_->GetAddress().substr( 0, 8 ) );
+            logger_->info( "[{}] Full node detected, creating genesis block", account_->GetAddress().substr( 0, 8 ) );
+            auto create_result = CreateGenesisBlock();
+            return create_result;
         }
+        logger_->info( "[{}] Regular node detected, requesting genesis block via pubsub",
+                       account_->GetAddress().substr( 0, 8 ) );
+        auto genesis_request_result = account_->RequestGenesis(
+            TIMEOUT_GENESIS_BLOCK_MS,
+            [weakptr( weak_from_this() )]( outcome::result<std::string> genesis_cid_res )
+            {
+                if ( auto self = weakptr.lock() )
+                {
+                    self->logger_->debug( "[{}] Genesis request finished",
+                                          self->account_->GetAddress().substr( 0, 8 ) );
+                    self->InformGenesisResult( std::move( genesis_cid_res ) );
+                }
+            } );
+        if ( genesis_request_result.has_error() )
+        {
+            logger_->error( "[{}] Genesis request failed: no response received",
+                            account_->GetAddress().substr( 0, 8 ) );
+            return outcome::failure( Error::GENESIS_BLOCK_MISSING );
+        }
+        logger_->info( "[{}] Request succeeded for Genesis", account_->GetAddress().substr( 0, 8 ) );
 
         return outcome::success();
     }
@@ -621,41 +778,39 @@ namespace sgns
         return result;
     }
 
-    void Blockchain::InformGenesisResult( outcome::result<std::string> genesis_result )
+    outcome::result<void> Blockchain::InformGenesisResult( outcome::result<std::string> genesis_result )
     {
         if ( genesis_result.has_error() )
         {
             logger_->debug( "[{}] Genesis block not found", account_->GetAddress().substr( 0, 8 ) );
 
-            InformBlockchainResult( outcome::failure( Error::GENESIS_BLOCK_MISSING ) );
+            return InformBlockchainResult( outcome::failure( Error::GENESIS_BLOCK_MISSING ) );
         }
-        else
-        {
-            logger_->debug( "[{}] Informing genesis result response with CID: {}",
-                            account_->GetAddress().substr( 0, 8 ),
-                            genesis_result.value() );
-            WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK_MS );
-        }
+        logger_->debug( "[{}] Informing genesis result response with CID: {}",
+                        account_->GetAddress().substr( 0, 8 ),
+                        genesis_result.value() );
+        WatchCIDDownload( genesis_result.value(), Error::GENESIS_BLOCK_MISSING, TIMEOUT_GENESIS_BLOCK_MS );
+        return outcome::success();
     }
 
-    void Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
+    outcome::result<void> Blockchain::InformAccountCreationResponse( outcome::result<std::string> creation_result )
     {
         if ( creation_result.has_error() )
         {
             logger_->debug( "[{}] Received empty account creation CID, no account created yet",
                             account_->GetAddress().substr( 0, 8 ) );
 
-            CreateAccountCreationBlock();
+            return CreateAccountCreationBlock();
         }
-        else
-        {
-            logger_->debug( "[{}] Informing account creation response with CID: {}",
-                            account_->GetAddress().substr( 0, 8 ),
-                            creation_result.value() );
-            WatchCIDDownload( creation_result.value(),
-                              Error::ACCOUNT_CREATION_BLOCK_MISSING,
-                              TIMEOUT_ACC_CREATION_BLOCK_MS );
-        }
+
+        logger_->debug( "[{}] Informing account creation response with CID: {}",
+                        account_->GetAddress().substr( 0, 8 ),
+                        creation_result.value() );
+        WatchCIDDownload( creation_result.value(),
+                          Error::ACCOUNT_CREATION_BLOCK_MISSING,
+                          TIMEOUT_ACC_CREATION_BLOCK_MS );
+
+        return outcome::success();
     }
 
     void Blockchain::WatchCIDDownload( const std::string &cid, Error error_on_failure, uint64_t timeout_ms )
@@ -730,8 +885,8 @@ namespace sgns
             .detach();
     }
 
-    void Blockchain::GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
-                                              const std::string                            &cid )
+    outcome::result<void> Blockchain::GenesisReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                               const std::string                            &cid )
     {
         logger_->debug( "[{}] Genesis received callback triggered with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
@@ -767,8 +922,7 @@ namespace sgns
 
         if ( new_genesis_return.has_error() )
         {
-            InformBlockchainResult( new_genesis_return );
-            return;
+            return InformBlockchainResult( new_genesis_return );
         }
 
         logger_->info( "[{}] Requesting account creation block via pubsub (async)",
@@ -788,13 +942,10 @@ namespace sgns
             logger_->error( "[{}] Account creation request failed {}. Creating account...",
                             account_->GetAddress().substr( 0, 8 ),
                             result.error().message() );
-            InformAccountCreationResponse( outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED ) );
+            return InformAccountCreationResponse( outcome::failure( Error::ACCOUNT_CREATION_BLOCK_CREATION_FAILED ) );
         }
-        else
-        {
-            logger_->info( "[{}] Triggered Request account creation successfully",
-                           account_->GetAddress().substr( 0, 8 ) );
-        }
+        logger_->info( "[{}] Triggered Request account creation successfully", account_->GetAddress().substr( 0, 8 ) );
+        return outcome::success();
     }
 
     outcome::result<void> Blockchain::CreateGenesisBlock()
@@ -803,8 +954,8 @@ namespace sgns
                        account_->GetAddress().substr( 0, 8 ),
                        GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::GenesisBlock g;
-        auto                           timestamp = std::chrono::system_clock::now();
+        GenesisBlock g;
+        auto         timestamp = std::chrono::system_clock::now();
 
         g.set_chain_id( "supergenius" );
         g.set_timestamp(
@@ -897,7 +1048,7 @@ namespace sgns
                         account_->GetAddress().substr( 0, 8 ),
                         GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::GenesisBlock g;
+        GenesisBlock g;
 
         // Convert string back to byte vector for ParseFromArray
         std::vector<uint8_t> data( serialized_genesis.begin(), serialized_genesis.end() );
@@ -935,39 +1086,45 @@ namespace sgns
         return outcome::success();
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::GenesisBlock &g ) const
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Computing signature data for genesis block", account_->GetAddress().substr( 0, 8 ) );
 
         // Create a copy without signature for deterministic signing
-        blockchain::GenesisBlock g_copy = g;
+        GenesisBlock g_copy = g;
         g_copy.clear_signature();
 
         // Serialize the unsigned block
         size_t               size = g_copy.ByteSizeLong();
         std::vector<uint8_t> signature_data( size );
 
-        g_copy.SerializeToArray( signature_data.data(), signature_data.size() );
+        if ( !g_copy.SerializeToArray( signature_data.data(), signature_data.size() ) )
+        {
+            logger_->error( "Failed to serialize signature into array" );
+        }
 
         logger_->trace( "[{}] Signature data computed (size: {} bytes)", account_->GetAddress().substr( 0, 8 ), size );
 
         return signature_data;
     }
 
-    std::vector<uint8_t> Blockchain::ComputeSignatureData( const blockchain::AccountCreationBlock &ac ) const
+    std::vector<uint8_t> Blockchain::ComputeSignatureData( const AccountCreationBlock &ac ) const
     {
         // Create a copy without signature for deterministic signing
-        blockchain::AccountCreationBlock ac_copy = ac;
+        AccountCreationBlock ac_copy = ac;
         ac_copy.clear_signature();
 
         size_t               size = ac_copy.ByteSizeLong();
         std::vector<uint8_t> signature_data( size );
-        ac_copy.SerializeToArray( signature_data.data(), signature_data.size() );
+        if ( !ac_copy.SerializeToArray( signature_data.data(), signature_data.size() ) )
+        {
+            logger_->error( "Failed to serialize signature into array" );
+        }
 
         return signature_data;
     }
 
-    bool Blockchain::VerifySignature( const blockchain::GenesisBlock &g ) const
+    bool Blockchain::VerifySignature( const GenesisBlock &g ) const
     {
         logger_->trace( "[{}] Verifying genesis block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -1001,7 +1158,7 @@ namespace sgns
         return verification_result;
     }
 
-    bool Blockchain::VerifySignature( const blockchain::AccountCreationBlock &ac ) const
+    bool Blockchain::VerifySignature( const AccountCreationBlock &ac ) const
     {
         logger_->trace( "[{}] Verifying account creation block signature", account_->GetAddress().substr( 0, 8 ) );
 
@@ -1049,8 +1206,8 @@ namespace sgns
                        account_->GetAddress().substr( 0, 8 ),
                        cids_.genesis_.value() );
 
-        sgns::blockchain::AccountCreationBlock ac;
-        auto                                   timestamp = std::chrono::system_clock::now();
+        AccountCreationBlock ac;
+        auto                 timestamp = std::chrono::system_clock::now();
 
         ac.set_account_address( account_->GetAddress() );
         ac.set_genesis_block_cid( cids_.genesis_.value() );
@@ -1120,7 +1277,7 @@ namespace sgns
     {
         logger_->debug( "[{}] Verifying account creation block", account_->GetAddress().substr( 0, 8 ) );
 
-        sgns::blockchain::AccountCreationBlock ac;
+        AccountCreationBlock ac;
 
         // Convert string back to byte vector for ParseFromArray
         std::vector<uint8_t> data( serialized_account_creation.begin(), serialized_account_creation.end() );
@@ -1171,7 +1328,7 @@ namespace sgns
 
         do
         {
-            sgns::blockchain::GenesisBlock new_genesis;
+            GenesisBlock new_genesis;
             if ( !new_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
                                               static_cast<int>( element.value().size() ) ) )
             {
@@ -1205,7 +1362,7 @@ namespace sgns
                 break;
             }
 
-            sgns::blockchain::GenesisBlock existing_genesis;
+            GenesisBlock existing_genesis;
             if ( !existing_genesis.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
                                                    static_cast<int>( existing_serialized.size() ) ) )
             {
@@ -1253,7 +1410,7 @@ namespace sgns
 
         do
         {
-            sgns::blockchain::AccountCreationBlock new_block;
+            AccountCreationBlock new_block;
             if ( !new_block.ParseFromArray( reinterpret_cast<const uint8_t *>( element.value().data() ),
                                             static_cast<int>( element.value().size() ) ) )
             {
@@ -1307,7 +1464,7 @@ namespace sgns
                 break;
             }
 
-            sgns::blockchain::AccountCreationBlock existing_block;
+            AccountCreationBlock existing_block;
             if ( !existing_block.ParseFromArray( reinterpret_cast<const uint8_t *>( existing_serialized.data() ),
                                                  static_cast<int>( existing_serialized.size() ) ) )
             {
@@ -1357,8 +1514,7 @@ namespace sgns
         return std::nullopt;
     }
 
-    bool Blockchain::ShouldReplaceGenesis( const blockchain::GenesisBlock &existing,
-                                           const blockchain::GenesisBlock &candidate )
+    bool Blockchain::ShouldReplaceGenesis( const GenesisBlock &existing, const GenesisBlock &candidate ) const
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1367,8 +1523,8 @@ namespace sgns
         return candidate.timestamp() < existing.timestamp();
     }
 
-    bool Blockchain::ShouldReplaceAccountCreation( const blockchain::AccountCreationBlock &existing,
-                                                   const blockchain::AccountCreationBlock &candidate )
+    bool Blockchain::ShouldReplaceAccountCreation( const AccountCreationBlock &existing,
+                                                   const AccountCreationBlock &candidate ) const
     {
         if ( candidate.timestamp() == existing.timestamp() )
         {
@@ -1380,12 +1536,17 @@ namespace sgns
     outcome::result<void> Blockchain::Stop()
     {
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->Close();
+        }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();
     }
 
-    void Blockchain::AccountCreationReceivedCallback( const crdt::CRDTCallbackManager::NewDataPair &new_data,
-                                                      const std::string                            &cid )
+    outcome::result<void> Blockchain::AccountCreationReceivedCallback(
+        const crdt::CRDTCallbackManager::NewDataPair &new_data,
+        const std::string                            &cid )
     {
         logger_->debug( "[{}] Account creation received callback triggered with CID: {}",
                         account_->GetAddress().substr( 0, 8 ),
@@ -1465,8 +1626,10 @@ namespace sgns
 
         if ( notify_blockchain )
         {
-            InformBlockchainResult( new_account_return );
+            return InformBlockchainResult( new_account_return );
         }
+
+        return outcome::success();
     }
 
     outcome::result<std::string> Blockchain::GetGenesisCID() const
@@ -1492,9 +1655,99 @@ namespace sgns
         return it->second;
     }
 
+    std::shared_ptr<ValidatorRegistry> Blockchain::GetValidatorRegistry() const
+    {
+        return validator_registry_;
+    }
+
     void Blockchain::SetFullNodeMode()
     {
         db_->AddListenTopic(
             std::string( BLOCKCHAIN_TOPIC ) ); //This will not trigger the broadcaster, but it will grab links on CRDT
     }
+
+    bool Blockchain::RegisterSubjectHandler( std::string_view subject_type, ConsensusManager::SubjectHandler handler )
+    {
+        return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterSubjectHandler( std::string_view subject_type )
+    {
+        consensus_manager_->UnregisterSubjectHandler( subject_type );
+    }
+
+    bool Blockchain::RegisterCertificateHandler( std::string_view                            subject_type,
+                                                 ConsensusManager::CertificateSubjectHandler handler )
+    {
+        return consensus_manager_->RegisterCertificateHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterCertificateHandler( std::string_view subject_type )
+    {
+        consensus_manager_->UnregisterCertificateHandler( subject_type );
+    }
+
+    outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
+        const std::string                             &account_id,
+        uint64_t                                       nonce,
+        const std::string                             &tx_hash,
+        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+        const std::optional<UTXOWitness>              &utxo_witness )
+    {
+        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
+    }
+
+    outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
+        const std::string                             &account_id,
+        uint64_t                                       nonce,
+        const std::string                             &tx_hash,
+        const std::optional<UTXOTransitionCommitment> &utxo_commitment,
+        const std::optional<UTXOWitness>              &utxo_witness )
+    {
+        BOOST_OUTCOME_TRY( auto &&nonce_subject,
+                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
+        BOOST_OUTCOME_TRY( auto &&nonce_proposal,
+                           consensus_manager_->CreateProposal( nonce_subject,
+                                                               account_id,
+                                                               validator_registry_->GetRegistryCid(),
+                                                               validator_registry_->GetRegistryEpoch() ) );
+
+        return nonce_proposal;
+    }
+
+    outcome::result<void> Blockchain::SubmitProposal( const ConsensusManager::Proposal &proposal )
+    {
+        return consensus_manager_->SubmitProposal( std::move( proposal ) );
+    }
+
+    outcome::result<void> Blockchain::TryResumeProposal( const std::string &hash )
+    {
+        if ( consensus_manager_->CheckCertificateForSubject( hash ) )
+        {
+            return outcome::success();
+        }
+        return consensus_manager_->ResumeProposalHandling( hash );
+    }
+
+    bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
+    {
+        return consensus_manager_->CheckCertificateForSubject( subject_hash );
+    }
+
+    bool Blockchain::CheckCertificateStrict( const ConsensusManager::Subject &subject ) const
+    {
+        return consensus_manager_->CheckCertificateForSubject( subject );
+    }
+
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySubjectHash(
+        const std::string &subject_hash ) const
+    {
+        return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
+    }
+
+    const std::string &Blockchain::BestHash( const std::string &a, const std::string &b ) const
+    {
+        return consensus_manager_->BestHash( a, b );
+    }
+
 }

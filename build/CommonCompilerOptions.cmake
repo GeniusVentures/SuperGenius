@@ -19,19 +19,20 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY BOTH)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if(DEFINED SANITIZE_CODE AND "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
-    add_compile_options("-fsanitize=${SANITIZE_CODE}")
-    add_link_options("-fsanitize=${SANITIZE_CODE}")
-endif()
-
-#TODO Remove this once we update gRPC, its dependencies, fix libp2p and change some of our internal projects
-
-if("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-template-arg-list-after-template-kw")
+if (DEFINED SANITIZE_CODE)
+    message(STATUS "Building with sanitizer: ${SANITIZE_CODE}")
+    if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=${SANITIZE_CODE}")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=${SANITIZE_CODE}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fsanitize=${SANITIZE_CODE}")
+        add_compile_options("-fsanitize=${SANITIZE_CODE}")
+        add_link_options("-fsanitize=${SANITIZE_CODE}")
+    elseif (MSVC)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /fsanitize=${SANITIZE_CODE}")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /fsanitize=${SANITIZE_CODE}")
+        add_compile_options("/fsanitize=${SANITIZE_CODE}")
+    endif()
 endif()
 
 include(GNUInstallDirs)
@@ -45,6 +46,11 @@ include(${PROJECT_ROOT}/build/CompilationFlags.cmake)
 if(NOT CMAKE_BUILD_TYPE)
     message("CMAKE_BUILD_TYPE not defined, setting to release mode")
     set(CMAKE_BUILD_TYPE "Release")
+endif()
+
+if(WIN32)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_WIN32_WINNT=0x0A00 -DNOMINMAX")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0A00 -DNOMINMAX")
 endif()
 
 # Define zkllvm directory

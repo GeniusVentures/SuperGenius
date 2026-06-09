@@ -174,6 +174,31 @@ namespace sgns::crdt
         EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( newKey ), false );
     }
 
+    TEST_F( CrdtDatastoreTest, TestDeleteCreatesDifferentCIDAndHidesFromQuery )
+    {
+        auto       key = HierarchicalKey( "claimable/task_x" );
+        CrdtBuffer value;
+        value.put( "task_x" );
+
+        EXPECT_OUTCOME_TRUE( createCid, crdtDatastore_->PutKey( key, value, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( createCidStr, createCid.toString() );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( key ), true );
+
+        EXPECT_OUTCOME_TRUE( queryBeforeDelete, crdtDatastore_->QueryKeyValues( key.GetKey() ) );
+        EXPECT_FALSE( queryBeforeDelete.empty() );
+
+        EXPECT_OUTCOME_TRUE( deleteCid, crdtDatastore_->DeleteKey( key, { "topic" } ) );
+        EXPECT_OUTCOME_TRUE( deleteCidStr, deleteCid.toString() );
+
+        // Creation and deletion are distinct deltas and must have distinct CIDs.
+        EXPECT_NE( createCidStr, deleteCidStr );
+        EXPECT_OUTCOME_EQ( crdtDatastore_->HasKey( key ), false );
+
+        // Query view should also hide tombstoned keys.
+        EXPECT_OUTCOME_TRUE( queryAfterDelete, crdtDatastore_->QueryKeyValues( key.GetKey() ) );
+        EXPECT_TRUE( queryAfterDelete.empty() );
+    }
+
     TEST_F( CrdtDatastoreTest, TestDeltaFunctions )
     {
         auto       newKey1 = HierarchicalKey( "NewKey1" );

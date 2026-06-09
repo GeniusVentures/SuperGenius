@@ -44,17 +44,16 @@ namespace sgns
         dag_st.set_signature( std::move( signature ) );
     }
 
-    bool IGeniusTransactions::CheckHash()
+    bool IGeniusTransactions::CheckHash() const
     {
-        auto signature = dag_st.signature();
-        auto hash      = dag_st.data_hash();
-        dag_st.clear_signature();
-        dag_st.clear_data_hash();
+        const auto hash = dag_st.data_hash();
+
+        SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        dag_copy.clear_data_hash();
 
         auto hasher_         = std::make_shared<crypto::HasherImpl>();
-        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector() );
-        dag_st.set_data_hash( hash );
-        dag_st.set_signature( std::move( signature ) );
+        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector( dag_copy ) );
 
         return hash == calculated_hash.toReadableString();
     }
@@ -72,24 +71,28 @@ namespace sgns
         return signed_vector;
     }
 
-    bool IGeniusTransactions::CheckSignature()
+    bool IGeniusTransactions::CheckSignature() const
     {
-        auto str_signature = dag_st.signature();
-        dag_st.clear_signature();
-        auto serialized = SerializeByteVector();
-        dag_st.set_signature( str_signature );
+        auto       str_signature = dag_st.signature();
+
+        SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        auto serialized = SerializeByteVector(dag_copy);
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
     }
 
-    bool IGeniusTransactions::CheckDAGSignatureLegacy()
+    bool IGeniusTransactions::CheckDAGSignatureLegacy() const
     {
         auto str_signature = dag_st.signature();
-        dag_st.clear_signature();
-        auto                 size = dag_st.ByteSizeLong();
+                SGTransaction::DAGStruct dag_copy = dag_st;
+        dag_copy.clear_signature();
+        auto                 size = dag_copy.ByteSizeLong();
         std::vector<uint8_t> serialized( size );
-        dag_st.SerializeToArray( serialized.data(), size );
-        dag_st.set_signature( str_signature );
+        if ( !dag_copy.SerializeToArray( serialized.data(), size ) )
+        {
+            std::cerr << "Failed to serialize DAG struct\n";
+        }
 
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
@@ -97,6 +100,16 @@ namespace sgns
     std::string IGeniusTransactions::GetHash() const
     {
         return dag_st.data_hash();
+    }
+
+    std::string IGeniusTransactions::GetPreviousHash() const
+    {
+        return dag_st.previous_hash();
+    }
+
+    std::string IGeniusTransactions::GetUncleHash() const
+    {
+        return dag_st.uncle_hash();
     }
 
     std::unordered_set<std::string> IGeniusTransactions::GetTopics() const

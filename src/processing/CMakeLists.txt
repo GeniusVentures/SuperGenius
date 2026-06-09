@@ -11,7 +11,7 @@ add_library(processing_service
     processing_subtask_queue_manager.cpp
     processing_subtask_result_storage.hpp
     impl/processing_subtask_result_storage_impl.cpp
-    impl/processing_task_queue_impl.cpp
+    impl/TaskQueueImpl.cpp
     processing_validation_core.cpp
     processing_validation_core.hpp
 )
@@ -43,11 +43,9 @@ if(APPLE)
     )
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-        # macOS specific
         target_link_libraries(processing_service PRIVATE
             "-framework AppKit")
     elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
-        # iOS specific
         target_link_libraries(processing_service PRIVATE
             "-framework UIKit")
     endif()
@@ -57,11 +55,11 @@ target_link_libraries(processing_service
     PUBLIC
     MNN::MNN
     Vulkan::Vulkan
-	ProcessingBase
+    ProcessingBase
+    SGProcessingProto
     PRIVATE
     crdt_globaldb
     ipfs-pubsub
-    SGProcessingProto
     ${WIN_CRYPT_LIBRARY}
     AsyncIOManager
     rapidjson

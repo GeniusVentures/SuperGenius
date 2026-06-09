@@ -25,6 +25,8 @@ if("${CMAKE_CXX_COMPILER_ID}" MATCHES "^(AppleClang|Clang|GNU)$")
 	add_flag(-Wno-unused-but-set-variable)
     add_flag(-Wno-macro-redefined)
     add_flag(-Wno-deprecated-copy-with-user-provided-copy)
+    # dumb crypto3 warnings
+    add_flag(-Wno-reorder-ctor)
     if(APPLE)
         add_link_options(-Wl,-no_warn_duplicate_libraries)
     endif()

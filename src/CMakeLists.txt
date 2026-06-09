@@ -3,8 +3,6 @@ add_subdirectory(account)
 add_subdirectory(base)
 add_subdirectory(blockchain)
 add_subdirectory(outcome)
-add_subdirectory(scale)
-add_subdirectory(primitives)
 add_subdirectory(crypto)
 add_subdirectory(storage)
 add_subdirectory(crdt)
@@ -15,3 +13,9 @@ add_subdirectory(singleton)
 add_subdirectory(watcher)
 add_subdirectory(coinprices)
 add_subdirectory(proof)
+
+install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    FILES_MATCHING PATTERN "*.h*"
+)

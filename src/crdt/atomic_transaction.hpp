@@ -7,6 +7,7 @@
 #include "outcome/outcome.hpp"
 #include "primitives/cid/cid.hpp"
 #include <memory>
+#include <mutex>
 #include <vector>
 #include <optional>
 #include <unordered_set>
@@ -76,6 +77,20 @@ namespace sgns::crdt
         bool HasKey( const HierarchicalKey &key ) const;
 
         /**
+         * @brief Add a single topic to this transaction's internal topic set.
+         * @param topic topic name to add
+         * @return outcome::success or failure if already committed
+         */
+        outcome::result<void> AddTopic( const std::string &topic );
+
+        /**
+         * @brief Add multiple topics to this transaction's internal topic set.
+         * @param topics topic names to add
+         * @return outcome::success or failure if already committed
+         */
+        outcome::result<void> AddTopics( const std::unordered_set<std::string> &topics );
+
+        /**
          * @brief    Commits all pending operations atomically.
          *            Combines all pending operations into a single Delta and publishes it.
          * @param[in] topics Optional topic name for targeted publishing. If not provided, the default broadcast behavior is used.
@@ -112,7 +127,9 @@ namespace sgns::crdt
         std::shared_ptr<CrdtDatastore>  datastore_;
         std::vector<PendingOperation>   operations_;
         std::unordered_set<std::string> modified_keys_; // Track which keys have been modified
+        std::unordered_set<std::string> stored_topics_; // Topics accumulated before commit
         bool                            is_committed_;
+        mutable std::mutex              mutex_;
     };
 
 } // namespace sgns::crdt

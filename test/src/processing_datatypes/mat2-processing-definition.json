@@ -1,0 +1,76 @@
+{
+  "name": "mat2-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for mat2 input using a tiny Conv1D model",
+  "tags": ["mat2", "matrix", "test"],
+
+  "inputs": [
+    {
+      "name": "inputMat2",
+      "source_uri_param": "file://processing_datatypes/mat2_input.raw",
+      "type": "mat2",
+      "description": "Input mat2 array (row-major)",
+      "dimensions": {
+        "width": 16,
+        "block_len": 8,
+        "chunk_stride": 4
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "mat2Output",
+      "source_uri_param": "file://processing_datatypes/mat2_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from mat2 model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/mat2_tiny.mnn",
+      "description": "URI to the mat2 MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "mat2_inference",
+      "type": "inference",
+      "description": "Mat2 model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/mat2_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputMat2",
+            "shape": [1, 4, 8]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:mat2Output",
+            "shape": [1, 4, 8]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-16",
+    "framework": "MNN",
+    "test_case": "mat2_datatype"
+  }
+}

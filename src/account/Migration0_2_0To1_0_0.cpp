@@ -13,7 +13,6 @@
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
 #include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
 #include "base/sgns_version.hpp"
@@ -52,7 +51,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
@@ -99,7 +98,7 @@ namespace sgns
 
         if ( db_0_0_2_out_ && db_0_0_2_in_ )
         {
-            OUTCOME_TRY( auto &&target_db, InitTargetDb() );
+            BOOST_OUTCOME_TRY( auto target_db, InitTargetDb() );
             db_1_0_0_ = std::move( target_db );
         }
 
@@ -178,7 +177,7 @@ namespace sgns
 
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
-        OUTCOME_TRY( auto &&db,
+        BOOST_OUTCOME_TRY( auto db,
                      crdt::GlobalDB::New( ioContext_,
                                           fullPath,
                                           pubSub_,
@@ -283,13 +282,13 @@ namespace sgns
                             m_logger->debug( "Need to remove previous transaction, since new one is older {}",
                                              transaction_path );
 
-                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
+                            BOOST_OUTCOME_TRY( crdt_transaction_->Erase( tx_key ) );
 
                             sgns::crdt::HierarchicalKey replicated_proof_key( BASE + BuildLegacyProofPath( *tx ) );
 
                             m_logger->debug( "Need to remove previous proof as well {}",
                                              replicated_proof_key.GetKey() );
-                            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
+                            BOOST_OUTCOME_TRY( crdt_transaction_->Erase( replicated_proof_key ) );
                         }
                         else
                         {
@@ -302,12 +301,12 @@ namespace sgns
                         migrate_tx = true;
                         m_logger->debug( "Invalid transaction, deleting from migration {}", transaction_path );
 
-                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( tx_key ) );
+                        BOOST_OUTCOME_TRY( crdt_transaction_->Erase( tx_key ) );
 
                         sgns::crdt::HierarchicalKey replicated_proof_key( BASE + BuildLegacyProofPath( *tx ) );
 
                         m_logger->debug( "Need to remove previous proof as well {}", replicated_proof_key.GetKey() );
-                        BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Erase( replicated_proof_key ) );
+                        BOOST_OUTCOME_TRY( crdt_transaction_->Erase( replicated_proof_key ) );
                     }
                 }
             }
@@ -321,15 +320,10 @@ namespace sgns
                         topics_.emplace( dest_info.dest_address );
                     }
                 }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
-                }
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
-                BOOST_OUTCOME_TRYV2( auto &&,
+                BOOST_OUTCOME_TRY(
                                      crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
                 sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath( *tx ) );
@@ -347,7 +341,7 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = db_1_0_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
@@ -377,7 +371,7 @@ namespace sgns
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
         m_logger->debug( "Migrating output DB into new DB" );
-        OUTCOME_TRY( auto &&remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
+        BOOST_OUTCOME_TRY( auto remainder_outdb, MigrateDb( db_0_0_2_out_, db_1_0_0_ ) );
 
         if ( remainder_outdb > 0 )
         {
@@ -385,7 +379,7 @@ namespace sgns
             {
                 m_logger->debug( "Commiting migrating to topics {}", topic );
             }
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             crdt_transaction_ = db_1_0_0_->BeginTransaction();
             topics_.clear();
             topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -393,7 +387,7 @@ namespace sgns
         }
 
         m_logger->debug( "Migrating input DB into new DB" );
-        OUTCOME_TRY( auto &&remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
+        BOOST_OUTCOME_TRY( auto remainder_indb, MigrateDb( db_0_0_2_in_, db_1_0_0_ ) );
 
         if ( remainder_indb > 0 )
         {
@@ -401,14 +395,14 @@ namespace sgns
             {
                 m_logger->debug( "Commiting migrating to topics {}", topic );
             }
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
         }
         sgns::crdt::GlobalDB::Buffer version_buffer;
         sgns::crdt::GlobalDB::Buffer version_key;
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_1_0_0_->GetDataStore()->put( version_key, version_buffer ) );
 
         m_logger->debug( "Apply step of Migration0_2_0To1_0_0 finished successfully" );
 

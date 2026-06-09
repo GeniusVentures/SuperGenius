@@ -12,25 +12,24 @@ namespace sgns::crdt
 
     AtomicTransaction::~AtomicTransaction()
     {
-        if ( !is_committed_ )
-        {
-            Rollback();
-        }
+        Rollback();
     }
 
     outcome::result<void> AtomicTransaction::Put( HierarchicalKey key, Buffer value )
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
         }
         modified_keys_.insert( key.GetKey() ); // Track the key
-        operations_.push_back( { Operation::PUT,  std::move(key), std::move( value ) } );
+        operations_.push_back( { Operation::PUT, std::move( key ), std::move( value ) } );
         return outcome::success();
     }
 
     outcome::result<void> AtomicTransaction::Remove( const HierarchicalKey &key )
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -41,6 +40,7 @@ namespace sgns::crdt
 
     outcome::result<AtomicTransaction::Buffer> AtomicTransaction::Get( const HierarchicalKey &key ) const
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         // First, check pending operations in reverse order (most recent first)
         auto latest_op = FindLatestOperation( key );
         if ( latest_op.has_value() )
@@ -63,6 +63,7 @@ namespace sgns::crdt
 
     outcome::result<void> AtomicTransaction::Erase( const HierarchicalKey &key )
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -86,11 +87,38 @@ namespace sgns::crdt
 
     bool AtomicTransaction::HasKey( const HierarchicalKey &key ) const
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         return modified_keys_.find( key.GetKey() ) != modified_keys_.end();
+    }
+
+    outcome::result<void> AtomicTransaction::AddTopic( const std::string &topic )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        if ( is_committed_ )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        if ( !topic.empty() )
+        {
+            stored_topics_.insert( topic );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> AtomicTransaction::AddTopics( const std::unordered_set<std::string> &topics )
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        if ( is_committed_ )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        stored_topics_.insert( topics.begin(), topics.end() );
+        return outcome::success();
     }
 
     outcome::result<CID> AtomicTransaction::Commit( const std::unordered_set<std::string> &topics )
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         if ( is_committed_ )
         {
             return outcome::failure( boost::system::error_code{} );
@@ -105,13 +133,14 @@ namespace sgns::crdt
             std::shared_ptr<Delta> delta;
             if ( op.type == Operation::PUT )
             {
-                OUTCOME_TRY( ( auto &&, result ),
-                             datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
+                BOOST_OUTCOME_TRY(
+                    auto result,
+                    datastore_->CreateDeltaToAdd( op.key.GetKey(), std::string( op.value.toString() ) ) );
                 delta = result;
             }
             else // REMOVE
             {
-                OUTCOME_TRY( ( auto &&, result ), datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
+                BOOST_OUTCOME_TRY( auto result, datastore_->CreateDeltaToRemove( op.key.GetKey() ) );
                 delta = result;
             }
 
@@ -129,7 +158,10 @@ namespace sgns::crdt
         }
         combined_delta->set_priority( max_priority );
 
-        auto result = datastore_->Publish( combined_delta, topics );
+        auto merged_topics = stored_topics_;
+        merged_topics.insert( topics.begin(), topics.end() );
+
+        auto result = datastore_->Publish( combined_delta, merged_topics );
         if ( !result.has_failure() )
         {
             is_committed_ = true;
@@ -140,8 +172,10 @@ namespace sgns::crdt
 
     void AtomicTransaction::Rollback()
     {
+        std::lock_guard<std::mutex> lock( mutex_ );
         operations_.clear();
         modified_keys_.clear();
+        stored_topics_.clear();
     }
 
     std::optional<AtomicTransaction::PendingOperation> AtomicTransaction::FindLatestOperation(

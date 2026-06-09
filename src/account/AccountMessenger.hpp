@@ -127,6 +127,9 @@ namespace sgns
          */
         outcome::result<void> RequestAccountCreation( uint64_t                                            timeout_ms,
                                                       std::function<void( outcome::result<std::string> )> callback );
+        outcome::result<void> RequestValidatorRegistry(
+            uint64_t                                            timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback );
 
         /**
          * @brief       Request a block by CID from the network (retries until timeout)
@@ -267,6 +270,7 @@ namespace sgns
             Nonce,
             Genesis,
             AccountCreation,
+            ValidatorRegistry,
             BlockByCid,
             UTXO,
             Transaction

@@ -71,7 +71,7 @@ namespace sgns::crdt
          * @brief  Subscribe to a given topic and store its future.
          * @param  topic  Name of the topic to listen to.
          */
-        void AddListenTopic( const std::string &topic );
+        void AddListenTopic( std::string topic );
 
         /**
          * @brief Checks whether the given topic is already registered.

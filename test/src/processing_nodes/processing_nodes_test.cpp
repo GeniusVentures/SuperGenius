@@ -1,16 +1,16 @@
 #include <gtest/gtest.h>
 
-#include <fstream>
 #include <memory>
 #include <iostream>
 #include <thread>
+#include <cstdio>
 
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
-#include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::test;
@@ -18,9 +18,9 @@ using namespace sgns::test;
 class ProcessingNodesTest : public ::testing::Test
 {
 protected:
-    static std::shared_ptr<GeniusNode> node_main;
-    static std::shared_ptr<GeniusNode> node_proc1;
-    static std::shared_ptr<GeniusNode> node_proc2;
+    static std::shared_ptr<sgns::GeniusNode> node_main;
+    static std::shared_ptr<sgns::GeniusNode> node_proc1;
+    static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
     static DevConfig_st DEV_CONFIG;
     static DevConfig_st DEV_CONFIG2;
@@ -30,25 +30,12 @@ protected:
 
     static void SetUpTestSuite()
     {
-        std::string full_node_pub_address =
-            "d4985fbd36d29a48744cd92ee288c18ea0507d83bd993f12cedd32c3e80b2cee105cf696d85a2117156d37f3f69c5eda82e3adb1185c39f8836cce58c63af64d";
+
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
 
-        std::strncpy( DEV_CONFIG.BaseWritePath,
-                      ( binary_path + "/node1/" ).c_str(),
-                      sizeof( DEV_CONFIG.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG2.BaseWritePath,
-                      ( binary_path + "/node2/" ).c_str(),
-                      sizeof( DEV_CONFIG2.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG3.BaseWritePath,
-                      ( binary_path + "/node3/" ).c_str(),
-                      sizeof( DEV_CONFIG3.BaseWritePath ) );
-
-        // Ensure null termination in case the string is too long
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-        DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+        DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
+        DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
+        DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -56,11 +43,11 @@ protected:
                                             true,
                                             40054,
                                             true );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
-        test::assertWaitForCondition(
-            [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_proc1 not ready" );
+        sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_proc1 not ready" );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -81,14 +68,12 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
-        test::assertWaitForCondition(
-            [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_main not ready" );
-        test::assertWaitForCondition(
-            [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-            std::chrono::milliseconds( 30000 ),
-            "node_proc2 not ready" );
+        sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_main not ready" );
+        sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                      std::chrono::milliseconds( 30000 ),
+                                      "node_proc2 not ready" );
     }
 
     static void TearDownTestSuite()
@@ -154,24 +139,31 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
-    test::assertWaitForCondition(
-        [&]() { return node_main->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Main node not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Node proc 1 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Node proc 2 not synched" );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
-    node_main->MintTokens( 50000000000, "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Main node not synced" );
+    sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Node proc 1 not synced" );
+    sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Node proc 2 not synced" );
+    node_main->MintTokens( 50000000000,
+                           sgns::test::NextMintSourceHash(),
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
+    node_main->MintTokens( 50000000000,
+                           sgns::test::NextMintSourceHash(),
+                           "",
+                           sgns::TokenID::FromBytes( { 0x00 } ),
+                           "",
+                           std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetOutTransactions().size();
-    int transcount_node1 = node_proc1->GetOutTransactions().size();
-    int transcount_node2 = node_proc2->GetOutTransactions().size();
+    int transcount_main  = node_main->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node1 = node_proc1->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_node2 = node_proc2->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;
@@ -213,7 +205,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -249,7 +241,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -288,7 +280,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
@@ -297,7 +289,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -306,7 +298,7 @@ TEST_F( ProcessingNodesTest, DISABLED_CalculateProcessingCost )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -367,7 +359,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
       "format": "RGBA8"
     },
     {
-      "name": "frisbee_image", 
+      "name": "frisbee_image",
 	  "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
@@ -403,7 +395,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     {
       "name": "frisbee_keypoints",
 	  "source_uri_param": "dummy",
-      "type": "tensor", 
+      "type": "tensor",
       "description": "Detected keypoints for frisbee image",
       "dimensions": {
         "width": 17,
@@ -442,7 +434,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     },
     {
       "name": "frisbee_pose_inference",
-      "type": "inference", 
+      "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "file://[basepath]../../../../test/src/processing_nodes/model.mnn",
@@ -451,7 +443,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         "input_nodes": [
           {
             "name": "input",
-            "type": "texture2D", 
+            "type": "texture2D",
             "source": "input:frisbee_image",
             "shape": [1, 256, 256, 4]
           }
@@ -460,7 +452,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
           {
             "name": "output",
             "type": "tensor",
-            "target": "output:frisbee_keypoints", 
+            "target": "output:frisbee_keypoints",
             "shape": [1, 17, 3]
           }
         ]
@@ -473,10 +465,11 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     auto        cost      = node_main->GetProcessCost( procmgr.value() );
 
     auto mint_result = node_main->MintTokens( 50000000000,
-                                              "",
+                                              sgns::test::NextMintSourceHash(),
                                               "",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                              std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                              "",
+                                              std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
@@ -491,7 +484,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     EXPECT_TRUE( postjob ) << "post job error: " << postjob.error().message();
 
     EXPECT_EQ( node_main->WaitForEscrowRelease( postjob.value(), std::chrono::milliseconds( 300000 ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+               sgns::TransactionManager::TransactionStatus::CONFIRMED );
 
     std::cout << "Balance main (Before):  " << balance_main << std::endl;
     std::cout << "Balance node1 (Before): " << balance_node1 << std::endl;
@@ -499,28 +492,20 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Cost:                   " << cost << std::endl;
 
     assertWaitForCondition(
-        [&]()
+        [&]
         {
             auto result = node_main->GetBalance();
-            if ( result == balance_main - cost )
-            {
-                return true;
-            }
-            return false;
+            return result == balance_main - cost;
         },
         std::chrono::milliseconds( 20000 ),
         "Main Balance not updated in time" );
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
     assertWaitForCondition(
-        [&]()
+        [&]
         {
             auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
             auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
-            if ( result == balance_node1 + balance_node2 + 2 * expected_peer_gain )
-            {
-                return true;
-            }
-            return false;
+            return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
         "Balances not updated in time" );

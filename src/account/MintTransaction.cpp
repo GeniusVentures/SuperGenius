@@ -6,8 +6,6 @@
  */
 #include "account/MintTransaction.hpp"
 
-#include "crypto/hasher/hasher_impl.hpp"
-
 namespace sgns
 {
     MintTransaction::MintTransaction( uint64_t                 new_amount,
@@ -21,17 +19,21 @@ namespace sgns
     {
     }
 
-    std::vector<uint8_t> MintTransaction::SerializeByteVector()
+    std::vector<uint8_t> MintTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::MintTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_amount( amount );
         tx_struct.set_chain_id( chain_id );
         tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
 
         return serialized_proto;
     }
@@ -49,7 +51,7 @@ namespace sgns
         TokenID     tokenid = TokenID::FromBytes( tx_struct.token_id().data(), tx_struct.token_id().size() );
 
         return std::make_shared<MintTransaction>(
-            MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) ); // Return new instance
+            MintTransaction( amount, chainid, tokenid, tx_struct.dag_struct() ) );
     }
 
     uint64_t MintTransaction::GetAmount() const
@@ -60,6 +62,11 @@ namespace sgns
     TokenID MintTransaction::GetTokenID() const
     {
         return token_id;
+    }
+
+    std::string MintTransaction::GetChainId() const
+    {
+        return chain_id;
     }
 
     MintTransaction MintTransaction::New( uint64_t                 new_amount,

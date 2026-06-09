@@ -34,7 +34,9 @@ namespace sgns::crdt
     GraphsyncDAGSyncer::GraphsyncDAGSyncer( std::shared_ptr<IpfsDatastore> service,
                                             std::shared_ptr<Graphsync>     graphsync,
                                             std::shared_ptr<libp2p::Host>  host ) :
-        dagService_( std::move( service ) ), graphsync_( std::move( graphsync ) ), host_( std::move( host ) )
+        dagService_( std::make_shared<ipfs_lite::ipfs::merkledag::MerkleDagServiceImpl>( std::move( service ) ) ),
+        graphsync_( std::move( graphsync ) ),
+        host_( std::move( host ) )
     {
         logger_->debug( "GraphSyncer created {} ", reinterpret_cast<size_t>( this ) );
     }
@@ -84,7 +86,7 @@ namespace sgns::crdt
             return outcome::failure( Error::HOST_IS_NULL );
         }
 
-        OUTCOME_TRY( host_->listen( listen_to ) );
+        BOOST_OUTCOME_TRY( host_->listen( listen_to ) );
 
         auto startResult = this->StartSync();
 
@@ -154,7 +156,7 @@ namespace sgns::crdt
     {
         std::lock_guard lock( dagMutex_ );
         auto            cid = node->getCID();
-        auto            ret = dagService_.addNode( std::move( node ) );
+        auto            ret = dagService_->addNode( std::move( node ) );
 
         if ( !ret.has_error() )
         {
@@ -202,7 +204,7 @@ namespace sgns::crdt
         }
         ipfs_lite::ipfs::graphsync::Subscription curr_subscription;
 
-        OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
+        BOOST_OUTCOME_TRY( auto peerEntry, GetRoute( cid ) );
 
         auto &peerID  = peerEntry.first;
         auto &address = peerEntry.second;
@@ -214,10 +216,10 @@ namespace sgns::crdt
                             peerID.toBase58() );
             return outcome::failure( Error::CID_NOT_FOUND );
         }
-        if ( already_requested == false )
+        if ( !already_requested )
         {
             logger_->debug( "Requesting CID {}", cid.toString().value() );
-            OUTCOME_TRY( ( auto &&, subscription ), RequestNode( peerID, address, cid ) );
+            BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
             curr_subscription = std::move( subscription );
         }
 
@@ -249,7 +251,7 @@ namespace sgns::crdt
                     return result;
                 }
                 logger_->error( "Request state not found for CID {}", cid.toString().value() );
-                OUTCOME_TRY( BlackListPeer( peerID ) );
+                BOOST_OUTCOME_TRY( BlackListPeer( peerID ) );
                 return outcome::failure( Error::ROUTE_NOT_FOUND );
             }
 
@@ -304,7 +306,7 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::removeNode( const CID &cid )
     {
         std::lock_guard lock( dagMutex_ );
-        return dagService_.removeNode( cid );
+        return dagService_->removeNode( cid );
     }
 
     outcome::result<size_t> GraphsyncDAGSyncer::select(
@@ -313,7 +315,7 @@ namespace sgns::crdt
         std::function<bool( std::shared_ptr<const ipfs_lite::ipld::IPLDNode> node )> handler ) const
     {
         std::lock_guard lock( dagMutex_ );
-        return dagService_.select( root_cid, selector, handler );
+        return dagService_->select( root_cid, selector, handler );
     }
 
     outcome::result<std::shared_ptr<ipfs_lite::ipfs::merkledag::Leaf>> GraphsyncDAGSyncer::fetchGraph(
@@ -384,8 +386,6 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        auto dagService = std::make_shared<MerkleDagBridgeImpl>( shared_from_this() );
-
         BlockCallback blockCallback = [weakptr = weak_from_this()]( const CID &cid, common::Buffer buffer )
         {
             if ( auto self = weakptr.lock() )
@@ -394,7 +394,7 @@ namespace sgns::crdt
             }
         };
 
-        graphsync_->start( dagService, blockCallback );
+        graphsync_->start( shared_from_this(), blockCallback );
 
         if ( host_ == nullptr )
         {
@@ -533,7 +533,7 @@ namespace sgns::crdt
         };
 
         std::deque<WorkItem> work_queue;
-        
+
         // Start with the root node
         const CID &root_cid = node.getCID();
 
@@ -560,7 +560,8 @@ namespace sgns::crdt
 
         // Add the root node to the work queue
         // Create a shared_ptr from the reference - note this assumes the node is already managed
-        work_queue.push_back( WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
+        work_queue.push_back(
+            WorkItem{ std::shared_ptr<ipfs_lite::ipld::IPLDNode>( &node, []( ipfs_lite::ipld::IPLDNode * ) {} ) } );
 
         // Process the queue iteratively
         while ( !work_queue.empty() )
@@ -568,8 +569,8 @@ namespace sgns::crdt
             WorkItem current_item = std::move( work_queue.front() );
             work_queue.pop_front();
 
-            auto &current_node = *current_item.node;
-            const CID &current_cid = current_node.getCID();
+            auto      &current_node = *current_item.node;
+            const CID &current_cid  = current_node.getCID();
 
             logger_->trace( "TraverseCIDsLinks: Processing node {}", current_cid.toString().value() );
 
@@ -628,7 +629,7 @@ namespace sgns::crdt
                 // This ensures children are resolved before their parents, maintaining the original
                 // recursive behavior where we don't mark a CID as complete until all its children are processed
                 work_queue.push_front( WorkItem{ get_child_result.value() } );
-                
+
                 logger_->trace( "TraverseCIDsLinks: Added child {} to work queue (queue size: {})",
                                 child.toString().value(),
                                 work_queue.size() );
@@ -645,13 +646,13 @@ namespace sgns::crdt
     outcome::result<void> GraphsyncDAGSyncer::markResolved( const CID &cid )
     {
         std::lock_guard<std::mutex> lock( dagMutex_ );
-        return dagService_.markResolved( cid );
+        return dagService_->markResolved( cid );
     }
 
     outcome::result<bool> GraphsyncDAGSyncer::isResolved( const CID &cid ) const
     {
         std::lock_guard<std::mutex> lock( dagMutex_ );
-        return dagService_.isResolved( cid );
+        return dagService_->isResolved( cid );
     }
 
     void GraphsyncDAGSyncer::InitCIDBlock( const CID &cid )
@@ -833,7 +834,7 @@ namespace sgns::crdt
         const CID &cid ) const
     {
         std::lock_guard lock( dagMutex_ );
-        return dagService_.getNode( cid );
+        return dagService_->getNode( cid );
     }
 
     outcome::result<GraphsyncDAGSyncer::PeerEntry> GraphsyncDAGSyncer::GetRoute( const CID &cid ) const

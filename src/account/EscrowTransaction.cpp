@@ -20,7 +20,7 @@ namespace sgns
                                           SGTransaction::DAGStruct dag ) :
         IGeniusTransactions( "escrow-hold", SetDAGWithType( std::move( dag ), "escrow-hold" ) ),
         utxo_params_( std::move( params ) ),
-        amount_( std::move( amount ) ),
+        amount_( amount ),
         dev_addr_( std::move( dev_addr ) ),
         peers_cut_( peers_cut )
     {
@@ -37,10 +37,10 @@ namespace sgns
         return instance;
     }
 
-    std::vector<uint8_t> EscrowTransaction::SerializeByteVector()
+    std::vector<uint8_t> EscrowTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::EscrowTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         SGTransaction::UTXOTxParams *utxo_proto_params = tx_struct.mutable_utxo_params();
 
         for ( const auto &[txid_hash_, output_idx_, signature_] : utxo_params_.first )
@@ -63,7 +63,11 @@ namespace sgns
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
 
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
+
         return serialized_proto;
     }
 

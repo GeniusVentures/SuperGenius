@@ -10,6 +10,7 @@
 
 #include "testutil/storage/base_fs_test.hpp"
 #include <boost/asio.hpp>
+#include <atomic>
 #include <memory>
 #include <rocksdb/iterator.h>
 #include <rocksdb/options.h>
@@ -39,7 +40,10 @@ namespace test
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs_;
 
         std::shared_ptr<sgns::crdt::GlobalDB>            db_;
+        std::string                                      keypair_path_;
+        std::string                                      db_path_;
         static std::shared_ptr<::soralog::LoggingSystem> logging_system_;
+        static std::atomic<uint64_t>                     fixture_counter_;
     };
 
 }

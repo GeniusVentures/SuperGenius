@@ -1,12 +1,17 @@
 /**
  * @file       Migration1_0_0To3_4_0.cpp
- * @brief      
+ * @brief
  * @date       2025-10-03
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include "Migration1_0_0To3_4_0.hpp"
 
 #include <filesystem>
+
+#include "MigrationManager.hpp"
+#include "TransactionManager.hpp"
+#include "TransferTransaction.hpp"
+#include "base/sgns_version.hpp"
 
 namespace sgns
 {
@@ -23,7 +28,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
@@ -84,11 +89,11 @@ namespace sgns
 
     outcome::result<void> Migration1_0_0To3_4_0::Init()
     {
-        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        BOOST_OUTCOME_TRY( auto legacy_db, InitLegacyDb() );
         db_1_0_0_ = std::move( legacy_db );
         if ( db_1_0_0_ )
         {
-            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            BOOST_OUTCOME_TRY( auto new_db, InitTargetDb() );
             db_3_4_0_ = std::move( new_db );
         }
         return outcome::success();
@@ -103,13 +108,13 @@ namespace sgns
         }
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
-        auto                  crdt_transaction_ = db_3_4_0_->BeginTransaction();
+        auto                            crdt_transaction_ = db_3_4_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
 
-        topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+        topics_.emplace( TransactionManager::GNUS_FULL_NODES_TOPIC );
 
         const std::string BASE = "/bc-963/";
-        OUTCOME_TRY( auto &&entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
+        BOOST_OUTCOME_TRY( auto entries, db_1_0_0_->QueryKeyValues( BASE, "*", "/tx" ) );
         logger_->debug( "Found {} transaction keys to migrate", entries.size() );
         size_t migrated_count = 0;
         size_t BATCH_SIZE     = 50;
@@ -155,15 +160,10 @@ namespace sgns
                     topics_.emplace( dest_info.dest_address );
                 }
             }
-            if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-            {
-                topics_.emplace( escrow_tx->GetSrcAddress() );
-                topics_.emplace( escrow_tx->GetEscrowSource() );
-            }
 
             sgns::crdt::GlobalDB::Buffer data_transaction;
             data_transaction.put( tx->SerializeByteVector() );
-            BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Put( transaction_key, std::move( data_transaction ) ) );
 
             sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath_1_0_0( *tx ) );
             sgns::crdt::GlobalDB::Buffer proof_transaction;
@@ -176,7 +176,7 @@ namespace sgns
             ++migrated_count;
             if ( migrated_count >= BATCH_SIZE )
             {
-                OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                 crdt_transaction_ = db_3_4_0_->BeginTransaction(); // start fresh
                 topics_.clear();
 
@@ -187,7 +187,7 @@ namespace sgns
         }
         if ( migrated_count )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {}  transactions", migrated_count );
         }
 
@@ -196,7 +196,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_4_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

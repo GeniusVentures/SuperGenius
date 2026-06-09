@@ -1,0 +1,74 @@
+{
+  "name": "vec3-tiny-test",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "author": "Test Author",
+  "description": "A test processing definition for vec3 input using a tiny Conv1D model",
+  "tags": ["vec3", "vector", "test"],
+
+  "inputs": [
+    {
+      "name": "inputVec3",
+      "source_uri_param": "file://processing_datatypes/vec3_input.raw",
+      "type": "vec3",
+      "description": "Input vec3 array (X, Y, Z components)",
+      "dimensions": {
+        "width": 16
+      },
+      "format": "FLOAT32"
+    }
+  ],
+
+  "outputs": [
+    {
+      "name": "vec3Output",
+      "source_uri_param": "file://processing_datatypes/vec3_output.raw",
+      "type": "tensor",
+      "description": "Output tensor from vec3 model"
+    }
+  ],
+
+  "parameters": [
+    {
+      "name": "modelUri",
+      "type": "uri",
+      "default": "file://processing_datatypes/vec3_tiny.mnn",
+      "description": "URI to the vec3 MNN model"
+    }
+  ],
+
+  "passes": [
+    {
+      "name": "vec3_inference",
+      "type": "inference",
+      "description": "Vec3 model inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/vec3_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputVec3",
+            "shape": [1, 3, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:vec3Output",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ],
+
+  "metadata": {
+    "created_date": "2026-02-17",
+    "framework": "MNN",
+    "test_case": "vec3_datatype"
+  }
+}

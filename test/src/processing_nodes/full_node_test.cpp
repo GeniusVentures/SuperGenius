@@ -4,9 +4,11 @@
 #include <thread>
 #include <cstring>
 #include <atomic>
+#include <cstdio>
 #include <iostream>
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
@@ -36,27 +38,14 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
-    DevConfig_st devConfig = { "", "1.0", tokenValue, tokenId, "" };
-    std::strncpy( devConfig.Addr, self_address.c_str(), sizeof( devConfig.Addr ) - 1 );
-    std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-    devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-    devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+    DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
-    if ( isFullNode )
-    {
-        auto maybe_address = sgns::GeniusAccount::GenerateGeniusAddress( privKey.c_str(), outPath );
-        if ( !maybe_address.has_value() )
-        {
-            ADD_FAILURE() << "Failed to generate full-node address for authorization";
-        }
-        else
-        {
-            const auto &pub_address = maybe_address.value().second.second.GetEntirePubValue();
-            sgns::Blockchain::SetAuthorizedFullNodeAddress( pub_address );
-        }
-    }
     uint16_t port = static_cast<uint16_t>( 40001 + id );
     auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    if ( isFullNode )
+    {
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
+    }
 
     // allow startup
     std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
@@ -78,10 +67,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     auto fullNode =
         CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full_2", fullKey );
 
-    test::assertWaitForCondition(
-        [&]() { return fullNode->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "fullNode not synched" );
+    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 30000 ),
+                                  "fullnode not synced" );
 
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =
@@ -89,10 +77,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition(
-        [&]() { return originalNode->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "Recovery node balance not updated in time" );
+    test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "Recovery node balance not updated in time" );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
@@ -101,7 +88,12 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     constexpr size_t mintAmount = 10;
     for ( size_t i = 0; i < mintAmount; ++i )
     {
-        auto mintRes = originalNode->MintTokens( 500000, "", "", TokenID::FromBytes( { 0x00 } ) );
+        auto mintRes = originalNode->MintTokens( 500000,
+                                                 sgns::test::NextMintSourceHash(),
+                                                 "",
+                                                 TokenID::FromBytes( { 0x00 } ),
+                                                 "",
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );

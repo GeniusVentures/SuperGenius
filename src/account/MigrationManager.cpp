@@ -11,6 +11,7 @@
 #include "account/Migration1_0_0To3_4_0.hpp"
 #include "account/Migration3_4_0To3_5_0.hpp"
 #include "account/Migration3_5_0To3_6_0.hpp"
+#include "account/Migration3_6_0To3_7_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
@@ -34,11 +35,12 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account )
+        std::shared_ptr<GeniusAccount>                                  account,
+        bool                                                            is_full_node )
     {
         auto instance = std::shared_ptr<MigrationManager>( new MigrationManager() );
         instance->RegisterStep( std::make_shared<Migration0_2_0To1_0_0>( ioContext,
@@ -70,6 +72,15 @@ namespace sgns
                                                                          generator,
                                                                          writeBasePath,
                                                                          base58key ) );
+        instance->RegisterStep( std::make_shared<Migration3_6_0To3_7_0>( ioContext,
+                                                                         pubSub,
+                                                                         graphsync,
+                                                                         scheduler,
+                                                                         generator,
+                                                                         writeBasePath,
+                                                                         base58key,
+                                                                         account,
+                                                                         is_full_node ) );
         return instance;
     }
 
@@ -89,20 +100,20 @@ namespace sgns
         {
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
-            OUTCOME_TRY( step->Init() );
+            BOOST_OUTCOME_TRY( step->Init() );
 
-            OUTCOME_TRY( bool is_req, step->IsRequired() );
+            BOOST_OUTCOME_TRY( bool is_req, step->IsRequired() );
 
             if ( is_req )
             {
-                OUTCOME_TRY( step->Apply() );
+                BOOST_OUTCOME_TRY( step->Apply() );
                 m_logger->debug( "Completed migration step to {}", step->ToVersion() );
             }
             else
             {
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
-            OUTCOME_TRY( step->ShutDown() );
+            BOOST_OUTCOME_TRY( step->ShutDown() );
             std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 

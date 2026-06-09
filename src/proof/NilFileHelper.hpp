@@ -1,6 +1,6 @@
 /**
  * @file       NilFileHelper.hpp
- * @brief      
+ * @brief
  * @date       2024-09-19
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -52,12 +52,12 @@ namespace sgns
             std::vector<std::uint8_t> v;
             if ( binary )
             {
-                OUTCOME_TRY( ( auto &&, result ), ReadFromBin( in ) );
+                BOOST_OUTCOME_TRY( auto result, ReadFromBin( in ) );
                 v = std::move( result );
             }
             else
             {
-                OUTCOME_TRY( ( auto &&, result ), ReadFromHex( in ) );
+                BOOST_OUTCOME_TRY( auto result, ReadFromHex( in ) );
                 v = std::move( result );
             }
 

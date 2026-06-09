@@ -74,3 +74,65 @@ CRDT.Datastore.TEST/
 example/BpeTokenizer/data/**/*.mnn
 example/BpeTokenizer/data/**/*.mnn.weight
 example/BpeTokenizer/data/**/*.json
+
+# Local environment / secrets — never commit
+.env
+.env.*
+!.env.example
+examples/.env
+examples/.env.*
+!examples/.env.example
+
+# Build outputs
+
+# macOS
+.DS_Store
+
+# Test log files
+/tmp/eth_watch_*.log
+examples/*.log
+
+# User-specific stuff
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+# github copilot
+.idea/**/copilot*
+# AWS User-specific
+.idea/**/aws.xml
+
+# Generated files
+.idea/**/contentModel.xml
+
+# Sensitive or high-churn files
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+
+# CMake
+cmake-build-*/
+
+# File-based project format
+*.iws
+
+# IntelliJ
+out/
+
+# Android studio 3.1+ serialized cache file
+.idea/caches/build_file_checksums.ser
+
+### CLion+iml Patch ###
+# Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-249601023
+
+*.iml
+modules.xml
+.idea/misc.xml
+*.ipr
+

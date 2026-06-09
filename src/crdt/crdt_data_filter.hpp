@@ -19,6 +19,8 @@
 
 namespace sgns::crdt
 {
+    class CRDTWorkJournal;
+
     class CRDTDataFilter
     {
     public:
@@ -33,7 +35,7 @@ namespace sgns::crdt
          * @param[in]   accept_by_default: if true, every delta that doesn't have a filter gets accepted.
          *              if false, rejects by default.
          */
-        explicit CRDTDataFilter( bool accept_by_default = true );
+        explicit CRDTDataFilter( std::shared_ptr<CRDTWorkJournal> work_journal, bool accept_by_default = true );
 
         /**
          * @brief       Destroy the CRDTDataFilter object
@@ -81,11 +83,12 @@ namespace sgns::crdt
         void FilterTombstonesOnDelta( pb::Delta &delta );
 
     private:
-        const bool             accept_by_default_;        ///< The default behavior for values not matching any filter
-        mutable std::shared_mutex      element_registry_mutex_;   ///< Mutex for the element registry
-        std::shared_mutex      tombstone_registry_mutex_; ///< Mutex for the tombstone registry
-        FilterCallbackRegistry element_registry_;         ///< Element filter callback registry
-        FilterCallbackRegistry tombstone_registry_;       ///< Tombstone filter callback registry
+        std::shared_ptr<CRDTWorkJournal> work_journal_;
+        const bool                accept_by_default_;      ///< The default behavior for values not matching any filter
+        mutable std::shared_mutex element_registry_mutex_; ///< Mutex for the element registry
+        std::shared_mutex         tombstone_registry_mutex_; ///< Mutex for the tombstone registry
+        FilterCallbackRegistry    element_registry_;         ///< Element filter callback registry
+        FilterCallbackRegistry    tombstone_registry_;       ///< Tombstone filter callback registry
     };
 
 }

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace sgns
 {
@@ -39,6 +40,13 @@ namespace sgns
          * @return uint32_t representing the patch version.
          */
         uint32_t SuperGeniusVersionPatch();
+
+        /**
+         * @brief Retrieves the processing version used by processing task storage keys.
+         *
+         * @return uint32_t processing version.
+         */
+        uint32_t ProcessingVersion();
 
         /**
          * @brief Retrieves the short version string of SuperGenius.

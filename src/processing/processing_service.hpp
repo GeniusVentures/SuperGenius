@@ -11,7 +11,7 @@ namespace sgns::processing
     class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
     {
     public:
-        enum class Status {
+        enum class Status : uint8_t {
             DISABLED,
             IDLE,
             PROCESSING,
@@ -21,22 +21,9 @@ namespace sgns::processing
             Status status;
             float percentage; // 0.0 to 100.0
 
-            ProcessingStatus(Status s = Status::DISABLED, float p = 0.0f) 
+            ProcessingStatus(Status s = Status::DISABLED, float p = 0.0f)
                 : status(s), percentage(p) {}
         };
-
-        /** Constructs a processing service.
-         * @param gossipPubSub - PubSub service.
-         * @param maximalNodesCount - Max number of processing nodes handled by the service.
-         * @param subTaskEnqueuer - Subtask enqueuer used to dispatch tasks.
-         * @param subTaskResultStorage - Storage for subtask results.
-         * @param processingCore - Processing core used to execute subtasks.
-         */
-        ProcessingServiceImpl( std::shared_ptr<ipfs_pubsub::GossipPubSub> gossipPubSub,
-                               size_t                                     maximalNodesCount,
-                               std::shared_ptr<SubTaskEnqueuer>           subTaskEnqueuer,
-                               std::shared_ptr<SubTaskResultStorage>      subTaskResultStorage,
-                               std::shared_ptr<ProcessingCore>            processingCore );
 
         /**
          * @brief Constructs a processing service with user callbacks.

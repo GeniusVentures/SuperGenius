@@ -3,7 +3,6 @@
 #include "account/MigrationManager.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "account/EscrowReleaseTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "base/sgns_version.hpp"
@@ -17,7 +16,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::protocol::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
@@ -75,11 +74,11 @@ namespace sgns
 
     outcome::result<void> Migration3_5_0To3_6_0::Init()
     {
-        OUTCOME_TRY( auto &&legacy_db, InitLegacyDb() );
+        BOOST_OUTCOME_TRY( auto legacy_db, InitLegacyDb() );
         db_3_5_1_ = std::move( legacy_db );
         if ( db_3_5_1_ )
         {
-            OUTCOME_TRY( auto &&new_db, InitTargetDb() );
+            BOOST_OUTCOME_TRY( auto new_db, InitTargetDb() );
             db_3_6_0_ = std::move( new_db );
         }
         return outcome::success();
@@ -95,8 +94,8 @@ namespace sgns
 
         logger_->info( "Starting migration from {} to {}", FromVersion(), ToVersion() );
 
-        OUTCOME_TRY( blockchain::ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
-        OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
+        BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
         auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
@@ -114,7 +113,7 @@ namespace sgns
             std::unordered_set<std::string> unique_keys;
             std::vector<std::string>        transaction_keys;
 
-            OUTCOME_TRY( auto &&entries, db_3_5_1_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
+            BOOST_OUTCOME_TRY( auto entries, db_3_5_1_->QueryKeyValues( blockchain_base, "*", "/tx" ) );
             for ( const auto &entry : entries )
             {
                 auto keyOpt = db_3_5_1_->KeyToString( entry.first );
@@ -153,7 +152,7 @@ namespace sgns
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
-                BOOST_OUTCOME_TRYV2( auto &&, crdt_transaction_->Put( new_tx_key, std::move( data_transaction ) ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Put( new_tx_key, std::move( data_transaction ) ) );
 
                 topics_.emplace( tx->GetSrcAddress() );
                 if ( auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx ) )
@@ -163,16 +162,11 @@ namespace sgns
                         topics_.emplace( dest_info.dest_address );
                     }
                 }
-                if ( auto escrow_tx = std::dynamic_pointer_cast<EscrowReleaseTransaction>( tx ) )
-                {
-                    topics_.emplace( escrow_tx->GetSrcAddress() );
-                    topics_.emplace( escrow_tx->GetEscrowSource() );
-                }
 
                 ++migrated_count;
                 if ( migrated_count >= BATCH_SIZE )
                 {
-                    OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+                    BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
                     crdt_transaction_ = db_3_6_0_->BeginTransaction();
                     topics_.clear();
                     topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -184,7 +178,7 @@ namespace sgns
 
         if ( migrated_count )
         {
-            OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
+            BOOST_OUTCOME_TRY( crdt_transaction_->Commit( topics_ ) );
             logger_->debug( "Committed remaining {} transactions", migrated_count );
         }
 
@@ -193,7 +187,7 @@ namespace sgns
         version_key.put( std::string( MigrationManager::VERSION_INFO_KEY ) );
         version_buffer.put( ToVersion() );
 
-        OUTCOME_TRY( db_3_6_0_->GetDataStore()->put( version_key, version_buffer ) );
+        BOOST_OUTCOME_TRY( db_3_6_0_->GetDataStore()->put( version_key, version_buffer ) );
         logger_->debug( "Migration from {} to {} completed successfully", FromVersion(), ToVersion() );
 
         return outcome::success();

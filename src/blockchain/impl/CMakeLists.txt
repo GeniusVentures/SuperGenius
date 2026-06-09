@@ -1,30 +1,12 @@
-add_proto_library(SGBlocksProto proto/SGBlocks.proto)
 add_proto_library(SGBlockchainProto proto/SGBlockchain.proto)
+add_proto_library(ConsensusProto proto/Consensus.proto)
 add_proto_library(ValidatorRegistryProto proto/ValidatorRegistry.proto)
-
-add_library(blockchain_common
-    types.cpp
-    common.hpp
-    storage_util.cpp
-    storage_util.hpp
-)
-target_link_libraries(blockchain_common
-    PUBLIC
-    primitives
-    crdt_globaldb
-    PRIVATE
-    Boost::headers
-    in_memory_storage
-    trie_storage
-    trie_storage_backend
-    supergenius_trie
-)
-supergenius_install(blockchain_common)
 
 
 add_library(blockchain_genesis
     Blockchain.cpp
     ../ValidatorRegistry.cpp
+    ../Consensus.cpp
 )
 
 target_link_libraries(blockchain_genesis
@@ -37,9 +19,11 @@ target_link_libraries(blockchain_genesis
     hexutil
     logger
     sgns_genius_account
+    ipfs-pubsub
+    ValidatorRegistryProto
+    ConsensusProto
     PRIVATE
     SGBlockchainProto
-    ValidatorRegistryProto
 )
 
 supergenius_install(blockchain_genesis)

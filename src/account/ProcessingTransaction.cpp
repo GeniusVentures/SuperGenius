@@ -42,10 +42,10 @@ namespace sgns
         return instance;
     }
 
-    std::vector<uint8_t> ProcessingTransaction::SerializeByteVector()
+    std::vector<uint8_t> ProcessingTransaction::SerializeByteVector( const SGTransaction::DAGStruct &dag ) const
     {
         SGTransaction::ProcessingTx tx_struct;
-        tx_struct.mutable_dag_struct()->CopyFrom( this->dag_st );
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
         tx_struct.set_mpc_magic_key( 0 );
         tx_struct.set_offset( 0 );
         tx_struct.set_job_cid( job_id_ );
@@ -59,7 +59,10 @@ namespace sgns
         }
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
-        tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() );
+        if ( !tx_struct.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        {
+            std::cerr << "Failed to serialize transaction\n";
+        }
         return serialized_proto;
     }
 

@@ -69,7 +69,7 @@ function(compile_proto_to_cpp PB_H PB_CC PB_REL_PATH PROTO)
         COMMAND ${GEN_COMMAND}
         ARGS -I${PROJECT_ROOT}/src -I${GEN_ARGS} --cpp_out=${SCHEMA_OUT_DIR} ${PROTO_ABS}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        DEPENDS protobuf::protoc
+        DEPENDS ${PROTO_ABS} protobuf::protoc
         VERBATIM
     )
 
@@ -87,7 +87,6 @@ endif()
 function(add_proto_library NAME)
     set(SOURCES "")
     set(HEADERS "")
-    set(PB_REL_PATH "")
 
     foreach(PROTO IN ITEMS ${ARGN})
         compile_proto_to_cpp(H C PB_REL_PATH ${PROTO})
@@ -110,13 +109,13 @@ function(add_proto_library NAME)
     # target_include_directories(${NAME} PUBLIC
     # ${CMAKE_BINARY_DIR}/generated/
     # )
-    foreach(H IN ITEMS ${HEADERS})
-        set_target_properties(${NAME} PROPERTIES PUBLIC_HEADER "${H}")
-    endforeach()
+    install(TARGETS ${NAME} EXPORT supergeniusTargets)
 
-    install(TARGETS ${NAME} EXPORT supergeniusTargets
-        PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${PB_REL_PATH}
-    )
+    foreach(H IN ITEMS ${HEADERS})
+        file(RELATIVE_PATH H_REL_PATH "${CMAKE_BINARY_DIR}/generated" "${H}")
+        get_filename_component(H_REL_DIR "${H_REL_PATH}" DIRECTORY)
+        install(FILES "${H}" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${H_REL_DIR}")
+    endforeach()
 
     disable_clang_tidy(${NAME})
 

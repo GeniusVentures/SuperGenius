@@ -7,6 +7,7 @@
 #pragma once
 
 #include <array>
+#include <deque>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,35 +18,27 @@
 #include <functional>
 #include <optional>
 #include <set>
-#include <storage/rocksdb/rocksdb.hpp>
 #include <string_view>
 
 #include <boost/multiprecision/cpp_int.hpp>
+#include <boost/filesystem/path.hpp>
+#include <WalletCore/PrivateKey.h>
 
 #include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "local_secure_storage/ISecureStorage.hpp"
 #include "outcome/outcome.hpp"
+#include "UTXOManager.hpp"
 
 #include <unordered_set>
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/operations.hpp>
 
 namespace sgns
 {
     using namespace boost::multiprecision;
 
-    namespace ipfs_pubsub
-    {
-        class GossipPubSub;
-    }
-
-    namespace crdt
-    {
-        class GlobalDB;
-    }
     class AccountMessenger;
     class TransactionManager;
 
@@ -55,14 +48,8 @@ namespace sgns
         using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
                                              std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
 
-        struct Credentials
-        {
-            std::string email;
-            std::string password;
-        };
-
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
-        static constexpr uint64_t            NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+        static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
          * @brief       Factory constructor of new GeniusAccount.
@@ -77,14 +64,14 @@ namespace sgns
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
 
-        /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
-         */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const Credentials             &credentials,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
+                                                               const std::string             &mnemonic,
+                                                               const boost::filesystem::path &base_path,
+                                                               bool                           full_node = false );
+
+        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
+                                                                std::string_view public_key,
+                                                                bool             full_node = false );
 
         /**
          * @brief       Factory constructor of new GeniusAccount
@@ -93,6 +80,11 @@ namespace sgns
         static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
+
+        static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
+
+        static outcome::result<void> DeleteAccount( std::string_view               public_address,
+                                                    const boost::filesystem::path &base_path );
 
         /**
          * @brief       Initialize the messenger for the account
@@ -158,17 +150,19 @@ namespace sgns
         std::vector<uint8_t> Sign( const std::vector<uint8_t> &data ) const;
 
         /**
-         * @brief       Set the local confirmed nonce
-         * @param[in]   nonce The nonce value to be set
+         * @brief       Build signed transaction inputs from UTXOs
+         * @param[in]   utxos UTXOs to turn into transaction inputs
+         * @return      Signed input descriptors
          */
-        void SetLocalConfirmedNonce( uint64_t nonce );
+        std::vector<InputUTXOInfo> CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const;
 
         /**
-         * @brief       Set the local confirmed nonce for a peer
+         * @brief       Set the confirmed nonce for an address
          * @param[in]   nonce The nonce value to be set
-         * @param[in]   address The address of the peer
+         * @param[in]   address The address whose nonce is being updated
+         * @param[in]   tx_hash The confirmed transaction hash. Persisted only for the local address
          */
-        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address );
+        void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address, const std::string &tx_hash = "" );
 
         /**
          * @brief       Rollback the local confirmed nonce for a peer
@@ -189,6 +183,13 @@ namespace sgns
          * @return      The local confirmed nonce if exists, error otherwise
          */
         outcome::result<uint64_t> GetLocalConfirmedNonce() const;
+
+        /**
+         * @brief       Get a locally persisted confirmed transaction hash by nonce
+         * @param[in]   nonce The confirmed nonce to search for
+         * @return      The confirmed transaction hash if it exists, error otherwise
+         */
+        outcome::result<std::string> GetLocalConfirmedTxHash( uint64_t nonce ) const;
 
         /**
          * @brief       Get confirmed nonce from the network
@@ -228,6 +229,9 @@ namespace sgns
         outcome::result<void> RequestAccountCreation(
             uint64_t                                            timeout_ms,
             std::function<void( outcome::result<std::string> )> callback ) const;
+        outcome::result<void> RequestValidatorRegistry(
+            uint64_t                                            timeout_ms,
+            std::function<void( outcome::result<std::string> )> callback ) const;
         outcome::result<void> RequestRegularBlock(
             uint64_t                                            timeout_ms,
             const std::string                                  &cid,
@@ -256,8 +260,29 @@ namespace sgns
         static outcome::result<StorageWithAddress> GenerateGeniusAddress( const char *eth_private_key,
                                                                           const boost::filesystem::path &base_path );
 
-        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const Credentials             &credentials,
+        static outcome::result<StorageWithAddress> GenerateGeniusAddress( const TW::PrivateKey          &private_key,
                                                                           const boost::filesystem::path &base_path );
+
+        outcome::result<void> SaveInSecureStorage( const std::string                      &key,
+                                                   const ISecureStorage::SecureBufferType &buffer )
+        {
+            return storage_->Save( key, buffer );
+        }
+
+        outcome::result<ISecureStorage::SecureBufferType> LoadFromSecureStorage( const std::string &key )
+        {
+            return storage_->Load( key );
+        }
+
+        const UTXOManager &GetUTXOManager() const
+        {
+            return utxo_manager_;
+        }
+
+        UTXOManager &GetUTXOManager()
+        {
+            return utxo_manager_;
+        }
 
     protected:
         friend class Blockchain;
@@ -267,9 +292,6 @@ namespace sgns
         void ClearGetBlockChainCIDMethod();
         void SetHasBlockCidMethod( std::function<outcome::result<bool>( const std::string & )> method );
         void ClearHasBlockCidMethod();
-        void SetGetUTXOsMethod(
-            std::function<outcome::result<std::vector<std::string>>( const std::string & )> method );
-        void ClearGetUTXOsMethod();
         void SetGetValidatorWeightMethod(
             std::function<outcome::result<std::optional<uint64_t>>( const std::string & )> method );
         void ClearGetValidatorWeightMethod();
@@ -278,25 +300,36 @@ namespace sgns
         void SetNonceStore( std::shared_ptr<storage::rocksdb> db );
 
     private:
+        struct ConfirmedTxRecord
+        {
+            uint64_t    nonce;
+            std::string hash;
+        };
+
         static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+        static constexpr size_t LOCAL_CONFIRMED_TX_HISTORY_LIMIT = 5;
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
+
+        static outcome::result<StorageWithAddress> LoadGeniusAccount( std::string_view public_key );
 
         static std::shared_ptr<GeniusAccount> CreateInstanceFromResponse( TokenID            token_id,
                                                                           StorageWithAddress response_value,
                                                                           bool               full_node );
 
-        TokenID token;         ///< Token ID of the account
-        bool    is_full_node_; ///< Whether this account is a full node
+        TokenID                         token;         ///< Token ID of the account
+        std::shared_ptr<ISecureStorage> storage_;      ///< Secure storage instance
+        bool                            is_full_node_; ///< Whether this account is a full node
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
         std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
-        std::shared_ptr<ISecureStorage>                 storage_;          ///< Secure storage instance
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
+        std::deque<ConfirmedTxRecord>                   local_confirmed_transactions_; ///< Recent local confirmed txs
         std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
+        UTXOManager                                     utxo_manager_;
 
         // Nonce request tracking
         mutable std::mutex              nonce_request_mutex_; ///< Mutex for nonce request tracking
@@ -319,9 +352,15 @@ namespace sgns
         std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
         static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
+        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX =
+            "gnus-local-confirmed-tx-history-";
 
         void LoadConfirmedNonces();
         void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
+        static std::string SerializeConfirmedTxHistory( const std::deque<ConfirmedTxRecord> &history );
+        static std::deque<ConfirmedTxRecord> DeserializeConfirmedTxHistory( const std::string &serialized );
+        void UpdateLocalConfirmedTxHistoryLocked( uint64_t nonce, const std::string &tx_hash );
+        void RollbackLocalConfirmedTxHistoryLocked( uint64_t nonce );
 
         uint64_t GetNextNonceLocked() const;
 
@@ -331,6 +370,9 @@ namespace sgns
          * @param[in]   storage Secure storage instance.
          * @param[in]   full_node Whether this account is a full node.
          */
-        GeniusAccount( TokenID token_id, std::shared_ptr<ISecureStorage> storage, bool full_node );
+        GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
+                       TokenID                                         token_id,
+                       std::shared_ptr<ISecureStorage>                 storage,
+                       bool                                            full_node );
     };
 }

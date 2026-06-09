@@ -18,6 +18,8 @@ target_link_libraries(crdt_set
     rocksdb
     hierarchical_key
     crdt_delta
+    PRIVATE
+    logger
 )
 supergenius_install(crdt_set)
 
@@ -70,6 +72,7 @@ supergenius_install(crdt_data_filter)
 
 add_library(crdt_datastore
     impl/crdt_datastore.cpp
+    impl/crdt_work_journal.cpp
     impl/atomic_transaction.cpp
 )
 target_link_libraries(crdt_datastore

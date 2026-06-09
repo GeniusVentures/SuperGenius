@@ -1,8 +1,10 @@
+#include <filesystem>
 #include <gtest/gtest.h>
 
 #include <fstream>
 #include <memory>
 #include <iostream>
+#include <cstdio>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -19,7 +21,10 @@
 #include <boost/dll.hpp>
 #include "account/TransferTransaction.hpp"
 #include "proof/TransferProof.hpp"
+#include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
+
+using namespace sgns;
 
 namespace sgns
 {
@@ -50,44 +55,39 @@ namespace sgns
 
         static void SetUpTestSuite()
         {
-            std::string binary_path = boost::dll::program_location().parent_path().string();
-            std::strncpy( DEV_CONFIG.BaseWritePath,
-                          ( binary_path + "/node10/" ).c_str(),
-                          sizeof( DEV_CONFIG.BaseWritePath ) );
-            std::strncpy( DEV_CONFIG2.BaseWritePath,
-                          ( binary_path + "/node20/" ).c_str(),
-                          sizeof( DEV_CONFIG2.BaseWritePath ) );
-            std::strncpy( DEV_CONFIG3.BaseWritePath,
-                          ( binary_path + "/node_full/" ).c_str(),
-                          sizeof( DEV_CONFIG3.BaseWritePath ) );
+            std::string binary_path   = boost::dll::program_location().parent_path().string();
+            DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
+            DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";
+            DEV_CONFIG3.BaseWritePath = binary_path + "/node_full/";
 
-            // Ensure null termination in case the string is too long
-            DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-            DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-            DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
-
-            std::string full_node_pub_address =
-                "8b095989e76c1fef19451abc6837c8da086b9196a65bb7335f92a8aad48226319ab3f85c54d932c914c49f39c679314bc2bb6fad905d66d96969834e9c9f12b3";
-            Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+            try
+            {
+                std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
+                std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
+                std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
+            }
+            catch ( ... )
+            {
+            }
 
             full_node = sgns::GeniusNode::New( DEV_CONFIG3,
-                                               "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                               "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",
                                                false,
                                                false,
                                                40001,
                                                true );
-            test::assertWaitForCondition(
-                [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-                std::chrono::milliseconds( 40000 ),
-                "full_node not ready" );
+            Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
+            test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                          std::chrono::milliseconds( 40000 ),
+                                          "full_node not ready" );
 
             node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
-                                                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395",
                                                 false,
                                                 false );
 
             node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                                "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                                                "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02",
                                                 false,
                                                 false );
 
@@ -98,14 +98,12 @@ namespace sgns
                 { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
             node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-            test::assertWaitForCondition(
-                [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-                std::chrono::milliseconds( 40000 ),
-                "node_proc1 not ready" );
-            test::assertWaitForCondition(
-                [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-                std::chrono::milliseconds( 40000 ),
-                "node_proc2 not ready" );
+            test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                          std::chrono::milliseconds( 40000 ),
+                                          "node_proc1 not ready" );
+            test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                          std::chrono::milliseconds( 40000 ),
+                                          "node_proc2 not ready" );
         }
 
         static void TearDownTestSuite()
@@ -115,35 +113,38 @@ namespace sgns
             full_node.reset();
         }
 
-        outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
-            std::shared_ptr<sgns::GeniusAccount> account,
-            UTXOManager                         &utxo_manager,
-            uint64_t                             amount,
-            const std::string                   &destination )
+        outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer( sgns::GeniusAccount &account,
+                                                                                   uint64_t             amount,
+                                                                                   const std::string   &destination,
+            const std::string                   &previous_hash = "" )
         {
-            OUTCOME_TRY( auto &&params,
-                         utxo_manager.CreateTxParameter( amount, destination, sgns::TokenID::FromBytes( { 0x00 } ) ) );
+            BOOST_OUTCOME_TRY( auto params,
+                               account.GetUTXOManager().CreateTxParameter( amount,
+                                                                           destination,
+                                                                           sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
             auto timestamp = std::chrono::system_clock::now();
 
             SGTransaction::DAGStruct dag;
-            dag.set_previous_hash( "" );
-            dag.set_nonce( account->ReserveNextNonce() );
-            dag.set_source_addr( account->GetAddress() );
-            dag.set_timestamp( timestamp.time_since_epoch().count() );
+            dag.set_previous_hash( previous_hash );
+            dag.set_nonce( account.ReserveNextNonce() );
+            dag.set_source_addr( account.GetAddress() );
+            dag.set_timestamp(
+                std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
             dag.set_uncle_hash( "" );
             dag.set_data_hash( "" ); //filled by transaction class
 
             auto transfer_transaction = std::make_shared<sgns::TransferTransaction>(
                 sgns::TransferTransaction::New( params.first, params.second, dag ) );
+            transfer_transaction->MakeSignature( account );
             std::optional<std::vector<uint8_t>> maybe_proof;
 
-            TransferProof prover( static_cast<uint64_t>( utxo_manager.GetBalance() ), static_cast<uint64_t>( amount ) );
-            OUTCOME_TRY( ( auto &&, proof_result ), prover.GenerateFullProof() );
+            TransferProof prover( account.GetUTXOManager().GetBalance(), amount );
+            BOOST_OUTCOME_TRY( auto proof_result, prover.GenerateFullProof() );
 
             maybe_proof = std::move( proof_result );
 
-            utxo_manager.ReserveUTXOs( params.first );
+            account.GetUTXOManager().ReserveUTXOs( params.first, transfer_transaction->GetHash() );
             return std::make_pair( transfer_transaction, maybe_proof );
         }
 
@@ -154,12 +155,12 @@ namespace sgns
 
         UTXOManager *GetUTXOManagerFromNode( sgns::GeniusNode &node )
         {
-            return &node.utxo_manager_;
+            return &node.account_->GetUTXOManager();
         }
 
         void SendPair( sgns::GeniusNode &node, std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
         {
-            node.SendTransactionAndProof( tx, proof );
+            node.SendTransactionAndProof( std::move( tx ), std::move( proof ) );
         }
     };
 }
@@ -168,13 +169,12 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
 {
     auto balance_1_before = node_proc1->GetBalance();
     auto balance_2_before = node_proc2->GetBalance();
-
-    // Mint tokens with timeout
-    auto mint_result = node_proc1->MintTokens( 10000000000,
-                                               "",
-                                               "",
-                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto mint_result      = node_proc1->MintTokens( 10000000000,
+                                                    sgns::test::NextMintSourceHash(),
+                                                    "",
+                                                    sgns::TokenID::FromBytes( { 0x00 } ),
+                                                    "",
+                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -187,7 +187,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto transfer_result = node_proc1->TransferFunds( 10000000000,
                                                       node_proc2->GetAddress(),
                                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                      std::chrono::milliseconds( GeniusNode::TIMEOUT_TRANSFER ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id, transfer_duration] = transfer_result.value();
     std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
@@ -228,18 +228,15 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
         { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc1 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc2 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "full_node not synched" );
+    test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc1 not synced" );
+    test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc2 not synced" );
+    test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "full_node not synced" );
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> mint_amounts =
@@ -248,10 +245,11 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     for ( auto amount : mint_amounts )
     {
         auto mint_result = node_proc1->MintTokens( amount,
-                                                   "",
+                                                   sgns::test::NextMintSourceHash(),
                                                    "",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                   "",
+                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction of " << amount << " failed or timed out";
 
         auto [tx_id, duration] = mint_result.value();
@@ -260,17 +258,19 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     // Mint tokens on node_proc2
     auto mint_result1 = node_proc2->MintTokens( 10000000000,
-                                                "",
+                                                sgns::test::NextMintSourceHash(),
                                                 "",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
     auto mint_result2 = node_proc2->MintTokens( 20000000000,
-                                                "",
+                                                sgns::test::NextMintSourceHash(),
                                                 "",
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
@@ -322,26 +322,31 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
 TEST_F( TransactionSyncTest, TransactionTransferSync )
 {
-    auto balance_1_before = node_proc1->GetBalance();
-    auto balance_2_before = node_proc2->GetBalance();
-
     // Connect the nodes
     node_proc1->GetPubSub()->AddPeers(
         { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc1 not synced" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc2 not synced" );
-    test::assertWaitForCondition(
-        [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "full_node not synced" );
+    test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc1 not synced" );
+    test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc2 not synced" );
+    test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "full_node not synced" );
+
+    auto mint_result = node_proc1->MintTokens( 67000000000,
+                                               "",
+                                               "",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+
+    auto balance_1_before = node_proc1->GetBalance();
+    auto balance_2_before = node_proc2->GetBalance();
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> xfer_amounts[2] = {
@@ -425,31 +430,30 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
         { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc1 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "node_proc2 not synched" );
-    test::assertWaitForCondition(
-        [&]() { return full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 20000 ),
-        "full_node not synched" );
+    test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc1 not synced" );
+    test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "node_proc2 not synced" );
+    test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 20000 ),
+                                  "full_node not synced" );
 
     // Mint tokens with timeout
     auto mint_result = node_proc1->MintTokens( 10000000000,
+                                               sgns::test::NextMintSourceHash(),
                                                "",
+                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                                "",
-                                               TokenID::FromBytes( { 0x00 } ),
-                                               std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
     mint_result = node_proc1->MintTokens( 10000000000,
+                                          sgns::test::NextMintSourceHash(),
                                           "",
+                                          sgns::TokenID::FromBytes( { 0x00 } ),
                                           "",
-                                          TokenID::FromBytes( { 0x00 } ),
-                                          std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -460,10 +464,8 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     // Verify balance after minting
     EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
-    auto tx_pair = CreateTransfer( GetAccountFromNode( *node_proc1 ),
-                                   *GetUTXOManagerFromNode( *node_proc1 ),
-                                   10000000000,
-                                   node_proc2->GetAddress() );
+    auto tx_pair = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(),
+                                   mint_tx_id );
     if ( !tx_pair.has_value() )
     {
     }
@@ -481,46 +483,14 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     auto invalid_tx_id = tx->dag_st.data_hash();
     SendPair( *node_proc1, tx, proof_vect );
 
-    test::assertWaitForCondition(
-        [&]
-        {
-            return node_proc1->GetTransactionStatus( invalid_tx_id ) ==
-                   TransactionManager::TransactionStatus::VERIFYING;
-        },
-        std::chrono::milliseconds( 20000 ),
-        "Invalid transaction didn't get sent" );
-
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid - 10000000000 )
-        << "Correct Balance of outgoing transactions";
-
-    std::cout << "Invalid tx confirmed " << std::endl;
-
-    // Transfer funds with timeout
-    auto transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                      node_proc2->GetAddress(),
-                                                      sgns::TokenID::FromBytes( { 0x00 } ),
-                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_FALSE( transfer_result.has_value() ) << "Transfer transaction succeeded when it should fail";
-
-    std::cout << "subsequent tx failed" << std::endl;
-
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::SYNCING; },
-        std::chrono::milliseconds( 20000 ),
-        "Node didn't went into synching" );
-
-    EXPECT_EQ( node_proc1->GetTransactionManagerState(),
-               TransactionManager::State::SYNCING ); //confirms it's invalid
-
     auto invalid_tx_result_sent = node_proc1->WaitForTransactionOutgoing(
         invalid_tx_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED );
 
-    std::cout << "waited again for the invalid tx" << std::endl;
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
-    EXPECT_EQ( invalid_tx_result_sent, TransactionManager::TransactionStatus::FAILED ); //confirms it's invalid
-
-    std::cout << "now it's invalid" << std::endl;
+    std::cout << "Invalid tx failed" << std::endl;
 
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
@@ -529,12 +499,10 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
 
     std::cout << "wait until its ready" << std::endl;
 
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
-
-    transfer_result = node_proc1->TransferFunds( 10000000000,
-                                                 node_proc2->GetAddress(),
-                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                 std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    auto transfer_result = node_proc1->TransferFunds( 10000000000,
+                                                      node_proc2->GetAddress(),
+                                                      sgns::TokenID::FromBytes( { 0x00 } ),
+                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed when it should succeed";
 
     auto [transfer_tx_id, transfer_duration] = transfer_result.value();
@@ -552,4 +520,73 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     // Verify node_proc2's balance increased
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 )
         << "Transfer should increase node_proc2's balance";
+}
+
+TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
+{
+    // Ensure nodes are connected and ready
+    node_proc1->GetPubSub()->AddPeers(
+        { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
+    node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+
+    test::assertWaitForCondition(
+        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "node_proc1 not synched" );
+    test::assertWaitForCondition(
+        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 20000 ),
+        "node_proc2 not synched" );
+
+    // Mint tokens to ensure sufficient balance
+    auto mint_result = node_proc1->MintTokens( 20000000000,
+                                               sgns::test::NextMintSourceHash(),
+                                               "",
+                                               TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
+
+    // Create and send a valid first transfer using the normal flow
+    auto transfer_result = node_proc1->TransferFunds( 10000000000,
+                                                      node_proc2->GetAddress(),
+                                                      sgns::TokenID::FromBytes( { 0x00 } ),
+                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer_result.has_value() ) << "Transfer transaction failed or timed out";
+    auto [tx1_id, transfer_duration] = transfer_result.value();
+    std::cout << "Transfer transaction completed in " << transfer_duration << " ms" << std::endl;
+
+    auto tx1_status = node_proc1->WaitForTransactionOutgoing(
+        tx1_id,
+        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
+
+    // Create a second transfer with an invalid previous hash
+    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ),
+                                    10000000000,
+                                    node_proc2->GetAddress(),
+                                    tx1_id );
+    ASSERT_TRUE( tx_pair2.has_value() );
+
+    auto [tx2, proof2]   = tx_pair2.value();
+    std::string bad_prev = tx1_id;
+    if ( !bad_prev.empty() )
+    {
+        bad_prev[0] = ( bad_prev[0] == 'a' ) ? 'b' : 'a';
+    }
+    tx2->dag_st.set_previous_hash( bad_prev );
+    tx2->FillHash();
+    tx2->MakeSignature( *GetAccountFromNode( *node_proc1 ) );
+
+    std::vector<uint8_t> proof_vect2;
+    if ( proof2.has_value() )
+    {
+        proof_vect2 = proof2.value();
+    }
+    SendPair( *node_proc1, tx2, proof_vect2 );
+
+    auto tx2_status = node_proc1->WaitForTransactionOutgoing(
+        tx2->GetHash(),
+        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    EXPECT_EQ( tx2_status, TransactionManager::TransactionStatus::FAILED );
 }

@@ -17,86 +17,145 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingCoreImpl::Error, e )
             return "GlobaDB Read error ";
         case E::NO_BUFFER_FROM_JOB_DATA:
             return "No buffer from job data";
+        case E::TASK_DESERIALIZATION_ERROR:
+            return "Task deserialization error";
+        case E::JOB_INCOMPATIBILITY_ERROR:
+            return "Job incompatibility error";
+        case E::INVALID_MODEL_ERROR:
+            return "Invalid model error";
     }
     return "Unknown error";
 }
 
 namespace sgns::processing
 {
+
+    std::shared_ptr<ProcessingCoreImpl> ProcessingCoreImpl::New( std::shared_ptr<ProcessingTaskQueue> task_queue,
+                                                                 uint32_t maximalProcessingSubTaskCount,
+                                                                 TokenID  tokenID )
+    {
+        if ( ( maximalProcessingSubTaskCount == 0 ) || ( !task_queue ) )
+        {
+            return nullptr;
+        }
+        auto instance = std::shared_ptr<ProcessingCoreImpl>(
+            new ProcessingCoreImpl( std::move( task_queue ), maximalProcessingSubTaskCount, std::move( tokenID ) ) );
+        return instance;
+    }
+
+    ProcessingCoreImpl::ProcessingCoreImpl( std::shared_ptr<ProcessingTaskQueue> task_queue,
+                                            uint32_t                             maximalProcessingSubTaskCount,
+                                            TokenID                              tokenID ) :
+        task_queue_( std::move( task_queue ) ),
+        token_ID_( std::move( tokenID ) ),
+        max_processing_subtask_count_( maximalProcessingSubTaskCount )
+    {
+    }
+
     outcome::result<SGProcessing::SubTaskResult> ProcessingCoreImpl::ProcessSubTask(
         const SGProcessing::SubTask &subTask,
         uint32_t                     initialHashCode )
     {
-        SGProcessing::SubTaskResult result;
-
         //Check if we're processing too much.
-        std::scoped_lock<std::mutex> subTaskCountLock( m_subTaskCountMutex );
-        ++m_processingSubTaskCount;
-        if ( ( m_maximalProcessingSubTaskCount > 0 ) && ( m_processingSubTaskCount > m_maximalProcessingSubTaskCount ) )
-        {
-            // Reset the counter to allow processing restart
-            --m_processingSubTaskCount;
-            return outcome::failure( Error::MAX_NUMBER_SUBTASKS );
-        }
+        BOOST_OUTCOME_TRY( IncProcessingSubTaskCount() );
 
-        auto queryTasks = m_db->Get( "tasks/TASK_" + subTask.ipfsblock() );
-        if ( !queryTasks.has_value() )
-        {
-            --m_processingSubTaskCount;
-            return outcome::failure( Error::GLOBALDB_READ_ERROR );
-            //task.ParseFromArray(element, element.second.size());
-        }
-        SGProcessing::Task task;
+        Error error{ Error::GLOBALDB_READ_ERROR };
 
-        //Create io context for obtaining data
-        libp2p::protocol::kademlia::Config kademlia_config;
-        kademlia_config.randomWalk.enabled  = true;
-        kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
-        kademlia_config.requestConcurency   = 20;
-        auto injector                       = libp2p::injector::makeHostInjector(
-            libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
-        auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
-
-        task.ParseFromArray( queryTasks.value().data(), queryTasks.value().size() );
-        //Parse main json data
-        OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( task.json_data() ) );
-        m_currentProcessingManager = procmgr; // Store for progress tracking
-        //Parse subtask json
-        auto                              subtaskjson = nlohmann::json::parse( subTask.json_data() );
-        sgns::ModelNode                 model;
-        sgns::from_json( subtaskjson, model );
-        std::vector<std::vector<uint8_t>> chunkhashes;
-        auto                              tempResult = procmgr->Process( ioc, chunkhashes, model );
-        //Parse the results if we got some
-        if ( tempResult )
+        do
         {
-            for ( auto &chunkhash : chunkhashes )
+            auto get_task_retval = task_queue_->GetTask( subTask.ipfsblock() );
+            if ( !get_task_retval.has_value() )
             {
-                std::string hashString( chunkhash.begin(), chunkhash.end() );
-                result.add_chunk_hashes( hashString );
+                error = Error::GLOBALDB_READ_ERROR;
+                break;
             }
 
-            std::string hashString( tempResult.value().begin(), tempResult.value().end() );
-            result.set_result_hash( hashString );
-            result.set_token_id( m_tokenId.bytes().data(), m_tokenId.size() );
-            --m_processingSubTaskCount;
-            m_currentProcessingManager.reset(); // Clear after completion
-        }
-        else
-        {
-            --m_processingSubTaskCount;
-            m_currentProcessingManager.reset(); // Clear on error
-            return tempResult.error();
-        }
-        return result;
+            const SGProcessing::Task &task = get_task_retval.value();
+
+            auto manager_retval = sgns::sgprocessing::ProcessingManager::Create( task.json_data() );
+
+            if ( !manager_retval.has_value() )
+            {
+                error = Error::JOB_INCOMPATIBILITY_ERROR;
+                break;
+            }
+            processing_manager_ = std::move( manager_retval.value() );
+
+            auto model_retval = sgns::sgprocessing::ProcessingManager::GetModelNodeFromJson( subTask.json_data() );
+
+            if ( !model_retval.has_value() )
+            {
+                error = Error::INVALID_MODEL_ERROR;
+                break;
+            }
+
+            libp2p::protocol::kademlia::Config kademlia_config;
+            kademlia_config.randomWalk.enabled  = true;
+            kademlia_config.randomWalk.interval = std::chrono::seconds( 300 );
+            kademlia_config.requestConcurency   = 20;
+            auto injector                       = libp2p::injector::makeHostInjector(
+                libp2p::injector::makeKademliaInjector( libp2p::injector::useKademliaConfig( kademlia_config ) ) );
+            auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
+
+            std::vector<std::vector<uint8_t>> chunk_hashes;
+            auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value() );
+
+            DecProcessingSubTaskCount();
+            
+            if ( !result_retval.has_value() )
+            {
+                return result_retval.error();
+            }
+
+            SGProcessing::SubTaskResult result;
+            for ( auto &chunk_hash : chunk_hashes )
+            {
+                std::string hash_string( chunk_hash.begin(), chunk_hash.end() );
+                result.add_chunk_hashes( hash_string );
+            }
+
+            std::string hash_string( result_retval.value().begin(), result_retval.value().end() );
+            result.set_result_hash( hash_string );
+            result.set_token_id( token_ID_.bytes().data(), token_ID_.size() );
+
+            return result;
+
+        } while ( 0 );
+
+        DecProcessingSubTaskCount();
+
+        return outcome::failure( error );
     }
 
     float ProcessingCoreImpl::GetProgress() const
     {
-        if (m_currentProcessingManager) {
-            return m_currentProcessingManager->GetProgress();
+        if ( processing_manager_ )
+        {
+            return processing_manager_->GetProgress();
         }
         return 0.0f;
     }
-    
+
+    outcome::result<void> ProcessingCoreImpl::IncProcessingSubTaskCount()
+    {
+        std::scoped_lock<std::mutex> subTaskCountLock( subtask_count_mutex_ );
+
+        if ( processing_subtask_count_ >= max_processing_subtask_count_ )
+        {
+            // Reset the counter to allow processing restart
+            return outcome::failure( Error::MAX_NUMBER_SUBTASKS );
+        }
+        processing_subtask_count_++;
+        return outcome::success();
+    }
+
+    void ProcessingCoreImpl::DecProcessingSubTaskCount()
+    {
+        std::scoped_lock<std::mutex> subTaskCountLock( subtask_count_mutex_ );
+        if ( processing_subtask_count_ > 0 )
+        {
+            --processing_subtask_count_;
+        }
+    }
+
 }

@@ -31,14 +31,6 @@ namespace sgns::crdt
     */
     HierarchicalKey( std::string key );
 
-    /** Copy constructor
-    */
-    HierarchicalKey( const HierarchicalKey & ) = default;
-
-    virtual ~HierarchicalKey() = default;
-
-    HierarchicalKey& operator=(const HierarchicalKey&) = default;
-
     void SetKey(const std::string& aKey ) { key_ = aKey; };
 
     std::string GetKey() const { return key_; };

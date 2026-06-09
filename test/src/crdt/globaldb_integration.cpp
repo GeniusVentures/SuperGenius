@@ -14,6 +14,8 @@
 #include <boost/asio/io_context.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <chrono>
+#include <libp2p/basic/scheduler.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <thread>
 #include <fstream>
 #include <openssl/sha.h>
@@ -32,7 +34,7 @@
 #include <libp2p/log/logger.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
-#include <libp2p/protocol/common/asio/asio_scheduler.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 
 namespace
 {
@@ -112,9 +114,10 @@ public:
             const std::string              listenIp = "127.0.0.1";
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
-            auto io               = std::make_shared<boost::asio::io_context>();
-            auto scheduler        = std::make_shared<libp2p::protocol::AsioScheduler>( io,
-                                                                                libp2p::protocol::SchedulerConfig{} );
+            auto io        = std::make_shared<boost::asio::io_context>();
+            auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( io ),
+                libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
             auto graphsyncnetwork = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>( pubsub->GetHost(),
                                                                                                  scheduler );
             auto generator        = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -130,7 +133,7 @@ public:
             {
                 return;
             }
-            auto db = std::move(globaldb_ret.value());
+            auto db = std::move( globaldb_ret.value() );
 
             ++currentPubsubPort;
 
@@ -146,8 +149,7 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
-                    nodes_[i].pubsub->AddPeers(
-                        { nodes_[j].pubsub->GetInterfaceAddress() } );
+                    nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
             std::this_thread::sleep_for( delay );
@@ -222,7 +224,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
 
@@ -266,7 +268,7 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "test_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "test_topic" ).has_error() );
         node.db->AddListenTopic( "test_topic" );
     }
 
@@ -310,13 +312,13 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
 
-        node.db->AddBroadcastTopic( "topic_A" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_A" ).has_error() );
         node.db->AddListenTopic( "topic_A" );
 
-        node.db->AddBroadcastTopic( "topic_B" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "topic_B" ).has_error() );
         node.db->AddListenTopic( "topic_B" );
     }
 
@@ -365,7 +367,7 @@ TEST_F( GlobalDBIntegrationTest, PreventDoubleCommitTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
     testNodes->addNode( "globaldb_node1" );
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "firstTopic" ).has_error() );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
     sgns::base::Buffer value;
@@ -408,8 +410,8 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
-        node.db->AddBroadcastTopic( "direct_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "direct_topic" ).has_error() );
         node.db->AddListenTopic( "direct_topic" );
     }
     testNodes->connectNodes();
@@ -449,7 +451,7 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "firstTopic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "firstTopic" ).has_error() );
         node.db->AddListenTopic( "firstTopic" );
     }
     testNodes->connectNodes();
@@ -489,11 +491,11 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "first_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "first_topic" ).has_error() );
     }
-    testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[0].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[0].db->AddListenTopic( "test_topic" );
-    testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" );
+    ASSERT_FALSE( testNodes->getNodes()[1].db->AddBroadcastTopic( "test_topic" ).has_error() );
     testNodes->getNodes()[1].db->AddListenTopic( "test_topic" );
     testNodes->connectNodes();
     using sgns::crdt::HierarchicalKey;
@@ -534,7 +536,7 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
 
     for ( auto &node : testNodes->getNodes() )
     {
-        node.db->AddBroadcastTopic( "isolated_topic" );
+        ASSERT_FALSE( node.db->AddBroadcastTopic( "isolated_topic" ).has_error() );
         node.db->AddListenTopic( "isolated_topic" );
     }
 

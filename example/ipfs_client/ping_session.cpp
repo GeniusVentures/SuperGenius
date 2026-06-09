@@ -1,4 +1,5 @@
 #include "ping_session.hpp"
+#include <libp2p/connection/stream_and_protocol.hpp>
 #include <libp2p/crypto/random_generator/boost_generator.hpp>
 
 PingSession::PingSession(std::shared_ptr<boost::asio::io_context> io, std::shared_ptr<libp2p::Host> host)
@@ -19,8 +20,8 @@ void PingSession::Init()
     });
 
     host_->setProtocolHandler(
-        ping_->getProtocolId(),
-        [ctx = shared_from_this()](libp2p::protocol::BaseProtocol::StreamResult rstream) {
+        {ping_->getProtocolId()},
+        [ctx = shared_from_this()](libp2p::StreamAndProtocol rstream) {
         ctx->ping_->handle(std::move(rstream));
     });
 }

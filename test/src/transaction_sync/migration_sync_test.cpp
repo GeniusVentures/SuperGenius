@@ -9,13 +9,16 @@
 #include <gtest/gtest.h>
 #include <boost/dll.hpp>
 
+#include "account/MigrationAllowList.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/MigrationManager.hpp"
 #include "account/TokenID.hpp"
-#include "FileManager.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
+
+using namespace sgns;
+
 
 /**
  * @brief Test parameters for migration.
@@ -38,14 +41,27 @@ protected:
         ""                                    // BaseWritePath
     };
 
-    static constexpr char DB_PREFIX[]        = "SuperGNUSNode.TestNet.2a.00.";
-    static constexpr int  STARTUP_DELAY_MS   = 1000;
-    static constexpr char FULL_NODE_SUBDIR[] = "migration_full_node";
-    static constexpr char FULL_NODE_ADDR[]   = "0xcafe";
-    static constexpr char FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-    static constexpr char FULL_NODE_PUB_ADDRESS[] =
-        "16fc3a9c86b42bd7e02b4c3276704948211a034b6cddfe024bfaf39dfb51d95a9649c5b149d18956991cc116f148f6441fc8fc60205d499dad35421c1279dd93";
+    static constexpr std::string_view DB_PREFIX        = "SuperGNUSNode.TestNet.2a.00.";
+    static constexpr int              STARTUP_DELAY_MS = 1000;
+    static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
+    static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
+    static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
     static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
+
+    void SetEligibilityCheckEnabled( bool enabled )
+    {
+        sgns::MigrationAllowList::SetEligibilityCheckEnabledForTests( enabled );
+    }
+
+    void SetUp() override
+    {
+        SetEligibilityCheckEnabled( true );
+    }
+
+    void TearDown() override
+    {
+        SetEligibilityCheckEnabled( true );
+    }
 
     static void RemovePrefixedSubdirs( const fs::path &baseDir )
     {
@@ -90,9 +106,8 @@ protected:
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
 
-        std::string baseWrite = binaryParent + "/" + subdir + "/";
-        std::strncpy( DEV_CONFIG.BaseWritePath, baseWrite.c_str(), sizeof( DEV_CONFIG.BaseWritePath ) );
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1] = '\0';
+        std::string baseWrite    = binaryParent + "/" + subdir + "/";
+        DEV_CONFIG.BaseWritePath = baseWrite;
 
         auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, is_processor, base_port, is_full_node );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
@@ -105,19 +120,21 @@ protected:
         int                     id = nodeCounter.fetch_add( 1 );
 
         std::string     binaryPath = boost::dll::program_location().parent_path().string();
-        std::string     outPath    = binaryPath + "/" + FULL_NODE_SUBDIR + "_" + std::to_string( id ) + "/";
+        std::string     outPath    = ( binaryPath + '/' ).append( FULL_NODE_SUBDIR ) + '_' + std::to_string( id ) + '/';
         std::error_code ec;
         fs::remove_all( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        DevConfig_st devConfig = { "", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), "" };
-        std::strncpy( devConfig.Addr, FULL_NODE_ADDR, sizeof( devConfig.Addr ) - 1 );
-        std::strncpy( devConfig.BaseWritePath, outPath.c_str(), sizeof( devConfig.BaseWritePath ) - 1 );
-        devConfig.Addr[sizeof( devConfig.Addr ) - 1]                   = '\0';
-        devConfig.BaseWritePath[sizeof( devConfig.BaseWritePath ) - 1] = '\0';
+        DevConfig_st devConfig = { std::string( FULL_NODE_ADDR ),
+                                   "0.65",
+                                   "1.0",
+                                   TokenID::FromBytes( { 0x00 } ),
+                                   outPath };
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
         auto     instance    = GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
+
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         std::cout << "Full node created" << std::endl;
         return instance;
@@ -126,28 +143,54 @@ protected:
 
 TEST_P( MigrationParamTest, BalanceAfterMigration )
 {
-    std::string full_node_pub_address{ FULL_NODE_PUB_ADDRESS };
-    Blockchain::SetAuthorizedFullNodeAddress( full_node_pub_address );
+    SetEligibilityCheckEnabled( false );
+
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
-    EXPECT_EQ( full_node->GetAddress(), full_node_pub_address );
-    test::assertWaitForCondition(
-        [full_node]
-        { return full_node && full_node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "Full node not synced" );
+    test::assertWaitForCondition( [full_node]
+                                  { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 80000 ),
+                                  "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
-    test::assertWaitForCondition(
-        [node] { return node && node->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 40000 ),
-        readiness_message );
+    test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 40000 ),
+                                  readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
+}
+
+TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
+{
+    namespace fs = std::filesystem;
+    using sgns::MigrationAllowList;
+    using sgns::storage::rocksdb;
+
+    const auto      unique_suffix = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() );
+    const fs::path  db_path       = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
+    std::error_code ec;
+    fs::remove_all( db_path, ec );
+    fs::create_directories( db_path, ec );
+    ASSERT_FALSE( ec ) << "Failed to create temp DB directory: " << ec.message();
+
+    rocksdb::Options options;
+    options.create_if_missing = true;
+
+    auto db_result = rocksdb::create( db_path.string(), options );
+    ASSERT_TRUE( db_result.has_value() ) << db_result.error().message();
+
+    MigrationAllowList allow_list( db_result.value(), "3.6.0" );
+    ASSERT_TRUE( allow_list.StoreObservedBalance( "eligible-address", 100 ).has_value() );
+
+    auto eligible = allow_list.IsEligible( "eligible-address", 201 );
+    ASSERT_TRUE( eligible.has_value() ) << eligible.error().message();
+    EXPECT_FALSE( eligible.value() );
+
+    fs::remove_all( db_path, ec );
 }
 
 INSTANTIATE_TEST_SUITE_P(

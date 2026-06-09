@@ -30,7 +30,6 @@ target_include_directories(child_tokens_test PRIVATE ${AsyncIOManager_INCLUDE_DI
 
 target_link_libraries(child_tokens_test
     genius_node
-    mp_utils
     json_secure_storage
 )
 if(WIN32)
@@ -56,7 +55,6 @@ target_include_directories(full_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(full_node_test
     genius_node
-    mp_utils
     json_secure_storage
 )
 if(WIN32)

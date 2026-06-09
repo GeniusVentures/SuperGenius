@@ -27,6 +27,9 @@ elseif (DEFINED SGNS_PRINT_LOGS)
 	add_definitions(-DSGNS_DEBUGLOGS)
 endif()
 
+set(ZLIB_DIR "${_THIRDPARTY_BUILD_DIR}/zlib/lib/cmake/zlib")
+find_package(ZLIB CONFIG REQUIRED)
+
 if(BUILD_TESTING)
     set(GTest_DIR "${_THIRDPARTY_BUILD_DIR}/GTest/lib/cmake/GTest")
     message("Gtest dir: ${GTest_DIR}")
@@ -47,6 +50,14 @@ endif()
 # protobuf project
 if(NOT DEFINED Protobuf_DIR)
     set(Protobuf_DIR "${_THIRDPARTY_BUILD_DIR}/protobuf/lib/cmake/protobuf")
+endif()
+
+if(NOT DEFINED grpc_INCLUDE_DIR)
+    set(grpc_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/grpc/include")
+endif()
+
+if(NOT DEFINED Protobuf_INCLUDE_DIR)
+    set(Protobuf_INCLUDE_DIR "${grpc_INCLUDE_DIR}/google/protobuf")
 endif()
 
 find_package(Protobuf CONFIG REQUIRED)
@@ -149,6 +160,7 @@ set(Boost_DIR "${Boost_LIB_DIR}/cmake/Boost-${BOOST_VERSION}")
 set(boost_atomic_DIR "${Boost_LIB_DIR}/cmake/boost_atomic-${BOOST_VERSION}")
 set(boost_chrono_DIR "${Boost_LIB_DIR}/cmake/boost_chrono-${BOOST_VERSION}")
 set(boost_container_DIR "${Boost_LIB_DIR}/cmake/boost_container-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
 set(boost_date_time_DIR "${Boost_LIB_DIR}/cmake/boost_date_time-${BOOST_VERSION}")
 set(boost_filesystem_DIR "${Boost_LIB_DIR}/cmake/boost_filesystem-${BOOST_VERSION}")
 set(boost_headers_DIR "${Boost_LIB_DIR}/cmake/boost_headers-${BOOST_VERSION}")
@@ -160,11 +172,37 @@ set(boost_random_DIR "${Boost_LIB_DIR}/cmake/boost_random-${BOOST_VERSION}")
 set(boost_regex_DIR "${Boost_LIB_DIR}/cmake/boost_regex-${BOOST_VERSION}")
 set(boost_system_DIR "${Boost_LIB_DIR}/cmake/boost_system-${BOOST_VERSION}")
 set(boost_thread_DIR "${Boost_LIB_DIR}/cmake/boost_thread-${BOOST_VERSION}")
+set(boost_context_DIR "${Boost_LIB_DIR}/cmake/boost_context-${BOOST_VERSION}")
+set(boost_coroutine_DIR "${Boost_LIB_DIR}/cmake/boost_coroutine-${BOOST_VERSION}")
 set(boost_unit_test_framework_DIR "${Boost_LIB_DIR}/cmake/boost_unit_test_framework-${BOOST_VERSION}")
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_NO_SYSTEM_PATHS ON)
 option(Boost_USE_STATIC_RUNTIME "Use static runtimes" ON)
+set(_BOOST_CACHE_ARGS
+    -DBOOST_ROOT:PATH=${_BOOST_ROOT}
+    -DBoost_DIR:PATH=${Boost_DIR}/Boost-${BOOST_VERSION}
+    -DBoost_INCLUDE_DIR:PATH=${Boost_INCLUDE_DIR}
+    -Dboost_headers_DIR:PATH=${Boost_DIR}/boost_headers-${BOOST_VERSION}
+    -Dboost_date_time_DIR:PATH=${Boost_DIR}/boost_date_time-${BOOST_VERSION}
+    -Dboost_filesystem_DIR:PATH=${Boost_DIR}/boost_filesystem-${BOOST_VERSION}
+    -Dboost_program_options_DIR:PATH=${Boost_DIR}/boost_program_options-${BOOST_VERSION}
+    -Dboost_random_DIR:PATH=${Boost_DIR}/boost_random-${BOOST_VERSION}
+    -Dboost_regex_DIR:PATH=${Boost_DIR}/boost_regex-${BOOST_VERSION}
+    -Dboost_system_DIR:PATH=${Boost_DIR}/boost_system-${BOOST_VERSION}
+    -Dboost_context_DIR:PATH=${Boost_DIR}/boost_context-${BOOST_VERSION}
+    -Dboost_coroutine_DIR:PATH=${Boost_DIR}/boost_coroutine-${BOOST_VERSION}
+    -Dboost_thread_DIR:PATH=${Boost_DIR}/boost_thread-${BOOST_VERSION}
+    -Dboost_log_DIR:PATH=${Boost_DIR}/boost_log-${BOOST_VERSION}
+    -Dboost_log_setup_DIR:PATH=${Boost_DIR}/boost_log_setup-${BOOST_VERSION}
+    -Dboost_unit_test_framework_DIR:PATH=${Boost_DIR}/boost_unit_test_framework-${BOOST_VERSION}
+    -Dboost_json_DIR:PATH=${Boost_DIR}/boost_json-${BOOST_VERSION}
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+    -DBoost_NO_SYSTEM_PATHS:BOOL=ON
+    -DBoost_USE_MULTITHREADED:BOOL=ON
+    -DBoost_USE_STATIC_LIBS:BOOL=ON
+    -DBoost_USE_STATIC_RUNTIME:BOOL=ON
+)
 
 option(SGNS_STACKTRACE_BACKTRACE "Use BOOST_STACKTRACE_USE_BACKTRACE in stacktraces, for POSIX" OFF)
 
@@ -176,8 +214,10 @@ if(SGNS_STACKTRACE_BACKTRACE)
     endif()
 endif()
 
-# header only libraries must not be added here
-find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
+find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json context coroutine)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
@@ -234,6 +274,9 @@ find_package(ipfs-bitswap-cpp CONFIG REQUIRED)
 set(ed25519_DIR "${_THIRDPARTY_BUILD_DIR}/ed25519/lib/cmake/ed25519")
 find_package(ed25519 CONFIG REQUIRED)
 
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS ON CACHE BOOL "Suppress developer warnings" FORCE)
+# Globally suppress ALL CMake deprecation warnings (including from third-party Config.cmake files)
+set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "Disable deprecation warnings" FORCE)
 # RapidJSON
 set(RapidJSON_DIR "${_THIRDPARTY_BUILD_DIR}/rapidjson/lib/cmake/RapidJSON")
 find_package(RapidJSON CONFIG REQUIRED)
@@ -249,9 +292,27 @@ find_package(xxHash CONFIG REQUIRED)
 # zlib
 set(ZLIB_ROOT "${_THIRDPARTY_BUILD_DIR}/zlib")
 
+# Prefer package config files while loading Libssh2's dependencies.
+# Libssh2 config calls `find_dependency(ZLIB)` without `CONFIG`, which can
+# otherwise resolve to CMake's FindZLIB module on Windows CI.
+set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED FALSE)
+if(DEFINED CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED TRUE)
+    set(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV "${CMAKE_FIND_PACKAGE_PREFER_CONFIG}")
+endif()
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
 # libssh2
 set(Libssh2_DIR "${_THIRDPARTY_BUILD_DIR}/libssh2/lib/cmake/libssh2")
 find_package(Libssh2 CONFIG REQUIRED)
+
+if(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED)
+    set(CMAKE_FIND_PACKAGE_PREFER_CONFIG "${_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV}")
+else()
+    unset(CMAKE_FIND_PACKAGE_PREFER_CONFIG)
+endif()
+unset(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_PREV)
+unset(_SGNS_CMAKE_FIND_PACKAGE_PREFER_CONFIG_WAS_DEFINED)
 
 # AsyncIOManager
 set(AsyncIOManager_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/AsyncIOManager/include")
@@ -366,15 +427,19 @@ endif()
 include_directories(
     ${PROJECT_ROOT}/src
 )
+
 include_directories(
-    ${PROJECT_ROOT}/GeniusKDF
+        ${PROJECT_ROOT}/ProofSystem/include
 )
+
 include_directories(
-    ${PROJECT_ROOT}/ProofSystem
+        ${PROJECT_ROOT}/SGProcessingManager/include
 )
+
 include_directories(
-    ${PROJECT_ROOT}/SGProcessingManager
+        ${PROJECT_ROOT}/evmrelay/include
 )
+
 include_directories(
     ${PROJECT_ROOT}/app
 )
@@ -397,14 +462,13 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
+add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
+add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
 add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
-add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
-add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
-
-# add_subdirectory(${PROJECT_ROOT}/app ${CMAKE_BINARY_DIR}/app)
 if(BUILD_TESTING)
     enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
@@ -436,40 +500,40 @@ write_basic_package_version_file(
 )
 
 # install header files
-install_hfile(${PROJECT_ROOT}/src/api)
-install_hfile(${PROJECT_ROOT}/src/authorship)
-install_hfile(${PROJECT_ROOT}/src/application)
-install_hfile(${PROJECT_ROOT}/src/base)
-install_hfile(${PROJECT_ROOT}/src/blockchain)
-install_hfile(${PROJECT_ROOT}/src/clock)
-install_hfile(${PROJECT_ROOT}/src/crdt)
-install_hfile(${PROJECT_ROOT}/src/crypto)
-install_hfile(${PROJECT_ROOT}/src/extensions)
-install_hfile(${PROJECT_ROOT}/src/injector)
-install_hfile(${PROJECT_ROOT}/src/macro)
-install_hfile(${PROJECT_ROOT}/src/network)
-install_hfile(${PROJECT_ROOT}/src/outcome)
-install_hfile(${PROJECT_ROOT}/src/processing)
-install_hfile(${PROJECT_ROOT}/src/primitives)
-install_hfile(${PROJECT_ROOT}/src/runtime)
-install_hfile(${PROJECT_ROOT}/src/scale)
-install_hfile(${PROJECT_ROOT}/src/storage)
-install_hfile(${PROJECT_ROOT}/src/subscription)
-install_hfile(${PROJECT_ROOT}/src/transaction_pool)
-install_hfile(${PROJECT_ROOT}/src/verification)
-install_hfile(${PROJECT_ROOT}/src/account)
-install_hfile(${PROJECT_ROOT}/app/integration)
-install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
-install_hfile(${PROJECT_ROOT}/src/singleton)
-install_hfile(${PROJECT_ROOT}/src/coinprices)
-install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
-
-# install proto header files
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
-install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
+#install_hfile(${PROJECT_ROOT}/src/api)
+#install_hfile(${PROJECT_ROOT}/src/authorship)
+#install_hfile(${PROJECT_ROOT}/src/application)
+#install_hfile(${PROJECT_ROOT}/src/base)
+#install_hfile(${PROJECT_ROOT}/src/blockchain)
+#install_hfile(${PROJECT_ROOT}/src/clock)
+#install_hfile(${PROJECT_ROOT}/src/crdt)
+#install_hfile(${PROJECT_ROOT}/src/crypto)
+#install_hfile(${PROJECT_ROOT}/src/extensions)
+#install_hfile(${PROJECT_ROOT}/src/injector)
+#install_hfile(${PROJECT_ROOT}/src/macro)
+#install_hfile(${PROJECT_ROOT}/src/network)
+#install_hfile(${PROJECT_ROOT}/src/outcome)
+#install_hfile(${PROJECT_ROOT}/src/processing)
+#install_hfile(${PROJECT_ROOT}/src/primitives)
+#install_hfile(${PROJECT_ROOT}/src/runtime)
+#install_hfile(${PROJECT_ROOT}/src/scale)
+#install_hfile(${PROJECT_ROOT}/src/storage)
+#install_hfile(${PROJECT_ROOT}/src/subscription)
+#install_hfile(${PROJECT_ROOT}/src/transaction_pool)
+#install_hfile(${PROJECT_ROOT}/src/verification)
+#install_hfile(${PROJECT_ROOT}/src/account)
+#install_hfile(${PROJECT_ROOT}/app/integration)
+#install_hfile(${PROJECT_ROOT}/src/local_secure_storage)
+#install_hfile(${PROJECT_ROOT}/src/singleton)
+#install_hfile(${PROJECT_ROOT}/src/coinprices)
+#install_hfile(${PROJECT_ROOT}/ProcessingSchema/generated)
+#
+## install proto header files
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/crdt)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/processing)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/account)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/blockchain)
+#install_hfile(${CMAKE_CURRENT_BINARY_DIR}/generated/proof)
 
 # install the configuration file
 install(FILES
