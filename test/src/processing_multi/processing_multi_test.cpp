@@ -26,6 +26,7 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 class ProcessingMultiTest : public ::testing::Test
 {

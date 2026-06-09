@@ -12,6 +12,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 using namespace sgns::test;
 using namespace sgns;

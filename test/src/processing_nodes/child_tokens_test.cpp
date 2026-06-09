@@ -14,6 +14,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>

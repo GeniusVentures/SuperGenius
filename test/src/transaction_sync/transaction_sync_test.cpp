@@ -22,6 +22,7 @@
 #include "account/TransferTransaction.hpp"
 #include "proof/TransferProof.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns;

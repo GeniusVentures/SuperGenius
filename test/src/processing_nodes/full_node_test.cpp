@@ -9,6 +9,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 

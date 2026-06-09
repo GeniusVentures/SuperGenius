@@ -11,6 +11,7 @@
 #include <boost/dll.hpp>
 #include "account/GeniusNode.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
 {

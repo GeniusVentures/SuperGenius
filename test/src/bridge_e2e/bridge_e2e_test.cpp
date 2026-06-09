@@ -28,6 +28,7 @@
 #include <TrustWalletCore/TWHash.h>
 #include <TrustWalletCore/TWCurve.h>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/wait_condition.hpp"
 
