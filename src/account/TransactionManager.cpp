@@ -1105,12 +1105,10 @@ namespace sgns
             return *validator;
         }
 
-        if ( chain_id.empty() || chain_id == GENIUS_CHAIN_ID )
-        {
-            return genius_input_validator_;
-        }
-
-        return public_chain_input_validator_;
+        static GeniusInputValidator fallback;
+        TransactionManagerLogger()->error( "{}: no input validator registered for chain_id={}",
+                                           __func__, chain_id );
+        return fallback;
     }
 
     outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )

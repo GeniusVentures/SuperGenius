@@ -2119,6 +2119,13 @@ namespace sgns
             provider.Initialize( transaction_manager_->GetPublicChainInputValidator(),
                                  config,
                                  node_logger_ );
+
+            // Register PublicChainInputValidator for all configured chain IDs
+            auto &pub_validator = transaction_manager_->GetPublicChainInputValidator();
+            for ( const auto &chain_entry : bridge_chains )
+            {
+                IInputValidator::Register( std::to_string( chain_entry.chain_id ), &pub_validator );
+            }
         }
         else
         {
