@@ -93,7 +93,7 @@ TEST( BridgeRelayerTest, ExtractsBurnDetailsFromNotification )
         "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045", // sender
         42,                                            // token_id
         1000000,                                       // amount (1M wei)
-        11155111,                                      // Sepolia chain ID
+        0,                                              // test chain ID (0 = "test" validator)
         "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" // tx_hash
     );
 
@@ -177,7 +177,7 @@ TEST( BridgeRelayerTest, HandlesMaxUint64Amount )
         "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
         1,
         std::numeric_limits<uint64_t>::max(),
-        1,
+        0,  // test chain
         "1111111111111111111111111111111111111111111111111111111111111111"
     );
 
@@ -250,7 +250,7 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesZeroAmount )
         "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
         1,
         0,  // zero amount
-        1,
+        0,  // test chain
         "1111111111111111111111111111111111111111111111111111111111111111" );
 
     // Should not crash — zero amount is valid (though MintFunds may reject it)

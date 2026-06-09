@@ -17,6 +17,8 @@ namespace sgns::test
         {
             static TestMintInputValidator instance;
             IInputValidator::Register( "test", &instance );
+            IInputValidator::Register( "0", &instance );
+            return true;
         }
 
         bool ValidateUTXOParameters( const UTXOTxParameters & /*params*/,
