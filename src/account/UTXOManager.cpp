@@ -208,7 +208,8 @@ namespace sgns
     }
 
     outcome::result<bool> UTXOManager::ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
-                                                     const std::string                &address )
+                                                     const std::string                &address,
+                                                     UTXOType                          type )
     {
         bool consumed = true;
         {
@@ -222,14 +223,9 @@ namespace sgns
                 {
                     auto &entry = canonical_it->second;
                     if ( ( entry.state == UTXOState::UTXO_READY || entry.state == UTXOState::UTXO_RESERVED )
-                         && entry.utxo.GetOwnerAddress() == address )
+                         && entry.utxo.GetOwnerAddress() == address
+                         && entry.type == type )
                     {
-                        // UTXO_BRIDGE UTXOs must be RESERVED (via MintFunds→ReserveUTXOs)
-                        // before consumption — guards against non-mint transactions spending them.
-                        if ( entry.type == UTXOType::UTXO_BRIDGE && entry.state != UTXOState::UTXO_RESERVED )
-                        {
-                            continue;
-                        }
                         utxo_found  = true;
                         entry.state = UTXOState::UTXO_CONSUMED;
                     }
@@ -413,7 +409,9 @@ namespace sgns
         return std::make_pair( inputs, outputs );
     }
 
-    void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id )
+    void UTXOManager::ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                                     const std::string &reservation_id,
+                                     UTXOType type )
     {
         std::unique_lock lock( utxos_mutex_ );
 
@@ -423,7 +421,8 @@ namespace sgns
 
             if ( auto entry_it = utxo_outpoints_.find( outpoint ); entry_it != utxo_outpoints_.end() )
             {
-                if ( entry_it->second.state == UTXOState::UTXO_READY )
+                if ( entry_it->second.state == UTXOState::UTXO_READY &&
+                     entry_it->second.type == type )
                 {
                     entry_it->second.state = UTXOState::UTXO_RESERVED;
                 }
@@ -431,7 +430,9 @@ namespace sgns
         }
     }
 
-    void UTXOManager::RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id )
+    void UTXOManager::RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                                      const std::string &reservation_id,
+                                      UTXOType type )
     {
         std::unique_lock lock( utxos_mutex_ );
 
@@ -440,7 +441,9 @@ namespace sgns
             const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
 
             if ( auto entry_it = utxo_outpoints_.find( outpoint );
-                 entry_it != utxo_outpoints_.end() && entry_it->second.state == UTXOState::UTXO_RESERVED )
+                 entry_it != utxo_outpoints_.end() &&
+                 entry_it->second.state == UTXOState::UTXO_RESERVED &&
+                 entry_it->second.type == type )
             {
                 entry_it->second.state = UTXOState::UTXO_READY;
             }
@@ -987,10 +990,6 @@ namespace sgns
                 if ( entry.state != UTXOState::UTXO_READY )
                 {
                     continue;
-                }
-                if ( entry.type == UTXOType::UTXO_BRIDGE )
-                {
-                    continue; // UTXO_BRIDGE UTXOs are only spendable by MintTransactionV2
                 }
                 if ( !token_id.Equals( entry.utxo.GetTokenID() ) )
                 {

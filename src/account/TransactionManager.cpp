@@ -705,7 +705,7 @@ namespace sgns
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
         // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
-        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs, transaction_hash );
+        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs, transaction_hash, sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
 
         // Capture input info for potential rollback (mint_inputs may be moved below)
         auto rollback_inputs = mint_inputs;
@@ -727,7 +727,7 @@ namespace sgns
         }
         catch ( const std::exception &e )
         {
-            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs, transaction_hash );
+            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs, transaction_hash, sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
             TransactionManagerLogger()->error(
                 "[{} - full: {}] {}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
                 account_m->GetAddress().substr( 0, 8 ), full_node_m, __func__,
@@ -1869,7 +1869,7 @@ namespace sgns
 
             if ( !inputs.empty() )
             {
-                account_m->GetUTXOManager().ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress() );
+                account_m->GetUTXOManager().ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress(), sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
             }
 
             TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",

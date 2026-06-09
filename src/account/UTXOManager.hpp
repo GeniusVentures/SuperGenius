@@ -186,18 +186,23 @@ namespace sgns
          * @brief       Consume UTXOs from the account
          * @param[in]   infos Vector of UTXO information to be consumed
          * @param       address Address to consume UTXOs from
+         * @param[in]   type Only consume UTXOs of this type (default NORMAL)
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                            const std::string &address,
+                                            UTXOType type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Consume UTXOs from the default owner address tracked by this manager.
          * @param[in]   infos Vector of UTXO information to be consumed
+         * @param[in]   type Only consume UTXOs of this type (default NORMAL)
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                            UTXOType type = UTXOType::UTXO_NORMAL )
         {
-            return ConsumeUTXOs( infos, address_ );
+            return ConsumeUTXOs( infos, address_, type );
         }
 
         /**
@@ -271,15 +276,21 @@ namespace sgns
          * @brief       Marks inputs as reserved so they are not reused by concurrent transaction assembly.
          * @param[in]   inputs The list of UTXOs to reserve
          * @param[in]   reservation_id The ID for the reservation
+         * @param[in]   type Only reserve UTXOs of this type (default NORMAL)
          */
-        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
+        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                           const std::string &reservation_id,
+                           UTXOType type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Releases a previous reservation without consuming the inputs.
          * @param[in]   inputs The list of UTXOs to release
          * @param[in]   reservation_id The ID for the reservation
+         * @param[in]   type Only rollback UTXOs of this type (default NORMAL)
          */
-        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
+        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                            const std::string &reservation_id,
+                            UTXOType type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Verifies ownership and signatures for UTXO transaction parameters using the default address.
