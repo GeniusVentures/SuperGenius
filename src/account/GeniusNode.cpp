@@ -2168,10 +2168,8 @@ namespace sgns
         auto topic0_hash = eth::abi::event_signature_hash( event_sig );
         std::string topic0_hex = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
-        // D-20: Cap scan depth — default 10,000 blocks, configurable via DevConfig_st
-        const uint64_t scan_depth = dev_config_.bridge_catchup_scan_depth > 0
-                                        ? dev_config_.bridge_catchup_scan_depth
-                                        : 10000;
+        // D-20: Cap scan depth — default 10,000 blocks
+        const uint64_t scan_depth = kBridgeCatchupScanDepth;
 
         size_t total_backfilled = 0;
         size_t total_skipped    = 0;

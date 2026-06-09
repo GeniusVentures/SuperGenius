@@ -50,12 +50,12 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-    uint64_t      bridge_catchup_scan_depth = 10000; ///< Max historical blocks to scan for unprocessed bridge burns (D-20).
 } DevConfig_st;
 
 extern DevConfig_st DEV_CONFIG;
 
 constexpr uint64_t kDefaultTimestampToleranceMs = 300000;  // ±5 minutes
+constexpr uint64_t kBridgeCatchupScanDepth       = 10000;   // Max historical blocks to scan for unprocessed burns (D-20)
 
 #define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
 #define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
@@ -757,7 +757,7 @@ namespace sgns
          * via MintFunds() with UTXOType::UTXO_BRIDGE.
          *
          * Best-effort: failures on one chain do not block others.
-         * Scan depth capped at dev_config_.bridge_catchup_scan_depth blocks (default 10,000).
+         * Scan depth capped at kBridgeCatchupScanDepth blocks (currently 10,000).
          */
         void PerformStartupCatchupScan();
 
