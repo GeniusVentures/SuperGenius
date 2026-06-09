@@ -42,3 +42,5 @@ namespace sgns::test
         }
     };
 } // namespace sgns::test
+
+static inline bool kTestMintValidatorRegistered = sgns::test::TestMintInputValidator::RegisterTestValidator();
