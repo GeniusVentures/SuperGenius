@@ -22,6 +22,24 @@ IndentWidth: 4
 TabWidth: 4
 UseTab: Never
 
+# ─── Alignment ──────────────────────────────────────────────────
+# Guideline 11 - Use vertical alignment to ease scanning of declarations.
+AlignConsecutiveAssignments:
+  Enabled: true
+  AlignCompound: true
+AlignConsecutiveBitFields:
+  Enabled: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+
+
+# ─── Braces ──────────────────────────────────────────────────────
+# Standard 11 - While, for and if statements shall always use braces, even if they are not syntactically required.
+InsertBraces: true
+
+
 # ─── Column limit ───────────────────────────────────────────────
 # CLAUDE.md override of Handbook Guideline 15 (78 → 120)
 ColumnLimit: 120
@@ -53,12 +71,12 @@ SpacesInAngles: false
 
 # ─── Pointer / reference alignment ──────────────────────────────
 # Handbook Standard 23: val = *pFoo (no space between * and name)
-PointerAlignment: Left
-ReferenceAlignment: Left
+PointerAlignment: Right
+ReferenceAlignment: Right
 
 # ─── Access modifiers ───────────────────────────────────────────
 # Handbook Standard 79: public/protected/private flush with class keyword
-AccessModifierOffset: 0
+AccessModifierOffset: -4
 
 # ─── Switch / case ──────────────────────────────────────────────
 # Handbook Standard 18: indent cases one level from switch,
@@ -74,7 +92,7 @@ CompactNamespaces: false
 # ─── Include ordering ───────────────────────────────────────────
 # Handbook Guideline 70: system/third-party includes before local.
 # Preserve existing include groups; sort within each group only.
-SortIncludes: true
+SortIncludes: false
 IncludeBlocks: Preserve
 
 # ─── Line wrapping — binary operators ───────────────────────────
@@ -96,7 +114,7 @@ BreakBeforeTernaryOperators: true
 # Handbook Standard 69: list members in declaration order.
 # Handbook Guideline 41 (CLAUDE.md override): prefer init lists over assignment.
 ConstructorInitializerIndentWidth: 4
-BreakConstructorInitializers: BeforeComma
+BreakConstructorInitializers: AfterColon
 
 # ─── Trailing comments ──────────────────────────────────────────
 # Handbook Standard 5: closing-brace trailing comments indented one
@@ -106,3 +124,29 @@ SpacesBeforeTrailingComments: 1
 # ─── Empty lines ────────────────────────────────────────────────
 # Handbook Standard 29: blank lines before and after block comments.
 MaxEmptyLinesToKeep: 1
+
+AllowAllArgumentsOnNextLine: false
+AllowShortBlocksOnASingleLine: Empty
+AlwaysBreakTemplateDeclarations: true
+BraceWrapping:
+  AfterCaseLabel: true
+  BeforeLambdaBody: true
+BinPackArguments: false
+BreakStringLiterals: false
+
+FixNamespaceComments: false
+InsertNewlineAtEOF: true
+InsertTrailingCommas: Wrapped
+KeepEmptyLinesAtTheStartOfBlocks: false
+PackConstructorInitializers: NextLine
+PenaltyBreakAssignment: 190
+PenaltyBreakBeforeFirstCallParameter: 2
+ReflowComments: false
+RemoveParentheses: ReturnStatement
+RemoveSemicolon: true
+SeparateDefinitionBlocks: Always
+SpacesInParens: Custom
+SpacesInParensOptions:
+  InConditionalStatements: true
+  Other: true
+Standard: c++17
