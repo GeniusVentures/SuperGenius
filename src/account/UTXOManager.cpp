@@ -197,6 +197,7 @@ namespace sgns
                 if ( outpoint_it != outpoints.end() )
                 {
                     const OutPoint outpoint = *outpoint_it;
+                    local_reservations_.erase( outpoint );
                     utxo_outpoints_.erase( outpoint );
                     outpoints.erase( outpoint_it );
                 }
@@ -218,12 +219,16 @@ namespace sgns
             {
                 const OutPoint outpoint{ input_info.txid_hash_, input_info.output_idx_ };
                 bool           utxo_found = false;
+                std::string    stored_owner;
 
                 if ( auto canonical_it = utxo_outpoints_.find( outpoint ); canonical_it != utxo_outpoints_.end() )
                 {
                     auto &entry = canonical_it->second;
+                    stored_owner = entry.utxo.GetOwnerAddress();
+                    const bool owner_matches = entry.type == UTXOType::UTXO_BRIDGE ||
+                                               stored_owner == address;
                     if ( ( entry.state == UTXOState::UTXO_READY || entry.state == UTXOState::UTXO_RESERVED )
-                         && entry.utxo.GetOwnerAddress() == address
+                         && owner_matches
                          && entry.type == type )
                     {
                         utxo_found  = true;
@@ -231,17 +236,24 @@ namespace sgns
                     }
                 }
 
-                if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
+                const auto &indexed_owner = stored_owner.empty() ? address : stored_owner;
+                if ( auto address_it = address_outpoints_.find( indexed_owner );
+                     address_it != address_outpoints_.end() )
                 {
                     auto &outpoints_vector = address_it->second;
                     outpoints_vector.erase( std::remove( outpoints_vector.begin(), outpoints_vector.end(), outpoint ), outpoints_vector.end() );
                 }
 
+                local_reservations_.erase( outpoint );
                 if ( !utxo_found )
                 {
                     GeniusUTXO consumed_utxo( input_info.txid_hash_, input_info.output_idx_, 0, TokenID(), address );
-                    utxo_outpoints_[outpoint] =
-                        UTXOEntry{ UTXOState::UTXO_CONSUMED, consumed_utxo, 0, std::nullopt, std::nullopt };
+                    utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_CONSUMED,
+                                                          consumed_utxo,
+                                                          0,
+                                                          std::nullopt,
+                                                          std::nullopt,
+                                                          type };
                 }
 
                 consumed = consumed && utxo_found;
@@ -278,8 +290,7 @@ namespace sgns
         return {};
     }
 
-    std::vector<GeniusUTXO> UTXOManager::GetUTXOsForReservation( const std::string &address,
-                                                                 const std::string &reservation_id ) const
+    std::vector<GeniusUTXO> UTXOManager::GetUnconsumedUTXOs( const std::string &address ) const
     {
         std::shared_lock lock( utxos_mutex_ );
         if ( auto address_it = address_outpoints_.find( address ); address_it != address_outpoints_.end() )
@@ -293,16 +304,29 @@ namespace sgns
                 {
                     continue;
                 }
-                if ( utxo_it->second.state != UTXOState::UTXO_READY )
+                const auto &entry = utxo_it->second;
+                if ( entry.state == UTXOState::UTXO_CONSUMED )
                 {
                     continue;
                 }
-
-                result.push_back( utxo_it->second.utxo );
+                result.push_back( entry.utxo );
             }
             return result;
         }
         return {};
+    }
+
+    std::optional<GeniusUTXO> UTXOManager::GetUnconsumedUTXO( const base::Hash256 &txid,
+                                                              uint32_t             output_idx ) const
+    {
+        std::shared_lock lock( utxos_mutex_ );
+        const OutPoint   outpoint{ txid, output_idx };
+        auto             it = utxo_outpoints_.find( outpoint );
+        if ( it == utxo_outpoints_.end() || it->second.state == UTXOState::UTXO_CONSUMED )
+        {
+            return std::nullopt;
+        }
+        return it->second.utxo;
     }
 
     std::unordered_map<std::string, std::vector<UTXOManager::UTXOData>> UTXOManager::GetAllUTXOs() const
@@ -329,6 +353,7 @@ namespace sgns
             {
                 for ( const auto &outpoint : address_it->second )
                 {
+                    local_reservations_.erase( outpoint );
                     utxo_outpoints_.erase( outpoint );
                 }
                 address_it->second.clear();
@@ -342,8 +367,12 @@ namespace sgns
                 auto owned_utxo = utxo;
                 owned_utxo.SetOwnerAddress( address );
                 const OutPoint outpoint{ owned_utxo.GetTxID(), owned_utxo.GetOutputIdx() };
-                utxo_outpoints_[outpoint] =
-                    UTXOEntry{ UTXOState::UTXO_READY, owned_utxo, 0, std::nullopt, std::nullopt };
+                utxo_outpoints_[outpoint] = UTXOEntry{ UTXOState::UTXO_READY,
+                                                      owned_utxo,
+                                                      0,
+                                                      std::nullopt,
+                                                      std::nullopt,
+                                                      UTXOType::UTXO_NORMAL };
                 outpoints.push_back( outpoint );
             }
         }
@@ -425,6 +454,16 @@ namespace sgns
                      entry_it->second.type == type )
                 {
                     entry_it->second.state = UTXOState::UTXO_RESERVED;
+                    local_reservations_[outpoint] = reservation_id;
+                }
+                else if ( auto reservation_it = local_reservations_.find( outpoint );
+                          entry_it->second.state == UTXOState::UTXO_RESERVED &&
+                          reservation_it != local_reservations_.end() &&
+                          reservation_it->second != reservation_id )
+                {
+                    logger_->warn( "Outpoint {}:{} already reserved by another tx",
+                                   input_utxo.txid_hash_.toReadableString(),
+                                   input_utxo.output_idx_ );
                 }
             }
         }
@@ -440,12 +479,20 @@ namespace sgns
         {
             const OutPoint outpoint{ input_utxo.txid_hash_, input_utxo.output_idx_ };
 
+            auto reservation_it = local_reservations_.find( outpoint );
             if ( auto entry_it = utxo_outpoints_.find( outpoint );
                  entry_it != utxo_outpoints_.end() &&
                  entry_it->second.state == UTXOState::UTXO_RESERVED &&
-                 entry_it->second.type == type )
+                 entry_it->second.type == type &&
+                 ( reservation_id.empty() ||
+                   ( reservation_it != local_reservations_.end() &&
+                     reservation_it->second == reservation_id ) ) )
             {
                 entry_it->second.state = UTXOState::UTXO_READY;
+                if ( reservation_it != local_reservations_.end() )
+                {
+                    local_reservations_.erase( reservation_it );
+                }
             }
         }
     }
@@ -481,7 +528,8 @@ namespace sgns
                 return false;
             }
 
-            if ( utxo_it->second.state != UTXOState::UTXO_READY )
+            if ( utxo_it->second.state != UTXOState::UTXO_READY &&
+                 utxo_it->second.state != UTXOState::UTXO_RESERVED )
             {
                 logger_->warn( "Outpoint {}:{} is not spendable",
                                input.txid_hash_.toReadableString(),
@@ -608,6 +656,7 @@ namespace sgns
             db_ = std::move( db );
             utxo_outpoints_.clear();
             address_outpoints_.clear();
+            local_reservations_.clear();
         }
 
         auto db_handle = AcquireStorage();

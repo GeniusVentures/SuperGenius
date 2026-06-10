@@ -222,13 +222,19 @@ namespace sgns
         }
 
         /**
-         * @brief       Get UTXOs for a specific address that are reserved under a given reservation ID
+         * @brief       Get all unconsumed UTXOs for a specific address.
          * @param[in]   address The address to get UTXOs for
-         * @param[in]   reservation_id The reservation ID to filter UTXOs by
-         * @return      The vector of UTXOs for the address under the reservation ID
+         * @return      Ready and locally reserved UTXOs for the address
          */
-        std::vector<GeniusUTXO> GetUTXOsForReservation( const std::string &address,
-                                                        const std::string &reservation_id ) const;
+        std::vector<GeniusUTXO> GetUnconsumedUTXOs( const std::string &address ) const;
+
+        /**
+         * @brief Returns an unconsumed UTXO by its exact outpoint.
+         * @param[in] txid Transaction hash that created the UTXO
+         * @param[in] output_idx Output index within the transaction
+         * @return The UTXO when present and not consumed, otherwise std::nullopt
+         */
+        std::optional<GeniusUTXO> GetUnconsumedUTXO( const base::Hash256 &txid, uint32_t output_idx ) const;
 
         /**
          * @brief       Get all UTXOs tracked by the manager, grouped by owner address
@@ -450,6 +456,8 @@ namespace sgns
         mutable std::shared_mutex utxos_mutex_;       ///< Mutex for UTXO state structures
         UTXOOutPointMap           utxo_outpoints_;    ///< Maps outpoints to their UTXO entries for efficient lookup
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
+        /// Transient local ownership for reservations; never persisted or used for consensus validity.
+        std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
     };
 
 }

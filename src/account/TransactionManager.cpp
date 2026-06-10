@@ -1839,8 +1839,13 @@ namespace sgns
                                                full_node_m,
                                                input.output_idx_ );
         }
+        auto input_owner = transfer_tx->GetSrcAddress();
+        if ( utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
+        {
+            input_owner = transfer_tx->GetUncleHash();
+        }
         BOOST_OUTCOME_TRY(
-            account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
+            account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
         return outcome::success();
     }
 
@@ -3872,6 +3877,11 @@ namespace sgns
                 registry_epoch,
                 checkpoint_res.error().message() );
         }
+        TransactionManagerLogger()->debug( "[{:.8} - full: {}] {}: Transaction approved: {:.8}",
+                                           account_m->GetAddress(),
+                                           full_node_m,
+                                           __func__,
+                                           tx_hash );
         return ConsensusManager::Check::Approve;
     }
 
@@ -4783,17 +4793,32 @@ namespace sgns
     {
         if ( !tx )
         {
+            TransactionManagerLogger()->error( "[{.8} - full: {}] {}: Missing transaction",
+                                               account_m->GetAddress(),
+                                               full_node_m,
+                                               __func__ );
             return std::nullopt;
         }
 
         if ( !tx->HasUTXOParameters() )
         {
+            TransactionManagerLogger()->error( "[{.8} - full: {}] {}: No UTXO parameters for transaction {}",
+                                               account_m->GetAddress(),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
             return std::nullopt;
         }
 
         auto params_opt = tx->GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
+            TransactionManagerLogger()->error(
+                "[{.8} - full: {}] {}: Unexpected missing UTXO parameters for transaction {}",
+                account_m->GetAddress(),
+                full_node_m,
+                __func__,
+                tx->GetHash() );
             return std::nullopt;
         }
         const auto &inputs = params_opt->first;
@@ -4805,12 +4830,23 @@ namespace sgns
         };
 
         std::vector<SnapshotLeaf> leaves;
-        auto utxos = account_m->GetUTXOManager().GetUTXOsForReservation( tx->GetSrcAddress(), tx->GetHash() );
-        leaves.reserve( utxos.size() );
-        for ( const auto &utxo : utxos )
+        leaves.reserve( inputs.size() );
+        for ( const auto &input : inputs )
         {
+            auto utxo = account_m->GetUTXOManager().GetUnconsumedUTXO( input.txid_hash_, input.output_idx_ );
+            if ( !utxo.has_value() )
+            {
+                TransactionManagerLogger()->error(
+                    "[{:.8} - full: {}] {}: Missing input UTXO for transaction {} and key {}",
+                    account_m->GetAddress(),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash(),
+                    OutPointKey( input.txid_hash_, input.output_idx_ ) );
+                return std::nullopt;
+            }
             leaves.push_back(
-                { OutPointKey( utxo.GetTxID(), utxo.GetOutputIdx() ), SerializeUTXOLeafPayload( utxo ) } );
+                { OutPointKey( utxo->GetTxID(), utxo->GetOutputIdx() ), SerializeUTXOLeafPayload( utxo.value() ) } );
         }
 
         std::sort( leaves.begin(),
@@ -4834,6 +4870,13 @@ namespace sgns
             auto       it  = outpoint_to_index.find( key );
             if ( it == outpoint_to_index.end() )
             {
+                TransactionManagerLogger()->error(
+                    "[{:.8} - full: {}] {}: Missing outpoint for transaction {} and key {}",
+                    account_m->GetAddress(),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash(),
+                    key );
                 return std::nullopt;
             }
 
@@ -4871,11 +4914,22 @@ namespace sgns
             auto producer_tx = GetTransactionByHash( input.txid_hash_.toReadableString() );
             if ( !producer_tx )
             {
+                TransactionManagerLogger()->error( "[{:.8} - full: {}] {}: Missing producer transaction for input {}",
+                                                   account_m->GetAddress(),
+                                                   full_node_m,
+                                                   __func__,
+                                                   input.txid_hash_.toReadableString() );
                 return std::nullopt;
             }
             std::vector<GeniusUTXO> produced_outputs;
             if ( !ExtractProducedUTXOs( *producer_tx, produced_outputs ) )
             {
+                TransactionManagerLogger()->error(
+                    "[{:.8} - full: {}] {}: Could not extract produced outputs for producer transaction {}",
+                    account_m->GetAddress(),
+                    full_node_m,
+                    __func__,
+                    producer_tx->GetHash() );
                 return std::nullopt;
             }
 
@@ -4903,10 +4957,24 @@ namespace sgns
             auto produced_it = produced_outpoint_to_index.find( key );
             if ( produced_it == produced_outpoint_to_index.end() )
             {
+                TransactionManagerLogger()->error(
+                    "[{:.8} - full: {}] {}: Missing produced UTXO for transaction {} and key {}",
+                    account_m->GetAddress(),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash(),
+                    key );
                 return std::nullopt;
             }
             if ( produced_leaves[produced_it->second].payload != leaves[leaf_index].payload )
             {
+                TransactionManagerLogger()->error(
+                    "[{:.8} - full: {}] {}: Payload mismatch for produced UTXO for transaction {} and key {}",
+                    account_m->GetAddress(),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash(),
+                    key );
                 return std::nullopt;
             }
 
@@ -5244,7 +5312,16 @@ namespace sgns
                     auto params_opt = tx->GetUTXOParametersOpt();
                     if ( params_opt.has_value() )
                     {
-                        account_m->GetUTXOManager().RollbackUTXOs( params_opt->first, tx->GetHash() );
+                        if ( tx->GetType() == "mint-v2" )
+                        {
+                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
+                                                                       tx->dag_st.uncle_hash(),
+                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
+                        }
+                        else
+                        {
+                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first, tx->GetHash() );
+                        }
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
