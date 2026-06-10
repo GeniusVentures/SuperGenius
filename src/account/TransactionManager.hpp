@@ -295,8 +295,8 @@ namespace sgns
         struct TrackedTx
         {
             std::shared_ptr<GeniusTransaction> tx;
-            TransactionStatus                    status;
-            uint64_t                             cached_nonce; // Cache nonce to avoid dereferencing tx
+            TransactionStatus                  status;
+            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
         };
 
         struct AccountUTXOState
@@ -354,13 +354,13 @@ namespace sgns
          * @brief Returns the set of network IDs to monitor.
          *        On DEV_NET, also includes TEST_NET and MAIN_NET.
          */
-        static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
+        static std::vector<uint16_t> GetMonitoredNetworkIDs();
 
         /**
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
-        static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
+        static outcome::result<std::string> GetExpectedProofKey( const std::string                        &tx_key,
                                                                  const std::shared_ptr<GeniusTransaction> &tx );
 
         /**
@@ -446,7 +446,7 @@ namespace sgns
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
         std::shared_ptr<GeniusTransaction> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                              const std::string &address ) const;
+                                                                            const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
@@ -463,7 +463,7 @@ namespace sgns
         void TickOnce();
 
         outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
-                                                                          const ConsensusCertificate &certificate );
+                                                                         const ConsensusCertificate &certificate );
         /**
          * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
@@ -589,8 +589,7 @@ namespace sgns
          * has an earlier timestamp within tolerance (or unconditionally
          * if disabled).
          */
-        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
-                                       const GeniusTransaction &new_tx ) const;
+        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         static uint64_t GetCurrentTimestamp();
 
@@ -652,7 +651,6 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
-
         enum class WitnessValidationResult : uint8_t
         {
             VALID,
@@ -677,14 +675,14 @@ namespace sgns
             const std::shared_ptr<GeniusTransaction> &tx ) const;
         std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool                       ApplyTransactionToUTXOSnapshot( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                   std::vector<GeniusUTXO>                    &snapshot ) const;
-        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                     &subject,
+                                                                   std::vector<GeniusUTXO>                  &snapshot ) const;
+        WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                   &subject,
                                                                 const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus                           new_status );
-        bool HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
+                                                      TransactionStatus                         new_status );
+        bool                  HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
 
         bool IsGoingToOverwrite( const std::string &key ) const;
 
