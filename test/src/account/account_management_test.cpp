@@ -85,7 +85,7 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 
 TEST_F( AccountManagement, TransferAccount )
 {
-    ASSERT_TRUE( node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT ).has_value() );
+    ASSERT_TRUE( node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT ).has_value() );
     auto         balance = node_->GetBalance();
     TW::HDWallet wallet( 128, "" );
     auto         other_account_address = GeniusAccount::NewFromMnemonic( TOKEN_ID, wallet.getMnemonic(), path, true )
@@ -300,9 +300,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
 
     auto mint_result = node_requester->MintTokens( 50000000000,
                                                    sgns::test::NextMintSourceHash(),
-                                                   "",
+                                                   "test",
                                                    TOKEN_ID,
-                                                   "",
+                                                   "test",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 

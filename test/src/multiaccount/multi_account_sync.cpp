@@ -180,24 +180,24 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     // Mint some tokens
     auto mint_result = node_original->MintTokens( 100,
                                                   sgns::test::NextMintSourceHash(),
-                                                  "",
+                                                  "test",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                  "",
+                                                  "test",
                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
     mint_result = node_original->MintTokens( 2000,
                                              sgns::test::NextMintSourceHash(),
-                                             "",
+                                             "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "",
+                                             "test",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
     mint_result = node_original->MintTokens( 30,
                                              sgns::test::NextMintSourceHash(),
-                                             "",
+                                             "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "",
+                                             "test",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
@@ -219,9 +219,9 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     mint_result = node_duplicated->MintTokens( 60000,
                                                sgns::test::NextMintSourceHash(),
-                                               "",
+                                               "test",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "",
+                                               "test",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
 
@@ -313,9 +313,9 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
     auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
                                                        sgns::test::NextMintSourceHash(),
-                                                       "",
+                                                       "test",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       "",
+                                                       "test",
                                                        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 
@@ -627,7 +627,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto [epoch_before, cid_before] = load_registry_state();
 
-    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
     fmt::println( "Mint 1 succeeded" );
 
@@ -636,7 +636,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     std::tie( epoch_before, cid_before ) = load_registry_state();
 
-    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     fmt::println( "Mint 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -800,11 +800,11 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         }
     };
 
-    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
     assert_registry_immutable( "tx1" );
 
-    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "test", TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     assert_registry_immutable( "tx2" );
 

@@ -151,15 +151,15 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                                   "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
+                           "test",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
+                           "test",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
@@ -467,9 +467,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),
-                                              "",
+                           "test",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                              "",
+                           "test",
                                               std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";

@@ -140,15 +140,15 @@ TEST_F( ProcessingMultiTest, MintTokens )
 {
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
+                           "test",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "",
+                           "test",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
 }

@@ -91,9 +91,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     {
         auto mintRes = originalNode->MintTokens( 500000,
                                                  sgns::test::NextMintSourceHash(),
-                                                 "",
+                           "test",
                                                  TokenID::FromBytes( { 0x00 } ),
-                                                 "",
+                           "test",
                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();

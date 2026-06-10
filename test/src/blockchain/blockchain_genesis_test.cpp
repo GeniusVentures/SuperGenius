@@ -299,9 +299,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
                                                    sgns::test::NextMintSourceHash(),
-                                                   "",
+                           "test",
                                                    token_id,
-                                                   "",
+                           "test",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 

@@ -343,7 +343,7 @@ void BridgeE2ETest::SetUpTestSuite()
             sepolia_eps.push_back( ep );
         }
 
-        node_main->ConfigureRpcEndpoint( "11155111", sepolia_eps );
+        node_main->ConfigureRpcEndpoint( "test", sepolia_eps );
         spdlog::info( "bridge_e2e: configured {} Sepolia RPC endpoints", sepolia_eps.size() );
     }
 }
@@ -444,7 +444,7 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
     spdlog::info( "bridge_e2e: triggering MintTokens on node_main" );
     EXPECT_OUTCOME_TRUE(
         mint_result,
-        node_main->MintTokens( kMintAmount, tx_hash, "11155111", sgns::TokenID::FromBytes( { 0x00 } ), dest_addr, kMintTimeout ) );
+        node_main->MintTokens( kMintAmount, tx_hash, "test", sgns::TokenID::FromBytes( { 0x00 } ), dest_addr, kMintTimeout ) );
     spdlog::info( "bridge_e2e: MintTokens completed" );
 
     // --- Step 4: Poll for UTXO confirmation on node_main ---
@@ -502,7 +502,7 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
         mint_result_1,
         node_main->MintTokens( kSlotMintAmount,
                                 burn_hash_1,
-                                "11155111",
+                                "test",
                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                 dest_addr,
                                 kSlotKeyTimeout ) );
@@ -530,7 +530,7 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
         mint_result_2,
         node_main->MintTokens( kSlotMintAmount,
                                 burn_hash_2,
-                                "11155111",
+                                "test",
                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                 dest_addr,
                                 kSlotKeyTimeout ) );
@@ -579,7 +579,7 @@ TEST_F( BridgeE2ETest, ReplayRejection )
         first_result,
         node_main->MintTokens( kMintAmount,
                                 burn_tx_hash,
-                                "11155111",
+                                "test",
                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                 dest_addr,
                                 kReplayTimeout ) );
@@ -599,7 +599,7 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     // Step 4: Second mint with the same burn tx hash should be rejected
     auto second_result = node_main->MintTokens( kMintAmount,
                                                  burn_tx_hash,
-                                                 "11155111",
+                                                 "test",
                                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                                  dest_addr,
                                                  kReplayTimeout );
