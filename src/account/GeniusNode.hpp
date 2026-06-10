@@ -325,6 +325,7 @@ namespace sgns
                                       spdlog::level::level_enum level );
         bool         InitNetwork( uint16_t base_port, bool is_full_node );
         void         LoadCrdtConfig();
+        void         LoadLogConfig();
         bool         InitUPNP();
         bool         InitDatabase();
         bool         InitProcessingModules();
@@ -418,7 +419,7 @@ sinks:
 groups:
     - name: SuperGeniusNode
       sink: file
-      level: trace                         
+      level: error                         
       children:
         - name: libp2p
         - name: Gossip
