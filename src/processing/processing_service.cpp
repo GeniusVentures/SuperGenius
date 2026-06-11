@@ -193,13 +193,17 @@ namespace sgns::processing
 
     void ProcessingServiceImpl::OnProcessingError( const std::string &subTaskQueueId, const std::string &errorMessage )
     {
-        m_logger->error( "[{}] PROCESSING_ERROR reason: {} ID: {}", node_address_, errorMessage, subTaskQueueId );
+        m_logger->error( "[{:.8}] {} PROCESSING_ERROR reason: {} ID: {}",
+                         node_address_,
+                         __func__,
+                         errorMessage,
+                         subTaskQueueId );
 
         // Add this channel to blacklist to prevent repeated processing attempts
         {
             std::lock_guard lockBlacklist( m_mutexBlacklist );
             m_blacklistedChannels.insert( subTaskQueueId );
-            m_logger->info( "[{}] Blacklisted channel {} due to processing error (total blacklisted: {})",
+            m_logger->info( "[{:.8}] Blacklisted channel {} due to processing error (total blacklisted: {})",
                             node_address_,
                             subTaskQueueId,
                             m_blacklistedChannels.size() );
@@ -209,7 +213,11 @@ namespace sgns::processing
         {
             userCallbackError_( subTaskQueueId );
         }
-        m_subTaskEnqueuer->MarkTaskBad( subTaskQueueId );
+        if ( errorMessage.find( "timed out" ) == std::string::npos )
+        {
+            m_logger->error( "[{:.8}] {}: Marking task as bad {}", node_address_, __func__, subTaskQueueId );
+            m_subTaskEnqueuer->MarkTaskBad( subTaskQueueId );
+        }
         {
             std::scoped_lock lock( m_mutexNodes );
             m_processingNodes.erase( subTaskQueueId );

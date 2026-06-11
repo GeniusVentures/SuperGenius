@@ -184,12 +184,13 @@ namespace sgns::processing
 
         m_dltGrabSubTaskTimeout.expires_at( boost::posix_time::pos_infin );
 
-        m_logger->trace( "QUEUE_PROCESS_PENDING: for node {} at {}ms. is callback empty? {} current {} versus max {}",
-                         m_localNodeId,
-                         m_queue_timestamp_,
-                         m_onSubTaskGrabbedCallbacks.empty(),
-                         m_processedSubtasksInCurrentOwnership,
-                         m_maxSubtasksPerOwnership );
+        m_logger->trace(
+            "QUEUE_PROCESS_PENDING: for node {:.8} at {}ms. is callback empty? {} current {} versus max {}",
+            m_localNodeId,
+            m_queue_timestamp_,
+            m_onSubTaskGrabbedCallbacks.empty(),
+            m_processedSubtasksInCurrentOwnership,
+            m_maxSubtasksPerOwnership );
 
         // Update queue timestamp based on current ownership duration
         UpdateQueueTimestamp();
@@ -408,7 +409,7 @@ namespace sgns::processing
         m_dltQueueResponseTimeout.expires_at( boost::posix_time::pos_infin );
 
         bool queueInitialized = m_queue != nullptr;
-        bool queueChanged      = UpdateQueue( queue );
+        bool queueChanged     = UpdateQueue( queue );
 
         if ( queueChanged )
         {
@@ -423,7 +424,7 @@ namespace sgns::processing
                 m_ownership_last_delta_time_          = m_ownership_acquired_at_;
                 m_processedSubtasksInCurrentOwnership = 0; // Reset processed subtasks on new ownership
 
-                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED: by {} at {}ms", m_localNodeId, m_queue_timestamp_ );
+                m_logger->debug( "QUEUE_OWNERSHIP_ACQUIRED: by {:.8} at {}ms", m_localNodeId, m_queue_timestamp_ );
 
                 // If we have both available work and callbacks waiting to process it,
                 // cancel both timers to enable immediate processing
@@ -432,7 +433,7 @@ namespace sgns::processing
                     m_dltGrabSubTaskTimeout.cancel();
                     m_dltQueueResponseTimeout.cancel();
                     m_logger->debug(
-                        "CANCEL_ASYNC_TIMERS: {} is Canceling timers due to ownership acquisition and available work at {}ms",
+                        "CANCEL_ASYNC_TIMERS: {:.8} is Canceling timers due to ownership acquisition and available work at {}ms",
                         m_localNodeId,
                         m_queue_timestamp_ );
                     ProcessPendingSubTaskGrabbing(); // Start processing immediately
@@ -664,7 +665,7 @@ namespace sgns::processing
                          m_processedSubTaskIds.size(),
                          m_queue->subtasks().items_size(),
                          m_localNodeId );
-        return m_processedSubTaskIds.size() >= (size_t)m_queue->subtasks().items_size();
+        return m_processedSubTaskIds.size() >= (size_t) m_queue->subtasks().items_size();
     }
 
     void ProcessingSubTaskQueueManager::SetSubTaskQueueAssignmentEventSink(
@@ -754,9 +755,16 @@ namespace sgns::processing
 
     void ProcessingSubTaskQueueManager::CheckActiveCount()
     {
-        auto now      = std::chrono::steady_clock::now();
+        auto now                = std::chrono::steady_clock::now();
+        m_activeCountElapsed   += now - m_lastActiveCountCheck;
+        m_lastActiveCountCheck  = now;
+
         auto duration = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>( now - m_lastActiveCountCheck ).count() );
+            std::chrono::duration_cast<std::chrono::milliseconds>( m_activeCountElapsed ).count() );
+        m_logger->debug( "[{:.8} ] {}: Time elapsed since last reset on the processed tasks {}. Timeout configured {}",
+                         m_localNodeId,
+                         duration,
+                         m_waitTimeBeforeReset );
         auto activeNodeCount = m_queueChannel->GetActiveNodesCount();
         m_logger->info( "Active count is {} Duration is {}", activeNodeCount, duration );
         if ( activeNodeCount > 1 || ( m_queue->processing_queue().ownership_requests_size() > 0 ) )
@@ -765,6 +773,7 @@ namespace sgns::processing
             m_maxSubtasksPerOwnership = m_defaultMaxSubtasksPerOwnership;
             m_waitTimeBeforeReset     = 100;  // Short wait if other nodes are active
             m_initialDelayPassed      = true; // Consider initial delay passed when other nodes appear
+            m_activeCountElapsed      = std::chrono::steady_clock::duration::zero();
         }
         else
         {
@@ -774,6 +783,7 @@ namespace sgns::processing
                 // Reset processed subtasks and prepare for more processing
                 m_processedSubtasksInCurrentOwnership = 0;
                 m_maxSubtasksPerOwnership             = m_defaultMaxSubtasksPerOwnership;
+                m_activeCountElapsed                  = std::chrono::steady_clock::duration::zero();
 
                 // After initial delay, use shorter wait time
                 if ( !m_initialDelayPassed )
@@ -783,8 +793,6 @@ namespace sgns::processing
                 }
             }
         }
-        // Update last check time
-        m_lastActiveCountCheck = now;
     }
 
     uint64_t ProcessingSubTaskQueueManager::GetCurrentQueueTimestamp()
