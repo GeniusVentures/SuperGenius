@@ -118,6 +118,9 @@ namespace sgns
 
         std::string GetVersion();
 
+        /** Reloads log level overrides from log_config.json at runtime. */
+        void LoadLogConfig();
+
         /**
          * @brief       Fires of a Mint transaction and returns the transaction hash
          * @param[in]   amount Amount to be minted
@@ -325,7 +328,6 @@ namespace sgns
                                       spdlog::level::level_enum level );
         bool         InitNetwork( uint16_t base_port, bool is_full_node );
         void         LoadCrdtConfig();
-        void         LoadLogConfig();
         bool         InitUPNP();
         bool         InitDatabase();
         bool         InitProcessingModules();
