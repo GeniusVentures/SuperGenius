@@ -207,8 +207,10 @@ namespace sgns::processing
         const uint64_t m_delayBetweenProcessingMs;
 
         std::chrono::steady_clock::time_point m_lastActiveCountCheck = std::chrono::steady_clock::now();
-        uint64_t                              m_waitTimeBeforeReset  = 3000;  // Initial wait time of 3000ms
-        bool                                  m_initialDelayPassed   = false; // Track if initial delay has passed
+        /// Elapsed time since last active node count reset m_processedSubtasksInCurrentOwnership
+        std::chrono::steady_clock::duration   m_activeCountElapsed{}; 
+        uint64_t                              m_waitTimeBeforeReset = 3000;  // Initial wait time of 3000ms
+        bool                                  m_initialDelayPassed  = false; // Track if initial delay has passed
     };
 }
 
