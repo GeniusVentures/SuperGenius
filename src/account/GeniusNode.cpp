@@ -442,12 +442,14 @@ namespace sgns
                 // InitializeRpcEndpoints() and BridgeRelayer::Start() will run
                 // on the io_context independently. The node state machine proceeds
                 // through INITIALIZING_PROCESSING → READY without waiting.
-                boost::asio::post( *io_, [weak_self = weak_from_this()] {
-                    if ( auto strong = weak_self.lock() )
-                    {
-                        strong->InitializeAndStartBridge();
-                    }
-                } );
+                boost::asio::post( *io_,
+                                   [weak_self = weak_from_this()]
+                                   {
+                                       if ( auto strong = weak_self.lock() )
+                                       {
+                                           strong->InitializeAndStartBridge();
+                                       }
+                                   } );
 
                 break;
             }
@@ -575,6 +577,7 @@ namespace sgns
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
+        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::trace );
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -633,6 +636,7 @@ namespace sgns
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
+        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
@@ -661,7 +665,7 @@ namespace sgns
             if ( use_upnp_ )
             {
                 //ret = InitUPNP();
-                (void)InitUPNP(); // Ignore UPNP init result for now
+                (void) InitUPNP(); // Ignore UPNP init result for now
             }
 
             // Make a base58 out of our address
@@ -1998,7 +2002,7 @@ namespace sgns
             try
             {
                 auto bin_dir = boost::dll::program_location().parent_path();
-                chains_path   = std::filesystem::path( bin_dir.string() ) / "chains_config.json";
+                chains_path  = std::filesystem::path( bin_dir.string() ) / "chains_config.json";
             }
             catch ( const std::exception &e )
             {
@@ -2009,23 +2013,22 @@ namespace sgns
             }
         }
 
-        node_logger_->info( "InitializeRpcEndpoints: loading chain config from {}",
-                            chains_path.string() );
+        node_logger_->info( "InitializeRpcEndpoints: loading chain config from {}", chains_path.string() );
 
         // ── Read chains_config.json directly to discover bridge contracts (D-02) ──
         ChainRpcEndpointProvider::ChainIdMap chain_id_map;
-        std::vector<ChainContractPair> bridge_chains;
+        std::vector<ChainContractPair>       bridge_chains;
 
         // D-03: known numeric chain IDs for deployed chains
         static const std::unordered_map<std::string, uint64_t> kChainNameToId = {
-            { "ethereum-mainnet",          1 },
-            { "ethereum-sepolia",          11155111 },
-            { "bnb-smart-chain",           56 },
-            { "bnb-smart-chain-testnet",   97 },
-            { "polygon-mainnet",           137 },
-            { "polygon-amoy",              80002 },
-            { "base-mainnet",              8453 },
-            { "base-sepolia",              84532 },
+            { "ethereum-mainnet", 1 },
+            { "ethereum-sepolia", 11155111 },
+            { "bnb-smart-chain", 56 },
+            { "bnb-smart-chain-testnet", 97 },
+            { "polygon-mainnet", 137 },
+            { "polygon-amoy", 80002 },
+            { "base-mainnet", 8453 },
+            { "base-sepolia", 84532 },
         };
 
         ChainRpcProviderConfig config;
@@ -2045,8 +2048,7 @@ namespace sgns
             }
             else
             {
-                std::string json_text( ( std::istreambuf_iterator<char>( file ) ),
-                                       std::istreambuf_iterator<char>() );
+                std::string json_text( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
                 file.close();
 
                 auto parsed = boost::json::parse( json_text );
@@ -2075,8 +2077,7 @@ namespace sgns
                     auto id_it = kChainNameToId.find( chain_name );
                     if ( id_it == kChainNameToId.end() )
                     {
-                        node_logger_->warn( "InitializeRpcEndpoints: unknown chain '{}', skipping",
-                                            chain_name );
+                        node_logger_->warn( "InitializeRpcEndpoints: unknown chain '{}', skipping", chain_name );
                         continue;
                     }
 
@@ -2086,9 +2087,8 @@ namespace sgns
                     chain_id_map.emplace( chain_name, chain_id );
 
                     // D-05: compute event topic0 for catch-up scan and verification
-                    auto topic0_hash = eth::abi::event_signature_hash( event_sig );
-                    std::string topic0_hex = rlp::base::parse::hex_bytes(
-                        topic0_hash.data(), topic0_hash.size() );
+                    auto        topic0_hash = eth::abi::event_signature_hash( event_sig );
+                    std::string topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
                     config.bridge_contract_addresses[chain_id] = contract_addr;
                     config.bridge_event_topic0[chain_id]       = topic0_hex;
@@ -2096,15 +2096,17 @@ namespace sgns
                     bridge_chains.push_back( { chain_name, contract_addr, chain_id } );
 
                     node_logger_->info( "InitializeRpcEndpoints: chain {} (id={}) bridge={} topic0={}",
-                                        chain_name, chain_id, contract_addr, topic0_hex );
+                                        chain_name,
+                                        chain_id,
+                                        contract_addr,
+                                        topic0_hex );
                 }
             }
         }
         catch ( const std::exception &e )
         {
             // T-05-15: malformed JSON — graceful degradation
-            node_logger_->warn( "InitializeRpcEndpoints: failed to parse chains_config.json: {}",
-                                e.what() );
+            node_logger_->warn( "InitializeRpcEndpoints: failed to parse chains_config.json: {}", e.what() );
             // Continue without bridge — node still boots
         }
 
@@ -2116,9 +2118,7 @@ namespace sgns
         if ( !chain_id_map.empty() )
         {
             ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
-            provider.Initialize( transaction_manager_->GetPublicChainInputValidator(),
-                                 config,
-                                 node_logger_ );
+            provider.Initialize( transaction_manager_->GetPublicChainInputValidator(), config, node_logger_ );
 
             // Register PublicChainInputValidator for all configured chain IDs
             auto &pub_validator = transaction_manager_->GetPublicChainInputValidator();
@@ -2142,7 +2142,7 @@ namespace sgns
         // 1. Initialize RPC endpoints — wires PublicChainInputValidator and
         //    returns chain/contract pairs for chains with bridge addresses.
         auto bridge_chains = InitializeRpcEndpoints();
-        bridge_chains_ = bridge_chains;  // Store for catch-up scan (D-02)
+        bridge_chains_     = bridge_chains; // Store for catch-up scan (D-02)
 
         // 2. Start BridgeRelayer with discoverd chains (D-04: ordering guaranteed —
         //    Start() only called AFTER endpoints are wired).
@@ -2172,9 +2172,9 @@ namespace sgns
             return;
         }
 
-        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
-        auto topic0_hash = eth::abi::event_signature_hash( event_sig );
-        std::string topic0_hex = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+        const std::string event_sig   = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+        auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
+        std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
         // D-20: Cap scan depth — default 10,000 blocks
         const uint64_t scan_depth = kBridgeCatchupScanDepth;
@@ -2193,7 +2193,8 @@ namespace sgns
             if ( !rpc_url.has_value() )
             {
                 node_logger_->debug( "CatchUpScan: no RPC endpoint for chain {} (id={}) — skipping",
-                                     chain_entry.chain_name, chain_entry.chain_id );
+                                     chain_entry.chain_name,
+                                     chain_entry.chain_id );
                 continue;
             }
 
@@ -2211,17 +2212,16 @@ namespace sgns
             if ( !rlp::base::parse::hex_array( contract_addr_str, contract_addr ) )
             {
                 node_logger_->warn( "CatchUpScan: invalid bridge address {} for chain {}",
-                                    contract_addr_str, chain_entry.chain_name );
+                                    contract_addr_str,
+                                    chain_entry.chain_name );
                 continue;
             }
 
             // Parse topic0 hex to Hash256 for EventFilter
             rlp::Hash256 topic0_hash256{};
-            if ( !rlp::base::parse::hex_array(
-                     topic0_hex, topic0_hash256 ) )
+            if ( !rlp::base::parse::hex_array( topic0_hex, topic0_hash256 ) )
             {
-                node_logger_->warn( "CatchUpScan: invalid topic0 {} for chain {}",
-                                    topic0_hex, chain_entry.chain_name );
+                node_logger_->warn( "CatchUpScan: invalid topic0 {} for chain {}", topic0_hex, chain_entry.chain_name );
                 continue;
             }
 
@@ -2235,7 +2235,7 @@ namespace sgns
             uint64_t from_block = scan_depth > 0 ? scan_depth : 10000;
 
             // Create request — from_block=N means "scan last N blocks"; to_block=0 = "latest"
-            auto request = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
+            auto request  = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
             auto response = transport.call( request );
 
             if ( !response.has_value() )
@@ -2258,8 +2258,7 @@ namespace sgns
             // Process logs: for each burn event, check if already tracked and insert if missing
             for ( const auto &rpc_log : logs.value() )
             {
-                std::string tx_hash_hex = rlp::base::parse::hex_bytes(
-                    rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
+                std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
 
                 // Parse tx_hash_hex to Hash256 for UTXO query
                 base::Hash256 burn_tx_hash;
@@ -2277,15 +2276,13 @@ namespace sgns
                 if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
                 {
                     ++total_skipped;
-                    node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping",
-                                         tx_hash_hex );
+                    node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping", tx_hash_hex );
                     continue;
                 }
                 if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
                 {
                     ++total_skipped;
-                    node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping",
-                                         tx_hash_hex );
+                    node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping", tx_hash_hex );
                     continue;
                 }
 
@@ -2294,18 +2291,19 @@ namespace sgns
                 try
                 {
                     auto result = transaction_manager_->MintFunds(
-                        0,              // amount — derived from burn event data on full decode
-                        tx_hash_hex,    // source-chain tx hash
+                        0,           // amount — derived from burn event data on full decode
+                        tx_hash_hex, // source-chain tx hash
                         std::to_string( chain_entry.chain_id ),
                         dev_config_.TokenID,
-                        ""              // destination defaults to local account
+                        "" // destination defaults to local account
                     );
 
                     if ( result.has_value() )
                     {
                         ++total_backfilled;
                         node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
-                                            tx_hash_hex, chain_entry.chain_name );
+                                            tx_hash_hex,
+                                            chain_entry.chain_name );
                     }
                     else
                     {
@@ -2318,7 +2316,8 @@ namespace sgns
                 catch ( const std::exception &e )
                 {
                     node_logger_->debug( "CatchUpScan: MintFunds threw for tx {}: {} — skipping",
-                                         tx_hash_hex, e.what() );
+                                         tx_hash_hex,
+                                         e.what() );
                     ++total_skipped;
                 }
             }
@@ -2326,7 +2325,9 @@ namespace sgns
 
         node_logger_->info( "CatchUpScan: scanned {} chains — {} historical burns backfilled, "
                             "{} skipped (already processed)",
-                            chains_scanned, total_backfilled, total_skipped );
+                            chains_scanned,
+                            total_backfilled,
+                            total_skipped );
     }
 
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
@@ -2358,12 +2359,14 @@ namespace sgns
                 if ( !catchup_scan_done_ )
                 {
                     catchup_scan_done_ = true;
-                    boost::asio::post( *io_, [weak_self = weak_from_this()] {
-                        if ( auto strong = weak_self.lock() )
-                        {
-                            strong->PerformStartupCatchupScan();
-                        }
-                    } );
+                    boost::asio::post( *io_,
+                                       [weak_self = weak_from_this()]
+                                       {
+                                           if ( auto strong = weak_self.lock() )
+                                           {
+                                               strong->PerformStartupCatchupScan();
+                                           }
+                                       } );
                 }
 
                 if ( processing_service_ == nullptr )
