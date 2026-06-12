@@ -302,6 +302,76 @@ TEST_F( UTXOManagerTest, IsOutPointReservedRejectsNonexistent )
     EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 999 ) );
 }
 
+TEST_F( UTXOManagerTest, ReservedUTXORemainsVisibleToConsensusSnapshots )
+{
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_  = DUMMY_HASH;
+    input.output_idx_ = 0;
+
+    utxo_manager->ReserveUTXOs( { input }, "transfer-a" );
+
+    const auto consensus_snapshot = utxo_manager->GetUnconsumedUTXOs( std::string( PRIV_KEY ) );
+    ASSERT_EQ( consensus_snapshot.size(), 1u );
+    EXPECT_EQ( consensus_snapshot[0].GetOutPoint(), GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ).GetOutPoint() );
+}
+
+TEST_F( UTXOManagerTest, ExactOutpointLookupFindsEscrowOwnedUTXO )
+{
+    const std::string lock_address = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ), lock_address ).value() );
+
+    auto utxo = utxo_manager->GetUnconsumedUTXO( DUMMY_HASH, 0 );
+
+    ASSERT_TRUE( utxo.has_value() );
+    EXPECT_EQ( utxo->GetOwnerAddress(), lock_address );
+    EXPECT_EQ( utxo->GetAmount(), 100u );
+}
+
+TEST_F( UTXOManagerTest, RollbackOnlyReleasesMatchingReservation )
+{
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_  = DUMMY_HASH;
+    input.output_idx_ = 0;
+
+    utxo_manager->ReserveUTXOs( { input }, "transfer-a" );
+    utxo_manager->RollbackUTXOs( { input }, "transfer-b" );
+    EXPECT_TRUE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 0 ) );
+
+    utxo_manager->RollbackUTXOs( { input }, "transfer-a" );
+    EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 0 ) );
+}
+
+TEST_F( UTXOManagerTest, WinningPeerConsumesLocallyOwnedReservedBridgeBurn )
+{
+    const std::string local_detector = "peer-b";
+    const std::string winning_minter = "peer-a";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ),
+                                local_detector,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
+
+    InputUTXOInfo input;
+    input.txid_hash_  = DUMMY_HASH;
+    input.output_idx_ = 0;
+    utxo_manager->ReserveUTXOs( { input }, "peer-b-proposal", UTXOManager::UTXOType::UTXO_BRIDGE );
+
+    auto consumed = utxo_manager->ConsumeUTXOs(
+        { input }, winning_minter, UTXOManager::UTXOType::UTXO_BRIDGE );
+
+    ASSERT_TRUE( consumed.has_value() );
+    EXPECT_TRUE( consumed.value() );
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
+
+    utxo_manager->RollbackUTXOs(
+        { input }, "peer-b-proposal", UTXOManager::UTXOType::UTXO_BRIDGE );
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
+}
+
 TEST_F( UTXOManagerTest, PutUTXOWithBridgeType )
 {
     // Insert a UTXO with UTXO_BRIDGE type for a foreign address
