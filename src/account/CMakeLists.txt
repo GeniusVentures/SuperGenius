@@ -63,6 +63,7 @@ set(GENIUS_NODE_SOURCES
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
     GeniusInputValidator.cpp
+    MigrationInputValidator.cpp
     InputValidators.cpp
     PublicChainInputValidator.cpp
     TransactionManager.cpp

@@ -18,6 +18,7 @@
 #include "MintTransaction.hpp"
 #include "MintTransactionV2.hpp"
 #include "MigrationTransaction.hpp"
+#include "MigrationInputValidator.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
 #include "ProcessingTransaction.hpp"

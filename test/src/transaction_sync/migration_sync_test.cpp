@@ -10,6 +10,7 @@
 #include <boost/dll.hpp>
 
 #include "account/MigrationAllowList.hpp"
+#include "account/MigrationInputValidator.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
@@ -19,6 +20,12 @@ namespace fs = std::filesystem;
 
 using namespace sgns;
 
+TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
+{
+    const auto *validator = IInputValidator::Get( "migration" );
+    ASSERT_NE( validator, nullptr );
+    EXPECT_FALSE( validator->RequiresConsensusUTXOData() );
+}
 
 /**
  * @brief Test parameters for migration.
