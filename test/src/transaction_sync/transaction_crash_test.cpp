@@ -9,7 +9,9 @@
 #include <chrono>
 #include <cstdio>
 #include <boost/dll.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
@@ -52,6 +54,12 @@ namespace sgns
      */
         static void SetUpTestSuite()
         {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                {
+                    return std::make_shared<MemorySecureStorage>( identifier );
+                } );
+
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
             CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );

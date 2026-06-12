@@ -6,6 +6,7 @@ target_include_directories(transaction_sync_test PRIVATE ${AsyncIOManager_INCLUD
 
 target_link_libraries(transaction_sync_test
     genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)
@@ -46,6 +47,7 @@ addtest(transaction_crash_test
 
 target_link_libraries(transaction_crash_test
     genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)

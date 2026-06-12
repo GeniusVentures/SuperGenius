@@ -18,10 +18,12 @@
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
 
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include <TrustWalletCore/TWPrivateKey.h>
@@ -188,6 +190,12 @@ DevConfig_st BridgeE2ETest::DEV_CONFIG3 = { "0xcafe",
 
 void BridgeE2ETest::SetUpTestSuite()
 {
+    sgns::GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+        {
+            return std::make_shared<sgns::MemorySecureStorage>( identifier );
+        } );
+
     // Guard 1: opt-in env var
     if ( !std::getenv( "RUN_E2E_BRIDGE" ) )
     {

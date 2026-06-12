@@ -16,10 +16,12 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include "account/TransferTransaction.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "proof/TransferProof.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
@@ -56,6 +58,12 @@ namespace sgns
 
         static void SetUpTestSuite()
         {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                {
+                    return std::make_shared<MemorySecureStorage>( identifier );
+                } );
+
             std::string binary_path   = boost::dll::program_location().parent_path().string();
             DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
             DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";

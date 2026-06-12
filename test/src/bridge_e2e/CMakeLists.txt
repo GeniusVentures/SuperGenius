@@ -7,6 +7,7 @@ target_include_directories(bridge_e2e_test PRIVATE ${AsyncIOManager_INCLUDE_DIR}
 
 target_link_libraries(bridge_e2e_test
     genius_node_test
+    json_secure_storage
 )
 if(WIN32)
     target_link_options(bridge_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)

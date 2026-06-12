@@ -7,6 +7,7 @@ target_include_directories(processing_nodes_test PRIVATE ${AsyncIOManager_INCLUD
 
 target_link_libraries(processing_nodes_test
     genius_node_test
+    json_secure_storage
 )
 if(WIN32)
     target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)

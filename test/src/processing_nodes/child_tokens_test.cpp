@@ -18,7 +18,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 using namespace sgns;
 using namespace sgns::test;
@@ -39,6 +39,13 @@ namespace
                                                   bool               isProcessor     = false,
                                                   bool               setAsAuthorized = false )
     {
+
+      // Inject in-memory secure storage to avoid OS keychain prompts during tests
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            {
+                return std::make_shared<MemorySecureStorage>( identifier );
+            } );
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 

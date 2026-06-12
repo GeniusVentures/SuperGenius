@@ -7,9 +7,11 @@
 
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
@@ -31,6 +33,11 @@ protected:
 
     static void SetUpTestSuite()
     {
+        sgns::GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+            {
+                return std::make_shared<sgns::MemorySecureStorage>( identifier );
+            } );
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
 

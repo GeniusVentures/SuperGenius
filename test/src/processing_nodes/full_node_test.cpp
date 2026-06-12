@@ -6,8 +6,10 @@
 #include <atomic>
 #include <cstdio>
 #include <iostream>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
@@ -55,6 +57,12 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
 TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 {
+    GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+        {
+            return std::make_shared<MemorySecureStorage>( identifier );
+        } );
+
     std::cout << "****** Removing old node_recovery folder ****" << std::endl;
     {
         std::string binaryPath   = boost::dll::program_location().parent_path().string();
