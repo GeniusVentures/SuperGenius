@@ -2243,11 +2243,42 @@ namespace sgns
             filter.addresses.push_back( contract_addr );
             filter.topics.push_back( topic0_hash256 );
 
-            // from_block: cap at scan_depth blocks from latest (D-20)
-            // to_block: "latest" (indicated by 0 in make_get_logs_request)
-            uint64_t from_block = scan_depth > 0 ? scan_depth : 10000;
+            // D-20: Query current block number to compute scan start
+            // Scan from (current_block - scan_depth) to latest
+            constexpr uint64_t kBlockNumberRequestId = 99;
+            auto              block_number_req = eth::rpc::make_json_rpc_request( "eth_blockNumber",
+                                                                                   boost::json::array{},
+                                                                                   kBlockNumberRequestId );
+            auto              block_number_resp = transport.call( block_number_req );
+            uint64_t          current_block     = 0;
 
-            // Create request — from_block=N means "scan last N blocks"; to_block=0 = "latest"
+            if ( block_number_resp.has_value() )
+            {
+                auto parsed_block = eth::rpc::parse_block_number_response( *block_number_resp );
+                if ( parsed_block.has_value() )
+                {
+                    current_block = *parsed_block;
+                }
+            }
+
+            if ( current_block == 0 )
+            {
+                node_logger_->warn( "CatchUpScan: failed to query block number for chain {} — skipping",
+                                    chain_entry.chain_name );
+                continue;
+            }
+
+            // from_block: cap at scan_depth blocks from latest (D-20)
+            // to_block: 0 = "latest"
+            const uint64_t from_block = current_block > scan_depth ? current_block - scan_depth : 0;
+
+            node_logger_->debug( "CatchUpScan: scanning chain {} from block {} to latest (current={}, depth={})",
+                                 chain_entry.chain_name,
+                                 from_block,
+                                 current_block,
+                                 scan_depth );
+
+            // Create eth_getLogs request
             auto request  = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
             auto response = transport.call( request );
 
