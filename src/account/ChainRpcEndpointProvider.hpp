@@ -29,13 +29,13 @@ namespace sgns
     struct ChainRpcProviderConfig
     {
         /**
-         * @brief Filesystem path to the chainid.network chains.json file.
+         * @brief Filesystem path to the chainid.network ChainList JSON file (array format).
          *
          * This is the aggregated ChainList dataset that provides verified public
          * RPC endpoint URLs for every EVM chain.  The file is typically bundled
          * with the application or downloaded at first launch.
          */
-        std::filesystem::path chains_json_path;
+        std::filesystem::path chainlist_json_path;
 
         /**
          * @brief Per-chain direct (API-key) endpoints supplied by the app layer.
@@ -52,7 +52,7 @@ namespace sgns
         /**
          * @brief Bridge contract addresses keyed by numeric chain ID.
          *
-         * Sourced from chains_config.json's optional "bridge_contract_address" field.
+         * Sourced from bridge_chains_config.json's optional "bridge_contract_address" field.
          * Chains not present in this map have no bridge deployed (D-02: skip signal).
          */
         std::unordered_map<uint64_t, std::string> bridge_contract_addresses;
@@ -91,7 +91,7 @@ namespace sgns
         /**
          * @brief Loads RPC endpoints and wires them into the validator.
          *
-         * Public endpoints from the ChainList provider in @p config.chains_json_path
+         * Public endpoints from the ChainList provider in @p config.chainlist_json_path
          * contribute 25% consensus weight.  Direct endpoints from
          * @p config.direct_endpoints contribute 50% consensus weight.
          *

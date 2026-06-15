@@ -39,10 +39,10 @@ static const std::string kExpectedTopic0Hex =
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/// @brief Write a temporary chains_config.json for testing.
+/// @brief Write a temporary bridge_chains_config.json for testing.
 fs::path WriteTempChainsConfig( const std::string &json_content )
 {
-    auto tmp_path = fs::temp_directory_path() / "test_chains_config.json";
+    auto tmp_path = fs::temp_directory_path() / "test_bridge_chains_config.json";
     std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
     out << json_content;
     out.close();
@@ -118,7 +118,7 @@ TEST( StartupWiringTest, KnownChainMappingIsCorrect )
 
 TEST( StartupWiringTest, ParseChainsConfigWithBridgeContract )
 {
-    // Write a chains_config.json with a bridge_contract_address
+    // Write a bridge_chains_config.json with a bridge_contract_address
     const std::string json = R"({
         "ethereum-sepolia": {
             "name": "Ethereum Sepolia",
@@ -351,7 +351,7 @@ TEST( StartupWiringTest, ChainRpcProviderWithBridgeConfigReturnsChainPairs )
 
 TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
 {
-    // T-05-15: Malformed chains_config.json should be caught and handled
+    // T-05-15: Malformed bridge_chains_config.json should be caught and handled
     const std::string malformed = R"({ "ethereum-mainnet": { "name": "Ethereum", "chainId": 1, )";
     // missing closing braces — this is invalid JSON
 
@@ -388,7 +388,7 @@ TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
 
 TEST( StartupWiringTest, EmptyChainsConfigDoesNotCrash )
 {
-    // An empty chains_config.json file should be handled gracefully
+    // An empty bridge_chains_config.json file should be handled gracefully
     const std::string empty = "{}";
 
     auto path = WriteTempChainsConfig( empty );

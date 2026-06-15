@@ -1988,34 +1988,45 @@ namespace sgns
             return {};
         }
 
-        // ── Pitfall #3: Resolve chains_config.json path using writable base path ──
-        std::filesystem::path chains_path;
+        // ── Pitfall #3: Resolve bridge_chains_config.json path ──
+        // Priority: BaseWriteDir → binary-relative → CWD.
+        std::filesystem::path bridge_chains_path;
 
         // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
         if ( !dev_config_.BaseWritePath.empty() )
         {
-            chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "chains_config.json";
+            bridge_chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "bridge_chains_config.json";
         }
-        else
+
+        // Fallback: binary directory (finds CMake-installed or copied default)
+        if ( bridge_chains_path.empty() || !std::filesystem::exists( bridge_chains_path ) )
         {
-            // Fallback: binary directory (works on desktop platforms)
             try
             {
                 auto bin_dir = boost::dll::program_location().parent_path();
-                chains_path  = std::filesystem::path( bin_dir.string() ) / "chains_config.json";
+                auto candidate = std::filesystem::path( bin_dir.string() ) / "bridge_chains_config.json";
+                if ( std::filesystem::exists( candidate ) )
+                {
+                    bridge_chains_path = std::move( candidate );
+                }
             }
             catch ( const std::exception &e )
             {
                 node_logger_->warn( "InitializeRpcEndpoints: cannot determine binary location ({}), "
                                     "falling back to CWD",
                                     e.what() );
-                chains_path = std::filesystem::current_path() / "chains_config.json";
             }
         }
 
-        node_logger_->info( "InitializeRpcEndpoints: loading chain config from {}", chains_path.string() );
+        // Final fallback: current working directory
+        if ( bridge_chains_path.empty() || !std::filesystem::exists( bridge_chains_path ) )
+        {
+            bridge_chains_path = std::filesystem::current_path() / "bridge_chains_config.json";
+        }
 
-        // ── Read chains_config.json directly to discover bridge contracts (D-02) ──
+        node_logger_->info( "InitializeRpcEndpoints: loading bridge chain config from {}", bridge_chains_path.string() );
+
+        // ── Read bridge_chains_config.json directly to discover bridge contracts (D-02) ──
         ChainRpcEndpointProvider::ChainIdMap chain_id_map;
         std::vector<ChainContractPair>       bridge_chains;
 
@@ -2032,17 +2043,17 @@ namespace sgns
         };
 
         ChainRpcProviderConfig config;
-        config.chains_json_path = chains_path;
+        config.chainlist_json_path = bridge_chains_path;
 
         const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
 
         try
         {
-            std::ifstream file( chains_path, std::ios::binary );
+            std::ifstream file( bridge_chains_path, std::ios::binary );
             if ( !file.is_open() )
             {
                 node_logger_->warn( "InitializeRpcEndpoints: cannot open {} — bridge startup skipped",
-                                    chains_path.string() );
+                                    bridge_chains_path.string() );
                 // Continue with empty maps — RPC endpoints will still be configured
                 // if direct_endpoints are supplied.
             }
@@ -2106,7 +2117,7 @@ namespace sgns
         catch ( const std::exception &e )
         {
             // T-05-15: malformed JSON — graceful degradation
-            node_logger_->warn( "InitializeRpcEndpoints: failed to parse chains_config.json: {}", e.what() );
+            node_logger_->warn( "InitializeRpcEndpoints: failed to parse bridge_chains_config.json: {}", e.what() );
             // Continue without bridge — node still boots
         }
 
