@@ -131,9 +131,9 @@ namespace sgns
             CREATING = 0,              ///< Object construction is in progress.
             MIGRATING_DATABASE,        ///< Versioned database migrations are running.
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
-            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -357,6 +357,8 @@ namespace sgns
         {
             return dev_config_.TokenID;
         }
+
+        [[nodiscard]] float GetInitializationPercentage() const;
 
         /**
          * @brief Returns the current processing service status.

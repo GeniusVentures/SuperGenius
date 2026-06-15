@@ -1335,6 +1335,52 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
+    [[nodiscard]] float GeniusNode::GetInitializationPercentage() const
+    {
+        auto node_state = state_.load();
+
+        // Note: these weights are arbitrary and may be changed if some stage is taking too long
+        switch ( node_state )
+        {
+            case NodeState::CREATING:
+                return 0.0f;
+
+            case NodeState::MIGRATING_DATABASE:
+                return 0.30f;
+
+            case NodeState::INITIALIZING_DATABASE:
+                return 0.40f;
+
+            case NodeState::INITIALIZING_BLOCKCHAIN:
+                return 0.525f;
+
+            case NodeState::INITIALIZING_TRANSACTIONS:
+            {
+                // 0.60 -- 0.90 range with sub-progress from TransactionManager state
+                switch ( GetTransactionManagerState() )
+                {
+                    case TransactionManager::State::CREATING:
+                        return 0.60f;
+                    case TransactionManager::State::INITIALIZING:
+                        return 0.70f;
+                    case TransactionManager::State::SYNCING:
+                        return 0.80f;
+                    case TransactionManager::State::READY:
+                        return 0.90f;
+                }
+                return 0.60f;
+            }
+
+            case NodeState::INITIALIZING_PROCESSING:
+                return 0.945f;
+
+            case NodeState::READY:
+                return 1.0f;
+        }
+
+        return 0.0f;
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
                                                                                  const std::string        &destination,
                                                                                  TokenID                   token_id,
