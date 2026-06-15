@@ -87,6 +87,22 @@ namespace sgns
                                                     const boost::filesystem::path &base_path );
 
         /**
+         * @brief       Strips the "0x" prefix from an address if present.
+         *              Stored addresses are prefix-free; this normalizes user input for lookups.
+         * @param[in]   address The address string, optionally prefixed with "0x".
+         * @return      A string_view pointing past the "0x" prefix if one was present.
+         */
+        static std::string_view NormalizeAddress( std::string_view address ) noexcept;
+
+        /**
+         * @brief       Validates that a string is a valid 512-bit public key in hex format.
+         *              A valid key is exactly 128 hex characters with no prefix.
+         * @param[in]   key The key string to validate.
+         * @return      true if the key is a valid 128-character hex string, false otherwise.
+         */
+        static bool IsValidPublicKey( std::string_view key ) noexcept;
+
+        /**
          * @brief       Initialize the messenger for the account
          * @param[in]   pubsub pubsub instance
          * @return      true if succeeds, false otherwise
@@ -306,7 +322,7 @@ namespace sgns
             std::string hash;
         };
 
-        static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+        static constexpr size_t SIGNATURE_EXP_SIZE               = 64; ///< Expected size of the signature in bytes
         static constexpr size_t LOCAL_CONFIRMED_TX_HISTORY_LIMIT = 5;
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
@@ -328,7 +344,7 @@ namespace sgns
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::deque<ConfirmedTxRecord>                   local_confirmed_transactions_; ///< Recent local confirmed txs
-        std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
+        std::shared_ptr<AccountMessenger>               messenger_;                    ///< Messenger instance
         UTXOManager                                     utxo_manager_;
 
         // Nonce request tracking
@@ -351,12 +367,11 @@ namespace sgns
                                           get_transaction_cid_method_; ///< Function to get transaction CID by hash
         std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
-        static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
-        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX =
-            "gnus-local-confirmed-tx-history-";
+        static constexpr std::string_view NONCE_KEY_PREFIX                      = "gnus-confirmed-nonce-";
+        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX = "gnus-local-confirmed-tx-history-";
 
-        void LoadConfirmedNonces();
-        void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
+        void               LoadConfirmedNonces();
+        void               PersistConfirmedNonce( const std::string &address, uint64_t nonce );
         static std::string SerializeConfirmedTxHistory( const std::deque<ConfirmedTxRecord> &history );
         static std::deque<ConfirmedTxRecord> DeserializeConfirmedTxHistory( const std::string &serialized );
         void UpdateLocalConfirmedTxHistoryLocked( uint64_t nonce, const std::string &tx_hash );
