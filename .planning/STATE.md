@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: Bridge Integration
 current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
 status: context-gathered
-last_updated: "2026-06-04T19:30:00.000Z"
+last_updated: "2026-06-15T21:24:32.838Z"
 progress:
-  total_phases: 9
-  completed_phases: 6
-  total_plans: 18
-  completed_plans: 18
-  percent: 72
+  total_phases: 10
+  completed_phases: 7
+  total_plans: 15
+  completed_plans: 17
+  percent: 70
 ---
 
 # Project State: SuperGenius Bridge Integration
@@ -82,6 +82,7 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 - Phase 5: Wire BridgeRelayer::Start() and InitializeRpcEndpoints() into node startup, add mock RPC transport for testing
 - Phase 6 (follow-up): Tier 2 network voting weight classes with reputation scoring
 - See `.planning/notes/rpc-verification-tiers.md` for architecture decisions
+- Phase 7 added: Deferred Validation and Pending Proposal Lifecycle; renumbered from duplicate Track B Phase 4 to global Phase 7
 
 ## Phase 5 Progress
 

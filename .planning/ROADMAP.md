@@ -233,7 +233,29 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 
 - [x] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
 
-### Phase 4: Deferred Validation and Pending Proposal Lifecycle
+## Design Notes
+
+### Consensus Trust Model for Bridge Mints
+
+Public-chain mint validation differs from internal transfers: a compromised validator can skip RPC verification and vote `Approve` without detection. Reputation-based voting alone is insufficient — a quorum of colluding nodes could mint fake tokens.
+
+**Proposed safeguard:** Require at least **N validators** to independently and verifiably confirm the burn receipt via RPC before the certificate is produced. Each validator's vote should include a commitment to the RPC result (e.g., `sha256(rpc_response)`) so other nodes can detect fabricated votes. This moves trust from "reputation" to "independent verification count."
+
+**Current state:** `VerifyPublicChainSmartContract` queries 3+ RPC endpoints per validator. This protects against RPC endpoint compromise but does not protect against validator compromise. The consensus protocol layer needs an additional quorum rule for bridge mints.
+
+---
+
+## Out of Scope (v1)
+
+| Concern | Disposition |
+|---------|-------------|
+| Multi-provider quorum (`RpcQuorumClient`, `ProviderVote<T>`) | SuperGenius builds on evmrelay's endpoint pool |
+| `SecurityDecision` structured evidence | Deferred — validator uses simple majority |
+| P2P RLPx burn event gossip | Deferred — WebSocket/RPC polling for v1 |
+| `EthWatchService` integration into watcher | Deferred — uses dedicated BridgeRpcWatcher |
+| Burn contract deployment/management | External concern |
+
+### Phase 7: Deferred Validation and Pending Proposal Lifecycle
 
 **Goal**: Proposals that are temporarily unverifiable remain eligible for validation and voting when
 their dependencies arrive or transient failures recover, without retaining unbounded state or
@@ -262,31 +284,8 @@ misclassifying inconclusive consensus as transaction failure.
 
 **Plans**: 0 plans
 
-- [ ] TBD (run `$gsd-plan-phase 4` for the Consensus Voting Decentralization track)
-
----
-
-## Design Notes
-
-### Consensus Trust Model for Bridge Mints
-
-Public-chain mint validation differs from internal transfers: a compromised validator can skip RPC verification and vote `Approve` without detection. Reputation-based voting alone is insufficient — a quorum of colluding nodes could mint fake tokens.
-
-**Proposed safeguard:** Require at least **N validators** to independently and verifiably confirm the burn receipt via RPC before the certificate is produced. Each validator's vote should include a commitment to the RPC result (e.g., `sha256(rpc_response)`) so other nodes can detect fabricated votes. This moves trust from "reputation" to "independent verification count."
-
-**Current state:** `VerifyPublicChainSmartContract` queries 3+ RPC endpoints per validator. This protects against RPC endpoint compromise but does not protect against validator compromise. The consensus protocol layer needs an additional quorum rule for bridge mints.
-
----
-
-## Out of Scope (v1)
-
-| Concern | Disposition |
-|---------|-------------|
-| Multi-provider quorum (`RpcQuorumClient`, `ProviderVote<T>`) | SuperGenius builds on evmrelay's endpoint pool |
-| `SecurityDecision` structured evidence | Deferred — validator uses simple majority |
-| P2P RLPx burn event gossip | Deferred — WebSocket/RPC polling for v1 |
-| `EthWatchService` integration into watcher | Deferred — uses dedicated BridgeRpcWatcher |
-| Burn contract deployment/management | External concern |
+Plans:
+- [ ] TBD (run `$gsd-plan-phase 7` to break down)
 
 ---
 
@@ -303,4 +302,4 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
 | B. Consensus | 2. Conflict and Replay Hardening | Complete | impl verified 2026-06-09 |
 | B. Consensus | 3. Network Hardening | Complete | impl verified 2026-06-09 |
-| B. Consensus | 4. Deferred Validation Lifecycle | Not started | - |
+| B. Consensus | 7. Deferred Validation Lifecycle | Not started | - |
