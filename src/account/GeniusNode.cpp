@@ -2043,7 +2043,9 @@ namespace sgns
         };
 
         ChainRpcProviderConfig config;
-        config.chainlist_json_path = bridge_chains_path;
+        // chainlist_json_path is left empty — public endpoints come from a
+        // chainid.network chains.json source (downloaded or configured separately).
+        // Direct API-key endpoints are supplied via config.direct_endpoints.
 
         const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
 
