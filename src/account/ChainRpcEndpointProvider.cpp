@@ -44,13 +44,13 @@ namespace sgns
         std::unordered_map<uint64_t, std::vector<WeightedRpcEndpoint>> endpoints_by_chain;
 
         // ── Public endpoints from the ChainList provider ──────────────
-        if ( !config.chains_json_path.empty() )
+        if ( !config.chainlist_json_path.empty() )
         {
-            std::ifstream file( config.chains_json_path, std::ios::binary );
+            std::ifstream file( config.chainlist_json_path, std::ios::binary );
             if ( !file.is_open() )
             {
-                logger->warn( "ChainRpcEndpointProvider: chains.json not found at {}",
-                              config.chains_json_path.string() );
+                logger->warn( "ChainRpcEndpointProvider: chainlist JSON not found at {}",
+                              config.chainlist_json_path.string() );
                 // Continue — direct endpoints may still be available.
             }
             else
@@ -61,15 +61,15 @@ namespace sgns
 
                 if ( json_text.empty() )
                 {
-                    logger->warn( "ChainRpcEndpointProvider: chains.json is empty at {}",
-                                  config.chains_json_path.string() );
+                    logger->warn( "ChainRpcEndpointProvider: chainlist JSON is empty at {}",
+                                  config.chainlist_json_path.string() );
                 }
                 else
                 {
                     auto parse_result = eth::rpc::load_chainlist_from_json_text( json_text );
                     if ( !parse_result )
                     {
-                        logger->warn( "ChainRpcEndpointProvider: failed to parse chains.json: {}",
+                        logger->warn( "ChainRpcEndpointProvider: failed to parse chainlist JSON: {}",
                                       parse_result.error().field );
                     }
                     else

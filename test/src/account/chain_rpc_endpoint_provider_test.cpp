@@ -24,34 +24,22 @@ using namespace sgns;
 
 // ─── Test Helpers ───────────────────────────────────────────────────────────
 
-/// @brief Create a minimal chains.json content for testing.
+/// @brief Create a minimal chainid.network-format chainlist JSON (array root) for testing.
+/// @note bridge_contract_address is NOT included — it belongs in config.bridge_contract_addresses.
 std::string MakeChainsJson( const std::string &chain_name,
                             uint64_t           chain_id,
-                            const std::string &rpc_url,
-                            const std::string &bridge_addr = "" )
+                            const std::string &rpc_url )
 {
-    std::string json = R"({
-        ")" + chain_name +
-                       R"(": {
-            "name": ")" +
-                       chain_name + R"(",
-            "chainId": )" +
-                       std::to_string( chain_id ) + R"(,
-            "rpc": [")" +
-                       rpc_url + R"("])";
-    if ( !bridge_addr.empty() )
-    {
-        json += R"(,
-            "bridge_contract_address": ")" +
-                bridge_addr + R"(")";
-    }
-    json += R"(
-        }
-    })";
+    // Produce chainid.network array format: [{"name":"...","chainId":N,"rpc":["..."]}]
+    std::string json = R"([{
+        "name": ")" + chain_name + R"(",
+        "chainId": )" + std::to_string( chain_id ) + R"(,
+        "rpc": [")" + rpc_url + R"("]
+    }])";
     return json;
 }
 
-/// @brief Write a temporary chains.json file.
+/// @brief Write a temporary chainlist JSON file (chainid.network format).
 fs::path WriteTempJson( const std::string &content )
 {
     auto path = fs::temp_directory_path() / "test_chains_config_provider.json";
@@ -79,8 +67,8 @@ TEST( ChainRpcEndpointProviderTest, BridgeContractAddressPopulated )
     const std::string chain_name   = "ethereum-sepolia";
     const std::string rpc_url      = "https://sepolia.infura.io/v3/test";
 
-    // Write a chains.json with bridge_contract_address
-    auto json    = MakeChainsJson( chain_name, 11155111, rpc_url, expected_addr );
+    // Write a chainlist JSON with public RPC endpoint
+    auto json    = MakeChainsJson( chain_name, 11155111, rpc_url );
     auto tmpfile = WriteTempJson( json );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
@@ -89,7 +77,7 @@ TEST( ChainRpcEndpointProviderTest, BridgeContractAddressPopulated )
     chain_id_map.emplace( chain_name, 11155111 );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path             = tmpfile;
+    config.chainlist_json_path             = tmpfile;
     config.bridge_contract_addresses[11155111] = expected_addr;
 
     // Compute topic0 for the bridge event
@@ -132,7 +120,7 @@ TEST( ChainRpcEndpointProviderTest, EventTopic0Populated )
     const std::string chain_name   = "ethereum-mainnet";
     const std::string rpc_url      = "https://mainnet.infura.io/v3/test";
 
-    auto json    = MakeChainsJson( chain_name, 1, rpc_url, contract_addr );
+    auto json    = MakeChainsJson( chain_name, 1, rpc_url );
     auto tmpfile = WriteTempJson( json );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
@@ -146,7 +134,7 @@ TEST( ChainRpcEndpointProviderTest, EventTopic0Populated )
         rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path               = tmpfile;
+    config.chainlist_json_path               = tmpfile;
     config.bridge_contract_addresses[1]   = contract_addr;
     config.bridge_event_topic0[1]         = topic0_hex;
 
@@ -183,8 +171,8 @@ TEST( ChainRpcEndpointProviderTest, MissingBridgeFieldsDoesNotCrash )
     const std::string chain_name = "ethereum-sepolia";
     const std::string rpc_url    = "https://sepolia.infura.io/v3/test";
 
-    // chains.json WITHOUT bridge_contract_address
-    auto json    = MakeChainsJson( chain_name, 11155111, rpc_url, "" );
+    // chainlist JSON WITHOUT bridge fields in config
+    auto json    = MakeChainsJson( chain_name, 11155111, rpc_url );
     auto tmpfile = WriteTempJson( json );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
@@ -192,7 +180,7 @@ TEST( ChainRpcEndpointProviderTest, MissingBridgeFieldsDoesNotCrash )
     chain_id_map.emplace( chain_name, 11155111 );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = tmpfile;
+    config.chainlist_json_path = tmpfile;
     // Note: bridge_contract_addresses is NOT set for this chain
     // Note: bridge_event_topic0 is NOT set for this chain
 
@@ -220,12 +208,12 @@ TEST( ChainRpcEndpointProviderTest, MissingBridgeFieldsDoesNotCrash )
 
 TEST( ChainRpcEndpointProviderTest, EmptyChainConfigDoesNotCrash )
 {
-    // Config with an empty chains_json_path should be handled gracefully
+    // Config with an empty chainlist_json_path should be handled gracefully
     ChainRpcEndpointProvider::ChainIdMap chain_id_map;
     chain_id_map.emplace( "ethereum-mainnet", 1 );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = ""; // empty path — no file to read
+    config.chainlist_json_path = ""; // empty path — no file to read
 
     ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
     PublicChainInputValidator validator;
@@ -249,7 +237,7 @@ TEST( ChainRpcEndpointProviderTest, EmptyChainIdMapReturnsFalse )
     ChainRpcEndpointProvider::ChainIdMap empty_map;
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = "";
+    config.chainlist_json_path = "";
 
     ChainRpcEndpointProvider provider( std::move( empty_map ) );
     PublicChainInputValidator validator;
@@ -268,7 +256,7 @@ TEST( ChainRpcEndpointProviderTest, DirectEndpointsWired )
     chain_id_map.emplace( "ethereum-sepolia", 11155111 );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = ""; // no public endpoint file
+    config.chainlist_json_path = ""; // no public endpoint file
 
     // Provide direct endpoints
     config.direct_endpoints["11155111"] = {
@@ -295,26 +283,26 @@ TEST( ChainRpcEndpointProviderTest, DirectEndpointsWired )
 
 TEST( ChainRpcEndpointProviderTest, MultipleChainsBridgeConfig )
 {
-    // Multiple chains with bridge contracts — all should be configured
-    const std::string json = R"({
-        "ethereum-mainnet": {
+    // Multiple chains with bridge contracts — all should be configured.
+    // chainid.network array format — bridge_contract_address belongs in
+    // config.bridge_contract_addresses, not in the chainlist JSON.
+    const std::string json = R"([
+        {
             "name": "Ethereum Mainnet",
             "chainId": 1,
-            "rpc": ["https://mainnet.infura.io/v3/test"],
-            "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a"
+            "rpc": ["https://mainnet.infura.io/v3/test"]
         },
-        "ethereum-sepolia": {
+        {
             "name": "Ethereum Sepolia",
             "chainId": 11155111,
-            "rpc": ["https://sepolia.infura.io/v3/test"],
-            "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
+            "rpc": ["https://sepolia.infura.io/v3/test"]
         },
-        "no-bridge-chain": {
+        {
             "name": "No Bridge Chain",
             "chainId": 99999,
             "rpc": ["https://nobridge.example.com"]
         }
-    })";
+    ])";
 
     auto tmpfile = WriteTempJson( json );
     ASSERT_TRUE( fs::exists( tmpfile ) );
@@ -331,7 +319,7 @@ TEST( ChainRpcEndpointProviderTest, MultipleChainsBridgeConfig )
         rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = tmpfile;
+    config.chainlist_json_path = tmpfile;
     config.bridge_contract_addresses[1] =
         "0x614577036F0a024DBC1C88BA616b394DD65d105a";
     config.bridge_contract_addresses[11155111] =
@@ -369,7 +357,7 @@ TEST( ChainRpcEndpointProviderTest, BadChainIdDoesNotCrash )
     chain_id_map.emplace( "ethereum-sepolia", 11155111 );
 
     ChainRpcProviderConfig config;
-    config.chains_json_path = "";
+    config.chainlist_json_path = "";
     // Invalid chain ID string (not a number)
     config.direct_endpoints["not_a_number"] = {
         { "https://example.com/rpc", 50, {}, {} },

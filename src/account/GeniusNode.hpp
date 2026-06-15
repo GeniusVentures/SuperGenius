@@ -729,7 +729,7 @@ namespace sgns
          *
          * This is called once during startup after the transaction manager reaches
          * the READY state and before processing modules are initialized.  It reads
-         * @c chains_config.json to discover configured chains, maps their names to
+         * @c bridge_chains_config.json to discover configured chains, maps their names to
          * well-known EVM chain IDs, parses the ChainList data to extract verified
          * public RPC endpoint URLs, and calls @c PublicChainInputValidator::SetRpcEndpoints
          * for each configured chain.
