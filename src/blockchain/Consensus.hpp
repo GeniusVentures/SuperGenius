@@ -508,6 +508,7 @@ namespace sgns
 
     private:
         friend class ConsensusManagerTestAccess;
+        friend class ConsensusPendingLifecycleTestAccess;
         friend class ConsensusSlotKeyTestAccess;
 
         /**

@@ -10,10 +10,14 @@
 #include <gtest/gtest.h>
 
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
+#include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/wait_condition.hpp"
 
 #include <array>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -32,6 +36,60 @@ namespace sgns
         static constexpr const char *Scope()
         {
             return "consensus pending lifecycle";
+        }
+
+        static bool HasProposal( const std::shared_ptr<ConsensusManager> &manager, const std::string &proposal_id )
+        {
+            return manager && manager->proposals_.find( proposal_id ) != manager->proposals_.end();
+        }
+
+        static bool HasPendingProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                        const std::string                       &proposal_id )
+        {
+            return manager && manager->pending_proposals_.find( proposal_id ) != manager->pending_proposals_.end();
+        }
+
+        static bool LocalVoteCastForProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                              const std::string                       &proposal_id )
+        {
+            if ( !manager )
+            {
+                return false;
+            }
+            auto proposal_it = manager->proposals_.find( proposal_id );
+            if ( proposal_it == manager->proposals_.end() )
+            {
+                return false;
+            }
+            auto slot_it = manager->slot_states_.find( proposal_it->second.slot_key );
+            return slot_it != manager->slot_states_.end() && slot_it->second.voted;
+        }
+
+        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                    const ConsensusManager::Proposal        &proposal )
+        {
+            manager->HandleProposal( proposal );
+        }
+
+        static void AddPendingProposal( const std::shared_ptr<ConsensusManager>        &manager,
+                                        const ConsensusManager::Proposal               &proposal,
+                                        const std::string                              &subject_hash,
+                                        const ConsensusManager::ValidationResult       &validation_result )
+        {
+            manager->AddPendingProposal( proposal, subject_hash, validation_result );
+        }
+
+        static void ContinueProposalAfterSubject( const std::shared_ptr<ConsensusManager> &manager,
+                                                  const ConsensusManager::Proposal        &proposal )
+        {
+            manager->ContinueProposalAfterSubject( proposal );
+        }
+
+        static std::vector<ConsensusManager::Proposal> TakePendingProposals(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const std::string                       &subject_hash )
+        {
+            return manager->TakePendingProposals( subject_hash );
         }
     };
 } // namespace sgns
@@ -52,15 +110,90 @@ namespace
         "D-11 local capacity refusal without reject vote",
         "D-12 pending TTL expiry"
     };
+    const std::string kValidatorId = "validator-pending-lifecycle";
 
-    class ConsensusPendingLifecycleTest : public ::testing::Test
+    std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
     {
+        return std::vector<uint8_t>{ 0x07, 0x02 };
+    }
+
+    class ConsensusPendingLifecycleTest : public test::CRDTFixture
+    {
+    public:
+        ConsensusPendingLifecycleTest() : CRDTFixture( "consensus_pending_lifecycle_test" ) {}
+
     protected:
         static std::vector<std::string> PendingBehaviorNames()
         {
             return std::vector<std::string>(
                 kConsensusPendingBehaviors.begin(),
                 kConsensusPendingBehaviors.end() );
+        }
+
+        std::shared_ptr<sgns::ValidatorRegistry> MakeRegistry()
+        {
+            auto registry = sgns::ValidatorRegistry::New(
+                db_,
+                1,
+                1,
+                sgns::ValidatorRegistry::WeightConfig{},
+                kValidatorId,
+                []( const std::string &, std::function<void( outcome::result<std::string> )> cb )
+                { cb( outcome::failure( std::errc::not_supported ) ); } );
+            EXPECT_TRUE( registry );
+
+            auto store_result = registry->StoreGenesisRegistry(
+                kValidatorId,
+                DummySignature );
+            EXPECT_FALSE( store_result.has_error() );
+
+            ASSERT_WAIT_FOR_CONDITION(
+                [&registry]()
+                {
+                    auto load = registry->LoadRegistry();
+                    return load.has_value() && !registry->GetRegistryCid().empty();
+                },
+                std::chrono::milliseconds( 2000 ),
+                "registry initialized",
+                nullptr );
+
+            return registry;
+        }
+
+        std::shared_ptr<sgns::ConsensusManager> MakeManager(
+            const std::shared_ptr<sgns::ValidatorRegistry> &registry )
+        {
+            auto manager = sgns::ConsensusManager::New(
+                registry,
+                db_,
+                pubs_,
+                []( std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
+                { return DummySignature( std::move( payload ) ); },
+                kValidatorId );
+            EXPECT_TRUE( manager );
+            return manager;
+        }
+
+        static sgns::UTXOTransitionCommitment MakeTestCommitment()
+        {
+            sgns::UTXOTransitionCommitment commitment;
+            auto                          *consumed = commitment.add_consumed_outpoints();
+            consumed->set_tx_id_hash( std::string( 32, '\x01' ) );
+            consumed->set_output_index( 0 );
+            auto *produced = commitment.add_produced_outputs();
+            produced->set_tx_id_hash( std::string( 32, '\x02' ) );
+            produced->set_output_index( 0 );
+            produced->set_owner_address( "owner" );
+            produced->set_token_id( std::string( 32, '\x03' ) );
+            produced->set_amount( 1 );
+            commitment.set_consumed_outpoints_root( std::string( 32, '\x05' ) );
+            commitment.set_produced_outputs_root( std::string( 32, '\x04' ) );
+            return commitment;
+        }
+
+        static sgns::UTXOWitness MakeTestWitness()
+        {
+            return sgns::UTXOWitness{};
         }
     };
 } // namespace
@@ -147,4 +280,57 @@ TEST_F( ConsensusPendingLifecycleTest, PendingDependencyKeySupportsHashIdentity 
     EXPECT_EQ( index.size(), 2U );
     EXPECT_EQ( index.at( PendingDependencyKey::Certificate( "tx-a" ) ), 2 );
     EXPECT_EQ( index.at( PendingDependencyKey::Certificate( "tx-b" ) ), 7 );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, PendingProposalRemainsLocalUntilRetryApproval )
+{
+    /**
+     * Given a subject handler returns local Pending for a valid proposal,
+     * When the proposal is handled and later resumed with Approve,
+     * Then Pending emits no local vote and retry approval uses the normal
+     * proposal path exactly once.
+     */
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+
+    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+        kValidatorId,
+        7,
+        "0xpending-retry",
+        sgns::EmbeddedTransaction{},
+        MakeTestCommitment(),
+        MakeTestWitness() );
+    ASSERT_TRUE( subject_result.has_value() );
+
+    auto proposal_result = manager->CreateProposal(
+        subject_result.value(),
+        kValidatorId,
+        registry->GetRegistryCid(),
+        registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal_result.has_value() );
+
+    const auto proposal_id = proposal_result.value().proposal_id();
+    sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        proposal_result.value(),
+        "0xpending-retry",
+        sgns::ConsensusManager::ValidationResult::Pending(
+            { sgns::ConsensusManager::PendingDependencyKey::Certificate( "0xprevious" ) } ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+
+    const auto pending = sgns::ConsensusPendingLifecycleTestAccess::TakePendingProposals( manager, "0xpending-retry" );
+    ASSERT_EQ( pending.size(), 1U );
+    EXPECT_EQ( pending.front().proposal_id(), proposal_id );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, pending.front() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, proposal_id ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal_result.value() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
 }
