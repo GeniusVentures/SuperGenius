@@ -195,6 +195,8 @@ namespace sgns
                         self->ProcessCertificates();
                         self->UpdateCertificatesPending();
                     }
+                    self->ExpirePendingProposals();
+                    self->ProcessDuePendingRetries();
                     // Keep replaying unfinished certificate work while the node is running.
                     self->RecoverPendingCertificateWork();
                 }
@@ -720,9 +722,26 @@ namespace sgns
         return { PendingDependencyKey::Certificate( subject_hash ) };
     }
 
+    std::chrono::milliseconds ConsensusManager::NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const
+    {
+        if ( entry.retry_after.has_value() )
+        {
+            return entry.retry_after.value();
+        }
+        if ( pending_config_.scheduled_retry_delays.empty() )
+        {
+            return std::chrono::seconds( 10 );
+        }
+        const auto index = std::min( entry.scheduled_retry_count,
+                                     pending_config_.scheduled_retry_delays.size() - 1 );
+        return pending_config_.scheduled_retry_delays[index];
+    }
+
     bool ConsensusManager::AddPendingProposal( const Proposal           &proposal,
                                                const std::string        &subject_hash,
-                                               const ValidationResult   &validation_result )
+                                               const ValidationResult   &validation_result,
+                                               std::size_t               scheduled_retry_count,
+                                               std::chrono::steady_clock::time_point last_retry_at )
     {
         std::lock_guard lock( proposals_mutex_ );
         if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
@@ -747,11 +766,12 @@ namespace sgns
         entry.dependencies   = dependencies;
         entry.admitted_at    = now;
         entry.expires_at     = now + pending_config_.pending_ttl;
-        entry.next_retry_at  = validation_result.retry_after.has_value() ? now + validation_result.retry_after.value() : now;
-        entry.last_retry_at  = {};
+        entry.last_retry_at  = last_retry_at;
         entry.retry_after    = validation_result.retry_after;
         entry.retained_bytes = retained_bytes;
         entry.proposer_id    = proposer_id;
+        entry.scheduled_retry_count = scheduled_retry_count;
+        entry.next_retry_at  = now + NextPendingRetryDelayLocked( entry );
 
         pending_retained_bytes_ += retained_bytes;
         pending_count_by_proposer_[proposer_id] += 1;
@@ -760,6 +780,7 @@ namespace sgns
             pending_by_dependency_[dependency].insert( proposal.proposal_id() );
         }
         pending_entries_.emplace( proposal.proposal_id(), std::move( entry ) );
+        timer_cv_.notify_all();
         return true;
     }
 
@@ -846,6 +867,201 @@ namespace sgns
                                          proposal_id.substr( 0, 8 ),
                                          reason );
         return true;
+    }
+
+    void ConsensusManager::RetryPendingProposal( const Proposal      &proposal,
+                                                 std::string_view     reason,
+                                                 std::size_t          scheduled_retry_count,
+                                                 std::chrono::steady_clock::time_point last_retry_at )
+    {
+        SubjectHandler subject_handler;
+        {
+            std::shared_lock lock( subject_handlers_mutex_ );
+            auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            if ( handler_it == subject_handlers_.end() )
+            {
+                ConsensusManagerLogger()->error(
+                    "{}: rejected: subject handler missing type_hash={} reason={}",
+                    __func__,
+                    base::hex_lower( gsl::span<const uint8_t>(
+                        reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                        proposal.subject().subject_type_hash().hash().size() ) ),
+                    reason );
+                return;
+            }
+            subject_handler = handler_it->second;
+        }
+
+        auto subject_result = subject_handler( proposal.subject() );
+        if ( subject_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={} reason={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             reason );
+            return;
+        }
+
+        const auto &validation_result = subject_result.value();
+        if ( validation_result.check == Check::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={} reason={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             reason );
+            return;
+        }
+
+        if ( validation_result.check == Check::Stalled )
+        {
+            ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled proposal_id={} reason={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ),
+                                            reason );
+            return;
+        }
+
+        if ( validation_result.check == Check::Pending )
+        {
+            auto subject_hash_result = GetSubjectHash( proposal.subject() );
+            if ( subject_hash_result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={} reason={}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 reason );
+                return;
+            }
+            AddPendingProposal( proposal,
+                                subject_hash_result.value(),
+                                validation_result,
+                                scheduled_retry_count,
+                                last_retry_at );
+            return;
+        }
+
+        ContinueProposalAfterSubject( proposal );
+    }
+
+    outcome::result<void> ConsensusManager::WakePendingDependency( const PendingDependencyKey &dependency )
+    {
+        struct DependencyRetryCandidate
+        {
+            Proposal    proposal;
+            std::size_t scheduled_retry_count = 0;
+        };
+
+        std::vector<DependencyRetryCandidate> retry_now;
+        const auto                            now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            dep_it = pending_by_dependency_.find( dependency );
+            if ( dep_it == pending_by_dependency_.end() )
+            {
+                return outcome::success();
+            }
+
+            const std::vector<std::string> proposal_ids( dep_it->second.begin(), dep_it->second.end() );
+            for ( const auto &proposal_id : proposal_ids )
+            {
+                auto entry_it = pending_entries_.find( proposal_id );
+                if ( entry_it == pending_entries_.end() )
+                {
+                    continue;
+                }
+                if ( now >= entry_it->second.expires_at )
+                {
+                    continue;
+                }
+                if ( entry_it->second.last_retry_at != std::chrono::steady_clock::time_point{} &&
+                     now - entry_it->second.last_retry_at < pending_config_.min_dependency_retry_interval )
+                {
+                    entry_it->second.next_retry_at =
+                        entry_it->second.last_retry_at + pending_config_.min_dependency_retry_interval;
+                    continue;
+                }
+
+                DependencyRetryCandidate candidate;
+                candidate.proposal = entry_it->second.proposal;
+                candidate.scheduled_retry_count = entry_it->second.scheduled_retry_count;
+                entry_it->second.last_retry_at = now;
+                retry_now.push_back( std::move( candidate ) );
+                RemovePendingProposalLocked( proposal_id, "dependency-wake" );
+            }
+        }
+
+        for ( const auto &candidate : retry_now )
+        {
+            RetryPendingProposal( candidate.proposal,
+                                  "dependency-wake",
+                                  candidate.scheduled_retry_count,
+                                  now );
+        }
+        return outcome::success();
+    }
+
+    void ConsensusManager::ProcessDuePendingRetries()
+    {
+        struct RetryCandidate
+        {
+            Proposal    proposal;
+            std::size_t scheduled_retry_count = 0;
+        };
+
+        std::vector<RetryCandidate> retry_now;
+        const auto                  now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto it = pending_entries_.begin(); it != pending_entries_.end(); )
+            {
+                if ( now < it->second.next_retry_at || now >= it->second.expires_at )
+                {
+                    ++it;
+                    continue;
+                }
+
+                const auto proposal_id = it->first;
+                RetryCandidate candidate;
+                candidate.proposal = it->second.proposal;
+                candidate.scheduled_retry_count = it->second.scheduled_retry_count + 1;
+                it->second.last_retry_at = now;
+                retry_now.push_back( std::move( candidate ) );
+                ++it;
+                RemovePendingProposalLocked( proposal_id, "scheduled-retry" );
+            }
+        }
+
+        for ( const auto &candidate : retry_now )
+        {
+            RetryPendingProposal( candidate.proposal, "scheduled-retry", candidate.scheduled_retry_count, now );
+        }
+    }
+
+    void ConsensusManager::ExpirePendingProposals()
+    {
+        std::vector<Proposal> expired;
+        const auto            now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto it = pending_entries_.begin(); it != pending_entries_.end(); )
+            {
+                if ( now < it->second.expires_at )
+                {
+                    ++it;
+                    continue;
+                }
+                const auto proposal_id = it->first;
+                expired.push_back( it->second.proposal );
+                ++it;
+                RemovePendingProposalLocked( proposal_id, "ttl-expired" );
+            }
+        }
+
+        for ( const auto &proposal : expired )
+        {
+            FireProposalCleanupCallbacks( proposal );
+            ClearProposalSlot( proposal );
+        }
     }
 
     void ConsensusManager::AddPendingVote( const Vote &vote )
@@ -1641,7 +1857,6 @@ namespace sgns
                                                  __func__,
                                                  subject_hash.value().substr( 0, 8 ),
                                                  state.proposal.proposal_id().substr( 0, 8 ) );
-                FireProposalCleanupCallbacks( state.proposal );
                 ClearProposalSlot( state.proposal );
                 continue;
             }
@@ -1726,7 +1941,6 @@ namespace sgns
             }
 
             (void)SubmitCertificate( certificate_result.value() );
-            FireProposalCleanupCallbacks( state.proposal );
             ClearProposalSlot( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
@@ -1838,6 +2052,12 @@ namespace sgns
 
         auto certificate_check = ValidateCertificate( certificate );
 
+        if ( certificate_check == Check::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
+            return;
+        }
+
         if ( certificate_check == Check::Stalled )
         {
             ConsensusManagerLogger()->error(
@@ -1858,6 +2078,7 @@ namespace sgns
             {
                 (void)certificate_work_journal_->MarkDone( key );
                 ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
+                (void)WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
                 return;
             }
             handler = it->second;
@@ -1885,6 +2106,7 @@ namespace sgns
             return;
         }
         (void)certificate_work_journal_->MarkDone( key );
+        (void)WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
     }
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const

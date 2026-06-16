@@ -1750,6 +1750,12 @@ namespace sgns
         return consensus_manager_->ResumeProposalHandling( hash );
     }
 
+    outcome::result<void> Blockchain::TryResumePendingDependency(
+        const ConsensusManager::PendingDependencyKey &dependency )
+    {
+        return consensus_manager_->WakePendingDependency( dependency );
+    }
+
     bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
     {
         return consensus_manager_->CheckCertificateForSubject( subject_hash );

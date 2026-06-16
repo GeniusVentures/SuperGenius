@@ -185,6 +185,13 @@ namespace sgns
             std::size_t               max_pending_per_proposer       = 64;
             std::size_t               max_retained_pending_bytes     = 64ULL * 1024ULL * 1024ULL;
             std::chrono::milliseconds pending_ttl                    = std::chrono::minutes( 3 );
+            std::chrono::milliseconds min_dependency_retry_interval  = std::chrono::seconds( 1 );
+            std::vector<std::chrono::milliseconds> scheduled_retry_delays = {
+                std::chrono::seconds( 1 ),
+                std::chrono::seconds( 2 ),
+                std::chrono::seconds( 5 ),
+                std::chrono::seconds( 10 )
+            };
         };
 
         /// @brief      Alias for a subject handler method type
@@ -478,6 +485,12 @@ namespace sgns
          */
         outcome::result<void> ResumeProposalHandling( const std::string &subject_hash );
         /**
+         * @brief Retries pending proposals waiting on a typed dependency key.
+         * @param[in] dependency Dependency key that became available.
+         * @return outcome::success on success, otherwise an error.
+         */
+        outcome::result<void> WakePendingDependency( const PendingDependencyKey &dependency );
+        /**
          * @brief Processes queued certificate work entries.
          */
         void ProcessCertificates();
@@ -602,6 +615,7 @@ namespace sgns
             std::optional<std::chrono::milliseconds>  retry_after;
             std::size_t                               retained_bytes = 0;
             std::string                               proposer_id;
+            std::size_t                               scheduled_retry_count = 0;
         };
 
         /**
@@ -717,7 +731,9 @@ namespace sgns
          */
         bool AddPendingProposal( const Proposal &proposal,
                                  const std::string &subject_hash,
-                                 const ValidationResult &validation_result = ValidationResult::Pending() );
+                                 const ValidationResult &validation_result = ValidationResult::Pending(),
+                                 std::size_t scheduled_retry_count = 0,
+                                 std::chrono::steady_clock::time_point last_retry_at = {} );
         /**
          * @brief Removes one pending proposal and its local indexes/accounting.
          * @param[in] proposal_id Proposal identifier.
@@ -737,6 +753,13 @@ namespace sgns
                                             const std::string &proposer_id ) const;
         std::vector<PendingDependencyKey> NormalizePendingDependencies( const std::string &subject_hash,
                                                                         const ValidationResult &validation_result ) const;
+        std::chrono::milliseconds NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const;
+        void RetryPendingProposal( const Proposal &proposal,
+                                   std::string_view reason,
+                                   std::size_t scheduled_retry_count = 0,
+                                   std::chrono::steady_clock::time_point last_retry_at = {} );
+        void ProcessDuePendingRetries();
+        void ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
          * @param[in] vote Vote to queue.
