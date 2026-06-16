@@ -58,7 +58,9 @@ eth::WatchEventNotification MakeBurnNotification(
     uint64_t           token_id_val,
     uint64_t           amount_val,
     uint64_t           src_chain_id,
-    const std::string &tx_hash_hex )
+    uint64_t           dest_chain_id,
+    const std::string &tx_hash_hex,
+    const std::string &sgns_dest_hex )
 {
     eth::WatchEventNotification notification;
 
@@ -75,14 +77,26 @@ eth::WatchEventNotification MakeBurnNotification(
     //   values[2]: amount (uint256)
     //   values[3]: srcChainID (uint256)
     //   values[4]: destChainID (uint256)
+    //   values[5]: sgnsDestination (bytes) — 64-byte SuperGenius public key
     notification.values.push_back( sender_addr );
     notification.values.push_back( intx::uint256( token_id_val ) );
     notification.values.push_back( intx::uint256( amount_val ) );
     notification.values.push_back( intx::uint256( src_chain_id ) );
-    notification.values.push_back( intx::uint256( 0 ) ); // destChainID (unused)
+    notification.values.push_back( intx::uint256( dest_chain_id ) );
+
+    // sgnsDestination as bytes (64-byte SuperGenius public key)
+    eth::codec::ByteBuffer sgns_dest_bytes;
+    sgns_dest_bytes.resize( sgns_dest_hex.size() / 2 );
+    rlp::base::parse::hex_array( sgns_dest_hex, sgns_dest_bytes );
+    notification.values.push_back( std::move( sgns_dest_bytes ) );
 
     return notification;
 }
+
+/// @brief 64-byte SuperGenius public key for test destinations.
+static const std::string kTestSgnsDestination =
+    "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc"
+    "2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6";
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -96,11 +110,14 @@ TEST( BridgeRelayerTest, ExtractsBurnDetailsFromNotification )
         42,                                            // token_id
         1000000,                                       // amount (1M wei)
         11155111,                                      // Sepolia chain ID
-        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" // tx_hash
+        8453,                                          // Base mainnet dest chain ID
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef12", // tx_hash (64 hex)
+        "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc"
+        "2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6"  // sgnsDestination (64 bytes)
     );
 
     // Verify notification was constructed correctly
-    ASSERT_EQ( notification.values.size(), 5U );
+    ASSERT_EQ( notification.values.size(), 6U );
 
     // Verify sender is an address (20 bytes)
     const auto &sender = std::get<eth::codec::Address>( notification.values[0] );
@@ -117,6 +134,14 @@ TEST( BridgeRelayerTest, ExtractsBurnDetailsFromNotification )
     // Verify srcChainID
     const auto &src_chain = std::get<intx::uint256>( notification.values[3] );
     EXPECT_EQ( src_chain, intx::uint256( 11155111 ) );
+
+    // Verify destChainID
+    const auto &dest_chain = std::get<intx::uint256>( notification.values[4] );
+    EXPECT_EQ( dest_chain, intx::uint256( 8453 ) );
+
+    // Verify sgnsDestination bytes (64 bytes)
+    const auto &sgns_dest = std::get<eth::codec::ByteBuffer>( notification.values[5] );
+    EXPECT_EQ( sgns_dest.size(), 64U );
 
     // Verify tx_hash is populated
     EXPECT_FALSE( notification.event.tx_hash.empty() );
@@ -180,7 +205,9 @@ TEST( BridgeRelayerTest, HandlesMaxUint64Amount )
         1,
         std::numeric_limits<uint64_t>::max(),
         1,
-        "1111111111111111111111111111111111111111111111111111111111111111"
+        8453,
+        "1111111111111111111111111111111111111111111111111111111111111111",
+        kTestSgnsDestination
     );
 
     const auto &amount = std::get<intx::uint256>( notification.values[2] );
@@ -190,10 +217,9 @@ TEST( BridgeRelayerTest, HandlesMaxUint64Amount )
     EXPECT_LE( amount, std::numeric_limits<uint64_t>::max() );
 }
 
-TEST( BridgeRelayerTest, AddressToHexRoundTrip )
+TEST( BridgeRelayerTest, HexAddressRoundTrip )
 {
-    // Verify hex address parsing and round-trip
-
+    // Verify 20-byte EVM address round-trip via parse::hex_array / hex_array_string.
     eth::Address addr{};
     bool parsed = rlp::base::parse::hex_array( "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045", addr );
     ASSERT_TRUE( parsed );
@@ -202,6 +228,20 @@ TEST( BridgeRelayerTest, AddressToHexRoundTrip )
     // Verify round-trip (hex_array_string includes "0x" prefix)
     std::string hex = rlp::base::parse::hex_array_string( addr );
     EXPECT_EQ( hex.size(), 42U ); // "0x" + 40 hex chars
+}
+
+TEST( BridgeRelayerTest, SgnsDestinationHexRoundTrip )
+{
+    // Verify 64-byte SuperGenius destination round-trip via hex_bytes / hex_array.
+    eth::codec::ByteBuffer bytes;
+    bytes.resize( 64 );
+    bool parsed = rlp::base::parse::hex_array( kTestSgnsDestination, bytes );
+    ASSERT_TRUE( parsed );
+    EXPECT_EQ( bytes.size(), 64U );
+
+    // Verify round-trip via hex_bytes
+    std::string hex = rlp::base::parse::hex_bytes( bytes.data(), bytes.size() );
+    EXPECT_EQ( hex.size(), 128U ); // 64 bytes → 128 hex chars (no "0x" prefix)
 }
 
 // ─── OnWatchEvent Behavior Tests ────────────────────────────────────────────
@@ -219,7 +259,9 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesNullTransactionManager )
         42,
         1000000,
         11155111,
-        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" );
+        8453,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        kTestSgnsDestination );
 
     // Should not crash — logs error and returns
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
@@ -227,7 +269,7 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesNullTransactionManager )
 
 TEST( BridgeRelayerTest, OnWatchEventRejectsInsufficientValues )
 {
-    // Verify that OnWatchEvent rejects notifications with fewer than 5 ABI values.
+    // Verify that OnWatchEvent rejects notifications with fewer than 6 ABI values.
 
     auto logger = base::createLogger( "bridge_relayer_test" );
     auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
@@ -235,7 +277,7 @@ TEST( BridgeRelayerTest, OnWatchEventRejectsInsufficientValues )
     eth::WatchEventNotification notification;
     notification.values.push_back( intx::uint256( 1 ) );
     notification.values.push_back( intx::uint256( 2 ) );
-    // Only 2 values — needs 5
+    // Only 2 values — needs 6
 
     // Should not crash — logs error and returns
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
@@ -253,7 +295,9 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesZeroAmount )
         1,
         0,  // zero amount
         1,
-        "1111111111111111111111111111111111111111111111111111111111111111" );
+        8453,
+        "1111111111111111111111111111111111111111111111111111111111111111",
+        kTestSgnsDestination );
 
     // Should not crash — zero amount is valid (though MintFunds may reject it)
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
@@ -280,6 +324,7 @@ TEST( BridgeRelayerTest, OnWatchEventHandlesAmountOverflow )
     notification.values.push_back( intx::uint256( 1 ) << 255 ); // amount overflows uint64
     notification.values.push_back( intx::uint256( 1 ) );  // srcChainID
     notification.values.push_back( intx::uint256( 0 ) );  // destChainID
+    notification.values.push_back( eth::codec::ByteBuffer( 64, 0 ) );  // sgnsDestination (dummy)
 
     // Should not crash — overflow detected, logs error and returns
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
@@ -447,7 +492,9 @@ TEST( BridgeRelayerTest, OnWatchEventLogsChainName )
         42,
         1000000,
         11155111,
-        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890" );
+        8453,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        kTestSgnsDestination );
 
     // Should not crash; chain_name is passed through and logged
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification, "specific-chain" ) );

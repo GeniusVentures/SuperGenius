@@ -24,7 +24,7 @@ TEST(MessagingWatcherTest, EvmMessagingWatcherInitialization) {
 
     // Define topics to watch
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256)"}
+        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
     };
 
     // Create the EvmMessagingWatcher
@@ -58,7 +58,7 @@ TEST(MessagingWatcherTest, StartAndStopWatching) {
 
     // Define topics to watch
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256)"}
+        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
     };
 
     // Create the EvmMessagingWatcher
@@ -106,7 +106,7 @@ TEST(MessagingWatcherTest, MultipleWatchersManagement) {
 
     // Define topics to watch for both configurations
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters1 = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256)"}
+        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
     };
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters2 = {
         {"AnotherEvent(address,uint256)"}

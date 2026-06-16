@@ -29,10 +29,10 @@ using namespace sgns;
 // ─── Test Constants ─────────────────────────────────────────────────────────
 
 static const std::string kBridgeEventSignature =
-    "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+    "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
 
 // Expected topic0 hex for BridgeSourceBurned (keccak256 of the signature)
-// Computed via keccak256("BridgeSourceBurned(address,uint256,uint256,uint256,uint256)")
+// Computed via keccak256("BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)")
 static const std::string kExpectedTopic0Hex =
     "0x"  // placeholder — verified against actual hash in test
     ;
