@@ -98,8 +98,86 @@ namespace sgns
             Stalled  ///< Object evaluation is stalled
         };
 
+        /**
+         * @brief Local-only dependency key for deferred subject validation.
+         */
+        struct PendingDependencyKey
+        {
+            enum class Type
+            {
+                Certificate, ///< Waiting for a certificate by subject/transaction hash.
+            };
+
+            Type        type{ Type::Certificate };
+            std::string value;
+
+            bool operator==( const PendingDependencyKey &other ) const
+            {
+                return type == other.type && value == other.value;
+            }
+
+            static PendingDependencyKey Certificate( std::string subject_hash )
+            {
+                return PendingDependencyKey{ Type::Certificate, std::move( subject_hash ) };
+            }
+        };
+
+        /**
+         * @brief Hash functor for PendingDependencyKey unordered containers.
+         */
+        struct PendingDependencyKeyHash
+        {
+            std::size_t operator()( const PendingDependencyKey &key ) const
+            {
+                const auto type_hash  = std::hash<int>{}( static_cast<int>( key.type ) );
+                const auto value_hash = std::hash<std::string>{}( key.value );
+                return type_hash ^ ( value_hash + 0x9e3779b97f4a7c15ULL + ( type_hash << 6 ) + ( type_hash >> 2 ) );
+            }
+        };
+
+        /**
+         * @brief Local structured validation result for subject handlers.
+         *
+         * Pending metadata is local bookkeeping only. It is not serialized,
+         * broadcast, or counted toward quorum.
+         */
+        struct ValidationResult
+        {
+            Check                                      check{ Check::Reject };
+            std::vector<PendingDependencyKey>          dependencies;
+            std::optional<std::chrono::milliseconds>   retry_after;
+
+            ValidationResult() = default;
+            ValidationResult( Check result ) : check( result ) {}
+
+            static ValidationResult Approve()
+            {
+                return ValidationResult{ Check::Approve };
+            }
+
+            static ValidationResult Reject()
+            {
+                return ValidationResult{ Check::Reject };
+            }
+
+            static ValidationResult Stalled()
+            {
+                return ValidationResult{ Check::Stalled };
+            }
+
+            static ValidationResult Pending(
+                std::vector<PendingDependencyKey>        deps  = {},
+                std::optional<std::chrono::milliseconds> retry = std::nullopt )
+            {
+                ValidationResult result{ Check::Pending };
+                result.dependencies = std::move( deps );
+                result.retry_after  = retry;
+                return result;
+            }
+        };
+
         /// @brief      Alias for a subject handler method type
-        using SubjectHandler = std::function<outcome::result<Check>( const Subject &subject )>;
+        using SubjectHandler = std::function<outcome::result<ValidationResult>( const Subject &subject )>;
         /// @brief      Alias for a certificate handler method type
         using CertificateSubjectHandler =
             std::function<outcome::result<Check>( const std::string &subject_hash, const Certificate &certificate )>;
@@ -603,7 +681,9 @@ namespace sgns
          * @param[in] proposal Proposal to queue.
          * @param[in] subject_hash Subject hash dependency key.
          */
-        void AddPendingProposal( const Proposal &proposal, const std::string &subject_hash );
+        void AddPendingProposal( const Proposal &proposal,
+                                 const std::string &subject_hash,
+                                 const ValidationResult &validation_result = ValidationResult::Pending() );
         /**
          * @brief Removes and returns pending proposals for a subject hash.
          * @param[in] subject_hash Subject hash key.
@@ -722,6 +802,10 @@ namespace sgns
         std::unordered_map<std::string, Proposal> pending_proposals_; ///< Pending proposals awaiting subject readiness.
         std::unordered_map<std::string, std::vector<std::string>>
             pending_by_subject_hash_;                                        ///< Proposal ids queued by subject hash.
+        std::unordered_map<std::string, std::vector<PendingDependencyKey>>
+            pending_dependencies_; ///< Local pending dependency metadata keyed by proposal id.
+        std::unordered_map<std::string, std::optional<std::chrono::milliseconds>>
+            pending_retry_after_; ///< Optional local retry metadata keyed by proposal id.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.

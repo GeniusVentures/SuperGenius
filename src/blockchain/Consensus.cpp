@@ -672,7 +672,9 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::AddPendingProposal( const Proposal &proposal, const std::string &subject_hash )
+    void ConsensusManager::AddPendingProposal( const Proposal           &proposal,
+                                               const std::string        &subject_hash,
+                                               const ValidationResult   &validation_result )
     {
         std::lock_guard lock( proposals_mutex_ );
         if ( pending_proposals_.find( proposal.proposal_id() ) != pending_proposals_.end() )
@@ -689,6 +691,8 @@ namespace sgns
                                          subject_hash.substr( 0, 8 ),
                                          proposal.proposal_id().substr( 0, 8 ) );
         pending_proposals_.emplace( proposal.proposal_id(), proposal );
+        pending_dependencies_[proposal.proposal_id()] = validation_result.dependencies;
+        pending_retry_after_[proposal.proposal_id()]  = validation_result.retry_after;
         pending_by_subject_hash_[subject_hash].push_back( proposal.proposal_id() );
     }
 
@@ -709,6 +713,8 @@ namespace sgns
             {
                 result.push_back( prop_it->second );
                 pending_proposals_.erase( prop_it );
+                pending_dependencies_.erase( proposal_id );
+                pending_retry_after_.erase( proposal_id );
             }
         }
         ConsensusManagerLogger()->debug( "{}: Taking pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
@@ -1324,6 +1330,8 @@ namespace sgns
             std::lock_guard lock( proposals_mutex_ );
             pending_votes_.erase( proposal.proposal_id() );
             pending_proposals_.erase( proposal.proposal_id() );
+            pending_dependencies_.erase( proposal.proposal_id() );
+            pending_retry_after_.erase( proposal.proposal_id() );
             return;
         }
 
@@ -1354,7 +1362,8 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == Check::Reject )
+        const auto &validation_result = subject_result.value();
+        if ( validation_result.check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                              __func__,
@@ -1363,7 +1372,16 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == Check::Pending )
+        if ( validation_result.check == Check::Stalled )
+        {
+            ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
+                                            __func__,
+                                            GetPrintableSubjectHash( proposal.subject() ),
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+
+        if ( validation_result.check == Check::Pending )
         {
             {
                 std::lock_guard lock( proposals_mutex_ );
@@ -1379,7 +1397,7 @@ namespace sgns
                                              __func__,
                                              GetPrintableSubjectHash( proposal.subject() ),
                                              proposal.proposal_id().substr( 0, 8 ) );
-            AddPendingProposal( proposal, subject_hash.value() );
+            AddPendingProposal( proposal, subject_hash.value(), validation_result );
             return;
         }
 
@@ -1427,7 +1445,8 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == Check::Reject )
+            const auto &validation_result = subject_result.value();
+            if ( validation_result.check == Check::Reject )
             {
                 ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                                  __func__,
@@ -1436,7 +1455,16 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == Check::Pending )
+            if ( validation_result.check == Check::Stalled )
+            {
+                ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
+                                                __func__,
+                                                subject_hash.substr( 0, 8 ),
+                                                proposal.proposal_id().substr( 0, 8 ) );
+                continue;
+            }
+
+            if ( validation_result.check == Check::Pending )
             {
                 auto subject_hash_result = GetSubjectHash( proposal.subject() );
                 if ( subject_hash_result.has_error() )
@@ -1450,7 +1478,7 @@ namespace sgns
                                                  __func__,
                                                  subject_hash.substr( 0, 8 ),
                                                  proposal.proposal_id().substr( 0, 8 ) );
-                AddPendingProposal( proposal, subject_hash_result.value() );
+                AddPendingProposal( proposal, subject_hash_result.value(), validation_result );
                 continue;
             }
 
@@ -2112,6 +2140,8 @@ namespace sgns
         {
             proposals_.erase( proposal_id );
             pending_proposals_.erase( proposal_id );
+            pending_dependencies_.erase( proposal_id );
+            pending_retry_after_.erase( proposal_id );
             pending_votes_.erase( proposal_id );
         }
 

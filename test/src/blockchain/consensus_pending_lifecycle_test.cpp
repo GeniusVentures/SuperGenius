@@ -13,7 +13,9 @@
 #include "blockchain/impl/proto/Consensus.pb.h"
 
 #include <array>
+#include <chrono>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace sgns
@@ -77,4 +79,72 @@ TEST_F( ConsensusPendingLifecycleTest, HarnessIsDiscoverable )
     EXPECT_STREQ( sgns::ConsensusPendingLifecycleTestAccess::Scope(),
                   "consensus pending lifecycle" );
     EXPECT_FALSE( sgns::NONCE_SUBJECT_TYPE.empty() );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, ValidationResultPreservesTerminalChecks )
+{
+    /**
+     * Given the local structured validation result contract,
+     * When terminal outcomes are constructed,
+     * Then each result preserves the legacy consensus check value without
+     * adding local pending dependency metadata.
+     */
+    const auto approve = sgns::ConsensusManager::ValidationResult::Approve();
+    const auto reject  = sgns::ConsensusManager::ValidationResult::Reject();
+    const auto stalled = sgns::ConsensusManager::ValidationResult::Stalled();
+
+    EXPECT_EQ( approve.check, sgns::ConsensusManager::Check::Approve );
+    EXPECT_TRUE( approve.dependencies.empty() );
+    EXPECT_FALSE( approve.retry_after.has_value() );
+
+    EXPECT_EQ( reject.check, sgns::ConsensusManager::Check::Reject );
+    EXPECT_TRUE( reject.dependencies.empty() );
+
+    EXPECT_EQ( stalled.check, sgns::ConsensusManager::Check::Stalled );
+    EXPECT_TRUE( stalled.dependencies.empty() );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, PendingResultCarriesTypedCertificateDependencyAndRetryMetadata )
+{
+    /**
+     * Given a proposal waiting for a predecessor certificate,
+     * When Pending is constructed with a Certificate dependency key,
+     * Then the typed dependency and optional retry metadata stay local to the
+     * structured result.
+     */
+    using PendingDependencyKey = sgns::ConsensusManager::PendingDependencyKey;
+
+    const auto dependency = PendingDependencyKey::Certificate( "tx-previous-cert" );
+    const auto pending    = sgns::ConsensusManager::ValidationResult::Pending(
+        { dependency },
+        std::chrono::seconds( 2 ) );
+
+    ASSERT_EQ( pending.check, sgns::ConsensusManager::Check::Pending );
+    ASSERT_EQ( pending.dependencies.size(), 1U );
+    EXPECT_EQ( pending.dependencies.front().type, PendingDependencyKey::Type::Certificate );
+    EXPECT_EQ( pending.dependencies.front().value, "tx-previous-cert" );
+    ASSERT_TRUE( pending.retry_after.has_value() );
+    EXPECT_EQ( pending.retry_after.value(), std::chrono::seconds( 2 ) );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, PendingDependencyKeySupportsHashIdentity )
+{
+    /**
+     * Given typed dependency keys are used as local pending indexes,
+     * When identical and different Certificate keys are inserted into an
+     * unordered map,
+     * Then identical keys address the same entry and different values stay
+     * isolated.
+     */
+    using PendingDependencyKey     = sgns::ConsensusManager::PendingDependencyKey;
+    using PendingDependencyKeyHash = sgns::ConsensusManager::PendingDependencyKeyHash;
+
+    std::unordered_map<PendingDependencyKey, int, PendingDependencyKeyHash> index;
+    index.emplace( PendingDependencyKey::Certificate( "tx-a" ), 1 );
+    index[PendingDependencyKey::Certificate( "tx-a" )] += 1;
+    index.emplace( PendingDependencyKey::Certificate( "tx-b" ), 7 );
+
+    EXPECT_EQ( index.size(), 2U );
+    EXPECT_EQ( index.at( PendingDependencyKey::Certificate( "tx-a" ) ), 2 );
+    EXPECT_EQ( index.at( PendingDependencyKey::Certificate( "tx-b" ) ), 7 );
 }

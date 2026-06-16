@@ -663,7 +663,7 @@ namespace sgns
          *        searching across all monitored networks.
          */
         outcome::result<std::string>             GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::Check> HandleNonceConsensusSubject(
+        outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
         bool ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool CheckTransactionWellFormed( const GeniusTransaction &tx ) const;

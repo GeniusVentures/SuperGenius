@@ -212,7 +212,7 @@ namespace sgns
         instance->consensus_manager_->RegisterSubjectHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -224,12 +224,12 @@ namespace sgns
                     switch ( decision_result.value() )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
-                            return ConsensusManager::Check::Approve;
+                            return ConsensusManager::ValidationResult::Approve();
                         case ValidatorRegistry::BatchSubjectDecision::Pending:
-                            return ConsensusManager::Check::Pending;
+                            return ConsensusManager::ValidationResult::Pending();
                         case ValidatorRegistry::BatchSubjectDecision::Reject:
                         default:
-                            return ConsensusManager::Check::Reject;
+                            return ConsensusManager::ValidationResult::Reject();
                     }
                 }
                 return outcome::failure( std::errc::owner_dead );

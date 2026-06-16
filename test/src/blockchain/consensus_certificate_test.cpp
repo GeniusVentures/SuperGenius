@@ -273,7 +273,7 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
         ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
         EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
         ConsensusManagerTestAccess::HandleCertificate( manager, cert );
@@ -341,7 +341,7 @@ namespace sgns::test
 
         EXPECT_TRUE( manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                                       []( const ConsensusManager::Subject & )
-                                                      { return ConsensusManager::Check::Approve; } ) );
+                                                      { return ConsensusManager::ValidationResult::Approve(); } ) );
         EXPECT_TRUE(
             manager->RegisterCertificateHandler( NONCE_SUBJECT_TYPE,
                                                  []( const std::string &, const ConsensusManager::Certificate & )
@@ -515,7 +515,7 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
 
         auto submit_prop = manager->SubmitProposal( proposal_result.value(), false );
         EXPECT_FALSE( submit_prop.has_error() );
@@ -565,13 +565,13 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Pending; } );
+                                         { return ConsensusManager::ValidationResult::Pending(); } );
         ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
         EXPECT_TRUE( ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject_result.value() );
         ASSERT_TRUE( nonce_subject.has_value() );

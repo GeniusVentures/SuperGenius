@@ -147,7 +147,7 @@ namespace sgns
         instance->blockchain_->RegisterSubjectHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -3886,7 +3886,7 @@ namespace sgns
         return ConsensusManager::Check::Approve;
     }
 
-    outcome::result<ConsensusManager::Check> TransactionManager::HandleNonceConsensusSubject(
+    outcome::result<ConsensusManager::ValidationResult> TransactionManager::HandleNonceConsensusSubject(
         const ConsensusManager::Subject &subject )
     {
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
@@ -3909,7 +3909,7 @@ namespace sgns
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__ );
-            return ConsensusManager::Check::Reject;
+            return ConsensusManager::ValidationResult::Reject();
         }
 
         auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.value().transaction() );
@@ -3920,7 +3920,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return ConsensusManager::Check::Reject;
+            return ConsensusManager::ValidationResult::Reject();
         }
         auto tx = tx_result.value();
 
@@ -3933,7 +3933,7 @@ namespace sgns
                 full_node_m,
                 __func__,
                 tx_hash );
-            return ConsensusManager::Check::Reject;
+            return ConsensusManager::ValidationResult::Reject();
         }
 
         // BIND-01: Commitment-tx binding cross-check
@@ -3948,7 +3948,7 @@ namespace sgns
                     full_node_m,
                     __func__,
                     tx_hash );
-                return ConsensusManager::Check::Reject;
+                return ConsensusManager::ValidationResult::Reject();
             }
 
             auto reconstructed = BuildUTXOTransitionCommitment( tx );
@@ -3964,7 +3964,7 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    tx_hash );
-                return ConsensusManager::Check::Reject;
+                return ConsensusManager::ValidationResult::Reject();
             }
         }
 
@@ -3995,7 +3995,7 @@ namespace sgns
                     {
                         if ( it2->second.status == TransactionStatus::FAILED )
                         {
-                            return ConsensusManager::Check::Reject;
+                            return ConsensusManager::ValidationResult::Reject();
                         }
                         tracked_status = it2->second.status;
                         tracked_nonce  = it2->second.cached_nonce;
@@ -4013,7 +4013,7 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    tx_hash );
-                return ConsensusManager::Check::Reject;
+                return ConsensusManager::ValidationResult::Reject();
             }
             else
             {
@@ -4033,7 +4033,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::Check
+        auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::ValidationResult
         {
             // METRICS-01: Validation reject counter with reason logged at info level
             metrics_validation_reject_.fetch_add( 1, std::memory_order_relaxed );
@@ -4091,7 +4091,7 @@ namespace sgns
                 }
             }
 
-            return ConsensusManager::Check::Reject;
+            return ConsensusManager::ValidationResult::Reject();
         };
 
         if ( tracked_nonce != nonce_subject.value().nonce() )
@@ -4160,7 +4160,7 @@ namespace sgns
                     tx_hash,
                     migration_tx->GetSrcAddress(),
                     eligibility_result.error().message() );
-                return ConsensusManager::Check::Pending;
+                return ConsensusManager::ValidationResult::Pending();
             }
             if ( !eligibility_result.value() )
             {
@@ -4177,7 +4177,7 @@ namespace sgns
 
         // METRICS-01: Validation approve counter
         metrics_validation_approve_.fetch_add( 1, std::memory_order_relaxed );
-        return ConsensusManager::Check::Approve;
+        return ConsensusManager::ValidationResult::Approve();
     }
 
     bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
