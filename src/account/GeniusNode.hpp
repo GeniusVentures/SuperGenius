@@ -36,6 +36,9 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/event/bus.hpp>
+#include <libp2p/network/connection_manager.hpp>
 
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
@@ -70,15 +73,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node bound to the provided Ethereum private key.
@@ -88,7 +89,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
@@ -96,8 +96,7 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node from an existing mnemonic phrase.
@@ -107,7 +106,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
          */
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
@@ -115,8 +113,7 @@ namespace sgns
                                                             bool                autodht      = true,
                                                             bool                isprocessor  = true,
                                                             uint16_t            base_port    = 40001,
-                                                            bool                is_full_node = false,
-                                                            bool                use_upnp     = true );
+                                                            bool                is_full_node = false );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -611,6 +608,12 @@ namespace sgns
         std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
         std::string                 processing_channel_topic_;     ///< Processing task channel topic.
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                              bootstrap_peers_;
+        std::vector<std::string>                              bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>                   bootstrap_fullnode_infos_;
+        std::unordered_set<libp2p::peer::PeerId>              bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>                   bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId>              bootstrap_peer_ids_;
         uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
 
@@ -622,15 +625,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
                     bool                           isprocessor,
                     uint16_t                       base_port,
-                    bool                           is_full_node,
-                    bool                           use_upnp );
+                    bool                           is_full_node );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
@@ -662,6 +663,11 @@ namespace sgns
          * @return True when network initialization succeeds.
          */
         bool InitNetwork( uint16_t base_port, bool is_full_node );
+
+        /**
+         * @brief Loads the CRDT configuration.
+         */
+         void         LoadCrdtConfig();
 
         /**
          * @brief Attempts initial UPnP port mapping for the PubSub port.
@@ -709,6 +715,11 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
+         * @brief Shuts down
+         */
+        void         ShutdownForDestruction();
+
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
@@ -722,6 +733,40 @@ namespace sgns
          */
         void DHTInit();
 
+        /**
+         * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
+         */
+        static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
+         */
+        void InitBootstrapReconnect();
+
+        /**
+         * @brief Start the periodic health-check polling for bootstrap fullnode connections
+         */
+        void StartBootstrapHealthCheck();
+
+        /**
+         * @brief Schedule a reconnection attempt with exponential backoff
+         */
+        void ScheduleBootstrapReconnect( const libp2p::peer::PeerId &peer_id, unsigned attempt );
+
+        /**
+         * @brief Perform the actual reconnection to a bootstrap peer
+         */
+        void DoReconnectToBootstrapPeer( const libp2p::peer::PeerId &peer_id );
+
+        /**
+         * @brief Schedule the next periodic health check
+         */
+        void ScheduleNextHealthCheck();
+
+        /**
+         * @brief Perform a health check on all bootstrap fullnode connections
+         */
+        void PerformHealthCheck();
         struct PriceInfo
         {
             double                                             price;      ///< Cached USD token price.
@@ -746,8 +791,26 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
-        bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
+         std::atomic_bool       shutdown_started_{ false }; ///< Whether shutdown has been initiated.
 
+    
+        // ── Bootstrap fullnode reconnection ──
+        struct BootstrapReconnectConfig
+        {
+            std::chrono::seconds base_delay{ 5 };
+            std::chrono::seconds max_delay{ 300 };
+            std::chrono::seconds health_check_interval{ 60 };
+            std::chrono::seconds health_check_disconnected_interval{ 15 };
+            double               background_multiplier{ 3.0 };
+        };
+        BootstrapReconnectConfig                                       reconnect_config_;
+        std::optional<libp2p::event::Handle>                           bootstrap_disconnect_subscription_;
+        std::optional<libp2p::basic::Scheduler::Handle>                health_check_handle_;
+        std::unordered_map<libp2p::peer::PeerId, unsigned>             reconnect_attempts_;
+        std::mutex                                                     reconnect_mutex_;
+
+        crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
+        
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.
          * @param[in] escrow_path Escrow address/path associated with the completed task.
