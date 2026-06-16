@@ -350,8 +350,9 @@ namespace sgns
             return;
         }
 
-        const auto &loggers = config_json["loggers"].GetObject();
-        for ( auto it = loggers.MemberBegin(); it != loggers.MemberEnd(); ++it )
+        for ( auto it = config_json["loggers"].MemberBegin();
+              it != config_json["loggers"].MemberEnd();
+              ++it )
         {
             if ( !it->value.IsString() )
             {
