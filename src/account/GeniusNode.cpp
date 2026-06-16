@@ -2131,13 +2131,23 @@ namespace sgns
         if ( !chain_id_map.empty() )
         {
             ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
-            provider.Initialize( transaction_manager_->GetPublicChainInputValidator(), config, node_logger_ );
+            bool endpoints_wired = provider.Initialize(
+                transaction_manager_->GetPublicChainInputValidator(), config, node_logger_ );
 
-            // Register PublicChainInputValidator for all configured chain IDs
-            auto &pub_validator = transaction_manager_->GetPublicChainInputValidator();
-            for ( const auto &chain_entry : bridge_chains )
+            if ( endpoints_wired )
             {
-                IInputValidator::Register( std::to_string( chain_entry.chain_id ), &pub_validator );
+                // Register PublicChainInputValidator for all configured chain IDs
+                auto &pub_validator = transaction_manager_->GetPublicChainInputValidator();
+                for ( const auto &chain_entry : bridge_chains )
+                {
+                    IInputValidator::Register( std::to_string( chain_entry.chain_id ), &pub_validator );
+                }
+            }
+            else
+            {
+                node_logger_->warn( "InitializeRpcEndpoints: no RPC endpoints were wired — "
+                                    "bridge chains will not be registered" );
+                bridge_chains.clear();
             }
         }
         else

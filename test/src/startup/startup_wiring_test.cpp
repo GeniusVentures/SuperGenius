@@ -410,6 +410,119 @@ TEST( StartupWiringTest, EmptyChainsConfigDoesNotCrash )
     RemoveTempFile( path );
 }
 
+// ─── Tests: InitializeRpcEndpoints without Endpoint Sources ──────────────────
+
+TEST( StartupWiringTest, NoRpcEndpointsWiredWhenNoSourcesConfigured )
+{
+    // Reproduces the bug where InitializeRpcEndpoints() proceeds to register
+    // bridge chains and start the relayer even though ChainRpcEndpointProvider
+    // wired zero RPC endpoints.
+    //
+    // When config.chainlist_json_path is empty and config.direct_endpoints is
+    // empty, provider.Initialize() returns false.  The caller must NOT proceed
+    // with validator registration or bridge chain discovery — otherwise the
+    // catch-up scan silently skips every chain (GetFirstRpcUrl returns nullopt)
+    // while the relayer is running against unconfigured endpoints.
+
+    ChainRpcEndpointProvider::ChainIdMap chain_id_map;
+    // These chains exist in bridge_chains_config.json (bundled default)
+    chain_id_map.emplace( "ethereum-mainnet", 1 );
+    chain_id_map.emplace( "ethereum-sepolia", 11155111 );
+    chain_id_map.emplace( "bnb-smart-chain",  56 );
+    chain_id_map.emplace( "polygon-mainnet",  137 );
+
+    ChainRpcProviderConfig config;
+    config.chainlist_json_path = "";   // no public chainlist JSON
+    // config.direct_endpoints is left empty — no API-key endpoints
+
+    ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
+    PublicChainInputValidator validator;
+
+    auto logger = base::createLogger( "startup_wiring_test" );
+    bool endpoints_wired = provider.Initialize( validator, config, logger );
+
+    // When no endpoint sources are configured, Initialize must report failure.
+    EXPECT_FALSE( endpoints_wired )
+        << "Initialize() should return false when no RPC endpoint sources are available";
+
+    // No chain should have RPC endpoints — GetFirstRpcUrl must return nullopt
+    // for every chain that was in the map.
+    for ( auto chain_id : { "1", "11155111", "56", "137" } )
+    {
+        auto url = validator.GetFirstRpcUrl( chain_id );
+        EXPECT_FALSE( url.has_value() )
+            << "Chain " << chain_id << " should have no endpoints when nothing is wired";
+    }
+}
+
+TEST( StartupWiringTest, BridgeChainsMustNotProceedWhenNoEndpointsWired )
+{
+    // Behavioral contract: when ChainRpcEndpointProvider::Initialize() returns
+    // false, the caller (InitializeRpcEndpoints) must NOT register validators
+    // or return bridge chains for BridgeRelayer startup.
+    //
+    // This test encodes the pattern that every caller of provider.Initialize()
+    // must follow: check the return value before proceeding.
+
+    ChainRpcEndpointProvider::ChainIdMap chain_id_map;
+    chain_id_map.emplace( "ethereum-sepolia", 11155111 );
+
+    ChainRpcProviderConfig config;
+    config.chainlist_json_path = ""; // no public endpoints
+    // direct_endpoints also empty
+
+    ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
+    PublicChainInputValidator validator;
+
+    auto logger = base::createLogger( "startup_wiring_test" );
+    bool endpoints_wired = provider.Initialize( validator, config, logger );
+
+    // Simulate the bridge_chain discovery that InitializeRpcEndpoints performs:
+    // it reads bridge_chains_config.json and builds a list of chains with
+    // bridge contracts.  In the buggy code, these were unconditionally
+    // registered regardless of whether endpoints were wired.
+    struct SimulatedPair
+    {
+        std::string chain_name;
+        std::string contract_address;
+        uint64_t    chain_id;
+    };
+    std::vector<SimulatedPair> bridge_chains;
+    bridge_chains.push_back( { "ethereum-sepolia",
+                               "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+                               11155111 } );
+
+    // The correct behavior: only register validators / keep bridge chains
+    // when endpoints were actually wired.
+    if ( endpoints_wired )
+    {
+        for ( const auto &chain_entry : bridge_chains )
+        {
+            // This path should NOT execute in this test — if it does, the
+            // validator is being registered without RPC endpoints.
+            IInputValidator::Register( std::to_string( chain_entry.chain_id ),
+                                       &validator );
+        }
+    }
+    else
+    {
+        // Correct unhappy-path behavior: clear bridge chains so
+        // InitializeAndStartBridge does not start the relayer.
+        bridge_chains.clear();
+    }
+
+    // After the fix, bridge_chains must be empty because no endpoints exist.
+    EXPECT_TRUE( bridge_chains.empty() )
+        << "bridge_chains must be empty when no RPC endpoints are wired — "
+        << "otherwise BridgeRelayer starts against unconfigured chains";
+
+    // Confirm the validator has no RPC URL for the chain.
+    auto url = validator.GetFirstRpcUrl( "11155111" );
+    EXPECT_FALSE( url.has_value() )
+        << "Validator should have no URL for chain 11155111 when endpoints "
+        << "were never wired";
+}
+
 // ─── Tests: Non-blocking Bridge Init (D-04) ─────────────────────────────────
 
 TEST( StartupWiringTest, BridgeInitIsNonBlocking )
