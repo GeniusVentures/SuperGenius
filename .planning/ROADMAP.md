@@ -288,17 +288,20 @@ Plans:
 **Wave 0**
 
 - [ ] 07-01-PLAN.md — Wave 0 focused pending lifecycle test targets
-- [ ] 07-02-PLAN.md — Structured validation result and local-only Pending contract
 
 **Wave 1** *(blocked on Wave 0 completion)*
 
-- [ ] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
+- [ ] 07-02-PLAN.md — Structured validation result and local-only Pending contract
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
+- [ ] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
 
 **Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
+
+**Wave 4** *(blocked on Wave 3 completion)*
 
 - [ ] 07-05-PLAN.md — TransactionManager pending dependency and UNCONFIRMED expiry semantics
 
