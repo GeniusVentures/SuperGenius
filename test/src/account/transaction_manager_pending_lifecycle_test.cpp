@@ -50,7 +50,7 @@ namespace
      *          construct GeniusAccount, Blockchain, and TransactionManager directly
      *          using the certificate fallback fixture pattern.
      */
-    class TransactionManagerPendingLifecycleTest : public sgns::test::CRDTFixture
+    class TransactionManagerPendingLifecycleTest : public test::CRDTFixture
     {
     public:
         TransactionManagerPendingLifecycleTest()
