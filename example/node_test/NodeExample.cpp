@@ -535,12 +535,7 @@ int main( int argc, char *argv[] )
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
 
-    std::thread input_thread;
     std::thread status_thread;
-    if ( terminal_mode )
-    {
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( node_instance->GetAddress() );
-    }
 
     while ( node_instance->GetState() != sgns::GeniusNode::NodeState::READY )
     {
