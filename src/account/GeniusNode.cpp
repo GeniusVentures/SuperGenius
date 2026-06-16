@@ -2047,7 +2047,7 @@ namespace sgns
         // chainid.network chains.json source (downloaded or configured separately).
         // Direct API-key endpoints are supplied via config.direct_endpoints.
 
-        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
 
         try
         {
@@ -2195,7 +2195,7 @@ namespace sgns
             return;
         }
 
-        const std::string event_sig   = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+        const std::string event_sig   = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
         auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
         std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 

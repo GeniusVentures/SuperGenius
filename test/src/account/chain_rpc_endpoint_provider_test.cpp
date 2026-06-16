@@ -82,7 +82,7 @@ TEST( ChainRpcEndpointProviderTest, BridgeContractAddressPopulated )
 
     // Compute topic0 for the bridge event
     auto topic0_hash = eth::abi::event_signature_hash(
-        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)" );
+        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)" );
     std::string topic0_hex =
         rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
     config.bridge_event_topic0[11155111] = topic0_hex;
@@ -129,7 +129,7 @@ TEST( ChainRpcEndpointProviderTest, EventTopic0Populated )
 
     // Compute expected topic0
     auto topic0_hash = eth::abi::event_signature_hash(
-        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)" );
+        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)" );
     std::string topic0_hex =
         rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
@@ -314,7 +314,7 @@ TEST( ChainRpcEndpointProviderTest, MultipleChainsBridgeConfig )
 
     // Compute topic0
     auto topic0_hash = eth::abi::event_signature_hash(
-        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)" );
+        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)" );
     std::string topic0_hex =
         rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 

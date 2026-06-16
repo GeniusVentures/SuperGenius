@@ -30,16 +30,6 @@ namespace sgns
     namespace
     {
         /**
-         * @brief       Auxiliary function to convert an eth::Address to a hex string for logging.
-         * @param[in]   addr The eth::Address to convert.
-         * @return      Address as a hex string.
-         */
-        std::string AddressToHex( const eth::Address &addr )
-        {
-            return rlp::base::parse::hex_array_string( addr );
-        }
-
-        /**
          * @brief       Converts an intx::uint256 to uint64_t with overflow check, used for event parameters that must fit in uint64.
          * @param[in]   value The intx::uint256 value to convert.
          * @param[in]   field The name of the field being converted.
@@ -86,8 +76,8 @@ namespace sgns
         }
 
         // BridgeSourceBurned(address indexed sender, uint256 id, uint256 amount,
-        //                    uint256 srcChainID, uint256 destChainID)
-        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256)";
+        //                    uint256 srcChainID, uint256 destChainID, bytes sgnsDestination)
+        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
         auto              params    = eth::cli::event_registry().params_for( event_sig );
 
         size_t registered = 0;
@@ -169,11 +159,11 @@ namespace sgns
     void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification,
                                        const std::string                 &chain_name )
     {
-        static constexpr size_t BRIDGE_SOURCE_BURNED_PARAM_COUNT = 5;
-        if ( notification.values.size() < BRIDGE_SOURCE_BURNED_PARAM_COUNT )
+        static constexpr size_t kBridgeSourceBurnedParamCount = 6;
+        if ( notification.values.size() < kBridgeSourceBurnedParamCount )
         {
             logger_->error( "BridgeRelayer: expected {} event params for chain {}, got {}",
-                            BRIDGE_SOURCE_BURNED_PARAM_COUNT,
+                            kBridgeSourceBurnedParamCount,
                             chain_name,
                             notification.values.size() );
             return;
@@ -185,10 +175,13 @@ namespace sgns
         //   values[2]: amount (uint256)
         //   values[3]: srcChainID (uint256)
         //   values[4]: destChainID (uint256)
-        const auto &sender     = std::get<eth::codec::Address>( notification.values[0] );
-        const auto &token_id   = std::get<intx::uint256>( notification.values[1] );
-        const auto &amount_val = std::get<intx::uint256>( notification.values[2] );
-        const auto &src_chain  = std::get<intx::uint256>( notification.values[3] );
+        //   values[5]: sgnsDestination (bytes) — 64-byte SuperGenius public key
+        const auto &sender          = std::get<eth::codec::Address>( notification.values[0] );
+        const auto &token_id        = std::get<intx::uint256>( notification.values[1] );
+        const auto &amount_val      = std::get<intx::uint256>( notification.values[2] );
+        const auto &src_chain       = std::get<intx::uint256>( notification.values[3] );
+        const auto &dest_chain      = std::get<intx::uint256>( notification.values[4] );
+        const auto &sgns_dest_bytes = std::get<eth::codec::ByteBuffer>( notification.values[5] );
 
         // Transaction hash from the event
         const std::string tx_hash = rlp::base::parse::hex_array_string( notification.event.tx_hash );
@@ -207,8 +200,8 @@ namespace sgns
 
         const TokenID mint_token_id = TokenID::FromUint256( token_id, TokenID::Endianness::BIG );
 
-        // Destination: sender of the burn (the user who bridged out)
-        const std::string destination = AddressToHex( sender );
+        // Destination: SuperGenius public key from the burn event (64 bytes, 128 hex chars)
+        const std::string destination = rlp::base::parse::hex_bytes( sgns_dest_bytes.data(), sgns_dest_bytes.size() );
 
         logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} token={} amount={} dest={}",
                        chain_id,
