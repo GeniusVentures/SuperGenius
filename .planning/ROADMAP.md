@@ -282,10 +282,14 @@ misclassifying inconclusive consensus as transaction failure.
   6. **Retry safety:** Revalidation is idempotent, emits at most one local Approval vote per proposal
      slot, and never double-counts validator weight.
 
-**Plans**: 0 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD (run `$gsd-plan-phase 7` to break down)
+- [ ] 07-01-PLAN.md — Wave 0 focused pending lifecycle test targets
+- [ ] 07-02-PLAN.md — Structured validation result and local-only Pending contract
+- [ ] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
+- [ ] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
+- [ ] 07-05-PLAN.md — TransactionManager pending dependency and UNCONFIRMED expiry semantics
 
 ---
 
