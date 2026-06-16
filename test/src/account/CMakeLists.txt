@@ -89,3 +89,26 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+set(TRANSACTION_MANAGER_PENDING_LIFECYCLE_SOURCE transaction_manager_pending_lifecycle)
+set(TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET transaction_manager_pending_lifecycle)
+addtest(transaction_manager_pending_lifecycle_test
+    ${TRANSACTION_MANAGER_PENDING_LIFECYCLE_SOURCE}_test.cpp
+)
+target_link_libraries(${TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET}_test
+    genius_node_test
+    json_secure_storage
+    base_crdt_test
+)
+
+if(MSVC)
+    target_link_options(${TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET}_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(${TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET}_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(${TRANSACTION_MANAGER_PENDING_LIFECYCLE_TARGET}_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
