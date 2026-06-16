@@ -291,7 +291,7 @@ Plans:
 
 **Wave 1** *(blocked on Wave 0 completion)*
 
-- [ ] 07-02-PLAN.md — Structured validation result and local-only Pending contract
+- [x] 07-02-PLAN.md — Structured validation result and local-only Pending contract
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
