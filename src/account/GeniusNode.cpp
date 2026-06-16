@@ -324,6 +324,60 @@ namespace sgns
                             crdt_backup_config_.auto_restore_on_repair_failure );
     }
 
+    void GeniusNode::LoadLogConfig()
+    {
+        const std::string config_path = write_base_path_ + "/log_config.json";
+        std::ifstream     config_file( config_path );
+        if ( !config_file.good() )
+        {
+            return;
+        }
+
+        std::stringstream buffer;
+        buffer << config_file.rdbuf();
+
+        rapidjson::Document config_json;
+        config_json.Parse( buffer.str().c_str() );
+        if ( config_json.HasParseError() || !config_json.IsObject() )
+        {
+            node_logger_->warn( "Invalid log_config.json at {}, using defaults", config_path );
+            return;
+        }
+
+        if ( !config_json.HasMember( "loggers" ) || !config_json["loggers"].IsObject() )
+        {
+            node_logger_->warn( "log_config.json missing 'loggers' object at {}", config_path );
+            return;
+        }
+
+        const auto &loggers = config_json["loggers"].GetObject();
+        for ( auto it = loggers.MemberBegin(); it != loggers.MemberEnd(); ++it )
+        {
+            if ( !it->value.IsString() )
+            {
+                node_logger_->warn( "log_config.json: logger '{}' value is not a string, skipping", it->name.GetString() );
+                continue;
+            }
+
+            std::string logger_name  = it->name.GetString();
+            std::string level_string = it->value.GetString();
+
+            auto logger = spdlog::get( logger_name );
+            if ( !logger )
+            {
+                node_logger_->warn( "log_config.json: logger '{}' not found, skipping", logger_name );
+                continue;
+            }
+
+            auto level = spdlog::level::from_str( level_string );
+            logger->set_level( level );
+            if ( level != spdlog::level::off )
+            {
+                logger->flush_on( level );
+            }
+            node_logger_->info( "log_config override: {} -> {}", logger_name, level_string );
+        }
+    }
 
     void GeniusNode::BeginDBInitialization()
     {
@@ -655,6 +709,8 @@ namespace sgns
         auto asioFileLoader  = ConfigureLogger( "MNNLoader", logdir, spdlog::level::err );
         auto asioWSCommon    = ConfigureLogger( "WSCommon", logdir, spdlog::level::err );
 #endif
+
+        LoadLogConfig();
 
         // Logger initialization complete
         node_logger_->info( "Logger initialized successfully" );
