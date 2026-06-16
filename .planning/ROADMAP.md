@@ -299,7 +299,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
+- [x] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
