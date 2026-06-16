@@ -287,7 +287,7 @@ Plans:
 
 **Wave 0**
 
-- [ ] 07-01-PLAN.md — Wave 0 focused pending lifecycle test targets
+- [x] 07-01-PLAN.md — Wave 0 focused pending lifecycle test targets
 
 **Wave 1** *(blocked on Wave 0 completion)*
 
