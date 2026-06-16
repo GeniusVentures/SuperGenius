@@ -2222,7 +2222,7 @@ namespace sgns
             }
 
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
-                 retval == TransactionStatus::FAILED )
+                 retval == TransactionStatus::UNCONFIRMED || retval == TransactionStatus::FAILED )
             {
                 TransactionManagerLogger()->trace( "[{} - full: {}] Transaction has finalized state {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
@@ -3621,21 +3621,31 @@ namespace sgns
             return;
         }
 
-        std::shared_lock tx_lock( tx_mutex_m );
+        std::unique_lock tx_lock( tx_mutex_m );
         const auto       key = GetTransactionPath( *tx );
         auto             it  = tx_processed_m.find( key );
         if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
         {
-            tx_lock.unlock(); // ChangeTransactionState acquires its own lock
+            if ( tx->GetSrcAddress() == account_m->GetAddress() )
+            {
+                tx_lock.unlock(); // ChangeTransactionState acquires its own lock
+                TransactionManagerLogger()->info(
+                    "[{} - full: {}] {}: Proposal timeout — transitioning local tx to UNCONFIRMED tx={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx_hash );
+                (void) ChangeTransactionState( tx, TransactionStatus::UNCONFIRMED );
+                return;
+            }
+
             TransactionManagerLogger()->info(
-                "[{} - full: {}] {}: Proposal timeout — transitioning temp entry to FAILED tx={}",
+                "[{} - full: {}] {}: Proposal timeout — removing remote temp entry tx={}",
                 account_m->GetAddress().substr( 0, 8 ),
                 full_node_m,
                 __func__,
                 tx_hash );
-            // D-09: Only VERIFYING entries can reach this point per the condition above.
-            // CONFIRMED entries (line above would skip them) are left untouched.
-            (void) ChangeTransactionState( tx, TransactionStatus::FAILED );
+            tx_processed_m.erase( it );
         }
         // D-10: Entry not in map OR entry status is not VERIFYING → silently skip.
     }
@@ -4168,7 +4178,17 @@ namespace sgns
             }
         }
 
-        auto validate_result = ValidateTransactionForConsensus( tx );
+        auto replay_result = EvaluateTransactionReplayProtection( *tx );
+        if ( replay_result.validation.check == ConsensusManager::Check::Pending )
+        {
+            return replay_result.validation;
+        }
+        if ( replay_result.validation.check != ConsensusManager::Check::Approve )
+        {
+            return reject_and_maybe_fail_local( "replay protection failed" );
+        }
+
+        auto validate_result = ValidateTransactionForConsensus( tx, false );
 
         if ( !validate_result )
         {
@@ -4217,6 +4237,12 @@ namespace sgns
 
     bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx ) const
     {
+        return ValidateTransactionForConsensus( tx, true );
+    }
+
+    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx,
+                                                              bool check_replay ) const
+    {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -4257,7 +4283,7 @@ namespace sgns
                                                tx->GetHash() );
             return false;
         }
-        if ( !CheckTransactionReplayProtection( *tx ) )
+        if ( check_replay && !CheckTransactionReplayProtection( *tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Replay protection failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -4409,6 +4435,12 @@ namespace sgns
 
     bool TransactionManager::CheckTransactionReplayProtection( const GeniusTransaction &tx ) const
     {
+        return EvaluateTransactionReplayProtection( tx ).validation.check == ConsensusManager::Check::Approve;
+    }
+
+    TransactionManager::ReplayProtectionResult TransactionManager::EvaluateTransactionReplayProtection(
+        const GeniusTransaction &tx ) const
+    {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking replay protection tx={}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -4425,7 +4457,7 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    tx.GetHash() );
-                return false;
+                return { ConsensusManager::ValidationResult::Reject() };
             }
             auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
             if ( previous_cert_result.has_error() )
@@ -4435,21 +4467,22 @@ namespace sgns
                                                    full_node_m,
                                                    __func__,
                                                    previous_hash );
-                return false;
+                return { ConsensusManager::ValidationResult::Pending(
+                    { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
             auto        previous_nonce   = ConsensusManager::DecodeNonceSubject( previous_subject );
             if ( previous_nonce.has_error() )
             {
-                return false;
+                return { ConsensusManager::ValidationResult::Reject() };
             }
             if ( previous_subject.account_id() != tx.GetSrcAddress() )
             {
-                return false;
+                return { ConsensusManager::ValidationResult::Reject() };
             }
             if ( ( previous_nonce.value().nonce() + 1 ) != tx.GetNonce() )
             {
-                return false;
+                return { ConsensusManager::ValidationResult::Reject() };
             }
         }
 
@@ -4461,7 +4494,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx.GetSrcAddress() );
-            return true;
+            return { ConsensusManager::ValidationResult::Approve() };
         }
 
         const auto confirmed_nonce = nonce_result.value();
@@ -4476,7 +4509,7 @@ namespace sgns
                                                tx.GetHash(),
                                                tx_nonce,
                                                confirmed_nonce );
-            return false;
+            return { ConsensusManager::ValidationResult::Reject() };
         }
 
         if ( tx_nonce > confirmed_nonce + nonce_window_m )
@@ -4490,7 +4523,7 @@ namespace sgns
                 tx_nonce,
                 confirmed_nonce,
                 nonce_window_m );
-            return false;
+            return { ConsensusManager::ValidationResult::Reject() };
         }
 
         if ( tx_nonce > confirmed_nonce + 1 )
@@ -4507,7 +4540,7 @@ namespace sgns
                         __func__,
                         n,
                         tx.GetSrcAddress() );
-                    return false;
+                    return { ConsensusManager::ValidationResult::Reject() };
                 }
                 if ( tracked->status == TransactionStatus::FAILED )
                 {
@@ -4518,7 +4551,7 @@ namespace sgns
                         __func__,
                         n,
                         tx.GetSrcAddress() );
-                    return false;
+                    return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
         }
@@ -4527,7 +4560,7 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx.GetHash() );
-        return true;
+        return { ConsensusManager::ValidationResult::Approve() };
     }
 
     bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const
@@ -5275,6 +5308,31 @@ namespace sgns
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
                 }
+            }
+
+            break;
+            case TransactionStatus::UNCONFIRMED:
+            {
+                std::unique_lock tx_lock( tx_mutex_m );
+                const auto       key = GetTransactionPath( *tx );
+                auto             it  = tx_processed_m.find( key );
+                if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
+                {
+                    TransactionManagerLogger()->debug(
+                        "[{} - full: {}] {}: Keeping CONFIRMED transaction from becoming UNCONFIRMED {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        tx->GetHash() );
+                    break;
+                }
+                tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::UNCONFIRMED, tx->GetNonce() };
+                TransactionManagerLogger()->info(
+                    "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    tx->GetHash() );
             }
 
             break;

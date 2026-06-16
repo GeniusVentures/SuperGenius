@@ -32,6 +32,11 @@ namespace sgns
         {
             return "transaction manager pending lifecycle";
         }
+
+        static bool IsUnconfirmedDistinctFromFailed()
+        {
+            return TransactionManager::TransactionStatus::UNCONFIRMED != TransactionManager::TransactionStatus::FAILED;
+        }
     };
 } // namespace sgns
 
@@ -82,4 +87,19 @@ TEST_F( TransactionManagerPendingLifecycleTest, HarnessIsDiscoverable )
     EXPECT_STREQ( sgns::TransactionManagerPendingLifecycleTestAccess::Scope(),
                   "transaction manager pending lifecycle" );
     EXPECT_FALSE( sgns::NONCE_SUBJECT_TYPE.empty() );
+}
+
+TEST( TransactionManagerPendingLifecycleContractTest, UnconfirmedAndCertificatePendingContractsExist )
+{
+    using PendingDependencyKey = sgns::ConsensusManager::PendingDependencyKey;
+
+    EXPECT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::IsUnconfirmedDistinctFromFailed() );
+
+    const auto pending = sgns::ConsensusManager::ValidationResult::Pending(
+        { PendingDependencyKey::Certificate( "previous-tx" ) } );
+
+    ASSERT_EQ( pending.check, sgns::ConsensusManager::Check::Pending );
+    ASSERT_EQ( pending.dependencies.size(), 1U );
+    EXPECT_EQ( pending.dependencies.front().type, PendingDependencyKey::Type::Certificate );
+    EXPECT_EQ( pending.dependencies.front().value, "previous-tx" );
 }
