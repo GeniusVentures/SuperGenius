@@ -303,7 +303,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 07-05-PLAN.md — TransactionManager pending dependency and UNCONFIRMED expiry semantics
+- [x] 07-05-PLAN.md — TransactionManager pending dependency and UNCONFIRMED expiry semantics
 
 ---
 
