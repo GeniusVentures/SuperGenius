@@ -516,21 +516,21 @@ void ConsensusManager::RemovePendingProposal( const std::string &proposal_id )
 | A3 | A single cleanup helper can own pending index and accounting removal. | Common Pitfalls | If slot cleanup semantics require multi-proposal grouped removal, helper design needs a group-aware variant. |
 | A4 | New focused tests can use friend test accessors rather than public production introspection. | Validation Architecture | If maintainers reject friend accessors, tests need public diagnostic methods or integration-only validation. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Should `ValidationResult` replace `SubjectHandler` directly or be introduced as an adapter first?**
+1. **RESOLVED — Should `ValidationResult` replace `SubjectHandler` directly or be introduced as an adapter first?**
    - What we know: `SubjectHandler` currently returns `outcome::result<Check>`. [VERIFIED: src/blockchain/Consensus.hpp]
-   - What's unclear: How much downstream compile churn the planner wants in one wave. [ASSUMED]
+   - Resolution: Plan 07-02 introduces `ValidationResult` as the handler-facing result while preserving adapter coverage for existing simple handlers in the same wave.
    - Recommendation: Introduce `ValidationResult` as the new handler return type and provide a small adapter for existing simple handlers in the same wave. [ASSUMED]
 
-2. **Should scheduled retry share `round_timer_` or use a separate pending timer?**
+2. **RESOLVED — Should scheduled retry share `round_timer_` or use a separate pending timer?**
    - What we know: `round_timer_` already waits on `timer_cv_`, processes certificates, and recovers certificate work. [VERIFIED: src/blockchain/Consensus.cpp]
-   - What's unclear: Whether adding pending scans to that loop could make certificate work too complex. [ASSUMED]
+   - Resolution: Plan 07-04 uses the existing timer primitives and splits pending retry/expiry into named helpers.
    - Recommendation: Share the existing timer primitives but split work into named helpers such as `ProcessDuePendingRetries()` and `ExpirePendingProposals()`. [ASSUMED]
 
-3. **How should remote temporary transaction removal be represented in `TransactionManager`?**
+3. **RESOLVED — How should remote temporary transaction removal be represented in `TransactionManager`?**
    - What we know: `tx_processed_m` stores `TrackedTx` by transaction path and `ChangeTransactionState(FAILED)` has rollback and nonce side effects. [VERIFIED: src/account/TransactionManager.cpp]
-   - What's unclear: Whether an existing erase helper should be reused or a new explicit `RemoveTemporaryTrackingEntry()` should be added. [ASSUMED]
+   - Resolution: Plan 07-05 adds explicit remote temporary tracking cleanup so expiry can remove `VERIFYING` remote embedded entries without invoking failure side effects.
    - Recommendation: Add an explicit helper to erase only `VERIFYING` remote embedded entries without invoking failure side effects. [ASSUMED]
 
 ## Environment Availability
