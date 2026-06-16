@@ -14,6 +14,7 @@
 #include <vector>
 #include <thread>
 #include <optional>
+#include <mutex>
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -59,6 +60,8 @@ extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {
+    class MigrationManager;
+
     /**
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
@@ -128,9 +131,9 @@ namespace sgns
             CREATING = 0,              ///< Object construction is in progress.
             MIGRATING_DATABASE,        ///< Versioned database migrations are running.
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
-            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -354,6 +357,8 @@ namespace sgns
         {
             return dev_config_.TokenID;
         }
+
+        [[nodiscard]] std::pair<float, std::string> GetInitializationStatus() const;
 
         /**
          * @brief Returns the current processing service status.
@@ -590,11 +595,13 @@ namespace sgns
     private:
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                              io_work_guard_; ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;   ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
-        std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
+                                                   io_work_guard_;       ///< Keeps @ref io_ alive.
+        std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
+        std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
+        std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
+        mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.

@@ -652,7 +652,7 @@ namespace sgns
                                                       TransactionStatus                           new_status );
         bool HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const;
 
-        bool IsGoingToOverwrite( const std::string &key ) const;
+        bool KeyExistsInDB( const std::string &key ) const;
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";

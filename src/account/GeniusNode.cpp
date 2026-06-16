@@ -981,18 +981,24 @@ namespace sgns
 
     void GeniusNode::MigrateDatabase( std::function<void( outcome::result<void> )> callback )
     {
-        auto migrationManager = sgns::MigrationManager::New( io_,               // ioContext
-                                                             pubsub_,           // pubSub
-                                                             graphsyncnetwork_, // graphsync
-                                                             scheduler_,        // scheduler
-                                                             generator_,        // generator
-                                                             write_base_path_,  // writeBasePath
-                                                             base58key_,        // base58key
-                                                             account_,
-                                                             is_full_node_ );
+        auto mgr = sgns::MigrationManager::New( io_,               // ioContext
+                                                pubsub_,           // pubSub
+                                                graphsyncnetwork_, // graphsync
+                                                scheduler_,        // scheduler
+                                                generator_,        // generator
+                                                write_base_path_,  // writeBasePath
+                                                base58key_,        // base58key
+                                                account_,
+                                                is_full_node_ );
+
+        // We store it to query migration progress later.
+        {
+            std::lock_guard<std::mutex> lock( migration_mutex_ );
+            migration_manager_ = mgr;
+        }
 
         std::thread migration_thread(
-            [manager = std::move( migrationManager ), cb = std::move( callback )]
+            [manager = std::move( mgr ), cb = std::move( callback )]
             {
                 auto migrationResult = manager->Migrate();
                 if ( cb )
@@ -1276,9 +1282,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        auto account = GeniusAccount::NewFromPublicKey( TokenID::FromBytes( { 0x00 } ),
-                                                        public_address,
-                                                        this->is_full_node_ );
+        auto account = GeniusAccount::NewFromPublicKey( TokenID::FromBytes( { 0x00 } ), public_address, is_full_node_ );
 
         if ( account == nullptr )
         {
@@ -1572,6 +1576,67 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
+    [[nodiscard]] std::pair<float, std::string> GeniusNode::GetInitializationStatus() const
+    {
+        auto node_state = state_.load();
+
+        // Note: these weights are arbitrary and may be changed if some stage is taking too long
+        switch ( node_state )
+        {
+            case NodeState::CREATING:
+                return { 0.0f, "Creating node and initializing services" };
+
+            case NodeState::MIGRATING_DATABASE:
+            {
+                std::lock_guard<std::mutex> lock( migration_mutex_ );
+                if ( migration_manager_ )
+                {
+                    auto total   = migration_manager_->GetTotalSteps();
+                    auto current = migration_manager_->GetCurrentStepIndex();
+                    if ( total > 0 && current > 0 )
+                    {
+                        // Subdivide the 0.05 -- 0.30 range across migration steps
+                        float pct = 0.05f + 0.25f * ( static_cast<float>( current ) / static_cast<float>( total ) );
+                        return { pct, migration_manager_->GetCurrentStepDescription() };
+                    }
+                    return { 0.05f, "Preparing migration steps" };
+                }
+                return { 0.30f, "Migrating database" };
+            }
+
+            case NodeState::INITIALIZING_DATABASE:
+                return { 0.40f, "Initializing CRDT database" };
+
+            case NodeState::INITIALIZING_BLOCKCHAIN:
+                return { 0.525f, "Initializing blockchain service" };
+
+            case NodeState::INITIALIZING_TRANSACTIONS:
+            {
+                // 0.60 -- 0.90 range with sub-progress from TransactionManager state
+                switch ( GetTransactionManagerState() )
+                {
+                    case TransactionManager::State::CREATING:
+                        return { 0.60f, "Creating transaction manager" };
+                    case TransactionManager::State::INITIALIZING:
+                        return { 0.70f, "Initializing transaction manager" };
+                    case TransactionManager::State::SYNCING:
+                        return { 0.80f, "Syncing transactions" };
+                    case TransactionManager::State::READY:
+                        return { 0.90f, "Finalizing transaction manager" };
+                }
+                return { 0.60f, "Initializing transactions" };
+            }
+
+            case NodeState::INITIALIZING_PROCESSING:
+                return { 0.945f, "Initializing processing modules" };
+
+            case NodeState::READY:
+                return { 1.0f, "Ready" };
+        }
+
+        return { 0.0f, "Unknown state" };
+    }
+
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
                                                                                  const std::string        &destination,
                                                                                  TokenID                   token_id,
@@ -1622,47 +1687,14 @@ namespace sgns
 
     outcome::result<std::string> GeniusNode::PayDev( uint64_t amount, TokenID token_id )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
-        {
-            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
-            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
-        }
-
-        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
-        if ( available_balance < amount )
-        {
-            node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
-                                 __func__,
-                                 amount,
-                                 available_balance );
-            return outcome::failure( Error::INSUFFICIENT_FUNDS );
-        }
-
-        BOOST_OUTCOME_TRY( auto &&manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto &&tx_id, manager->TransferFunds( amount, dev_config_.Addr, token_id ) );
-
-        node_logger_->debug( "{}: transaction {} triggered ", __func__, tx_id );
-        return tx_id;
+        return TransferFunds( amount, dev_config_.Addr, token_id );
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayDev( uint64_t                  amount,
                                                                           TokenID                   token_id,
                                                                           std::chrono::milliseconds timeout )
     {
-        BOOST_OUTCOME_TRY( auto &&tx_id, PayDev( amount, token_id ) );
-
-        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
-
-        auto [tx_status, duration] = finalized_result;
-
-        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
-            return outcome::failure( Error::TRANSACTION_FAILED );
-        }
-
-        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
-        return std::make_pair( tx_id, duration );
+        return TransferFunds( amount, dev_config_.Addr, token_id, timeout );
     }
 
     outcome::result<std::pair<TransactionManager::TransactionStatus, uint64_t>> GeniusNode::WaitForFinalized(
@@ -1784,65 +1816,66 @@ namespace sgns
                                                                strong->account_->GetAddress().substr( 0, 8 ),
                                                                FUNC,
                                                                task_id );
-                                   do
+
+                                   if ( strong->task_queue_->IsTaskCompleted( task_id ) )
                                    {
-                                       if ( strong->task_queue_->IsTaskCompleted( task_id ) )
-                                       {
-                                           strong->node_logger_->info( "[{}]{}: Task Already completed!",
-                                                                       strong->account_->GetAddress().substr( 0, 8 ),
-                                                                       FUNC );
-                                           break;
-                                       }
-                                       if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
-                                       {
-                                           strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                                       strong->account_->GetAddress().substr( 0, 8 ),
-                                                                       FUNC );
-                                           break;
-                                       }
-                                       strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                       strong->node_logger_->info( "[{}]{}: Task Already completed!",
                                                                    strong->account_->GetAddress().substr( 0, 8 ),
                                                                    FUNC );
-                                       auto maybe_task = strong->task_queue_->GetTask( task_id );
-                                       if ( maybe_task.has_failure() )
-                                       {
-                                           strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
-                                                                       strong->account_->GetAddress().substr( 0, 8 ),
-                                                                       FUNC,
-                                                                       task_id );
-                                           break;
-                                       }
-                                       auto escrow_path          = maybe_task.value().escrow_path();
-                                       auto complete_task_result = strong->task_queue_->CompleteTask( task_id,
-                                                                                                      taskresult );
-                                       if ( complete_task_result.has_failure() )
-                                       {
-                                           strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
-                                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                                        FUNC,
-                                                                        task_id );
-                                           break;
-                                       }
-                                       strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                       return;
+                                   }
+                                   if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
+                                   {
+                                       strong->node_logger_->info( "[{}]{}: Transactions are not ready",
                                                                    strong->account_->GetAddress().substr( 0, 8 ),
                                                                    FUNC );
-                                       auto pay_result = strong->PayEscrow( escrow_path,
-                                                                            taskresult,
-                                                                            std::move( complete_task_result.value() ) );
-                                       if ( pay_result.has_failure() )
-                                       {
-                                           strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
-                                                                        strong->account_->GetAddress().substr( 0, 8 ),
-                                                                        FUNC,
-                                                                        task_id );
-                                           break;
-                                       }
-                                       strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                       return;
+                                   }
+                                   strong->node_logger_->info( "[{}]{}: Transactions READY",
+                                                               strong->account_->GetAddress().substr( 0, 8 ),
+                                                               FUNC );
+
+                                   auto maybe_task = strong->task_queue_->GetTask( task_id );
+                                   if ( maybe_task.has_failure() )
+                                   {
+                                       strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
                                                                    strong->account_->GetAddress().substr( 0, 8 ),
                                                                    FUNC,
                                                                    task_id );
+                                       return;
+                                   }
 
-                                   } while ( 0 );
+                                   auto escrow_path          = maybe_task.value().escrow_path();
+                                   auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
+                                   if ( complete_task_result.has_failure() )
+                                   {
+                                       strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
+                                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                                    FUNC,
+                                                                    task_id );
+                                       return;
+                                   }
+
+                                   strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
+                                                               strong->account_->GetAddress().substr( 0, 8 ),
+                                                               FUNC );
+
+                                   auto pay_result = strong->PayEscrow( escrow_path,
+                                                                        taskresult,
+                                                                        std::move( complete_task_result.value() ) );
+                                   if ( pay_result.has_failure() )
+                                   {
+                                       strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
+                                                                    strong->account_->GetAddress().substr( 0, 8 ),
+                                                                    FUNC,
+                                                                    task_id );
+                                       return;
+                                   }
+
+                                   strong->node_logger_->info( "[{}]{}: Paid for task: {}",
+                                                               strong->account_->GetAddress().substr( 0, 8 ),
+                                                               FUNC,
+                                                               task_id );
                                }
                            } );
     }
