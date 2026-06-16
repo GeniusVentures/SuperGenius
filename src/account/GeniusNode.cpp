@@ -781,18 +781,24 @@ namespace sgns
 
     void GeniusNode::MigrateDatabase( std::function<void( outcome::result<void> )> callback )
     {
-        auto migrationManager = sgns::MigrationManager::New( io_,               // ioContext
-                                                             pubsub_,           // pubSub
-                                                             graphsyncnetwork_, // graphsync
-                                                             scheduler_,        // scheduler
-                                                             generator_,        // generator
-                                                             write_base_path_,  // writeBasePath
-                                                             base58key_,        // base58key
-                                                             account_,
-                                                             is_full_node_ );
+        auto mgr = sgns::MigrationManager::New( io_,               // ioContext
+                                                pubsub_,           // pubSub
+                                                graphsyncnetwork_, // graphsync
+                                                scheduler_,        // scheduler
+                                                generator_,        // generator
+                                                write_base_path_,  // writeBasePath
+                                                base58key_,        // base58key
+                                                account_,
+                                                is_full_node_ );
+
+        // We store it to query migration progress later.
+        {
+            std::lock_guard<std::mutex> lock( migration_mutex_ );
+            migration_manager_ = mgr;
+        }
 
         std::thread migration_thread(
-            [manager = std::move( migrationManager ), cb = std::move( callback )]
+            [manager = std::move( mgr ), cb = std::move( callback )]
             {
                 auto migrationResult = manager->Migrate();
                 if ( cb )
@@ -1335,7 +1341,7 @@ namespace sgns
         return std::make_pair( tx_id, duration );
     }
 
-    [[nodiscard]] float GeniusNode::GetInitializationPercentage() const
+    [[nodiscard]] std::pair<float, std::string> GeniusNode::GetInitializationStatus() const
     {
         auto node_state = state_.load();
 
@@ -1343,16 +1349,31 @@ namespace sgns
         switch ( node_state )
         {
             case NodeState::CREATING:
-                return 0.0f;
+                return { 0.0f, "Creating node and initializing services" };
 
             case NodeState::MIGRATING_DATABASE:
-                return 0.30f;
+            {
+                std::lock_guard<std::mutex> lock( migration_mutex_ );
+                if ( migration_manager_ )
+                {
+                    auto total   = migration_manager_->GetTotalSteps();
+                    auto current = migration_manager_->GetCurrentStepIndex();
+                    if ( total > 0 && current > 0 )
+                    {
+                        // Subdivide the 0.05 -- 0.30 range across migration steps
+                        float pct = 0.05f + 0.25f * ( static_cast<float>( current ) / static_cast<float>( total ) );
+                        return { pct, migration_manager_->GetCurrentStepDescription() };
+                    }
+                    return { 0.05f, "Preparing migration steps" };
+                }
+                return { 0.30f, "Migrating database" };
+            }
 
             case NodeState::INITIALIZING_DATABASE:
-                return 0.40f;
+                return { 0.40f, "Initializing CRDT database" };
 
             case NodeState::INITIALIZING_BLOCKCHAIN:
-                return 0.525f;
+                return { 0.525f, "Initializing blockchain service" };
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
@@ -1360,25 +1381,25 @@ namespace sgns
                 switch ( GetTransactionManagerState() )
                 {
                     case TransactionManager::State::CREATING:
-                        return 0.60f;
+                        return { 0.60f, "Creating transaction manager" };
                     case TransactionManager::State::INITIALIZING:
-                        return 0.70f;
+                        return { 0.70f, "Initializing transaction manager" };
                     case TransactionManager::State::SYNCING:
-                        return 0.80f;
+                        return { 0.80f, "Syncing transactions" };
                     case TransactionManager::State::READY:
-                        return 0.90f;
+                        return { 0.90f, "Finalizing transaction manager" };
                 }
-                return 0.60f;
+                return { 0.60f, "Initializing transactions" };
             }
 
             case NodeState::INITIALIZING_PROCESSING:
-                return 0.945f;
+                return { 0.945f, "Initializing processing modules" };
 
             case NodeState::READY:
-                return 1.0f;
+                return { 1.0f, "Ready" };
         }
 
-        return 0.0f;
+        return { 0.0f, "Unknown state" };
     }
 
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::TransferFunds( uint64_t                  amount,
