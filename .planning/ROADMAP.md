@@ -295,7 +295,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
+- [x] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
