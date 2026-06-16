@@ -176,6 +176,17 @@ namespace sgns
             }
         };
 
+        /**
+         * @brief Local pending proposal lifecycle limits.
+         */
+        struct PendingLifecycleConfig
+        {
+            std::size_t               max_pending_proposals          = 1024;
+            std::size_t               max_pending_per_proposer       = 64;
+            std::size_t               max_retained_pending_bytes     = 64ULL * 1024ULL * 1024ULL;
+            std::chrono::milliseconds pending_ttl                    = std::chrono::minutes( 3 );
+        };
+
         /// @brief      Alias for a subject handler method type
         using SubjectHandler = std::function<outcome::result<ValidationResult>( const Subject &subject )>;
         /// @brief      Alias for a certificate handler method type
@@ -235,6 +246,12 @@ namespace sgns
          * @param[in] subject_type Canonical subject type to remove.
          */
         void UnregisterProposalCleanupHandler( std::string_view subject_type );
+
+        /**
+         * @brief Overrides local pending lifecycle limits for deterministic tests/configuration.
+         * @param[in] config Pending lifecycle configuration.
+         */
+        void SetPendingLifecycleConfig( PendingLifecycleConfig config );
 
         /** RegisterSlotKeyHandler also changed to match subject type pattern: */
         /**
@@ -572,6 +589,22 @@ namespace sgns
         };
 
         /**
+         * @brief Canonical local pending proposal entry.
+         */
+        struct PendingProposalEntry
+        {
+            Proposal                                  proposal;
+            std::vector<PendingDependencyKey>         dependencies;
+            std::chrono::steady_clock::time_point     admitted_at;
+            std::chrono::steady_clock::time_point     expires_at;
+            std::chrono::steady_clock::time_point     next_retry_at;
+            std::chrono::steady_clock::time_point     last_retry_at;
+            std::optional<std::chrono::milliseconds>  retry_after;
+            std::size_t                               retained_bytes = 0;
+            std::string                               proposer_id;
+        };
+
+        /**
          * @brief Handles an incoming proposal.
          * @param[in] proposal Proposal to process.
          */
@@ -682,15 +715,28 @@ namespace sgns
          * @param[in] proposal Proposal to queue.
          * @param[in] subject_hash Subject hash dependency key.
          */
-        void AddPendingProposal( const Proposal &proposal,
+        bool AddPendingProposal( const Proposal &proposal,
                                  const std::string &subject_hash,
                                  const ValidationResult &validation_result = ValidationResult::Pending() );
+        /**
+         * @brief Removes one pending proposal and its local indexes/accounting.
+         * @param[in] proposal_id Proposal identifier.
+         * @param[in] reason Short local reason for logging.
+         * @return `true` when an entry was removed.
+         */
+        bool RemovePendingProposal( const std::string &proposal_id, std::string_view reason );
         /**
          * @brief Removes and returns pending proposals for a subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return Pending proposals for the subject.
          */
         std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
+        bool RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason );
+        bool CanAdmitPendingProposalLocked( const Proposal &proposal,
+                                            std::size_t retained_bytes,
+                                            const std::string &proposer_id ) const;
+        std::vector<PendingDependencyKey> NormalizePendingDependencies( const std::string &subject_hash,
+                                                                        const ValidationResult &validation_result ) const;
         /**
          * @brief Stores vote pending proposal availability.
          * @param[in] vote Vote to queue.
@@ -800,13 +846,14 @@ namespace sgns
         std::string               account_address_;                   ///< Local validator/account id.
         std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
-        std::unordered_map<std::string, Proposal> pending_proposals_; ///< Pending proposals awaiting subject readiness.
-        std::unordered_map<std::string, std::vector<std::string>>
-            pending_by_subject_hash_;                                        ///< Proposal ids queued by subject hash.
-        std::unordered_map<std::string, std::vector<PendingDependencyKey>>
-            pending_dependencies_; ///< Local pending dependency metadata keyed by proposal id.
-        std::unordered_map<std::string, std::optional<std::chrono::milliseconds>>
-            pending_retry_after_; ///< Optional local retry metadata keyed by proposal id.
+        std::unordered_map<std::string, PendingProposalEntry>
+            pending_entries_; ///< Canonical pending proposals keyed by proposal id.
+        std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>
+            pending_by_dependency_; ///< Proposal ids queued by typed dependency key.
+        std::unordered_map<std::string, std::size_t>
+            pending_count_by_proposer_; ///< Pending proposal count by proposer id.
+        std::size_t pending_retained_bytes_ = 0; ///< Total retained pending proposal bytes.
+        PendingLifecycleConfig pending_config_; ///< Local pending lifecycle bounds.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.

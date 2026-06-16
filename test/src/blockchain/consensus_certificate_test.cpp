@@ -31,7 +31,7 @@ namespace sgns
         static bool HasPendingProposal( const std::shared_ptr<ConsensusManager> &manager,
                                         const std::string                       &proposal_id )
         {
-            return manager && manager->pending_proposals_.find( proposal_id ) != manager->pending_proposals_.end();
+            return manager && manager->pending_entries_.find( proposal_id ) != manager->pending_entries_.end();
         }
 
         static bool HasSubjectHandler( const std::shared_ptr<ConsensusManager> &manager, const std::string &type_hash )

@@ -326,6 +326,12 @@ namespace sgns
         proposal_cleanup_handlers_.erase( type_hash.value() );
     }
 
+    void ConsensusManager::SetPendingLifecycleConfig( PendingLifecycleConfig config )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        pending_config_ = config;
+    }
+
     void ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
     {
         if ( !handler )
@@ -672,54 +678,174 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::AddPendingProposal( const Proposal           &proposal,
+    bool ConsensusManager::CanAdmitPendingProposalLocked( const Proposal    &proposal,
+                                                          std::size_t        retained_bytes,
+                                                          const std::string &proposer_id ) const
+    {
+        if ( pending_entries_.size() >= pending_config_.max_pending_proposals )
+        {
+            ConsensusManagerLogger()->warn( "{}: pending admission refused: global limit reached proposal_id={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        auto proposer_it = pending_count_by_proposer_.find( proposer_id );
+        if ( proposer_it != pending_count_by_proposer_.end() &&
+             proposer_it->second >= pending_config_.max_pending_per_proposer )
+        {
+            ConsensusManagerLogger()->warn( "{}: pending admission refused: proposer limit reached proposer={} proposal_id={}",
+                                            __func__,
+                                            proposer_id.substr( 0, 8 ),
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        if ( pending_retained_bytes_ + retained_bytes > pending_config_.max_retained_pending_bytes )
+        {
+            ConsensusManagerLogger()->warn( "{}: pending admission refused: retained byte limit reached proposal_id={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        return true;
+    }
+
+    std::vector<ConsensusManager::PendingDependencyKey> ConsensusManager::NormalizePendingDependencies(
+        const std::string      &subject_hash,
+        const ValidationResult &validation_result ) const
+    {
+        if ( !validation_result.dependencies.empty() )
+        {
+            return validation_result.dependencies;
+        }
+        return { PendingDependencyKey::Certificate( subject_hash ) };
+    }
+
+    bool ConsensusManager::AddPendingProposal( const Proposal           &proposal,
                                                const std::string        &subject_hash,
                                                const ValidationResult   &validation_result )
     {
         std::lock_guard lock( proposals_mutex_ );
-        if ( pending_proposals_.find( proposal.proposal_id() ) != pending_proposals_.end() )
+        if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
         {
-            ConsensusManagerLogger()->error(
-                "{}: Failed adding pending proposal for {}: already have a proposal with id {}",
-                __func__,
-                subject_hash.substr( 0, 8 ),
-                proposal.proposal_id().substr( 0, 8 ) );
-            return;
+            RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
+        }
+
+        const auto  dependencies   = NormalizePendingDependencies( subject_hash, validation_result );
+        const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
+        const auto &proposer_id    = proposal.proposer_id();
+        if ( !CanAdmitPendingProposalLocked( proposal, retained_bytes, proposer_id ) )
+        {
+            return false;
         }
         ConsensusManagerLogger()->debug( "{}: Adding pending proposal for {}: proposal with id {}",
                                          __func__,
                                          subject_hash.substr( 0, 8 ),
                                          proposal.proposal_id().substr( 0, 8 ) );
-        pending_proposals_.emplace( proposal.proposal_id(), proposal );
-        pending_dependencies_[proposal.proposal_id()] = validation_result.dependencies;
-        pending_retry_after_[proposal.proposal_id()]  = validation_result.retry_after;
-        pending_by_subject_hash_[subject_hash].push_back( proposal.proposal_id() );
+        const auto now = std::chrono::steady_clock::now();
+        PendingProposalEntry entry;
+        entry.proposal       = proposal;
+        entry.dependencies   = dependencies;
+        entry.admitted_at    = now;
+        entry.expires_at     = now + pending_config_.pending_ttl;
+        entry.next_retry_at  = validation_result.retry_after.has_value() ? now + validation_result.retry_after.value() : now;
+        entry.last_retry_at  = {};
+        entry.retry_after    = validation_result.retry_after;
+        entry.retained_bytes = retained_bytes;
+        entry.proposer_id    = proposer_id;
+
+        pending_retained_bytes_ += retained_bytes;
+        pending_count_by_proposer_[proposer_id] += 1;
+        for ( const auto &dependency : dependencies )
+        {
+            pending_by_dependency_[dependency].insert( proposal.proposal_id() );
+        }
+        pending_entries_.emplace( proposal.proposal_id(), std::move( entry ) );
+        return true;
     }
 
     std::vector<ConsensusManager::Proposal> ConsensusManager::TakePendingProposals( const std::string &subject_hash )
     {
         std::vector<Proposal> result;
         std::lock_guard       lock( proposals_mutex_ );
-        auto                  it = pending_by_subject_hash_.find( subject_hash );
-        if ( it == pending_by_subject_hash_.end() )
+        const auto            dependency = PendingDependencyKey::Certificate( subject_hash );
+        auto                  it         = pending_by_dependency_.find( dependency );
+        if ( it == pending_by_dependency_.end() )
         {
             ConsensusManagerLogger()->trace( "{}: No pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
             return result;
         }
-        for ( const auto &proposal_id : it->second )
+        const std::vector<std::string> proposal_ids( it->second.begin(), it->second.end() );
+        for ( const auto &proposal_id : proposal_ids )
         {
-            auto prop_it = pending_proposals_.find( proposal_id );
-            if ( prop_it != pending_proposals_.end() )
+            auto prop_it = pending_entries_.find( proposal_id );
+            if ( prop_it != pending_entries_.end() )
             {
-                result.push_back( prop_it->second );
-                pending_proposals_.erase( prop_it );
-                pending_dependencies_.erase( proposal_id );
-                pending_retry_after_.erase( proposal_id );
+                result.push_back( prop_it->second.proposal );
+                RemovePendingProposalLocked( proposal_id, "take" );
             }
         }
         ConsensusManagerLogger()->debug( "{}: Taking pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
-        pending_by_subject_hash_.erase( it );
         return result;
+    }
+
+    bool ConsensusManager::RemovePendingProposal( const std::string &proposal_id, std::string_view reason )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        return RemovePendingProposalLocked( proposal_id, reason );
+    }
+
+    bool ConsensusManager::RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason )
+    {
+        auto entry_it = pending_entries_.find( proposal_id );
+        if ( entry_it == pending_entries_.end() )
+        {
+            pending_votes_.erase( proposal_id );
+            return false;
+        }
+
+        const auto retained_bytes = entry_it->second.retained_bytes;
+        if ( pending_retained_bytes_ >= retained_bytes )
+        {
+            pending_retained_bytes_ -= retained_bytes;
+        }
+        else
+        {
+            pending_retained_bytes_ = 0;
+        }
+
+        auto proposer_it = pending_count_by_proposer_.find( entry_it->second.proposer_id );
+        if ( proposer_it != pending_count_by_proposer_.end() )
+        {
+            if ( proposer_it->second > 1 )
+            {
+                --proposer_it->second;
+            }
+            else
+            {
+                pending_count_by_proposer_.erase( proposer_it );
+            }
+        }
+
+        for ( const auto &dependency : entry_it->second.dependencies )
+        {
+            auto dep_it = pending_by_dependency_.find( dependency );
+            if ( dep_it != pending_by_dependency_.end() )
+            {
+                dep_it->second.erase( proposal_id );
+                if ( dep_it->second.empty() )
+                {
+                    pending_by_dependency_.erase( dep_it );
+                }
+            }
+        }
+
+        pending_entries_.erase( entry_it );
+        pending_votes_.erase( proposal_id );
+        ConsensusManagerLogger()->debug( "{}: removed pending proposal_id={} reason={}",
+                                         __func__,
+                                         proposal_id.substr( 0, 8 ),
+                                         reason );
+        return true;
     }
 
     void ConsensusManager::AddPendingVote( const Vote &vote )
@@ -1328,10 +1454,7 @@ namespace sgns
                                              subject_hash.value().substr( 0, 8 ),
                                              proposal.proposal_id().substr( 0, 8 ) );
             std::lock_guard lock( proposals_mutex_ );
-            pending_votes_.erase( proposal.proposal_id() );
-            pending_proposals_.erase( proposal.proposal_id() );
-            pending_dependencies_.erase( proposal.proposal_id() );
-            pending_retry_after_.erase( proposal.proposal_id() );
+            RemovePendingProposalLocked( proposal.proposal_id(), "already-certified" );
             return;
         }
 
@@ -2138,29 +2261,8 @@ namespace sgns
 
         for ( const auto &proposal_id : ids_to_remove )
         {
+            RemovePendingProposalLocked( proposal_id, "slot-cleanup" );
             proposals_.erase( proposal_id );
-            pending_proposals_.erase( proposal_id );
-            pending_dependencies_.erase( proposal_id );
-            pending_retry_after_.erase( proposal_id );
-            pending_votes_.erase( proposal_id );
-        }
-
-        for ( auto it_hash = pending_by_subject_hash_.begin(); it_hash != pending_by_subject_hash_.end(); )
-        {
-            auto &vec = it_hash->second;
-            vec.erase( std::remove_if( vec.begin(),
-                                       vec.end(),
-                                       [&]( const std::string &proposal_id )
-                                       { return ids_to_remove.find( proposal_id ) != ids_to_remove.end(); } ),
-                       vec.end() );
-            if ( vec.empty() )
-            {
-                it_hash = pending_by_subject_hash_.erase( it_hash );
-            }
-            else
-            {
-                ++it_hash;
-            }
         }
 
         slot_states_.erase( slot_key );

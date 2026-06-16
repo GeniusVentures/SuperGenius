@@ -46,7 +46,7 @@ namespace sgns
         static bool HasPendingProposal( const std::shared_ptr<ConsensusManager> &manager,
                                         const std::string                       &proposal_id )
         {
-            return manager && manager->pending_proposals_.find( proposal_id ) != manager->pending_proposals_.end();
+            return manager && manager->pending_entries_.find( proposal_id ) != manager->pending_entries_.end();
         }
 
         static bool LocalVoteCastForProposal( const std::shared_ptr<ConsensusManager> &manager,
@@ -71,12 +71,84 @@ namespace sgns
             manager->HandleProposal( proposal );
         }
 
-        static void AddPendingProposal( const std::shared_ptr<ConsensusManager>        &manager,
+        static bool AddPendingProposal( const std::shared_ptr<ConsensusManager>        &manager,
                                         const ConsensusManager::Proposal               &proposal,
                                         const std::string                              &subject_hash,
                                         const ConsensusManager::ValidationResult       &validation_result )
         {
-            manager->AddPendingProposal( proposal, subject_hash, validation_result );
+            return manager->AddPendingProposal( proposal, subject_hash, validation_result );
+        }
+
+        static bool RemovePendingProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                           const std::string                       &proposal_id,
+                                           std::string_view                         reason )
+        {
+            return manager->RemovePendingProposal( proposal_id, reason );
+        }
+
+        static ConsensusManager::PendingLifecycleConfig PendingConfig(
+            const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager->pending_config_;
+        }
+
+        static std::size_t PendingEntryCount( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? manager->pending_entries_.size() : 0U;
+        }
+
+        static std::size_t PendingDependencyWaiterCount(
+            const std::shared_ptr<ConsensusManager>       &manager,
+            const ConsensusManager::PendingDependencyKey  &dependency )
+        {
+            if ( !manager )
+            {
+                return 0;
+            }
+            auto it = manager->pending_by_dependency_.find( dependency );
+            return it == manager->pending_by_dependency_.end() ? 0U : it->second.size();
+        }
+
+        static std::size_t PendingRetainedBytes( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager ? manager->pending_retained_bytes_ : 0U;
+        }
+
+        static std::size_t PendingCountForProposer( const std::shared_ptr<ConsensusManager> &manager,
+                                                    const std::string                       &proposer_id )
+        {
+            if ( !manager )
+            {
+                return 0;
+            }
+            auto it = manager->pending_count_by_proposer_.find( proposer_id );
+            return it == manager->pending_count_by_proposer_.end() ? 0U : it->second;
+        }
+
+        static std::chrono::milliseconds PendingTtlForProposal(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const std::string                       &proposal_id )
+        {
+            auto it = manager->pending_entries_.find( proposal_id );
+            if ( it == manager->pending_entries_.end() )
+            {
+                return std::chrono::milliseconds( 0 );
+            }
+            return std::chrono::duration_cast<std::chrono::milliseconds>(
+                it->second.expires_at - it->second.admitted_at );
+        }
+
+        static std::chrono::milliseconds PendingRetryDelayForProposal(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const std::string                       &proposal_id )
+        {
+            auto it = manager->pending_entries_.find( proposal_id );
+            if ( it == manager->pending_entries_.end() )
+            {
+                return std::chrono::milliseconds( 0 );
+            }
+            return std::chrono::duration_cast<std::chrono::milliseconds>(
+                it->second.next_retry_at - it->second.admitted_at );
         }
 
         static void ContinueProposalAfterSubject( const std::shared_ptr<ConsensusManager> &manager,
@@ -195,10 +267,34 @@ namespace
         {
             return sgns::UTXOWitness{};
         }
+
+        sgns::ConsensusManager::Proposal MakeProposal(
+            const std::shared_ptr<sgns::ConsensusManager>   &manager,
+            const std::shared_ptr<sgns::ValidatorRegistry>  &registry,
+            uint64_t                                         nonce,
+            const std::string                               &account )
+        {
+            auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
+                kValidatorId,
+                nonce,
+                account,
+                sgns::EmbeddedTransaction{},
+                MakeTestCommitment(),
+                MakeTestWitness() );
+            EXPECT_TRUE( subject_result.has_value() );
+
+            auto proposal_result = manager->CreateProposal(
+                subject_result.value(),
+                kValidatorId,
+                registry->GetRegistryCid(),
+                registry->GetRegistryEpoch() );
+            EXPECT_TRUE( proposal_result.has_value() );
+            return proposal_result.value();
+        }
     };
 } // namespace
 
-TEST_F( ConsensusPendingLifecycleTest, HarnessIsDiscoverable )
+TEST( ConsensusPendingLifecycleContractTest, HarnessIsDiscoverable )
 {
     /**
      * Given a dedicated consensus pending lifecycle CTest target,
@@ -206,7 +302,9 @@ TEST_F( ConsensusPendingLifecycleTest, HarnessIsDiscoverable )
      * Then it exposes the future behavior slots for PEND-01 through PEND-07
      * and avoids bridge or EVM RPC concerns.
      */
-    const auto behaviors = PendingBehaviorNames();
+    const auto behaviors = std::vector<std::string>(
+        kConsensusPendingBehaviors.begin(),
+        kConsensusPendingBehaviors.end() );
 
     ASSERT_EQ( behaviors.size(), kConsensusPendingBehaviors.size() );
     EXPECT_STREQ( sgns::ConsensusPendingLifecycleTestAccess::Scope(),
@@ -214,7 +312,7 @@ TEST_F( ConsensusPendingLifecycleTest, HarnessIsDiscoverable )
     EXPECT_FALSE( sgns::NONCE_SUBJECT_TYPE.empty() );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, ValidationResultPreservesTerminalChecks )
+TEST( ConsensusPendingLifecycleContractTest, ValidationResultPreservesTerminalChecks )
 {
     /**
      * Given the local structured validation result contract,
@@ -237,7 +335,7 @@ TEST_F( ConsensusPendingLifecycleTest, ValidationResultPreservesTerminalChecks )
     EXPECT_TRUE( stalled.dependencies.empty() );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, PendingResultCarriesTypedCertificateDependencyAndRetryMetadata )
+TEST( ConsensusPendingLifecycleContractTest, PendingResultCarriesTypedCertificateDependencyAndRetryMetadata )
 {
     /**
      * Given a proposal waiting for a predecessor certificate,
@@ -260,7 +358,7 @@ TEST_F( ConsensusPendingLifecycleTest, PendingResultCarriesTypedCertificateDepen
     EXPECT_EQ( pending.retry_after.value(), std::chrono::seconds( 2 ) );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, PendingDependencyKeySupportsHashIdentity )
+TEST( ConsensusPendingLifecycleContractTest, PendingDependencyKeySupportsHashIdentity )
 {
     /**
      * Given typed dependency keys are used as local pending indexes,
@@ -282,55 +380,170 @@ TEST_F( ConsensusPendingLifecycleTest, PendingDependencyKeySupportsHashIdentity 
     EXPECT_EQ( index.at( PendingDependencyKey::Certificate( "tx-b" ) ), 7 );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, PendingProposalRemainsLocalUntilRetryApproval )
+TEST( ConsensusPendingLifecycleContractTest, PendingLifecycleConfigDefaultsToThreeMinuteBoundedPool )
 {
-    /**
-     * Given a subject handler returns local Pending for a valid proposal,
-     * When the proposal is handled and later resumed with Approve,
-     * Then Pending emits no local vote and retry approval uses the normal
-     * proposal path exactly once.
-     */
+    const sgns::ConsensusManager::PendingLifecycleConfig config;
+
+    EXPECT_EQ( config.max_pending_proposals, 1024U );
+    EXPECT_EQ( config.max_pending_per_proposer, 64U );
+    EXPECT_EQ( config.max_retained_pending_bytes, 64ULL * 1024ULL * 1024ULL );
+    EXPECT_EQ( config.pending_ttl, std::chrono::minutes( 3 ) );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndCleansAccounting )
+{
+    using PendingDependencyKey = sgns::ConsensusManager::PendingDependencyKey;
+
     auto registry = MakeRegistry();
     ASSERT_TRUE( registry );
     auto manager = MakeManager( registry );
     ASSERT_TRUE( manager );
 
-    auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-        kValidatorId,
-        7,
-        "0xpending-retry",
-        sgns::EmbeddedTransaction{},
-        MakeTestCommitment(),
-        MakeTestWitness() );
-    ASSERT_TRUE( subject_result.has_value() );
+    sgns::ConsensusManager::PendingLifecycleConfig config;
+    config.pending_ttl = std::chrono::seconds( 10 );
+    manager->SetPendingLifecycleConfig( config );
 
-    auto proposal_result = manager->CreateProposal(
-        subject_result.value(),
-        kValidatorId,
-        registry->GetRegistryCid(),
-        registry->GetRegistryEpoch() );
-    ASSERT_TRUE( proposal_result.has_value() );
+    auto proposal    = MakeProposal( manager, registry, 11, "0xpending-index" );
+    auto proposal_id = proposal.proposal_id();
+    const auto dep_a = PendingDependencyKey::Certificate( "cert-a" );
+    const auto dep_b = PendingDependencyKey::Certificate( "cert-b" );
 
-    const auto proposal_id = proposal_result.value().proposal_id();
-    sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+    const bool admitted = sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
         manager,
-        proposal_result.value(),
+        proposal,
+        "subject-hash",
+        sgns::ConsensusManager::ValidationResult::Pending(
+            { dep_a, dep_b },
+            std::chrono::seconds( 2 ) ) );
+
+    EXPECT_TRUE( admitted );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dep_a ), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dep_b ), 1U );
+    EXPECT_GT( sgns::ConsensusPendingLifecycleTestAccess::PendingRetainedBytes( manager ), 0U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, kValidatorId ), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingTtlForProposal( manager, proposal_id ),
+               std::chrono::seconds( 10 ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal( manager, proposal_id ),
+               std::chrono::seconds( 2 ) );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
+        manager,
+        proposal_id,
+        "test-reset" ) );
+
+    config.max_pending_proposals = 1;
+    config.max_pending_per_proposer = 1;
+    config.pending_ttl = std::chrono::seconds( 10 );
+    manager->SetPendingLifecycleConfig( config );
+
+    auto first  = MakeProposal( manager, registry, 21, "0xcapacity-first" );
+    auto second = MakeProposal( manager, registry, 22, "0xcapacity-second" );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        first,
+        "subject-first",
+        sgns::ConsensusManager::ValidationResult::Pending() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        second,
+        "subject-second",
+        sgns::ConsensusManager::ValidationResult::Pending() ) );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 1U );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, first.proposal_id() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, second.proposal_id() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, second.proposal_id() ) );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
+        manager,
+        first.proposal_id(),
+        "test-reset" ) );
+
+    config.max_pending_proposals = 2;
+    config.max_pending_per_proposer = 1;
+    config.pending_ttl = std::chrono::seconds( 10 );
+    manager->SetPendingLifecycleConfig( config );
+
+    auto remove_first  = MakeProposal( manager, registry, 31, "0xremove-first" );
+    auto remove_second = MakeProposal( manager, registry, 32, "0xremove-second" );
+    auto remove_third  = MakeProposal( manager, registry, 33, "0xremove-third" );
+    remove_first.set_proposer_id( "validator-a" );
+    remove_second.set_proposer_id( "validator-b" );
+    remove_third.set_proposer_id( "validator-a" );
+
+    const auto dependency = PendingDependencyKey::Certificate( "shared-cert" );
+    const auto pending    = sgns::ConsensusManager::ValidationResult::Pending( { dependency } );
+
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        remove_first,
+        "subject-first",
+        pending ) );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        remove_second,
+        "subject-second",
+        pending ) );
+
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 2U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-a" ), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-b" ), 1U );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
+        manager,
+        remove_first.proposal_id(),
+        "test-remove" ) );
+
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_first.proposal_id() ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_second.proposal_id() ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 1U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-a" ), 0U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-b" ), 1U );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        remove_third,
+        "subject-third",
+        pending ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_third.proposal_id() ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 2U );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 2U );
+
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
+        manager,
+        remove_second.proposal_id(),
+        "test-reset" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
+        manager,
+        remove_third.proposal_id(),
+        "test-reset" ) );
+    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
+
+    manager->SetPendingLifecycleConfig( sgns::ConsensusManager::PendingLifecycleConfig{} );
+
+    auto retry_proposal    = MakeProposal( manager, registry, 41, "0xpending-retry" );
+    auto retry_proposal_id = retry_proposal.proposal_id();
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
+        manager,
+        retry_proposal,
         "0xpending-retry",
         sgns::ConsensusManager::ValidationResult::Pending(
-            { sgns::ConsensusManager::PendingDependencyKey::Certificate( "0xprevious" ) } ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+            { sgns::ConsensusManager::PendingDependencyKey::Certificate( "0xprevious" ) } ) ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, retry_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
-    const auto pending = sgns::ConsensusPendingLifecycleTestAccess::TakePendingProposals( manager, "0xpending-retry" );
-    ASSERT_EQ( pending.size(), 1U );
-    EXPECT_EQ( pending.front().proposal_id(), proposal_id );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, proposal_id ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+    const auto retry_pending = sgns::ConsensusPendingLifecycleTestAccess::TakePendingProposals( manager, "0xprevious" );
+    ASSERT_EQ( retry_pending.size(), 1U );
+    EXPECT_EQ( retry_pending.front().proposal_id(), retry_proposal_id );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, retry_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
-    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, pending.front() );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, proposal_id ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retry_pending.front() );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, retry_proposal_id ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
-    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, proposal_result.value() );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, proposal_id ) );
+    sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retry_proposal );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 }
