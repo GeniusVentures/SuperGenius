@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Bridge Integration
-current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
+current_phase: Phase 5.1 — Refactor RPC endpoint initialization
 status: context-gathered
-last_updated: "2026-06-04T19:30:00.000Z"
+last_updated: "2026-06-17T18:51:11.266Z"
 progress:
-  total_phases: 9
-  completed_phases: 6
+  total_phases: 10
+  completed_phases: 7
   total_plans: 18
-  completed_plans: 18
-  percent: 72
+  completed_plans: 17
+  percent: 70
 ---
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 5 — Startup Wiring + Mock RPC Transport
+**Current Phase:** Phase 5.1 — Refactor RPC endpoint initialization
 
 ## Phase Status
 
@@ -82,6 +82,7 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 - Phase 5: Wire BridgeRelayer::Start() and InitializeRpcEndpoints() into node startup, add mock RPC transport for testing
 - Phase 6 (follow-up): Tier 2 network voting weight classes with reputation scoring
 - See `.planning/notes/rpc-verification-tiers.md` for architecture decisions
+- Phase 05.1 inserted after Phase 5: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (URGENT)
 
 ## Phase 5 Progress
 

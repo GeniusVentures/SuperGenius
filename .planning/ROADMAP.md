@@ -142,6 +142,19 @@ Plans:
 
 ---
 
+
+### Phase 05.1: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (INSERTED)
+
+**Goal:** Move `GeniusNode::InitializeRpcEndpoints()` (~175 lines of path resolution, JSON parsing, provider construction, validator registration) into `ChainRpcEndpointProvider::Initialize()`. GeniusNode becomes a thin orchestrator: resolve the config path, construct the provider, register observers (BridgeRelayer + self for catch-up scan), and post `Initialize()` to the io_context. Chain IDs come from a new `chain_id` field in `bridge_chains_config.json`, eliminating the hardcoded `kChainNameToId` map.
+**Requirements**: None — internal refactor, no formal requirement IDs mapped.
+**Depends on:** Phase 5
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05.1-01-PLAN.md — Define IBridgeInitObserver + re-signature ChainRpcEndpointProvider::Initialize(path, validator, logger); move JSON read, chain_id parse, IInputValidator::Register, and observer notification into the provider (D-01, D-02, D-03, D-04)
+- [ ] 05.1-02-PLAN.md — Make BridgeRelayer implement IBridgeInitObserver (OnRpcEndpointsReady delegates to Start); add numeric chain_id to bridge_chains_config.json (D-03, D-04)
+- [ ] 05.1-03-PLAN.md — Rewrite GeniusNode as thin orchestrator (resolve path, construct provider, AddObserver relayer+self, post Initialize); remove InitializeRpcEndpoints body, kChainNameToId, bridge_chains_; catch-up scan reads catchup_chains_ via observer callback (D-01, D-02, D-04)
+
 ### Phase 6: Network Voting Weight Classes (Tier 2)
 
 **Goal:** Implement two-tier network voting for bridge mints — direct API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight. Reputation scoring identifies full nodes. Final approval requires both cohorts to independently meet thresholds.
