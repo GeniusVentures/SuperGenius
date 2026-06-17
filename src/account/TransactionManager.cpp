@@ -4178,19 +4178,13 @@ namespace sgns
             }
         }
 
-        auto replay_result = EvaluateTransactionReplayProtection( *tx );
-        if ( replay_result.validation.check == ConsensusManager::Check::Pending )
-        {
-            return replay_result.validation;
-        }
-        if ( replay_result.validation.check != ConsensusManager::Check::Approve )
-        {
-            return reject_and_maybe_fail_local( "replay protection failed" );
-        }
+        auto validate_result = ValidateTransactionForConsensus( tx );
 
-        auto validate_result = ValidateTransactionForConsensus( tx, false );
-
-        if ( !validate_result )
+        if ( validate_result.check == ConsensusManager::Check::Pending )
+        {
+            return validate_result;
+        }
+        if ( validate_result.check != ConsensusManager::Check::Approve )
         {
             return reject_and_maybe_fail_local( "transaction validation failed" );
         }
@@ -4235,13 +4229,8 @@ namespace sgns
         return true;
     }
 
-    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx ) const
-    {
-        return ValidateTransactionForConsensus( tx, true );
-    }
-
-    bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx,
-                                                              bool check_replay ) const
+    ConsensusManager::ValidationResult TransactionManager::ValidateTransactionForConsensus(
+        const std::shared_ptr<GeniusTransaction> &tx ) const
     {
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
                                            account_m->GetAddress().substr( 0, 8 ),
@@ -4253,7 +4242,7 @@ namespace sgns
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__ );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
 
         if ( !CheckTransactionWellFormed( *tx ) )
@@ -4263,7 +4252,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
         if ( !CheckTransactionAuthorization( *tx ) )
         {
@@ -4272,7 +4261,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
         if ( !CheckTransactionTimestamp( *tx ) )
         {
@@ -4281,16 +4270,17 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
-        if ( check_replay && !CheckTransactionReplayProtection( *tx ) )
+        auto replay_result = EvaluateTransactionReplayProtection( *tx );
+        if ( replay_result.validation.check != ConsensusManager::Check::Approve )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Replay protection failed tx={}",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
-            return false;
+            return replay_result.validation;
         }
         //TODO - Deal with checking the Mint
         if ( !CheckTransactionTypeRules( tx ) )
@@ -4300,7 +4290,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx->GetHash() );
-            return false;
+            return ConsensusManager::ValidationResult::Reject();
         }
 
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction valid tx={}",
@@ -4308,7 +4298,7 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx->GetHash() );
-        return true;
+        return ConsensusManager::ValidationResult::Approve();
     }
 
     bool TransactionManager::CheckTransactionWellFormed( const GeniusTransaction &tx ) const
