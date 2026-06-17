@@ -195,12 +195,8 @@ namespace sgns
                 return nullptr;
             }
 
-            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config,
-                                                                         std::move( account ),
-                                                                         autodht,
-                                                                         isprocessor,
-                                                                         base_port,
-                                                                         is_full_node ) );
+            auto instance = std::shared_ptr<GeniusNode>(
+                new GeniusNode( dev_config, std::move( account ), autodht, isprocessor, base_port, is_full_node ) );
 
             if ( instance )
             {
@@ -262,7 +258,7 @@ namespace sgns
         {
             io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
         }
-        
+
         LoadCrdtConfig();
     }
 
@@ -304,8 +300,8 @@ namespace sgns
         if ( config_json.HasMember( "backup_auto_restore_on_repair_failure" ) &&
              config_json["backup_auto_restore_on_repair_failure"].IsBool() )
         {
-            crdt_backup_config_.auto_restore_on_repair_failure =
-                config_json["backup_auto_restore_on_repair_failure"].GetBool();
+            crdt_backup_config_.auto_restore_on_repair_failure = config_json["backup_auto_restore_on_repair_failure"]
+                                                                     .GetBool();
         }
 
         if ( crdt_backup_config_.interval_minutes == 0 )
@@ -317,11 +313,12 @@ namespace sgns
             crdt_backup_config_.keep_count = 12;
         }
 
-        node_logger_->info( "CRDT backup config loaded: enabled={}, interval_minutes={}, keep_count={}, auto_restore={}",
-                            crdt_backup_config_.enabled,
-                            crdt_backup_config_.interval_minutes,
-                            crdt_backup_config_.keep_count,
-                            crdt_backup_config_.auto_restore_on_repair_failure );
+        node_logger_->info(
+            "CRDT backup config loaded: enabled={}, interval_minutes={}, keep_count={}, auto_restore={}",
+            crdt_backup_config_.enabled,
+            crdt_backup_config_.interval_minutes,
+            crdt_backup_config_.keep_count,
+            crdt_backup_config_.auto_restore_on_repair_failure );
     }
 
     void GeniusNode::LoadLogConfig()
@@ -350,13 +347,12 @@ namespace sgns
             return;
         }
 
-        for ( auto it = config_json["loggers"].MemberBegin();
-              it != config_json["loggers"].MemberEnd();
-              ++it )
+        for ( auto it = config_json["loggers"].MemberBegin(); it != config_json["loggers"].MemberEnd(); ++it )
         {
             if ( !it->value.IsString() )
             {
-                node_logger_->warn( "log_config.json: logger '{}' value is not a string, skipping", it->name.GetString() );
+                node_logger_->warn( "log_config.json: logger '{}' value is not a string, skipping",
+                                    it->name.GetString() );
                 continue;
             }
 
@@ -721,61 +717,83 @@ namespace sgns
 
     bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
     {
-        bool ret = true;
-        std::string config_path = write_base_path_ + "/network_config.json";
+        bool                ret         = true;
+        std::string         config_path = write_base_path_ + "/network_config.json";
         rapidjson::Document config_json;
-        std::string pubsub_bind_address = "0.0.0.0";
-        std::string authorized_full_node;
-        bool upnp_enabled = true;
-        int high_water = is_full_node ? 400 : 300;
-        int low_water = is_full_node ? 200 : 150;
-        std::string port_str;
-        uint16_t config_port = 0;
+        std::string         pubsub_bind_address = "0.0.0.0";
+        std::string         authorized_full_node;
+        bool                upnp_enabled = true;
+        int                 high_water   = is_full_node ? 400 : 300;
+        int                 low_water    = is_full_node ? 200 : 150;
+        std::string         port_str;
+        uint16_t            config_port = 0;
 
         bootstrap_peers_.clear();
         bootstrap_fullnodes_.clear();
 
         // Try to read config file
-        std::ifstream config_file(config_path);
-        if (config_file.good()) {
+        std::ifstream config_file( config_path );
+        if ( config_file.good() )
+        {
             std::stringstream buffer;
             buffer << config_file.rdbuf();
-            config_json.Parse(buffer.str().c_str());
-            if (!config_json.HasParseError() && config_json.IsObject()) {
-                if (config_json.HasMember("pubsub_port") && config_json["pubsub_port"].IsString()) {
+            config_json.Parse( buffer.str().c_str() );
+            if ( !config_json.HasParseError() && config_json.IsObject() )
+            {
+                if ( config_json.HasMember( "pubsub_port" ) && config_json["pubsub_port"].IsString() )
+                {
                     port_str = config_json["pubsub_port"].GetString();
-                    if (!port_str.empty()) {
-                        try {
-                            config_port = static_cast<uint16_t>(std::stoi(port_str));
-                        } catch (...) {
-                            node_logger_->warn("Invalid pubsub_port in config, using default");
+                    if ( !port_str.empty() )
+                    {
+                        try
+                        {
+                            config_port = static_cast<uint16_t>( std::stoi( port_str ) );
+                        }
+                        catch ( ... )
+                        {
+                            node_logger_->warn( "Invalid pubsub_port in config, using default" );
                         }
                     }
                 }
-                if (config_json.HasMember("pubsub_bind_address") && config_json["pubsub_bind_address"].IsString()) {
+                if ( config_json.HasMember( "pubsub_bind_address" ) && config_json["pubsub_bind_address"].IsString() )
+                {
                     pubsub_bind_address = config_json["pubsub_bind_address"].GetString();
                 }
-                if (config_json.HasMember("bootstrap_addresses") && config_json["bootstrap_addresses"].IsArray()) {
-                    for (auto& v : config_json["bootstrap_addresses"].GetArray()) {
-                        if (v.IsString()) bootstrap_peers_.push_back(v.GetString());
+                if ( config_json.HasMember( "bootstrap_addresses" ) && config_json["bootstrap_addresses"].IsArray() )
+                {
+                    for ( auto &v : config_json["bootstrap_addresses"].GetArray() )
+                    {
+                        if ( v.IsString() )
+                        {
+                            bootstrap_peers_.push_back( v.GetString() );
+                        }
                     }
                 }
-                if (config_json.HasMember("bootstrap_fullnodes") && config_json["bootstrap_fullnodes"].IsArray()) {
-                    for (auto& v : config_json["bootstrap_fullnodes"].GetArray()) {
-                        if (v.IsString()) bootstrap_fullnodes_.push_back(v.GetString());
+                if ( config_json.HasMember( "bootstrap_fullnodes" ) && config_json["bootstrap_fullnodes"].IsArray() )
+                {
+                    for ( auto &v : config_json["bootstrap_fullnodes"].GetArray() )
+                    {
+                        if ( v.IsString() )
+                        {
+                            bootstrap_fullnodes_.push_back( v.GetString() );
+                        }
                     }
                 }
 
-                if (config_json.HasMember("upnp_enabled") && config_json["upnp_enabled"].IsBool()) {
+                if ( config_json.HasMember( "upnp_enabled" ) && config_json["upnp_enabled"].IsBool() )
+                {
                     upnp_enabled = config_json["upnp_enabled"].GetBool();
                 }
-                if (config_json.HasMember("high_water") && config_json["high_water"].IsInt()) {
+                if ( config_json.HasMember( "high_water" ) && config_json["high_water"].IsInt() )
+                {
                     high_water = config_json["high_water"].GetInt();
                 }
-                if (config_json.HasMember("low_water") && config_json["low_water"].IsInt()) {
+                if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
+                {
                     low_water = config_json["low_water"].GetInt();
                 }
-                if (config_json.HasMember("authorized_full_node") && config_json["authorized_full_node"].IsString()) {
+                if ( config_json.HasMember( "authorized_full_node" ) && config_json["authorized_full_node"].IsString() )
+                {
                     authorized_full_node = config_json["authorized_full_node"].GetString();
                 }
 
@@ -783,33 +801,32 @@ namespace sgns
                 if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
                      config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
                 {
-                    reconnect_config_.base_delay =
-                        std::chrono::seconds( config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
+                    reconnect_config_.base_delay = std::chrono::seconds(
+                        config_json["bootstrap_reconnect_base_delay_sec"].GetInt() );
                 }
                 if ( config_json.HasMember( "bootstrap_reconnect_max_delay_sec" ) &&
                      config_json["bootstrap_reconnect_max_delay_sec"].IsInt() )
                 {
-                    reconnect_config_.max_delay =
-                        std::chrono::seconds( config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
+                    reconnect_config_.max_delay = std::chrono::seconds(
+                        config_json["bootstrap_reconnect_max_delay_sec"].GetInt() );
                 }
                 if ( config_json.HasMember( "bootstrap_health_check_interval_sec" ) &&
                      config_json["bootstrap_health_check_interval_sec"].IsInt() )
                 {
-                    reconnect_config_.health_check_interval =
-                        std::chrono::seconds( config_json["bootstrap_health_check_interval_sec"].GetInt() );
+                    reconnect_config_.health_check_interval = std::chrono::seconds(
+                        config_json["bootstrap_health_check_interval_sec"].GetInt() );
                 }
                 if ( config_json.HasMember( "bootstrap_health_check_disconnected_interval_sec" ) &&
                      config_json["bootstrap_health_check_disconnected_interval_sec"].IsInt() )
                 {
-                    reconnect_config_.health_check_disconnected_interval =
-                        std::chrono::seconds(
-                            config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
+                    reconnect_config_.health_check_disconnected_interval = std::chrono::seconds(
+                        config_json["bootstrap_health_check_disconnected_interval_sec"].GetInt() );
                 }
                 if ( config_json.HasMember( "bootstrap_background_multiplier" ) &&
                      config_json["bootstrap_background_multiplier"].IsDouble() )
                 {
-                    reconnect_config_.background_multiplier =
-                        config_json["bootstrap_background_multiplier"].GetDouble();
+                    reconnect_config_.background_multiplier = config_json["bootstrap_background_multiplier"]
+                                                                  .GetDouble();
                 }
             }
         }
@@ -854,8 +871,7 @@ namespace sgns
         }
         if ( !bootstrap_peer_infos_.empty() )
         {
-            node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking",
-                                bootstrap_peer_infos_.size() );
+            node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking", bootstrap_peer_infos_.size() );
         }
 
         // Port selection logic
@@ -868,7 +884,8 @@ namespace sgns
             pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
         }
 
-        do {
+        do
+        {
             // Never block node construction on UPnP/IGD discovery.
             // RefreshUPNP() runs on its own thread and will try immediately.
             if ( upnp_enabled )
@@ -877,43 +894,41 @@ namespace sgns
             }
 
             // Make a base58 out of our address
-            std::string tempaddress = account_->GetAddress();
-            std::vector<unsigned char> inputBytes(tempaddress.begin(), tempaddress.end());
-            std::vector<unsigned char> hash(SHA256_DIGEST_LENGTH);
-            SHA256(inputBytes.data(), inputBytes.size(), hash.data());
+            std::string                tempaddress = account_->GetAddress();
+            std::vector<unsigned char> inputBytes( tempaddress.begin(), tempaddress.end() );
+            std::vector<unsigned char> hash( SHA256_DIGEST_LENGTH );
+            SHA256( inputBytes.data(), inputBytes.size(), hash.data() );
 
             auto key          = libp2p::multi::ContentIdentifierCodec::encodeCIDV0( hash.data(), hash.size() );
-            auto acc_cid = libp2p::multi::ContentIdentifierCodec::decode(key);
-            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString(acc_cid.value());
-            if (!maybe_base58) {
+            auto acc_cid      = libp2p::multi::ContentIdentifierCodec::decode( key );
+            auto maybe_base58 = libp2p::multi::ContentIdentifierCodec::toString( acc_cid.value() );
+            if ( !maybe_base58 )
+            {
                 ret = false;
-                node_logger_->error("We couldn't convert the account {} to base58", account_->GetAddress());
+                node_logger_->error( "We couldn't convert the account {} to base58", account_->GetAddress() );
                 break;
             }
             base58key_ = maybe_base58.value();
 
-            gnus_network_full_path_ = std::string(GNUS_NETWORK_PATH) + version::GetNetAndVersionAppendix() + base58key_;
-            auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
+            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
+                                      base58key_;
+            auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
 
             //Set a pubsub config, use no signing because we can verify with proof and dag structure
             libp2p::protocol::gossip::Config config;
-            config.echo_forward_mode = false;
-            config.sign_messages = false;
-            config.seen_cache_limit = 10;
-            config.heartbeat_interval_msec = std::chrono::milliseconds{500};
-            config.rw_timeout_msec = std::chrono::seconds{30};
+            config.echo_forward_mode       = false;
+            config.sign_messages           = false;
+            config.seen_cache_limit        = 10;
+            config.heartbeat_interval_msec = std::chrono::milliseconds{ 500 };
+            config.rw_timeout_msec         = std::chrono::seconds{ 30 };
 
             pubsub_ = std::make_shared<ipfs_pubsub::GossipPubSub>(
-                crdt::KeyPairFileStorage(write_base_path_ + pubsubKeyPath).GetKeyPair().value(),
-                config);
+                crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
+                config );
 
-            auto pubs = pubsub_->Start(
-                pubsubport_,
-                bootstrap_peers_,
-                pubsub_bind_address,
-                {});
+            auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
             pubs.wait();
-            node_logger_->info("PubSub started at address: {}", pubsub_->GetInterfaceAddress());
+            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
 
             if ( upnp_enabled )
             {
@@ -921,15 +936,16 @@ namespace sgns
             }
 
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
-            pubsub_->GetHost()->getConnectionManagerConfig().low_water = low_water;
+            pubsub_->GetHost()->getConnectionManagerConfig().low_water  = low_water;
 
-            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>(pubsub_->GetHost(), scheduler_);
+            graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
 
             // Initialize DHT early so peer discovery works during database migration
-            if (autodht_) {
+            if ( autodht_ )
+            {
                 DHTInit();
             }
-        } while (0);
+        } while ( 0 );
         return ret;
     }
 
@@ -1148,10 +1164,9 @@ namespace sgns
 
     GeniusNode::~GeniusNode()
     {
-        node_logger_->debug( "~GeniusNode CALLED" );    
+        node_logger_->debug( "~GeniusNode CALLED" );
 
         ShutdownForDestruction();
-
 
         if ( pubsub_ )
         {
@@ -1339,7 +1354,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        auto account = GeniusAccount::NewFromPublicKey( TokenID::FromBytes( { 0x00 } ), public_address, is_full_node_ );
+        auto account = GeniusAccount::NewFromPublicKey( GetTokenID(), public_address, is_full_node_ );
 
         if ( account == nullptr )
         {
@@ -1391,32 +1406,37 @@ namespace sgns
 
     outcome::result<void> GeniusNode::TransferAccount( std::string_view public_address )
     {
-        public_address = GeniusAccount::NormalizeAddress( public_address );
+        const std::string destination_address( GeniusAccount::NormalizeAddress( public_address ) );
+
+        if ( destination_address == GetAddress() )
+        {
+            node_logger_->warn( "Address already active" );
+            return std::errc::address_in_use;
+        }
 
         auto addresses = GeniusAccount::GetAvailableAccounts( write_base_path_ );
 
-        if ( std::find( addresses.cbegin(), addresses.cend(), public_address ) == addresses.cend() )
+        if ( std::find( addresses.cbegin(), addresses.cend(), destination_address ) == addresses.cend() )
         {
             node_logger_->error( "Tried to transfer to account that was not added to GeniusNode" );
             return std::errc::address_not_available;
         }
 
-        auto balance = account_->GetUTXOManager().GetBalance();
+        const auto token_id = GetTokenID();
+        auto       balance  = account_->GetUTXOManager().GetBalance( token_id );
         if ( balance > 0 )
         {
-            BOOST_OUTCOME_TRY(
-                auto hash,
-                transaction_manager_->TransferFunds( balance, std::string( public_address ), this->GetTokenID() ) );
-
-            if ( transaction_manager_->WaitForTransactionOutgoing( hash, std::chrono::seconds( 20 ) ) !=
-                 TransactionManager::TransactionStatus::CONFIRMED )
-            {
-                node_logger_->error( "Failed to transfer fund in viable time" );
-                return std::errc::interrupted;
-            }
+            BOOST_OUTCOME_TRY( auto transfer_result,
+                               TransferFunds( balance, destination_address, token_id, TIMEOUT_TRANSFER ) );
+            const auto &[tx_id, duration_ms] = transfer_result;
+            node_logger_->debug( "Transferred account balance {} to {:.8} in transaction {} after {} ms",
+                                 balance,
+                                 destination_address,
+                                 tx_id,
+                                 duration_ms );
         }
 
-        return SelectAccount( public_address );
+        return SelectAccount( destination_address );
     }
 
     outcome::result<void> GeniusNode::DeleteAccount( std::string_view public_address )
@@ -1432,8 +1452,9 @@ namespace sgns
 
     outcome::result<void> GeniusNode::MergeAccount( std::string_view public_address )
     {
+        const auto previous_address = GetAddress();
         BOOST_OUTCOME_TRY( TransferAccount( public_address ) );
-        return DeleteAccount( public_address );
+        return DeleteAccount( previous_address );
     }
 
     outcome::result<void> GeniusNode::SetPayoutAddress( std::string_view payout_address )
@@ -1454,7 +1475,7 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         BOOST_OUTCOME_TRY( auto procmgr, sgns::sgprocessing::ProcessingManager::Create( jsondata ) );
 
@@ -1617,7 +1638,8 @@ namespace sgns
                                                                               std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
-        BOOST_OUTCOME_TRY( auto tx_id, MintTokens( amount, transaction_hash, chainid, tokenid ) );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                           MintTokens( amount, transaction_hash, chainid, tokenid, std::move( destination ) ) );
 
         BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
@@ -1762,7 +1784,7 @@ namespace sgns
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
 
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         auto start_time = std::chrono::steady_clock::now();
 
@@ -1819,7 +1841,7 @@ namespace sgns
     {
         if ( GetTransactionManagerState() != TransactionManager::State::READY )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         auto start_time = std::chrono::steady_clock::now();
 
@@ -2370,41 +2392,36 @@ namespace sgns
 
         auto host = pubsub_->GetHost();
         bootstrap_disconnect_subscription_.emplace(
-            host->getBus()
-                .getChannel<libp2p::event::network::OnPeerDisconnectedChannel>()
-                .subscribe(
-                    [weak_self = weak_from_this()]( const libp2p::peer::PeerId &peer_id )
+            host->getBus().getChannel<libp2p::event::network::OnPeerDisconnectedChannel>().subscribe(
+                [weak_self = weak_from_this()]( const libp2p::peer::PeerId &peer_id )
+                {
+                    if ( auto strong = weak_self.lock() )
                     {
-                        if ( auto strong = weak_self.lock() )
+                        if ( strong->shutdown_started_.load() )
                         {
-                            if ( strong->shutdown_started_.load() )
-                            {
-                                return;
-                            }
-                            bool is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
-                                                strong->bootstrap_peer_ids_.count( peer_id );
-                            if ( is_bootstrap )
-                            {
-                                const char *kind = strong->bootstrap_fullnode_ids_.count( peer_id )
-                                                       ? "fullnode"
-                                                       : "peer";
-                                strong->node_logger_->info(
-                                    "Bootstrap {} {} disconnected, scheduling reconnect",
-                                    kind,
-                                    peer_id.toBase58() );
-                                unsigned attempt = 0;
-                                {
-                                    std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
-                                    auto                          it = strong->reconnect_attempts_.find( peer_id );
-                                    if ( it != strong->reconnect_attempts_.end() )
-                                    {
-                                        attempt = it->second;
-                                    }
-                                }
-                                strong->ScheduleBootstrapReconnect( peer_id, attempt );
-                            }
+                            return;
                         }
-                    } ) );
+                        bool is_bootstrap = strong->bootstrap_fullnode_ids_.count( peer_id ) ||
+                                            strong->bootstrap_peer_ids_.count( peer_id );
+                        if ( is_bootstrap )
+                        {
+                            const char *kind = strong->bootstrap_fullnode_ids_.count( peer_id ) ? "fullnode" : "peer";
+                            strong->node_logger_->info( "Bootstrap {} {} disconnected, scheduling reconnect",
+                                                        kind,
+                                                        peer_id.toBase58() );
+                            unsigned attempt = 0;
+                            {
+                                std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
+                                auto                        it = strong->reconnect_attempts_.find( peer_id );
+                                if ( it != strong->reconnect_attempts_.end() )
+                                {
+                                    attempt = it->second;
+                                }
+                            }
+                            strong->ScheduleBootstrapReconnect( peer_id, attempt );
+                        }
+                    }
+                } ) );
 
         node_logger_->info( "Subscribed to disconnect events for {} bootstrap fullnode(s) + {} peer(s)",
                             bootstrap_fullnode_ids_.size(),
@@ -2453,7 +2470,6 @@ namespace sgns
             interval ) );
     }
 
-
     void GeniusNode::PerformHealthCheck()
     {
         if ( shutdown_started_.load() )
@@ -2481,7 +2497,7 @@ namespace sgns
                     unsigned attempt = 0;
                     {
                         std::lock_guard<std::mutex> lock( reconnect_mutex_ );
-                        auto                          it = reconnect_attempts_.find( peer_info.id );
+                        auto                        it = reconnect_attempts_.find( peer_info.id );
                         if ( it != reconnect_attempts_.end() )
                         {
                             attempt = it->second;
@@ -2598,7 +2614,7 @@ namespace sgns
                         unsigned attempt = 0;
                         {
                             std::lock_guard<std::mutex> lock( strong->reconnect_mutex_ );
-                            auto                          it = strong->reconnect_attempts_.find( peer_id );
+                            auto                        it = strong->reconnect_attempts_.find( peer_id );
                             if ( it != strong->reconnect_attempts_.end() )
                             {
                                 attempt = it->second;

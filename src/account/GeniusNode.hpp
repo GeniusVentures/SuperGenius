@@ -200,9 +200,9 @@ namespace sgns
         outcome::result<void> DeleteAccount( std::string_view public_address );
 
         /**
-         * @brief Merges data from another account into the currently selected one.
-         * @param[in] public_address Stored account address to transfer into and then delete.
-         * @return Success when transfer and delete both complete.
+         * @brief Merges the active account into another stored account.
+         * @param[in] public_address Stored account address to receive the configured-token balance and become active.
+         * @return Success when transfer, selection, and deletion of the previous active account complete.
          */
         outcome::result<void> MergeAccount( std::string_view public_address );
 
@@ -612,20 +612,20 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                        is_full_node_;                 ///< Whether this node runs in full-node mode.
-        base::Logger                node_logger_;                  ///< Main node logger.
-        DevConfig_st                dev_config_;                   ///< Runtime node configuration.
-        std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string                 processing_channel_topic_;     ///< Processing task channel topic.
-        std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
-        std::vector<std::string>                              bootstrap_peers_;
-        std::vector<std::string>                              bootstrap_fullnodes_;
-        std::vector<libp2p::peer::PeerInfo>                   bootstrap_fullnode_infos_;
-        std::unordered_set<libp2p::peer::PeerId>              bootstrap_fullnode_ids_;
-        std::vector<libp2p::peer::PeerInfo>                   bootstrap_peer_infos_;
-        std::unordered_set<libp2p::peer::PeerId>              bootstrap_peer_ids_;
-        uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
-        std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
+        bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
+        base::Logger                             node_logger_;            ///< Main node logger.
+        DevConfig_st                             dev_config_;             ///< Runtime node configuration.
+        std::string                              gnus_network_full_path_; ///< Versioned network DB path.
+        std::string                              processing_channel_topic_;     ///< Processing task channel topic.
+        std::string                              processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                 bootstrap_peers_;
+        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
+        uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
         /**
          * @brief Constructs a node around an already-created account.
@@ -677,7 +677,7 @@ namespace sgns
         /**
          * @brief Loads the CRDT configuration.
          */
-         void         LoadCrdtConfig();
+        void LoadCrdtConfig();
 
         /**
          * @brief Attempts initial UPnP port mapping for the PubSub port.
@@ -727,7 +727,7 @@ namespace sgns
         /**
          * @brief Shuts down
          */
-        void         ShutdownForDestruction();
+        void ShutdownForDestruction();
 
         /**
          * @brief Returns the transaction manager when initialized.
@@ -777,6 +777,7 @@ namespace sgns
          * @brief Perform a health check on all bootstrap fullnode connections
          */
         void PerformHealthCheck();
+
         struct PriceInfo
         {
             double                                             price;      ///< Cached USD token price.
@@ -801,9 +802,8 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
-         std::atomic_bool       shutdown_started_{ false }; ///< Whether shutdown has been initiated.
+        std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
 
-    
         // ── Bootstrap fullnode reconnection ──
         struct BootstrapReconnectConfig
         {
@@ -813,14 +813,15 @@ namespace sgns
             std::chrono::seconds health_check_disconnected_interval{ 15 };
             double               background_multiplier{ 3.0 };
         };
-        BootstrapReconnectConfig                                       reconnect_config_;
-        std::optional<libp2p::event::Handle>                           bootstrap_disconnect_subscription_;
-        std::optional<libp2p::basic::Scheduler::Handle>                health_check_handle_;
-        std::unordered_map<libp2p::peer::PeerId, unsigned>             reconnect_attempts_;
-        std::mutex                                                     reconnect_mutex_;
+
+        BootstrapReconnectConfig                           reconnect_config_;
+        std::optional<libp2p::event::Handle>               bootstrap_disconnect_subscription_;
+        std::optional<libp2p::basic::Scheduler::Handle>    health_check_handle_;
+        std::unordered_map<libp2p::peer::PeerId, unsigned> reconnect_attempts_;
+        std::mutex                                         reconnect_mutex_;
 
         crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
-        
+
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.
          * @param[in] escrow_path Escrow address/path associated with the completed task.
