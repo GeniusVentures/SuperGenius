@@ -248,6 +248,9 @@ namespace sgns
          */
         std::string GetVersion();
 
+        /** Reloads log level overrides from log_config.json at runtime. */
+        void LoadLogConfig();
+
         /**
          * @brief Creates and submits a mint transaction.
          * @param[in] amount Amount to mint in token base units.
