@@ -499,3 +499,44 @@ TEST( BridgeRelayerTest, OnWatchEventLogsChainName )
     // Should not crash; chain_name is passed through and logged
     EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification, "specific-chain" ) );
 }
+
+// ─── Observer-Driven Start Tests ───────────────────────────────────────────
+
+TEST( BridgeRelayerTest, OnRpcEndpointsReadyDelegatesToStart )
+{
+    // @given a BridgeRelayer implementing IBridgeInitObserver
+    // @when OnRpcEndpointsReady() is called with a chain list
+    // @then the same chains are registered in chain_watches_ as if Start() were called
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    std::vector<ChainContractPair> chains = {
+        { "ethereum-sepolia", "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70", 11155111 },
+    };
+
+    relayer->OnRpcEndpointsReady( chains );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_EQ( watches.size(), 1U );
+    auto it = watches.find( "ethereum-sepolia" );
+    ASSERT_NE( it, watches.end() );
+    EXPECT_NE( it->second, 0 );
+}
+
+TEST( BridgeRelayerTest, OnRpcEndpointsReadyEmptyVector )
+{
+    // @given a BridgeRelayer implementing IBridgeInitObserver
+    // @when OnRpcEndpointsReady() is called with an empty chain list
+    // @then no watches are registered (Start({}) is a no-op per D-21)
+
+    auto watch_service = std::make_shared<eth::EthWatchService>();
+    auto relayer       = BridgeRelayer::Create( std::weak_ptr<TransactionManager>(), watch_service );
+    ASSERT_NE( relayer, nullptr );
+
+    relayer->OnRpcEndpointsReady( {} );
+
+    const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
+    EXPECT_TRUE( watches.empty() );
+}

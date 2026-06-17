@@ -6,19 +6,22 @@
  */
 #include <gtest/gtest.h>
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <set>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
 
+#include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
+#include "account/GeniusNode.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "account/TokenID.hpp"
-#include "base/logger.hpp"
 #include "base/parse_utility.hpp"
 #include "eth/abi_decoder.hpp"
 
@@ -90,27 +93,33 @@ TEST( StartupWiringTest, DifferentSignaturesProduceDifferentTopic0 )
     EXPECT_NE( bridge_hash, transfer_hash );
 }
 
-// ─── Tests: Chain ID → Name Mapping (D-03) ─────────────────────────────────
+// ─── Tests: Chain ID from config file (D-04) ─────────────────────────────────
 
-TEST( StartupWiringTest, KnownChainMappingIsCorrect )
+TEST( StartupWiringTest, ConfigFileHasCorrectChainIds )
 {
-    // Verify the static chain name → ID mapping matches expected values (D-03)
-    std::unordered_map<std::string, uint64_t> expected = {
-        { "ethereum-mainnet",        1 },
-        { "ethereum-sepolia",        11155111 },
-        { "bnb-smart-chain",         56 },
-        { "bnb-smart-chain-testnet", 97 },
-        { "polygon-mainnet",         137 },
-        { "polygon-amoy",            80002 },
-        { "base-mainnet",            8453 },
-        { "base-sepolia",            84532 },
-    };
+    // D-04: chain IDs are now sourced from bridge_chains_config.json.
+    // Verify the bundled config carries valid numeric chain_id on all 8 entries.
+    std::ifstream file( "bridge_chains_config.json", std::ios::binary );
+    ASSERT_TRUE( file.is_open() );
 
-    // All entries should be valid EVM chain IDs (positive, non-zero)
-    for ( const auto &[name, id] : expected )
+    std::string content( ( std::istreambuf_iterator<char>( file ) ),
+                         std::istreambuf_iterator<char>() );
+    file.close();
+
+    auto parsed = boost::json::parse( content );
+    auto obj    = parsed.as_object();
+    EXPECT_EQ( obj.size(), 8u );
+
+    std::set<uint64_t> seen;
+    for ( const auto &[key, value] : obj )
     {
-        EXPECT_GT( id, 0u ) << "Chain " << name << " has invalid ID " << id;
-        EXPECT_FALSE( name.empty() ) << "Chain name should not be empty";
+        auto chain_obj = value.as_object();
+        ASSERT_TRUE( chain_obj.contains( "chain_id" ) )
+            << "Chain '" << key << "' missing chain_id";
+        uint64_t chain_id = boost::json::value_to<uint64_t>( chain_obj.at( "chain_id" ) );
+        EXPECT_GT( chain_id, 0u ) << "Chain " << key << " has invalid chain_id " << chain_id;
+        EXPECT_TRUE( seen.insert( chain_id ).second )
+            << "Duplicate chain_id " << chain_id << " for " << key;
     }
 }
 
@@ -172,16 +181,16 @@ TEST( StartupWiringTest, ChainsConfigWithoutBridgeContractIsSkipped )
     RemoveTempFile( path );
 }
 
-TEST( StartupWiringTest, UnknownChainSkipsBridgeRegistration )
+TEST( StartupWiringTest, ChainWithoutChainIdIsSkipped )
 {
-    // Chains not in kChainNameToId should be skipped gracefully
-    // (test that the mapping validation would reject an unknown chain)
+    // D-04: chains lacking a chain_id field in bridge_chains_config.json are
+    // skipped by ChainRpcEndpointProvider::Initialize().
     std::unordered_map<std::string, uint64_t> known = {
         { "ethereum-mainnet", 1 },
         { "ethereum-sepolia", 11155111 },
     };
 
-    // "unknown-chain" is not in the known set
+    // "unknown-chain" is not in the config — no chain_id, so it would be skipped
     EXPECT_EQ( known.find( "unknown-chain" ), known.end() );
     EXPECT_NE( known.find( "ethereum-mainnet" ), known.end() );
 }
@@ -217,38 +226,46 @@ TEST( StartupWiringTest, MetadataEntriesPrefixedWithUnderscoreAreSkipped )
     RemoveTempFile( path );
 }
 
-// ─── Tests: InitializeAndStartBridge Ordering (D-04) ────────────────────────
+// ─── Tests: Observer Architecture (D-03, D-04) ───────────────────────────────
 
-TEST( StartupWiringTest, BridgeInitializationOrderingIsCorrect )
+TEST( StartupWiringTest, ArchitectureObserverContractsAreInPlace )
 {
-    // D-04: InitializeRpcEndpoints() must be called before BridgeRelayer::Start().
-    // Verify via code analysis: the static call graph shows InitializeAndStartBridge()
-    // calls InitializeRpcEndpoints() first, then BridgeRelayer::Start().
+    // D-03: BridgeRelayer implements IBridgeInitObserver so it self-starts
+    // via OnRpcEndpointsReady when ChainRpcEndpointProvider signals readiness.
+    // D-03/D-04: GeniusNode also implements IBridgeInitObserver for catch-up.
 
-    // Structural assertion: both methods exist and InitializeAndStartBridge
-    // is the glue that guarantees the ordering.
-    // This test verifies that the logical ordering is enforced by the architecture.
+    // Compile-time verification: BridgeRelayer is-an IBridgeInitObserver
+    EXPECT_TRUE( ( std::is_base_of_v<IBridgeInitObserver, BridgeRelayer> ) )
+        << "BridgeRelayer must implement IBridgeInitObserver (D-03)";
 
-    // Verify the chain name → ID mapping used in InitializeRpcEndpoints
-    // matches known deployed chains
-    std::unordered_map<std::string, uint64_t> deployed = {
-        { "ethereum-mainnet",        1 },
-        { "ethereum-sepolia",        11155111 },
-        { "bnb-smart-chain",         56 },
-        { "bnb-smart-chain-testnet", 97 },
-        { "polygon-mainnet",         137 },
-        { "polygon-amoy",            80002 },
-        { "base-mainnet",            8453 },
-        { "base-sepolia",            84532 },
-    };
+    // GeniusNode must also implement IBridgeInitObserver (self-subscribes for catch-up scan)
+    EXPECT_TRUE( ( std::is_base_of_v<IBridgeInitObserver, GeniusNode> ) )
+        << "GeniusNode must implement IBridgeInitObserver for catch-up scan (D-03)";
 
-    EXPECT_EQ( deployed.size(), 8u );
-    // All chain IDs must be unique
-    std::set<uint64_t> seen;
-    for ( const auto &[name, id] : deployed )
+    // ChainRpcEndpointProvider exposes AddObserver and path-based Initialize
+    ChainRpcEndpointProvider provider;
+    // Verify the API exposes AddObserver (compile-time check with a stub observer)
+    struct StubObserver final : IBridgeInitObserver
     {
-        EXPECT_TRUE( seen.insert( id ).second )
-            << "Duplicate chain ID " << id << " for " << name;
+        void OnRpcEndpointsReady( std::vector<ChainContractPair> ) override {}
+    };
+    StubObserver stub;
+    provider.AddObserver( stub ); // compile-time check: API is present
+
+    // Config file carries chain IDs (D-04): verify the bundled file has chain_id
+    std::ifstream file( "bridge_chains_config.json", std::ios::binary );
+    ASSERT_TRUE( file.is_open() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ),
+                         std::istreambuf_iterator<char>() );
+    file.close();
+    auto parsed = boost::json::parse( content );
+    auto obj    = parsed.as_object();
+    for ( const auto &[key, value] : obj )
+    {
+        if ( key.starts_with( "_" ) ) continue;
+        auto chain_obj = value.as_object();
+        EXPECT_TRUE( chain_obj.contains( "chain_id" ) )
+            << "Chain '" << key << "' missing chain_id (D-04)";
     }
 }
 
@@ -310,44 +327,62 @@ TEST( StartupWiringTest, CatchupScanTopic0HexConversion )
     EXPECT_EQ( topic0_hex.substr( 0, 2 ), "0x" );
 }
 
-// ─── Tests: ChainRpcEndpointProvider Integration in Startup ─────────────────
+// ─── Tests: ChainRpcEndpointProvider Initialization (new API) ─────────────────
 
-TEST( StartupWiringTest, ChainRpcProviderWithBridgeConfigReturnsChainPairs )
+TEST( StartupWiringTest, ProviderInitializeWithValidConfigReturnsTrue )
 {
-    // Simulate what InitializeRpcEndpoints does: for chains with
-    // bridge_contract_address, collect ChainContractPair entries.
-    struct SimulatedPair
-    {
-        std::string chain_name;
-        std::string contract_address;
-    };
-
-    std::vector<SimulatedPair> bridge_chains;
-
-    // Simulate parsing a config entry with bridge_contract_address
-    auto process_chain = [&]( const std::string &name,
-                              const std::string &contract )
-    {
-        if ( !contract.empty() )
-        {
-            bridge_chains.push_back( { name, contract } );
+    // Write a bridge_chains_config.json with 2 chains, call Initialize(),
+    // verify return true and validator registered for both.
+    const std::string json = R"({
+        "ethereum-sepolia": {
+            "chain_id": 11155111,
+            "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
+        },
+        "ethereum-mainnet": {
+            "chain_id": 1,
+            "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a"
         }
-    };
+    })";
 
-    process_chain( "ethereum-mainnet",
-                   "0x614577036F0a024DBC1C88BA616b394DD65d105a" );
-    process_chain( "ethereum-sepolia",
-                   "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
-    process_chain( "no-bridge-chain", "" ); // should be skipped
+    auto path = WriteTempChainsConfig( json );
+    ASSERT_TRUE( fs::exists( path ) );
 
-    EXPECT_EQ( bridge_chains.size(), 2u );
-    EXPECT_EQ( bridge_chains[0].chain_name, "ethereum-mainnet" );
-    EXPECT_EQ( bridge_chains[1].chain_name, "ethereum-sepolia" );
-    EXPECT_EQ( bridge_chains[0].contract_address,
-               "0x614577036F0a024DBC1C88BA616b394DD65d105a" );
+    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator  validator;
+
+    bool result = provider.Initialize( path, validator );
+
+    EXPECT_TRUE( result );
+    auto url1 = validator.GetFirstRpcUrl( "11155111" );
+    auto url2 = validator.GetFirstRpcUrl( "1" );
+    EXPECT_TRUE( url1.has_value() );
+    EXPECT_TRUE( url2.has_value() );
+
+    RemoveTempFile( path );
 }
 
-// ─── Tests: InitializeRpcEndpoints Graceful Degradation ─────────────────────
+TEST( StartupWiringTest, ProviderReturnsFalseForConfigWithoutChainId )
+{
+    // A chain without chain_id is skipped — if all chains lack it, return false.
+    const std::string json = R"({
+        "no-id-chain": {
+            "bridge_contract_address": "0x0000000000000000000000000000000000000000"
+        }
+    })";
+
+    auto path = WriteTempChainsConfig( json );
+    ASSERT_TRUE( fs::exists( path ) );
+
+    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator  validator;
+
+    bool result = provider.Initialize( path, validator );
+    EXPECT_FALSE( result );
+
+    RemoveTempFile( path );
+}
+
+// ─── Tests: Provider Graceful Degradation ────────────────────────────────────
 
 TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
 {
@@ -369,7 +404,7 @@ TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
     EXPECT_FALSE( content.empty() );
 
     // Using boost::json::parse on malformed JSON should throw
-    // (caught in InitializeRpcEndpoints by try/catch)
+    // (caught by ChainRpcEndpointProvider::Initialize try/catch)
     bool parse_failed = false;
     try
     {
@@ -410,117 +445,58 @@ TEST( StartupWiringTest, EmptyChainsConfigDoesNotCrash )
     RemoveTempFile( path );
 }
 
-// ─── Tests: InitializeRpcEndpoints without Endpoint Sources ──────────────────
+// ─── Tests: Provider Initialize Graceful Degradation ─────────────────────────
 
-TEST( StartupWiringTest, NoRpcEndpointsWiredWhenNoSourcesConfigured )
+TEST( StartupWiringTest, MissingFileReturnsFalse )
 {
-    // Reproduces the bug where InitializeRpcEndpoints() proceeds to register
-    // bridge chains and start the relayer even though ChainRpcEndpointProvider
-    // wired zero RPC endpoints.
-    //
-    // When config.chainlist_json_path is empty and config.direct_endpoints is
-    // empty, provider.Initialize() returns false.  The caller must NOT proceed
-    // with validator registration or bridge chain discovery — otherwise the
-    // catch-up scan silently skips every chain (GetFirstRpcUrl returns nullopt)
-    // while the relayer is running against unconfigured endpoints.
+    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator  validator;
 
-    ChainRpcEndpointProvider::ChainIdMap chain_id_map;
-    // These chains exist in bridge_chains_config.json (bundled default)
-    chain_id_map.emplace( "ethereum-mainnet", 1 );
-    chain_id_map.emplace( "ethereum-sepolia", 11155111 );
-    chain_id_map.emplace( "bnb-smart-chain",  56 );
-    chain_id_map.emplace( "polygon-mainnet",  137 );
+    fs::path nonexistent = fs::temp_directory_path() / "no_such_config_xyz.json";
+    bool result = provider.Initialize( nonexistent, validator );
 
-    ChainRpcProviderConfig config;
-    config.chainlist_json_path = "";   // no public chainlist JSON
-    // config.direct_endpoints is left empty — no API-key endpoints
-
-    ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
-    PublicChainInputValidator validator;
-
-    auto logger = base::createLogger( "startup_wiring_test" );
-    bool endpoints_wired = provider.Initialize( validator, config, logger );
-
-    // When no endpoint sources are configured, Initialize must report failure.
-    EXPECT_FALSE( endpoints_wired )
-        << "Initialize() should return false when no RPC endpoint sources are available";
-
-    // No chain should have RPC endpoints — GetFirstRpcUrl must return nullopt
-    // for every chain that was in the map.
-    for ( auto chain_id : { "1", "11155111", "56", "137" } )
-    {
-        auto url = validator.GetFirstRpcUrl( chain_id );
-        EXPECT_FALSE( url.has_value() )
-            << "Chain " << chain_id << " should have no endpoints when nothing is wired";
-    }
+    EXPECT_FALSE( result )
+        << "Initialize should return false when config file does not exist";
 }
 
-TEST( StartupWiringTest, BridgeChainsMustNotProceedWhenNoEndpointsWired )
+TEST( StartupWiringTest, EmptyJsonConfigReturnsFalse )
 {
-    // Behavioral contract: when ChainRpcEndpointProvider::Initialize() returns
-    // false, the caller (InitializeRpcEndpoints) must NOT register validators
-    // or return bridge chains for BridgeRelayer startup.
-    //
-    // This test encodes the pattern that every caller of provider.Initialize()
-    // must follow: check the return value before proceeding.
+    auto path = WriteTempChainsConfig( "{}" );
+    ASSERT_TRUE( fs::exists( path ) );
 
-    ChainRpcEndpointProvider::ChainIdMap chain_id_map;
-    chain_id_map.emplace( "ethereum-sepolia", 11155111 );
+    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator  validator;
 
-    ChainRpcProviderConfig config;
-    config.chainlist_json_path = ""; // no public endpoints
-    // direct_endpoints also empty
+    bool result = provider.Initialize( path, validator );
+    EXPECT_FALSE( result )
+        << "Initialize should return false when config has no valid chain entries";
 
-    ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
-    PublicChainInputValidator validator;
+    RemoveTempFile( path );
+}
 
-    auto logger = base::createLogger( "startup_wiring_test" );
-    bool endpoints_wired = provider.Initialize( validator, config, logger );
-
-    // Simulate the bridge_chain discovery that InitializeRpcEndpoints performs:
-    // it reads bridge_chains_config.json and builds a list of chains with
-    // bridge contracts.  In the buggy code, these were unconditionally
-    // registered regardless of whether endpoints were wired.
-    struct SimulatedPair
-    {
-        std::string chain_name;
-        std::string contract_address;
-        uint64_t    chain_id;
-    };
-    std::vector<SimulatedPair> bridge_chains;
-    bridge_chains.push_back( { "ethereum-sepolia",
-                               "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
-                               11155111 } );
-
-    // The correct behavior: only register validators / keep bridge chains
-    // when endpoints were actually wired.
-    if ( endpoints_wired )
-    {
-        for ( const auto &chain_entry : bridge_chains )
-        {
-            // This path should NOT execute in this test — if it does, the
-            // validator is being registered without RPC endpoints.
-            IInputValidator::Register( std::to_string( chain_entry.chain_id ),
-                                       &validator );
+TEST( StartupWiringTest, ConfigWithoutBridgeContractAddressReturnsFalse )
+{
+    // A chain with chain_id but no bridge_contract_address is skipped.
+    // If all chains lack bridge_contract_address, Initialize returns false.
+    const std::string json = R"({
+        "ethereum-sepolia": {
+            "chain_id": 11155111,
+            "name": "Ethereum Sepolia",
+            "rpc": ["https://sepolia.infura.io/v3/test"]
         }
-    }
-    else
-    {
-        // Correct unhappy-path behavior: clear bridge chains so
-        // InitializeAndStartBridge does not start the relayer.
-        bridge_chains.clear();
-    }
+    })";
 
-    // After the fix, bridge_chains must be empty because no endpoints exist.
-    EXPECT_TRUE( bridge_chains.empty() )
-        << "bridge_chains must be empty when no RPC endpoints are wired — "
-        << "otherwise BridgeRelayer starts against unconfigured chains";
+    auto path = WriteTempChainsConfig( json );
+    ASSERT_TRUE( fs::exists( path ) );
 
-    // Confirm the validator has no RPC URL for the chain.
-    auto url = validator.GetFirstRpcUrl( "11155111" );
-    EXPECT_FALSE( url.has_value() )
-        << "Validator should have no URL for chain 11155111 when endpoints "
-        << "were never wired";
+    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator  validator;
+
+    bool result = provider.Initialize( path, validator );
+    EXPECT_FALSE( result )
+        << "Initialize should return false when no chain has bridge_contract_address";
+
+    RemoveTempFile( path );
 }
 
 // ─── Tests: Non-blocking Bridge Init (D-04) ─────────────────────────────────

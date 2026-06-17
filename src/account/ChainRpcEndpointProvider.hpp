@@ -14,98 +14,73 @@
 #include <unordered_map>
 #include <vector>
 
+#include "account/ChainContractPair.hpp"
 #include "account/PublicChainInputValidator.hpp"
-#include "base/logger.hpp"
 
 namespace sgns
 {
     /**
-     * @brief Platform-agnostic configuration passed to ChainRpcEndpointProvider.
+     * @brief Observer interface notified when RPC endpoints have been loaded and wired.
      *
-     * On desktop, the app layer loads this from a local JSON config file.
-     * On mobile, the app layer constructs it from secure storage or settings.
-     * No environment variables or git-tracked secrets are consumed here.
+     * Subscribers (e.g. BridgeRelayer) implement this interface and call
+     * ChainRpcEndpointProvider::AddObserver() before Initialize() is posted
+     * to the io_context. The callback fires synchronously inside Initialize()
+     * after all endpoints are wired and IInputValidator::Register has been
+     * called for each discovered chain.
      */
-    struct ChainRpcProviderConfig
+    class IBridgeInitObserver
     {
+    public:
         /**
-         * @brief Filesystem path to the chainid.network ChainList JSON file (array format).
-         *
-         * This is the aggregated ChainList dataset that provides verified public
-         * RPC endpoint URLs for every EVM chain.  The file is typically bundled
-         * with the application or downloaded at first launch.
+         * @brief Called when RPC endpoint initialization completes successfully.
+         * @param[in] chains  List of (chain_name, contract_address, chain_id) pairs discovered.
          */
-        std::filesystem::path chainlist_json_path;
+        virtual void OnRpcEndpointsReady( std::vector<ChainContractPair> chains ) = 0;
 
-        /**
-         * @brief Per-chain direct (API-key) endpoints supplied by the app layer.
-         *
-         * Keyed by the numeric chain ID as a string (e.g. "1" for Ethereum).
-         * Each entry carries a URL and a consensus weight (typically 50%).
-         * API keys must be embedded in the URL (e.g. https://mainnet.infura.io/v3/{key}).
-         *
-         * These values come from secure storage on mobile or a local-only config
-         * file on desktop — never from environment variables or tracked files.
-         */
-        std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> direct_endpoints;
-
-        /**
-         * @brief Bridge contract addresses keyed by numeric chain ID.
-         *
-         * Sourced from bridge_chains_config.json's optional "bridge_contract_address" field.
-         * Chains not present in this map have no bridge deployed (D-02: skip signal).
-         */
-        std::unordered_map<uint64_t, std::string> bridge_contract_addresses;
-
-        /**
-         * @brief Bridge event topic0 hashes keyed by numeric chain ID.
-         *
-         * Computed from the BridgeSourceBurned event signature via
-         * eth::cli::event_registry(). The topic0 is used by the catch-up scan
-         * to construct eth_getLogs queries for historical burns.
-         */
-        std::unordered_map<uint64_t, std::string> bridge_event_topic0;
+        virtual ~IBridgeInitObserver() = default;
     };
 
     /**
      * @brief Encapsulates ChainList RPC endpoint loading and validator wiring.
      *
-     * Loads the chainid.network chains.json, filters to configured chains,
-     * groups endpoints by chain ID with consensus weights (public=25%, direct=50%),
-     * and calls PublicChainInputValidator::SetRpcEndpoints for each chain.
+     * Reads bridge_chains_config.json at the path provided, extracts chain_id
+     * and bridge_contract_address for each chain entry, loads RPC endpoints
+     * from the chainlist.org dataset, wires them into
+     * PublicChainInputValidator with consensus weights, calls
+     * IInputValidator::Register per chain, and notifies IBridgeInitObserver
+     * subscribers on success.
      */
     class ChainRpcEndpointProvider
     {
     public:
-        /**
-         * @brief Mapping from config-level chain name to its numeric EVM chain ID.
-         */
-        using ChainIdMap = std::unordered_map<std::string, uint64_t>;
+        ChainRpcEndpointProvider() = default;
 
         /**
-         * @brief Constructs the provider with the configured chain name -> ID mapping.
-         * @param[in] chain_id_map  Maps config keys (e.g. "ethereum-mainnet") to numeric chain IDs (e.g. 1).
+         * @brief Registers an observer to receive the chain/contract list on Init success.
+         * @param[in] observer  Non-owning reference to an IBridgeInitObserver.
+         *
+         * Subscription must occur before Initialize() is posted to the io_context
+         * so the callback fires inside that same Initialize() invocation.
          */
-        explicit ChainRpcEndpointProvider( ChainIdMap chain_id_map );
+        void AddObserver( IBridgeInitObserver &observer );
 
         /**
-         * @brief Loads RPC endpoints and wires them into the validator.
+         * @brief Loads RPC endpoints from bridge_chains_config.json and wires them
+         *        into the validator, then calls IInputValidator::Register per chain.
          *
-         * Public endpoints from the ChainList provider in @p config.chainlist_json_path
-         * contribute 25% consensus weight.  Direct endpoints from
-         * @p config.direct_endpoints contribute 50% consensus weight.
+         * Public endpoints from the ChainList provider contribute 25% consensus
+         * weight; any RPC URLs present in the config contribute 50% weight.
          *
-         * @param[in] validator  PublicChainInputValidator to configure.
-         * @param[in] config     Filesystem paths and direct-endpoint definitions.
-         * @param[in] logger     Logger for diagnostic output.
-         * @return True when at least one chain received RPC endpoints.
+         * @param[in] bridge_chains_config_path  Path to bridge_chains_config.json.
+         * @param[in] validator                  PublicChainInputValidator to configure.
+         * @param[in] logger                     Logger for diagnostic output.
+         * @return True when at least one chain entry was accepted (had chain_id + bridge_contract_address).
          */
-        bool Initialize( PublicChainInputValidator  &validator,
-                         const ChainRpcProviderConfig &config,
-                         const base::Logger          &logger ) const;
+        bool Initialize( const std::filesystem::path    &bridge_chains_config_path,
+                         PublicChainInputValidator       &validator );
 
     private:
-        ChainIdMap chain_id_map_;
+        std::vector<IBridgeInitObserver *> observers_;
     };
 } // namespace sgns
 

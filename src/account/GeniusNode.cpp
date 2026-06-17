@@ -439,9 +439,10 @@ namespace sgns
                                                          eth_watch_service_ );
 
                 // D-04: Launch async bridge initialization as NON-BLOCKING post.
-                // InitializeRpcEndpoints() and BridgeRelayer::Start() will run
-                // on the io_context independently. The node state machine proceeds
-                // through INITIALIZING_PROCESSING → READY without waiting.
+                // ChainRpcEndpointProvider::Initialize() runs on the io_context
+                // independently; observers (BridgeRelayer, catch-up scan) are
+                // notified synchronously within Initialize. The node state
+                // machine proceeds through INITIALIZING_PROCESSING → READY without waiting.
                 boost::asio::post( *io_,
                                    [weak_self = weak_from_this()]
                                    {
@@ -1980,16 +1981,8 @@ namespace sgns
         node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoints.size(), chain_id );
     }
 
-    std::vector<ChainContractPair> GeniusNode::InitializeRpcEndpoints()
+    std::filesystem::path GeniusNode::ResolveBridgeChainsConfigPath() const
     {
-        if ( !transaction_manager_ )
-        {
-            node_logger_->warn( "InitializeRpcEndpoints called before transaction manager is ready" );
-            return {};
-        }
-
-        // ── Pitfall #3: Resolve bridge_chains_config.json path ──
-        // Priority: BaseWriteDir → binary-relative → CWD.
         std::filesystem::path bridge_chains_path;
 
         // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
@@ -2012,7 +2005,7 @@ namespace sgns
             }
             catch ( const std::exception &e )
             {
-                node_logger_->warn( "InitializeRpcEndpoints: cannot determine binary location ({}), "
+                node_logger_->warn( "ResolveBridgeChainsConfigPath: cannot determine binary location ({}), "
                                     "falling back to CWD",
                                     e.what() );
             }
@@ -2024,165 +2017,46 @@ namespace sgns
             bridge_chains_path = std::filesystem::current_path() / "bridge_chains_config.json";
         }
 
-        node_logger_->info( "InitializeRpcEndpoints: loading bridge chain config from {}", bridge_chains_path.string() );
+        return bridge_chains_path;
+    }
 
-        // ── Read bridge_chains_config.json directly to discover bridge contracts (D-02) ──
-        ChainRpcEndpointProvider::ChainIdMap chain_id_map;
-        std::vector<ChainContractPair>       bridge_chains;
-
-        // D-03: known numeric chain IDs for deployed chains
-        static const std::unordered_map<std::string, uint64_t> kChainNameToId = {
-            { "ethereum-mainnet", 1 },
-            { "ethereum-sepolia", 11155111 },
-            { "bnb-smart-chain", 56 },
-            { "bnb-smart-chain-testnet", 97 },
-            { "polygon-mainnet", 137 },
-            { "polygon-amoy", 80002 },
-            { "base-mainnet", 8453 },
-            { "base-sepolia", 84532 },
-        };
-
-        ChainRpcProviderConfig config;
-        // chainlist_json_path is left empty — public endpoints come from a
-        // chainid.network chains.json source (downloaded or configured separately).
-        // Direct API-key endpoints are supplied via config.direct_endpoints.
-
-        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
-
-        try
-        {
-            std::ifstream file( bridge_chains_path, std::ios::binary );
-            if ( !file.is_open() )
-            {
-                node_logger_->warn( "InitializeRpcEndpoints: cannot open {} — bridge startup skipped",
-                                    bridge_chains_path.string() );
-                // Continue with empty maps — RPC endpoints will still be configured
-                // if direct_endpoints are supplied.
-            }
-            else
-            {
-                std::string json_text( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
-                file.close();
-
-                auto parsed = boost::json::parse( json_text );
-                auto obj    = parsed.as_object();
-
-                for ( const auto &[key, value] : obj )
-                {
-                    // Skip metadata entries (prefixed with '_')
-                    if ( key.starts_with( "_" ) )
-                    {
-                        continue;
-                    }
-
-                    auto chain_obj = value.as_object();
-
-                    // D-02: only process chains with bridge_contract_address
-                    auto bridge_it = chain_obj.find( "bridge_contract_address" );
-                    if ( bridge_it == chain_obj.end() )
-                    {
-                        continue;
-                    }
-
-                    std::string chain_name( key );
-                    std::string contract_addr = boost::json::value_to<std::string>( bridge_it->value() );
-
-                    auto id_it = kChainNameToId.find( chain_name );
-                    if ( id_it == kChainNameToId.end() )
-                    {
-                        node_logger_->warn( "InitializeRpcEndpoints: unknown chain '{}', skipping", chain_name );
-                        continue;
-                    }
-
-                    uint64_t chain_id = id_it->second;
-
-                    // Build chain ID map for ChainRpcEndpointProvider
-                    chain_id_map.emplace( chain_name, chain_id );
-
-                    // D-05: compute event topic0 for catch-up scan and verification
-                    auto        topic0_hash = eth::abi::event_signature_hash( event_sig );
-                    std::string topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
-
-                    config.bridge_contract_addresses[chain_id] = contract_addr;
-                    config.bridge_event_topic0[chain_id]       = topic0_hex;
-
-                    bridge_chains.push_back( { chain_name, contract_addr, chain_id } );
-
-                    node_logger_->info( "InitializeRpcEndpoints: chain {} (id={}) bridge={} topic0={}",
-                                        chain_name,
-                                        chain_id,
-                                        contract_addr,
-                                        topic0_hex );
-                }
-            }
-        }
-        catch ( const std::exception &e )
-        {
-            // T-05-15: malformed JSON — graceful degradation
-            node_logger_->warn( "InitializeRpcEndpoints: failed to parse bridge_chains_config.json: {}", e.what() );
-            // Continue without bridge — node still boots
-        }
-
-        // Direct API-key endpoints are not wired here — the app layer
-        // (desktop launcher or mobile host) supplies them through secure
-        // storage and populates config.direct_endpoints before constructing
-        // the provider.  API keys are never tracked in git.
-
-        if ( !chain_id_map.empty() )
-        {
-            ChainRpcEndpointProvider provider( std::move( chain_id_map ) );
-            bool endpoints_wired = provider.Initialize(
-                transaction_manager_->GetPublicChainInputValidator(), config, node_logger_ );
-
-            if ( endpoints_wired )
-            {
-                // Register PublicChainInputValidator for all configured chain IDs
-                auto &pub_validator = transaction_manager_->GetPublicChainInputValidator();
-                for ( const auto &chain_entry : bridge_chains )
-                {
-                    IInputValidator::Register( std::to_string( chain_entry.chain_id ), &pub_validator );
-                }
-            }
-            else
-            {
-                node_logger_->warn( "InitializeRpcEndpoints: no RPC endpoints were wired — "
-                                    "bridge chains will not be registered" );
-                bridge_chains.clear();
-            }
-        }
-        else
-        {
-            node_logger_->warn( "InitializeRpcEndpoints: no bridge-configured chains found" );
-        }
-
-        return bridge_chains;
+    void GeniusNode::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
+    {
+        node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
+                            chains.size() );
+        catchup_chains_ = std::move( chains );
     }
 
     void GeniusNode::InitializeAndStartBridge()
     {
-        node_logger_->info( "InitializeAndStartBridge: beginning async bridge initialization (D-04)" );
+        node_logger_->info( "InitializeAndStartBridge: thin orchestrator (D-01, D-03)" );
 
-        // 1. Initialize RPC endpoints — wires PublicChainInputValidator and
-        //    returns chain/contract pairs for chains with bridge addresses.
-        auto bridge_chains = InitializeRpcEndpoints();
-        bridge_chains_     = bridge_chains; // Store for catch-up scan (D-02)
+        // 1. Resolve config path (stays in GeniusNode per D-01)
+        auto config_path = ResolveBridgeChainsConfigPath();
+        node_logger_->info( "InitializeAndStartBridge: loading bridge chain config from {}",
+                            config_path.string() );
 
-        // 2. Start BridgeRelayer with discoverd chains (D-04: ordering guaranteed —
-        //    Start() only called AFTER endpoints are wired).
-        if ( !bridge_chains.empty() && bridge_relayer_ )
+        // 2. Construct provider
+        rpc_endpoint_provider_ = std::make_unique<ChainRpcEndpointProvider>();
+
+        // 3. Subscribe observers BEFORE post (D-03 ordering)
+        rpc_endpoint_provider_->AddObserver( *this );
+        if ( bridge_relayer_ )
         {
-            node_logger_->info( "BridgeRelayer startup: watching {} chains", bridge_chains.size() );
-            bridge_relayer_->Start( std::move( bridge_chains ) );
+            rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
         }
-        else if ( bridge_chains.empty() )
-        {
-            node_logger_->info( "InitializeAndStartBridge: no chains with bridge contracts — "
-                                "BridgeRelayer not started" );
-        }
-        else
-        {
-            node_logger_->warn( "InitializeAndStartBridge: bridge_relayer_ not available" );
-        }
+
+        // 4. Post Initialize() to io_context — non-blocking
+        boost::asio::post( *io_,
+                           [weak_self = weak_from_this(),
+                            config_path = std::move( config_path )]()
+                           {
+                               if ( auto strong = weak_self.lock() )
+                               {
+                                   auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
+                                   strong->rpc_endpoint_provider_->Initialize( config_path, validator );
+                               }
+                           } );
     }
 
     void GeniusNode::PerformStartupCatchupScan()
@@ -2206,11 +2080,11 @@ namespace sgns
         size_t total_skipped    = 0;
         size_t chains_scanned   = 0;
 
-        // Iterate chains discovered during InitializeRpcEndpoints (D-02, D-03)
-        // Uses bridge_chains_ stored during startup — no hardcoded maps.
+        // Iterate chains discovered via OnRpcEndpointsReady observer callback (D-02, D-03)
+        // Uses catchup_chains_ populated by the observer — no hardcoded maps.
         auto &validator = transaction_manager_->GetPublicChainInputValidator();
 
-        for ( const auto &chain_entry : bridge_chains_ )
+        for ( const auto &chain_entry : catchup_chains_ )
         {
             auto rpc_url = validator.GetFirstRpcUrl( std::to_string( chain_entry.chain_id ) );
             if ( !rpc_url.has_value() )

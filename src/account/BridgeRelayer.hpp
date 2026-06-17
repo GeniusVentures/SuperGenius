@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "account/ChainContractPair.hpp"
+#include "account/ChainRpcEndpointProvider.hpp"
 #include "account/TransactionManager.hpp"
 #include "base/logger.hpp"
 #include "eth/eth_watch_service.hpp"
@@ -20,20 +22,11 @@ class BridgeRelayerTestAccess;
 namespace sgns
 {
     /**
-     * @brief Represents a chain name and its GNUS bridge contract address.
-     */
-    struct ChainContractPair
-    {
-        std::string chain_name;
-        std::string contract_address;
-        uint64_t    chain_id = 0;
-    };
-
-    /**
      * @brief Registers BridgeSourceBurned watches on a shared EthWatchService
      *        across multiple chains and calls MintFunds when burns are detected.
      */
-    class BridgeRelayer : public std::enable_shared_from_this<BridgeRelayer>
+    class BridgeRelayer : public IBridgeInitObserver,
+                          public std::enable_shared_from_this<BridgeRelayer>
     {
     public:
         /**
@@ -52,6 +45,12 @@ namespace sgns
          *                   Best-effort: if one chain fails, others still register (D-21).
          */
         void Start( std::vector<ChainContractPair> chains );
+
+        /**
+         * @brief IBridgeInitObserver callback — self-starts when the provider signals readiness.
+         * @param[in] chains  List of (chain_name, contract_address, chain_id) pairs.
+         */
+        void OnRpcEndpointsReady( std::vector<ChainContractPair> chains ) override;
 
         /**
          * @brief Stop watching (currently a no-op — EthWatchService lifecycle is external).

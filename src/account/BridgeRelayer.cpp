@@ -67,6 +67,12 @@ namespace sgns
     {
     }
 
+    void BridgeRelayer::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
+    {
+        logger_->info( "BridgeRelayer: observer-driven startup for {} chain(s)", chains.size() );
+        Start( std::move( chains ) );
+    }
+
     void BridgeRelayer::Start( std::vector<ChainContractPair> chains )
     {
         if ( !watch_service_ )
