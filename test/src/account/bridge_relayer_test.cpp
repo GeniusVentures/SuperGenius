@@ -5,8 +5,9 @@
  */
 #include <gtest/gtest.h>
 
-#include <unordered_map>
+#include <array>
 #include <string>
+#include <unordered_map>
 
 #include "account/BridgeRelayer.hpp"
 #include "account/TokenID.hpp"
@@ -85,9 +86,9 @@ eth::WatchEventNotification MakeBurnNotification(
     notification.values.push_back( intx::uint256( dest_chain_id ) );
 
     // sgnsDestination as bytes (64-byte SuperGenius public key)
-    eth::codec::ByteBuffer sgns_dest_bytes;
-    sgns_dest_bytes.resize( sgns_dest_hex.size() / 2 );
-    rlp::base::parse::hex_array( sgns_dest_hex, sgns_dest_bytes );
+    std::array<uint8_t, 64> sgns_dest_arr{};
+    rlp::base::parse::hex_array( sgns_dest_hex, sgns_dest_arr );
+    eth::codec::ByteBuffer sgns_dest_bytes( sgns_dest_arr.begin(), sgns_dest_arr.end() );
     notification.values.push_back( std::move( sgns_dest_bytes ) );
 
     return notification;
@@ -233,15 +234,14 @@ TEST( BridgeRelayerTest, HexAddressRoundTrip )
 TEST( BridgeRelayerTest, SgnsDestinationHexRoundTrip )
 {
     // Verify 64-byte SuperGenius destination round-trip via hex_bytes / hex_array.
-    eth::codec::ByteBuffer bytes;
-    bytes.resize( 64 );
+    std::array<uint8_t, 64> bytes{};
     bool parsed = rlp::base::parse::hex_array( kTestSgnsDestination, bytes );
     ASSERT_TRUE( parsed );
     EXPECT_EQ( bytes.size(), 64U );
 
     // Verify round-trip via hex_bytes
     std::string hex = rlp::base::parse::hex_bytes( bytes.data(), bytes.size() );
-    EXPECT_EQ( hex.size(), 128U ); // 64 bytes → 128 hex chars (no "0x" prefix)
+    EXPECT_EQ( hex.size(), 130U ); // 64 bytes → "0x" + 128 hex chars
 }
 
 // ─── OnWatchEvent Behavior Tests ────────────────────────────────────────────
