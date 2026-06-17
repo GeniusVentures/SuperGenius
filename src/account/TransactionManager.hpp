@@ -74,6 +74,7 @@ namespace sgns
             SENDING,   ///< Transaction is being sent
             CONFIRMED, ///< Transaction confirmed
             VERIFYING, ///< Transaction being verified
+            UNCONFIRMED, ///< Local outgoing transaction expired inconclusively
             FAILED,    ///< Transaction failed
             INVALID    ///< Invalid transaction
         };
@@ -283,6 +284,7 @@ namespace sgns
         friend class GeniusNode;
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
+        friend class TransactionManagerPendingLifecycleTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -297,6 +299,11 @@ namespace sgns
             std::shared_ptr<GeniusTransaction> tx;
             TransactionStatus                  status;
             uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+        };
+
+        struct ReplayProtectionResult
+        {
+            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
         };
 
         struct AccountUTXOState
@@ -465,9 +472,10 @@ namespace sgns
         outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
                                                                          const ConsensusCertificate &certificate );
         /**
-         * @brief Handles proposal timeout cleanup by transitioning a VERIFYING tracking entry to FAILED.
+         * @brief Handles proposal timeout cleanup for VERIFYING tracking entries.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
-         *        up due to timeout. CONFIRMED entries are left untouched. Missing entries are skipped silently.
+         *        up due to timeout. Local outgoing entries become UNCONFIRMED; remote temporary entries are
+         *        removed. CONFIRMED entries are left untouched. Missing entries are skipped silently.
          * @param[in] tx_hash Transaction hash identifying the tracking entry to clean up.
          */
         void OnProposalTimeoutCleanup( const std::string &tx_hash );
@@ -663,13 +671,15 @@ namespace sgns
          *        searching across all monitored networks.
          */
         outcome::result<std::string>             GetTransactionCID( const std::string &tx_hash ) const;
-        outcome::result<ConsensusManager::Check> HandleNonceConsensusSubject(
+        outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
-        bool ValidateTransactionForConsensus( const std::shared_ptr<GeniusTransaction> &tx ) const;
+        ConsensusManager::ValidationResult ValidateTransactionForConsensus(
+            const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
         bool CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
         bool CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
+        ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
         bool CheckTransactionTypeRules( const std::shared_ptr<GeniusTransaction> &tx ) const;
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
             const std::shared_ptr<GeniusTransaction> &tx ) const;

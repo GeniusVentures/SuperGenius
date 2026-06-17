@@ -246,8 +246,6 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 
 - [x] 03-02-PLAN.md — Tracking Entry Cleanup via ProposalCleanupHandler: callback registration on ConsensusManager/Blockchain, FireProposalCleanupCallbacks at timeout callers (NOT certificate path), TransactionManager OnProposalTimeoutCleanup handler transitioning VERIFYING → FAILED (CLEAN-01)
 
----
-
 ## Design Notes
 
 ### Consensus Trust Model for Bridge Mints
@@ -270,6 +268,56 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | `EthWatchService` integration into watcher | Deferred — uses dedicated BridgeRpcWatcher |
 | Burn contract deployment/management | External concern |
 
+### Phase 7: Deferred Validation and Pending Proposal Lifecycle
+
+**Goal**: Proposals that are temporarily unverifiable remain eligible for validation and voting when
+their dependencies arrive or transient failures recover, without retaining unbounded state or
+misclassifying inconclusive consensus as transaction failure.
+**Mode**: mvp
+**Depends on**: Phase 3
+**Status**: Not started
+**Requirements**: PEND-01, PEND-02, PEND-03, PEND-04, PEND-05, PEND-06, PEND-07, TXSTATE-01
+**Design note**: [Deferred Consensus Validation](notes/deferred-consensus-validation.md)
+**Success Criteria** (what must be TRUE):
+
+  1. **Out-of-order certificate recovery:** When Peer B receives `tx2` before `tx1`'s certificate,
+     Peer B keeps `tx2` pending and automatically revalidates it when the certificate arrives. A
+     valid `tx2` then receives Peer B's Approval vote without requiring re-proposal.
+  2. **Generic deferred outcomes:** Subject handlers can identify explicit dependency keys or request
+     bounded scheduled retry for transient failures. Pending remains local and never contributes to
+     quorum.
+  3. **Bounded lifecycle:** Pending state uses a compile-time three-minute default TTL, supports an
+     injected ten-second test TTL, and enforces count and retained-byte limits.
+  4. **Complete cleanup:** Certification, terminal rejection, and expiry remove proposal,
+     dependency, vote, retry, and temporary transaction state without duplicate callbacks or leaks.
+  5. **Correct terminal state:** Locally proven invalid transactions become `FAILED`; proposals that
+     reach TTL without a conclusive outcome become `EXPIRED` or `UNCONFIRMED`.
+  6. **Retry safety:** Revalidation is idempotent, emits at most one local Approval vote per proposal
+     slot, and never double-counts validator weight.
+
+**Plans**: 5 plans
+Plans:
+
+**Wave 0**
+
+- [x] 07-01-PLAN.md — Wave 0 focused pending lifecycle test targets
+
+**Wave 1** *(blocked on Wave 0 completion)*
+
+- [x] 07-02-PLAN.md — Structured validation result and local-only Pending contract
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [x] 07-03-PLAN.md — Bounded pending pool, dependency indexes, and cleanup accounting
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [x] 07-04-PLAN.md — Dependency wakeups, scheduled retry, TTL expiry, and retry safety
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [x] 07-05-PLAN.md — TransactionManager pending dependency and UNCONFIRMED expiry semantics
+
 ---
 
 ## Progress Summary
@@ -285,3 +333,4 @@ Public-chain mint validation differs from internal transfers: a compromised vali
 | B. Consensus | 1. Embedded-Transaction Validation | Complete | 2026-05-27 |
 | B. Consensus | 2. Conflict and Replay Hardening | Complete | impl verified 2026-06-09 |
 | B. Consensus | 3. Network Hardening | Complete | impl verified 2026-06-09 |
+| B. Consensus | 7. Deferred Validation Lifecycle | Not started | - |

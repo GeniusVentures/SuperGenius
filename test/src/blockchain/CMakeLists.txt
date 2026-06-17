@@ -33,6 +33,18 @@ target_link_libraries(consensus_slot_key_test
     rapidjson
 )
 
+set(CONSENSUS_PENDING_LIFECYCLE_SOURCE consensus_pending_lifecycle)
+set(CONSENSUS_PENDING_LIFECYCLE_TARGET consensus_pending_lifecycle)
+addtest(consensus_pending_lifecycle_test
+    ${CONSENSUS_PENDING_LIFECYCLE_SOURCE}_test.cpp
+)
+target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test

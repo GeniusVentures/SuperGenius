@@ -237,6 +237,13 @@ namespace sgns
          */
         outcome::result<void> TryResumeProposal( const std::string &hash );
         /**
+         * @brief Attempts to resume deferred handling for a typed pending dependency.
+         * @param[in] dependency Dependency key that became available.
+         * @return outcome::success on success, otherwise an error.
+         */
+        outcome::result<void> TryResumePendingDependency(
+            const ConsensusManager::PendingDependencyKey &dependency );
+        /**
          * @brief Checks whether any certificate exists for subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return `true` when certificate exists.
