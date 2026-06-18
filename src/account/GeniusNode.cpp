@@ -2025,6 +2025,22 @@ namespace sgns
         node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
                             chains.size() );
         catchup_chains_ = std::move( chains );
+
+        // P2: If the catchup scan hasn't run yet (READY may have fired before
+        // chains were populated), trigger it now that chains are available.
+        if ( !catchup_scan_done_ && !catchup_chains_.empty() )
+        {
+            catchup_scan_done_ = true;
+            node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
+            boost::asio::post( *io_,
+                               [weak_self = weak_from_this()]
+                               {
+                                   if ( auto strong = weak_self.lock() )
+                                   {
+                                       strong->PerformStartupCatchupScan();
+                                   }
+                               } );
+        }
     }
 
     void GeniusNode::InitializeAndStartBridge()
@@ -2284,7 +2300,10 @@ namespace sgns
             case TransactionManager::State::READY:
                 // D-20: Trigger startup catch-up scan once after CRDT sync completes.
                 // Non-blocking — posted to io_ so the node proceeds normally.
-                if ( !catchup_scan_done_ )
+                // P2: Require chains to be populated before marking the scan done.
+                // Prevents permanent skip when READY fires before OnRpcEndpointsReady
+                // populates catchup_chains_.
+                if ( !catchup_scan_done_ && !catchup_chains_.empty() )
                 {
                     catchup_scan_done_ = true;
                     boost::asio::post( *io_,

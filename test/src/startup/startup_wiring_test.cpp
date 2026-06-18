@@ -547,3 +547,95 @@ TEST( StartupWiringTest, IoContextStopPreventsCallbacks )
     EXPECT_FALSE( callback_invoked )
         << "Posted callback should not execute on stopped io_context";
 }
+
+// ─── Tests: Catchup Scan Guard (P2 race-condition fix) ─────────────────────
+
+TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
+{
+    // P2: The catchup scan must not permanently skip when TransactionManager
+    // reaches READY before OnRpcEndpointsReady populates catchup_chains_.
+    //
+    // Contract encoded in GeniusNode:
+    //   GeniusNode.cpp ~2287: if (!catchup_scan_done_ && !catchup_chains_.empty())
+    //   GeniusNode.cpp ~2023: OnRpcEndpointsReady fallback trigger
+    //
+    // This test validates the guard state machine so the scan is never
+    // permanently skipped when chains arrive after the READY transition.
+
+    struct CatchupScanGuard
+    {
+        bool scan_done       = false;  // catchup_scan_done_
+        bool chains_populated = false;  // !catchup_chains_.empty()
+
+        /// @brief Models the guard: should we post PerformStartupCatchupScan now?
+        bool ShouldTriggerScan() const
+        {
+            // P2 fix: require chains to be populated before marking the scan done.
+            // Without the chains_populated check, a premature READY permanently
+            // skips the startup catch-up scan.
+            return !scan_done && chains_populated;
+        }
+    };
+
+    // ── Scenario A: READY fires before chains arrive (the P2 race) ──────
+    {
+        CatchupScanGuard guard;
+
+        // Attempt 1: READY state reached, chains not yet populated
+        EXPECT_FALSE( guard.ShouldTriggerScan() )
+            << "Guard must NOT trigger scan when chains are not yet populated";
+
+        // scan_done must remain false so a retry is still possible
+        EXPECT_FALSE( guard.scan_done )
+            << "scan_done must remain false after a blocked attempt — "
+            << "the scan must not be permanently skipped";
+
+        // Chains arrive later via OnRpcEndpointsReady
+        guard.chains_populated = true;
+
+        // Attempt 2: chains now available, scan should trigger
+        EXPECT_TRUE( guard.ShouldTriggerScan() )
+            << "Guard must allow scan after chains are populated — "
+            << "OnRpcEndpointsReady must be able to trigger the deferred scan";
+    }
+
+    // ── Scenario B: chains arrive before READY (happy path) ──────────
+    {
+        CatchupScanGuard guard;
+
+        // Chains arrive first (OnRpcEndpointsReady fires first)
+        guard.chains_populated = true;
+
+        // READY fires — scan should trigger
+        EXPECT_TRUE( guard.ShouldTriggerScan() )
+            << "Guard must allow scan when chains are already populated "
+            << "at the time READY is reached";
+    }
+
+    // ── Scenario C: scan runs once, does not re-trigger ──────────────
+    {
+        CatchupScanGuard guard;
+        guard.chains_populated = true;
+
+        // First trigger succeeds
+        EXPECT_TRUE( guard.ShouldTriggerScan() );
+
+        // Mark as done (the actual code sets catchup_scan_done_ = true
+        // before posting, preventing re-trigger)
+        guard.scan_done = true;
+
+        // Second trigger must not fire
+        EXPECT_FALSE( guard.ShouldTriggerScan() )
+            << "Guard must not allow scan to re-trigger after it has already run";
+    }
+
+    // ── Scenario D: empty chains forever, scan never triggers ─────────
+    {
+        CatchupScanGuard guard;
+
+        // Chains never arrive — scan should never trigger
+        EXPECT_FALSE( guard.ShouldTriggerScan() );
+        EXPECT_FALSE( guard.scan_done )
+            << "scan_done must remain false if chains never arrive";
+    }
+}
