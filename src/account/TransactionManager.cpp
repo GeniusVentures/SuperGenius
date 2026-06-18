@@ -5317,6 +5317,10 @@ namespace sgns
                     break;
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::UNCONFIRMED, tx->GetNonce() };
+                if ( tx->GetSrcAddress() == account_m->GetAddress() )
+                {
+                    account_m->ReleaseNonce( tx->GetNonce() );
+                }
                 TransactionManagerLogger()->info(
                     "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
                     account_m->GetAddress().substr( 0, 8 ),
