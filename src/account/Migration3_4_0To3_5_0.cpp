@@ -34,7 +34,8 @@ namespace sgns
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
-        std::shared_ptr<GeniusAccount>                                  account ) :
+        std::shared_ptr<GeniusAccount>                                  account,
+        uint16_t                                                        network_id ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -42,7 +43,8 @@ namespace sgns
         generator_( std::move( generator ) ),
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
-        account_( std::move( account ) )
+        account_( std::move( account ) ),
+        network_id_( network_id )
     {
     }
 
@@ -239,7 +241,7 @@ namespace sgns
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
 
-        std::vector<uint16_t> monitored_networks{ version::DEV_NET_ID, version::TEST_NET_ID, version::MAIN_NET_ID };
+        auto monitored_networks = TransactionManager::GetMonitoredNetworkIDs( network_id_ );
         size_t                migrated_count = 0;
         size_t                BATCH_SIZE     = 50;
 
@@ -420,7 +422,7 @@ namespace sgns
         static constexpr std::string_view GNUS_NETWORK_PATH_3_4_0 = "SuperGNUSNode.Node";
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_4_0 ) +
-                         version::GetNetAndVersionAppendix( 3, 4, version::GetNetworkID() ) + base58key_;
+                         version::GetNetAndVersionAppendix( 3, 4, network_id_ ) + base58key_;
 
         if ( !std::filesystem::exists( full_path ) )
         {
@@ -453,7 +455,7 @@ namespace sgns
         static constexpr std::string_view GNUS_NETWORK_PATH_3_5_0 = "SuperGNUSNode.Node";
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_5_0 ) +
-                         version::GetNetAndVersionAppendix( 3, 5, version::GetNetworkID() ) + base58key_;
+                         version::GetNetAndVersionAppendix( 3, 5, network_id_ ) + base58key_; 
 
         logger_->debug( "Initializing target {} DB at path {}", ToVersion(), full_path );
 

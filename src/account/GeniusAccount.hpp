@@ -107,7 +107,7 @@ namespace sgns
          * @param[in]   pubsub pubsub instance
          * @return      true if succeeds, false otherwise
          */
-        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
+        bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, uint16_t network_id = 144 );
 
         /**
          * @brief       Configures the block response handler.

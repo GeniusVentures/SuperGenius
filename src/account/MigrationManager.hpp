@@ -58,7 +58,8 @@ namespace sgns
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
             std::shared_ptr<GeniusAccount>                                  account,
-            bool                                                            is_full_node );
+            bool                                                            is_full_node,
+            uint16_t                                                        network_id );
 
         /**
          * @brief   Register a migration step.
@@ -97,6 +98,7 @@ namespace sgns
 
         std::deque<std::shared_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
+        uint16_t     network_id_ = 144; ///< Network ID from config, forwarded to migration steps.
 
         std::atomic<size_t> current_step_index_{ 0 }; ///< 1-based index of the step currently being migrated.
         size_t              total_steps_{ 0 };        ///< Total number of steps (set before migration begins).

@@ -59,7 +59,8 @@ namespace sgns::crdt
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::shared_ptr<RocksDB>                                              datastore = nullptr,
-            BackupOptions                                                         backup_options = BackupOptions{ false, 15, 12, true } );
+            BackupOptions                                                         backup_options = BackupOptions{ false, 15, 12, true },
+            uint16_t                                                              network_id = 144 );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -272,7 +273,8 @@ namespace sgns::crdt
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
                                     std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-                                    std::shared_ptr<RocksDB> datastore = nullptr );
+                                    std::shared_ptr<RocksDB> datastore = nullptr,
+                                    uint16_t              network_id = 144 );
 
         void scheduleBootstrap( std::shared_ptr<boost::asio::io_context> io_context,
                                 std::shared_ptr<libp2p::Host>            host );

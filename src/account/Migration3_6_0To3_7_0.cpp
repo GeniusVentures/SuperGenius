@@ -63,7 +63,8 @@ namespace sgns
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
         std::shared_ptr<GeniusAccount>                                  account,
-        bool                                                            is_full_node ) :
+        bool                                                            is_full_node,
+        uint16_t                                                        network_id ) :
         ioContext_( std::move( ioContext ) ),
         pubSub_( std::move( pubSub ) ),
         graphsync_( std::move( graphsync ) ),
@@ -72,7 +73,8 @@ namespace sgns
         writeBasePath_( std::move( writeBasePath ) ),
         base58key_( std::move( base58key ) ),
         account_( std::move( account ) ),
-        is_full_node_( is_full_node )
+        is_full_node_( is_full_node ),
+        network_id_( network_id )
     {
     }
 
@@ -444,7 +446,7 @@ namespace sgns
         std::unordered_set<std::string>                       consumed_outpoints;
         size_t                                                scanned_transactions = 0;
 
-        for ( auto network_id : TransactionManager::GetMonitoredNetworkIDs() )
+        for ( auto network_id : TransactionManager::GetMonitoredNetworkIDs( network_id_ ) )
         {
             const std::string query_path = TransactionManager::GetBlockChainBase( network_id ) + "tx";
             BOOST_OUTCOME_TRY( auto transaction_list, db_3_6_0_->QueryKeyValues( query_path ) );
@@ -530,7 +532,7 @@ namespace sgns
         static constexpr std::string_view GNUS_NETWORK_PATH_3_6_0 = "SuperGNUSNode.Node";
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_6_0 ) +
-                         version::GetNetAndVersionAppendix( 3, 6, version::GetNetworkID() ) + base58key_;
+                         version::GetNetAndVersionAppendix( 3, 6, network_id_ ) + base58key_;
 
         if ( !std::filesystem::exists( full_path ) )
         {
@@ -563,7 +565,7 @@ namespace sgns
         static constexpr std::string_view GNUS_NETWORK_PATH_3_7_0 = "SuperGNUSNode.Node";
 
         auto full_path = writeBasePath_ + std::string( GNUS_NETWORK_PATH_3_7_0 ) +
-                         version::GetNetAndVersionAppendix( 3, 7, version::GetNetworkID() ) + base58key_;
+                         version::GetNetAndVersionAppendix( 3, 7, network_id_ ) + base58key_;
 
         logger_->debug( "Initializing target {} DB at path {}", ToVersion(), full_path );
 

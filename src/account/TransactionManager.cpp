@@ -104,7 +104,9 @@ namespace sgns
                                                                  std::shared_ptr<Blockchain>              blockchain,
                                                                  bool                                     full_node,
                                                                  std::chrono::milliseconds timestamp_tolerance,
-                                                                 std::chrono::milliseconds mutability_window )
+                                                                 std::chrono::milliseconds mutability_window,
+                                                                 uint16_t                                 network_id,
+                                                                 uint16_t                                 subnet_id )
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
@@ -113,7 +115,9 @@ namespace sgns
                                                                                      std::move( blockchain ),
                                                                                      full_node,
                                                                                      timestamp_tolerance,
-                                                                                     mutability_window ) );
+                                                                                     mutability_window,
+                                                                                     network_id,
+                                                                                     subnet_id ) );
 
         instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
@@ -149,7 +153,7 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
 
-        auto monitored_networks = GetMonitoredNetworkIDs();
+        auto monitored_networks = instance->GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
         {
             std::string blockchain_base            = GetBlockChainBase( network_id );
@@ -220,13 +224,17 @@ namespace sgns
                                             std::shared_ptr<Blockchain>              blockchain,
                                             bool                                     full_node,
                                             std::chrono::milliseconds                timestamp_tolerance,
-                                            std::chrono::milliseconds                mutability_window ) :
+                                            std::chrono::milliseconds                mutability_window,
+                                            uint16_t                                 network_id,
+                                            uint16_t                                 subnet_id ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         hasher_m( std::move( hasher ) ),
         blockchain_( std::move( blockchain ) ),
         full_node_m( full_node ),
+        network_id_( network_id ),
+        subnet_id_( subnet_id ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( timestamp_tolerance ),
@@ -1168,32 +1176,37 @@ namespace sgns
         return outcome::success();
     }
 
-    std::string TransactionManager::GetTransactionPath( uint16_t base, const std::string &tx_hash )
+    std::string TransactionManager::GetTransactionPath( uint16_t base, const std::string &tx_hash ) const
     {
         return GetBlockChainBase( base ) + IGeniusTransactions::GetTransactionFullPath( tx_hash );
     }
 
-    std::string TransactionManager::GetTransactionPath( const IGeniusTransactions &element )
+    std::string TransactionManager::GetTransactionPath( const IGeniusTransactions &element ) const
     {
         return GetBlockChainBase() + element.GetTransactionFullPath();
     }
 
-    std::string TransactionManager::GetTransactionPath( const std::string &tx_hash )
+    std::string TransactionManager::GetTransactionPath( const std::string &tx_hash ) const
     {
         return GetBlockChainBase() + IGeniusTransactions::GetTransactionFullPath( tx_hash );
     }
 
-    std::string TransactionManager::GetTransactionProofPath( const IGeniusTransactions &element )
+    std::string TransactionManager::GetTransactionProofPath( const IGeniusTransactions &element ) const
     {
         auto proof_path = GetBlockChainBase() + element.GetProofFullPath();
 
         return proof_path;
     }
 
-    std::vector<uint16_t> TransactionManager::GetMonitoredNetworkIDs()
+    std::vector<uint16_t> TransactionManager::GetMonitoredNetworkIDs() const
     {
-        std::vector monitored_networks{ version::GetNetworkID() };
-        if ( version::GetNetworkID() == version::DEV_NET_ID ) // DEV network
+        return GetMonitoredNetworkIDs( network_id_ );
+    }
+
+    std::vector<uint16_t> TransactionManager::GetMonitoredNetworkIDs( uint16_t network_id )
+    {
+        std::vector<uint16_t> monitored_networks{ network_id };
+        if ( network_id == version::DEV_NET_ID ) // DEV network: also monitor TEST and MAIN
         {
             monitored_networks.push_back( version::TEST_NET_ID );
             monitored_networks.push_back( version::MAIN_NET_ID );
@@ -1210,9 +1223,9 @@ namespace sgns
         return tx_key.str();
     }
 
-    std::string TransactionManager::GetBlockChainBase()
+    std::string TransactionManager::GetBlockChainBase() const
     {
-        return GetBlockChainBase( version::GetNetworkID() );
+        return GetBlockChainBase( network_id_ );
     }
 
     outcome::result<std::string> TransactionManager::GetExpectedProofKey(

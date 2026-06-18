@@ -35,7 +35,8 @@ namespace sgns
                                std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
-                               std::string                                                     base58key );
+                               std::string                                                     base58key,
+                               uint16_t                                                        network_id );
 
         /**
          * @brief Returns the source schema version handled by this step.
@@ -95,6 +96,7 @@ namespace sgns
         std::string                                                     writeBasePath_; ///< Base path for versioned DBs.
         std::string                                                     base58key_;     ///< Node key suffix for DB paths.
 
+        uint16_t                        network_id_ = 144; ///< Network ID for DB path construction.
         std::shared_ptr<crdt::GlobalDB> db_3_5_1_; ///< Legacy 3.5.1 database.
         std::shared_ptr<crdt::GlobalDB> db_3_6_0_; ///< Target 3.6.0 database.
     };

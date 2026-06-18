@@ -246,6 +246,8 @@ namespace sgns
 
         node_logger_->info( sgns::version::SuperGeniusVersionText() );
 
+        LoadSgnsConfig();
+
         if ( !InitNetwork( base_port, is_full_node_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
@@ -260,6 +262,55 @@ namespace sgns
         }
 
         LoadCrdtConfig();
+    }
+
+    void GeniusNode::LoadSgnsConfig()
+    {
+        const std::string config_path = write_base_path_ + "/sgns_config.json";
+        std::ifstream     config_file( config_path );
+        if ( !config_file.good() )
+        {
+            node_logger_->info( "sgns_config.json not found at {}, using defaults (net_id=144)", config_path );
+            return;
+        }
+
+        std::stringstream buffer;
+        buffer << config_file.rdbuf();
+
+        rapidjson::Document config_json;
+        config_json.Parse( buffer.str().c_str() );
+        if ( config_json.HasParseError() || !config_json.IsObject() )
+        {
+            node_logger_->warn( "Invalid sgns_config.json at {}, using defaults", config_path );
+            return;
+        }
+
+        if ( config_json.HasMember( "net_id" ) && config_json["net_id"].IsUint() )
+        {
+            network_id_ = static_cast<uint16_t>( config_json["net_id"].GetUint() );
+            node_logger_->info( "sgns_config.json: net_id={}", network_id_ );
+        }
+        if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
+        {
+            subnet_id_ = static_cast<uint16_t>( config_json["subnet_id"].GetUint() );
+            node_logger_->info( "sgns_config.json: subnet_id={}", subnet_id_ );
+        }
+        if ( config_json.HasMember( "bootstrap_fullnodes" ) && config_json["bootstrap_fullnodes"].IsArray() )
+        {
+            for ( auto &v : config_json["bootstrap_fullnodes"].GetArray() )
+            {
+                if ( v.IsString() )
+                    bootstrap_fullnodes_.push_back( v.GetString() );
+            }
+            node_logger_->info( "sgns_config.json: loaded {} bootstrap fullnodes", bootstrap_fullnodes_.size() );
+        }
+        // Read authorized_full_node and immediately set it
+        if ( config_json.HasMember( "authorized_full_node" ) && config_json["authorized_full_node"].IsString() )
+        {
+            const std::string addr = config_json["authorized_full_node"].GetString();
+            node_logger_->info( "sgns_config.json: setting authorized_full_node" );
+            Blockchain::SetAuthorizedFullNodeAddress( addr );
+        }
     }
 
     void GeniusNode::LoadCrdtConfig()
@@ -395,7 +446,7 @@ namespace sgns
                     pubsub_->AddPeers( bootstrap_fullnodes_ );
                     node_logger_->info( "Added {} bootstrap fullnodes", bootstrap_fullnodes_.size() );
                 }
-                account_->InitMessenger( pubsub_ );
+                account_->InitMessenger( pubsub_, network_id_ );
                 MigrateDatabase(
                     [weak_self( weak_from_this() )]( outcome::result<void> result )
                     {
@@ -485,7 +536,8 @@ namespace sgns
                                         }
                                     } );
                             }
-                        } );
+                        },
+                        network_id_ );
                 }
                 blockchain_->Start();
                 InitBootstrapReconnect();
@@ -500,7 +552,11 @@ namespace sgns
                                                                 account_,
                                                                 std::make_shared<crypto::HasherImpl>(),
                                                                 blockchain_,
-                                                                is_full_node_ );
+                                                                is_full_node_,
+                                                                std::chrono::milliseconds( 300000 ),
+                                                                std::chrono::milliseconds( 0 ),
+                                                                network_id_,
+                                                                subnet_id_ );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -721,7 +777,6 @@ namespace sgns
         std::string         config_path = write_base_path_ + "/network_config.json";
         rapidjson::Document config_json;
         std::string         pubsub_bind_address = "0.0.0.0";
-        std::string         authorized_full_node;
         bool                upnp_enabled = true;
         int                 high_water   = is_full_node ? 400 : 300;
         int                 low_water    = is_full_node ? 200 : 150;
@@ -729,7 +784,7 @@ namespace sgns
         uint16_t            config_port = 0;
 
         bootstrap_peers_.clear();
-        bootstrap_fullnodes_.clear();
+        // bootstrap_fullnodes_ now loaded from sgns_config.json in LoadSgnsConfig()
 
         // Try to read config file
         std::ifstream config_file( config_path );
@@ -769,16 +824,7 @@ namespace sgns
                         }
                     }
                 }
-                if ( config_json.HasMember( "bootstrap_fullnodes" ) && config_json["bootstrap_fullnodes"].IsArray() )
-                {
-                    for ( auto &v : config_json["bootstrap_fullnodes"].GetArray() )
-                    {
-                        if ( v.IsString() )
-                        {
-                            bootstrap_fullnodes_.push_back( v.GetString() );
-                        }
-                    }
-                }
+                // bootstrap_fullnodes now loaded from sgns_config.json in LoadSgnsConfig()
 
                 if ( config_json.HasMember( "upnp_enabled" ) && config_json["upnp_enabled"].IsBool() )
                 {
@@ -791,10 +837,6 @@ namespace sgns
                 if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
                 {
                     low_water = config_json["low_water"].GetInt();
-                }
-                if ( config_json.HasMember( "authorized_full_node" ) && config_json["authorized_full_node"].IsString() )
-                {
-                    authorized_full_node = config_json["authorized_full_node"].GetString();
                 }
 
                 // ── Parse reconnect config ──
@@ -910,7 +952,10 @@ namespace sgns
             }
             base58key_ = maybe_base58.value();
 
-            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
+            gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) +
+                                      version::GetNetAndVersionAppendix( version::SuperGeniusVersionMajor(),
+                                                                         version::SuperGeniusVersionMinor(),
+                                                                         network_id_ ) +
                                       base58key_;
             auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
 
@@ -1025,7 +1070,8 @@ namespace sgns
                                                       scheduler_,
                                                       generator_,
                                                       nullptr,
-                                                      crdt_backup_config_ );
+                                                      crdt_backup_config_,
+                                                      network_id_ );
             if ( global_db_ret.has_error() )
             {
                 node_logger_->error( "Error creating GlobalDB: {}", global_db_ret.error().message() );
@@ -1062,7 +1108,8 @@ namespace sgns
                                                 write_base_path_,  // writeBasePath
                                                 base58key_,        // base58key
                                                 account_,
-                                                is_full_node_ );
+                                                is_full_node_,
+                                                network_id_ );
 
         // We store it to query migration progress later.
         {
@@ -1266,7 +1313,11 @@ namespace sgns
     void GeniusNode::DHTInit()
     {
         // Encode the string to UTF-8 bytes
-        std::string                temp = processing_grid_chanel_topic_ + sgns::version::GetNetAndVersionAppendix();
+        std::string                temp = processing_grid_chanel_topic_ +
+                                      sgns::version::GetNetAndVersionAppendix(
+                                          sgns::version::SuperGeniusVersionMajor(),
+                                          sgns::version::SuperGeniusVersionMinor(),
+                                          network_id_ );
         std::vector<unsigned char> inputBytes( temp.begin(), temp.end() );
 
         // Compute the SHA-256 hash of the input bytes

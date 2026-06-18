@@ -64,7 +64,8 @@ namespace sgns::crdt
 
     std::shared_ptr<PubSubBroadcasterExt> PubSubBroadcasterExt::New(
         std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-        std::shared_ptr<GossipPubSub>                   pubSub )
+        std::shared_ptr<GossipPubSub>                   pubSub,
+        uint16_t network_id )
     {
         if ( !dagSyncer )
         {
@@ -75,14 +76,15 @@ namespace sgns::crdt
             return nullptr;
         }
         auto instance = std::shared_ptr<PubSubBroadcasterExt>(
-            new PubSubBroadcasterExt( std::move( dagSyncer ), std::move( pubSub ) ) );
+            new PubSubBroadcasterExt( std::move( dagSyncer ), std::move( pubSub ), network_id ) );
         return instance;
     }
 
     PubSubBroadcasterExt::PubSubBroadcasterExt( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                std::shared_ptr<GossipPubSub>                   pubSub ) :
+                                                std::shared_ptr<GossipPubSub>                   pubSub,
+                                                uint16_t network_id ) :
 
-        dagSyncer_( std::move( dagSyncer ) ), pubSub_( std::move( pubSub ) ), started_{ false }
+        dagSyncer_( std::move( dagSyncer ) ), pubSub_( std::move( pubSub ) ), network_id_( network_id ), started_{ false }
     {
         m_logger->trace( "Initializing PubSubBroadcasterExt" );
     }
@@ -209,7 +211,10 @@ namespace sgns::crdt
         }
         if ( !topic.empty() )
         {
-            auto full_topic = topic + version::GetNetAndVersionAppendix();
+            auto full_topic = topic + version::GetNetAndVersionAppendix(
+                                        version::SuperGeniusVersionMajor(),
+                                        version::SuperGeniusVersionMinor(),
+                                        network_id_ );
             broadcastTopicsCopy.emplace( full_topic );
         }
 
@@ -308,7 +313,10 @@ namespace sgns::crdt
 
     outcome::result<void> PubSubBroadcasterExt::AddBroadcastTopic( const std::string &topicName )
     {
-        auto full_topic = topicName + version::GetNetAndVersionAppendix();
+        auto full_topic = topicName + version::GetNetAndVersionAppendix(
+                                          version::SuperGeniusVersionMajor(),
+                                          version::SuperGeniusVersionMinor(),
+                                          network_id_ );
         {
             std::lock_guard<std::mutex> lock( broadcastTopicsMutex_ );
 
@@ -332,7 +340,10 @@ namespace sgns::crdt
 
     void PubSubBroadcasterExt::AddListenTopic( std::string topic )
     {
-        auto            full_topic = std::move(topic) + version::GetNetAndVersionAppendix();
+        auto            full_topic = std::move(topic) + version::GetNetAndVersionAppendix(
+                                                         version::SuperGeniusVersionMajor(),
+                                                         version::SuperGeniusVersionMinor(),
+                                                         network_id_ );
         std::lock_guard lock( listenTopicsMutex_ );
         if ( topicsToListen_.find( full_topic ) != topicsToListen_.end() )
         {

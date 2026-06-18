@@ -32,7 +32,8 @@ namespace sgns::processing
     * @param processingQueueChannelId - a unique id of queue data channel
     */
         ProcessingSubTaskQueueChannelPubSub( std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> gossipPubSub,
-                                             const std::string &processingQueueChannelId );
+                                             const std::string &processingQueueChannelId,
+                                             uint16_t network_id = 144 );
 
         ~ProcessingSubTaskQueueChannelPubSub() override;
 

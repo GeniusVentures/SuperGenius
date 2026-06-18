@@ -11,12 +11,14 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
         std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
         std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-        std::function<void( const std::string & )>              processingErrorSink ) :
+        std::function<void( const std::string & )>              processingErrorSink,
+        uint16_t network_id ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_subTaskQueueManager( std::move( subTaskQueueManager ) ),
         m_subTaskResultStorage( std::move( subTaskResultStorage ) ),
         m_taskResultProcessingSink( std::move( taskResultProcessingSink ) ),
-        m_processingErrorSink( std::move( processingErrorSink ) )
+        m_processingErrorSink( std::move( processingErrorSink ) ),
+        m_network_id( network_id )
     {
         m_localContext = std::make_shared<boost::asio::io_context>();
         m_localWorkGuard.emplace( m_localContext->get_executor() );
@@ -63,7 +65,11 @@ namespace sgns::processing
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
     {
         bool ret           = false;
-        auto results_topic = "RESULT_CHANNEL_ID_" + task_id + sgns::version::GetNetAndVersionAppendix();
+        auto results_topic = "RESULT_CHANNEL_ID_" + task_id +
+                             sgns::version::GetNetAndVersionAppendix(
+                                 sgns::version::SuperGeniusVersionMajor(),
+                                 sgns::version::SuperGeniusVersionMinor(),
+                                 m_network_id );
         if ( !m_resultChannel )
         {
             m_resultChannel = std::make_shared<ipfs_pubsub::GossipPubSubTopic>( m_gossipPubSub, results_topic );

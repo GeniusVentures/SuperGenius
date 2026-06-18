@@ -45,7 +45,8 @@ namespace sgns
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
-                               std::shared_ptr<GeniusAccount>                                  account );
+                               std::shared_ptr<GeniusAccount>                                  account,
+                               uint16_t                                                        network_id );
 
         /**
          * @brief Destroys the migration step.
@@ -130,6 +131,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB> db_3_4_0_;                                       ///< Legacy 3.4.0 database.
         std::shared_ptr<Blockchain>     blockchain_;                                     ///< Blockchain instance used during migration.
         std::shared_ptr<GeniusAccount>  account_;                                        ///< Local account being migrated.
+        uint16_t                        network_id_ = 144;                                  ///< Network ID for DB path construction.
         std::atomic<Status>             blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 

@@ -69,9 +69,6 @@ namespace sgns
          */
         std::string SuperGeniusVersionText();
 
-        uint16_t GetNetworkID();
-
-        std::string GetNetAndVersionAppendix();
         std::string GetNetAndVersionAppendix( uint32_t version_major, uint32_t version_minor, uint16_t net_id );
     }
 }
