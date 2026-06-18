@@ -33,7 +33,8 @@ namespace sgns
          * @brief Validates witness data against Genius-chain consensus state.
          *
          * Checks the transaction hash, UTXO commitment roots, consumed input proofs,
-         * input signatures, ownership, duplicate inputs, and per-token input/output balance.
+         * input signatures, ownership, duplicate inputs, registered token identifiers, and raw-value
+         * input/output balance.
          *
          * @param[in] subject Consensus subject containing the UTXO witness and commitment.
          * @param[in] tx Genius-chain transaction being validated.

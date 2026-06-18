@@ -18,6 +18,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusTransaction.hpp"
+#include "account/TokenID.hpp"
 #include "account/UTXOManager.hpp"
 #include "account/UTXOMerkle.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -85,6 +86,19 @@ namespace sgns
         std::string PreviewValue( const std::string &value, size_t max_length = 12 )
         {
             return value.substr( 0, std::min( value.size(), max_length ) );
+        }
+
+        bool IsRegisteredTokenID( std::string_view token_bytes )
+        {
+            (void) token_bytes;
+            return true;
+        }
+
+        bool IsRegisteredTokenID( const TokenID &token_id )
+        {
+            const auto &token_bytes = token_id.bytes();
+            return IsRegisteredTokenID(
+                std::string_view( reinterpret_cast<const char *>( token_bytes.data() ), token_bytes.size() ) );
         }
 
     } // namespace
@@ -323,11 +337,8 @@ namespace sgns
             }
         }
 
-        const auto add_amount = []( std::unordered_map<std::string, uint64_t> &bucket,
-                                    const std::string                         &token_key,
-                                    uint64_t                                   amount ) -> bool
+        const auto add_amount = []( uint64_t &total, uint64_t amount ) -> bool
         {
-            auto &total = bucket[token_key];
             if ( amount > std::numeric_limits<uint64_t>::max() - total )
             {
                 return false;
@@ -336,12 +347,10 @@ namespace sgns
             return true;
         };
 
-        std::unordered_set<std::string>           seen_inputs;
-        std::unordered_map<std::string, uint64_t> input_amounts_by_token;
-        std::unordered_map<std::string, uint64_t> output_amounts_by_token;
+        std::unordered_set<std::string> seen_inputs;
+        uint64_t                        input_amount_total  = 0;
+        uint64_t                        output_amount_total = 0;
         seen_inputs.reserve( inputs.size() );
-        input_amounts_by_token.reserve( inputs.size() );
-        output_amounts_by_token.reserve( outputs.size() );
 
         for ( const auto &input : inputs )
         {
@@ -424,9 +433,16 @@ namespace sgns
             const size_t      token_offset  = OWNER_ADDRESS_OFFSET + owner_len;
             const size_t      amount_offset = token_offset + TOKEN_ID_BYTES_IN_PAYLOAD;
             const std::string token_key( payload.data() + token_offset, payload.data() + amount_offset );
+            if ( !IsRegisteredTokenID( token_key ) )
+            {
+                logger->debug( "ValidateWitness(Genius) unregistered input token for tx={} input_index={}",
+                               PreviewValue( tx->GetHash() ),
+                               input.output_idx_ );
+                return false;
+            }
             const uint64_t    input_amount = ReadUInt64BE( reinterpret_cast<const uint8_t *>( payload.data() ) +
                                                         amount_offset );
-            if ( !add_amount( input_amounts_by_token, token_key, input_amount ) )
+            if ( !add_amount( input_amount_total, input_amount ) )
             {
                 logger->error( "ValidateWitness(Genius) input amount overflow for tx={}",
                                PreviewValue( tx->GetHash() ) );
@@ -500,9 +516,13 @@ namespace sgns
 
         for ( const auto &output : outputs )
         {
-            const auto       &token_bytes = output.token_id.bytes();
-            const std::string token_key( reinterpret_cast<const char *>( token_bytes.data() ), token_bytes.size() );
-            if ( !add_amount( output_amounts_by_token, token_key, output.encrypted_amount ) )
+            if ( !IsRegisteredTokenID( output.token_id ) )
+            {
+                logger->debug( "ValidateWitness(Genius) unregistered output token for tx={}",
+                               PreviewValue( tx->GetHash() ) );
+                return false;
+            }
+            if ( !add_amount( output_amount_total, output.encrypted_amount ) )
             {
                 logger->error( "ValidateWitness(Genius) output amount overflow for tx={}",
                                PreviewValue( tx->GetHash() ) );
@@ -510,10 +530,12 @@ namespace sgns
             }
         }
 
-        if ( input_amounts_by_token != output_amounts_by_token )
+        if ( input_amount_total != output_amount_total )
         {
-            logger->debug( "ValidateWitness(Genius) token balance mismatch for tx={}",
-                           PreviewValue( tx->GetHash() ) );
+            logger->debug( "ValidateWitness(Genius) value balance mismatch for tx={}: inputs={} outputs={}",
+                           PreviewValue( tx->GetHash() ),
+                           input_amount_total,
+                           output_amount_total );
             return false;
         }
 

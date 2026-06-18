@@ -903,9 +903,43 @@ namespace sgns
     {
         node_logger_->debug( "~GeniusNode CALLED" );
 
+        if ( processing_service_ )
+        {
+            processing_service_->StopProcessing();
+        }
+        if ( processing_callback_pool_ )
+        {
+            processing_callback_pool_->join();
+            processing_callback_pool_.reset();
+        }
+        if ( bridge_relayer_ )
+        {
+            bridge_relayer_->Stop();
+            bridge_relayer_.reset();
+        }
+        if ( eth_watch_service_ )
+        {
+            eth_watch_service_->stop();
+            eth_watch_service_.reset();
+        }
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
+            transaction_manager_.reset();
+        }
+        if ( blockchain_ )
+        {
+            auto stop_result = blockchain_->Stop();
+            if ( stop_result.has_error() )
+            {
+                node_logger_->warn( "~GeniusNode: failed to stop blockchain: {}", stop_result.error().message() );
+            }
+            blockchain_.reset();
+        }
         if ( pubsub_ )
         {
-            pubsub_->Stop(); // Stop activities of OtherClass
+            pubsub_->Stop();
+            pubsub_.reset();
         }
         io_work_guard_.reset();
         if ( io_ )
@@ -924,15 +958,6 @@ namespace sgns
         if ( upnp_thread.joinable() )
         {
             upnp_thread.join();
-        }
-        if ( processing_service_ )
-        {
-            processing_service_->StopProcessing();
-        }
-        if ( processing_callback_pool_ )
-        {
-            processing_callback_pool_->join();
-            processing_callback_pool_.reset();
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
