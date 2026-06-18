@@ -27,6 +27,7 @@ addtest(migration_sync_test
 
 target_link_libraries(migration_sync_test
     genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)
