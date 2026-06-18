@@ -3,7 +3,8 @@
  * @brief      Wires evmrelay burn events to MintFunds via shared EthWatchService.
  * @date       2026-05-30
  */
-#pragma once
+#ifndef SGNS_BRIDGE_RELAYER_HPP
+#define SGNS_BRIDGE_RELAYER_HPP
 
 #include <memory>
 #include <string>
@@ -43,7 +44,7 @@ namespace sgns
          * @return      If successful, a shared pointer to the created BridgeRelayer; otherwise, a nullptr
          */
         static std::shared_ptr<BridgeRelayer> Create( std::weak_ptr<TransactionManager>     tx_manager,
-                                                       std::shared_ptr<eth::EthWatchService> watch_service );
+                                                      std::shared_ptr<eth::EthWatchService> watch_service );
 
         /**
          * @brief Register BridgeSourceBurned watches on all provided chains.
@@ -68,15 +69,14 @@ namespace sgns
          * @param[in] logger Optional injected logger (defaults to BridgeRelayerLogger() if null).
          */
         explicit BridgeRelayer( std::weak_ptr<TransactionManager>     tx_manager,
-                                 std::shared_ptr<eth::EthWatchService> watch_service,
-                                 base::Logger                          logger = nullptr );
+                                std::shared_ptr<eth::EthWatchService> watch_service,
+                                base::Logger                          logger = nullptr );
         /**
          * @brief Processes a matched burn event and calls MintFunds.
          * @param[in] notification Watch event with decoded ABI values.
          * @param[in] chain_name Name of the chain that produced this event.
          */
-        void OnWatchEvent( const eth::WatchEventNotification &notification,
-                           const std::string                 &chain_name );
+        void OnWatchEvent( const eth::WatchEventNotification &notification, const std::string &chain_name );
 
         std::weak_ptr<TransactionManager> tx_manager_; ///< Weak reference to TransactionManager for calling MintFunds
         std::shared_ptr<eth::EthWatchService> watch_service_; ///< Shared EthWatchService for event detection
@@ -85,3 +85,5 @@ namespace sgns
         std::unordered_map<std::string, eth::EventWatchId> chain_watches_;
     };
 } // namespace sgns
+
+#endif // SGNS_BRIDGE_RELAYER_HPP

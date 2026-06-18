@@ -3,7 +3,8 @@
  * @brief      Header file for a Migration transaction that mint tokens on the destination chain based on observed legacy balances on the source chain.
  * @date       2026-04-29
  */
-#pragma once
+#ifndef SGNS_MIGRATION_TRANSACTION_HPP
+#define SGNS_MIGRATION_TRANSACTION_HPP
 
 #include <cstdint>
 #include <optional>
@@ -78,3 +79,5 @@ namespace sgns
         static inline bool registered = Register();
     };
 }
+
+#endif // SGNS_MIGRATION_TRANSACTION_HPP

@@ -4,7 +4,8 @@
  * @date       2026-03-19
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_MINT_TRANSACTION_V2_HPP
+#define SGNS_MINT_TRANSACTION_V2_HPP
 
 #include <vector>
 #include <cstdint>
@@ -47,12 +48,12 @@ namespace sgns
          * @param[in]   mint_destination The destination of the Mint
          * @return      A @ref MintTransactionV2
          */
-        static MintTransactionV2 New( uint64_t                 new_amount,
-                                      std::string              chain_id,
-                                      TokenID                  token_id,
-                                      SGTransaction::DAGStruct dag,
+        static MintTransactionV2 New( uint64_t                   new_amount,
+                                      std::string                chain_id,
+                                      TokenID                    token_id,
+                                      SGTransaction::DAGStruct   dag,
                                       std::vector<InputUTXOInfo> mint_inputs,
-                                      std::string              mint_destination );
+                                      std::string                mint_destination );
 
         /**
          * @brief       Serializes the transaction
@@ -150,3 +151,5 @@ namespace sgns
         static inline bool registered = Register();
     };
 }
+
+#endif // SGNS_MINT_TRANSACTION_V2_HPP

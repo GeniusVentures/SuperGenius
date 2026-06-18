@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SGNS_SGNS_VERSION_HPP
+#define SGNS_SGNS_VERSION_HPP
 
 #include <cstdint>
 #include <string>
@@ -75,3 +76,5 @@ namespace sgns
         std::string GetNetAndVersionAppendix( uint32_t version_major, uint32_t version_minor, uint16_t net_id );
     }
 }
+
+#endif // SGNS_SGNS_VERSION_HPP

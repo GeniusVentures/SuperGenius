@@ -7,7 +7,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#pragma once
+#ifndef BRIDGE_RPC_WATCHER_HPP
+#define BRIDGE_RPC_WATCHER_HPP
 
 #include <watcher/messaging_watcher.hpp>
 
@@ -96,3 +97,5 @@ namespace sgns::evmwatcher
     };
 
 } // namespace sgns::evmwatcher
+
+#endif // BRIDGE_RPC_WATCHER_HPP

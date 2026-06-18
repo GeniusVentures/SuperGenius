@@ -4,7 +4,8 @@
  * @date       2026-06-02
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_GENIUS_INPUT_VALIDATOR_HPP
+#define SGNS_GENIUS_INPUT_VALIDATOR_HPP
 
 #include <memory>
 
@@ -42,10 +43,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service used to resolve producer certificates.
          * @return True when the witness and transaction UTXO parameters are consistent.
          */
-        bool ValidateWitness( const ConsensusSubject                     &subject,
+        bool ValidateWitness( const ConsensusSubject                   &subject,
                               const std::shared_ptr<GeniusTransaction> &tx,
-                              const UTXOTxParameters                     &params,
-                              const std::shared_ptr<Blockchain>          &blockchain ) const override;
+                              const UTXOTxParameters                   &params,
+                              const std::shared_ptr<Blockchain>        &blockchain ) const override;
 
         /**
          * @brief Genius-native validation requires consensus UTXO context.
@@ -68,3 +69,5 @@ namespace sgns
 
     static inline bool kGeniusValidatorRegistered = GeniusInputValidator::Register();
 } // namespace sgns
+
+#endif // SGNS_GENIUS_INPUT_VALIDATOR_HPP

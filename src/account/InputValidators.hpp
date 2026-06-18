@@ -4,7 +4,8 @@
  * @date       2026-03-23
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_INPUT_VALIDATORS_HPP
+#define SGNS_INPUT_VALIDATORS_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -101,3 +102,5 @@ namespace sgns
         }
     };
 } // namespace sgns
+
+#endif // SGNS_INPUT_VALIDATORS_HPP

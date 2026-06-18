@@ -6,7 +6,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef SGNS_MIGRATION_0_2_0_TO_1_0_0_HPP
+#define SGNS_MIGRATION_0_2_0_TO_1_0_0_HPP
 
 #include <memory>
 #include <string>
@@ -119,3 +120,5 @@ namespace sgns
         base::Logger m_logger = base::createLogger( "MigrationStep" ); ///< Logger for this step.
     };
 } // namespace sgns
+
+#endif // SGNS_MIGRATION_0_2_0_TO_1_0_0_HPP

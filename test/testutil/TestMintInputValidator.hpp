@@ -4,7 +4,8 @@
  *             without requiring RPC burn verification.
  * @date       2026-06-09
  */
-#pragma once
+#ifndef TESTUTIL_TEST_MINT_INPUT_VALIDATOR_HPP
+#define TESTUTIL_TEST_MINT_INPUT_VALIDATOR_HPP
 
 #include "account/InputValidators.hpp"
 
@@ -44,3 +45,5 @@ namespace sgns::test
 } // namespace sgns::test
 
 static inline bool kTestMintValidatorRegistered = sgns::test::TestMintInputValidator::RegisterTestValidator();
+
+#endif // TESTUTIL_TEST_MINT_INPUT_VALIDATOR_HPP

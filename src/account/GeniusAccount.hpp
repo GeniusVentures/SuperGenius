@@ -4,7 +4,8 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_GENIUS_ACCOUNT_HPP
+#define SGNS_GENIUS_ACCOUNT_HPP
 
 #include <array>
 #include <deque>
@@ -399,3 +400,5 @@ namespace sgns
                        bool                                            full_node );
     };
 }
+
+#endif // SGNS_GENIUS_ACCOUNT_HPP

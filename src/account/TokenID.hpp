@@ -4,7 +4,8 @@
  * @date       2025-06-19
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_TOKEN_ID_HPP
+#define SGNS_TOKEN_ID_HPP
 
 #include <array>
 #include <algorithm>
@@ -40,7 +41,9 @@ namespace sgns
         /**
          * @brief Constructs an invalid or legacy-default token identifier.
          */
-        TokenID() : data_{}, valid_( false ) {}
+        TokenID() : data_{}, valid_( false )
+        {
+        }
 
         /**
          * @brief Copy-constructs a token identifier.
@@ -186,7 +189,7 @@ namespace sgns
             std::ostringstream oss;
             for ( uint8_t byte : data_ )
             {
-                oss << std::hex << std::setw( 2 ) << std::setfill( '0' ) << (int)byte;
+                oss << std::hex << std::setw( 2 ) << std::setfill( '0' ) << (int) byte;
             }
             return oss.str();
         }
@@ -246,3 +249,5 @@ inline std::ostream &operator<<( std::ostream &os, const sgns::TokenID &id )
 {
     return os << id.ToHex();
 }
+
+#endif // SGNS_TOKEN_ID_HPP

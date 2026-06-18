@@ -4,7 +4,8 @@
  * @date       2026-01-20
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_UTXO_MANAGER_HPP
+#define SGNS_UTXO_MANAGER_HPP
 
 #include "GeniusUTXO.hpp"
 #include "UTXOStructs.hpp"
@@ -79,7 +80,7 @@ namespace sgns
             uint64_t                     created_epoch{ 0 };             ///< Epoch when the UTXO was created
             std::optional<uint64_t>      spent_epoch;   ///< Epoch when the UTXO was consumed, if applicable
             std::optional<base::Hash256> spent_by_txid; ///< Transaction ID that consumed this UTXO, if applicable
-            UTXOType                     type{ UTXOType::UTXO_NORMAL };  ///< Type classification for the UTXO
+            UTXOType                     type{ UTXOType::UTXO_NORMAL }; ///< Type classification for the UTXO
         };
 
         /**
@@ -114,9 +115,7 @@ namespace sgns
          * @param[in]   sign The signer method
          * @param[in]   verify_signature The verifier method
          */
-        UTXOManager( std::string         address,
-                     SignFunc            sign,
-                     VerifySignatureFunc verify_signature ) :
+        UTXOManager( std::string address, SignFunc sign, VerifySignatureFunc verify_signature ) :
             address_( std::move( address ) ),
             sign_( std::move( sign ) ),
             verify_signature_( std::move( verify_signature ) )
@@ -158,9 +157,9 @@ namespace sgns
          * @param[in]   type UTXO type classification (default UTXO_NORMAL for standard UTXOs)
          * @return      true if the UTXO was added, false otherwise
          */
-        outcome::result<bool> PutUTXO( GeniusUTXO    new_utxo,
+        outcome::result<bool> PutUTXO( GeniusUTXO         new_utxo,
                                        const std::string &address,
-                                       UTXOType      type = UTXOType::UTXO_NORMAL );
+                                       UTXOType           type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Adds a new UTXO to the account using the manager's default address.
@@ -190,8 +189,8 @@ namespace sgns
          * @return      true if all UTXOs were consumed, false otherwise
          */
         outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
-                                            const std::string &address,
-                                            UTXOType type = UTXOType::UTXO_NORMAL );
+                                            const std::string                &address,
+                                            UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Consume UTXOs from the default owner address tracked by this manager.
@@ -200,7 +199,7 @@ namespace sgns
          * @return      true if all UTXOs were consumed, false otherwise
          */
         outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
-                                            UTXOType type = UTXOType::UTXO_NORMAL )
+                                            UTXOType                          type = UTXOType::UTXO_NORMAL )
         {
             return ConsumeUTXOs( infos, address_, type );
         }
@@ -285,8 +284,8 @@ namespace sgns
          * @param[in]   type Only reserve UTXOs of this type (default NORMAL)
          */
         void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs,
-                           const std::string &reservation_id,
-                           UTXOType type = UTXOType::UTXO_NORMAL );
+                           const std::string                &reservation_id,
+                           UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Releases a previous reservation without consuming the inputs.
@@ -295,8 +294,8 @@ namespace sgns
          * @param[in]   type Only rollback UTXOs of this type (default NORMAL)
          */
         void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs,
-                            const std::string &reservation_id,
-                            UTXOType type = UTXOType::UTXO_NORMAL );
+                            const std::string                &reservation_id,
+                            UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Verifies ownership and signatures for UTXO transaction parameters using the default address.
@@ -447,7 +446,6 @@ namespace sgns
         /// Logger instance for UTXOManager
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-
         std::string         address_;          ///< Address of the account this manager is responsible for
         SignFunc            sign_;             ///< Signer method for authorizing UTXO spends
         VerifySignatureFunc verify_signature_; ///< Verifier method for validating signatures on UTXO spends
@@ -461,3 +459,5 @@ namespace sgns
     };
 
 }
+
+#endif // SGNS_UTXO_MANAGER_HPP

@@ -6,7 +6,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef SGNS_MIGRATION_MANAGER_HPP
+#define SGNS_MIGRATION_MANAGER_HPP
 
 #include <memory>
 #include <deque>
@@ -57,7 +58,7 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context>                        ioContext,
             std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-            std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+            std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
             std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
             std::string                                                     writeBasePath,
             std::string                                                     base58key,
@@ -90,3 +91,5 @@ namespace sgns
 } // namespace sgns
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, MigrationManager::Error );
+
+#endif // SGNS_MIGRATION_MANAGER_HPP

@@ -4,7 +4,8 @@
  * @date       2026-05-06
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_MIGRATION_3_6_0_TO_3_7_0_HPP
+#define SGNS_MIGRATION_3_6_0_TO_3_7_0_HPP
 
 #include "IMigrationStep.hpp"
 #include "base/logger.hpp"
@@ -58,12 +59,12 @@ namespace sgns
          * @brief Returns the source schema version handled by this step.
          * @return Source version string, "3.6.0".
          */
-        std::string           FromVersion() const override;
+        std::string FromVersion() const override;
         /**
          * @brief Returns the target schema version produced by this step.
          * @return Target version string, "3.7.0".
          */
-        std::string           ToVersion() const override;
+        std::string ToVersion() const override;
         /**
          * @brief Initializes migration resources before applying the step.
          * @return Success after opening the legacy database and, when present, the target database.
@@ -120,24 +121,26 @@ namespace sgns
          *
          * @return Migratable address balances sorted by address, or an error when legacy data cannot be decoded.
          */
-        outcome::result<std::vector<AddressBalance>>     ComputeLegacyBalances() const;
+        outcome::result<std::vector<AddressBalance>> ComputeLegacyBalances() const;
 
         base::Logger logger_ = base::createLogger( "MigrationStep" ); ///< Logger for migration progress and errors.
 
-        std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for GlobalDB services.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub service for CRDT sync.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
-        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<boost::asio::io_context>             ioContext_; ///< IO context for GlobalDB services.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>           pubSub_;    ///< PubSub service for CRDT sync.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> graphsync_; ///< GraphSync network.
+        std::shared_ptr<libp2p::basic::Scheduler>            scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
-        std::string                                                     writeBasePath_; ///< Base path for versioned DBs.
-        std::string                                                     base58key_;     ///< Node key suffix for DB paths.
+        std::string writeBasePath_;                                                 ///< Base path for versioned DBs.
+        std::string base58key_;                                                     ///< Node key suffix for DB paths.
 
-        std::shared_ptr<crdt::GlobalDB>     db_3_6_0_; ///< Legacy 3.6.0 database.
-        std::shared_ptr<crdt::GlobalDB>     db_3_7_0_; ///< Target 3.7.0 database.
-        std::shared_ptr<Blockchain>         blockchain_; ///< Blockchain instance used during migration.
+        std::shared_ptr<crdt::GlobalDB>     db_3_6_0_;            ///< Legacy 3.6.0 database.
+        std::shared_ptr<crdt::GlobalDB>     db_3_7_0_;            ///< Target 3.7.0 database.
+        std::shared_ptr<Blockchain>         blockchain_;          ///< Blockchain instance used during migration.
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction manager used for the migration claim.
         std::shared_ptr<GeniusAccount>      account_;             ///< Local account being migrated.
         bool                                is_full_node_ = false; ///< Whether this node is a full node.
         std::atomic<Status>                 blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 }
+
+#endif // SGNS_MIGRATION_3_6_0_TO_3_7_0_HPP
