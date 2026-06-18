@@ -143,6 +143,38 @@ Plans:
 ---
 
 
+### Phase 05.2: Bridge V2 — X-only compressed encoding: smart contract updated with `bridgeOut(uint256,uint256,uint256,bytes32)` accepting 32-byte X-only compressed SG public key (not an Ethereum address). Event renamed from `BridgeSourceBurned` to `BridgeOutInitiated`. C++ side must decode 32-byte X-only key → decompress to full X+Y → match `GetAddress()`. Versioned catch-up scan handles old topic0 for v1 burns.
+
+Contract:
+```solidity
+function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgnsDestination) external {
+    address sender = _msgSender();
+    require(GNUSNFTFactoryStorage.layout().NFTs[id].nftCreated, "Token not created.");
+    require(balanceOf(sender, id) >= amount, "Insufficient tokens.");
+    require(destChainID != GNUSControlStorage.layout().chainID, "Cannot bridge to same chain");
+    _burn(sender, id, amount);
+    emit BridgeOutInitiated(sender, id, amount, GNUSControlStorage.layout().chainID, destChainID, sgnsDestination);
+}
+``` (INSERTED)
+
+	**Goal:** Decode 32-byte X-only compressed SG public key from BridgeOutInitiated events → decompress to full X+Y key → construct destination matching GetAddress(). Register new event in EventRegistry (kBytes32), retain v1 BridgeSourceBurned (kBytes). BridgeRelayer registers dual watches and dispatches v1/v2 events. Catch-up scan queries both v1 and v2 topic0 hashes.
+	**Requirements**: REQ-V2-01, REQ-V2-02, REQ-V2-03, REQ-V2-04, REQ-V2-05, REQ-V2-06, REQ-V2-07, REQ-V2-08, REQ-V2-09
+	**Depends on:** Phase 05.1 (Observer pattern, ChainContractPair, IBridgeInitObserver)
+	**Plans:** 4 plans
+	
+	**Wave 1** (evmrelay foundation — independent):
+	Plans:
+	- [ ] 05.2-01-PLAN.md — EventRegistry v2 registration (D-04, D-05) + DecompressXOnlyPubkey free function (D-07, D-08, D-09, D-10) + 5 secp256k1 decompression tests (REQ-V2-01, REQ-V2-02, REQ-V2-05, REQ-V2-06, REQ-V2-09)
+	
+	**Wave 2** (BridgeRelayer + GeniusNode — parallel, depends on Wave 1):
+	Plans:
+	- [ ] 05.2-02-PLAN.md — BridgeRelayer::Start() dual-watch v1+v2 (D-14, D-15) + OnWatchEvent() variant dispatch ByteBuffer/Hash256 with v2 decompression (D-06) (REQ-V2-03, REQ-V2-04)
+	- [ ] 05.2-03-PLAN.md — GeniusNode::PerformStartupCatchupScan() dual topic0 query v1+v2 (D-11, D-12) + v2 X-only decompression before MintFunds (D-13) (REQ-V2-07, REQ-V2-08)
+	
+	**Wave 3** (test coverage — depends on Waves 1+2):
+	Plans:
+	- [ ] 05.2-04-PLAN.md — EventRegistry v2 tests + BridgeRelayer v2 dispatch/dual-watch tests + Startup catch-up scan v2 topic0 tests (REQ-V2-03, REQ-V2-04, REQ-V2-07, REQ-V2-09)
+
 ### Phase 05.1: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (INSERTED)
 
 **Goal:** Move `GeniusNode::InitializeRpcEndpoints()` (~175 lines of path resolution, JSON parsing, provider construction, validator registration) into `ChainRpcEndpointProvider::Initialize()`. GeniusNode becomes a thin orchestrator: resolve the config path, construct the provider, register observers (BridgeRelayer + self for catch-up scan), and post `Initialize()` to the io_context. Chain IDs come from a new `chain_id` field in `bridge_chains_config.json`, eliminating the hardcoded `kChainNameToId` map.
