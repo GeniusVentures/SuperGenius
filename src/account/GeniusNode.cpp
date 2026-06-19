@@ -2247,8 +2247,72 @@ namespace sgns
                     std::string destination;
                     if ( is_v2 )
                     {
-                        // V2: decompression handled in Task 2
-                        destination = "";
+                        // BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool):
+                        // sender is indexed (topics[1]); the remaining 6 params
+                        // are ABI-encoded in log.data. Non-indexed layout:
+                        //   [0] id (uint256) [1] amount (uint256)
+                        //   [2] srcChainID (uint256) [3] destChainID (uint256)
+                        //   [4] sgnsDestination (bytes32 — the X-only key)
+                        //   [5] destinationYOdd (bool — Y parity: false=0x02, true=0x03)
+                        static const std::string kEventSigV2 =
+                            "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+                        const auto all_params = eth::cli::event_registry().params_for( kEventSigV2 );
+
+                        std::vector<eth::abi::AbiParam> non_indexed_params;
+                        non_indexed_params.reserve( all_params.size() );
+                        for ( const auto &p : all_params )
+                        {
+                            if ( !p.indexed )
+                            {
+                                non_indexed_params.push_back( p );
+                            }
+                        }
+
+                        auto decoded = eth::abi::decode_log_data( rpc_log.log.data, non_indexed_params );
+                        // Expect 6 non-indexed params (id, amount, srcChainID,
+                        // destChainID, sgnsDestination, destinationYOdd).
+                        static constexpr size_t kExpectedV2DataParams = 6;
+                        static constexpr size_t kSgnsDestinationIndex  = 4;
+                        static constexpr size_t kDestinationYOddIndex  = 5;
+                        if ( !decoded.has_value() || decoded->size() < kExpectedV2DataParams )
+                        {
+                            ++total_skipped;
+                            node_logger_->warn( "CatchUpScan v2: failed to decode log data for tx {} — skipping",
+                                                tx_hash_hex );
+                            continue;
+                        }
+
+                        // sgnsDestination is bytes32 → codec::Hash256 variant.
+                        if ( !std::holds_alternative<eth::codec::Hash256>(
+                                ( *decoded )[kSgnsDestinationIndex] ) )
+                        {
+                            ++total_skipped;
+                            node_logger_->warn( "CatchUpScan v2: sgnsDestination not bytes32 for tx {} — skipping",
+                                                tx_hash_hex );
+                            continue;
+                        }
+                        const auto &x_bytes = std::get<eth::codec::Hash256>(
+                            ( *decoded )[kSgnsDestinationIndex] );
+
+                        // destinationYOdd is bool.
+                        if ( !std::holds_alternative<bool>( ( *decoded )[kDestinationYOddIndex] ) )
+                        {
+                            ++total_skipped;
+                            node_logger_->warn( "CatchUpScan v2: destinationYOdd not bool for tx {} — skipping",
+                                                tx_hash_hex );
+                            continue;
+                        }
+                        const bool destination_y_odd = std::get<bool>( ( *decoded )[kDestinationYOddIndex] );
+
+                        auto dest_opt = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
+                        if ( !dest_opt.has_value() )
+                        {
+                            ++total_skipped;
+                            node_logger_->warn( "CatchUpScan v2: X-only decompression failed for tx {} — skipping",
+                                                tx_hash_hex );
+                            continue;
+                        }
+                        destination = std::move( *dest_opt );
                     }
 
                     try
