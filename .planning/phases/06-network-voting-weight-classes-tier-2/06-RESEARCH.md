@@ -6,68 +6,53 @@
 
 ## Summary
 
-Phase 6 adds a **second, network-level trust layer** on top of the per-node RPC
-verification (Tier 1, delivered in Phase 5). The phase goal — "direct API-key nodes
-carry 50% voting weight, public-only RPC nodes carry 25% weight … final approval
-requires both cohorts to independently meet thresholds" — is a cohort-partitioned
-quorum rule that applies **only to bridge-mint subjects**, layered onto an existing
-single-pool weighted-voting consensus.
+Phase 6 replaces the single-pool quorum for bridge-mint subjects with a **cryptographic
+slot-based cumulative quorum** (per CONTEXT.md D-01..D-10, locked via `/gsd:discuss-phase 6`).
+The `ConsensusVote` proto is extended with 3 `bytes32` RPC URL hash slots:
 
-The codebase already contains most of the primitives this phase needs, but several
-are wired for a different purpose and three foundational gaps must be closed first:
+| Slot | Who fills | Hash rule | Weight |
+|------|-----------|-----------|--------|
+| 0 | DIRECT_API (paid/API-key endpoints) | 1 valid hash | rep × 0.50 |
+| 1 | Any node (PUBLIC endpoints) | ≥2 distinct validators | rep × 0.25 |
+| 2 | Any node (PUBLIC endpoints) | ≥2 distinct validators | rep × 0.25 |
 
-1. **A weight system already exists** — `ValidatorRegistry::WeightConfig`
-   (`src/blockchain/ValidatorRegistry.hpp:66`) with `genesis_weight_`, `full_weight_`,
-   `regular_weight_`, `sharded_weight_`, plus `QuorumThreshold()` / `IsQuorum()`
-   (`ValidatorRegistry.cpp:310-333`). Production runs at quorum `2/3` single-pool
-   (`src/blockchain/impl/Blockchain.cpp:131-135`). But this is **one pool**, not two
-   cohorts, and there is **no per-subject-type quorum** today.
-2. **A `Role` enum already exists** (`GENESIS | FULL | REGULAR | SHARDED`,
-   `ValidatorRegistry.proto`) — but `Role::FULL` is **never assigned anywhere in src/
-   or test/** (verified by grep). `CreateGenesisRegistry` sets `GENESIS`; new
-   validators are stamped `REGULAR` (`ValidatorRegistry.cpp:1693`). There is no
-   promotion path from `REGULAR` → `FULL`, which is the "reputation identifies full
-   nodes" requirement.
-3. **The API-key signal already exists** — `eth::rpc::RpcEndpointConfig` carries
-   `is_paid`, `is_public`, `api_key_env_var`, `api_key_literal`
-   (`evmrelay/include/eth/rpc_manager_config.hpp:16`). These are the exact signals
-   needed to classify a node into the "direct API-key" cohort vs. "public-only"
-   cohort. But this signal is currently consumed **only inside per-node RPC
-   verification** (`PublicChainInputValidator::WeightedRpcEndpoint`), not propagated
-   to the consensus/registry layer where cohort membership must live.
+**Certificate**: `qualified_sum > total_voting_reputation × 0.75` (single cumulative check,
+no per-cohort gates). Solo hashes in slots 1-2 contribute zero (deduplication). A node that
+cannot produce any valid RPC hash abstains (marks tx invalid, doesn't vote).
 
-A critical naming trap: `PublicChainInputValidator::WeightedRpcEndpoint` (Phase 5)
-**already documents** "Direct (api-key) endpoints contribute 50% weight. Public
-endpoints … 25% weight" (`src/account/PublicChainInputValidator.hpp:28-31`). That is
-**Tier 1 (per-node, local RPC majority)**, NOT Tier 2 (network cohort voting). The
-two are easily conflated. Phase 6 operates on the **consensus vote tally**, not the
-RPC endpoint tally.
+The codebase contains the primitives this phase needs:
 
-**Primary recommendation:** Implement Tier 2 as a **subject-type-gated, two-cohort
-quorum policy** inside `ConsensusManager` (the single owner of `TallyVotes` and the
-incremental `HandleVote` tally), keyed off `EmbeddedTransaction::kMintV2` (the
-existing bridge-mint discriminator). Introduce a `ValidatorCohort` derivation on
-`ValidatorRegistry` (mapping `Role` + a new optional API-key/direct-endpoint flag to
-`DIRECT_API | PUBLIC_ONLY`), add a `TwoTierQuorumPolicy` that requires each cohort to
-independently reach a configurable threshold, and **do NOT modify the proto
-`ConsensusCertificate`** in v1 — store cohort breakdown as an in-memory `QuorumTally`
-extension only (certificate remains single-pool for backward compatibility). Close
-the `Role::FULL` gap with a reputation-driven promotion in `ApplyVoteEffects` using
-the existing `approval_increment_` / `missed_epochs_` fields.
+1. **A weight system already exists** — `ValidatorRegistry::WeightConfig` with
+   `genesis_weight_`/`full_weight_`/`regular_weight_`/`sharded_weight_`, plus
+   `QuorumThreshold()`/`IsQuorum()` for the existing single-pool path that remains
+   unchanged for non-bridge subjects.
+2. **`Role::FULL` is never assigned** — promotion rule added in `ApplyVoteEffects` (D-08)
+   closes this gap; a promoted FULL node's higher weight flows naturally into slot
+   contributions.
+3. **The API-key signal exists** in `RpcEndpointConfig` (`is_paid`, `is_public`,
+   `api_key_*`) — consumed to compute endpoint hashes for slot population (D-02/D-03).
+4. **`ConsensusVote` proto IS extended** (D-09) — 3 `bytes32` fields at tags 6/7/8.
+   `ConsensusCertificate` remains single-pool and unchanged.
 
-This phase touches shared consensus hot paths (`TallyVotes`, `HandleVote`). Per
-CLAUDE.md, any change to shared libraries requires the **full regression suite**,
-not just changed-file tests.
+**Primary recommendation:** Implement the slot tally as a shared `EvaluateSlotQuorum`
+helper in `ValidatorRegistry`, dispatched by `ConsensusManager::EvaluateQuorum()` for
+bridge-mint subjects. Route BOTH tally sites (`TallyVotes` and the incremental `HandleVote`
+path) through this single helper. Non-bridge subjects use the existing `IsQuorum` path
+unchanged. Close the `Role::FULL` gap with promotion in `ApplyVoteEffects`.
+
+This phase touches shared consensus hot paths. Per CLAUDE.md, any change to shared
+libraries requires the **full regression suite**.
 
 ## Architectural Responsibility Map
 
 | Capability | Primary Tier | Secondary Tier | Rationale |
 |------------|-------------|----------------|-----------|
-| Node cohort classification (DIRECT_API vs PUBLIC_ONLY) | API / Backend (ValidatorRegistry) | RPC config layer | The registry owns validator identity and weights; cohort is a property of the validator entry, derived from RPC config + Role. |
-| Per-cohort quorum arithmetic | API / Backend (ConsensusManager) | — | `ConsensusManager` is the sole owner of `TallyVotes` and the incremental vote tally; quorum math must not be duplicated. |
+| Slot RPC-hash computation | API / Backend (PublicChainInputValidator) | — | Additive read-only accessors (`HashDirectApiEndpoint`, `HashPublicEndpoint`) on the existing validator that holds endpoint config. |
+| Vote slot-hash population | API / Backend (GeniusNode) | PublicChainInputValidator | GeniusNode calls the hashing accessors to stamp its outgoing `ConsensusVote` before signing. |
+| Slot quorum arithmetic | API / Backend (ValidatorRegistry + ConsensusManager) | — | `EvaluateSlotQuorum` in ValidatorRegistry (hash grouping, dedup, 50/25/75 arithmetic). `EvaluateQuorum` dispatcher in ConsensusManager routes both tally sites. |
 | Bridge-mint subject discrimination | API / Backend (ConsensusManager / TransactionManager) | — | `EmbeddedTransaction::kMintV2` + non-empty `chain_id` is the existing discriminator; reused, not reinvented. |
-| Reputation → Role::FULL promotion | API / Backend (ValidatorRegistry) | — | `ApplyVoteEffects` already mutates weight/penalty; promotion belongs there. |
-| RPC-result vote commitments (stretch / deferred) | API / Backend (ConsensusVote proto) | ConsensusManager | The design note proposes `sha256(rpc_response)` commitments to detect fabricated votes; this is a proto change deferred from v1 (see Open Questions). |
+| Reputation → Role::FULL promotion | API / Backend (ValidatorRegistry) | — | `ApplyVoteEffects` already mutates weight/penalty; promotion belongs there (D-08). |
+| RPC-result vote commitments | — | — | Deferred — out of scope v1 (CONTEXT.md Explicitly Out of Scope). Only endpoint URL hash (not response data hash). |
 | Cohort threshold configuration | Frontend Server / node config (DevConfig_st + WeightConfig) | — | New thresholds ride alongside the existing `WeightConfig` aggregate. |
 
 ## Standard Stack
@@ -511,16 +496,16 @@ EXPECT_TRUE( tally.value().has_quorum );
 
 | # | Claim | Section | Risk if Wrong |
 |---|-------|---------|---------------|
-| A1 | Cohort breakdown should stay out of the `ConsensusCertificate` protobuf in v1 (in-memory only) | Architecture / Anti-Patterns | If downstream consumers (other peers, block explorers) need verifiable cohort evidence, the certificate schema must be extended — a larger, consensus-breaking change. Needs user confirmation. |
-| A2 | Cohort membership should be derived from registry state only (not local RPC config) for determinism | Pitfall 5 | If the user wants cohort to reflect each peer's live RPC connectivity (not registry-stored classification), the determinism guarantee breaks and a different design is needed. |
-| A3 | `Role::FULL` promotion via `ApplyVoteEffects` is the intended "reputation identifies full nodes" mechanism | Pattern 3 | The user may envision a separate, more sophisticated reputation system (e.g., slashing history, uptime SLAs). If so, the promotion rule is too simplistic. |
-| A4 | 50%/25% in the phase goal are **cohort weight caps** (DIRECT_API cohort total weight = 50% of network, PUBLIC_ONLY = 25%), not vote-counting ratios | Summary / Architecture | The phase goal wording is ambiguous. If 50/25 are instead per-vote multipliers or quorum thresholds, the arithmetic differs. The `rpc-verification-tiers.md` note frames them as cohort weight classes, which this research follows. **Needs user confirmation at discuss-phase.** |
-| A5 | Both cohorts use an independent ≥51% threshold (the note says "≥51% of this cohort") | Summary | If a different per-cohort threshold is intended (e.g. 2/3), only constants change. Low risk. |
-| A6 | The genesis/authority node is implicitly in the DIRECT_API cohort | Architecture | If genesis should be a special third cohort or excluded from cohort voting, the predicate changes. |
+| A1 | `ConsensusCertificate` proto stays single-pool; slot tally breakdown is in-memory only (CONTEXT D-09 extends `ConsensusVote`, not `ConsensusCertificate`) | Architecture | If downstream consumers need verifiable slot evidence, the certificate schema must be extended — deferred. RESOLVED by discuss-phase: keep single-pool. |
+| A2 | Determined by discuss-phase: no registry-persisted classification. Node computes endpoint hashes at vote time via `HashDirectApiEndpoint`/`HashPublicEndpoint`; tally-side dedup (≥2 validator groups) enforces consistency (D-02, D-03, D-04). | Pitfall 5 | Determinism holds because `EvaluateSlotQuorum` is a pure function of votes + registry snapshot; hash dedup prevents solitary fabrication. |
+| A3 | `Role::FULL` promotion via `ApplyVoteEffects` is the intended "reputation identifies full nodes" mechanism (D-08) | Pattern 3 | The user endorsed this (discuss-phase: "Role::FULL promotion stays"). |
+| A4 | 50%/25% are per-vote slot contribution multipliers (slot 0 = rep × 0.50, slots 1-2 = rep × 0.25), not cohort weight caps (D-02, D-03, D-06). RESOLVED by discuss-phase slot-model replacement. | Summary / Architecture | The user explicitly chose cumulative slot tally over binary cohort gates. |
+| A5 | Certificate requires `qualified_sum > total_voting_reputation × 0.75` — single cumulative threshold, no per-cohort gates (D-06). RESOLVED by discuss-phase. | Summary | The 75% numerator/denominator is configurable in `WeightConfig` (`slot_quorum_numerator_`/`denominator_`). |
+| A6 | Genesis/authority nodes participate in slot 0 if they have a paid/API-key endpoint; otherwise they vote in slots 1-2 like any other node (D-02, D-03). No special genesis cohort. | Architecture | RESOLVED by discuss-phase. |
 
 ## Open Questions (RESOLVED)
 
-1. **Are 50% / 25% cohort weights, or per-cohort quorum thresholds?** *(RESOLVED → 06-02: A4/A5 — both cohorts use independent configurable ≥51% thresholds; weights inherited from registry)*
+1. **Are 50% / 25% cohort weights, or per-cohort quorum thresholds?** *(RESOLVED → CONTEXT D-02, D-03, D-06: 50%/25% are per-vote slot contribution multipliers (not per-cohort thresholds). Cumulative `qualified_sum > total_voting_reputation × 0.75` replaces independent per-cohort gates. Discuss-phase replaced the binary-cohort model with a 3-slot cumulative model.)*
    - What we know: The phase goal and `rpc-verification-tiers.md` describe "direct
      API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight"
      and "Require ≥51% of this cohort to approve."
@@ -531,7 +516,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      per-cohort independent thresholds (≥51% within each cohort), which is what the
      design note's "Require ≥51% of this cohort" sentence states most directly.
 
-2. **Should `ConsensusVote` carry an RPC-result commitment (`sha256(rpc_response)`)?** *(RESOLVED → 06-02: A5 — defer; proto-breaking, out of scope v1)*
+2. **Should `ConsensusVote` carry an RPC-result commitment (`sha256(rpc_response)`)?** *(RESOLVED → CONTEXT Out of Scope: deferred. `ConsensusVote` IS extended with 3 `bytes32` RPC URL hashes (D-09), but these are ENDPOINT IDENTITY hashes, not response-data commitments. The `sha256(rpc_response)` data commitment is out of scope v1.)*
    - What we know: The ROADMAP "Consensus Trust Model for Bridge Mints" note proposes
      this so peers can detect fabricated votes. `ConsensusVote` proto today has only
      `voter_id, approve, timestamp, signature`.
@@ -540,7 +525,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      break) and adds bandwidth to every vote. The two-cohort AND rule delivers the
      primary security value without it.
 
-3. **How does a node learn its own cohort at startup?** *(RESOLVED → 06-01: A2/A3 — node-level; any paid/direct endpoint across any chain → DIRECT_API; persisted into registry)*
+3. **How does a node learn its own cohort at startup?** *(RESOLVED → CONTEXT D-02, D-03: No cohort classification. A node with paid/API-key endpoints fills slot 0; any node fills slots 1-2. `PublicChainInputValidator::HashDirectApiEndpoint()` / `HashPublicEndpoint()` compute per-slot endpoint hashes at vote time. No registry-persisted classification (D-04).)*
    - What we know: `GeniusNode` has `is_full_node_` (constructor bool); RPC endpoints
      come from `chains_config.json` via `ChainRpcEndpointProvider`; `RpcEndpointConfig`
      has `is_paid`/`api_key_*`.
@@ -551,7 +536,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      persisted into the validator registry on self-registration, so all peers agree.
      Confirm with user.
 
-4. **Is `Role::FULL` promotion automatic, or operator-gated?** *(RESOLVED → 06-03: A3/A6 — algorithmic in ApplyVoteEffects; threshold configurable in WeightConfig; genesis in DIRECT_API cohort)*
+4. **Is `Role::FULL` promotion automatic, or operator-gated?** *(RESOLVED → CONTEXT D-08: Algorithmic in `ApplyVoteEffects`. REGULAR→FULL when `weight ≥ full_promotion_weight_` AND `penalty_score < penalty_threshold_`. Threshold configurable in `WeightConfig`. Promoted FULL weight flows into slot tally naturally via `EvaluateSlotQuorum` reading `validator.weight()`.)*
    - What we know: `ApplyVoteEffects` is the natural hook; no operator UI exists.
    - What's unclear: Whether promotion should be purely algorithmic (weight
      threshold) or require off-chain operator action.
@@ -580,38 +565,36 @@ EXPECT_TRUE( tally.value().has_quorum );
 | Property | Value |
 |----------|-------|
 | Framework | Google Test (gtest) via CMake `enable_testing()` |
-| Config file | `test/src/CMakeLists.txt` (+ per-dir `CMakeLists.txt`) |
-| Quick run command | `cd build/OSX/Debug && ctest -R ConsensusTwoTier -j8 --output-on-failure` |
+| Config file | `test/src/blockchain/CMakeLists.txt` |
+| Quick run command | `cd build/OSX/Debug && ninja consensus_slot_quorum_test && ctest -R "ConsensusSlotQuorum|ValidatorRegistryPromotion" --output-on-failure` |
 | Full suite command | `cd build/OSX/Debug && ninja && ctest -j8 --output-on-failure` (CLAUDE.md: full regression on shared-lib changes) |
 
 ### Phase Requirements → Test Map
 
-> Phase 6 has no formal REQ-IDs in ROADMAP yet (plans = 0). The map below covers the
-> behaviors implied by the phase goal; the planner should mint REQ-IDs at planning.
+> REQ IDs defined in `.planning/REQUIREMENTS.md`. Plans 06-01..06-04 deliver these.
 
-| Req ID (proposed) | Behavior | Test Type | Automated Command | File Exists? |
-|-------------------|----------|-----------|-------------------|-------------|
-| REQ-COHORT-01 | `CohortOf()` returns DIRECT_API for a validator with paid/api-key RPC config | unit | `ctest -R CohortOfDirectApi` | ❌ Wave 0 |
-| REQ-COHORT-02 | `CohortOf()` returns PUBLIC_ONLY for a REGULAR validator with public-only RPC | unit | `ctest -R CohortOfPublicOnly` | ❌ Wave 0 |
-| REQ-QUORUM-01 | Bridge-mint subject with only DIRECT_API quorum (PUBLIC below threshold) → no certificate | unit | `ctest -R TwoTierPublicMissing` | ❌ Wave 0 |
-| REQ-QUORUM-02 | Bridge-mint subject with only PUBLIC_ONLY quorum (DIRECT below threshold) → no certificate | unit | `ctest -R TwoTierDirectMissing` | ❌ Wave 0 |
-| REQ-QUORUM-03 | Bridge-mint subject with both cohorts meeting thresholds → certificate produced | unit | `ctest -R TwoTierBothMeet` | ❌ Wave 0 |
-| REQ-QUORUM-04 | Non-bridge subject (internal transfer) → single-pool quorum unchanged | unit | `ctest -R TwoTierNonBridgeUnchanged` | ❌ Wave 0 |
-| REQ-QUORUM-05 | Incremental `HandleVote` tally and `TallyVotes` agree on two-tier quorum | unit | `ctest -R TwoTierIncrementalAgrees` | ❌ Wave 0 |
-| REQ-REPUT-01 | REGULAR validator promoted to FULL when weight ≥ threshold and penalty low | unit | `ctest -R RolePromotionToFull` | ❌ Wave 0 |
-| REQ-DETERM-01 | Two peers derive same cohort for same validator from same registry snapshot | unit | `ctest -R CohortDeterminism` | ❌ Wave 0 |
+| Req ID | Behavior | Test Type | Automated Command | File Exists? |
+|--------|----------|-----------|-------------------|-------------|
+| REQ-SLOT-01 | `ConsensusVote` extended with 3 `bytes32` slot hashes (D-01) | unit | `ctest -R ConsensusSlotQuorum.ProtoExtension` | ❌ Wave 0 |
+| REQ-SLOT-02 | Slot 0 = rep × 0.50 if `slot_0_hash ≠ 0` (D-02) | unit | `ctest -R ConsensusSlotQuorum.Slot0Direct` | ❌ Wave 0 |
+| REQ-SLOT-03 | Slots 1-2 = rep × 0.25 for hash groups with ≥2 validators; solo hashes → 0 (D-03) | unit | `ctest -R ConsensusSlotQuorum.Slot12Dedup` | ❌ Wave 0 |
+| REQ-SLOT-04 | Certificate iff `qualified_sum > total_voting_rep × 0.75` (D-06) | unit | `ctest -R ConsensusSlotQuorum.Threshold` | ❌ Wave 0 |
+| REQ-SLOT-05 | `TallyVotes` and `HandleVote` agree via shared `EvaluateQuorum` helper (D-06) | unit | `ctest -R ConsensusSlotQuorum.BothSitesAgree` | ❌ Wave 0 |
+| REQ-SLOT-06 | All-empty slots → full weight to total_voting_rep, zero to qualified_sum (D-05) | unit | `ctest -R ConsensusSlotQuorum.Abstention` | ❌ Wave 0 |
+| REQ-REPUT-01 | REGULAR→FULL when weight ≥ threshold AND penalty low (D-08) | unit | `ctest -R ValidatorRegistryPromotion.Promotion` | ❌ Wave 0 |
+| REQ-DETERM-01 | Same votes + registry → identical `qualified_sum` across peers (D-06) | unit | `ctest -R ConsensusSlotQuorum.Determinism` | ❌ Wave 0 |
 
 ### Sampling Rate
 
-- **Per task commit:** `cd build/OSX/Debug && ninja && ctest -R ConsensusTwoTier -j8`
+- **Per task commit:** `cd build/OSX/Debug && ninja && ctest -R "ConsensusSlotQuorum|ValidatorRegistryPromotion" -j8`
 - **Per wave merge:** `cd build/OSX/Debug && ninja && ctest -j8` (full consensus + account suites)
 - **Phase gate:** Full suite green (`ctest -j8`) AND `genius_node_test` green before `/gsd:verify-work` (CLAUDE.md shared-library rule)
 
 ### Wave 0 Gaps
 
-- [ ] `test/src/blockchain/consensus_two_tier_test.cpp` — covers REQ-COHORT-01/02, REQ-QUORUM-01..05, REQ-DETERM-01
-- [ ] `test/src/blockchain/validator_registry_promotion_test.cpp` — covers REQ-REPUT-01 (Role::FULL promotion)
-- [ ] Extend `ConsensusManagerTestAccess` if `EvaluateQuorum` helper or cohort tally needs friend access
+- [ ] `test/src/blockchain/consensus_slot_quorum_test.cpp` — covers REQ-SLOT-01..06, REQ-DETERM-01
+- [ ] `test/src/blockchain/validator_registry_promotion_test.cpp` — covers REQ-REPUT-01
+- [ ] Extend `ConsensusManagerTestAccess` if `EvaluateSlotQuorum` helper needs friendship for test access
 - [ ] No framework install needed — gtest already in thirdparty/
 
 ## Security Domain
@@ -685,54 +668,45 @@ EXPECT_TRUE( tally.value().has_quorum );
 
 ## Recommended Plan Breakdown (for the planner)
 
-> Not a section the planner consumes verbatim, but included to guide
-> `/gsd:plan-phase`. Trim wave count if the user merges scope at discuss-phase.
+> LOCKED by CONTEXT.md D-01..D-10. The planner already executed and produced
+> 06-01 through 06-04 matching this structure. See `/gsd:plan-phase 6` output.
 
-**Proposed: 4 plans across 3 waves.**
+**Delivered: 4 plans across 4 waves.**
 
-### Wave 1 (foundation — parallel where independent)
+### Wave 1 — 06-01: Proto extension + RPC endpoint hashing + GeniusNode slot population
+- Extend `ConsensusVote` proto with 3 `bytes32` slot hashes (tags 6/7/8) per D-01/D-09.
+- Add `HashDirectApiEndpoint()`/`HashPublicEndpoint(i)` to `PublicChainInputValidator` (D-02/D-03).
+- Wire `GeniusNode::PopulateVoteSlotHashes` per D-04/D-05.
+Files: `Consensus.proto`, `PublicChainInputValidator.{hpp,cpp}`, `GeniusNode.{hpp,cpp}`.
 
-- **06-01 — Cohort derivation + registry self-classification.** Add
-  `ValidatorRegistry::CohortOf(validator_id) -> {DIRECT_API, PUBLIC_ONLY}` derived
-  from registry state; add `has_direct_api` (or reuse `Role::FULL`) as the stored
-  signal; wire `GeniusNode` to set the node's own cohort from RPC config
-  (`is_paid`/`api_key_*` presence) at self-registration. No quorum change yet.
-  Files: `ValidatorRegistry.{hpp,cpp}`, `GeniusNode.cpp`,
-  `PublicChainInputValidator.hpp` (expose `HasDirectApiEndpoint()`).
+### Wave 2 — 06-02: Slot tally + dual tally-site routing
+- `EvaluateSlotQuorum`: hash grouping, dedup, 50/25/75 arithmetic per D-02/D-03/D-06.
+- `EvaluateQuorum` dispatcher: bridge-mint → slot tally; non-bridge → single-pool `IsQuorum`.
+- Route BOTH `TallyVotes` AND incremental `HandleVote` through the shared helper (Pitfall 1).
+- Extend `WeightConfig` with slot constants (`slot_direct_numerator_` = 1/2, etc.).
+Files: `Consensus.{hpp,cpp}`, `ValidatorRegistry.{hpp,cpp}`.
 
-### Wave 2 (quorum policy — depends on Wave 1)
+### Wave 3 — 06-03: Role::FULL promotion
+- `full_promotion_weight_` in `WeightConfig`. REGULAR→FULL promotion in `ApplyVoteEffects`.
+- Penalty gate (`penalty_score < penalty_threshold_`). Idempotent. Deterministic (D-07/D-08).
+Files: `ValidatorRegistry.{hpp,cpp}`.
+*(Serialized after Wave 2 due to `ValidatorRegistry.{hpp,cpp}` file overlap with 06-02.)*
 
-- **06-02 — TwoTierQuorumPolicy + shared `EvaluateQuorum` helper.** Add the policy
-  struct, the `IsBridgeMintSubject()` discriminator (`kMintV2` + `chain_id≠""`),
-  and route **both** tally sites (`TallyVotes` + incremental `HandleVote`) through
-  one `EvaluateQuorum`. Non-bridge subjects use the existing single-pool path
-  unchanged. Extend `WeightConfig` with cohort thresholds. This is the riskiest
-  plan — it touches shared consensus hot paths.
-  Files: `Consensus.{hpp,cpp}`, `ValidatorRegistry.hpp` (WeightConfig).
-- **06-03 — Role::FULL promotion (reputation).** Add the promotion rule in
-  `ApplyVoteEffects` using existing `weight`/`penalty_score`/`missed_epochs` fields
-  + new `full_promotion_weight_`. Closes the "FULL never assigned" gap.
-  Files: `ValidatorRegistry.{hpp,cpp}`.
-  *(Parallel to 06-02; both depend only on 06-01.)*
+### Wave 4 — 06-04: Tests + full regression gate
+- `consensus_slot_quorum_test.cpp`: golden D-06 example, dedup, both-sites-agree, determinism.
+- `validator_registry_promotion_test.cpp`: FULL promotion + penalty gate.
+- Blocking `checkpoint:human-verify` for `ninja && ctest -j8` full regression.
+Files: `test/src/blockchain/*`, `test/src/blockchain/CMakeLists.txt`.
 
-### Wave 3 (tests + integration — depends on Waves 1+2)
-
-- **06-04 — Two-tier quorum + cohort + promotion tests.** New
-  `consensus_two_tier_test.cpp` and `validator_registry_promotion_test.cpp`;
-  extend `ConsensusManagerTestAccess` as needed. Covers all proposed REQ-COHORT,
-  REQ-QUORUM, REQ-REPUT, REQ-DETERM behaviors. Full regression run per CLAUDE.md.
-
-**Key files that will be modified:**
-
-- `src/blockchain/Consensus.hpp` / `.cpp` (two tally sites + new helper + policy)
-- `src/blockchain/ValidatorRegistry.hpp` / `.cpp` (cohort derivation, WeightConfig
-  extension, FULL promotion)
-- `src/account/GeniusNode.cpp` (self-classification wiring)
-- `src/account/PublicChainInputValidator.hpp` (expose direct-endpoint presence)
-- `test/src/blockchain/consensus_two_tier_test.cpp` (NEW)
+**Key files modified:**
+- `src/blockchain/impl/proto/Consensus.proto` — `ConsensusVote` extended with 3 slot hashes (D-09)
+- `src/blockchain/Consensus.hpp/.cpp` — `EvaluateQuorum` dispatcher, both tally sites
+- `src/blockchain/ValidatorRegistry.hpp/.cpp` — `EvaluateSlotQuorum`, `WeightConfig` slot + promotion constants
+- `src/account/PublicChainInputValidator.hpp/.cpp` — `HashDirectApiEndpoint`/`HashPublicEndpoint`
+- `src/account/GeniusNode.cpp` — `PopulateVoteSlotHashes`
+- `test/src/blockchain/consensus_slot_quorum_test.cpp` (NEW)
 - `test/src/blockchain/validator_registry_promotion_test.cpp` (NEW)
 
-**Key files that will NOT be modified (v1):**
-
-- `src/blockchain/impl/proto/Consensus.proto` — certificate/vote schema unchanged
-  (A1; needs user confirmation to break this constraint)
+**Key files NOT modified (v1):**
+- `src/blockchain/impl/proto/Consensus.proto` — `ConsensusCertificate` schema unchanged (single-pool, in-memory slot breakdown only)
+- `src/blockchain/impl/proto/ValidatorRegistry.proto` — no hash registration (D-04)
