@@ -157,6 +157,28 @@ namespace sgns
         [[nodiscard]] std::vector<uint8_t> GetSlotHash( size_t           slot_index,
                                                         const std::string &chain_id ) const noexcept;
 
+        /**
+         * @brief Returns the first configured chain id, if any (Phase 6, D-01).
+         *
+         * Used by GeniusNode's slot-hash populator lambda to resolve a chain
+         * context for single-chain deployments (multi-chain resolution is a
+         * future enhancement). Read-only and additive (D-10: Tier 1 untouched).
+         *
+         * @return First configured chain id, or std::nullopt when none configured.
+         */
+        [[nodiscard]] std::optional<std::string> GetFirstConfiguredChainId() const noexcept
+        {
+            if ( rpc_endpoints_.empty() )
+            {
+                return std::nullopt;
+            }
+            // unordered_map iteration is not order-stable across runs, but for
+            // single-chain deployments (the Phase 6 target) there is exactly one
+            // entry. Multi-chain resolution will read chain_id from the proposal
+            // subject instead.
+            return rpc_endpoints_.begin()->first;
+        }
+
     private:
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction

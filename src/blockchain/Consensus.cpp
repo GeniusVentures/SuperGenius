@@ -1176,6 +1176,16 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
 
+        // Phase 6 (D-01): populate slot_N_hash fields before signing so the
+        // signature commits to them (T-06-01). No-op when no populator is set.
+        if ( slot_hash_populator_ )
+        {
+            slot_hash_populator_( vote );
+            ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
+                                             __func__,
+                                             proposal_id.substr( 0, 8 ) );
+        }
+
         auto signing_bytes = VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
         {
