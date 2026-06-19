@@ -659,6 +659,52 @@ namespace sgns
                 // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
+                // Phase 6 (D-01..D-10): Wire slot-hash populator bridging
+                // PublicChainInputValidator -> ConsensusManager::CreateVote, so
+                // each signed vote commits to its RPC endpoint slot hashes.
+                // Single-chain resolution: use the first configured chain id.
+                // Multi-chain (resolve chain_id from the vote's proposal subject)
+                // is a future enhancement.
+                if ( blockchain_ )
+                {
+                    blockchain_->SetSlotHashPopulator(
+                        [this]( sgns::ConsensusVote &vote )
+                        {
+                            if ( !transaction_manager_ )
+                            {
+                                return;
+                            }
+                            auto &validator = transaction_manager_->GetPublicChainInputValidator();
+                            const auto chain_id = validator.GetFirstConfiguredChainId();
+                            if ( !chain_id.has_value() )
+                            {
+                                // No RPC endpoints configured: leave slots empty (abstain, D-05).
+                                node_logger_->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                                return;
+                            }
+                            const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
+                            const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
+                            const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+                            if ( !slot0.empty() )
+                            {
+                                vote.set_slot_0_hash( slot0.data(), slot0.size() );
+                            }
+                            if ( !slot1.empty() )
+                            {
+                                vote.set_slot_1_hash( slot1.data(), slot1.size() );
+                            }
+                            if ( !slot2.empty() )
+                            {
+                                vote.set_slot_2_hash( slot2.data(), slot2.size() );
+                            }
+                            node_logger_->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
+                                                 chain_id.value(),
+                                                 !slot0.empty(),
+                                                 !slot1.empty(),
+                                                 !slot2.empty() );
+                        } );
+                }
+
                 // Initialize shared EthWatchService for EVM event detection
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
 

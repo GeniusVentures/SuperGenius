@@ -1679,6 +1679,14 @@ namespace sgns
         return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
     }
 
+    void Blockchain::SetSlotHashPopulator( ConsensusManager::SlotHashPopulator populator )
+    {
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->SetSlotHashPopulator( std::move( populator ) );
+        }
+    }
+
     void Blockchain::UnregisterSubjectHandler( std::string_view subject_type )
     {
         consensus_manager_->UnregisterSubjectHandler( subject_type );

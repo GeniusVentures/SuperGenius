@@ -63,6 +63,19 @@ namespace sgns
         using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
 
         /**
+         * @brief      Callback invoked during CreateVote to populate slot_N_hash
+         *             fields before signing (Phase 6, D-01).
+         * @details    Set once at init time by GeniusNode (via Blockchain::SetSlotHashPopulator)
+         *             to bridge TransactionManager::GetPublicChainInputValidator
+         *             into ConsensusManager's vote-creation path. When unset,
+         *             CreateVote behaves exactly as before (backward compatible).
+         *             The callback is invoked AFTER proposal_id/voter_id/approve/
+         *             timestamp are set but BEFORE VoteSigningBytes, so the
+         *             resulting signature commits to the slot hashes (T-06-01).
+         */
+        using SlotHashPopulator = std::function<void( ConsensusVote &vote )>;
+
+        /**
          * @brief Creates a ConsensusManager instance.
          * @param[in] registry Validator registry used for voter set and weights.
          * @param[in] db GlobalDB instance used for persistence and CRDT interactions.
@@ -321,6 +334,17 @@ namespace sgns
                                           const std::string &voter_id,
                                           bool               approve,
                                           Signer             sign );
+
+        /**
+         * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
+         * @param[in]  populator  Callback that fills slot_N_hash fields on a vote.
+         * @details    Set by GeniusNode during blockchain initialization. When the
+         *             callback is unset (default), CreateVote skips slot population.
+         */
+        void SetSlotHashPopulator( SlotHashPopulator populator )
+        {
+            slot_hash_populator_ = std::move( populator );
+        }
 
         /**
          * @brief Builds and signs an aggregated vote bundle.
@@ -873,13 +897,14 @@ namespace sgns
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
-                                        slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
-        static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
-        mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
-        Signer                          signer_;                     ///< Local signing callback.
-        std::string                     account_address_;            ///< Local validator/account id.
-        std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
-        std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
+                                  slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
+        static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
+        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
+        Signer                    signer_;                            ///< Local signing callback.
+        SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
+        std::string               account_address_;                   ///< Local validator/account id.
+        std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
+        std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>

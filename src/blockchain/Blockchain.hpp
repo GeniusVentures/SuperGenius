@@ -187,6 +187,14 @@ namespace sgns
          */
         void RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler );
 
+        /**
+         * @brief      Forwards a slot-hash populator to the consensus manager (Phase 6, D-01).
+         * @param[in]  populator  Callback invoked during CreateVote before signing.
+         * @details    GeniusNode wires this during blockchain initialization to bridge
+         *             TransactionManager::GetPublicChainInputValidator() into vote creation.
+         */
+        void SetSlotHashPopulator( ConsensusManager::SlotHashPopulator populator );
+
         void UnregisterSlotKeyHandler( std::string_view subject_type );
 
         /**
