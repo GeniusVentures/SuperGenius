@@ -15,6 +15,7 @@
 #include "base/parse_utility.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/event_filter.hpp"
+#include "eth/secp256k1_utility.hpp"
 
 #include "testutil/TestMintInputValidator.hpp"
 
@@ -34,7 +35,9 @@ public:
     }
 
     /// @brief Access chain_watches_ for test verification.
-    static const std::unordered_map<std::string, eth::EventWatchId> &
+    /// After Plan 05.2-02, each entry is a pair<v1_watch_id, v2_watch_id>.
+    static const std::unordered_map<std::string,
+                                    std::pair<eth::EventWatchId, eth::EventWatchId>> &
     ChainWatches( const BridgeRelayer &relayer )
     {
         return relayer.chain_watches_;
@@ -98,6 +101,51 @@ eth::WatchEventNotification MakeBurnNotification(
 static const std::string kTestSgnsDestination =
     "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc"
     "2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6";
+
+/// @brief Build a WatchEventNotification simulating a BridgeOutInitiated v2
+///        event (Plan 05.2-01/02). Param 5 is a 32-byte X-only key (Hash256)
+///        and param 6 is the Y-parity bool (destinationYOdd).
+eth::WatchEventNotification MakeV2BurnNotification(
+    const std::string              &sender_hex,
+    uint64_t                        token_id_val,
+    uint64_t                        amount_val,
+    uint64_t                        src_chain_id,
+    uint64_t                        dest_chain_id,
+    const std::string              &tx_hash_hex,
+    const std::array<uint8_t, 32>  &x_only_bytes,
+    bool                            destination_y_odd )
+{
+    eth::WatchEventNotification notification;
+
+    eth::codec::Address sender_addr{};
+    rlp::base::parse::hex_array( sender_hex, sender_addr );
+
+    notification.event.tx_hash = {};
+    rlp::base::parse::hex_array( tx_hash_hex, notification.event.tx_hash );
+
+    // ABI-decoded values for BridgeOutInitiated:
+    //   values[0]: sender (address)
+    //   values[1]: id (uint256)
+    //   values[2]: amount (uint256)
+    //   values[3]: srcChainID (uint256)
+    //   values[4]: destChainID (uint256)
+    //   values[5]: sgnsDestination (bytes32) — 32-byte X-only key (D-06 discriminator)
+    //   values[6]: destinationYOdd (bool) — Y parity (D-07)
+    notification.values.push_back( sender_addr );
+    notification.values.push_back( intx::uint256( token_id_val ) );
+    notification.values.push_back( intx::uint256( amount_val ) );
+    notification.values.push_back( intx::uint256( src_chain_id ) );
+    notification.values.push_back( intx::uint256( dest_chain_id ) );
+
+    // sgnsDestination as bytes32 (32-byte X-only key in contract byte order)
+    eth::codec::Hash256 x_only_hash = x_only_bytes;
+    notification.values.push_back( std::move( x_only_hash ) );
+
+    // destinationYOdd as bool
+    notification.values.push_back( destination_y_odd );
+
+    return notification;
+}
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
@@ -367,7 +415,11 @@ TEST( BridgeRelayerTest, MultiChainStart )
     {
         auto it = watches.find( chain.chain_name );
         ASSERT_NE( it, watches.end() ) << "missing watch for " << chain.chain_name;
-        EXPECT_NE( it->second, 0 ) << "watch_id should be non-zero for " << chain.chain_name;
+        // After Plan 05.2-02, each entry is a pair<v1_id, v2_id>; both must be non-zero.
+        EXPECT_NE( it->second.first, 0 )
+            << "v1 watch_id should be non-zero for " << chain.chain_name;
+        EXPECT_NE( it->second.second, 0 )
+            << "v2 watch_id should be non-zero for " << chain.chain_name;
     }
 }
 
@@ -522,7 +574,9 @@ TEST( BridgeRelayerTest, OnRpcEndpointsReadyDelegatesToStart )
     EXPECT_EQ( watches.size(), 1U );
     auto it = watches.find( "ethereum-sepolia" );
     ASSERT_NE( it, watches.end() );
-    EXPECT_NE( it->second, 0 );
+    // After Plan 05.2-02, the entry is a pair<v1_id, v2_id>; both must be non-zero.
+    EXPECT_NE( it->second.first, 0 );
+    EXPECT_NE( it->second.second, 0 );
 }
 
 TEST( BridgeRelayerTest, OnRpcEndpointsReadyEmptyVector )
@@ -539,4 +593,101 @@ TEST( BridgeRelayerTest, OnRpcEndpointsReadyEmptyVector )
 
     const auto &watches = BridgeRelayerTestAccess::ChainWatches( *relayer );
     EXPECT_TRUE( watches.empty() );
+}
+
+// ─── Bridge V2 Event Dispatch Tests (Plan 05.2-04) ──────────────────────────
+
+namespace
+{
+/// @brief Known secp256k1 test vector: public key of private key = 1.
+///        X coordinate (big-endian) = 79BE667E...81798 (canonical Bitcoin vector),
+///        with an EVEN Y (compressed prefix 0x02).  Contract byte order is the
+///        reverse of big-endian, matching what the v2 event carries in bytes32.
+constexpr bool kKnownEvenYOdd = false; // even Y → destination_y_odd = false
+
+/// @brief Big-endian X hex for private key = 1 (canonical secp256k1 vector).
+constexpr const char *kKnownXBigEndianHex =
+    "79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798";
+
+/// @brief Parse a big-endian hex X coordinate into contract-order (reversed)
+///        32-byte array — matching the bytes32 the bridge contract emits.
+std::array<uint8_t, 32> ParseContractOrderX( const std::string &big_endian_hex )
+{
+    std::array<uint8_t, 32> big_endian{};
+    rlp::base::parse::hex_array( big_endian_hex, big_endian );
+    std::array<uint8_t, 32> contract_order{};
+    for ( size_t i = 0; i < big_endian.size(); ++i )
+    {
+        contract_order[i] = big_endian[big_endian.size() - 1u - i];
+    }
+    return contract_order;
+}
+} // namespace
+
+TEST( BridgeRelayerTest, OnWatchEventDispatchesV2Event )
+{
+    // @given a v2 BridgeOutInitiated notification with a valid on-curve X-only
+    //        key (Hash256 at values[5], bool Y-parity at values[6]).
+    // @when OnWatchEvent is called with a null TransactionManager.
+    // @then the Hash256 branch is dispatched (no std::bad_variant_access),
+    //       decompression succeeds, and it logs "no TransactionManager" — the
+    //       expected terminal behavior for a null TM (mirrors the v1 path).
+
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
+
+    const auto contract_x = ParseContractOrderX( kKnownXBigEndianHex );
+    auto notification = MakeV2BurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        42,
+        1000000,
+        11155111,
+        8453,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        contract_x,
+        kKnownEvenYOdd ); // even Y → destination_y_odd = false
+
+    // Variant dispatch on values[5] must hit the Hash256 branch and decompress.
+    // No throw — the decompressed destination is built and the null-TM guard
+    // logs and returns cleanly.
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
+}
+
+TEST( BridgeRelayerTest, OnWatchEventV1StillWorks )
+{
+    // @regression The v1 BridgeSourceBurned path (ByteBuffer at values[5]) must
+    //             still dispatch correctly after the Plan 05.2-02 dual-watch
+    //             refactor.  This re-exercises the existing null-TM v1 flow.
+    auto logger = base::createLogger( "bridge_relayer_test" );
+    auto relayer = BridgeRelayerTestAccess::CreateForTest( logger );
+
+    auto notification = MakeBurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        42,
+        1000000,
+        11155111,
+        8453,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        kTestSgnsDestination );
+
+    EXPECT_NO_THROW( BridgeRelayerTestAccess::OnWatchEvent( relayer, notification ) );
+}
+
+TEST( BridgeRelayerTest, DecompressMatchesKnownVector )
+{
+    // @integration REQ-V2-05: the decompression used by the v2 OnWatchEvent
+    //             path produces a 128-char destination whose X half matches the
+    //             input X, for the canonical private-key-1 secp256k1 vector.
+    const auto contract_x = ParseContractOrderX( kKnownXBigEndianHex );
+    const auto dest = eth::DecompressXOnlyPubkey( contract_x, kKnownEvenYOdd );
+    ASSERT_TRUE( dest.has_value() ) << "Decompression of known on-curve X must succeed";
+    EXPECT_EQ( dest->size(), 128U ) << "Destination must be 128 hex chars (X+Y)";
+
+    // The first 64 hex chars are the contract-order X — must equal the input X
+    // rendered as plain hex (no "0x" prefix).
+    const std::string x_hex = rlp::base::parse::hex_bytes( contract_x.data(), contract_x.size() );
+    ASSERT_GE( x_hex.size(), 2U );
+    const std::string x_hex_no_prefix = x_hex.substr( 2 ); // strip "0x"
+    EXPECT_EQ( dest->substr( 0, 64 ), x_hex_no_prefix )
+        << "Destination X half must equal the input contract-order X";
 }
