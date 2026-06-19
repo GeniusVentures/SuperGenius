@@ -57,11 +57,8 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
 TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 {
-    GeniusAccount::SetSecureStorageFactory(
-        []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-        {
-            return std::make_shared<MemorySecureStorage>( identifier );
-        } );
+    GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                            { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
     std::cout << "****** Removing old node_recovery folder ****" << std::endl;
     {
@@ -99,9 +96,9 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     {
         auto mintRes = originalNode->MintTokens( 500000,
                                                  sgns::test::NextMintSourceHash(),
-                           "test",
+                                                 "test",
                                                  TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                                                 "",
                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mintRes.has_value() ) << "MintTokens failed on original node";
         afterMint = originalNode->GetBalance();

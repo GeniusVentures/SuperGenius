@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SGNS_SECURE_STORAGE_HPP
+#define SGNS_SECURE_STORAGE_HPP
 
 // Compile-time override for tests: -DSGNS_USE_MEMORY_SECURE_STORAGE
 // Uses in-memory storage — no keychain prompts, no file I/O, no cleanup.
@@ -48,3 +49,5 @@ namespace sgns
 }
 
 #endif
+
+#endif // SGNS_SECURE_STORAGE_HPP

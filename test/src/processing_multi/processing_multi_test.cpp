@@ -46,9 +46,7 @@ protected:
     {
         sgns::GeniusAccount::SetSecureStorageFactory(
             []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
-            {
-                return std::make_shared<sgns::MemorySecureStorage>( identifier );
-            } );
+            { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
         std::strncpy( DEV_CONFIG.BaseWritePath,
@@ -149,13 +147,13 @@ TEST_F( ProcessingMultiTest, MintTokens )
                            sgns::test::NextMintSourceHash(),
                            "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                           "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
                            "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                           "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
 }

@@ -41,11 +41,8 @@ protected:
     static void SetUpTestSuite()
     {
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            {
-                return std::make_shared<MemorySecureStorage>( identifier );
-            } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
 
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
@@ -299,9 +296,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
                                                    sgns::test::NextMintSourceHash(),
-                           "test",
+                                                   "test",
                                                    token_id,
-                           "test",
+                                                   "",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 

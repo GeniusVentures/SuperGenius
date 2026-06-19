@@ -3,7 +3,8 @@
  * @brief      In-memory JSON backend for testing — no keychain access.
  * @date       2026-06-01
  */
-#pragma once
+#ifndef MEMORY_SECURE_STORAGE_HPP
+#define MEMORY_SECURE_STORAGE_HPP
 
 #include "JSONBackend.hpp"
 
@@ -23,8 +24,7 @@ namespace sgns
     class MemorySecureStorage : public JSONBackend
     {
     public:
-        explicit MemorySecureStorage( std::string identifier ) :
-            identifier_( std::move( identifier ) )
+        explicit MemorySecureStorage( std::string identifier ) : identifier_( std::move( identifier ) )
         {
         }
 
@@ -60,7 +60,9 @@ namespace sgns
         }
 
     private:
-        std::string identifier_;
+        std::string                                                identifier_;
         static inline std::unordered_map<std::string, std::string> store_;
     };
 } // namespace sgns
+
+#endif // MEMORY_SECURE_STORAGE_HPP

@@ -11,8 +11,10 @@
 
 #include "account/MigrationAllowList.hpp"
 #include "account/MigrationInputValidator.hpp"
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -62,6 +64,11 @@ protected:
 
     void SetUp() override
     {
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            {
+                return std::make_shared<MemorySecureStorage>( identifier );
+            } );
         SetEligibilityCheckEnabled( true );
     }
 

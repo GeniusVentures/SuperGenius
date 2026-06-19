@@ -186,7 +186,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                                   sgns::test::NextMintSourceHash(),
                                                   "test",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                  "test",
+                                                  "",
                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
 
@@ -194,14 +194,14 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                              sgns::test::NextMintSourceHash(),
                                              "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "test",
+                                             "",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
     mint_result = node_original->MintTokens( 30,
                                              sgns::test::NextMintSourceHash(),
                                              "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "test",
+                                             "",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
@@ -225,7 +225,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                                sgns::test::NextMintSourceHash(),
                                                "test",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "test",
+                                               "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_duplicated";
 
@@ -319,7 +319,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                                                        sgns::test::NextMintSourceHash(),
                                                        "test",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       "test",
+                                                       "",
                                                        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result_1.has_value() ) << "Mint transaction failed on node_same_addr_1";
 

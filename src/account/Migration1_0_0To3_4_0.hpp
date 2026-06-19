@@ -4,7 +4,8 @@
  * @date       2025-10-03
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_MIGRATION_1_0_0_TO_3_4_0_HPP
+#define SGNS_MIGRATION_1_0_0_TO_3_4_0_HPP
 
 #include <string>
 #include <memory>
@@ -26,7 +27,7 @@ namespace sgns
         Migration1_0_0To3_4_0( std::shared_ptr<boost::asio::io_context>                        ioContext,
                                std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-                               std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+                               std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key );
@@ -70,7 +71,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for DB I/O.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub instance for legacy DB.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
-        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< Request ID generator.
         std::string                     writeBasePath_;                             ///< Base path for writing DB files.
         std::string                     base58key_;                                 ///< Key to build legacy paths.
@@ -80,3 +81,5 @@ namespace sgns
     };
 
 }
+
+#endif // SGNS_MIGRATION_1_0_0_TO_3_4_0_HPP

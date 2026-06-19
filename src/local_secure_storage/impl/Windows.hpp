@@ -1,4 +1,5 @@
-#pragma once
+#ifndef WINDOWS_SECURE_STORAGE_HPP
+#define WINDOWS_SECURE_STORAGE_HPP
 
 #include "JSONBackend.hpp"
 
@@ -9,7 +10,7 @@ namespace sgns
     class WindowsSecureStorage : public JSONBackend
     {
     public:
-        explicit WindowsSecureStorage(std::string identifier);
+        explicit WindowsSecureStorage( std::string identifier );
 
         std::string GetName() override
         {
@@ -24,3 +25,5 @@ namespace sgns
         std::string identifier_;
     };
 }
+
+#endif // WINDOWS_SECURE_STORAGE_HPP

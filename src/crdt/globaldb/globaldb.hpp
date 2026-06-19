@@ -24,6 +24,14 @@ namespace sgns::crdt
     class GlobalDB : public std::enable_shared_from_this<GlobalDB>
     {
     public:
+        struct BackupOptions
+        {
+            bool     enabled{ false };
+            uint32_t interval_minutes{ 15 };
+            uint32_t keep_count{ 12 };
+            bool     auto_restore_on_repair_failure{ true };
+        };
+
         using Buffer             = base::Buffer;
         using QueryResult        = CrdtDatastore::QueryResult;
         using RocksDB            = storage::rocksdb;
@@ -39,6 +47,7 @@ namespace sgns::crdt
          * @param[in]   scheduler libp2p scheduler
          * @param[in]   generator The request ID generator from graphsync
          * @param[in]   datastore datastore to be used. If not defined, created using databasePath
+         * @param[in]   backup_options configuration for automatic backups of the CRDT data
          * @return      Instance of the GlobalDB initialized or Error
          */
         static outcome::result<std::shared_ptr<GlobalDB>> New(
@@ -49,7 +58,8 @@ namespace sgns::crdt
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
             std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
             std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-            std::shared_ptr<RocksDB>                                              datastore = nullptr );
+            std::shared_ptr<RocksDB>                                              datastore = nullptr,
+            BackupOptions                                                         backup_options = BackupOptions{ false, 15, 12, true } );
 
         /**
          * @brief      Destructor or GlobalDB
@@ -149,16 +159,68 @@ namespace sgns::crdt
         std::shared_ptr<sgns::crdt::PubSubBroadcasterExt> GetBroadcaster();
         std::shared_ptr<CRDTWorkJournal>                  GetWorkJournal() const;
 
+        /** Registers a filter callback for elements matching a pattern.
+         * @param pattern The pattern to match elements against.
+         * @param filter The callback to invoke for matching elements.
+         * @return true if the filter was successfully registered, false otherwise.
+         */
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
+
+        /** Registers a callback for new elements matching a pattern.
+         * @param pattern The pattern to match new elements against.
+         * @param callback The callback to invoke for matching new elements.
+         * @return true if the callback was successfully registered, false otherwise.
+         */
         bool RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback );
+
+        /** Registers a callback for deleted elements matching a pattern.
+         * @param pattern The pattern to match deleted elements against.
+         * @param callback The callback to invoke for matching deleted elements.
+         * @return true if the callback was successfully registered, false otherwise.
+         */
         bool RegisterDeletedElementCallback( const std::string &pattern, GlobalDBDeletedElementCallback callback );
+
+        /** Unregisters the filter callback for a pattern.
+         * @param pattern The pattern to unregister the filter for.
+         */
         void UnregisterElementFilter( const std::string &pattern );
+
+        /**
+         * @brief Unregisters the new element callback for a pattern.
+         * @param pattern The pattern to unregister the new element callback for.
+         */
+        
         void UnregisterNewElementCallback( const std::string &pattern );
+        /**
+         * @brief Unregisters the deleted element callback for a pattern.
+         * @param pattern The pattern to unregister the deleted element callback for.
+         */
         void UnregisterDeletedElementCallback( const std::string &pattern );
 
+        /**
+         * @brief Starts the GlobalDB instance.
+         */
         void Start();
+
+        /**
+         * @brief Immediately quiesce and shut down CRDT intake and workers.
+         * Safe to call multiple times.
+         */
+        void ShutdownNow();
+
+        /**
+         * @brief Starts receiving CIDs.
+         */
         void StartCIDReceiving();
+
+        /**
+         * @brief Starts CIC synchronization.
+         */
         void StartCICSync();
+
+        /**
+         * @brief Starts rebroadcasting heads.
+         */
         void StartRebroadcastHeads();
 
         outcome::result<CRDTHeadListResult> GetCRDTHeadList();
@@ -197,6 +259,15 @@ namespace sgns::crdt
                   std::string                                      databasePath,
                   std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubsub );
 
+        /**
+         * @brief       Initializes the GlobalDB instance by creating the CRDT datastore and broadcaster
+         * @param[in]   crdtOptions CRDT options
+         * @param[in]   graphsyncnetwork The graphsync network used for DAG sync
+         * @param[in]   scheduler libp2p scheduler
+         * @param[in]   generator The request ID generator from graphsync
+         * @param[in]   datastore datastore to be used. If not defined, created using databasePath
+         * @return      outcome::success on success, or outcome::failure on error
+         */
         outcome::result<void> Init( std::shared_ptr<CrdtOptions>                               crdtOptions,
                                     std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network> graphsyncnetwork,
                                     std::shared_ptr<libp2p::basic::Scheduler>                  scheduler,
@@ -218,6 +289,13 @@ namespace sgns::crdt
         bool                                              cid_sync_started_;
         bool                                              cid_receiving_started_;
         bool                                              head_broadcasting_started_;
+        BackupOptions                                     backup_options_{};
+        std::string                                       backup_directory_;
+        std::atomic_bool                                  stop_backup_thread_{ false };
+        std::atomic_bool                                  shutdown_started_{ false };
+        std::thread                                       backup_thread_;
+        std::mutex                                        backup_wait_mutex_;
+        std::condition_variable                           backup_wait_cv_;
 
         //std::shared_ptr<sgns::ipfs_lite::ipfs::dht::IpfsDHT> dht_;
         //std::shared_ptr<libp2p::protocol::Identify> identify_;
@@ -229,30 +307,14 @@ namespace sgns::crdt
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
 
-        //Default Bootstrap Servers
-        std::vector<std::string> bootstrapAddresses_ = {
-            //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmNnooDu7bfjPFoTZYxMNLWUQJyrVwtbZg5gBMjTezGAJN",
-            //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmQCU2EcMqAqQPR2i9bChDtGNJchTbq5TbXJJ16u19uLTa",
-            //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-            //"/dnsaddr/bootstrap.libp2p.io/ipfs/QmcZf59bWwK5XFi76CZX8cbJ4BhTzzA3gU1ZjYZcYW3dwt",
-            //"/ip4/64.225.105.42/tcp/4001/p2p/QmPo1ygpngghu5it8u4Mr3ym6SEU2Wp2wA66Z91Y1S1g29",
-            //"/ip4/3.92.45.153/tcp/4001/ipfs/12D3KooWP6R6XVCBK7t76o8VDwZdxpzAqVeDtHYQNmntP2y8NHvK",
-            "/ip4/104.131.131.82/tcp/4001/ipfs/QmaCpDMGvV2BGHeYERUEnRQAwe3N8SzbUtfsmvsqQLuvuJ",  // mars.i.ipfs.io
-            "/ip4/104.236.179.241/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM", // pluto.i.ipfs.io
-            "/ip4/128.199.219.111/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu", // saturn.i.ipfs.io
-            "/ip4/104.236.76.40/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64",   // venus.i.ipfs.io
-            "/ip4/178.62.158.247/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",  // earth.i.ipfs.io
-            "/ip6/2604:a880:1:20::203:d001/tcp/4001/ipfs/QmSoLPppuBtQSGwKDZT2M73ULpjvfd3aZ6ha4oFGL1KrGM", // pluto.i.ipfs.io
-            "/ip6/2400:6180:0:d0::151:6001/tcp/4001/ipfs/QmSoLSafTMBsPKadTEgaXctDQVcqN88CNLHXMkTNwMKPnu", // saturn.i.ipfs.io
-            "/ip6/2604:a880:800:10::4a:5001/tcp/4001/ipfs/QmSoLV4Bbm51jM9C4gDYZQ9Cy3U6aXMJDAbzgu2fzaDs64", // venus.i.ipfs.io
-            "/ip6/2a03:b0c0:0:1010::23:1001/tcp/4001/ipfs/QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd", // earth.i.ipfs.io
-            //"/dnsaddr/fra1-1.hostnodes.pinata.cloud/ipfs/QmWaik1eJcGHq1ybTWe7sezRfqKNcDRNkeBaLnGwQJz1Cj",
-            //"/dnsaddr/fra1-2.hostnodes.pinata.cloud/ipfs/QmNfpLrQQZr5Ns9FAJKpyzgnDL2GgC6xBug1yUZozKFgu4",
-            //"/dnsaddr/fra1-3.hostnodes.pinata.cloud/ipfs/QmPo1ygpngghu5it8u4Mr3ym6SEU2Wp2wA66Z91Y1S1g29",
-            //"/dnsaddr/nyc1-1.hostnodes.pinata.cloud/ipfs/QmRjLSisUCHVpFa5ELVvX3qVPfdxajxWJEHs9kN3EcxAW6",
-            //"/dnsaddr/nyc1-2.hostnodes.pinata.cloud/ipfs/QmPySsdmbczdZYBpbi2oq2WMJ8ErbfxtkG8Mo192UHkfGP",
-            //"/dnsaddr/nyc1-3.hostnodes.pinata.cloud/ipfs/QmSarArpxemsPESa6FNkmuu9iSE1QWqPX2R3Aw6f5jq4D5",
-        };
+        /** @brief Resolves the backup directory path based on the database path. */
+        std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;
+        /** @brief Creates a backup immediately. */
+        void        CreateBackupNow();
+        /** @brief Starts the backup loop in a separate thread. */
+        void        StartBackupLoop();
+        /** @brief Stops the backup loop and waits for the thread to finish. */
+        void        StopBackupLoop();
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "GlobalDB" );
     };

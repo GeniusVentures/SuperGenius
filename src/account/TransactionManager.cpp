@@ -348,8 +348,6 @@ namespace sgns
             return;
         }
 
-        RegisterTopicNames();
-
         globaldb_m->AddListenTopic( account_m->GetAddress() );
         TransactionManagerLogger()->info( "[{} - full: {}] Adding broadcast to full node on {}",
                                           account_m->GetAddress().substr( 0, 8 ),
@@ -399,7 +397,7 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_ = now;
+        last_loop_time_           = now;
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
@@ -1095,7 +1093,7 @@ namespace sgns
         {
             return std::string( GENIUS_CHAIN_ID );
         }
-        const auto chain_id = tx->GetChainId();
+        auto chain_id = tx->GetChainId();
         if ( chain_id.empty() )
         {
             if ( tx->GetType() == "mint-v2" )
@@ -3006,7 +3004,7 @@ namespace sgns
                                                    element.key() );
                 break;
             }
-            if ( IsGoingToOverwrite( GetTransactionPath( *new_tx ) ) )
+            if ( KeyExistsInDB( GetTransactionPath( *new_tx ) ) )
             {
                 TransactionManagerLogger()->debug(
                     "[{} - full: {}] New transaction {} would overwrite an existing one. Preventing that",
@@ -5114,13 +5112,13 @@ namespace sgns
                                            __func__,
                                            static_cast<int>( new_status ),
                                            tx->GetHash() );
+        const auto key = GetTransactionPath( *tx );
         switch ( new_status )
         {
             case TransactionStatus::CREATED:
             {
                 std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key = GetTransactionPath( *tx );
-                auto             it  = tx_processed_m.find( key );
+                auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() )
                 {
                     TransactionManagerLogger()->error(
@@ -5149,8 +5147,7 @@ namespace sgns
             case TransactionStatus::SENDING:
             {
                 std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key = GetTransactionPath( *tx );
-                auto             it  = tx_processed_m.find( key );
+                auto             it = tx_processed_m.find( key );
                 if ( it == tx_processed_m.end() )
                 {
                     TransactionManagerLogger()->error(
@@ -5182,8 +5179,7 @@ namespace sgns
             case TransactionStatus::VERIFYING:
             {
                 std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key = GetTransactionPath( *tx );
-                auto             it  = tx_processed_m.find( key );
+                auto             it = tx_processed_m.find( key );
 
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
                 {
@@ -5235,8 +5231,7 @@ namespace sgns
             case TransactionStatus::CONFIRMED:
             {
                 std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key = GetTransactionPath( *tx );
-                auto             it  = tx_processed_m.find( key );
+                auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
                     TransactionManagerLogger()->error(
@@ -5317,6 +5312,10 @@ namespace sgns
                     break;
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::UNCONFIRMED, tx->GetNonce() };
+                if ( tx->GetSrcAddress() == account_m->GetAddress() )
+                {
+                    account_m->ReleaseNonce( tx->GetNonce() );
+                }
                 TransactionManagerLogger()->info(
                     "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
                     account_m->GetAddress().substr( 0, 8 ),
@@ -5330,8 +5329,7 @@ namespace sgns
             case TransactionStatus::FAILED:
             {
                 std::unique_lock tx_lock( tx_mutex_m );
-                const auto       key = GetTransactionPath( *tx );
-                auto             it  = tx_processed_m.find( key );
+                auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::FAILED )
                 {
                     TransactionManagerLogger()->error(
@@ -5425,29 +5423,15 @@ namespace sgns
         return outcome::success();
     }
 
-    bool TransactionManager::IsGoingToOverwrite( const std::string &key ) const
+    bool TransactionManager::KeyExistsInDB( const std::string &key ) const
     {
         auto existing_data_result = globaldb_m->Get( key );
-        if ( existing_data_result.has_value() )
+        if ( !existing_data_result.has_value() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Key {} already exists in global DB, will overwrite",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               key );
-            auto maybe_old_tx = DeSerializeTransaction( existing_data_result.value() );
-            if ( maybe_old_tx.has_error() )
-            {
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] Failed to deserialize existing transaction, allow to replace it {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    key );
-                return false;
-            }
-            return true;
+            return false;
         }
-        return false;
+        auto result = DeSerializeTransaction( existing_data_result.value() );
+        return !result.has_error();
     }
 
 }

@@ -5,7 +5,9 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef SGNS_BLOCKCHAIN_HPP
+#define SGNS_BLOCKCHAIN_HPP
+
 #include <memory>
 #include <map>
 #include <functional>
@@ -249,8 +251,7 @@ namespace sgns
          * @param[in] dependency Dependency key that became available.
          * @return outcome::success on success, otherwise an error.
          */
-        outcome::result<void> TryResumePendingDependency(
-            const ConsensusManager::PendingDependencyKey &dependency );
+        outcome::result<void> TryResumePendingDependency( const ConsensusManager::PendingDependencyKey &dependency );
         /**
          * @brief Checks whether any certificate exists for subject hash.
          * @param[in] subject_hash Subject hash key.
@@ -548,3 +549,5 @@ namespace sgns
  * @brief       Macro for declaring error handling in the IBasicProof class.
  */
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, Blockchain::Error );
+
+#endif // SGNS_BLOCKCHAIN_HPP

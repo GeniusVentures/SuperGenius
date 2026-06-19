@@ -4,7 +4,8 @@
  * @date       2026-06-02
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_PUBLIC_CHAIN_INPUT_VALIDATOR_HPP
+#define SGNS_PUBLIC_CHAIN_INPUT_VALIDATOR_HPP
 
 #include <chrono>
 #include <cstdint>
@@ -34,8 +35,8 @@ namespace sgns
     {
         std::string url;
         uint8_t     consensus_weight = 25;
-        std::string bridge_contract_address;  ///< Expected bridge contract (hex, "0x...")
-        std::string event_topic0;             ///< Expected event topic0 (hex, "0x...")
+        std::string bridge_contract_address; ///< Expected bridge contract (hex, "0x...")
+        std::string event_topic0;            ///< Expected event topic0 (hex, "0x...")
     };
 
     /**
@@ -49,9 +50,8 @@ namespace sgns
      * @param timeout Transport operation timeout.
      * @return Unique ownership of a transport implementing JsonRpcTransport.
      */
-    using TransportFactory = std::function<std::unique_ptr<eth::rpc::JsonRpcTransport>(
-        const std::string    &url,
-        std::chrono::seconds  timeout)>;
+    using TransportFactory = std::function<std::unique_ptr<eth::rpc::JsonRpcTransport>( const std::string   &url,
+                                                                                        std::chrono::seconds timeout )>;
 
     /**
      * @brief Validator for transactions that reference external public-chain proofs.
@@ -85,10 +85,10 @@ namespace sgns
          * @param[in] blockchain Blockchain service; currently unused by public-chain validation.
          * @return True when @p tx is present, @p params are non-empty, and the source reference verification succeeds.
          */
-        bool ValidateWitness( const ConsensusSubject                     &subject,
+        bool ValidateWitness( const ConsensusSubject                   &subject,
                               const std::shared_ptr<GeniusTransaction> &tx,
-                              const UTXOTxParameters                     &params,
-                              const std::shared_ptr<Blockchain>          &blockchain ) const override;
+                              const UTXOTxParameters                   &params,
+                              const std::shared_ptr<Blockchain>        &blockchain ) const override;
 
         /**
          * @brief Public-chain validation does not require local UTXO witness data.
@@ -202,3 +202,5 @@ namespace sgns
         mutable TransportFactory transport_factory_;
     };
 } // namespace sgns
+
+#endif // SGNS_PUBLIC_CHAIN_INPUT_VALIDATOR_HPP

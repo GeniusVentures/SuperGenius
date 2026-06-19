@@ -4,7 +4,8 @@
  * @date       2025-10-16
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_CONSENSUS_HPP
+#define SGNS_CONSENSUS_HPP
 
 #include <chrono>
 #include <cstdint>
@@ -156,12 +157,15 @@ namespace sgns
          */
         struct ValidationResult
         {
-            Check                                      check{ Check::Reject };
-            std::vector<PendingDependencyKey>          dependencies;
-            std::optional<std::chrono::milliseconds>   retry_after;
+            Check                                    check{ Check::Reject };
+            std::vector<PendingDependencyKey>        dependencies;
+            std::optional<std::chrono::milliseconds> retry_after;
 
             ValidationResult() = default;
-            ValidationResult( Check result ) : check( result ) {}
+
+            ValidationResult( Check result ) : check( result )
+            {
+            }
 
             static ValidationResult Approve()
             {
@@ -178,9 +182,8 @@ namespace sgns
                 return ValidationResult{ Check::Stalled };
             }
 
-            static ValidationResult Pending(
-                std::vector<PendingDependencyKey>        deps  = {},
-                std::optional<std::chrono::milliseconds> retry = std::nullopt )
+            static ValidationResult Pending( std::vector<PendingDependencyKey>        deps  = {},
+                                             std::optional<std::chrono::milliseconds> retry = std::nullopt )
             {
                 ValidationResult result{ Check::Pending };
                 result.dependencies = std::move( deps );
@@ -194,17 +197,15 @@ namespace sgns
          */
         struct PendingLifecycleConfig
         {
-            std::size_t               max_pending_proposals          = 1024;
-            std::size_t               max_pending_per_proposer       = 64;
-            std::size_t               max_retained_pending_bytes     = 64ULL * 1024ULL * 1024ULL;
-            std::chrono::milliseconds pending_ttl                    = std::chrono::minutes( 3 );
-            std::chrono::milliseconds min_dependency_retry_interval  = std::chrono::seconds( 1 );
-            std::vector<std::chrono::milliseconds> scheduled_retry_delays = {
-                std::chrono::seconds( 1 ),
-                std::chrono::seconds( 2 ),
-                std::chrono::seconds( 5 ),
-                std::chrono::seconds( 10 )
-            };
+            std::size_t                            max_pending_proposals         = 1024;
+            std::size_t                            max_pending_per_proposer      = 64;
+            std::size_t                            max_retained_pending_bytes    = 64ULL * 1024ULL * 1024ULL;
+            std::chrono::milliseconds              pending_ttl                   = std::chrono::minutes( 3 );
+            std::chrono::milliseconds              min_dependency_retry_interval = std::chrono::seconds( 1 );
+            std::vector<std::chrono::milliseconds> scheduled_retry_delays        = { std::chrono::seconds( 1 ),
+                                                                                     std::chrono::seconds( 2 ),
+                                                                                     std::chrono::seconds( 5 ),
+                                                                                     std::chrono::seconds( 10 ) };
         };
 
         /// @brief      Alias for a subject handler method type
@@ -415,9 +416,9 @@ namespace sgns
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
          * @return 32-byte subject type hash on success, otherwise an error.
          */
-        static outcome::result<std::string> ComputeSubjectTypeHash( std::string_view subject_type );
-        static outcome::result<NonceSubject> DecodeNonceSubject( const Subject &subject );
-        static outcome::result<TaskResultSubject> DecodeTaskResultSubject( const Subject &subject );
+        static outcome::result<std::string>          ComputeSubjectTypeHash( std::string_view subject_type );
+        static outcome::result<NonceSubject>         DecodeNonceSubject( const Subject &subject );
+        static outcome::result<TaskResultSubject>    DecodeTaskResultSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
         static bool SubjectTypeMatches( const Subject &subject, std::string_view subject_type );
         /**
@@ -630,16 +631,16 @@ namespace sgns
          */
         struct PendingProposalEntry
         {
-            Proposal                                  proposal;
-            std::vector<PendingDependencyKey>         dependencies;
-            std::chrono::steady_clock::time_point     admitted_at;
-            std::chrono::steady_clock::time_point     expires_at;
-            std::chrono::steady_clock::time_point     next_retry_at;
-            std::chrono::steady_clock::time_point     last_retry_at;
-            std::optional<std::chrono::milliseconds>  retry_after;
-            std::size_t                               retained_bytes = 0;
-            std::string                               proposer_id;
-            std::size_t                               scheduled_retry_count = 0;
+            Proposal                                 proposal;
+            std::vector<PendingDependencyKey>        dependencies;
+            std::chrono::steady_clock::time_point    admitted_at;
+            std::chrono::steady_clock::time_point    expires_at;
+            std::chrono::steady_clock::time_point    next_retry_at;
+            std::chrono::steady_clock::time_point    last_retry_at;
+            std::optional<std::chrono::milliseconds> retry_after;
+            std::size_t                              retained_bytes = 0;
+            std::string                              proposer_id;
+            std::size_t                              scheduled_retry_count = 0;
         };
 
         /**
@@ -753,11 +754,11 @@ namespace sgns
          * @param[in] proposal Proposal to queue.
          * @param[in] subject_hash Subject hash dependency key.
          */
-        bool AddPendingProposal( const Proposal &proposal,
-                                 const std::string &subject_hash,
-                                 const ValidationResult &validation_result = ValidationResult::Pending(),
-                                 std::size_t scheduled_retry_count = 0,
-                                 std::chrono::steady_clock::time_point last_retry_at = {} );
+        bool AddPendingProposal( const Proposal                       &proposal,
+                                 const std::string                    &subject_hash,
+                                 const ValidationResult               &validation_result = ValidationResult::Pending(),
+                                 std::size_t                           scheduled_retry_count = 0,
+                                 std::chrono::steady_clock::time_point last_retry_at         = {} );
         /**
          * @brief Removes one pending proposal and its local indexes/accounting.
          * @param[in] proposal_id Proposal identifier.
@@ -771,19 +772,20 @@ namespace sgns
          * @return Pending proposals for the subject.
          */
         std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
-        bool RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason );
-        bool CanAdmitPendingProposalLocked( const Proposal &proposal,
-                                            std::size_t retained_bytes,
-                                            const std::string &proposer_id ) const;
-        std::vector<PendingDependencyKey> NormalizePendingDependencies( const std::string &subject_hash,
-                                                                        const ValidationResult &validation_result ) const;
+        bool                  RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason );
+        bool                  CanAdmitPendingProposalLocked( const Proposal    &proposal,
+                                                             std::size_t        retained_bytes,
+                                                             const std::string &proposer_id ) const;
+        std::vector<PendingDependencyKey> NormalizePendingDependencies(
+            const std::string      &subject_hash,
+            const ValidationResult &validation_result ) const;
         std::chrono::milliseconds NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const;
-        void RetryPendingProposal( const Proposal &proposal,
-                                   std::string_view reason,
-                                   std::size_t scheduled_retry_count = 0,
-                                   std::chrono::steady_clock::time_point last_retry_at = {} );
-        void ProcessDuePendingRetries();
-        void ExpirePendingProposals();
+        void                      RetryPendingProposal( const Proposal                       &proposal,
+                                                        std::string_view                      reason,
+                                                        std::size_t                           scheduled_retry_count = 0,
+                                                        std::chrono::steady_clock::time_point last_retry_at = {} );
+        void                      ProcessDuePendingRetries();
+        void                      ExpirePendingProposals();
         /**
          * @brief Stores vote pending proposal availability.
          * @param[in] vote Vote to queue.
@@ -873,18 +875,18 @@ namespace sgns
          * @param[in] subject Subject to format.
          * @return Printable hash string.
          */
-        static std::string                      GetPrintableSubjectHash( const Subject &subject );
-        std::shared_ptr<ValidatorRegistry>      registry_; ///< Validator registry dependency.
-        std::shared_ptr<crdt::GlobalDB>         db_;       ///< GlobalDB dependency for persistence and CRDT operations.
-        std::shared_ptr<crdt::CRDTWorkJournal>  certificate_work_journal_; ///< Work journal for certificate processing.
+        static std::string                     GetPrintableSubjectHash( const Subject &subject );
+        std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
+        std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
+        std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         std::unordered_map<std::string, SubjectHandler>
-                                  subject_handlers_;               ///< Subject handlers keyed by subject type hash.
-        mutable std::shared_mutex subject_handlers_mutex_;         ///< Guards `subject_handlers_`.
+                                  subject_handlers_;       ///< Subject handlers keyed by subject type hash.
+        mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
         std::unordered_map<std::string, CertificateSubjectHandler>
-                                  certificate_subject_handlers_;   ///< Certificate handlers by subject type hash.
-        mutable std::shared_mutex certificate_handlers_mutex_;      ///< Guards `certificate_subject_handlers_`.
+                                  certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
+        mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
-                                  proposal_cleanup_handlers_;         ///< Proposal cleanup handlers by subject type hash.
+            proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
                                   slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
         static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
@@ -899,9 +901,9 @@ namespace sgns
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>
             pending_by_dependency_; ///< Proposal ids queued by typed dependency key.
         std::unordered_map<std::string, std::size_t>
-            pending_count_by_proposer_; ///< Pending proposal count by proposer id.
-        std::size_t pending_retained_bytes_ = 0; ///< Total retained pending proposal bytes.
-        PendingLifecycleConfig pending_config_; ///< Local pending lifecycle bounds.
+                               pending_count_by_proposer_;                   ///< Pending proposal count by proposer id.
+        std::size_t            pending_retained_bytes_ = 0;                  ///< Total retained pending proposal bytes.
+        PendingLifecycleConfig pending_config_;                              ///< Local pending lifecycle bounds.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
@@ -922,3 +924,5 @@ namespace sgns
         std::thread               round_timer_;                   ///< Background thread driving round-based retries.
     };
 }
+
+#endif // CONSENSUS_MANAGER_HPP
