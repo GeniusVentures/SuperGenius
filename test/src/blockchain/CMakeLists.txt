@@ -30,6 +30,24 @@ target_link_libraries(consensus_vote_slot_test
     blockchain_genesis
 )
 
+# Phase 6 (D-06): slot-quorum arithmetic unit tests. Exercises the pure
+# static EvaluateSlotQuorumStatic helper directly -- no GlobalDB wiring needed.
+addtest(validator_registry_slot_quorum_test
+    validator_registry_slot_quorum_test.cpp
+)
+target_link_libraries(validator_registry_slot_quorum_test
+    blockchain_genesis
+)
+
+# Phase 6 (D-06): ConsensusManager::IsBridgeMintSubject discriminator tests.
+# Exercises the static discriminator directly -- no ConsensusManager instance.
+addtest(consensus_bridge_mint_subject_test
+    consensus_bridge_mint_subject_test.cpp
+)
+target_link_libraries(consensus_bridge_mint_subject_test
+    blockchain_genesis
+)
+
 # ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
 # GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
 # Test deferred to E2E integration (Phase 4).
