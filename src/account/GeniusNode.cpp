@@ -12,6 +12,7 @@
 #include <exception>
 #include <random>
 #include <filesystem>
+#include <set>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -45,6 +46,8 @@
 #include <eth/rpc_http_transport.hpp>
 #include <eth/json_rpc.hpp>
 #include <eth/event_filter.hpp>
+#include <eth/eth_watch_cli.hpp>     // event_registry().params_for() — Bridge V2 ABI decode (D-13)
+#include <eth/secp256k1_utility.hpp> // DecompressXOnlyPubkey() — X-only key decompression (D-13)
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
@@ -2085,9 +2088,19 @@ namespace sgns
             return;
         }
 
-        const std::string event_sig   = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
-        auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
-        std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+        // D-11/D-12: catch-up scan queries BOTH v1 (BridgeSourceBurned) and v2
+        // (BridgeOutInitiated) topic0 hashes.  EventFilter topics are
+        // single-value-per-position (no OR-array support in serialization), so
+        // two separate eth_getLogs calls are made per chain and the results are
+        // merged with tx_hash deduplication.
+        const std::string event_sig     = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+        auto              topic0_hash   = eth::abi::event_signature_hash( event_sig );
+        std::string       topic0_hex    = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+
+        // Bridge V2: bytes32 sgnsDestination + bool destinationYOdd (parity bit).
+        const std::string event_sig_v2  = "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+        auto              topic0_hash_v2 = eth::abi::event_signature_hash( event_sig_v2 );
+        std::string       topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
 
         // D-20: Cap scan depth — default 10,000 blocks
         const uint64_t scan_depth = kBridgeCatchupScanDepth;
@@ -2138,7 +2151,7 @@ namespace sgns
                 continue;
             }
 
-            // Build EventFilter for eth_getLogs
+            // Build EventFilter for eth_getLogs (v1 topic0)
             eth::EventFilter filter;
             filter.addresses.push_back( contract_addr );
             filter.topics.push_back( topic0_hash256 );
@@ -2178,91 +2191,163 @@ namespace sgns
                                  current_block,
                                  scan_depth );
 
-            // Create eth_getLogs request
-            auto request  = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
-            auto response = transport.call( request );
+            // D-12: Shared tx_hash deduplication set across v1 and v2 query
+            // results. A burn appearing in both queries (e.g. contract-version
+            // overlap) is processed only once.
+            std::set<std::string> seen_tx_hashes;
 
-            if ( !response.has_value() )
-            {
-                // T-05-13: RPC timeout or failure — log and continue (best-effort)
-                node_logger_->warn( "CatchUpScan: RPC call failed for chain {} (timeout/refused) — "
-                                    "skipping",
-                                    chain_entry.chain_name );
-                continue;
-            }
-
-            auto logs = eth::rpc::parse_get_logs_response( *response );
-            if ( !logs.has_value() )
-            {
-                node_logger_->warn( "CatchUpScan: failed to parse getLogs response for chain {}",
-                                    chain_entry.chain_name );
-                continue;
-            }
-
-            // Process logs: for each burn event, check if already tracked and insert if missing
-            for ( const auto &rpc_log : logs.value() )
-            {
-                std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
-
-                // Parse tx_hash_hex to Hash256 for UTXO query
-                base::Hash256 burn_tx_hash;
-                if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
-                {
-                    ++total_skipped;
-                    continue;
-                }
-
-                // D-20: Check UTXO set (not in-memory TransactionManager state)
-                // Use UTXOManager to determine if this burn is already tracked
-                auto &utxo_mgr = account_->GetUTXOManager();
-
-                // Check if burn outpoint (tx_hash, output_idx=0) is already consumed or reserved
-                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
-                {
-                    ++total_skipped;
-                    node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping", tx_hash_hex );
-                    continue;
-                }
-                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
-                {
-                    ++total_skipped;
-                    node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping", tx_hash_hex );
-                    continue;
-                }
-
+            // Helper: process one batch of logs (v1 or v2) through the dedup +
+            // UTXO-check + MintFunds pipeline. `is_v2` selects the destination
+            // construction path (D-13).
+            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) {
                 // Insert burn UTXO as READY with UTXO_BRIDGE type (D-20)
                 // MintFunds will later transition it to RESERVED → CONSUMED
-                try
-                {
-                    auto result = transaction_manager_->MintFunds(
-                        0,           // amount — derived from burn event data on full decode
-                        tx_hash_hex, // source-chain tx hash
-                        std::to_string( chain_entry.chain_id ),
-                        dev_config_.TokenID,
-                        "" // destination defaults to local account
-                    );
+                auto &utxo_mgr = account_->GetUTXOManager();
 
-                    if ( result.has_value() )
+                for ( const auto &rpc_log : rpc_logs )
+                {
+                    std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
+                                                                           rpc_log.tx_hash.size() );
+
+                    // Deduplicate across v1 and v2 query results (D-12).
+                    if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
                     {
-                        ++total_backfilled;
-                        node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
-                                            tx_hash_hex,
+                        ++total_skipped;
+                        node_logger_->debug( "CatchUpScan: burn tx {} already seen this scan — skipping",
+                                             tx_hash_hex );
+                        continue;
+                    }
+
+                    // Parse tx_hash_hex to Hash256 for UTXO query
+                    base::Hash256 burn_tx_hash;
+                    if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
+                    {
+                        ++total_skipped;
+                        continue;
+                    }
+
+                    // D-20: Check UTXO set (not in-memory TransactionManager state)
+                    // Check if burn outpoint (tx_hash, output_idx=0) is already consumed or reserved
+                    if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
+                    {
+                        ++total_skipped;
+                        node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping", tx_hash_hex );
+                        continue;
+                    }
+                    if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                    {
+                        ++total_skipped;
+                        node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping", tx_hash_hex );
+                        continue;
+                    }
+
+                    // D-13: For v2 logs, decompress the 32-byte X-only key from
+                    // the event data before calling MintFunds. V1 logs keep the
+                    // existing bare-bones empty destination (unchanged path).
+                    std::string destination;
+                    if ( is_v2 )
+                    {
+                        // V2: decompression handled in Task 2
+                        destination = "";
+                    }
+
+                    try
+                    {
+                        auto result = transaction_manager_->MintFunds(
+                            0,           // amount — derived from burn event data on full decode
+                            tx_hash_hex, // source-chain tx hash
+                            std::to_string( chain_entry.chain_id ),
+                            dev_config_.TokenID,
+                            destination );
+
+                        if ( result.has_value() )
+                        {
+                            ++total_backfilled;
+                            node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
+                                                tx_hash_hex,
+                                                chain_entry.chain_name );
+                        }
+                        else
+                        {
+                            node_logger_->debug( "CatchUpScan: MintFunds returned no value for tx {} — "
+                                                 "likely already processed",
+                                                 tx_hash_hex );
+                            ++total_skipped;
+                        }
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        node_logger_->debug( "CatchUpScan: MintFunds threw for tx {}: {} — skipping",
+                                             tx_hash_hex,
+                                             e.what() );
+                        ++total_skipped;
+                    }
+                }
+            };
+
+            // ── v1 query (BridgeSourceBurned) ───────────────────────────────
+            auto v1_request  = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
+            auto v1_response = transport.call( v1_request );
+
+            if ( !v1_response.has_value() )
+            {
+                // T-05-13: RPC timeout or failure — log and continue (best-effort).
+                // A failed v1 query does not block the v2 query or other chains.
+                node_logger_->warn( "CatchUpScan: v1 RPC call failed for chain {} (timeout/refused)",
+                                    chain_entry.chain_name );
+            }
+            else
+            {
+                auto v1_logs = eth::rpc::parse_get_logs_response( *v1_response );
+                if ( !v1_logs.has_value() )
+                {
+                    node_logger_->warn( "CatchUpScan: failed to parse v1 getLogs response for chain {}",
+                                        chain_entry.chain_name );
+                }
+                else
+                {
+                    process_logs( v1_logs.value(), /*is_v2=*/false );
+                }
+            }
+
+            // ── v2 query (BridgeOutInitiated) ───────────────────────────────
+            // Same contract address + block range, v2 topic0 hash (D-12).
+            rlp::Hash256 topic0_hash256_v2{};
+            if ( !rlp::base::parse::hex_array( topic0_hex_v2, topic0_hash256_v2 ) )
+            {
+                node_logger_->warn( "CatchUpScan: invalid v2 topic0 {} for chain {}",
+                                    topic0_hex_v2,
+                                    chain_entry.chain_name );
+            }
+            else
+            {
+                eth::EventFilter filter_v2;
+                filter_v2.addresses.push_back( contract_addr );
+                filter_v2.topics.push_back( topic0_hash256_v2 );
+
+                // Unique request id so v2 does not collide with v1 (id=1) or
+                // blockNumber (id=99).
+                constexpr uint64_t kV2LogsRequestId = 2;
+                auto v2_request  = eth::rpc::make_get_logs_request( filter_v2, from_block, 0, kV2LogsRequestId );
+                auto v2_response = transport.call( v2_request );
+
+                if ( !v2_response.has_value() )
+                {
+                    node_logger_->warn( "CatchUpScan: v2 RPC call failed for chain {} (timeout/refused)",
+                                        chain_entry.chain_name );
+                }
+                else
+                {
+                    auto v2_logs = eth::rpc::parse_get_logs_response( *v2_response );
+                    if ( !v2_logs.has_value() )
+                    {
+                        node_logger_->warn( "CatchUpScan: failed to parse v2 getLogs response for chain {}",
                                             chain_entry.chain_name );
                     }
                     else
                     {
-                        node_logger_->debug( "CatchUpScan: MintFunds returned no value for tx {} — "
-                                             "likely already processed",
-                                             tx_hash_hex );
-                        ++total_skipped;
+                        process_logs( v2_logs.value(), /*is_v2=*/true );
                     }
-                }
-                catch ( const std::exception &e )
-                {
-                    node_logger_->debug( "CatchUpScan: MintFunds threw for tx {}: {} — skipping",
-                                         tx_hash_hex,
-                                         e.what() );
-                    ++total_skipped;
                 }
             }
         }
