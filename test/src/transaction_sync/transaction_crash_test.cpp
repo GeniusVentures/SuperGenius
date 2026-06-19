@@ -56,9 +56,7 @@ namespace sgns
         {
             GeniusAccount::SetSecureStorageFactory(
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-                {
-                    return std::make_shared<MemorySecureStorage>( identifier );
-                } );
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
@@ -122,10 +120,10 @@ namespace sgns
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
                                               sgns::test::NextMintSourceHash(),
-                           "test",
+                                              "test",
                                               TokenID::FromBytes( { 0x00 } ),
-                           "test",
-                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+                                              "",
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

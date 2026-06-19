@@ -37,7 +37,6 @@
 #include <eth/bridge_event.hpp>
 #include <eth/objects.hpp>
 
-
 /**
  * @brief Decodes a base64-encoded string to raw bytes.
  * @param input  Base64-encoded string (standard alphabet, optional '=' padding).
@@ -69,8 +68,8 @@ static std::vector<uint8_t> Base64Decode( const std::string &input )
     std::vector<uint8_t> result;
     result.reserve( ( input.size() * 3 ) / 4 );
 
-    uint32_t accum  = 0;
-    int      bits   = 0;
+    uint32_t accum = 0;
+    int      bits  = 0;
     for ( char c : input )
     {
         if ( c == '=' )
@@ -82,8 +81,8 @@ static std::vector<uint8_t> Base64Decode( const std::string &input )
         {
             return {};
         }
-        accum = ( accum << 6 ) | static_cast<uint32_t>( val );
-        bits += 6;
+        accum  = ( accum << 6 ) | static_cast<uint32_t>( val );
+        bits  += 6;
         if ( bits >= 8 )
         {
             bits -= 8;
@@ -170,21 +169,9 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 
 std::string BridgeE2ETest::s_eth_private_key;
 
-DevConfig_st BridgeE2ETest::DEV_CONFIG  = { "0xcafe",
-                                             "0.65",
-                                             "1.0",
-                                             sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "./node1" };
-DevConfig_st BridgeE2ETest::DEV_CONFIG2 = { "0xcafe",
-                                             "0.65",
-                                             "1.0",
-                                             sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "./node2" };
-DevConfig_st BridgeE2ETest::DEV_CONFIG3 = { "0xcafe",
-                                             "0.65",
-                                             "1.0",
-                                             sgns::TokenID::FromBytes( { 0x00 } ),
-                                             "./node3" };
+DevConfig_st BridgeE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
+DevConfig_st BridgeE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
+DevConfig_st BridgeE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
 
 // --- Fixture implementation ---
 
@@ -192,9 +179,7 @@ void BridgeE2ETest::SetUpTestSuite()
 {
     sgns::GeniusAccount::SetSecureStorageFactory(
         []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
-        {
-            return std::make_shared<sgns::MemorySecureStorage>( identifier );
-        } );
+        { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
 
     // Guard 1: opt-in env var
     if ( !std::getenv( "RUN_E2E_BRIDGE" ) )
@@ -255,7 +240,7 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Guard 3: cast binary must be installed
     constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
-    FILE *cast_pipe = popen( kCastCheckCmd, "r" );
+    FILE                 *cast_pipe     = popen( kCastCheckCmd, "r" );
     if ( !cast_pipe )
     {
         GTEST_SKIP() << "Could not check for cast binary";
@@ -264,16 +249,17 @@ void BridgeE2ETest::SetUpTestSuite()
     if ( !std::fgets( cast_path_buf, sizeof( cast_path_buf ), cast_pipe ) )
     {
         pclose( cast_pipe );
-        GTEST_SKIP() << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
+        GTEST_SKIP()
+            << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
     }
     pclose( cast_pipe );
     spdlog::info( "bridge_e2e: found cast at {}", cast_path_buf );
 
     // Set per-node BaseWritePath
-    std::string binary_path          = boost::dll::program_location().parent_path().string();
-    DEV_CONFIG.BaseWritePath         = binary_path + "/node1/";
-    DEV_CONFIG2.BaseWritePath        = binary_path + "/node2/";
-    DEV_CONFIG3.BaseWritePath        = binary_path + "/node3/";
+    std::string binary_path   = boost::dll::program_location().parent_path().string();
+    DEV_CONFIG.BaseWritePath  = binary_path + "/node1/";
+    DEV_CONFIG2.BaseWritePath = binary_path + "/node2/";
+    DEV_CONFIG3.BaseWritePath = binary_path + "/node3/";
 
     spdlog::info( "bridge_e2e: creating 3-node cluster for E2E test" );
 
@@ -288,13 +274,9 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Wait for the full node to reach READY state (creates genesis + account-creation blocks)
     constexpr std::chrono::milliseconds kBlockchainInitTimeout{ 60000 };
-    sgns::test::assertWaitForCondition(
-        [&]()
-        {
-            return node_main->GetState() == GeniusNode::NodeState::READY;
-        },
-        kBlockchainInitTimeout,
-        "node_main not ready" );
+    sgns::test::assertWaitForCondition( [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
+                                        kBlockchainInitTimeout,
+                                        "node_main not ready" );
 
     spdlog::info( "bridge_e2e: node_main READY, creating processor nodes" );
 
@@ -333,7 +315,7 @@ void BridgeE2ETest::SetUpTestSuite()
     // Need >= 75 consensus weight (3 endpoints × 25 each) for VerifyPublicChainSmartContract.
     {
         constexpr const char *kBridgeContractLower = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
-        constexpr const char *kEventTopic0         = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
+        constexpr const char *kEventTopic0 = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
 
         std::vector<sgns::WeightedRpcEndpoint> sepolia_eps;
         for ( const auto &url : { kSepoliaRpc,
@@ -382,7 +364,7 @@ void BridgeE2ETest::TearDownTestSuite()
 TEST_F( BridgeE2ETest, BurnToMintPipeline )
 {
     // --- Step 1: Derive sender address from PRIVATE_KEY ---
-    std::string wallet_cmd = "cast wallet address " + s_eth_private_key + " 2>&1";
+    std::string wallet_cmd  = "cast wallet address " + s_eth_private_key + " 2>&1";
     FILE       *wallet_pipe = popen( wallet_cmd.c_str(), "r" );
     ASSERT_NE( wallet_pipe, nullptr ) << "Failed to run cast wallet address";
 
@@ -393,8 +375,8 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 
     std::string sender_addr( addr_buf );
     // Trim trailing whitespace/newline
-    while ( !sender_addr.empty() && ( sender_addr.back() == '\n' || sender_addr.back() == '\r' ||
-                                      sender_addr.back() == ' ' ) )
+    while ( !sender_addr.empty() &&
+            ( sender_addr.back() == '\n' || sender_addr.back() == '\r' || sender_addr.back() == ' ' ) )
     {
         sender_addr.pop_back();
     }
@@ -413,10 +395,9 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
     // --- Step 2: Send burn transaction to Sepolia via cast send ---
     // ERC-1155 safeTransferFrom(from, to, id, amount, data) — self-transfer burn
     // Token ID 0 is GNUS. Empty bytes for data field.
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " +
-                           sender_addr + " " + sender_addr + " 0 " + std::to_string( kMintAmount ) +
-                           " 0x --private-key " + s_eth_private_key + " --rpc-url " + kSepoliaRpc +
-                           " --json 2>&1";
+    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
+                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
+                           s_eth_private_key + " --rpc-url " + kSepoliaRpc + " --json 2>&1";
 
     spdlog::info( "bridge_e2e: sending burn transaction" );
     FILE *cast_pipe = popen( cast_cmd.c_str(), "r" );
@@ -433,12 +414,12 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
     ASSERT_EQ( cast_rc, 0 ) << "cast send failed with exit code " << cast_rc << ": " << cast_output;
 
     // Parse transactionHash from JSON output
-    std::string tx_hash;
+    std::string           tx_hash;
     constexpr const char *kTxHashPattern = "\"transactionHash\":\"0x";
     size_t                hash_pos       = cast_output.find( kTxHashPattern );
     if ( hash_pos != std::string::npos )
     {
-        size_t start = hash_pos + std::strlen( kTxHashPattern ) - 2;  // include "0x"
+        size_t start = hash_pos + std::strlen( kTxHashPattern ) - 2; // include "0x"
         size_t end   = cast_output.find( '"', start );
         if ( end != std::string::npos )
         {
@@ -450,24 +431,26 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 
     // --- Step 3: Trigger mint on node_main ---
     spdlog::info( "bridge_e2e: triggering MintTokens on node_main" );
-    EXPECT_OUTCOME_TRUE(
-        mint_result,
-        node_main->MintTokens( kMintAmount, tx_hash, "test", sgns::TokenID::FromBytes( { 0x00 } ), dest_addr, kMintTimeout ) );
+    EXPECT_OUTCOME_TRUE( mint_result,
+                         node_main->MintTokens( kMintAmount,
+                                                tx_hash,
+                                                "test",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kMintTimeout ) );
     spdlog::info( "bridge_e2e: MintTokens completed" );
 
     // --- Step 4: Poll for UTXO confirmation on node_main ---
     std::chrono::milliseconds e2e_timeout{ 10000 };
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_main->GetBalance( dest_addr ) > initial_balance;
-        },
-        e2e_timeout,
-        "Minted UTXO appears in recipient balance on node_main",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > initial_balance; },
+                               e2e_timeout,
+                               "Minted UTXO appears in recipient balance on node_main",
+                               nullptr );
 
     uint64_t final_balance = node_main->GetBalance( dest_addr );
-    spdlog::info( "bridge_e2e: node_main balance after mint = {} (delta = {})", final_balance, final_balance - initial_balance );
+    spdlog::info( "bridge_e2e: node_main balance after mint = {} (delta = {})",
+                  final_balance,
+                  final_balance - initial_balance );
     EXPECT_GE( final_balance - initial_balance, kMintAmount );
 
     // Step 5: Processor nodes are non-full nodes and cannot query other addresses.
@@ -497,34 +480,29 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     spdlog::info( "bridge_e2e: burn_hash_2 = {}", burn_hash_2 );
 
     // --- Step 2: Record initial balance ---
-    std::string dest_addr      = node_main->GetAddress();
+    std::string dest_addr       = node_main->GetAddress();
     uint64_t    initial_balance = node_main->GetBalance( dest_addr );
     spdlog::info( "bridge_e2e: initial balance = {} for {}", initial_balance, dest_addr );
 
     // --- Step 3: First mint (burn_hash_1) ---
-    constexpr uint64_t              kSlotMintAmount = 500;
+    constexpr uint64_t                  kSlotMintAmount = 500;
     constexpr std::chrono::milliseconds kSlotKeyTimeout{ 10000 };
 
     spdlog::info( "bridge_e2e: first MintTokens with burn_hash_1" );
-    EXPECT_OUTCOME_TRUE(
-        mint_result_1,
-        node_main->MintTokens( kSlotMintAmount,
-                                burn_hash_1,
-                                "test",
-                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                dest_addr,
-                                kSlotKeyTimeout ) );
+    EXPECT_OUTCOME_TRUE( mint_result_1,
+                         node_main->MintTokens( kSlotMintAmount,
+                                                burn_hash_1,
+                                                "test",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kSlotKeyTimeout ) );
     spdlog::info( "bridge_e2e: first MintTokens completed" );
 
     // --- Step 4: Wait for first mint to propagate ---
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_main->GetBalance( dest_addr ) > initial_balance;
-        },
-        kSlotKeyTimeout,
-        "First mint balance increase on node_main",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > initial_balance; },
+                               kSlotKeyTimeout,
+                               "First mint balance increase on node_main",
+                               nullptr );
 
     uint64_t balance_after_first = node_main->GetBalance( dest_addr );
     spdlog::info( "bridge_e2e: balance after first mint = {} (delta = {})",
@@ -534,30 +512,23 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
 
     // --- Step 5: Second mint (burn_hash_2) — same chain/token/amount/dest ---
     spdlog::info( "bridge_e2e: second MintTokens with burn_hash_2" );
-    EXPECT_OUTCOME_TRUE(
-        mint_result_2,
-        node_main->MintTokens( kSlotMintAmount,
-                                burn_hash_2,
-                                "test",
-                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                dest_addr,
-                                kSlotKeyTimeout ) );
+    EXPECT_OUTCOME_TRUE( mint_result_2,
+                         node_main->MintTokens( kSlotMintAmount,
+                                                burn_hash_2,
+                                                "test",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kSlotKeyTimeout ) );
     spdlog::info( "bridge_e2e: second MintTokens completed" );
 
     // --- Step 6: Wait for second mint to propagate ---
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_main->GetBalance( dest_addr ) > balance_after_first;
-        },
-        kSlotKeyTimeout,
-        "Second mint balance increase on node_main (collision resistance proof)",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > balance_after_first; },
+                               kSlotKeyTimeout,
+                               "Second mint balance increase on node_main (collision resistance proof)",
+                               nullptr );
 
     uint64_t final_balance = node_main->GetBalance( dest_addr );
-    spdlog::info( "bridge_e2e: final balance = {} (total delta = {})",
-                  final_balance,
-                  final_balance - initial_balance );
+    spdlog::info( "bridge_e2e: final balance = {} (total delta = {})", final_balance, final_balance - initial_balance );
 
     // --- Step 7: Verify final balance = initial + 2 * kSlotMintAmount ---
     EXPECT_GE( final_balance - initial_balance, 2 * kSlotMintAmount )
@@ -580,37 +551,32 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     spdlog::info( "bridge_e2e: ReplayRejection — burn_tx_hash = {}", burn_tx_hash );
 
     // Step 2: First mint should succeed
-    const std::string dest_addr = node_main->GetAddress();
+    const std::string                   dest_addr = node_main->GetAddress();
     constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
 
-    EXPECT_OUTCOME_TRUE(
-        first_result,
-        node_main->MintTokens( kMintAmount,
-                                burn_tx_hash,
-                                "test",
-                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                dest_addr,
-                                kReplayTimeout ) );
+    EXPECT_OUTCOME_TRUE( first_result,
+                         node_main->MintTokens( kMintAmount,
+                                                burn_tx_hash,
+                                                "test",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kReplayTimeout ) );
     spdlog::info( "bridge_e2e: first mint submitted" );
 
     // Step 3: Wait for the first mint to finalize
     uint64_t balance_before = node_main->GetBalance( dest_addr );
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]()
-        {
-            return node_main->GetBalance( dest_addr ) > balance_before;
-        },
-        kReplayTimeout,
-        "First mint UTXO appears in balance",
-        nullptr );
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return node_main->GetBalance( dest_addr ) > balance_before; },
+                               kReplayTimeout,
+                               "First mint UTXO appears in balance",
+                               nullptr );
 
     // Step 4: Second mint with the same burn tx hash should be rejected
     auto second_result = node_main->MintTokens( kMintAmount,
-                                                 burn_tx_hash,
-                                                 "test",
-                                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                                 dest_addr,
-                                                 kReplayTimeout );
+                                                burn_tx_hash,
+                                                "test",
+                                                sgns::TokenID::FromBytes( { 0x00 } ),
+                                                dest_addr,
+                                                kReplayTimeout );
 
     bool replay_rejected = second_result.has_error();
     if ( !replay_rejected )
@@ -646,20 +612,19 @@ TEST_F( BridgeE2ETest, MissingEndpointsFailClosed )
 
     // Chain "999999" has no RPC endpoints configured — should fail closed
     constexpr std::chrono::milliseconds kFailClosedTimeout{ 5000 };
-    auto result = node_main->MintTokens( kMintAmount,
-                                          burn_tx_hash,
-                                          "999999",
-                                          sgns::TokenID::FromBytes( { 0x00 } ),
-                                          node_main->GetAddress(),
-                                          kFailClosedTimeout );
+    auto                                result = node_main->MintTokens( kMintAmount,
+                                         burn_tx_hash,
+                                         "999999",
+                                         sgns::TokenID::FromBytes( { 0x00 } ),
+                                         node_main->GetAddress(),
+                                         kFailClosedTimeout );
 
     EXPECT_TRUE( result.has_error() )
         << "MintTokens for chain with no RPC endpoints should fail (fail-closed per Phase 3 D-03)";
 
     if ( result.has_error() )
     {
-        spdlog::info( "bridge_e2e: MissingEndpointsFailClosed — correctly rejected: {}",
-                      result.error().message() );
+        spdlog::info( "bridge_e2e: MissingEndpointsFailClosed — correctly rejected: {}", result.error().message() );
     }
 
     spdlog::info( "bridge_e2e: MissingEndpointsFailClosed test complete" );
@@ -709,7 +674,7 @@ TEST( BridgeE2ENegativeTest, InvalidReceiptLogsRejected )
     eth::codec::LogEntry log_entry;
     log_entry.address = test_addr;
     log_entry.topics.push_back( test_topic0 );
-    log_entry.data    = { 0x01, 0x02, 0x03, 0x04 };
+    log_entry.data = { 0x01, 0x02, 0x03, 0x04 };
 
     eth::codec::Receipt mock_receipt;
     mock_receipt.status = true;
@@ -731,7 +696,7 @@ TEST( BridgeE2ENegativeTest, InvalidReceiptLogsRejected )
     matching_claim.bridge_contract = test_addr;
     matching_claim.event_topic0    = test_topic0;
     matching_claim.topics.push_back( test_topic0 );
-    matching_claim.data            = log_entry.data;
+    matching_claim.data = log_entry.data;
 
     // --- Case 1: Matching claim should succeed ---
     auto match_result = eth::verify_receipt_log( receipt_result, matching_claim );
@@ -741,16 +706,16 @@ TEST( BridgeE2ENegativeTest, InvalidReceiptLogsRejected )
 
     // --- Case 2: Mismatched contract address should fail ---
     eth::BridgeEventClaim wrong_contract_claim = matching_claim;
-    wrong_contract_claim.bridge_contract[0] = 0xFF;
-    auto wrong_contract_result = eth::verify_receipt_log( receipt_result, wrong_contract_claim );
+    wrong_contract_claim.bridge_contract[0]    = 0xFF;
+    auto wrong_contract_result                 = eth::verify_receipt_log( receipt_result, wrong_contract_claim );
     EXPECT_FALSE( wrong_contract_result ) << "Mismatched contract should be rejected";
     EXPECT_EQ( wrong_contract_result.error, eth::ReceiptLogVerificationError::kContractMismatch );
     spdlog::info( "bridge_e2e: InvalidReceiptLogs — wrong contract: correctly rejected" );
 
     // --- Case 3: Mismatched event topic0 should fail ---
     eth::BridgeEventClaim wrong_topic_claim = matching_claim;
-    wrong_topic_claim.event_topic0[0] = 0xFF;
-    auto wrong_topic_result = eth::verify_receipt_log( receipt_result, wrong_topic_claim );
+    wrong_topic_claim.event_topic0[0]       = 0xFF;
+    auto wrong_topic_result                 = eth::verify_receipt_log( receipt_result, wrong_topic_claim );
     EXPECT_FALSE( wrong_topic_result ) << "Mismatched topic0 should be rejected";
     EXPECT_EQ( wrong_topic_result.error, eth::ReceiptLogVerificationError::kTopic0Mismatch );
     spdlog::info( "bridge_e2e: InvalidReceiptLogs — wrong topic0: correctly rejected" );

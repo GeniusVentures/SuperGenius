@@ -35,9 +35,7 @@ protected:
     {
         sgns::GeniusAccount::SetSecureStorageFactory(
             []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
-            {
-                return std::make_shared<sgns::MemorySecureStorage>( identifier );
-            } );
+            { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
 
@@ -53,9 +51,10 @@ protected:
                                             true );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
-        sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 30000 ),
-                                      "node_proc1 not ready" );
+        sgns::test::assertWaitForCondition( [&]
+                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                            std::chrono::milliseconds( 30000 ),
+                                            "node_proc1 not ready" );
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
@@ -77,11 +76,12 @@ protected:
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
         sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 30000 ),
-                                      "node_main not ready" );
-        sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                      std::chrono::milliseconds( 30000 ),
-                                      "node_proc2 not ready" );
+                                            std::chrono::milliseconds( 30000 ),
+                                            "node_main not ready" );
+        sgns::test::assertWaitForCondition( [&]
+                                            { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                            std::chrono::milliseconds( 30000 ),
+                                            "node_proc2 not ready" );
     }
 
     static void TearDownTestSuite()
@@ -148,25 +148,25 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
     sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
-                                  "Main node not synced" );
+                                        std::chrono::milliseconds( 20000 ),
+                                        "Main node not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
-                                  "Node proc 1 not synced" );
+                                        std::chrono::milliseconds( 20000 ),
+                                        "Node proc 1 not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
-                                  "Node proc 2 not synced" );
+                                        std::chrono::milliseconds( 20000 ),
+                                        "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
                            "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                           "",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
                            "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                           "",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
     int transcount_main  = node_main->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
@@ -474,9 +474,9 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),
-                           "test",
+                                              "test",
                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                           "test",
+                                              "",
                                               std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
 
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";

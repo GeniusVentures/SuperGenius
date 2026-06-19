@@ -35,18 +35,15 @@ public:
         }
 
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            {
-                return std::make_shared<MemorySecureStorage>( identifier );
-            } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
         node_ = sgns::GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
-                                 "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
-                                 false,
-                                 true,
-                                 40069,
-                                 true );
+                                       "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
+                                       false,
+                                       true,
+                                       40069,
+                                       true );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
         test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -58,8 +55,6 @@ public:
     std::shared_ptr<sgns::GeniusNode> node_;
 };
 
-
-
 TEST_F( AccountManagement, CantSelectAccountThatWasNotAdded )
 {
     ASSERT_TRUE( node_->SelectAccount( "foobar" ).has_error() );
@@ -70,7 +65,7 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
     auto         old_account_address = node_->GetAddress();
     TW::HDWallet wallet( 128, "" );
     auto         new_account_address = GeniusAccount::NewFromMnemonic( TOKEN_ID, wallet.getMnemonic(), path, true )
-                                           ->GetAddress();
+                                   ->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 40000 ),
@@ -85,11 +80,13 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 
 TEST_F( AccountManagement, TransferAccount )
 {
-    ASSERT_TRUE( node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT ).has_value() );
+    ASSERT_TRUE(
+        node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
+            .has_value() );
     auto         balance = node_->GetBalance();
     TW::HDWallet wallet( 128, "" );
     auto         other_account_address = GeniusAccount::NewFromMnemonic( TOKEN_ID, wallet.getMnemonic(), path, true )
-                                             ->GetAddress();
+                                     ->GetAddress();
     ASSERT_TRUE( node_->TransferAccount( other_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 40000 ),
@@ -102,7 +99,7 @@ TEST_F( AccountManagement, CanDeleteAccount )
     auto         old_account_address = node_->GetAddress();
     TW::HDWallet wallet( 128, "" );
     auto         new_account_address = GeniusAccount::NewFromMnemonic( TOKEN_ID, wallet.getMnemonic(), path, true )
-                                           ->GetAddress();
+                                   ->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 40000 ),
@@ -302,7 +299,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                                    sgns::test::NextMintSourceHash(),
                                                    "test",
                                                    TOKEN_ID,
-                                                   "test",
+                                                   "",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
