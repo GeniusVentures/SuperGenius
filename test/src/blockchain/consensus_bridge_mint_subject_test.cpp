@@ -12,9 +12,9 @@ namespace
     using sgns::ConsensusProposal;
     using sgns::ConsensusSubject;
     using sgns::EmbeddedTransaction;
-    using sgns::MintTxV2;
     using sgns::NonceSubject;
-    using sgns::TransferTx;
+    using SGTransaction::MintTxV2;
+    using SGTransaction::TransferTx;
 
     // Builds a NonceSubject-wrapped ConsensusProposal carrying the supplied
     // embedded transaction. Uses the production CreateNonceSubject so the
