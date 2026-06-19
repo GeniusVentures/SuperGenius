@@ -136,6 +136,27 @@ namespace sgns
             return std::nullopt;
         }
 
+        /**
+         * @brief Returns the SHA-256 hash of an endpoint URL for a vote slot (Phase 6, D-01).
+         *
+         * Slot semantics (per the slot-based RPC-hash voting model):
+         * - slot 0: first DIRECT_API endpoint (consensus_weight >= 50, D-02).
+         * - slot 1: first PUBLIC endpoint (consensus_weight < 50).
+         * - slot 2: second PUBLIC endpoint (consensus_weight < 50).
+         *
+         * The hash is over the endpoint's raw @c url string (UTF-8), NOT the
+         * resolved URL nor the bridge_contract_address/event_topic0 fields, so the
+         * hash is stable across config reloads and deterministic across peers that
+         * share config (T-06-03). An empty vector signals abstention (D-05).
+         *
+         * @param[in] slot_index  Vote slot (0, 1, or 2).
+         * @param[in] chain_id    Source chain identifier.
+         * @return 32-byte SHA-256 of the qualifying endpoint URL, or an empty vector
+         *         when no qualifying endpoint exists or the slot/chain is unknown.
+         */
+        [[nodiscard]] std::vector<uint8_t> GetSlotHash( size_t           slot_index,
+                                                        const std::string &chain_id ) const noexcept;
+
     private:
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
