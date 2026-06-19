@@ -14,6 +14,7 @@
 #include <vector>
 #include <thread>
 #include <optional>
+#include <mutex>
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -40,6 +41,9 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/event/bus.hpp>
+#include <libp2p/network/connection_manager.hpp>
 
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
@@ -55,14 +59,16 @@ typedef struct DevConfig
 
 extern DevConfig_st DEV_CONFIG;
 
-constexpr uint64_t kDefaultTimestampToleranceMs = 300000;  // ±5 minutes
-constexpr uint64_t kBridgeCatchupScanDepth       = 10000;   // Max historical blocks to scan for unprocessed burns (D-20)
+constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
+constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical blocks to scan for unprocessed burns (D-20)
 
 #define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
 #define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
 
 namespace sgns
 {
+    class MigrationManager;
+
     /**
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
@@ -79,15 +85,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node bound to the provided Ethereum private key.
@@ -97,7 +101,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
@@ -105,8 +108,7 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node from an existing mnemonic phrase.
@@ -116,7 +118,6 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
          */
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
@@ -124,8 +125,7 @@ namespace sgns
                                                             bool                autodht      = true,
                                                             bool                isprocessor  = true,
                                                             uint16_t            base_port    = 40001,
-                                                            bool                is_full_node = false,
-                                                            bool                use_upnp     = true );
+                                                            bool                is_full_node = false );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -140,9 +140,9 @@ namespace sgns
             CREATING = 0,              ///< Object construction is in progress.
             MIGRATING_DATABASE,        ///< Versioned database migrations are running.
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
-            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -183,6 +183,10 @@ namespace sgns
          */
         std::vector<std::string> GetAvailableAccounts();
 
+        outcome::result<void> AddAccountWithKey( const char *private_key );
+
+        outcome::result<void> AddAccountWithMnemonic( const std::string &mnemonic );
+
         /**
          * @brief Selects the active account for subsequent node operations.
          * @param[in] public_address Stored account address to activate.
@@ -205,9 +209,9 @@ namespace sgns
         outcome::result<void> DeleteAccount( std::string_view public_address );
 
         /**
-         * @brief Merges data from another account into the currently selected one.
-         * @param[in] public_address Stored account address to transfer into and then delete.
-         * @return Success when transfer and delete both complete.
+         * @brief Merges the active account into another stored account.
+         * @param[in] public_address Stored account address to receive the configured-token balance and become active.
+         * @return Success when transfer, selection, and deletion of the previous active account complete.
          */
         outcome::result<void> MergeAccount( std::string_view public_address );
 
@@ -252,6 +256,9 @@ namespace sgns
          * @return Version string built from the compiled version metadata.
          */
         std::string GetVersion();
+
+        /** Reloads log level overrides from log_config.json at runtime. */
+        void LoadLogConfig();
 
         /**
          * @brief Creates and submits a mint transaction.
@@ -359,6 +366,8 @@ namespace sgns
         {
             return dev_config_.TokenID;
         }
+
+        [[nodiscard]] std::pair<float, std::string> GetInitializationStatus() const;
 
         /**
          * @brief Returns the current processing service status.
@@ -607,11 +616,13 @@ namespace sgns
     private:
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                              io_work_guard_; ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;   ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
-        std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
+                                                   io_work_guard_;       ///< Keeps @ref io_ alive.
+        std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
+        std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
+        std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
+        mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
         std::shared_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
@@ -631,6 +642,12 @@ namespace sgns
         std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
         std::string                 processing_channel_topic_;     ///< Processing task channel topic.
         std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>       bootstrap_peers_;
+        std::vector<std::string>       bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
 
@@ -642,15 +659,13 @@ namespace sgns
          * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
                     bool                           isprocessor,
                     uint16_t                       base_port,
-                    bool                           is_full_node,
-                    bool                           use_upnp );
+                    bool                           is_full_node );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
@@ -682,6 +697,11 @@ namespace sgns
          * @return True when network initialization succeeds.
          */
         bool InitNetwork( uint16_t base_port, bool is_full_node );
+
+        /**
+         * @brief Loads the CRDT configuration.
+         */
+        void LoadCrdtConfig();
 
         /**
          * @brief Attempts initial UPnP port mapping for the PubSub port.
@@ -764,6 +784,11 @@ namespace sgns
         void PerformStartupCatchupScan();
 
         /**
+         * @brief Shuts down
+         */
+        void ShutdownForDestruction();
+
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
@@ -776,6 +801,41 @@ namespace sgns
          * @brief Starts DHT provider discovery for the processing grid topic.
          */
         void DHTInit();
+
+        /**
+         * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
+         */
+        static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
+         */
+        void InitBootstrapReconnect();
+
+        /**
+         * @brief Start the periodic health-check polling for bootstrap fullnode connections
+         */
+        void StartBootstrapHealthCheck();
+
+        /**
+         * @brief Schedule a reconnection attempt with exponential backoff
+         */
+        void ScheduleBootstrapReconnect( const libp2p::peer::PeerId &peer_id, unsigned attempt );
+
+        /**
+         * @brief Perform the actual reconnection to a bootstrap peer
+         */
+        void DoReconnectToBootstrapPeer( const libp2p::peer::PeerId &peer_id );
+
+        /**
+         * @brief Schedule the next periodic health check
+         */
+        void ScheduleNextHealthCheck();
+
+        /**
+         * @brief Perform a health check on all bootstrap fullnode connections
+         */
+        void PerformHealthCheck();
 
         struct PriceInfo
         {
@@ -801,7 +861,25 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
-        bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
+        std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
+
+        // ── Bootstrap fullnode reconnection ──
+        struct BootstrapReconnectConfig
+        {
+            std::chrono::seconds base_delay{ 5 };
+            std::chrono::seconds max_delay{ 300 };
+            std::chrono::seconds health_check_interval{ 60 };
+            std::chrono::seconds health_check_disconnected_interval{ 15 };
+            double               background_multiplier{ 3.0 };
+        };
+
+        BootstrapReconnectConfig                           reconnect_config_;
+        std::optional<libp2p::event::Handle>               bootstrap_disconnect_subscription_;
+        std::optional<libp2p::basic::Scheduler::Handle>    health_check_handle_;
+        std::unordered_map<libp2p::peer::PeerId, unsigned> reconnect_attempts_;
+        std::mutex                                         reconnect_mutex_;
+
+        crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
 
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.

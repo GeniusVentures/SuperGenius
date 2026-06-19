@@ -5,7 +5,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef JSON_SECURE_STORAGE_HPP
+#define JSON_SECURE_STORAGE_HPP
 
 #include "../../ISecureStorage.hpp"
 
@@ -19,7 +20,9 @@ namespace sgns
     class JSONSecureStorage : public ISecureStorage
     {
     public:
-        JSONSecureStorage( boost::filesystem::path directory ) : directory_( std::move( directory ) ) {}
+        JSONSecureStorage( boost::filesystem::path directory ) : directory_( std::move( directory ) )
+        {
+        }
 
         ~JSONSecureStorage() override = default;
 
@@ -42,3 +45,5 @@ namespace sgns
         boost::filesystem::path directory_;
     };
 }
+
+#endif // JSON_SECURE_STORAGE_HPP

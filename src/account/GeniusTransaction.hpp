@@ -4,7 +4,8 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_GENIUS_TRANSACTION_HPP
+#define SGNS_GENIUS_TRANSACTION_HPP
 
 #include <utility>
 #include <vector>
@@ -305,3 +306,5 @@ namespace sgns
         }
     };
 }
+
+#endif // SGNS_GENIUS_TRANSACTION_HPP

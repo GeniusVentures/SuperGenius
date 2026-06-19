@@ -4,7 +4,8 @@
  * @date       2026-02-07
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_CONSENSUS_AUTH_HPP
+#define SGNS_CONSENSUS_AUTH_HPP
 
 #include <system_error>
 #include <vector>
@@ -128,9 +129,7 @@ namespace sgns
             return false;
         }
 
-        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(),
-                                              proposal.signature(),
-                                              signing_bytes.value() ) )
+        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
         {
             return false;
         }
@@ -144,3 +143,5 @@ namespace sgns
         return computed_id.value() == proposal.proposal_id();
     }
 }
+
+#endif // SGNS_CONSENSUS_AUTH_HPP

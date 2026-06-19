@@ -3,7 +3,8 @@
  * @brief      Input validation strategy for one-time migration claims.
  * @date       2026-06-12
  */
-#pragma once
+#ifndef SGNS_MIGRATION_INPUT_VALIDATOR_HPP
+#define SGNS_MIGRATION_INPUT_VALIDATOR_HPP
 
 #include "account/InputValidators.hpp"
 
@@ -44,3 +45,5 @@ namespace sgns
     /// @brief Static instance to trigger registration of the MigrationInputValidator before main() starts.
     static inline bool kMigrationValidatorRegistered = MigrationInputValidator::Register();
 } // namespace sgns
+
+#endif // SGNS_MIGRATION_INPUT_VALIDATOR_HPP

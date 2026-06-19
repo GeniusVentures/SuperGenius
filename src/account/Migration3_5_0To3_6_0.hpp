@@ -4,7 +4,8 @@
  * @date       2026-01-22
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_MIGRATION_3_5_0_TO_3_6_0_HPP
+#define SGNS_MIGRATION_3_5_0_TO_3_6_0_HPP
 
 #include "IMigrationStep.hpp"
 #include "base/logger.hpp"
@@ -41,12 +42,12 @@ namespace sgns
          * @brief Returns the source schema version handled by this step.
          * @return Source version string, "3.5.1".
          */
-        std::string           FromVersion() const override;
+        std::string FromVersion() const override;
         /**
          * @brief Returns the target schema version produced by this step.
          * @return Target version string, "3.6.0".
          */
-        std::string           ToVersion() const override;
+        std::string ToVersion() const override;
         /**
          * @brief Initializes migration resources before the step is applied.
          * @return Success after opening the legacy database and, when present, the target database.
@@ -87,15 +88,17 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "MigrationStep" ); ///< Logger for migration progress and errors.
 
-        std::shared_ptr<boost::asio::io_context>                        ioContext_; ///< IO context for GlobalDB services.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub_;    ///< PubSub service for CRDT sync.
-        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync_; ///< GraphSync network.
-        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler_; ///< libp2p scheduler.
+        std::shared_ptr<boost::asio::io_context>             ioContext_; ///< IO context for GlobalDB services.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>           pubSub_;    ///< PubSub service for CRDT sync.
+        std::shared_ptr<ipfs_lite::ipfs::graphsync::Network> graphsync_; ///< GraphSync network.
+        std::shared_ptr<libp2p::basic::Scheduler>            scheduler_; ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
-        std::string                                                     writeBasePath_; ///< Base path for versioned DBs.
-        std::string                                                     base58key_;     ///< Node key suffix for DB paths.
+        std::string writeBasePath_;                                                 ///< Base path for versioned DBs.
+        std::string base58key_;                                                     ///< Node key suffix for DB paths.
 
         std::shared_ptr<crdt::GlobalDB> db_3_5_1_; ///< Legacy 3.5.1 database.
         std::shared_ptr<crdt::GlobalDB> db_3_6_0_; ///< Target 3.6.0 database.
     };
 }
+
+#endif // SGNS_MIGRATION_3_5_0_TO_3_6_0_HPP

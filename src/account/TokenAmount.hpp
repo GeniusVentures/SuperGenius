@@ -4,7 +4,8 @@
  * @copyright 2025
  */
 
-#pragma once
+#ifndef SGNS_TOKEN_AMOUNT_HPP
+#define SGNS_TOKEN_AMOUNT_HPP
 
 #include <string>
 #include <memory>
@@ -129,3 +130,5 @@ namespace sgns
     };
 
 } // namespace sgns
+
+#endif // SGNS_TOKEN_AMOUNT_HPP

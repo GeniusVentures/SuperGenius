@@ -333,7 +333,7 @@ jobs:
             CURRENT_BRANCH=${GITHUB_EVENT_PULL_REQUEST_HEAD_REF}
             IS_TAG=false
           else
-            CURRENT_BRANCH=$GITHUB_REF_NAME
+            CURRENT_BRANCH=${{ github.ref_name }}
             IS_TAG=false
           fi
           echo "Identified current branch/tag as ${CURRENT_BRANCH}"
@@ -555,21 +555,19 @@ jobs:
       - name: Set release tag
         shell: bash
         run: |
-          if ${{ github.event_name == 'workflow_dispatch' }} && [ '${GITHUB_EVENT_INPUTS_TAG}' ]; then
-            RELEASE_TAG="${GITHUB_EVENT_INPUTS_TAG}"
+          if ${{ github.event_name == 'workflow_dispatch' }} && [ '${{ github.event.inputs.tag }}' ]; then
+            RELEASE_TAG="${{ github.event.inputs.tag }}"
             IS_TAG_RELEASE="true"
           else
             if [ '${{ matrix.abi }}' ]; then
-              RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${GITHUB_REF_NAME}-${{ matrix.build-type }}"
+              RELEASE_TAG="${{ matrix.target }}-${{ matrix.abi }}-${{ github.ref_name }}-${{ matrix.build-type }}"
             else
-              RELEASE_TAG="${{ matrix.target }}-${GITHUB_REF_NAME}-${{ matrix.build-type }}"
+              RELEASE_TAG="${{ matrix.target }}-${{ github.ref_name }}-${{ matrix.build-type }}"
             fi
             IS_TAG_RELEASE="false"
           fi
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           echo "IS_TAG_RELEASE=$IS_TAG_RELEASE" >> $GITHUB_ENV
-        env:
-          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       - name: Create release tag
         if: github.ref_name == 'main' || github.ref_name == 'develop'
@@ -577,30 +575,30 @@ jobs:
         id: create-release-tag
         shell: bash
         run: |
-          echo "Checking if release $RELEASE_TAG exists..."
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            if [ "$IS_TAG_RELEASE" == "false" ]; then
-              echo "Deleting existing release/tag $RELEASE_TAG..."
-              gh release delete "$RELEASE_TAG" --yes || true
-              git push origin ":refs/tags/$RELEASE_TAG" || true
-              git tag -d "$RELEASE_TAG" || true
+          echo "Checking if release ${{ env.RELEASE_TAG }} exists..."
+          if gh release view "${{ env.RELEASE_TAG }}" >/dev/null 2>&1; then
+            if [ "${{ env.IS_TAG_RELEASE }}" == "false" ]; then
+              echo "Deleting existing release/tag ${{ env.RELEASE_TAG }}..."
+              gh release delete "${{ env.RELEASE_TAG }}" --yes || true
+              git push origin ":refs/tags/${{ env.RELEASE_TAG }}" || true
+              git tag -d "${{ env.RELEASE_TAG }}" || true
             fi
           fi
-          echo "Creating new tag $RELEASE_TAG..."
-          git tag -f "$RELEASE_TAG" "${{ github.sha }}"
-          git push origin "$RELEASE_TAG" --force
-          echo "Creating GitHub release $RELEASE_TAG..."
-          gh release create "$RELEASE_TAG" \
+          echo "Creating new tag ${{ env.RELEASE_TAG }}..."
+          git tag -f "${{ env.RELEASE_TAG }}" "${{ github.sha }}"
+          git push origin "${{ env.RELEASE_TAG }}" --force
+          echo "Creating GitHub release ${{ env.RELEASE_TAG }}..."
+          gh release create "${{ env.RELEASE_TAG }}" \
             --target "${{ github.sha }}" \
-            -t "${{ matrix.target }} ${GITHUB_REF_NAME} ${{ matrix.build-type }} build" \
-            -n "Branch: ${GITHUB_REF_NAME} | SHA: ${{ github.sha }}" \
-            $( [ "$IS_TAG_RELEASE" = "true" ] && echo "" || echo "--prerelease" )
+            -t "${{ matrix.target }} ${{ github.ref_name }} ${{ matrix.build-type }} build" \
+            -n "Branch: ${{ github.ref_name }} | SHA: ${{ github.sha }}" \
+            $( [ "${{ env.IS_TAG_RELEASE }}" = "true" ] && echo "" || echo "--prerelease" )
 
       - name: Upload file
         if: github.ref_name == 'main' || github.ref_name == 'develop' || env.IS_TAG == 'true'
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         shell: bash
-        run: gh release upload ${RELEASE_TAG} ${FILE_NAME} --clobber
+        run: gh release upload ${{ env.RELEASE_TAG }} ${{ env.FILE_NAME }} --clobber
 
       - name: Run tests (Windows)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
