@@ -229,6 +229,10 @@ namespace sgns
             uint64_t total_weight    = 0;     ///< The total maximum weight of the quorum
             uint64_t approved_weight = 0;     ///< The weight which was already approved
             bool     has_quorum      = false; ///< Flag indicating if quorum was reached
+            // Phase 6 (D-06): populated only for bridge-mint subjects; zero for
+            // non-bridge subjects (observability -- the slot-tally result).
+            uint64_t qualified_sum  = 0;      ///< Slot-weighted qualified contribution.
+            uint64_t slot_threshold = 0;      ///< total_voting_reputation * 0.75 (D-06).
         };
 
         /**
@@ -386,6 +390,41 @@ namespace sgns
          * @return Quorum tally result or an error.
          */
         outcome::result<QuorumTally> TallyVotes( const Proposal &proposal, const std::vector<Vote> &votes ) const;
+
+        /**
+         * @brief Phase 6 (D-06): classifies a proposal's subject as a bridge mint.
+         *
+         * A bridge mint is a NonceSubject whose embedded transaction case is
+         * kMintV2 AND whose chain_id is non-empty (mirror
+         * TransactionManager::GetValidationChainId). Any decode failure returns
+         * false (fail-closed: single-pool quorum applies).
+         *
+         * @param[in] proposal Proposal whose subject is inspected.
+         * @return `true` when the subject is a bridge mint; `false` otherwise.
+         */
+        static bool IsBridgeMintSubject( const Proposal &proposal );
+
+        /**
+         * @brief Phase 6 (D-06): single quorum dispatcher.
+         *
+         * For non-bridge subjects: computes the single-pool tally (total weight,
+         * approved weight, IsQuorum) -- identical to the pre-Phase-6 behavior.
+         * For bridge-mint subjects: delegates to ValidatorRegistry::EvaluateSlotQuorum
+         * (cumulative slot model with 50/25/75 weighting and >=2-validator PUBLIC
+         * deduplication).
+         *
+         * Used by BOTH TallyVotes (certificate creation) and the incremental
+         * HandleVote tally so the two sites agree on bridge-mint quorum
+         * (RESEARCH Pitfall 1 mitigation / T-06-10).
+         *
+         * @param[in] proposal Proposal being evaluated.
+         * @param[in] votes   Votes to tally.
+         * @param[in] registry Registry snapshot used for weight resolution.
+         * @return Quorum tally result.
+         */
+        outcome::result<QuorumTally> EvaluateQuorum( const Proposal                    &proposal,
+                                                     const std::vector<Vote>           &votes,
+                                                     const ValidatorRegistry::Registry &registry ) const;
 
         /**
          * @brief Computes canonical bytes to sign a proposal.
