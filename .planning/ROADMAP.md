@@ -160,11 +160,11 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	**Goal:** Decode 32-byte X-only compressed SG public key from BridgeOutInitiated events → decompress to full X+Y key → construct destination matching GetAddress(). Register new event in EventRegistry (kBytes32), retain v1 BridgeSourceBurned (kBytes). BridgeRelayer registers dual watches and dispatches v1/v2 events. Catch-up scan queries both v1 and v2 topic0 hashes.
 	**Requirements**: REQ-V2-01, REQ-V2-02, REQ-V2-03, REQ-V2-04, REQ-V2-05, REQ-V2-06, REQ-V2-07, REQ-V2-08, REQ-V2-09
 	**Depends on:** Phase 05.1 (Observer pattern, ChainContractPair, IBridgeInitObserver)
-	**Plans:** 4 plans
+	**Plans:** 1/4 plans executed
 	
 	**Wave 1** (evmrelay foundation — independent):
 	Plans:
-	- [ ] 05.2-01-PLAN.md — EventRegistry v2 registration (D-04, D-05) + DecompressXOnlyPubkey free function (D-07, D-08, D-09, D-10) + 5 secp256k1 decompression tests (REQ-V2-01, REQ-V2-02, REQ-V2-05, REQ-V2-06, REQ-V2-09)
+	- [x] 05.2-01-PLAN.md — EventRegistry v2 registration (D-04, D-05) + DecompressXOnlyPubkey free function (D-07, D-08, D-09, D-10) + 5 secp256k1 decompression tests (REQ-V2-01, REQ-V2-02, REQ-V2-05, REQ-V2-06, REQ-V2-09)
 	
 	**Wave 2** (BridgeRelayer + GeniusNode — parallel, depends on Wave 1):
 	Plans:
