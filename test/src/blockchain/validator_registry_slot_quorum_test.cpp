@@ -11,7 +11,7 @@
 namespace
 {
     using sgns::ConsensusVote;
-    using sgns::ValidatorEntry;
+    using sgns::validator::ValidatorEntry;
     using sgns::ValidatorRegistry;
 
     // Builds an in-memory registry snapshot with the supplied (id, weight) pairs,
@@ -26,7 +26,7 @@ namespace
             auto *entry = registry.add_validators();
             entry->set_validator_id( v.first );
             entry->set_weight( v.second );
-            entry->set_status( ValidatorEntry::ACTIVE );
+            entry->set_status( sgns::validator::ACTIVE );
         }
         return registry;
     }
