@@ -428,7 +428,6 @@ namespace sgns::processing
         }
 
         float averageProgress = ( nodeCount > 0 ) ? ( totalProgress / nodeCount ) : 0.0f;
-        // Round to 2 decimal places
         averageProgress = std::round( averageProgress * 100.0f ) / 100.0f;
 
         return { Status::PROCESSING, averageProgress };

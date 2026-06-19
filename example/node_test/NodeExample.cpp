@@ -8,8 +8,12 @@
 #include <cstdlib>
 #include <cstdint>
 #include <atomic>
-#include <iomanip>
 #include <random>
+#include <map>
+#include <functional>
+#include <cctype>
+#include <iomanip>
+#include "base/logger.hpp"
 #ifndef _WIN32
 #include <termios.h>
 #include <unistd.h>
@@ -23,6 +27,8 @@
 #include <thread>
 #include <chrono>
 
+static sgns::base::Logger logger = sgns::base::createLogger( "NodeExample" );
+
 std::mutex              keyboard_mutex;
 std::condition_variable cv;
 std::queue<std::string> events;
@@ -30,10 +36,8 @@ std::string             current_input;
 std::atomic<bool>       finished( false );
 
 #ifdef _WIN32
-// Add a global variable to store the original console mode
 DWORD original_console_mode;
 #else
-// Store the original terminal attributes
 termios original_term;
 #endif
 
@@ -41,7 +45,6 @@ void enable_raw_mode()
 {
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    // Save the original console mode to the global variable
     GetConsoleMode( hInput, &original_console_mode );
     SetConsoleMode( hInput, original_console_mode & ~( ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT ) );
 #else
@@ -56,23 +59,41 @@ void disable_raw_mode()
 {
 #ifdef _WIN32
     HANDLE hInput = GetStdHandle( STD_INPUT_HANDLE );
-    // Restore the original console mode from the global variable
     SetConsoleMode( hInput, original_console_mode );
 #else
-    // Restore the original terminal attributes
     tcsetattr( STDIN_FILENO, TCSANOW, &original_term );
 #endif
 }
 
 void clear_line()
 {
-    std::cout << "\r\033[K"; // Clear the current line
+    std::cout << "\r\033[K";
 }
 
 void redraw_prompt()
 {
     clear_line();
-    std::cout << "> " << current_input << std::flush; // Redraw the input prompt
+    std::cout << "> " << current_input << std::flush;
+}
+
+static std::string trim( std::string_view s )
+{
+    auto start = s.find_first_not_of( " \t\r\n" );
+    if ( start == std::string::npos )
+    {
+        return {};
+    }
+    auto end = s.find_last_not_of( " \t\r\n" );
+    return std::string( s.substr( start, end - start + 1 ) );
+}
+
+static std::string to_lower( std::string s )
+{
+    for ( auto &c : s )
+    {
+        c = static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) );
+    }
+    return s;
 }
 
 void keyboard_input_thread()
@@ -82,29 +103,36 @@ void keyboard_input_thread()
     while ( !finished )
     {
         char ch;
-        std::cin.get( ch );
+        if ( !std::cin.get( ch ) )
+        {
+            // EOF (Ctrl+D) — signal quit
+            std::lock_guard<std::mutex> lock( keyboard_mutex );
+            events.emplace( "quit" );
+            cv.notify_one();
+            break;
+        }
 
         {
             std::lock_guard<std::mutex> lock( keyboard_mutex );
             if ( ch == '\n' || ch == '\r' )
             {
-                // Check for both newline and carriage return
                 if ( !current_input.empty() )
                 {
-                    events.push( current_input );
+                    events.push( trim( current_input ) );
                     current_input.clear();
-                    cv.notify_one(); // Notify the event processor
+                    cv.notify_one();
                 }
                 std::cout << std::endl;
             }
             else if ( ch == 127 || ch == '\b' )
-            { // Handle backspace
+            {
                 if ( !current_input.empty() )
                 {
                     current_input.pop_back();
                 }
             }
-            else if ( std::isprint( ch ) || std::isspace( ch ) )
+            else if ( std::isprint( static_cast<unsigned char>( ch ) ) ||
+                      std::isspace( static_cast<unsigned char>( ch ) ) )
             {
                 current_input += ch;
             }
@@ -116,87 +144,27 @@ void keyboard_input_thread()
     disable_raw_mode();
 }
 
-void PrintAccountInfo( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
+static bool check_arg_count( const std::vector<std::string> &args, size_t expected, const std::string &usage )
 {
-    if ( args.size() != 1 )
+    if ( args.size() != expected )
     {
-        std::cerr << "Invalid info command format.\n";
-        return;
+        logger->error( "Usage: {}", usage );
+        return false;
     }
-    std::cout << "Balance: " << genius_node->GetBalance() << std::endl;
+    return true;
 }
 
-void PrintNodeBalance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
+static bool check_arg_count_min( const std::vector<std::string> &args, size_t min, const std::string &usage )
 {
-    if ( args.size() != 2 )
+    if ( args.size() < min )
     {
-        std::cerr << "Invalid balance command format.\n";
-        return;
+        logger->error( "Usage: {}", usage );
+        return false;
     }
-    std::cout << "Balance: " << genius_node->GetBalance( std::string( args[1] ) ) << std::endl;
+    return true;
 }
 
-void PrintDataStore( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    if ( args.size() != 1 )
-    {
-        std::cerr << "Invalid info command format.\n";
-        return;
-    }
-    genius_node->PrintDataStore();
-}
-
-void MintTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    if ( args.size() != 2 )
-    {
-        std::cerr << "Invalid mint command format.\n";
-        return;
-    }
-    genius_node->MintTokens( std::stoull( args[1] ),
-                             "",
-                             "",
-                             sgns::TokenID::FromBytes( { 0x00 } ) );
-}
-
-void TransferTokens( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    if ( args.size() != 3 )
-    {
-        std::cerr << "Invalid mint command format.\n";
-        return;
-    }
-    genius_node->TransferFunds( std::stoull( args[1] ),
-                                args[2],
-                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_TRANSFER ) );
-}
-
-void GetCoinPrice( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    if ( args.size() < 2 ) // Check if there's at least one token ID (args[0] is "price")
-    {
-        std::cerr << "Invalid price command format. Usage: price <token_id1> [token_id2] [token_id3] ...\n";
-        return;
-    }
-
-    // Create a vector of token IDs (skipping args[0] which is "price")
-    std::vector<std::string> tokenIds( args.begin() + 1, args.end() );
-
-    // Call the GetCoinprice function with the token IDs
-    auto prices = genius_node->GetCoinprice( tokenIds );
-
-    // Display the results
-    for ( const auto &[token, price] : prices.value() )
-    {
-        std::cout << token << ": $" << std::fixed << std::setprecision( 4 ) << price << std::endl;
-    }
-}
-
-void CreateProcessingTransaction( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    std::string json_data = R"(
-{
+static constexpr const char *POSENET_JSON = R"({
   "name": "posenet-inference",
   "version": "1.0.0",
   "gnus_spec_version": 1.0,
@@ -207,41 +175,27 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
   "inputs": [
     {
       "name": "ballet_image",
-	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
+      "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
       "type": "texture2D",
       "description": "Ballet pose image input",
       "dimensions": {
-        "width": 1350,
-        "height": 900,
-		"block_len": 4860000 ,
-		"block_line_stride": 5400,
-		"block_stride": 0,
-		"chunk_line_stride": 1080,
-		"chunk_offset": 0,
-		"chunk_stride": 4320,
-		"chunk_subchunk_height": 5,
-		"chunk_subchunk_width": 5,
-		"chunk_count": 25
+        "width": 1350, "height": 900,
+        "block_len": 4860000, "block_line_stride": 5400, "block_stride": 0,
+        "chunk_line_stride": 1080, "chunk_offset": 0, "chunk_stride": 4320,
+        "chunk_subchunk_height": 5, "chunk_subchunk_width": 5, "chunk_count": 25
       },
       "format": "RGBA8"
     },
     {
       "name": "frisbee_image",
-	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
+      "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
       "type": "texture2D",
       "description": "Frisbee pose image input",
       "dimensions": {
-        "width": 512,
-        "height": 512,
-		"block_len": 786432 ,
-		"block_line_stride": 1536,
-		"block_stride": 0,
-		"chunk_line_stride": 384,
-		"chunk_offset": 0,
-		"chunk_stride": 1152,
-		"chunk_subchunk_height": 4,
-		"chunk_subchunk_width": 4,
-		"chunk_count": 16
+        "width": 512, "height": 512,
+        "block_len": 786432, "block_line_stride": 1536, "block_stride": 0,
+        "chunk_line_stride": 384, "chunk_offset": 0, "chunk_stride": 1152,
+        "chunk_subchunk_height": 4, "chunk_subchunk_width": 4, "chunk_count": 16
       },
       "format": "RGB8"
     }
@@ -249,134 +203,195 @@ void CreateProcessingTransaction( const std::vector<std::string> &args, std::sha
 
   "outputs": [
     {
-      "name": "ballet_keypoints",
-	  "source_uri_param": "dummy",
-      "type": "tensor",
-      "description": "Detected keypoints for ballet image",
-      "dimensions": {
-        "width": 17,
-        "height": 3
-      },
-      "format": "FLOAT32"
+      "name": "ballet_keypoints", "source_uri_param": "dummy",
+      "type": "tensor", "description": "Detected keypoints for ballet image",
+      "dimensions": { "width": 17, "height": 3 }, "format": "FLOAT32"
     },
     {
-      "name": "frisbee_keypoints",
-	  "source_uri_param": "dummy",
-      "type": "tensor",
-      "description": "Detected keypoints for frisbee image",
-      "dimensions": {
-        "width": 17,
-        "height": 3
-      },
-      "format": "FLOAT32"
+      "name": "frisbee_keypoints", "source_uri_param": "dummy",
+      "type": "tensor", "description": "Detected keypoints for frisbee image",
+      "dimensions": { "width": 17, "height": 3 }, "format": "FLOAT32"
     }
   ],
 
   "passes": [
     {
-      "name": "ballet_pose_inference",
-      "type": "inference",
+      "name": "ballet_pose_inference", "type": "inference",
       "description": "Run PoseNet inference on ballet image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
-        "format": "MNN",
-        "batch_size": 1,
+        "format": "MNN", "batch_size": 1,
         "input_nodes": [
-          {
-            "name": "input",
-            "type": "texture2D",
-            "source": "input:ballet_image",
-            "shape": [1, 256, 256, 4]
-          }
+          { "name": "input", "type": "texture2D", "source": "input:ballet_image", "shape": [1, 256, 256, 4] }
         ],
         "output_nodes": [
-          {
-            "name": "output",
-            "type": "tensor",
-            "target": "output:ballet_keypoints",
-            "shape": [1, 17, 3]
-          }
+          { "name": "output", "type": "tensor", "target": "output:ballet_keypoints", "shape": [1, 17, 3] }
         ]
       }
     },
     {
-      "name": "frisbee_pose_inference",
-      "type": "inference",
+      "name": "frisbee_pose_inference", "type": "inference",
       "description": "Run PoseNet inference on frisbee image",
       "model": {
         "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
-        "format": "MNN",
-        "batch_size": 1,
+        "format": "MNN", "batch_size": 1,
         "input_nodes": [
-          {
-            "name": "input",
-            "type": "texture2D",
-            "source": "input:frisbee_image",
-            "shape": [1, 256, 256, 4]
-          }
+          { "name": "input", "type": "texture2D", "source": "input:frisbee_image", "shape": [1, 256, 256, 4] }
         ],
         "output_nodes": [
-          {
-            "name": "output",
-            "type": "tensor",
-            "target": "output:frisbee_keypoints",
-            "shape": [1, 17, 3]
-          }
+          { "name": "output", "type": "tensor", "target": "output:frisbee_keypoints", "shape": [1, 17, 3] }
         ]
       }
     }
   ]
+})";
+
+static void cmd_info( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 1, "info" ) )
+    {
+        return;
+    }
+    logger->info( "Balance: {}", node->GetBalance() );
 }
-       )";
-    auto        jobpost   = genius_node->ProcessImage( json_data /*args[1]*/
-    );
+
+static void cmd_balance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "balance <token_id>" ) )
+    {
+        return;
+    }
+    logger->info( "Balance: {}", node->GetBalance( args[1] ) );
+}
+
+static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 1, "ds" ) )
+    {
+        return;
+    }
+    node->PrintDataStore();
+}
+
+static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "mint <amount>" ) )
+    {
+        return;
+    }
+    try
+    {
+        node->MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+    }
+    catch ( const std::exception &e )
+    {
+        logger->error( "Invalid amount: '{}' — must be a non-negative integer.", args[1] );
+    }
+}
+
+static void cmd_transfer( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 3, "transfer <amount> <recipient_address>" ) )
+    {
+        return;
+    }
+    try
+    {
+        node->TransferFunds( std::stoull( args[1] ),
+                             args[2],
+                             sgns::TokenID::FromBytes( { 0x00 } ),
+                             std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_TRANSFER ) );
+    }
+    catch ( const std::exception &e )
+    {
+        logger->error( "Invalid amount: '{}' — must be a non-negative integer.", args[1] );
+    }
+}
+
+static void cmd_price( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count_min( args, 2, "price <token_id1> [token_id2 ...]" ) )
+    {
+        return;
+    }
+    std::vector<std::string> tokenIds( args.begin() + 1, args.end() );
+    auto                     prices = node->GetCoinprice( tokenIds );
+    for ( const auto &[token, price] : prices.value() )
+    {
+        logger->info( "{}: ${:.4f}", token, price );
+    }
+}
+
+static void cmd_process( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> node )
+{
+    auto jobpost = node->ProcessImage( POSENET_JSON );
     if ( !jobpost )
     {
-        std::cout << "Job post error: " << jobpost.error().message() << std::endl;
+        logger->error( "Job post error: {}", jobpost.error().message() );
     }
 }
 
-std::vector<std::string> split_string( const std::string &str )
+static void cmd_peer( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
-    std::istringstream       iss( str );
-    std::vector<std::string> results( ( std::istream_iterator<std::string>( iss ) ),
-                                      std::istream_iterator<std::string>() );
-    return results;
-}
-
-void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
-{
-    while ( !finished )
+    if ( !check_arg_count( args, 2, "peer <multiaddr>" ) )
     {
-        std::this_thread::sleep_for( std::chrono::seconds( 2 ) ); // Poll every 2 seconds
-        if ( finished )
-        {
-            break;
-        }
-
-        auto status = genius_node->GetProcessingStatus();
-
-        std::string status_str;
-        switch ( status.status )
-        {
-            case sgns::processing::ProcessingServiceImpl::Status::DISABLED:
-                status_str = "DISABLED";
-                break;
-            case sgns::processing::ProcessingServiceImpl::Status::IDLE:
-                status_str = "IDLE";
-                break;
-            case sgns::processing::ProcessingServiceImpl::Status::PROCESSING:
-                status_str = "PROCESSING";
-                break;
-        }
-
-        // Simple output without terminal manipulation
-        std::cout << "[Status: " << status_str << " | Progress: " << std::fixed << std::setprecision( 2 )
-                  << status.percentage << "%]" << std::endl;
+        return;
     }
+    node->AddPeer( args[1] );
 }
 
-void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
+static void cmd_stopprocessing( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> node )
+{
+    node->StopProcessing();
+    logger->info( "Stopping processing" );
+}
+
+static void cmd_quit( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> /*node*/ )
+{
+    finished = true;
+}
+
+static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> /*node*/ );
+
+using CmdFunc = std::function<void( const std::vector<std::string> &, std::shared_ptr<sgns::GeniusNode> )>;
+static const std::map<std::string, CmdFunc> COMMANDS = {
+    { "help", cmd_help },
+    { "?", cmd_help },
+    { "info", cmd_info },
+    { "balance", cmd_balance },
+    { "ds", cmd_ds },
+    { "mint", cmd_mint },
+    { "transfer", cmd_transfer },
+    { "price", cmd_price },
+    { "process", cmd_process },
+    { "peer", cmd_peer },
+    { "stopprocessing", cmd_stopprocessing },
+    { "quit", cmd_quit },
+};
+
+static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr<sgns::GeniusNode> /*node*/ )
+{
+    std::cout << "Available commands:\n"
+              << "  help, ?                  Show this help\n"
+              << "  info                     Display account balance\n"
+              << "  balance <token_id>       Display balance for a specific token\n"
+              << "  ds                       Print the data store\n"
+              << "  mint <amount>            Mint tokens\n"
+              << "  transfer <amt> <addr>    Transfer tokens to an address\n"
+              << "  price <token1> [tokens]  Get coin prices\n"
+              << "  process                  Submit a processing job\n"
+              << "  peer <multiaddr>         Add a peer\n"
+              << "  stopprocessing           Stop processing\n"
+              << "  quit                     Exit the application\n";
+}
+
+static std::vector<std::string> split_string( const std::string &str )
+{
+    std::istringstream iss( str );
+    return { std::istream_iterator<std::string>( iss ), std::istream_iterator<std::string>() };
+}
+
+static void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
     {
@@ -387,235 +402,79 @@ void process_events( std::shared_ptr<sgns::GeniusNode> genius_node )
         {
             std::string event = std::move( events.front() );
             events.pop();
-
-            lock.unlock(); // Unlock while processing
+            lock.unlock();
 
             auto arguments = split_string( event );
             if ( arguments.empty() )
             {
-                std::cerr << "Invalid command\n";
+                lock.lock();
+                continue;
             }
-            else if ( arguments[0] == "process" )
+
+            std::string cmd = to_lower( arguments[0] );
+            auto        it  = COMMANDS.find( cmd );
+
+            if ( it != COMMANDS.end() )
             {
-                CreateProcessingTransaction( arguments, genius_node );
-            }
-            else if ( arguments[0] == "mint" )
-            {
-                MintTokens( arguments, genius_node );
-            }
-            else if ( arguments[0] == "transfer" )
-            {
-                TransferTokens( arguments, genius_node );
-            }
-            else if ( arguments[0] == "info" )
-            {
-                PrintAccountInfo( arguments, genius_node );
-            }
-            else if ( arguments[0] == "balance" )
-            {
-                PrintNodeBalance( arguments, genius_node );
-            }
-            else if ( arguments[0] == "ds" )
-            {
-                PrintDataStore( arguments, genius_node );
-            }
-            else if ( arguments[0] == "price" )
-            {
-                GetCoinPrice( arguments, genius_node );
-            }
-            else if ( arguments[0] == "peer" )
-            {
-                if ( arguments.size() > 1 )
-                {
-                    genius_node->AddPeer( arguments[1] );
-                }
-                else
-                {
-                    std::cerr << "Invalid peer command\n";
-                }
-            }
-            else if ( arguments[0] == "stopprocessing" )
-            {
-                genius_node->StopProcessing();
-                std::cout << "Stopping processing" << std::endl;
-            }
-            else if ( arguments[0] == "quit" )
-            {
-                finished = true;
+                it->second( arguments, genius_node );
             }
             else
             {
-                std::cerr << "Unknown command: " << arguments[0] << "\n";
+                logger->warn( "Unknown command: '{}' — type 'help' for available commands.", cmd );
             }
 
-            lock.lock(); // Re-lock before checking the condition again
+            lock.lock();
         }
     }
 }
 
-void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
+void status_polling_thread( std::shared_ptr<sgns::GeniusNode> genius_node )
+{
+    static const char *STATUS_NAMES[] = { "DISABLED", "IDLE", "PROCESSING" };
+
+    while ( !finished )
+    {
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+        if ( finished )
+        {
+            break;
+        }
+
+        auto status = genius_node->GetProcessingStatus();
+        logger->info( "[Status: {} | Progress: {:.2f}%]",
+                      STATUS_NAMES[static_cast<int>( status.status )],
+                      status.percentage );
+    }
+}
+
+static void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
 {
     while ( !finished )
     {
-        std::this_thread::sleep_for( std::chrono::minutes( 7 ) ); // Wait for 1 minute
+        std::this_thread::sleep_for( std::chrono::minutes( 7 ) );
         if ( finished )
         {
-            break; // Exit if the application is shutting down
+            break;
         }
 
-        std::string json_data = R"(
-{
-  "name": "posenet-inference",
-  "version": "1.0.0",
-  "gnus_spec_version": 1.0,
-  "author": "AI Assistant",
-  "description": "PoseNet inference on multiple image inputs using MNN model",
-  "tags": ["pose-estimation", "computer-vision", "inference"],
-
-  "inputs": [
-    {
-      "name": "ballet_image",
-	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/ballet.data",
-      "type": "texture2D",
-      "description": "Ballet pose image input",
-      "dimensions": {
-        "width": 1350,
-        "height": 900,
-		"block_len": 4860000 ,
-		"block_line_stride": 5400,
-		"block_stride": 0,
-		"chunk_line_stride": 1080,
-		"chunk_offset": 0,
-		"chunk_stride": 4320,
-		"chunk_subchunk_height": 5,
-		"chunk_subchunk_width": 5,
-		"chunk_count": 25
-      },
-      "format": "RGBA8"
-    },
-    {
-      "name": "frisbee_image",
-	  "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/data/frisbee3.data",
-      "type": "texture2D",
-      "description": "Frisbee pose image input",
-      "dimensions": {
-        "width": 512,
-        "height": 512,
-		"block_len": 786432 ,
-		"block_line_stride": 1536,
-		"block_stride": 0,
-		"chunk_line_stride": 384,
-		"chunk_offset": 0,
-		"chunk_stride": 1152,
-		"chunk_subchunk_height": 4,
-		"chunk_subchunk_width": 4,
-		"chunk_count": 16
-      },
-      "format": "RGB8"
-    }
-  ],
-
-  "outputs": [
-    {
-      "name": "ballet_keypoints",
-	  "source_uri_param": "dummy",
-      "type": "tensor",
-      "description": "Detected keypoints for ballet image",
-      "dimensions": {
-        "width": 17,
-        "height": 3
-      },
-      "format": "FLOAT32"
-    },
-    {
-      "name": "frisbee_keypoints",
-	  "source_uri_param": "dummy",
-      "type": "tensor",
-      "description": "Detected keypoints for frisbee image",
-      "dimensions": {
-        "width": 17,
-        "height": 3
-      },
-      "format": "FLOAT32"
-    }
-  ],
-
-  "passes": [
-    {
-      "name": "ballet_pose_inference",
-      "type": "inference",
-      "description": "Run PoseNet inference on ballet image",
-      "model": {
-        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
-        "format": "MNN",
-        "batch_size": 1,
-        "input_nodes": [
-          {
-            "name": "input",
-            "type": "texture2D",
-            "source": "input:ballet_image",
-            "shape": [1, 256, 256, 4]
-          }
-        ],
-        "output_nodes": [
-          {
-            "name": "output",
-            "type": "tensor",
-            "target": "output:ballet_keypoints",
-            "shape": [1, 17, 3]
-          }
-        ]
-      }
-    },
-    {
-      "name": "frisbee_pose_inference",
-      "type": "inference",
-      "description": "Run PoseNet inference on frisbee image",
-      "model": {
-        "source_uri_param": "https://ipfs.filebase.io/ipfs/QmdHvvEXRUgmyn1q3nkQwf9yE412Vzy5gSuGAukHRLicXA/model.mnn",
-        "format": "MNN",
-        "batch_size": 1,
-        "input_nodes": [
-          {
-            "name": "input",
-            "type": "texture2D",
-            "source": "input:frisbee_image",
-            "shape": [1, 256, 256, 4]
-          }
-        ],
-        "output_nodes": [
-          {
-            "name": "output",
-            "type": "tensor",
-            "target": "output:frisbee_keypoints",
-            "shape": [1, 17, 3]
-          }
-        ]
-      }
-    }
-  ]
-}
-               )";
-        auto        jobpost   = genius_node->ProcessImage( json_data /*args[1]*/
-        );
+        auto jobpost = genius_node->ProcessImage( POSENET_JSON );
         if ( !jobpost )
         {
-            std::cout << "Job post error: " << jobpost.error().message() << std::endl;
+            logger->error( "Job post error: {}", jobpost.error().message() );
         }
     }
 }
 
-std::string generate_eth_private_key()
+static std::string generate_eth_private_key()
 {
     std::random_device                      rd;
-    std::mt19937                            gen( rd() );
+    std::mt19937                            gen( 42 );
     std::uniform_int_distribution<uint16_t> dist( 0, 255 );
 
     std::ostringstream oss;
     for ( int i = 0; i < 32; ++i )
     {
-        oss << std::hex << std::setw( 2 ) << std::setfill( '0' )
-            << ( dist( gen ) & 0xFF ); // Mask to ensure only lower 8 bits are used
+        oss << std::hex << std::setw( 2 ) << std::setfill( '0' ) << ( dist( gen ) & 0xFF );
     }
     return oss.str();
 }
@@ -626,78 +485,78 @@ int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
     bool        is_processor     = true;  // Default value for the last parameter
-    bool        use_upnp         = true;  // Default UPNP usage
     bool        is_full_node     = false;
-    bool        terminal_mode    = false; // Enable terminal input mode
-    std::string path_override    = "";    // Path override for DEV_CONFIG
+    bool        terminal_mode    = false;
+    std::string path_override;
 
-    // Parse command-line arguments
-    if ( argc > 1 )
+    for ( int i = 1; i < argc; ++i )
     {
-        std::string arg = argv[1];
+        std::string arg = argv[i];
+
         if ( arg == "server" )
         {
             start_processing = true;
             is_processor     = false;
-            use_upnp         = false;
             is_full_node     = true;
         }
         else if ( arg == "jobposter" )
         {
             start_processing = true;
             is_processor     = false;
-            use_upnp         = true;
             is_full_node     = false;
         }
-
-        // Check for path override argument (e.g., --path=/custom/path or -p /custom/path)
-        for ( int i = 1; i < argc; ++i )
+        else if ( arg == "--full" )
         {
-            std::string current_arg = argv[i];
-            if ( current_arg.rfind( "--path=", 0 ) == 0 )
-            {
-                path_override = current_arg.substr( 7 ); // Extract path after "--path="
-            }
-            else if ( ( current_arg == "-p" || current_arg == "--path" ) && i + 1 < argc )
-            {
-                path_override = argv[i + 1];
-            }
-            else if ( current_arg == "--terminal" )
-            {
-                terminal_mode = true;
-            }
+            is_full_node = true;
+        }
+        else if ( arg == "--terminal" )
+        {
+            terminal_mode = true;
+        }
+        else if ( arg.rfind( "--path=", 0 ) == 0 )
+        {
+            path_override = arg.substr( 7 );
+        }
+        else if ( ( arg == "-p" || arg == "--path" ) && i + 1 < argc )
+        {
+            path_override = argv[++i];
         }
     }
 
-    // Apply path override if provided
     if ( !path_override.empty() )
     {
         DEV_CONFIG.BaseWritePath = path_override;
-        std::cout << "Using custom path: " << path_override << '\n';
+        logger->info( "Using custom path: {}", path_override );
     }
 
-    // Generate a random Ethereum-compatible private key
     std::string eth_private_key = generate_eth_private_key();
-    std::cout << "Generated Ethereum Private Key: " << eth_private_key << '\n';
+    logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
-    //sgns::Blockchain::SetAuthorizedFullNodeAddress( "a62f83ab9f2de6ac95e2336053aea94f8fab10dfb8d3043efe64c3f4e565cfcc2c5aacd6d6092682b8de8383444f746d150b3f7891ed46c9050502ed4b6898a6" );
     auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node, use_upnp );
+        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
+
+    std::thread status_thread;
+
+    while ( node_instance->GetState() != sgns::GeniusNode::NodeState::READY )
+    {
+        std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+    }
 
     std::thread input_thread;
-    std::thread status_thread;
     if ( terminal_mode )
     {
         input_thread = std::thread( keyboard_input_thread );
-    }
-
-    //status_thread = std::thread( status_polling_thread, node_instance );
-
-    if ( terminal_mode )
-    {
-        std::cout << "Insert \"process\", the image and the number of tokens to be" << '\n';
+        logger->info( "Interactive mode. Type 'help' for available commands." );
         redraw_prompt();
     }
+
+    auto idle_loop = []
+    {
+        while ( !finished )
+        {
+            std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
+        }
+    };
 
     if ( start_processing )
     {
@@ -709,11 +568,7 @@ int main( int argc, char *argv[] )
         }
         else
         {
-            // Just wait for the processing thread without processing terminal events
-            while ( !finished )
-            {
-                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-            }
+            idle_loop();
         }
 
         if ( processing_thread.joinable() )
@@ -729,22 +584,13 @@ int main( int argc, char *argv[] )
         }
         else
         {
-            // Just keep running without processing terminal events
-            while ( !finished )
-            {
-                std::this_thread::sleep_for( std::chrono::seconds( 1 ) );
-            }
+            idle_loop();
         }
     }
 
     if ( input_thread.joinable() )
     {
         input_thread.join();
-    }
-
-    if ( status_thread.joinable() )
-    {
-        status_thread.join();
     }
 
     return 0;

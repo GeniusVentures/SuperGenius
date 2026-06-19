@@ -11,16 +11,12 @@
 
 #include <memory>
 #include <deque>
-#include <cstdint>
-#include <map>
-#include <unordered_map>
+#include <atomic>
 #include <string>
 
 #include <boost/asio/io_context.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "base/logger.hpp"
-#include "upnp.hpp"
-#include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
@@ -38,7 +34,7 @@ namespace sgns
     class MigrationManager : public std::enable_shared_from_this<MigrationManager>
     {
     public:
-        enum class Error
+        enum class Error: uint8_t
         {
             BLOCKCHAIN_INIT_FAILED = 1,
         };
@@ -77,6 +73,21 @@ namespace sgns
          */
         outcome::result<void> Migrate();
 
+        /// @return 1-based index of the migration step currently being processed, or 0 if not started.
+        size_t GetCurrentStepIndex() const
+        {
+            return current_step_index_.load();
+        }
+
+        /// @return Total number of registered migration steps.
+        size_t GetTotalSteps() const
+        {
+            return total_steps_;
+        }
+
+        /// @return Human-readable description of the current migration step.
+        std::string GetCurrentStepDescription() const;
+
         static constexpr std::string_view VERSION_INFO_KEY = "kSGNSCRDTVersion";
 
     private:
@@ -87,6 +98,9 @@ namespace sgns
 
         std::deque<std::shared_ptr<IMigrationStep>> steps_;               ///< Queue of registered migration steps.
         base::Logger m_logger = base::createLogger( "MigrationManager" ); ///< Logger instance.
+
+        std::atomic<size_t> current_step_index_{ 0 }; ///< 1-based index of the step currently being migrated.
+        size_t              total_steps_{ 0 };        ///< Total number of steps (set before migration begins).
     };
 } // namespace sgns
 
