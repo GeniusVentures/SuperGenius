@@ -98,6 +98,7 @@ namespace sgns
             std::shared_ptr<crypto::Hasher>          hasher,
             std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
+            uint16_t                                 subnet_id           = 0,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
@@ -303,6 +304,16 @@ namespace sgns
                             std::chrono::milliseconds                timestamp_tolerance,
                             std::chrono::milliseconds                mutability_window );
 
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<crypto::Hasher>          hasher,
+                            std::shared_ptr<Blockchain>              blockchain,
+                            bool                                     full_node,
+                            uint16_t                                 subnet_id,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                mutability_window );
+
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
@@ -340,7 +351,7 @@ namespace sgns
 
         /**
          * @brief Returns the set of network IDs to monitor.
-         *        On DEV_NET, also includes TEST_NET and MAIN_NET.
+         *        On DEV_NET (144), also includes TEST_NET (963) and MAIN_NET (369).
          */
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
@@ -460,6 +471,7 @@ namespace sgns
         std::shared_ptr<crypto::Hasher>          hasher_m;
         std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
+        uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
         std::mutex                               state_change_callback_mutex_;

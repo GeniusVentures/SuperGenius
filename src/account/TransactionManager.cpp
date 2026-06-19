@@ -103,6 +103,7 @@ namespace sgns
                                                                  std::shared_ptr<crypto::Hasher>          hasher,
                                                                  std::shared_ptr<Blockchain>              blockchain,
                                                                  bool                                     full_node,
+                                                                 uint16_t                                 subnet_id,
                                                                  std::chrono::milliseconds timestamp_tolerance,
                                                                  std::chrono::milliseconds mutability_window )
     {
@@ -112,6 +113,7 @@ namespace sgns
                                                                                      std::move( hasher ),
                                                                                      std::move( blockchain ),
                                                                                      full_node,
+                                                                                     subnet_id,
                                                                                      timestamp_tolerance,
                                                                                      mutability_window ) );
 
@@ -219,6 +221,7 @@ namespace sgns
                                             std::shared_ptr<crypto::Hasher>          hasher,
                                             std::shared_ptr<Blockchain>              blockchain,
                                             bool                                     full_node,
+                                            uint16_t                                 subnet_id,
                                             std::chrono::milliseconds                timestamp_tolerance,
                                             std::chrono::milliseconds                mutability_window ) :
         globaldb_m( std::move( processing_db ) ),
@@ -227,6 +230,7 @@ namespace sgns
         hasher_m( std::move( hasher ) ),
         blockchain_( std::move( blockchain ) ),
         full_node_m( full_node ),
+        subnet_id_( subnet_id ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( timestamp_tolerance ),
@@ -349,7 +353,7 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_           = now;
+        last_loop_time_ = now;
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
