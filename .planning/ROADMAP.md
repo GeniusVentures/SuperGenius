@@ -160,7 +160,7 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	**Goal:** Decode 32-byte X-only compressed SG public key from BridgeOutInitiated events → decompress to full X+Y key → construct destination matching GetAddress(). Register new event in EventRegistry (kBytes32), retain v1 BridgeSourceBurned (kBytes). BridgeRelayer registers dual watches and dispatches v1/v2 events. Catch-up scan queries both v1 and v2 topic0 hashes.
 	**Requirements**: REQ-V2-01, REQ-V2-02, REQ-V2-03, REQ-V2-04, REQ-V2-05, REQ-V2-06, REQ-V2-07, REQ-V2-08, REQ-V2-09
 	**Depends on:** Phase 05.1 (Observer pattern, ChainContractPair, IBridgeInitObserver)
-	**Plans:** 3/4 plans executed
+	**Plans:** 4/4 plans complete
 	
 	**Wave 1** (evmrelay foundation — independent):
 	Plans:
@@ -173,7 +173,7 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	
 	**Wave 3** (test coverage — depends on Waves 1+2):
 	Plans:
-	- [ ] 05.2-04-PLAN.md — EventRegistry v2 tests + BridgeRelayer v2 dispatch/dual-watch tests + Startup catch-up scan v2 topic0 tests (REQ-V2-03, REQ-V2-04, REQ-V2-07, REQ-V2-09)
+	- [x] 05.2-04-PLAN.md — EventRegistry v2 tests + BridgeRelayer v2 dispatch/dual-watch tests + Startup catch-up scan v2 topic0 tests (REQ-V2-03, REQ-V2-04, REQ-V2-07, REQ-V2-09)
 
 ### Phase 05.1: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (INSERTED)
 
