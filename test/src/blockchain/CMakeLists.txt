@@ -48,6 +48,16 @@ target_link_libraries(consensus_bridge_mint_subject_test
     blockchain_genesis
 )
 
+# Phase 6 (D-08): REGULAR -> FULL promotion decision unit tests. Exercises the
+# pure static EvaluateRegularPromotionStatic helper directly -- no GlobalDB
+# wiring needed (mirrors the EvaluateSlotQuorumStatic pattern from 06-02).
+addtest(validator_registry_promotion_test
+    validator_registry_promotion_test.cpp
+)
+target_link_libraries(validator_registry_promotion_test
+    blockchain_genesis
+)
+
 # ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
 # GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
 # Test deferred to E2E integration (Phase 4).

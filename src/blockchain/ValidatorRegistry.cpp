@@ -489,6 +489,27 @@ namespace sgns
         return result;
     }
 
+    // D-08: REGULAR -> FULL promotion decision (REQ-DETERM-01). Pure function of
+    // (entry, weight_config): every peer with identical inputs computes an
+    // identical promotion decision. ApplyVoteEffects delegates here after the
+    // approve-branch weight clamp so the just-clamped weight and just-updated
+    // penalty_score are considered.
+    bool ValidatorRegistry::EvaluateRegularPromotionStatic(
+        const ValidatorEntry &entry,
+        const WeightConfig   &weight_config )
+    {
+        // GENESIS is never demoted to FULL; SHARDED is not promoted by this rule;
+        // an already-FULL entry is not re-promoted (idempotent).
+        if ( entry.role() != Role::REGULAR )
+        {
+            return false;
+        }
+        // Weight must reach the promotion threshold AND penalty must be strictly
+        // below the threshold (a penalized node must earn back reputation).
+        return entry.weight() >= weight_config.full_promotion_weight_
+            && entry.penalty_score() < weight_config.penalty_threshold_;
+    }
+
     ValidatorRegistry::Registry ValidatorRegistry::CreateGenesisRegistry(
         const std::string &genesis_validator_id ) const
     {
@@ -1882,6 +1903,7 @@ namespace sgns
             const uint64_t old_weight  = entry.weight();
             const uint32_t old_penalty = penalty;
             const auto     old_status  = entry.status();
+            const auto     old_role    = entry.role();
             entry.set_missed_epochs( 0 );
 
             if ( approve )
@@ -1916,6 +1938,16 @@ namespace sgns
                         }
                         const uint64_t clamped = std::min( entry.weight() + increment, role_cap );
                         entry.set_weight( clamped );
+                    }
+
+                    // D-08: REGULAR -> FULL promotion. Promoted FULL nodes accumulate
+                    // weight up to full_max_weight_, which flows into EvaluateSlotQuorum
+                    // via validator.weight() with no tally-side special case. The
+                    // promotion operates on the just-clamped weight and just-updated
+                    // penalty_score; it only changes the role, never the weight.
+                    if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
+                    {
+                        entry.set_role( Role::FULL );
                     }
                 }
                 else if ( penalty == 0 )
@@ -1960,6 +1992,16 @@ namespace sgns
                             entry.penalty_score(),
                             static_cast<int>( old_status ),
                             static_cast<int>( entry.status() ) );
+            // D-08: surface the REGULAR -> FULL promotion only when the role
+            // actually changed, so the common no-promotion path stays quiet.
+            if ( entry.role() != old_role )
+            {
+                logger_->debug( "{}: role promotion id={} role {}->{}",
+                                __func__,
+                                entry.validator_id().substr( 0, 8 ),
+                                static_cast<int>( old_role ),
+                                static_cast<int>( entry.role() ) );
+            }
         }
     }
 
