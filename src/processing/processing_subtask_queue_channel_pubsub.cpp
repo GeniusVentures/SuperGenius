@@ -6,15 +6,10 @@ namespace sgns::processing
 {
     ProcessingSubTaskQueueChannelPubSub::ProcessingSubTaskQueueChannelPubSub(
         std::shared_ptr<GossipPubSub> gossipPubSub,
-        const std::string            &processingQueueChannelId,
-        uint16_t network_id ) :
+        const std::string            &processingQueueChannelId ) :
         m_gossipPubSub( std::move( gossipPubSub ) )
     {
-        auto processing_queue_topic = processingQueueChannelId +
-            sgns::version::GetNetAndVersionAppendix(
-                sgns::version::SuperGeniusVersionMajor(),
-                sgns::version::SuperGeniusVersionMinor(),
-                network_id );
+        auto processing_queue_topic = processingQueueChannelId + sgns::version::GetNetAndVersionAppendix();
         m_processingQueueChannel    = std::make_shared<GossipPubSubTopic>( m_gossipPubSub, processing_queue_topic );
     }
 

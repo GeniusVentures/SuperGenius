@@ -98,10 +98,9 @@ namespace sgns
             std::shared_ptr<crypto::Hasher>          hasher,
             std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
+            uint16_t                                 subnet_id           = 0,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ),
-            uint16_t                                 network_id          = 144,
-            uint16_t                                 subnet_id           = 0 );
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
 
         ~TransactionManager();
 
@@ -190,10 +189,10 @@ namespace sgns
         TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                 std::chrono::milliseconds timeout ) const;
 
-        std::string GetTransactionPath( uint16_t base, const std::string &tx_hash ) const;
-        std::string GetTransactionPath( const IGeniusTransactions &element ) const;
-        std::string GetTransactionPath( const std::string &tx_hash ) const;
-        std::string GetTransactionProofPath( const IGeniusTransactions &element ) const;
+        static std::string GetTransactionPath( uint16_t base, const std::string &tx_hash );
+        static std::string GetTransactionPath( const IGeniusTransactions &element );
+        static std::string GetTransactionPath( const std::string &tx_hash );
+        static std::string GetTransactionProofPath( const IGeniusTransactions &element );
 
         /**
          * @brief Fetches and deserializes a transaction from the CRDT by key.
@@ -247,14 +246,8 @@ namespace sgns
         /// @brief Builds the blockchain key prefix "/bc-<network_id>/" for the given network.
         static std::string GetBlockChainBase( uint16_t network_id );
 
-        /// @brief Overload using this instance's network_id_.
-        std::string GetBlockChainBase() const;
-
-        /**
-         * @brief Returns the monitored networks for an explicit network_id.
-         *        On DEV_NET (144), also includes TEST_NET (963) and MAIN_NET (369).
-         */
-        static std::vector<uint16_t> GetMonitoredNetworkIDs( uint16_t network_id );
+        /// @brief Overload using the current network ID.
+        static std::string GetBlockChainBase();
 
         /**
          * @brief Queries all transaction keys from the CRDT across monitored networks
@@ -317,10 +310,9 @@ namespace sgns
                             std::shared_ptr<crypto::Hasher>          hasher,
                             std::shared_ptr<Blockchain>              blockchain,
                             bool                                     full_node,
+                            uint16_t                                 subnet_id,
                             std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window,
-                            uint16_t                                 network_id,
-                            uint16_t                                 subnet_id );
+                            std::chrono::milliseconds                mutability_window );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
@@ -358,17 +350,17 @@ namespace sgns
         outcome::result<void> RollbackTransactions( TransactionItem &item_to_rollback );
 
         /**
-         * @brief Returns the set of network IDs to monitor for this instance.
+         * @brief Returns the set of network IDs to monitor.
          *        On DEV_NET (144), also includes TEST_NET (963) and MAIN_NET (369).
          */
-        std::vector<uint16_t> GetMonitoredNetworkIDs() const;
+        static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         /**
          * @brief Derives the proof key that corresponds to a transaction key by
          *        replacing "/tx/" with "/proof/".
          */
-        outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
+        static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
                                                                  const std::shared_ptr<IGeniusTransactions> &tx );
 
         /**
@@ -479,8 +471,7 @@ namespace sgns
         std::shared_ptr<crypto::Hasher>          hasher_m;
         std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
-        uint16_t                                 network_id_ = 144;  ///< Network ID from config.
-        uint16_t                                 subnet_id_  = 0;    ///< Subnet ID from config (reserved).
+        uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).
         std::string                              full_node_topic_m; ///< formatted full-node topic
         State                                    state_m;
         std::mutex                               state_change_callback_mutex_;

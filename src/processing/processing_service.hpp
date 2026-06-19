@@ -44,8 +44,7 @@ namespace sgns::processing
                                std::function<void( const std::string              &subTaskQueueId,
                                                    const SGProcessing::TaskResult &taskresult )> userCallbackSuccess,
                                std::function<void( const std::string &subTaskQueueId )>          userCallbackError,
-                               std::string                                                       node_address,
-                               uint16_t                                                          network_id = 144 );
+                               std::string                                                       node_address );
 
         ~ProcessingServiceImpl();
 
@@ -125,7 +124,6 @@ namespace sgns::processing
         std::mutex            m_mutexBlacklist;
 
         base::Logger m_logger = base::createLogger( "ProcessingService" );
-        uint16_t     m_network_id = 144; ///< Network ID from config.
     };
 }
 

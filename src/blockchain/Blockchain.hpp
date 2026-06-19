@@ -78,8 +78,7 @@ namespace sgns
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                BlockchainCallback                         callback,
-                                                uint16_t                                   network_id = 144 );
+                                                BlockchainCallback                         callback );
 
         /**
          * @brief Destroys the blockchain instance.

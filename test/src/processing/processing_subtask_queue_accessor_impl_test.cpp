@@ -89,8 +89,7 @@ TEST_F(SubTaskQueueAccessorImplTest, SubscriptionToResultChannel)
     Color::PrintInfo("Waited ", resultTime.count(),  " ms for connection");
 
      // Create external result publisher since echo messages are off
-    std::string externalChannelId = "RESULT_CHANNEL_ID_test" +
-                                   sgns::version::GetNetAndVersionAppendix( 3, 7, 144 );
+    std::string externalChannelId = "RESULT_CHANNEL_ID_test" + sgns::version::GetNetAndVersionAppendix();
     sgns::ipfs_pubsub::GossipPubSubTopic externalResultChannel( pubs2, externalChannelId );
     auto                                &subscriptionFuture = externalResultChannel.Subscribe(
         []( const boost::optional<const GossipPubSub::Message &> &message ) {},

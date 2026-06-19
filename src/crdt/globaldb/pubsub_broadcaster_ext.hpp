@@ -36,8 +36,7 @@ namespace sgns::crdt
          * @return Shared pointer to the new PubSubBroadcasterExt.
          */
         static std::shared_ptr<PubSubBroadcasterExt> New( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                                                          std::shared_ptr<GossipPubSub>                   pubSub,
-                                                          uint16_t network_id = 144 );
+                                                          std::shared_ptr<GossipPubSub>                   pubSub );
 
         /**
          * @brief Sends the given buffer as a broadcast to peers.
@@ -99,8 +98,7 @@ namespace sgns::crdt
          * @param pubSub       PubSub instance used to subscribe and publish.
          */
         PubSubBroadcasterExt( std::shared_ptr<sgns::crdt::GraphsyncDAGSyncer> dagSyncer,
-                              std::shared_ptr<GossipPubSub>                   pubSub,
-                              uint16_t network_id );
+                              std::shared_ptr<GossipPubSub>                   pubSub );
 
         void OnMessage( boost::optional<const GossipPubSub::Message &> message, const std::string &incomingTopic );
 
@@ -118,7 +116,6 @@ namespace sgns::crdt
         std::atomic_bool started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        uint16_t           network_id_ = 144; ///< Network ID from config.
         std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;
 
         bool AddMultiCIDInfo( const std::vector<CID>                         &cids,

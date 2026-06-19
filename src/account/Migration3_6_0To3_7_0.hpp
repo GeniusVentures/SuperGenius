@@ -52,8 +52,7 @@ namespace sgns
                                std::string                                                     writeBasePath,
                                std::string                                                     base58key,
                                std::shared_ptr<GeniusAccount>                                  account,
-                               bool                                                            is_full_node,
-                               uint16_t                                                        network_id );
+                               bool                                                            is_full_node );
 
         /**
          * @brief Returns the source schema version handled by this step.
@@ -139,7 +138,6 @@ namespace sgns
         std::shared_ptr<TransactionManager> transaction_manager_; ///< Transaction manager used for the migration claim.
         std::shared_ptr<GeniusAccount>      account_;             ///< Local account being migrated.
         bool                                is_full_node_ = false; ///< Whether this node is a full node.
-        uint16_t                            network_id_ = 144;     ///< Network ID for DB path construction.
         std::atomic<Status>                 blockchain_status_{ Status::ST_INIT }; ///< Async blockchain startup status.
     };
 }

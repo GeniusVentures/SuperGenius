@@ -29,8 +29,7 @@ namespace sgns
                                std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
                                std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
                                std::string                                                     writeBasePath,
-                               std::string                                                     base58key,
-                               uint16_t                                                        network_id );
+                               std::string                                                     base58key );
         ~Migration1_0_0To3_4_0();
 
         /**
@@ -76,7 +75,6 @@ namespace sgns
         std::string                     writeBasePath_;                             ///< Base path for writing DB files.
         std::string                     base58key_;                                 ///< Key to build legacy paths.
         base::Logger                    logger_ = base::createLogger( "MigrationStep" ); ///< Logger for this step.
-        uint16_t                        network_id_ = 144;                                  ///< Network ID for DB path construction.
         std::shared_ptr<crdt::GlobalDB> db_3_4_0_;                                       ///< Target GlobalDB.
         std::shared_ptr<crdt::GlobalDB> db_1_0_0_;                                       ///< Legacy GlobalDB.
     };

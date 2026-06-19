@@ -516,7 +516,7 @@ namespace sgns
         return std::make_pair( std::move( storage ), std::make_pair( std::move( elgamal ), std::move( eth_key ) ) );
     }
 
-    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub, uint16_t network_id )
+    bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )
     {
         bool                               ret = false;
         AccountMessenger::InterfaceMethods methods;
@@ -629,8 +629,7 @@ namespace sgns
         };
         messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
                                             std::move( pubsub ),
-                                            std::move( methods ),
-                                            network_id );
+                                            std::move( methods ) );
 
         if ( messenger_ )
         {

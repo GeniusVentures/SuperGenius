@@ -76,8 +76,7 @@ namespace sgns
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
-                                                      std::string                                consensus_topic = "",
-                                                      uint16_t                                   network_id = 144 );
+                                                      std::string                                consensus_topic = "" );
         /**
          * @brief      Destroys the Consensus Manager object
          */
@@ -411,8 +410,7 @@ namespace sgns
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
-                                   std::string                                consensus_topic,
-                                   uint16_t                                   network_id );
+                                   std::string                                consensus_topic );
         /**
          * @brief Starts the background round timer loop.
          */
@@ -680,7 +678,6 @@ namespace sgns
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
-        uint16_t    network_id_ = 144;          ///< Network ID from config.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
         std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.

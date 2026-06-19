@@ -44,8 +44,7 @@ namespace sgns
 {
     std::shared_ptr<AccountMessenger> AccountMessenger::New( std::string                                address,
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                             InterfaceMethods                           methods,
-                                                             uint16_t                                    network_id )
+                                                             InterfaceMethods                           methods )
     {
         if ( address.empty() )
         {
@@ -60,7 +59,7 @@ namespace sgns
             return nullptr;
         }
         auto instance = std::shared_ptr<AccountMessenger>(
-            new AccountMessenger( std::move( address ), std::move( pubsub ), std::move( methods ), network_id ) );
+            new AccountMessenger( std::move( address ), std::move( pubsub ), std::move( methods ) ) );
 
         instance->subs_acc_future_ = std::move( instance->pubsub_->Subscribe(
             instance->account_comm_topic_,
@@ -97,20 +96,10 @@ namespace sgns
 
     AccountMessenger::AccountMessenger( std::string                                address,
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                        InterfaceMethods                           methods,
-                                        uint16_t                                    network_id ) :
+                                        InterfaceMethods                           methods ) :
         address_( std::move( address ) ),
-        network_id_( network_id ),
-        account_comm_topic_( address_ + std::string( ACCOUNT_COMM ) +
-                             sgns::version::GetNetAndVersionAppendix(
-                                 sgns::version::SuperGeniusVersionMajor(),
-                                 sgns::version::SuperGeniusVersionMinor(),
-                                 network_id ) ),
-        requests_topic_( std::string( REQUESTS_COMM ) +
-                         sgns::version::GetNetAndVersionAppendix(
-                             sgns::version::SuperGeniusVersionMajor(),
-                             sgns::version::SuperGeniusVersionMinor(),
-                             network_id ) ),
+        account_comm_topic_( address_ + std::string( ACCOUNT_COMM ) + sgns::version::GetNetAndVersionAppendix() ),
+        requests_topic_( std::string( REQUESTS_COMM ) + sgns::version::GetNetAndVersionAppendix() ),
         pubsub_( std::move( pubsub ) ),
         methods_( std::move( methods ) )
     {
@@ -734,10 +723,7 @@ namespace sgns
         *msg.mutable_block_response() = signed_resp;
 
         auto account_topic = requester_address + std::string( ACCOUNT_COMM ) +
-                             sgns::version::GetNetAndVersionAppendix(
-                                 sgns::version::SuperGeniusVersionMajor(),
-                                 sgns::version::SuperGeniusVersionMinor(),
-                                 network_id_ );
+                             sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
         if ( send_ret.has_error() )
@@ -1567,10 +1553,7 @@ namespace sgns
         accountComm::AccountMessage msg;
         *msg.mutable_nonce_response() = signed_resp;
         auto account_topic            = req.requester_address() + std::string( ACCOUNT_COMM ) +
-                             sgns::version::GetNetAndVersionAppendix(
-                                 sgns::version::SuperGeniusVersionMajor(),
-                                 sgns::version::SuperGeniusVersionMinor(),
-                                 network_id_ );
+                             sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
 
@@ -1704,10 +1687,7 @@ namespace sgns
         *msg.mutable_utxo_response() = signed_resp;
 
         auto account_topic = req.requester_address() + std::string( ACCOUNT_COMM ) +
-                             sgns::version::GetNetAndVersionAppendix(
-                                 sgns::version::SuperGeniusVersionMajor(),
-                                 sgns::version::SuperGeniusVersionMinor(),
-                                 network_id_ );
+                             sgns::version::GetNetAndVersionAppendix();
 
         auto send_ret = SendAccountMessage( msg, { account_topic } );
         if ( send_ret.has_error() )

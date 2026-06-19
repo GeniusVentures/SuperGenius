@@ -97,8 +97,7 @@ namespace sgns
          */
         static std::shared_ptr<AccountMessenger> New( std::string                                address,
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                      InterfaceMethods                           methods,
-                                                      uint16_t                                    network_id = 144 );
+                                                      InterfaceMethods                           methods );
         /**
          * @brief      Destroy the Account Messenger object
          */
@@ -220,7 +219,6 @@ namespace sgns
         using BlockQuery = std::variant<BlockIndexRequest, BlockCidRequest, TransactionHashRequest>;
 
         const std::string                          address_;            ///< Own address
-        const uint16_t                            network_id_ = 144;   ///< Network ID from config.
         const std::string                          account_comm_topic_; ///< Account receiving topic
         const std::string                          requests_topic_;     ///< Global requests topic
         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;             ///< Pubsub instance
@@ -313,8 +311,7 @@ namespace sgns
          */
         AccountMessenger( std::string                                address,
                           std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                          InterfaceMethods                           methods,
-                          uint16_t                                    network_id );
+                          InterfaceMethods                           methods );
         /**
          * @brief       Requests the nonce to the network
          * @param[in]   req_id The current request ID

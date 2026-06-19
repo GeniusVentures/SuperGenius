@@ -37,8 +37,7 @@ namespace sgns::processing
                                   std::shared_ptr<ProcessingSubTaskQueueManager>          subTaskQueueManager,
                                   std::shared_ptr<SubTaskResultStorage>                   subTaskResultStorage,
                                   std::function<void( const SGProcessing::TaskResult & )> taskResultProcessingSink,
-                                  std::function<void( const std::string & )>              processingErrorSink,
-                                  uint16_t network_id = 144 );
+                                  std::function<void( const std::string & )>              processingErrorSink );
         ~SubTaskQueueAccessorImpl() override;
 
         /** SubTaskQueueAccessor overrides
@@ -95,7 +94,6 @@ namespace sgns::processing
         ProcessingValidationCore                           m_validationCore;
 
         base::Logger m_logger = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
-        uint16_t     m_network_id = 144; ///< Network ID from config.
     };
 }
 

@@ -14,8 +14,7 @@ namespace sgns::processing
         std::function<void( const std::string &subTaskQueueId, const SGProcessing::TaskResult &taskresult )>
                                                                  userCallbackSuccess,
         std::function<void( const std::string &subTaskQueueId )> userCallbackError,
-        std::string                                              node_address,
-        uint16_t                                                 network_id ) :
+        std::string                                              node_address ) :
         m_gossipPubSub( std::move( gossipPubSub ) ),
         m_context( std::make_shared<boost::asio::io_context>() ),
         m_maximalNodesCount( maximalNodesCount ),
@@ -29,8 +28,7 @@ namespace sgns::processing
         userCallbackError_( std::move( userCallbackError ) ),
         node_address_( std::move( node_address ) ),
         m_nodeCreationTimer( *m_context ),
-        m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) ),
-        m_network_id( network_id )
+        m_nodeCreationTimeout( boost::posix_time::milliseconds( 1000 ) )
     {
     }
 
@@ -100,11 +98,7 @@ namespace sgns::processing
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
-        auto processing_topic   = processingGridChannelId +
-                                  version::GetNetAndVersionAppendix(
-                                      version::SuperGeniusVersionMajor(),
-                                      version::SuperGeniusVersionMinor(),
-                                      m_network_id );
+        auto processing_topic   = processingGridChannelId + version::GetNetAndVersionAppendix();
         m_gridChannel           = std::make_unique<GossipPubSubTopic>( m_gossipPubSub, processing_topic );
         m_gridChannel->Subscribe(
             [weakSelf = weak_from_this()]( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )

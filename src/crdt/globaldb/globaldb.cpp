@@ -73,8 +73,7 @@ namespace sgns::crdt
         std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::shared_ptr<RocksDB>                                              datastore,
-        BackupOptions                                                         backup_options,
-        uint16_t                                                              network_id )
+        BackupOptions                                                         backup_options )
     {
         if ( ( !context ) || ( !generator ) || ( !pubsub ) || ( !graphsyncnetwork ) )
         {
@@ -88,8 +87,7 @@ namespace sgns::crdt
                                                std::move( graphsyncnetwork ),
                                                std::move( scheduler ),
                                                std::move( generator ),
-                                               std::move( datastore ),
-                                               network_id ) );
+                                               std::move( datastore ) ) );
         return new_instance;
     }
 
@@ -144,8 +142,7 @@ namespace sgns::crdt
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork,
         std::shared_ptr<libp2p::basic::Scheduler>                             scheduler,
         std::shared_ptr<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
-        std::shared_ptr<RocksDB>                                              datastore,
-        uint16_t                                                              network_id )
+        std::shared_ptr<RocksDB>                                              datastore )
     {
         std::shared_ptr<RocksDB> dataStore = std::move( datastore );
         if ( dataStore == nullptr )
@@ -316,7 +313,7 @@ namespace sgns::crdt
             return startResult.error();
         }
 
-        m_broadcaster = PubSubBroadcasterExt::New( dagSyncer, m_pubsub, network_id );
+        m_broadcaster = PubSubBroadcasterExt::New( dagSyncer, m_pubsub );
         if ( m_broadcaster == nullptr )
         {
             m_logger->error( "Unable to create PubSub broadcaster" );

@@ -35,8 +35,7 @@ namespace sgns
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                              Signer                                     signer,
                                                              std::string                                address,
-                                                             std::string consensus_topic,
-                                                             uint16_t    network_id )
+                                                             std::string consensus_topic )
     {
         if ( !registry )
         {
@@ -69,8 +68,7 @@ namespace sgns
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
                                                                                  address,
-                                                                                 consensus_topic,
-                                                                                 network_id ) );
+                                                                                 consensus_topic ) );
         instance->certificate_work_journal_ = instance->db_->GetWorkJournal();
 
         if ( !instance->certificate_work_journal_ )
@@ -111,19 +109,13 @@ namespace sgns
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         Signer                                     signer,
                                         std::string                                address,
-                                        std::string                                consensus_topic,
-                                        uint16_t                                   network_id ) :
+                                        std::string                                consensus_topic ) :
         registry_( std::move( registry ) ), //
         db_( std::move( db ) ),             //
         pubsub_( std::move( pubsub ) ),     //
         signer_( std::move( signer ) ),     //
         account_address_( address ),        //
-        network_id_( network_id ),
-        consensus_messages_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) +
-                                   sgns::version::GetNetAndVersionAppendix(
-                                       sgns::version::SuperGeniusVersionMajor(),
-                                       sgns::version::SuperGeniusVersionMinor(),
-                                       network_id ) +
+        consensus_messages_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
                                    consensus_topic ),
         consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )
     {
