@@ -20,6 +20,16 @@ target_link_libraries(consensus_subject_test
 #    base_crdt_test
 #)
 
+# Phase 6 (D-01): proto-only slot-hash field tests. Does not require a fully
+# wired ConsensusManager — only the regenerated Consensus.pb.h and
+# VoteSigningBytes from ConsensusAuth.hpp.
+addtest(consensus_vote_slot_test
+    consensus_vote_slot_test.cpp
+)
+target_link_libraries(consensus_vote_slot_test
+    blockchain_genesis
+)
+
 # ConsensusManager requires 6 constructor dependencies (ValidatorRegistry, GlobalDB,
 # GossipPubSub, Signer, etc.) — cannot be instantiated in isolation.
 # Test deferred to E2E integration (Phase 4).
