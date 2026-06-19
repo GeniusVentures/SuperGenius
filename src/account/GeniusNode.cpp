@@ -2274,7 +2274,7 @@ namespace sgns
                         static constexpr size_t kExpectedV2DataParams = 6;
                         static constexpr size_t kSgnsDestinationIndex  = 4;
                         static constexpr size_t kDestinationYOddIndex  = 5;
-                        if ( !decoded.has_value() || decoded->size() < kExpectedV2DataParams )
+                        if ( !decoded.has_value() || decoded.value().size() < kExpectedV2DataParams )
                         {
                             ++total_skipped;
                             node_logger_->warn( "CatchUpScan v2: failed to decode log data for tx {} — skipping",
@@ -2284,7 +2284,7 @@ namespace sgns
 
                         // sgnsDestination is bytes32 → codec::Hash256 variant.
                         if ( !std::holds_alternative<eth::codec::Hash256>(
-                                ( *decoded )[kSgnsDestinationIndex] ) )
+                                decoded.value()[kSgnsDestinationIndex] ) )
                         {
                             ++total_skipped;
                             node_logger_->warn( "CatchUpScan v2: sgnsDestination not bytes32 for tx {} — skipping",
@@ -2292,17 +2292,17 @@ namespace sgns
                             continue;
                         }
                         const auto &x_bytes = std::get<eth::codec::Hash256>(
-                            ( *decoded )[kSgnsDestinationIndex] );
+                            decoded.value()[kSgnsDestinationIndex] );
 
                         // destinationYOdd is bool.
-                        if ( !std::holds_alternative<bool>( ( *decoded )[kDestinationYOddIndex] ) )
+                        if ( !std::holds_alternative<bool>( decoded.value()[kDestinationYOddIndex] ) )
                         {
                             ++total_skipped;
                             node_logger_->warn( "CatchUpScan v2: destinationYOdd not bool for tx {} — skipping",
                                                 tx_hash_hex );
                             continue;
                         }
-                        const bool destination_y_odd = std::get<bool>( ( *decoded )[kDestinationYOddIndex] );
+                        const bool destination_y_odd = std::get<bool>( decoded.value()[kDestinationYOddIndex] );
 
                         auto dest_opt = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
                         if ( !dest_opt.has_value() )
