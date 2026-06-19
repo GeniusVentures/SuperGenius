@@ -217,7 +217,7 @@ Plans:
 
 **Depends on:** Phase 5
 **Requirements:** REQ-SLOT-01, REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06, REQ-REPUT-01, REQ-DETERM-01
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 **Wave 1** (proto foundation + node self-classification):
 
@@ -232,7 +232,7 @@ Plans:
 **Wave 3** (Role::FULL promotion — depends on Waves 1+2; serialized due to ValidatorRegistry file overlap):
 
 Plans:
-- [ ] 06-03-PLAN.md — REGULAR->FULL promotion in ApplyVoteEffects via full_promotion_weight_ + penalty gate (D-07 reuse weight, D-08 independence from tally) (REQ-REPUT-01)
+- [x] 06-03-PLAN.md — REGULAR->FULL promotion in ApplyVoteEffects via full_promotion_weight_ + penalty gate (D-07 reuse weight, D-08 independence from tally) (REQ-REPUT-01)
 
 **Wave 4** (test coverage + full regression gate — depends on Waves 1+2+3):
 
