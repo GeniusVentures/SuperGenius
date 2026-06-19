@@ -92,6 +92,14 @@ namespace sgns
             uint64_t slot_quorum_numerator_   = 3; ///< Cumulative quorum threshold numerator.  0.75 = 3/4 (D-06).
             uint64_t slot_quorum_denominator_ = 4; ///< Cumulative quorum threshold denominator.0.75 = 3/4 (D-06).
             uint64_t slot_public_min_group_   = 2; ///< D-03: minimum distinct validators per PUBLIC hash group.
+            // D-08: REGULAR -> FULL promotion threshold. A REGULAR validator whose
+            // accumulated weight (via ApplyVoteEffects approve increments) reaches
+            // this value AND whose penalty_score is below penalty_threshold_ is
+            // promoted to Role::FULL. The promoted node's weight then accumulates
+            // up to full_max_weight_, flowing into EvaluateSlotQuorum via
+            // validator.weight() with no tally-side special case. Conservative
+            // default between regular_max_weight_ (100) and full_max_weight_ (5000).
+            uint64_t full_promotion_weight_ = 500; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
         };
 
         /**
@@ -193,6 +201,25 @@ namespace sgns
         static SlotQuorumResult EvaluateSlotQuorumStatic( const std::vector<sgns::ConsensusVote> &votes,
                                                           const Registry                        &registry,
                                                           const WeightConfig                    &weight_config );
+
+        /**
+         * @brief Pure (stateless) REGULAR -> FULL promotion decision (D-08).
+         *
+         * Returns true iff the entry is currently Role::REGULAR, its accumulated
+         * weight has reached @ref full_promotion_weight_, AND its penalty_score is
+         * strictly below @ref penalty_threshold_. GENESIS, SHARDED, and already-FULL
+         * entries never qualify (no GENESIS demotion, idempotent on FULL). Extracted
+         * as a pure static helper so the promotion decision is unit-testable without
+         * a GlobalDB-backed ValidatorRegistry instance -- ApplyVoteEffects delegates
+         * here. The function reads ONLY its inputs (REQ-DETERM-01), so every peer
+         * mutates the entry identically.
+         *
+         * @param[in] entry         Validator entry under consideration.
+         * @param[in] weight_config Weight policy supplying thresholds.
+         * @return true if the entry should be promoted from REGULAR to FULL.
+         */
+        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
+                                                    const WeightConfig   &weight_config );
 
         /**
          * @brief Creates an in-memory genesis registry snapshot.
