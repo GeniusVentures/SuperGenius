@@ -11,6 +11,7 @@
 #include "base/parse_utility.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/eth_watch_cli.hpp"
+#include "eth/secp256k1_utility.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -209,29 +210,34 @@ namespace sgns
     void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification,
                                        const std::string                 &chain_name )
     {
-        static constexpr size_t kBridgeSourceBurnedParamCount = 6;
-        if ( notification.values.size() < kBridgeSourceBurnedParamCount )
+        // v1 (BridgeSourceBurned) and v2 (BridgeOutInitiated) share params 0..4;
+        // param 5 differs by type (ByteBuffer for v1, Hash256 for v2) and is the
+        // dispatch discriminator (D-06). v2 adds param 6 (bool destinationYOdd).
+        static constexpr size_t kCommonParamCount         = 6;
+        static constexpr size_t kV2DestinationYOddIndex   = 6;
+        if ( notification.values.size() < kCommonParamCount )
         {
-            logger_->error( "BridgeRelayer: expected {} event params for chain {}, got {}",
-                            kBridgeSourceBurnedParamCount,
+            logger_->error( "BridgeRelayer: expected at least {} event params for chain {}, got {}",
+                            kCommonParamCount,
                             chain_name,
                             notification.values.size() );
             return;
         }
 
-        // Decode BridgeSourceBurned params:
+        // Common params (identical types in both v1 and v2):
         //   values[0]: sender (address)
         //   values[1]: id (uint256) — ERC-1155 token ID
         //   values[2]: amount (uint256)
         //   values[3]: srcChainID (uint256)
         //   values[4]: destChainID (uint256)
-        //   values[5]: sgnsDestination (bytes) — 64-byte SuperGenius public key
-        const auto &sender          = std::get<eth::codec::Address>( notification.values[0] );
-        const auto &token_id        = std::get<intx::uint256>( notification.values[1] );
-        const auto &amount_val      = std::get<intx::uint256>( notification.values[2] );
-        const auto &src_chain       = std::get<intx::uint256>( notification.values[3] );
-        const auto &dest_chain      = std::get<intx::uint256>( notification.values[4] );
-        const auto &sgns_dest_bytes = std::get<eth::codec::ByteBuffer>( notification.values[5] );
+        //   values[5]: sgnsDestination — v1: bytes (64-byte full pubkey),
+        //                               v2: bytes32 (32-byte X-only key, D-06).
+        //   values[6]: v2 only — destinationYOdd (bool), Y parity for decompression.
+        const auto &sender     = std::get<eth::codec::Address>( notification.values[0] );
+        const auto &token_id   = std::get<intx::uint256>( notification.values[1] );
+        const auto &amount_val = std::get<intx::uint256>( notification.values[2] );
+        const auto &src_chain  = std::get<intx::uint256>( notification.values[3] );
+        const auto &dest_chain = std::get<intx::uint256>( notification.values[4] );
 
         // Transaction hash from the event
         const std::string tx_hash = rlp::base::parse::hex_array_string( notification.event.tx_hash );
@@ -250,8 +256,46 @@ namespace sgns
 
         const TokenID mint_token_id = TokenID::FromUint256( token_id, TokenID::Endianness::BIG );
 
-        // Destination: SuperGenius public key from the burn event (64 bytes, 128 hex chars)
-        const std::string destination = rlp::base::parse::hex_bytes( sgns_dest_bytes.data(), sgns_dest_bytes.size() );
+        // Destination: dispatch on the variant type of values[5] (D-06).
+        //   ByteBuffer -> v1: full 64-byte destination (128 hex chars).
+        //   Hash256    -> v2: 32-byte X-only key, decompressed via DecompressXOnlyPubkey
+        //                using the Y-parity bool from values[6] (D-07).
+        std::string destination;
+        if ( std::holds_alternative<eth::codec::ByteBuffer>( notification.values[5] ) )
+        {
+            const auto &sgns_dest_bytes = std::get<eth::codec::ByteBuffer>( notification.values[5] );
+            destination = rlp::base::parse::hex_bytes( sgns_dest_bytes.data(), sgns_dest_bytes.size() );
+        }
+        else if ( std::holds_alternative<eth::codec::Hash256>( notification.values[5] ) )
+        {
+            if ( notification.values.size() <= kV2DestinationYOddIndex )
+            {
+                logger_->error( "BridgeRelayer: v2 event missing destinationYOdd param for chain {}", chain_name );
+                return;
+            }
+            const auto &x_bytes     = std::get<eth::codec::Hash256>( notification.values[5] );
+            const auto &y_odd_value = notification.values[kV2DestinationYOddIndex];
+            if ( !std::holds_alternative<bool>( y_odd_value ) )
+            {
+                logger_->error( "BridgeRelayer: v2 destinationYOdd param not bool for chain {}", chain_name );
+                return;
+            }
+            const bool destination_y_odd = std::get<bool>( y_odd_value );
+            auto       dest_opt          = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
+            if ( !dest_opt )
+            {
+                logger_->error( "BridgeRelayer: X-only decompression failed for chain {} tx={}",
+                                chain_name,
+                                tx_hash.substr( 0, 16 ) );
+                return;
+            }
+            destination = std::move( *dest_opt );
+        }
+        else
+        {
+            logger_->error( "BridgeRelayer: unexpected type for param 5 on chain {}", chain_name );
+            return;
+        }
 
         logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} token={} amount={} dest={}",
                        chain_id,
