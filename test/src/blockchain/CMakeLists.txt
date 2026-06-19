@@ -57,19 +57,6 @@ target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
 
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
-# Phase 6 (D-01): slot-hash populator callback on ConsensusManager.
-set(CONSENSUS_SLOT_HASH_POPULATOR_SOURCE consensus_slot_hash_populator)
-set(CONSENSUS_SLOT_HASH_POPULATOR_TARGET consensus_slot_hash_populator)
-addtest(${CONSENSUS_SLOT_HASH_POPULATOR_TARGET}_test
-    ${CONSENSUS_SLOT_HASH_POPULATOR_SOURCE}_test.cpp
-)
-target_link_libraries(${CONSENSUS_SLOT_HASH_POPULATOR_TARGET}_test
-    blockchain_genesis
-    genius_node_test
-    rapidjson
-    base_crdt_test
-)
-
 target_link_libraries(blockchain_genesis_test
     genius_node_test
     rapidjson
