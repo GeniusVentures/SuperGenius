@@ -34,6 +34,12 @@ using namespace sgns;
 static const std::string kBridgeEventSignature =
     "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
 
+// Bridge V2 event signature (Plan 05.2-01) — param 5 is bytes32 (X-only key),
+// param 6 is bool destinationYOdd.  Used by PerformStartupCatchupScan (Plan
+// 05.2-03) for the second topic0 in the dual-signature catch-up scan.
+static const std::string kBridgeEventSignatureV2 =
+    "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+
 // Expected topic0 hex for BridgeSourceBurned (keccak256 of the signature)
 // Computed via keccak256("BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)")
 static const std::string kExpectedTopic0Hex =
@@ -91,6 +97,62 @@ TEST( StartupWiringTest, DifferentSignaturesProduceDifferentTopic0 )
         eth::abi::event_signature_hash( "Transfer(address,address,uint256)" );
 
     EXPECT_NE( bridge_hash, transfer_hash );
+}
+
+// ─── Bridge V2 catch-up scan topic0 tests (Plan 05.2-04) ─────────────────────
+
+TEST( StartupWiringTest, BridgeOutInitiatedTopic0IsDeterministic )
+{
+    // The v2 topic0 computation must be deterministic — the catch-up scan
+    // (Plan 05.2-03) relies on a stable hash for BridgeOutInitiated.
+    auto hash1 = eth::abi::event_signature_hash( kBridgeEventSignatureV2 );
+    auto hash2 = eth::abi::event_signature_hash( kBridgeEventSignatureV2 );
+
+    // Same input must produce the same output.
+    EXPECT_EQ( hash1, hash2 );
+
+    // Hash must not be all zeros.
+    bool all_zero = true;
+    for ( auto byte : hash1 )
+    {
+        if ( byte != 0 )
+        {
+            all_zero = false;
+            break;
+        }
+    }
+    EXPECT_FALSE( all_zero ) << "v2 topic0 hash should not be all zeros";
+}
+
+TEST( StartupWiringTest, V1andV2Topic0Differ )
+{
+    // The v1 (BridgeSourceBurned) and v2 (BridgeOutInitiated) topic0 hashes
+    // must differ — otherwise the catch-up scan dedup would collide and one
+    // signature's events would shadow the other (D-12).
+    auto v1_hash = eth::abi::event_signature_hash( kBridgeEventSignature );
+    auto v2_hash = eth::abi::event_signature_hash( kBridgeEventSignatureV2 );
+
+    EXPECT_NE( v1_hash, v2_hash )
+        << "v1 and v2 event signatures must produce distinct topic0 hashes";
+}
+
+TEST( StartupWiringTest, V2Topic0IsNonZero )
+{
+    // The v2 topic0 hash must be non-zero and 32 bytes (keccak256 output).
+    auto v2_hash = eth::abi::event_signature_hash( kBridgeEventSignatureV2 );
+
+    EXPECT_EQ( v2_hash.size(), 32u ) << "keccak256 topic0 must be 32 bytes";
+
+    bool all_zero = true;
+    for ( auto byte : v2_hash )
+    {
+        if ( byte != 0 )
+        {
+            all_zero = false;
+            break;
+        }
+    }
+    EXPECT_FALSE( all_zero ) << "v2 topic0 hash should not be all zeros";
 }
 
 // ─── Tests: Chain ID from config file (D-04) ─────────────────────────────────
