@@ -160,7 +160,7 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	**Goal:** Decode 32-byte X-only compressed SG public key from BridgeOutInitiated events → decompress to full X+Y key → construct destination matching GetAddress(). Register new event in EventRegistry (kBytes32), retain v1 BridgeSourceBurned (kBytes). BridgeRelayer registers dual watches and dispatches v1/v2 events. Catch-up scan queries both v1 and v2 topic0 hashes.
 	**Requirements**: REQ-V2-01, REQ-V2-02, REQ-V2-03, REQ-V2-04, REQ-V2-05, REQ-V2-06, REQ-V2-07, REQ-V2-08, REQ-V2-09
 	**Depends on:** Phase 05.1 (Observer pattern, ChainContractPair, IBridgeInitObserver)
-	**Plans:** 1/4 plans executed
+	**Plans:** 3/4 plans executed
 	
 	**Wave 1** (evmrelay foundation — independent):
 	Plans:
@@ -168,8 +168,8 @@ function bridgeOut(uint256 amount, uint256 id, uint256 destChainID, bytes32 sgns
 	
 	**Wave 2** (BridgeRelayer + GeniusNode — parallel, depends on Wave 1):
 	Plans:
-	- [ ] 05.2-02-PLAN.md — BridgeRelayer::Start() dual-watch v1+v2 (D-14, D-15) + OnWatchEvent() variant dispatch ByteBuffer/Hash256 with v2 decompression (D-06) (REQ-V2-03, REQ-V2-04)
-	- [ ] 05.2-03-PLAN.md — GeniusNode::PerformStartupCatchupScan() dual topic0 query v1+v2 (D-11, D-12) + v2 X-only decompression before MintFunds (D-13) (REQ-V2-07, REQ-V2-08)
+	- [x] 05.2-02-PLAN.md — BridgeRelayer::Start() dual-watch v1+v2 (D-14, D-15) + OnWatchEvent() variant dispatch ByteBuffer/Hash256 with v2 decompression (D-06) (REQ-V2-03, REQ-V2-04)
+	- [x] 05.2-03-PLAN.md — GeniusNode::PerformStartupCatchupScan() dual topic0 query v1+v2 (D-11, D-12) + v2 X-only decompression before MintFunds (D-13) (REQ-V2-07, REQ-V2-08)
 	
 	**Wave 3** (test coverage — depends on Waves 1+2):
 	Plans:
