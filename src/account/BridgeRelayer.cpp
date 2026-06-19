@@ -81,10 +81,18 @@ namespace sgns
             return;
         }
 
-        // BridgeSourceBurned(address indexed sender, uint256 id, uint256 amount,
-        //                    uint256 srcChainID, uint256 destChainID, bytes sgnsDestination)
-        const std::string event_sig = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
-        auto              params    = eth::cli::event_registry().params_for( event_sig );
+        // v1: BridgeSourceBurned(address indexed sender, uint256 id, uint256 amount,
+        //                         uint256 srcChainID, uint256 destChainID, bytes sgnsDestination)
+        const std::string event_sig_v1 = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+        auto              params_v1    = eth::cli::event_registry().params_for( event_sig_v1 );
+
+        // v2: BridgeOutInitiated(address indexed sender, uint256 id, uint256 amount,
+        //                         uint256 srcChainID, uint256 destChainID,
+        //                         bytes32 sgnsDestination, bool destinationYOdd)
+        // Param 5 is a 32-byte X-only key (decoded as codec::Hash256) and param 6
+        // carries the Y parity needed for deterministic decompression (D-06/D-07).
+        const std::string event_sig_v2 = "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+        auto              params_v2    = eth::cli::event_registry().params_for( event_sig_v2 );
 
         size_t registered = 0;
         size_t skipped    = 0;
@@ -117,39 +125,75 @@ namespace sgns
                 continue;
             }
 
-            // Register watch for this chain (best-effort per D-21)
+            const auto chain_name = chain.chain_name;
+
+            // Shared callback for both v1 and v2 events — OnWatchEvent dispatches
+            // on the variant type of values[5] (D-06).
+            auto callback = [ weakptr{ weak_from_this() }, chain_name ]( const eth::MatchedEvent               &event,
+                                                                          const std::vector<eth::abi::AbiValue> &values )
+            {
+                eth::WatchEventNotification notification;
+                notification.event  = event;
+                notification.values = values;
+                auto self           = weakptr.lock();
+                if ( self )
+                {
+                    self->OnWatchEvent( notification, chain_name );
+                }
+            };
+
+            eth::EventWatchId watch_id_v1 = 0;
+            eth::EventWatchId watch_id_v2 = 0;
+            bool              got_v1      = false;
+            bool              got_v2      = false;
+
+            // Register v1 watch (best-effort per D-21)
             try
             {
-                const auto chain_name = chain.chain_name;
-                auto       watch_id   = watch_service_->watch_event(
-                    addr,
-                    event_sig,
-                    params,
-                    [ weakptr{ weak_from_this() }, chain_name ]( const eth::MatchedEvent               &event,
-                                                                  const std::vector<eth::abi::AbiValue> &values )
-                    {
-                        eth::WatchEventNotification notification;
-                        notification.event  = event;
-                        notification.values = values;
-                        auto self           = weakptr.lock();
-                        if ( self )
-                        {
-                            self->OnWatchEvent( notification, chain_name );
-                        }
-                    } );
-
-                chain_watches_[chain_name] = watch_id;
+                watch_id_v1 = watch_service_->watch_event( addr, event_sig_v1, params_v1, callback );
+                got_v1      = true;
                 ++registered;
-                logger_->info( "BridgeRelayer: watching {} contract={} watch_id={}", chain_name, chain.contract_address, watch_id );
+                logger_->info( "BridgeRelayer: watching {} v1 contract={} watch_id={}",
+                               chain_name,
+                               chain.contract_address,
+                               watch_id_v1 );
             }
             catch ( const std::exception &e )
             {
-                logger_->warn( "BridgeRelayer: failed to watch {} ({}) — skipping", chain.chain_name, e.what() );
-                ++skipped;
+                logger_->warn( "BridgeRelayer: failed to watch {} v1 ({}) — skipping v1",
+                               chain.chain_name,
+                               e.what() );
             }
+
+            // Register v2 watch (best-effort per D-21)
+            try
+            {
+                watch_id_v2 = watch_service_->watch_event( addr, event_sig_v2, params_v2, callback );
+                got_v2      = true;
+                ++registered;
+                logger_->info( "BridgeRelayer: watching {} v2 contract={} watch_id={}",
+                               chain_name,
+                               chain.contract_address,
+                               watch_id_v2 );
+            }
+            catch ( const std::exception &e )
+            {
+                logger_->warn( "BridgeRelayer: failed to watch {} v2 ({}) — skipping v2",
+                               chain.chain_name,
+                               e.what() );
+            }
+
+            if ( !got_v1 && !got_v2 )
+            {
+                // Neither watch registered for this chain — count as skipped.
+                ++skipped;
+                continue;
+            }
+
+            chain_watches_[chain_name] = { watch_id_v1, watch_id_v2 };
         }
 
-        logger_->info( "BridgeRelayer: started watching {} of {} chains ({} skipped)",
+        logger_->info( "BridgeRelayer: started {} watch(es) across {} chain(s) ({} skipped)",
                        registered,
                        chains.size(),
                        skipped );
