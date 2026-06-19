@@ -213,31 +213,31 @@ Plans:
 
 ### Phase 6: Network Voting Weight Classes (Tier 2)
 
-**Goal:** Implement two-tier network voting for bridge mints — direct API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight. Reputation scoring identifies full nodes. Final approval requires both cohorts to independently meet thresholds.
+**Goal:** Implement slot-based RPC-hash voting for bridge mints (CONTEXT.md D-01..D-10). ConsensusVote carries 3 slot hashes (DIRECT_API + 2 PUBLIC). Cumulative quorum: slot 0 contributes voter reputation x 0.50; slots 1-2 each contribute reputation x 0.25 only for hash groups with >=2 distinct validators. Certificate produced iff the cumulative qualified_sum > 75% of total voter reputation. Reputation = existing ValidatorEntry.weight; Role::FULL promotion via ApplyVoteEffects retained. Tier 1 per-node RPC verification (Phase 5) unchanged.
 
 **Depends on:** Phase 5
-**Requirements:** REQ-COHORT-01, REQ-COHORT-02, REQ-QUORUM-01, REQ-QUORUM-02, REQ-QUORUM-03, REQ-QUORUM-04, REQ-QUORUM-05, REQ-REPUT-01, REQ-DETERM-01
+**Requirements:** REQ-SLOT-01, REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06, REQ-REPUT-01, REQ-DETERM-01
 **Plans:** 4 plans
 
-**Wave 1** (foundation — cohort classification):
+**Wave 1** (proto foundation + node self-classification):
 
 Plans:
-- [ ] 06-01-PLAN.md — Cohort derivation (ValidatorCohort enum, CohortOf(), cohort proto field) + self-classification wiring (HasDirectApiEndpoint, GeniusNode self-registration) (REQ-COHORT-01, REQ-COHORT-02, REQ-DETERM-01)
+- [ ] 06-01-PLAN.md — Extend ConsensusVote proto with slot_0_hash/slot_1_hash/slot_2_hash (D-01, D-04, D-09) + PublicChainInputValidator hashing accessors + GeniusNode::PopulateVoteSlotHashes wiring (D-10 Tier 1 unchanged) (REQ-SLOT-01)
 
-**Wave 2** (quorum policy — depends on Wave 1; touches shared consensus hot paths):
-
-Plans:
-- [ ] 06-02-PLAN.md — TwoTierQuorumPolicy (dual-cohort AND predicate) + EvaluateQuorum shared helper routing both tally sites (TallyVotes + HandleVote) (REQ-QUORUM-01, REQ-QUORUM-02, REQ-QUORUM-03, REQ-QUORUM-04, REQ-QUORUM-05)
-
-**Wave 3** (reputation — depends on Wave 1; serialized after Wave 2 due to ValidatorRegistry file overlap):
+**Wave 2** (slot tally + dual tally-site routing — depends on Wave 1; touches shared consensus hot paths):
 
 Plans:
-- [ ] 06-03-PLAN.md — Role::FULL promotion via ApplyVoteEffects (full_promotion_weight_ config) (REQ-REPUT-01)
+- [ ] 06-02-PLAN.md — ValidatorRegistry::EvaluateSlotQuorum (D-02 slot 0 50%, D-03 slots 1-2 dedup 25%, D-06 cumulative >75%) + ConsensusManager::EvaluateQuorum dispatcher routing BOTH TallyVotes + HandleVote through one helper (D-05 abstain, D-07 rep=weight, REQ-DETERM-01) (REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06)
 
-**Wave 4** (test coverage + regression gate — depends on Waves 2+3):
+**Wave 3** (Role::FULL promotion — depends on Waves 1+2; serialized due to ValidatorRegistry file overlap):
 
 Plans:
-- [ ] 06-04-PLAN.md — consensus_two_tier_test.cpp + validator_registry_promotion_test.cpp + full regression suite checkpoint (all REQs)
+- [ ] 06-03-PLAN.md — REGULAR->FULL promotion in ApplyVoteEffects via full_promotion_weight_ + penalty gate (D-07 reuse weight, D-08 independence from tally) (REQ-REPUT-01)
+
+**Wave 4** (test coverage + full regression gate — depends on Waves 1+2+3):
+
+Plans:
+- [ ] 06-04-PLAN.md — consensus_slot_quorum_test.cpp (golden D-06 example, dedup, both-sites-agree, determinism) + validator_registry_promotion_test.cpp + blocking full ctest -j8 checkpoint per CLAUDE.md shared-library mandate (all REQs)
 
 ---
 
