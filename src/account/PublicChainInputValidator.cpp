@@ -12,6 +12,7 @@
 
 #include <base/parse_utility.hpp>
 #include <base/rlp-logger.hpp>
+#include <crypto/hasher/hasher_impl.hpp>
 #include <eth/json_rpc.hpp>
 #include <eth/rpc_http_transport.hpp>
 
@@ -135,6 +136,94 @@ namespace sgns
         rpc_endpoints_[chain_id] = std::move( endpoints );
         logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
                       chain_id, rpc_endpoints_[chain_id].size() );
+    }
+
+    std::vector<uint8_t>
+        PublicChainInputValidator::GetSlotHash( size_t slot_index, const std::string &chain_id ) const noexcept
+    {
+        auto logger = InputValidatorLogger();
+
+        // Phase 6 (D-01): consensus_weight threshold separating DIRECT_API from PUBLIC slots.
+        static constexpr uint8_t kDirectApiWeightThreshold = 50;
+
+        const auto chain_it = rpc_endpoints_.find( chain_id );
+        if ( chain_it == rpc_endpoints_.end() )
+        {
+            logger->debug( "GetSlotHash: no endpoints for chain_id={} slot={}", chain_id, slot_index );
+            return {};
+        }
+
+        const auto &endpoints = chain_it->second;
+        std::vector<uint8_t>  result;
+
+        // Slot selection does not modify endpoint state and SHA-256 over an
+        // in-memory string does not throw, so the whole accessor is noexcept.
+        const auto hash_url = []( const std::string &url ) noexcept -> std::vector<uint8_t> {
+            crypto::HasherImpl hasher;
+            const auto         digest = hasher.sha2_256(
+                reinterpret_cast<const uint8_t *>( url.data() ), url.size() );
+            return std::vector<uint8_t>( digest.begin(), digest.end() );
+        };
+
+        switch ( slot_index )
+        {
+            case 0:
+            {
+                // First DIRECT_API endpoint (consensus_weight >= 50).
+                for ( const auto &ep : endpoints )
+                {
+                    if ( ep.consensus_weight >= kDirectApiWeightThreshold )
+                    {
+                        result = hash_url( ep.url );
+                        break;
+                    }
+                }
+                break;
+            }
+            case 1:
+            {
+                // First PUBLIC endpoint (consensus_weight < 50).
+                for ( const auto &ep : endpoints )
+                {
+                    if ( ep.consensus_weight < kDirectApiWeightThreshold )
+                    {
+                        result = hash_url( ep.url );
+                        break;
+                    }
+                }
+                break;
+            }
+            case 2:
+            {
+                // Second PUBLIC endpoint (consensus_weight < 50).
+                size_t public_seen = 0;
+                for ( const auto &ep : endpoints )
+                {
+                    if ( ep.consensus_weight < kDirectApiWeightThreshold )
+                    {
+                        ++public_seen;
+                        if ( public_seen == 2 )
+                        {
+                            result = hash_url( ep.url );
+                            break;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                // Unknown slot index: fail-closed -> abstention (empty vector).
+                logger->debug( "GetSlotHash: unknown slot_index={} chain_id={}", slot_index, chain_id );
+                return {};
+            }
+        }
+
+        if ( result.empty() )
+        {
+            logger->debug( "GetSlotHash: no qualifying endpoint for slot={} chain_id={} (abstain)", slot_index, chain_id );
+        }
+        return result;
     }
 
     bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,

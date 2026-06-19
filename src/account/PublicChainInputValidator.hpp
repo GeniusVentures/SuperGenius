@@ -136,6 +136,49 @@ namespace sgns
             return std::nullopt;
         }
 
+        /**
+         * @brief Returns the SHA-256 hash of an endpoint URL for a vote slot (Phase 6, D-01).
+         *
+         * Slot semantics (per the slot-based RPC-hash voting model):
+         * - slot 0: first DIRECT_API endpoint (consensus_weight >= 50, D-02).
+         * - slot 1: first PUBLIC endpoint (consensus_weight < 50).
+         * - slot 2: second PUBLIC endpoint (consensus_weight < 50).
+         *
+         * The hash is over the endpoint's raw @c url string (UTF-8), NOT the
+         * resolved URL nor the bridge_contract_address/event_topic0 fields, so the
+         * hash is stable across config reloads and deterministic across peers that
+         * share config (T-06-03). An empty vector signals abstention (D-05).
+         *
+         * @param[in] slot_index  Vote slot (0, 1, or 2).
+         * @param[in] chain_id    Source chain identifier.
+         * @return 32-byte SHA-256 of the qualifying endpoint URL, or an empty vector
+         *         when no qualifying endpoint exists or the slot/chain is unknown.
+         */
+        [[nodiscard]] std::vector<uint8_t> GetSlotHash( size_t           slot_index,
+                                                        const std::string &chain_id ) const noexcept;
+
+        /**
+         * @brief Returns the first configured chain id, if any (Phase 6, D-01).
+         *
+         * Used by GeniusNode's slot-hash populator lambda to resolve a chain
+         * context for single-chain deployments (multi-chain resolution is a
+         * future enhancement). Read-only and additive (D-10: Tier 1 untouched).
+         *
+         * @return First configured chain id, or std::nullopt when none configured.
+         */
+        [[nodiscard]] std::optional<std::string> GetFirstConfiguredChainId() const noexcept
+        {
+            if ( rpc_endpoints_.empty() )
+            {
+                return std::nullopt;
+            }
+            // unordered_map iteration is not order-stable across runs, but for
+            // single-chain deployments (the Phase 6 target) there is exactly one
+            // entry. Multi-chain resolution will read chain_id from the proposal
+            // subject instead.
+            return rpc_endpoints_.begin()->first;
+        }
+
     private:
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
