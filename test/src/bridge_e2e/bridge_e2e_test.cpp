@@ -112,6 +112,35 @@ static std::string BytesToHex( const std::vector<uint8_t> &bytes )
 
 using sgns::GeniusNode;
 
+namespace
+{
+
+FILE *OpenCommandPipe( const char *command, const char *mode )
+{
+#if defined( _WIN32 )
+    return _popen( command, mode );
+#else
+    return popen( command, mode );
+#endif
+}
+
+int CloseCommandPipe( FILE *pipe )
+{
+#if defined( _WIN32 )
+    return _pclose( pipe );
+#else
+    return pclose( pipe );
+#endif
+}
+
+#if defined( _WIN32 )
+constexpr const char *kCastCheckCmd = "where cast 2>NUL";
+#else
+constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
+#endif
+
+} // namespace
+
 /**
  * @brief Three-node GTest fixture for end-to-end bridge pipeline testing.
  *
@@ -239,8 +268,7 @@ void BridgeE2ETest::SetUpTestSuite()
     }
 
     // Guard 3: cast binary must be installed
-    constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
-    FILE                 *cast_pipe     = popen( kCastCheckCmd, "r" );
+    FILE *cast_pipe = OpenCommandPipe( kCastCheckCmd, "r" );
     if ( !cast_pipe )
     {
         GTEST_SKIP() << "Could not check for cast binary";
@@ -248,11 +276,11 @@ void BridgeE2ETest::SetUpTestSuite()
     char cast_path_buf[256] = {};
     if ( !std::fgets( cast_path_buf, sizeof( cast_path_buf ), cast_pipe ) )
     {
-        pclose( cast_pipe );
+        CloseCommandPipe( cast_pipe );
         GTEST_SKIP()
             << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
     }
-    pclose( cast_pipe );
+    CloseCommandPipe( cast_pipe );
     spdlog::info( "bridge_e2e: found cast at {}", cast_path_buf );
 
     // Set per-node BaseWritePath
@@ -365,13 +393,13 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
 {
     // --- Step 1: Derive sender address from PRIVATE_KEY ---
     std::string wallet_cmd  = "cast wallet address " + s_eth_private_key + " 2>&1";
-    FILE       *wallet_pipe = popen( wallet_cmd.c_str(), "r" );
+    FILE       *wallet_pipe = OpenCommandPipe( wallet_cmd.c_str(), "r" );
     ASSERT_NE( wallet_pipe, nullptr ) << "Failed to run cast wallet address";
 
     char addr_buf[256] = {};
     ASSERT_NE( std::fgets( addr_buf, sizeof( addr_buf ), wallet_pipe ), nullptr )
         << "cast wallet address returned no output";
-    pclose( wallet_pipe );
+    CloseCommandPipe( wallet_pipe );
 
     std::string sender_addr( addr_buf );
     // Trim trailing whitespace/newline
@@ -400,7 +428,7 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
                            s_eth_private_key + " --rpc-url " + kSepoliaRpc + " --json 2>&1";
 
     spdlog::info( "bridge_e2e: sending burn transaction" );
-    FILE *cast_pipe = popen( cast_cmd.c_str(), "r" );
+    FILE *cast_pipe = OpenCommandPipe( cast_cmd.c_str(), "r" );
     ASSERT_NE( cast_pipe, nullptr ) << "Failed to run cast send";
 
     std::string cast_output;
@@ -409,7 +437,7 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
     {
         cast_output += line_buf;
     }
-    int cast_rc = pclose( cast_pipe );
+    int cast_rc = CloseCommandPipe( cast_pipe );
     spdlog::info( "bridge_e2e: cast send output: {}", cast_output );
     ASSERT_EQ( cast_rc, 0 ) << "cast send failed with exit code " << cast_rc << ": " << cast_output;
 
