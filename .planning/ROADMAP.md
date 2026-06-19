@@ -192,9 +192,28 @@ Plans:
 **Goal:** Implement two-tier network voting for bridge mints — direct API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight. Reputation scoring identifies full nodes. Final approval requires both cohorts to independently meet thresholds.
 
 **Depends on:** Phase 5
-**Plans:** 0 plans
+**Requirements:** REQ-COHORT-01, REQ-COHORT-02, REQ-QUORUM-01, REQ-QUORUM-02, REQ-QUORUM-03, REQ-QUORUM-04, REQ-QUORUM-05, REQ-REPUT-01, REQ-DETERM-01
+**Plans:** 4 plans
 
-- [ ] TBD (run /gsd-plan-phase 6 to break down)
+**Wave 1** (foundation — cohort classification):
+
+Plans:
+- [ ] 06-01-PLAN.md — Cohort derivation (ValidatorCohort enum, CohortOf(), cohort proto field) + self-classification wiring (HasDirectApiEndpoint, GeniusNode self-registration) (REQ-COHORT-01, REQ-COHORT-02, REQ-DETERM-01)
+
+**Wave 2** (quorum policy — depends on Wave 1; touches shared consensus hot paths):
+
+Plans:
+- [ ] 06-02-PLAN.md — TwoTierQuorumPolicy (dual-cohort AND predicate) + EvaluateQuorum shared helper routing both tally sites (TallyVotes + HandleVote) (REQ-QUORUM-01, REQ-QUORUM-02, REQ-QUORUM-03, REQ-QUORUM-04, REQ-QUORUM-05)
+
+**Wave 3** (reputation — depends on Wave 1; serialized after Wave 2 due to ValidatorRegistry file overlap):
+
+Plans:
+- [ ] 06-03-PLAN.md — Role::FULL promotion via ApplyVoteEffects (full_promotion_weight_ config) (REQ-REPUT-01)
+
+**Wave 4** (test coverage + regression gate — depends on Waves 2+3):
+
+Plans:
+- [ ] 06-04-PLAN.md — consensus_two_tier_test.cpp + validator_registry_promotion_test.cpp + full regression suite checkpoint (all REQs)
 
 ---
 
