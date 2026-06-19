@@ -518,9 +518,9 @@ EXPECT_TRUE( tally.value().has_quorum );
 | A5 | Both cohorts use an independent ≥51% threshold (the note says "≥51% of this cohort") | Summary | If a different per-cohort threshold is intended (e.g. 2/3), only constants change. Low risk. |
 | A6 | The genesis/authority node is implicitly in the DIRECT_API cohort | Architecture | If genesis should be a special third cohort or excluded from cohort voting, the predicate changes. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Are 50% / 25% cohort weights, or per-cohort quorum thresholds?**
+1. **Are 50% / 25% cohort weights, or per-cohort quorum thresholds?** *(RESOLVED → 06-02: A4/A5 — both cohorts use independent configurable ≥51% thresholds; weights inherited from registry)*
    - What we know: The phase goal and `rpc-verification-tiers.md` describe "direct
      API-key nodes carry 50% voting weight, public-only RPC nodes carry 25% weight"
      and "Require ≥51% of this cohort to approve."
@@ -531,7 +531,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      per-cohort independent thresholds (≥51% within each cohort), which is what the
      design note's "Require ≥51% of this cohort" sentence states most directly.
 
-2. **Should `ConsensusVote` carry an RPC-result commitment (`sha256(rpc_response)`)?**
+2. **Should `ConsensusVote` carry an RPC-result commitment (`sha256(rpc_response)`)?** *(RESOLVED → 06-02: A5 — defer; proto-breaking, out of scope v1)*
    - What we know: The ROADMAP "Consensus Trust Model for Bridge Mints" note proposes
      this so peers can detect fabricated votes. `ConsensusVote` proto today has only
      `voter_id, approve, timestamp, signature`.
@@ -540,7 +540,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      break) and adds bandwidth to every vote. The two-cohort AND rule delivers the
      primary security value without it.
 
-3. **How does a node learn its own cohort at startup?**
+3. **How does a node learn its own cohort at startup?** *(RESOLVED → 06-01: A2/A3 — node-level; any paid/direct endpoint across any chain → DIRECT_API; persisted into registry)*
    - What we know: `GeniusNode` has `is_full_node_` (constructor bool); RPC endpoints
      come from `chains_config.json` via `ChainRpcEndpointProvider`; `RpcEndpointConfig`
      has `is_paid`/`api_key_*`.
@@ -551,7 +551,7 @@ EXPECT_TRUE( tally.value().has_quorum );
      persisted into the validator registry on self-registration, so all peers agree.
      Confirm with user.
 
-4. **Is `Role::FULL` promotion automatic, or operator-gated?**
+4. **Is `Role::FULL` promotion automatic, or operator-gated?** *(RESOLVED → 06-03: A3/A6 — algorithmic in ApplyVoteEffects; threshold configurable in WeightConfig; genesis in DIRECT_API cohort)*
    - What we know: `ApplyVoteEffects` is the natural hook; no operator UI exists.
    - What's unclear: Whether promotion should be purely algorithmic (weight
      threshold) or require off-chain operator action.
