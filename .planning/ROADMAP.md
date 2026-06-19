@@ -193,17 +193,17 @@ Plans:
 
 **Depends on:** Phase 5
 **Requirements:** REQ-SLOT-01, REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06, REQ-REPUT-01, REQ-DETERM-01
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 **Wave 1** (proto foundation + node self-classification):
 
 Plans:
-- [ ] 06-01-PLAN.md — Extend ConsensusVote proto with slot_0_hash/slot_1_hash/slot_2_hash (D-01, D-04, D-09) + PublicChainInputValidator hashing accessors + GeniusNode::PopulateVoteSlotHashes wiring (D-10 Tier 1 unchanged) (REQ-SLOT-01)
+- [x] 06-01-PLAN.md — Extend ConsensusVote proto with slot_0_hash/slot_1_hash/slot_2_hash (D-01, D-04, D-09) + PublicChainInputValidator hashing accessors + GeniusNode::PopulateVoteSlotHashes wiring (D-10 Tier 1 unchanged) (REQ-SLOT-01)
 
 **Wave 2** (slot tally + dual tally-site routing — depends on Wave 1; touches shared consensus hot paths):
 
 Plans:
-- [ ] 06-02-PLAN.md — ValidatorRegistry::EvaluateSlotQuorum (D-02 slot 0 50%, D-03 slots 1-2 dedup 25%, D-06 cumulative >75%) + ConsensusManager::EvaluateQuorum dispatcher routing BOTH TallyVotes + HandleVote through one helper (D-05 abstain, D-07 rep=weight, REQ-DETERM-01) (REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06)
+- [x] 06-02-PLAN.md — ValidatorRegistry::EvaluateSlotQuorum (D-02 slot 0 50%, D-03 slots 1-2 dedup 25%, D-06 cumulative >75%) + ConsensusManager::EvaluateQuorum dispatcher routing BOTH TallyVotes + HandleVote through one helper (D-05 abstain, D-07 rep=weight, REQ-DETERM-01) (REQ-SLOT-02, REQ-SLOT-03, REQ-SLOT-04, REQ-SLOT-05, REQ-SLOT-06)
 
 **Wave 3** (Role::FULL promotion — depends on Waves 1+2; serialized due to ValidatorRegistry file overlap):
 
