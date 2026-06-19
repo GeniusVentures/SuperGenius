@@ -77,10 +77,41 @@ A node that can't produce a valid RPC check for any endpoint does NOT vote. It m
 transaction as seen/invalid instead. This is fail-closed — a failing RPC endpoint doesn't
 become a silent approve.
 
-### D-06: Full Consensus — 2 of 3 Slots (LOCKED)
+### D-06: Full Consensus — Cumulative >75% of Voting Reputation (LOCKED)
 
-A certificate is produced when **≥2 of 3 slots pass**. A slot "passes" needs clarification
-from the plan/research step (see Open Design Question 1 below), but the 2/3 rule is locked.
+No per-slot pass thresholds. Instead, a SINGLE cumulative tally:
+
+```
+qualified_sum = 0
+
+For each vote:
+  if vote.slot_0_hash != 0:
+      qualified_sum += voter.reputation × 0.50
+
+  if same-hash group for vote.slot_1_hash has ≥2 distinct validators:
+      qualified_sum += voter.reputation × 0.25
+
+  if same-hash group for vote.slot_2_hash has ≥2 distinct validators:
+      qualified_sum += voter.reputation × 0.25
+
+total_voting_reputation = sum(reputation of ALL validators who voted)
+threshold = total_voting_reputation × 0.75
+
+certificate_produced = (qualified_sum > threshold)
+```
+
+**Slot 0**: 1 valid hash, 50% of voter reputation per qualifying vote.  
+**Slots 1-2**: Only hash groups with ≥2 distinct validators; solo hashes don't contribute.  
+**Certificate**: Cumulative qualified sum must exceed 75% of total voter reputation.
+
+Example: A DIRECT_API node with rep=1000 fills all 3 slots; two PUBLIC nodes with
+rep=100 each agree on hash `0xAB` in slot 1:
+- Slot 0: 1000 × 0.50 = 500
+- Slot 1: (100 + 100) × 0.25 = 50
+- Slot 2: 0 (no matching pair)
+- qualified_sum = 550
+- total_voting_rep = 1000 + 100 + 100 = 1200, threshold = 900
+- 550 < 900 → **no certificate** (need more PUBLIC agreement)
 
 ### D-07: Reputation = Existing Registry Weight (LOCKED)
 
@@ -120,23 +151,9 @@ vote and slot hashes are considered at the network level.
 | `sha256(rpc_response)` data commitments in votes | Out of scope — only endpoint identity hash |
 | Per-chain slot allocation | v1: node-level classification only |
 
-## Open Design Question (for planning)
+## Open Design Questions
 
-**Q1: Slot pass threshold.** Each slot computes a weight contribution. What threshold
-must that contribution cross for the slot to "pass"?
-
-Possibilities:
-- **(a)** The slot's weight contribution must be ≥ the slot's multiplier of the TOTAL
-  reputation pool for that slot type (e.g., slot 1 weight ≥ 25% of all node reputations
-  that COULD vote in slot 1).
-- **(b)** The slot's weight contribution must be ≥ the slot's multiplier of the total
-  reputation OF THOSE WHO ACTUALLY VOTED in that slot.
-- **(c)** The multiplier IS the gate — no additional threshold; the 50%/25% factor
-  is applied and the result feeds into a cumulative quorum check where total across
-  passing slots must cross 2/3 of network reputation.
-
-**The planner MUST resolve this with the user before task decomposition** — it
-determines the arithmetic in `EvaluateQuorum`.
+All resolved. No open questions remain.
 
 ## Plan Impact
 
