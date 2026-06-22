@@ -39,7 +39,7 @@ public:
 ///        "bridge_contract_address").
 fs::path WriteTempConfigJson( const std::string &content )
 {
-    auto path = fs::temp_directory_path() / "test_bridge_chains_config.json";
+    auto          path = fs::temp_directory_path() / "test_bridge_chains_config.json";
     std::ofstream out( path, std::ios::binary | std::ios::trunc );
     out << content;
     out.close();
@@ -47,13 +47,10 @@ fs::path WriteTempConfigJson( const std::string &content )
 }
 
 /// @brief Build a single-chain bridge_chains_config.json entry.
-std::string MakeConfigJsonEntry( const std::string &chain_name,
-                                 uint64_t           chain_id,
-                                 const std::string &contract_addr )
+std::string MakeConfigJsonEntry( const std::string &chain_name, uint64_t chain_id, const std::string &contract_addr )
 {
-    return R"(")" + chain_name + R"(": { "chain_id": )"
-           + std::to_string( chain_id )
-           + R"(, "bridge_contract_address": ")" + contract_addr + R"(" })";
+    return R"(")" + chain_name + R"(": { "chain_id": )" + std::to_string( chain_id ) +
+           R"(, "bridge_contract_address": ")" + contract_addr + R"(" })";
 }
 
 /// @brief Build a full bridge_chains_config.json object from one or more entries.
@@ -67,19 +64,18 @@ std::string MakeConfigJson( const std::string &entries )
 TEST( ChainRpcEndpointProviderTest, NotifiesObserversWithChains )
 {
     // Write a config with 2 chains — both should be accepted and reported.
-    std::string entries =
-        MakeConfigJsonEntry( "ethereum-sepolia", 11155111,
-                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" )
-        + ", " +
-        MakeConfigJsonEntry( "ethereum-mainnet", 1,
-                             "0x614577036F0a024DBC1C88BA616b394DD65d105a" );
+    std::string entries = MakeConfigJsonEntry( "ethereum-sepolia",
+                                               11155111,
+                                               "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" ) +
+                          ", " +
+                          MakeConfigJsonEntry( "ethereum-mainnet", 1, "0x614577036F0a024DBC1C88BA616b394DD65d105a" );
 
     auto tmpfile = WriteTempConfigJson( MakeConfigJson( entries ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    RecordingObserver          recorder;
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    RecordingObserver         recorder;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
     bool result = provider.Initialize( tmpfile, validator );
@@ -109,9 +105,9 @@ TEST( ChainRpcEndpointProviderTest, DoesNotNotifyObserversWhenInitializeFails )
     auto tmpfile = WriteTempConfigJson( "{" ); // invalid JSON
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    RecordingObserver          recorder;
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    RecordingObserver         recorder;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
     bool result = provider.Initialize( tmpfile, validator );
@@ -130,19 +126,18 @@ TEST( ChainRpcEndpointProviderTest, DoesNotNotifyObserversWhenInitializeFails )
 TEST( ChainRpcEndpointProviderTest, ChainWithoutChainIdIsSkipped )
 {
     // One entry has chain_id, the other does not — only the valid one counts.
-    std::string entry_with    = MakeConfigJsonEntry(
-        "ethereum-sepolia", 11155111,
-        "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+    std::string entry_with = MakeConfigJsonEntry( "ethereum-sepolia",
+                                                  11155111,
+                                                  "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
     std::string entry_without =
         R"("no-id-chain": { "bridge_contract_address": "0x0000000000000000000000000000000000000000" })";
 
-    auto tmpfile = WriteTempConfigJson(
-        MakeConfigJson( entry_with + ", " + entry_without ) );
+    auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry_with + ", " + entry_without ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    RecordingObserver          recorder;
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    RecordingObserver         recorder;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
     bool result = provider.Initialize( tmpfile, validator );
@@ -166,13 +161,11 @@ TEST( ChainRpcEndpointProviderTest, MalformedJsonReturnsFalse )
     auto tmpfile = WriteTempConfigJson( "{ not valid json" );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = false;
-    EXPECT_NO_THROW( {
-        result = provider.Initialize( tmpfile, validator );
-    } );
+    EXPECT_NO_THROW( { result = provider.Initialize( tmpfile, validator ); } );
     EXPECT_FALSE( result );
 
     // Cleanup
@@ -186,8 +179,8 @@ TEST( ChainRpcEndpointProviderTest, MissingFileReturnsFalse )
 {
     fs::path nonexistent = fs::temp_directory_path() / "nonexistent_config_12345.json";
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( nonexistent, validator );
     EXPECT_FALSE( result );
@@ -200,12 +193,11 @@ TEST( ChainRpcEndpointProviderTest, EmptyJsonReturnsFalse )
     auto tmpfile = WriteTempConfigJson( "{}" );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( tmpfile, validator );
-    EXPECT_FALSE( result )
-        << "Initialize should return false when no chain entries are present";
+    EXPECT_FALSE( result ) << "Initialize should return false when no chain entries are present";
 
     // Cleanup
     std::error_code ec;
@@ -216,17 +208,17 @@ TEST( ChainRpcEndpointProviderTest, EmptyJsonReturnsFalse )
 
 TEST( ChainRpcEndpointProviderTest, MultipleObserversAllNotified )
 {
-    std::string entry = MakeConfigJsonEntry(
-        "ethereum-sepolia", 11155111,
-        "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+    std::string entry = MakeConfigJsonEntry( "ethereum-sepolia",
+                                             11155111,
+                                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
 
     auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    RecordingObserver          recorder1;
-    RecordingObserver          recorder2;
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    RecordingObserver         recorder1;
+    RecordingObserver         recorder2;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     provider.AddObserver( recorder1 );
     provider.AddObserver( recorder2 );
@@ -249,15 +241,15 @@ TEST( ChainRpcEndpointProviderTest, MultipleObserversAllNotified )
 
 TEST( ChainRpcEndpointProviderTest, SucceedsWithNoObservers )
 {
-    std::string entry = MakeConfigJsonEntry(
-        "ethereum-sepolia", 11155111,
-        "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+    std::string entry = MakeConfigJsonEntry( "ethereum-sepolia",
+                                             11155111,
+                                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
 
     auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     // No AddObserver call — should still succeed without crashing
     bool result = provider.Initialize( tmpfile, validator );

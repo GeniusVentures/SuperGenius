@@ -73,9 +73,7 @@ namespace sgns
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
      */
-    class GeniusNode : public IComponent,
-                        public IBridgeInitObserver,
-                        public std::enable_shared_from_this<GeniusNode>
+    class GeniusNode : public IComponent, public IBridgeInitObserver, public std::enable_shared_from_this<GeniusNode>
     {
     public:
         /**
@@ -632,24 +630,24 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                        is_full_node_;                 ///< Whether this node runs in full-node mode.
-        base::Logger                node_logger_;                  ///< Main node logger.
-        DevConfig_st                dev_config_;                   ///< Runtime node configuration.
-        bool                        catchup_scan_done_ = false;    ///< Guards single-shot startup catch-up scan (D-20).
-        std::vector<ChainContractPair> catchup_chains_;         ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
+        bool                           is_full_node_;              ///< Whether this node runs in full-node mode.
+        base::Logger                   node_logger_;               ///< Main node logger.
+        DevConfig_st                   dev_config_;                ///< Runtime node configuration.
+        bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
+        std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
         std::unique_ptr<ChainRpcEndpointProvider>
-                                       rpc_endpoint_provider_;  ///< Owns the provider across async Initialize().
-        std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string                 processing_channel_topic_;     ///< Processing task channel topic.
-        std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
-        std::vector<std::string>       bootstrap_peers_;
-        std::vector<std::string>       bootstrap_fullnodes_;
-        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
+                                            rpc_endpoint_provider_;    ///< Owns the provider across async Initialize().
+        std::string                         gnus_network_full_path_;   ///< Versioned network DB path.
+        std::string                         processing_channel_topic_; ///< Processing task channel topic.
+        std::string                         processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>            bootstrap_peers_;
+        std::vector<std::string>            bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo> bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
-        uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
-        std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
+        uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
         /**
          * @brief Constructs a node around an already-created account.

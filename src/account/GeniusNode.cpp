@@ -2473,12 +2473,12 @@ namespace sgns
         // single-value-per-position (no OR-array support in serialization), so
         // two separate eth_getLogs calls are made per chain and the results are
         // merged with tx_hash deduplication.
-        const std::string event_sig    ( kBridgeSourceBurnedSig );
-        auto              topic0_hash   = eth::abi::event_signature_hash( event_sig );
+        const std::string event_sig( kBridgeSourceBurnedSig );
+        auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
         std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
         // Bridge V2: bytes32 sgnsDestination + bool destinationYOdd (parity bit).
-        const std::string event_sig_v2 ( kBridgeOutInitiatedSig );
+        const std::string event_sig_v2( kBridgeOutInitiatedSig );
         auto              topic0_hash_v2 = eth::abi::event_signature_hash( event_sig_v2 );
         std::string       topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
 
@@ -2624,15 +2624,14 @@ namespace sgns
                     // the value indices match OnWatchEvent / ParseBurnEventValues.
                     static const std::string kEventSigV1( kBridgeSourceBurnedSig );
                     static const std::string kEventSigV2( kBridgeOutInitiatedSig );
-                    const std::string &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
+                    const std::string       &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
 
                     const auto all_params = eth::cli::event_registry().params_for( event_sig );
-                    auto decoded = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
+                    auto       decoded    = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
                     if ( !decoded.has_value() )
                     {
                         ++total_skipped;
-                        node_logger_->warn( "CatchUpScan: failed to decode log for tx {} — skipping",
-                                            tx_hash_hex );
+                        node_logger_->warn( "CatchUpScan: failed to decode log for tx {} — skipping", tx_hash_hex );
                         continue;
                     }
 

@@ -56,19 +56,20 @@ static const std::string kChainlistJson = R"([
 /// @brief Compute the BridgeSourceBurned event topic0 to match provider-generated topic0.
 static std::string ComputeBridgeTopic0()
 {
-    auto        hash = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    auto hash = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
     return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
 }
 
 /// @brief Write a temp bridge_chains_config.json (Phase 05.1 object-keyed format).
 static fs::path WriteTempBridgeConfig()
 {
-    auto path = fs::temp_directory_path() / "e2e_bridge_chains_config.json";
-    std::ofstream out( path, std::ios::binary | std::ios::trunc );
+    auto              path = fs::temp_directory_path() / "e2e_bridge_chains_config.json";
+    std::ofstream     out( path, std::ios::binary | std::ios::trunc );
     const std::string json = R"({
         "ethereum-sepolia": {
             "chain_id": 11155111,
-            "bridge_contract_address": ")" + std::string( kSepoliaContract ) + R"("
+            "bridge_contract_address": ")" +
+                             std::string( kSepoliaContract ) + R"("
         }
     })";
     out << json;
@@ -112,9 +113,9 @@ static std::string BuildValidReceiptJson( const std::string &tx_hash,
 class FixedReceiptTransport final : public eth::rpc::JsonRpcTransport
 {
 public:
-    explicit FixedReceiptTransport( std::string receipt_json )
-        : receipt_( std::move( receipt_json ) )
-    {}
+    explicit FixedReceiptTransport( std::string receipt_json ) : receipt_( std::move( receipt_json ) )
+    {
+    }
 
     std::optional<std::string> call( const boost::json::object & /*request*/ ) override
     {
@@ -139,17 +140,18 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     ASSERT_TRUE( fs::exists( config_path ) );
 
     // 3. Create validator + provider
-    PublicChainInputValidator  validator;
-    ChainRpcEndpointProvider   provider;
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
 
     // 4. Inject mock transport factory — verify it was accepted
     validator.SetTransportFactory(
-        [&]( const std::string & /*url*/, std::chrono::seconds /*timeout*/ )
-        -> std::unique_ptr<eth::rpc::JsonRpcTransport>
+        [&]( const std::string & /*url*/,
+             std::chrono::seconds /*timeout*/ ) -> std::unique_ptr<eth::rpc::JsonRpcTransport>
         {
             const std::string topic0  = ComputeBridgeTopic0();
-            const std::string receipt = BuildValidReceiptJson(
-                "0x" + std::string( 64, 'a' ), kSepoliaContract, topic0 );
+            const std::string receipt = BuildValidReceiptJson( "0x" + std::string( 64, 'a' ),
+                                                               kSepoliaContract,
+                                                               topic0 );
             return std::make_unique<FixedReceiptTransport>( receipt );
         } );
 
@@ -158,7 +160,7 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     ASSERT_TRUE( result ) << "Initialize should succeed with valid config";
 
     // 6. Add URLs from chainlist data with consensus weights
-    const std::string topic0 = ComputeBridgeTopic0();
+    const std::string                topic0 = ComputeBridgeTopic0();
     std::vector<WeightedRpcEndpoint> endpoints;
     for ( const auto &url : kSepoliaRpcUrls )
     {
@@ -175,14 +177,12 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     auto first_url = validator.GetFirstRpcUrl( "11155111" );
     ASSERT_TRUE( first_url.has_value() ) << "Validator must have RPC URL after wiring";
     EXPECT_FALSE( first_url->empty() );
-    EXPECT_EQ( *first_url, kSepoliaRpcUrls[0] )
-        << "First URL should match the chainlist.org URL for Sepolia";
+    EXPECT_EQ( *first_url, kSepoliaRpcUrls[0] ) << "First URL should match the chainlist.org URL for Sepolia";
 
     // 8. Prove mock transport returns valid receipt JSON that would satisfy
     //    VerifyPublicChainSmartContract (which requires status=0x1, matching
     //    bridge_contract_address + event_topic0 in the receipt log).
-    const std::string valid_json = BuildValidReceiptJson(
-        "0x" + std::string( 64, 'a' ), kSepoliaContract, topic0 );
+    const std::string     valid_json = BuildValidReceiptJson( "0x" + std::string( 64, 'a' ), kSepoliaContract, topic0 );
     FixedReceiptTransport direct_transport( valid_json );
 
     boost::json::object dummy_request;
@@ -194,8 +194,8 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     ASSERT_TRUE( response.has_value() );
     EXPECT_TRUE( response->find( "\"0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70\"" ) != std::string::npos )
         << "Mock receipt must contain the real Sepolia bridge contract address";
-    EXPECT_TRUE( response->find( "\"0xde0dff20aee114e5ac35a9f7a916ab799270e86ae622ec6de8ab330eaacafc81\"" )
-                 != std::string::npos )
+    EXPECT_TRUE( response->find( "\"0xde0dff20aee114e5ac35a9f7a916ab799270e86ae622ec6de8ab330eaacafc81\"" ) !=
+                 std::string::npos )
         << "Mock receipt must contain the computed BridgeSourceBurned topic0";
 }
 
@@ -208,7 +208,8 @@ TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
     struct Recorder final : IBridgeInitObserver
     {
         std::vector<ChainContractPair> chains;
-        bool called = false;
+        bool                           called = false;
+
         void OnRpcEndpointsReady( std::vector<ChainContractPair> c ) override
         {
             chains = std::move( c );
@@ -216,9 +217,9 @@ TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
         }
     };
 
-    Recorder                   recorder;
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    Recorder                  recorder;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
     bool result = provider.Initialize( config_path, validator );
@@ -239,8 +240,7 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsLoadedAndFiltered )
 
     // Filter to only Sepolia (chain_id = 11155111)
     std::vector<uint64_t> configured = { 11155111 };
-    auto filtered = eth::rpc::filter_to_configured_chains(
-        parse_result.value(), configured );
+    auto                  filtered   = eth::rpc::filter_to_configured_chains( parse_result.value(), configured );
 
     ASSERT_FALSE( filtered.empty() );
     EXPECT_EQ( filtered.size(), 3u ) << "Should have 3 Sepolia endpoints";
