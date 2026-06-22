@@ -36,16 +36,19 @@ static const std::string kBridgeEventSignatureV2 = std::string( kBridgeOutInitia
 
 // Expected topic0 hex for BridgeSourceBurned (keccak256 of the signature)
 // Computed via keccak256(kBridgeSourceBurnedSig)
-static const std::string kExpectedTopic0Hex =
-    "0x"  // placeholder — verified against actual hash in test
-    ;
+static const std::string kExpectedTopic0Hex = "0x"; // placeholder — verified against actual hash in test
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+fs::path BundledChainsConfigPath()
+{
+    return fs::path( STARTUP_WIRING_TEST_CONFIG_PATH );
+}
 
 /// @brief Write a temporary bridge_chains_config.json for testing.
 fs::path WriteTempChainsConfig( const std::string &json_content )
 {
-    auto tmp_path = fs::temp_directory_path() / "test_bridge_chains_config.json";
+    auto          tmp_path = fs::temp_directory_path() / "test_bridge_chains_config.json";
     std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
     out << json_content;
     out.close();
@@ -86,9 +89,8 @@ TEST( StartupWiringTest, BridgeSourceBurnedTopic0IsDeterministic )
 TEST( StartupWiringTest, DifferentSignaturesProduceDifferentTopic0 )
 {
     // Different event signatures must produce different topic0 hashes
-    auto bridge_hash = eth::abi::event_signature_hash( kBridgeEventSignature );
-    auto transfer_hash =
-        eth::abi::event_signature_hash( "Transfer(address,address,uint256)" );
+    auto bridge_hash   = eth::abi::event_signature_hash( kBridgeEventSignature );
+    auto transfer_hash = eth::abi::event_signature_hash( "Transfer(address,address,uint256)" );
 
     EXPECT_NE( bridge_hash, transfer_hash );
 }
@@ -126,8 +128,7 @@ TEST( StartupWiringTest, V1andV2Topic0Differ )
     auto v1_hash = eth::abi::event_signature_hash( kBridgeEventSignature );
     auto v2_hash = eth::abi::event_signature_hash( kBridgeEventSignatureV2 );
 
-    EXPECT_NE( v1_hash, v2_hash )
-        << "v1 and v2 event signatures must produce distinct topic0 hashes";
+    EXPECT_NE( v1_hash, v2_hash ) << "v1 and v2 event signatures must produce distinct topic0 hashes";
 }
 
 TEST( StartupWiringTest, V2Topic0IsNonZero )
@@ -155,11 +156,11 @@ TEST( StartupWiringTest, ConfigFileHasCorrectChainIds )
 {
     // D-04: chain IDs are now sourced from bridge_chains_config.json.
     // Verify the bundled config carries valid numeric chain_id on all 8 entries.
-    std::ifstream file( "bridge_chains_config.json", std::ios::binary );
-    ASSERT_TRUE( file.is_open() );
+    const auto    config_path = BundledChainsConfigPath();
+    std::ifstream file( config_path, std::ios::binary );
+    ASSERT_TRUE( file.is_open() ) << "Failed to open " << config_path;
 
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
 
     auto parsed = boost::json::parse( content );
@@ -170,12 +171,10 @@ TEST( StartupWiringTest, ConfigFileHasCorrectChainIds )
     for ( const auto &[key, value] : obj )
     {
         auto chain_obj = value.as_object();
-        ASSERT_TRUE( chain_obj.contains( "chain_id" ) )
-            << "Chain '" << key << "' missing chain_id";
+        ASSERT_TRUE( chain_obj.contains( "chain_id" ) ) << "Chain '" << key << "' missing chain_id";
         uint64_t chain_id = boost::json::value_to<uint64_t>( chain_obj.at( "chain_id" ) );
         EXPECT_GT( chain_id, 0u ) << "Chain " << key << " has invalid chain_id " << chain_id;
-        EXPECT_TRUE( seen.insert( chain_id ).second )
-            << "Duplicate chain_id " << chain_id << " for " << key;
+        EXPECT_TRUE( seen.insert( chain_id ).second ) << "Duplicate chain_id " << chain_id << " for " << key;
     }
 }
 
@@ -201,8 +200,7 @@ TEST( StartupWiringTest, ParseChainsConfigWithBridgeContract )
     std::ifstream file( path, std::ios::binary );
     ASSERT_TRUE( file.is_open() );
 
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
     EXPECT_FALSE( content.empty() );
     EXPECT_NE( content.find( "bridge_contract_address" ), std::string::npos );
@@ -227,8 +225,7 @@ TEST( StartupWiringTest, ChainsConfigWithoutBridgeContractIsSkipped )
     std::ifstream file( path, std::ios::binary );
     ASSERT_TRUE( file.is_open() );
 
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
 
     // bridge_contract_address should NOT be present
@@ -272,8 +269,7 @@ TEST( StartupWiringTest, MetadataEntriesPrefixedWithUnderscoreAreSkipped )
     // skipped during initialization
     std::ifstream file( path, std::ios::binary );
     ASSERT_TRUE( file.is_open() );
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
 
     EXPECT_NE( content.find( "_comment" ), std::string::npos );
@@ -291,37 +287,43 @@ TEST( StartupWiringTest, ArchitectureObserverContractsAreInPlace )
     // D-03/D-04: GeniusNode also implements IBridgeInitObserver for catch-up.
 
     // Compile-time verification: BridgeRelayer is-an IBridgeInitObserver
-    EXPECT_TRUE( ( std::is_base_of_v<IBridgeInitObserver, BridgeRelayer> ) )
-        << "BridgeRelayer must implement IBridgeInitObserver (D-03)";
+    static_assert( std::is_base_of_v<IBridgeInitObserver, BridgeRelayer>,
+                   "BridgeRelayer must implement IBridgeInitObserver (D-03)" );
 
     // GeniusNode must also implement IBridgeInitObserver (self-subscribes for catch-up scan)
-    EXPECT_TRUE( ( std::is_base_of_v<IBridgeInitObserver, GeniusNode> ) )
-        << "GeniusNode must implement IBridgeInitObserver for catch-up scan (D-03)";
+    static_assert( std::is_base_of_v<IBridgeInitObserver, GeniusNode>,
+                   "GeniusNode must implement IBridgeInitObserver for catch-up scan (D-03)" );
 
     // ChainRpcEndpointProvider exposes AddObserver and path-based Initialize
     ChainRpcEndpointProvider provider;
+
     // Verify the API exposes AddObserver (compile-time check with a stub observer)
     struct StubObserver final : IBridgeInitObserver
     {
-        void OnRpcEndpointsReady( std::vector<ChainContractPair> ) override {}
+        void OnRpcEndpointsReady( std::vector<ChainContractPair> ) override
+        {
+        }
     };
+
     StubObserver stub;
     provider.AddObserver( stub ); // compile-time check: API is present
 
     // Config file carries chain IDs (D-04): verify the bundled file has chain_id
-    std::ifstream file( "bridge_chains_config.json", std::ios::binary );
-    ASSERT_TRUE( file.is_open() );
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    const auto    config_path = BundledChainsConfigPath();
+    std::ifstream file( config_path, std::ios::binary );
+    ASSERT_TRUE( file.is_open() ) << "Failed to open " << config_path;
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
     auto parsed = boost::json::parse( content );
     auto obj    = parsed.as_object();
     for ( const auto &[key, value] : obj )
     {
-        if ( key.starts_with( "_" ) ) continue;
+        if ( key.starts_with( "_" ) )
+        {
+            continue;
+        }
         auto chain_obj = value.as_object();
-        EXPECT_TRUE( chain_obj.contains( "chain_id" ) )
-            << "Chain '" << key << "' missing chain_id (D-04)";
+        EXPECT_TRUE( chain_obj.contains( "chain_id" ) ) << "Chain '" << key << "' missing chain_id (D-04)";
     }
 }
 
@@ -352,10 +354,7 @@ TEST( StartupWiringTest, CatchupScanBurnedUtxoSkippedIfConsumed )
     };
 
     auto should_skip = []( TxStatus status ) -> bool
-    {
-        return status == TxStatus::CONFIRMED || status == TxStatus::VERIFYING ||
-               status == TxStatus::SENDING;
-    };
+    { return status == TxStatus::CONFIRMED || status == TxStatus::VERIFYING || status == TxStatus::SENDING; };
 
     // These statuses should cause the catch-up scan to skip
     EXPECT_TRUE( should_skip( TxStatus::CONFIRMED ) );
@@ -373,13 +372,11 @@ TEST( StartupWiringTest, CatchupScanTopic0HexConversion )
     auto topic0_hash = eth::abi::event_signature_hash( kBridgeEventSignature );
 
     // Convert to hex string (as done in the implementation)
-    std::string topic0_hex =
-        rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+    std::string topic0_hex = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
     EXPECT_FALSE( topic0_hex.empty() );
-    EXPECT_EQ( topic0_hex.size(), 66u )  // "0x" + 64 hex chars
-        << "Topic0 hex should be 0x-prefixed 32-byte hex string, got: "
-        << topic0_hex;
+    EXPECT_EQ( topic0_hex.size(), 66u ) // "0x" + 64 hex chars
+        << "Topic0 hex should be 0x-prefixed 32-byte hex string, got: " << topic0_hex;
     EXPECT_EQ( topic0_hex.substr( 0, 2 ), "0x" );
 }
 
@@ -403,8 +400,8 @@ TEST( StartupWiringTest, ProviderInitializeWithValidConfigReturnsTrue )
     auto path = WriteTempChainsConfig( json );
     ASSERT_TRUE( fs::exists( path ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( path, validator );
 
@@ -429,8 +426,8 @@ TEST( StartupWiringTest, ProviderReturnsFalseForConfigWithoutChainId )
     auto path = WriteTempChainsConfig( json );
     ASSERT_TRUE( fs::exists( path ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( path, validator );
     EXPECT_FALSE( result );
@@ -452,8 +449,7 @@ TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
     // Read it back — parsing would fail, but no crash
     std::ifstream file( path, std::ios::binary );
     ASSERT_TRUE( file.is_open() );
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
 
     // The content exists but is malformed
@@ -465,14 +461,13 @@ TEST( StartupWiringTest, MalformedJsonIsHandledGracefully )
     try
     {
         auto parsed = boost::json::parse( content );
-        (void)parsed;
+        (void) parsed;
     }
     catch ( const std::exception & )
     {
         parse_failed = true;
     }
-    EXPECT_TRUE( parse_failed )
-        << "Malformed JSON should cause parse failure (caught by try/catch)";
+    EXPECT_TRUE( parse_failed ) << "Malformed JSON should cause parse failure (caught by try/catch)";
 
     RemoveTempFile( path );
 }
@@ -487,8 +482,7 @@ TEST( StartupWiringTest, EmptyChainsConfigDoesNotCrash )
 
     std::ifstream file( path, std::ios::binary );
     ASSERT_TRUE( file.is_open() );
-    std::string content( ( std::istreambuf_iterator<char>( file ) ),
-                         std::istreambuf_iterator<char>() );
+    std::string content( ( std::istreambuf_iterator<char>( file ) ), std::istreambuf_iterator<char>() );
     file.close();
 
     EXPECT_EQ( content, "{}" );
@@ -505,14 +499,13 @@ TEST( StartupWiringTest, EmptyChainsConfigDoesNotCrash )
 
 TEST( StartupWiringTest, MissingFileReturnsFalse )
 {
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     fs::path nonexistent = fs::temp_directory_path() / "no_such_config_xyz.json";
-    bool result = provider.Initialize( nonexistent, validator );
+    bool     result      = provider.Initialize( nonexistent, validator );
 
-    EXPECT_FALSE( result )
-        << "Initialize should return false when config file does not exist";
+    EXPECT_FALSE( result ) << "Initialize should return false when config file does not exist";
 }
 
 TEST( StartupWiringTest, EmptyJsonConfigReturnsFalse )
@@ -520,12 +513,11 @@ TEST( StartupWiringTest, EmptyJsonConfigReturnsFalse )
     auto path = WriteTempChainsConfig( "{}" );
     ASSERT_TRUE( fs::exists( path ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( path, validator );
-    EXPECT_FALSE( result )
-        << "Initialize should return false when config has no valid chain entries";
+    EXPECT_FALSE( result ) << "Initialize should return false when config has no valid chain entries";
 
     RemoveTempFile( path );
 }
@@ -545,12 +537,11 @@ TEST( StartupWiringTest, ConfigWithoutBridgeContractAddressReturnsFalse )
     auto path = WriteTempChainsConfig( json );
     ASSERT_TRUE( fs::exists( path ) );
 
-    ChainRpcEndpointProvider   provider;
-    PublicChainInputValidator  validator;
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
 
     bool result = provider.Initialize( path, validator );
-    EXPECT_FALSE( result )
-        << "Initialize should return false when no chain has bridge_contract_address";
+    EXPECT_FALSE( result ) << "Initialize should return false when no chain has bridge_contract_address";
 
     RemoveTempFile( path );
 }
@@ -567,11 +558,7 @@ TEST( StartupWiringTest, BridgeInitIsNonBlocking )
     auto io = std::make_shared<boost::asio::io_context>();
 
     bool callback_invoked = false;
-    boost::asio::post( *io,
-                       [&]()
-                       {
-                           callback_invoked = true;
-                       } );
+    boost::asio::post( *io, [&]() { callback_invoked = true; } );
 
     // Before running the io_context, the callback should NOT have run
     EXPECT_FALSE( callback_invoked );
@@ -579,8 +566,7 @@ TEST( StartupWiringTest, BridgeInitIsNonBlocking )
     // Run the io_context — the posted callback should execute
     io->run();
 
-    EXPECT_TRUE( callback_invoked )
-        << "boost::asio::post callback should execute when io_context runs";
+    EXPECT_TRUE( callback_invoked ) << "boost::asio::post callback should execute when io_context runs";
 }
 
 TEST( StartupWiringTest, IoContextStopPreventsCallbacks )
@@ -590,18 +576,13 @@ TEST( StartupWiringTest, IoContextStopPreventsCallbacks )
     io->stop();
 
     bool callback_invoked = false;
-    boost::asio::post( *io,
-                       [&]()
-                       {
-                           callback_invoked = true;
-                       } );
+    boost::asio::post( *io, [&]() { callback_invoked = true; } );
 
     // poll() returns immediately since io_context is stopped
     io->poll();
 
     // The callback should NOT have executed on a stopped context
-    EXPECT_FALSE( callback_invoked )
-        << "Posted callback should not execute on stopped io_context";
+    EXPECT_FALSE( callback_invoked ) << "Posted callback should not execute on stopped io_context";
 }
 
 // ─── Tests: Catchup Scan Guard (P2 race-condition fix) ─────────────────────
@@ -620,8 +601,8 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
 
     struct CatchupScanGuard
     {
-        bool scan_done       = false;  // catchup_scan_done_
-        bool chains_populated = false;  // !catchup_chains_.empty()
+        bool scan_done        = false; // catchup_scan_done_
+        bool chains_populated = false; // !catchup_chains_.empty()
 
         /// @brief Models the guard: should we post PerformStartupCatchupScan now?
         bool ShouldTriggerScan() const
@@ -638,21 +619,18 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
         CatchupScanGuard guard;
 
         // Attempt 1: READY state reached, chains not yet populated
-        EXPECT_FALSE( guard.ShouldTriggerScan() )
-            << "Guard must NOT trigger scan when chains are not yet populated";
+        EXPECT_FALSE( guard.ShouldTriggerScan() ) << "Guard must NOT trigger scan when chains are not yet populated";
 
         // scan_done must remain false so a retry is still possible
-        EXPECT_FALSE( guard.scan_done )
-            << "scan_done must remain false after a blocked attempt — "
-            << "the scan must not be permanently skipped";
+        EXPECT_FALSE( guard.scan_done ) << "scan_done must remain false after a blocked attempt — "
+                                        << "the scan must not be permanently skipped";
 
         // Chains arrive later via OnRpcEndpointsReady
         guard.chains_populated = true;
 
         // Attempt 2: chains now available, scan should trigger
-        EXPECT_TRUE( guard.ShouldTriggerScan() )
-            << "Guard must allow scan after chains are populated — "
-            << "OnRpcEndpointsReady must be able to trigger the deferred scan";
+        EXPECT_TRUE( guard.ShouldTriggerScan() ) << "Guard must allow scan after chains are populated — "
+                                                 << "OnRpcEndpointsReady must be able to trigger the deferred scan";
     }
 
     // ── Scenario B: chains arrive before READY (happy path) ──────────
@@ -663,9 +641,8 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
         guard.chains_populated = true;
 
         // READY fires — scan should trigger
-        EXPECT_TRUE( guard.ShouldTriggerScan() )
-            << "Guard must allow scan when chains are already populated "
-            << "at the time READY is reached";
+        EXPECT_TRUE( guard.ShouldTriggerScan() ) << "Guard must allow scan when chains are already populated "
+                                                 << "at the time READY is reached";
     }
 
     // ── Scenario C: scan runs once, does not re-trigger ──────────────
@@ -681,8 +658,7 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
         guard.scan_done = true;
 
         // Second trigger must not fire
-        EXPECT_FALSE( guard.ShouldTriggerScan() )
-            << "Guard must not allow scan to re-trigger after it has already run";
+        EXPECT_FALSE( guard.ShouldTriggerScan() ) << "Guard must not allow scan to re-trigger after it has already run";
     }
 
     // ── Scenario D: empty chains forever, scan never triggers ─────────
@@ -691,7 +667,6 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
 
         // Chains never arrive — scan should never trigger
         EXPECT_FALSE( guard.ShouldTriggerScan() );
-        EXPECT_FALSE( guard.scan_done )
-            << "scan_done must remain false if chains never arrive";
+        EXPECT_FALSE( guard.scan_done ) << "scan_done must remain false if chains never arrive";
     }
 }
