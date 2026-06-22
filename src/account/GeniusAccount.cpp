@@ -287,8 +287,11 @@ namespace sgns
             return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
         }
 
-        genius_account_logger()->info(
-            "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+        genius_account_logger()->error(
+            "Could not find existing Genius address, generating one from a random mnemonic" );
+
+        return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+    }
 
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )

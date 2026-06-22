@@ -69,15 +69,15 @@ namespace sgns
                                                                const boost::filesystem::path &base_path,
                                                                bool                           full_node = false );
 
-        static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
-                                                                std::string_view public_key,
-                                                                bool             full_node = false );
-
         /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
+         * @brief Creates an account with a newly generated random BIP39 mnemonic.
+         * @param[in] token_id Token ID of the account.
+         * @param[in] base_path Base path to store/retrieve keys.
+         * @param[in] full_node Whether to initialize as a full node.
+         * @return Pair of shared account instance (nullptr on failure) and the generated mnemonic phrase.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+        static std::pair<std::shared_ptr<GeniusAccount>, std::string> NewFromRandomMnemonic(
+            TokenID                        token_id,
                                                    const boost::filesystem::path &base_path,
                                                    bool                           full_node = false );
 

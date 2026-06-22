@@ -81,7 +81,7 @@ TEST( AccountCreationTest, CreationWithMnemonic )
     ASSERT_EQ( account->GetAddress(), address );
 }
 
-TEST( AccountCreationTest, CreationWithRandomKey )
+TEST( AccountCreationTest, CreationWithRandomMnemonicInAnEmptyDirectory )
 {
     try
     {
@@ -97,5 +97,25 @@ TEST( AccountCreationTest, CreationWithRandomKey )
     std::string address_main1 = account1->GetAddress();
     std::string address_main2 = account2->GetAddress();
 
+    ASSERT_NE( address_main1, address_main2 ) << "Addresses are equal even though they should not be";
+}
+
+TEST( AccountCreationTest, CreationWithRandomMnemonic )
+{
+    try
+    {
+        fs::remove_all( "./account1" );
+        fs::remove_all( "./account2" );
+    }
+    catch ( ... )
+    {
+    };
+
+    auto        account1      = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, fs::path( "./account1" ) );
+    auto        account2      = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, fs::path( "./account2" ) );
+    std::string address_main1 = account1.first->GetAddress();
+    std::string address_main2 = account2.first->GetAddress();
+
     EXPECT_NE( address_main1, address_main2 ) << "Addresses are equal even though they should not be";
+    ASSERT_NE( account1.second, account2.second );
 }

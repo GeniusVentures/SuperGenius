@@ -205,11 +205,32 @@ namespace sgns
 
             return instance;
         }
-        catch ( const std::invalid_argument &err )
+
+    std::pair<std::shared_ptr<GeniusNode>, std::string> GeniusNode::NewFromRandomMnemonic(
+        const DevConfig_st &dev_config,
+        bool                autodht,
+        bool                isprocessor,
+        uint16_t            base_port,
+        bool                is_full_node )
         {
-            std::cerr << "Failed to generate address from mnemonic: " << err.what() << '\n';
+        auto account = GeniusAccount::NewFromRandomMnemonic( dev_config.TokenID,
+                                                             dev_config.BaseWritePath,
+                                                             is_full_node );
+
+        if ( account.first == nullptr )
+        {
+            return std::make_pair( nullptr, account.second );
         }
-        return nullptr;
+
+        auto instance = std::shared_ptr<GeniusNode>(
+            new GeniusNode( dev_config, std::move( account.first ), autodht, isprocessor, base_port, is_full_node ) );
+
+        if ( instance )
+        {
+            instance->BeginDBInitialization();
+        }
+
+        return std::make_pair( instance, account.second );
     }
 
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
@@ -1337,6 +1358,16 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<std::string> GeniusNode::AddAccountWithRandomMnemonic() const
+    {
+        auto new_account = GeniusAccount::NewFromRandomMnemonic( this->GetTokenID(), write_base_path_, is_full_node_ );
+        if ( new_account.first == nullptr )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return new_account.second;
+    }
+
     outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
     {
         public_address = GeniusAccount::NormalizeAddress( public_address );
@@ -1653,6 +1684,16 @@ namespace sgns
 
         node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
         return std::make_pair( tx_id, duration );
+    }
+
+    std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
+    {
+        auto res = this->account_->LoadFromSecureStorage( "mnemonic" );
+        if ( res.has_error() )
+        {
+            return std::nullopt;
+        }
+        return res.value();
     }
 
     [[nodiscard]] std::pair<float, std::string> GeniusNode::GetInitializationStatus() const

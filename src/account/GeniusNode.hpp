@@ -119,6 +119,22 @@ namespace sgns
                                                             bool                is_full_node = false );
 
         /**
+         * @brief Creates a node with a newly generated random BIP39 mnemonic.
+         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
+         * @param[in] autodht Whether to start DHT discovery.
+         * @param[in] isprocessor Whether this node should run processing services.
+         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] is_full_node Whether the node should run in full-node mode.
+         * @return Pair of shared node instance (nullptr on failure) and the generated mnemonic phrase.
+         */
+        static std::pair<std::shared_ptr<GeniusNode>, std::string> NewFromRandomMnemonic(
+            const DevConfig_st &dev_config,
+            bool                autodht      = true,
+            bool                isprocessor  = true,
+            uint16_t            base_port    = 40001,
+            bool                is_full_node = false );
+
+        /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
          */
         ~GeniusNode() override;
@@ -176,7 +192,18 @@ namespace sgns
 
         outcome::result<void> AddAccountWithKey( const char *private_key );
 
-        outcome::result<void> AddAccountWithMnemonic( const std::string &mnemonic );
+        /**
+         * @brief Adds an account to local storage using a BIP39 mnemonic phrase.
+         * @param[in] mnemonic BIP39 mnemonic phrase.
+         * @return Success if the account was created and stored, or an error.
+         */
+        outcome::result<void> AddAccountWithMnemonic( const std::string &mnemonic ) const;
+
+        /**
+         * @brief Adds an account to local storage using a newly generated random BIP39 mnemonic.
+         * @return The generated mnemonic phrase on success, or an error.
+         */
+        outcome::result<std::string> AddAccountWithRandomMnemonic() const;
 
         /**
          * @brief Selects the active account for subsequent node operations.
@@ -351,6 +378,12 @@ namespace sgns
         {
             return account_->GetAddress();
         }
+
+        /**
+         * @brief Retrieves the BIP39 mnemonic of the active account from secure storage.
+         * @return The mnemonic phrase if found, or std::nullopt.
+         */
+        std::optional<std::string> GetMnemonicOfActiveAccount() const;
 
         /**
          * @brief Returns the configured child token identifier.
