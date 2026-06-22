@@ -1,4 +1,4 @@
-# GNUS-NEO-SWARM / SuperGenius clang-tidy configuration
+# SuperGenius clang-tidy configuration
 #
 # Encodes rules from:
 #   - CLAUDE.md → SuperGenius Naming Convention Overrides (takes precedence)
