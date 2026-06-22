@@ -13,15 +13,28 @@
 
 #include "account/ChainContractPair.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
+#include "account/TokenID.hpp"
 #include "account/TransactionManager.hpp"
 #include "base/logger.hpp"
 #include "eth/eth_watch_service.hpp"
+#include "outcome/outcome.hpp"
 
 /// @brief Forward declaration for unit test access to private members.
 class BridgeRelayerTestAccess;
 
 namespace sgns
 {
+    /**
+     * @brief Parsed burn event parameters shared between real-time watch
+     *        (OnWatchEvent) and startup catch-up scan (PerformStartupCatchupScan).
+     */
+    struct BurnEventParams
+    {
+        TokenID     token_id;     ///< Token identifier from event [1]
+        uint64_t    amount;       ///< Burn amount from event [2]
+        std::string destination;  ///< 128-char hex recipient from event [5] (decompressed if v2)
+    };
+
     /**
      * @brief Registers both BridgeSourceBurned (v1) and BridgeOutInitiated (v2)
      *        watches on a shared EthWatchService across multiple chains and calls
@@ -39,7 +52,23 @@ namespace sgns
          * @return      If successful, a shared pointer to the created BridgeRelayer; otherwise, a nullptr
          */
         static std::shared_ptr<BridgeRelayer> Create( std::weak_ptr<TransactionManager>     tx_manager,
-                                                      std::shared_ptr<eth::EthWatchService> watch_service );
+                                                       std::shared_ptr<eth::EthWatchService> watch_service );
+
+        /**
+         * @brief Parse decoded ABI values into BurnEventParams for bridging.
+         *
+         * Works for both OnWatchEvent (decoded via decode_log) and catch-up scan
+         * (decoded via decode_log).  values layout:
+         *   [0] sender (address, indexed)   [3] srcChainID (uint256)
+         *   [1] id (uint256)                [4] destChainID (uint256)
+         *   [2] amount (uint256)            [5] sgnsDestination (bytes/bytes32)
+         *                                    [6] destinationYOdd (bool, v2 only)
+         *
+         * @param[in] values  Decoded ABI values in declaration order.
+         * @return Parsed parameters on success, or error if values are malformed.
+         */
+        static outcome::result<BurnEventParams> ParseBurnEventValues(
+            const std::vector<eth::abi::AbiValue>& values );
 
         /**
          * @brief Register both v1 (BridgeSourceBurned) and v2 (BridgeOutInitiated)

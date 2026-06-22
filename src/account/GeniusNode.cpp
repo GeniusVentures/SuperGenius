@@ -2577,8 +2577,7 @@ namespace sgns
             std::set<std::string> seen_tx_hashes;
 
             // Helper: process one batch of logs (v1 or v2) through the dedup +
-            // UTXO-check + MintFunds pipeline. `is_v2` selects the destination
-            // construction path (D-13).
+            // UTXO-check + decode_log + ParseBurnEventValues + MintTokens pipeline.
             auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 )
             {
                 // Insert burn UTXO as READY with UTXO_BRIDGE type (D-20)
@@ -2621,86 +2620,40 @@ namespace sgns
                         continue;
                     }
 
-                    // D-13: For v2 logs, decompress the 32-byte X-only key from
-                    // the event data before calling MintFunds. V1 logs keep the
-                    // existing bare-bones empty destination (unchanged path).
-                    std::string destination;
-                    if ( is_v2 )
+                    // Decode the full log entry (indexed + non-indexed params) so
+                    // the value indices match OnWatchEvent / ParseBurnEventValues.
+                    static const std::string kEventSigV1 =
+                        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+                    static const std::string kEventSigV2 =
+                        "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+                    const std::string &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
+
+                    const auto all_params = eth::cli::event_registry().params_for( event_sig );
+                    auto decoded = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
+                    if ( !decoded.has_value() )
                     {
-                        // BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool):
-                        // sender is indexed (topics[1]); the remaining 6 params
-                        // are ABI-encoded in log.data. Non-indexed layout:
-                        //   [0] id (uint256) [1] amount (uint256)
-                        //   [2] srcChainID (uint256) [3] destChainID (uint256)
-                        //   [4] sgnsDestination (bytes32 — the X-only key)
-                        //   [5] destinationYOdd (bool — Y parity: false=0x02, true=0x03)
-                        static const std::string kEventSigV2 =
-                            "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
-                        const auto all_params = eth::cli::event_registry().params_for( kEventSigV2 );
+                        ++total_skipped;
+                        node_logger_->warn( "CatchUpScan: failed to decode log for tx {} — skipping",
+                                            tx_hash_hex );
+                        continue;
+                    }
 
-                        std::vector<eth::abi::AbiParam> non_indexed_params;
-                        non_indexed_params.reserve( all_params.size() );
-                        for ( const auto &p : all_params )
-                        {
-                            if ( !p.indexed )
-                            {
-                                non_indexed_params.push_back( p );
-                            }
-                        }
-
-                        auto decoded = eth::abi::decode_log_data( rpc_log.log.data, non_indexed_params );
-                        // Expect 6 non-indexed params (id, amount, srcChainID,
-                        // destChainID, sgnsDestination, destinationYOdd).
-                        static constexpr size_t kExpectedV2DataParams = 6;
-                        static constexpr size_t kSgnsDestinationIndex = 4;
-                        static constexpr size_t kDestinationYOddIndex = 5;
-                        if ( !decoded.has_value() || decoded.value().size() < kExpectedV2DataParams )
-                        {
-                            ++total_skipped;
-                            node_logger_->warn( "CatchUpScan v2: failed to decode log data for tx {} — skipping",
-                                                tx_hash_hex );
-                            continue;
-                        }
-
-                        // sgnsDestination is bytes32 → codec::Hash256 variant.
-                        if ( !std::holds_alternative<eth::codec::Hash256>( decoded.value()[kSgnsDestinationIndex] ) )
-                        {
-                            ++total_skipped;
-                            node_logger_->warn( "CatchUpScan v2: sgnsDestination not bytes32 for tx {} — skipping",
-                                                tx_hash_hex );
-                            continue;
-                        }
-                        const auto &x_bytes = std::get<eth::codec::Hash256>( decoded.value()[kSgnsDestinationIndex] );
-
-                        // destinationYOdd is bool.
-                        if ( !std::holds_alternative<bool>( decoded.value()[kDestinationYOddIndex] ) )
-                        {
-                            ++total_skipped;
-                            node_logger_->warn( "CatchUpScan v2: destinationYOdd not bool for tx {} — skipping",
-                                                tx_hash_hex );
-                            continue;
-                        }
-                        const bool destination_y_odd = std::get<bool>( decoded.value()[kDestinationYOddIndex] );
-
-                        auto dest_opt = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
-                        if ( !dest_opt.has_value() )
-                        {
-                            ++total_skipped;
-                            node_logger_->warn( "CatchUpScan v2: X-only decompression failed for tx {} — skipping",
-                                                tx_hash_hex );
-                            continue;
-                        }
-                        destination = std::move( *dest_opt );
+                    auto burn = BridgeRelayer::ParseBurnEventValues( decoded.value() );
+                    if ( !burn )
+                    {
+                        ++total_skipped;
+                        node_logger_->warn( "CatchUpScan: failed to parse burn event for tx {} — skipping",
+                                            tx_hash_hex );
+                        continue;
                     }
 
                     try
                     {
-                        auto result = transaction_manager_->MintFunds(
-                            0,           // amount — derived from burn event data on full decode
-                            tx_hash_hex, // source-chain tx hash
-                            std::to_string( chain_entry.chain_id ),
-                            dev_config_.TokenID,
-                            destination );
+                        auto result = MintTokens( burn.value().amount,
+                                                  tx_hash_hex,
+                                                  std::to_string( chain_entry.chain_id ),
+                                                  burn.value().token_id,
+                                                  burn.value().destination );
 
                         if ( result.has_value() )
                         {
@@ -2711,7 +2664,7 @@ namespace sgns
                         }
                         else
                         {
-                            node_logger_->debug( "CatchUpScan: MintFunds returned no value for tx {} — "
+                            node_logger_->debug( "CatchUpScan: MintTokens returned no value for tx {} — "
                                                  "likely already processed",
                                                  tx_hash_hex );
                             ++total_skipped;
@@ -2719,7 +2672,7 @@ namespace sgns
                     }
                     catch ( const std::exception &e )
                     {
-                        node_logger_->debug( "CatchUpScan: MintFunds threw for tx {}: {} — skipping",
+                        node_logger_->debug( "CatchUpScan: MintTokens threw for tx {}: {} — skipping",
                                              tx_hash_hex,
                                              e.what() );
                         ++total_skipped;

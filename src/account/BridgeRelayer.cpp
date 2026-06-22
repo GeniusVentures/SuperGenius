@@ -207,103 +207,116 @@ namespace sgns
         logger_->info( "BridgeRelayer: stopped" );
     }
 
-    void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification,
-                                       const std::string                 &chain_name )
+    outcome::result<BurnEventParams> BridgeRelayer::ParseBurnEventValues(
+        const std::vector<eth::abi::AbiValue> &values )
     {
-        // v1 (BridgeSourceBurned) and v2 (BridgeOutInitiated) share params 0..4;
-        // param 5 differs by type (ByteBuffer for v1, Hash256 for v2) and is the
-        // dispatch discriminator (D-06). v2 adds param 6 (bool destinationYOdd).
-        static constexpr size_t kCommonParamCount         = 6;
-        static constexpr size_t kV2DestinationYOddIndex   = 6;
-        if ( notification.values.size() < kCommonParamCount )
+        static constexpr size_t kExpectedMinParams    = 6;
+        static constexpr size_t kTokenIdIndex         = 1;
+        static constexpr size_t kAmountIndex          = 2;
+        static constexpr size_t kSgnsDestinationIndex = 5;
+        static constexpr size_t kDestinationYOddIndex = 6;
+
+        if ( values.size() < kExpectedMinParams )
         {
-            logger_->error( "BridgeRelayer: expected at least {} event params for chain {}, got {}",
-                            kCommonParamCount,
-                            chain_name,
-                            notification.values.size() );
-            return;
+            BridgeRelayerLogger()->error( "ParseBurnEventValues: expected at least {} values, got {}",
+                                          kExpectedMinParams,
+                                          values.size() );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        // Common params (identical types in both v1 and v2):
-        //   values[0]: sender (address)
-        //   values[1]: id (uint256) — ERC-1155 token ID
-        //   values[2]: amount (uint256)
-        //   values[3]: srcChainID (uint256)
-        //   values[4]: destChainID (uint256)
-        //   values[5]: sgnsDestination — v1: bytes (64-byte full pubkey),
-        //                               v2: bytes32 (32-byte X-only key, D-06).
-        //   values[6]: v2 only — destinationYOdd (bool), Y parity for decompression.
-        const auto &sender     = std::get<eth::codec::Address>( notification.values[0] );
-        const auto &token_id   = std::get<intx::uint256>( notification.values[1] );
-        const auto &amount_val = std::get<intx::uint256>( notification.values[2] );
-        const auto &src_chain  = std::get<intx::uint256>( notification.values[3] );
-        const auto &dest_chain = std::get<intx::uint256>( notification.values[4] );
+        // Token ID (uint256 at index 1).
+        if ( !std::holds_alternative<intx::uint256>( values[kTokenIdIndex] ) )
+        {
+            BridgeRelayerLogger()->error( "ParseBurnEventValues: token_id not uint256" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto &token_id_uint = std::get<intx::uint256>( values[kTokenIdIndex] );
+        TokenID     token_id = TokenID::FromUint256( token_id_uint, TokenID::Endianness::BIG );
 
-        // Transaction hash from the event
-        const std::string tx_hash = rlp::base::parse::hex_array_string( notification.event.tx_hash );
-
-        // Amount
-        const auto amount_result = Uint256ToUint64( amount_val, "amount" );
+        // Amount (uint256 at index 2).
+        if ( !std::holds_alternative<intx::uint256>( values[kAmountIndex] ) )
+        {
+            BridgeRelayerLogger()->error( "ParseBurnEventValues: amount not uint256" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        const auto &amount_uint   = std::get<intx::uint256>( values[kAmountIndex] );
+        auto        amount_result = Uint256ToUint64( amount_uint, "amount" );
         if ( !amount_result )
         {
-            logger_->error( "BridgeRelayer: {} exceeds uint64 for chain {}", "amount", chain_name );
-            return;
+            return outcome::failure( std::errc::value_too_large );
         }
-        const uint64_t amount = amount_result.value();
+        uint64_t amount = amount_result.value();
 
-        // Chain ID
-        const std::string chain_id = std::to_string( static_cast<uint64_t>( src_chain ) );
-
-        const TokenID mint_token_id = TokenID::FromUint256( token_id, TokenID::Endianness::BIG );
-
-        // Destination: dispatch on the variant type of values[5] (D-06).
-        //   ByteBuffer -> v1: full 64-byte destination (128 hex chars).
-        //   Hash256    -> v2: 32-byte X-only key, decompressed via DecompressXOnlyPubkey
-        //                using the Y-parity bool from values[6] (D-07).
+        // Destination: dispatch on variant type (v1 = ByteBuffer, v2 = Hash256).
         std::string destination;
-        if ( std::holds_alternative<eth::codec::ByteBuffer>( notification.values[5] ) )
+        const auto &dest_val = values[kSgnsDestinationIndex];
+        if ( std::holds_alternative<eth::codec::ByteBuffer>( dest_val ) )
         {
-            const auto &sgns_dest_bytes = std::get<eth::codec::ByteBuffer>( notification.values[5] );
-            destination = rlp::base::parse::hex_bytes( sgns_dest_bytes.data(), sgns_dest_bytes.size() );
+            const auto &dest_bytes = std::get<eth::codec::ByteBuffer>( dest_val );
+            destination = rlp::base::parse::hex_bytes( dest_bytes.data(), dest_bytes.size() );
         }
-        else if ( std::holds_alternative<eth::codec::Hash256>( notification.values[5] ) )
+        else if ( std::holds_alternative<eth::codec::Hash256>( dest_val ) )
         {
-            if ( notification.values.size() <= kV2DestinationYOddIndex )
+            if ( values.size() <= kDestinationYOddIndex )
             {
-                logger_->error( "BridgeRelayer: v2 event missing destinationYOdd param for chain {}", chain_name );
-                return;
+                BridgeRelayerLogger()->error( "ParseBurnEventValues: v2 event missing destinationYOdd" );
+                return outcome::failure( std::errc::invalid_argument );
             }
-            const auto &x_bytes     = std::get<eth::codec::Hash256>( notification.values[5] );
-            const auto &y_odd_value = notification.values[kV2DestinationYOddIndex];
-            if ( !std::holds_alternative<bool>( y_odd_value ) )
+            const auto &x_bytes = std::get<eth::codec::Hash256>( dest_val );
+
+            if ( !std::holds_alternative<bool>( values[kDestinationYOddIndex] ) )
             {
-                logger_->error( "BridgeRelayer: v2 destinationYOdd param not bool for chain {}", chain_name );
-                return;
+                BridgeRelayerLogger()->error( "ParseBurnEventValues: destinationYOdd not bool" );
+                return outcome::failure( std::errc::invalid_argument );
             }
-            const bool destination_y_odd = std::get<bool>( y_odd_value );
-            auto       dest_opt          = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
+            const bool destination_y_odd = std::get<bool>( values[kDestinationYOddIndex] );
+
+            auto dest_opt = eth::DecompressXOnlyPubkey( x_bytes, destination_y_odd );
             if ( !dest_opt )
             {
-                logger_->error( "BridgeRelayer: X-only decompression failed for chain {} tx={}",
-                                chain_name,
-                                tx_hash.substr( 0, 16 ) );
-                return;
+                BridgeRelayerLogger()->error( "ParseBurnEventValues: X-only decompression failed" );
+                return outcome::failure( std::errc::invalid_argument );
             }
             destination = std::move( *dest_opt );
         }
         else
         {
-            logger_->error( "BridgeRelayer: unexpected type for param 5 on chain {}", chain_name );
+            BridgeRelayerLogger()->error( "ParseBurnEventValues: unexpected type for sgnsDestination" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return BurnEventParams{ token_id, amount, std::move( destination ) };
+    }
+
+    void BridgeRelayer::OnWatchEvent( const eth::WatchEventNotification &notification,
+                                       const std::string                 &chain_name )
+    {
+        auto parsed = ParseBurnEventValues( notification.values );
+        if ( !parsed )
+        {
+            logger_->error( "BridgeRelayer: failed to parse burn event for chain {}: {}",
+                            chain_name,
+                            parsed.error().message() );
             return;
         }
+
+        auto                  &burn        = parsed.value();
+        static constexpr size_t kSrcChainIndex = 3;
+
+        // Transaction hash from the event
+        const std::string tx_hash  = rlp::base::parse::hex_array_string( notification.event.tx_hash );
+
+        // Chain ID from the event's srcChainID
+        const std::string chain_id = std::to_string(
+            static_cast<uint64_t>( std::get<intx::uint256>( notification.values[kSrcChainIndex] ) ) );
 
         logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} token={} amount={} dest={}",
                        chain_id,
                        chain_name,
                        tx_hash.substr( 0, 16 ),
-                       mint_token_id.ToHex().substr( 0, 16 ),
-                       amount,
-                       destination.substr( 0, 16 ) );
+                       burn.token_id.ToHex().substr( 0, 16 ),
+                       burn.amount,
+                       burn.destination.substr( 0, 16 ) );
 
         auto strong_tx_manager = tx_manager_.lock();
         if ( !strong_tx_manager )
@@ -312,12 +325,18 @@ namespace sgns
             return;
         }
 
-        auto result = strong_tx_manager->MintFunds( amount, tx_hash, chain_id, mint_token_id, destination );
+        auto result = strong_tx_manager->MintFunds( burn.amount,
+                                                     tx_hash,
+                                                     chain_id,
+                                                     burn.token_id,
+                                                     burn.destination );
         if ( result.has_error() )
         {
             if ( result.error() == std::errc::already_connected )
             {
-                logger_->debug( "BridgeRelayer: duplicate burn rejected chain={} tx={}", chain_name, tx_hash.substr( 0, 16 ) );
+                logger_->debug( "BridgeRelayer: duplicate burn rejected chain={} tx={}",
+                                chain_name,
+                                tx_hash.substr( 0, 16 ) );
             }
             else
             {
