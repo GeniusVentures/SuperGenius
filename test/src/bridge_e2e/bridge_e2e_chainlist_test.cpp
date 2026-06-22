@@ -16,6 +16,7 @@
 #include <boost/json.hpp>
 
 #include "account/ChainRpcEndpointProvider.hpp"
+#include "account/BridgeEventTypes.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/chainlist_provider.hpp"
@@ -55,8 +56,7 @@ static const std::string kChainlistJson = R"([
 /// @brief Compute the BridgeSourceBurned event topic0 to match provider-generated topic0.
 static std::string ComputeBridgeTopic0()
 {
-    auto        hash = eth::abi::event_signature_hash(
-        "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)" );
+    auto        hash = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
     return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
 }
 

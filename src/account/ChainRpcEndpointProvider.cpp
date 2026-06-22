@@ -5,6 +5,7 @@
  * @author     SuperGenius
  */
 #include "account/ChainRpcEndpointProvider.hpp"
+#include "account/BridgeEventTypes.hpp"
 
 #include <fstream>
 #include <iterator>
@@ -32,8 +33,7 @@ namespace sgns
     {
         auto logger = base::createLogger( "ChainRpcEndpointProvider" );
 
-        static constexpr std::string_view kBridgeEventSignature =
-            "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+        static constexpr std::string_view kBridgeEventSignature = kBridgeSourceBurnedSig;
         static constexpr uint8_t kPublicEndpointWeight = 25;
 
         std::vector<ChainContractPair>             discovered_chains;

@@ -11,9 +11,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "account/BridgeEventTypes.hpp"
 #include "account/ChainContractPair.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
-#include "account/TokenID.hpp"
 #include "account/TransactionManager.hpp"
 #include "base/logger.hpp"
 #include "eth/eth_watch_service.hpp"
@@ -24,17 +24,6 @@ class BridgeRelayerTestAccess;
 
 namespace sgns
 {
-    /**
-     * @brief Parsed burn event parameters shared between real-time watch
-     *        (OnWatchEvent) and startup catch-up scan (PerformStartupCatchupScan).
-     */
-    struct BurnEventParams
-    {
-        TokenID     token_id;     ///< Token identifier from event [1]
-        uint64_t    amount;       ///< Burn amount from event [2]
-        std::string destination;  ///< 128-char hex recipient from event [5] (decompressed if v2)
-    };
-
     /**
      * @brief Registers both BridgeSourceBurned (v1) and BridgeOutInitiated (v2)
      *        watches on a shared EthWatchService across multiple chains and calls

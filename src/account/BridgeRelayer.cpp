@@ -84,7 +84,7 @@ namespace sgns
 
         // v1: BridgeSourceBurned(address indexed sender, uint256 id, uint256 amount,
         //                         uint256 srcChainID, uint256 destChainID, bytes sgnsDestination)
-        const std::string event_sig_v1 = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+        const std::string event_sig_v1( kBridgeSourceBurnedSig );
         auto              params_v1    = eth::cli::event_registry().params_for( event_sig_v1 );
 
         // v2: BridgeOutInitiated(address indexed sender, uint256 id, uint256 amount,
@@ -92,7 +92,7 @@ namespace sgns
         //                         bytes32 sgnsDestination, bool destinationYOdd)
         // Param 5 is a 32-byte X-only key (decoded as codec::Hash256) and param 6
         // carries the Y parity needed for deterministic decompression (D-06/D-07).
-        const std::string event_sig_v2 = "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+        const std::string event_sig_v2( kBridgeOutInitiatedSig );
         auto              params_v2    = eth::cli::event_registry().params_for( event_sig_v2 );
 
         size_t registered = 0;

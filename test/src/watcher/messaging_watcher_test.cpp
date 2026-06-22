@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+#include "account/BridgeEventTypes.hpp"
 #include "watcher/impl/evm_messaging_watcher.hpp"
 #include "watcher/messaging_watcher.hpp"
 #include <rapidjson/document.h>
@@ -24,7 +25,7 @@ TEST(MessagingWatcherTest, EvmMessagingWatcherInitialization) {
 
     // Define topics to watch
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
+        {std::string( sgns::kBridgeSourceBurnedSig )}
     };
 
     // Create the EvmMessagingWatcher
@@ -58,7 +59,7 @@ TEST(MessagingWatcherTest, StartAndStopWatching) {
 
     // Define topics to watch
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
+        {std::string( sgns::kBridgeSourceBurnedSig )}
     };
 
     // Create the EvmMessagingWatcher
@@ -106,7 +107,7 @@ TEST(MessagingWatcherTest, MultipleWatchersManagement) {
 
     // Define topics to watch for both configurations
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters1 = {
-        {"BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)"}
+        {std::string( sgns::kBridgeSourceBurnedSig )}
     };
     std::vector<EvmMessagingWatcher::TopicFilter> topicFilters2 = {
         {"AnotherEvent(address,uint256)"}

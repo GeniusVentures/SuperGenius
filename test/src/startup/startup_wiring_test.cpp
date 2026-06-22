@@ -31,17 +31,11 @@ using namespace sgns;
 
 // ─── Test Constants ─────────────────────────────────────────────────────────
 
-static const std::string kBridgeEventSignature =
-    "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
-
-// Bridge V2 event signature (Plan 05.2-01) — param 5 is bytes32 (X-only key),
-// param 6 is bool destinationYOdd.  Used by PerformStartupCatchupScan (Plan
-// 05.2-03) for the second topic0 in the dual-signature catch-up scan.
-static const std::string kBridgeEventSignatureV2 =
-    "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+static const std::string kBridgeEventSignature   = std::string( kBridgeSourceBurnedSig );
+static const std::string kBridgeEventSignatureV2 = std::string( kBridgeOutInitiatedSig );
 
 // Expected topic0 hex for BridgeSourceBurned (keccak256 of the signature)
-// Computed via keccak256("BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)")
+// Computed via keccak256(kBridgeSourceBurnedSig)
 static const std::string kExpectedTopic0Hex =
     "0x"  // placeholder — verified against actual hash in test
     ;
