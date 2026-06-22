@@ -2374,7 +2374,7 @@ namespace sgns
         {
             try
             {
-                auto bin_dir = boost::dll::program_location().parent_path();
+                auto bin_dir   = boost::dll::program_location().parent_path();
                 auto candidate = std::filesystem::path( bin_dir.string() ) / "bridge_chains_config.json";
                 if ( std::filesystem::exists( candidate ) )
                 {
@@ -2406,18 +2406,25 @@ namespace sgns
 
         // P2: If the catchup scan hasn't run yet (READY may have fired before
         // chains were populated), trigger it now that chains are available.
+        // Only dispatch if transaction_manager_ is in READY state, otherwise
+        // MintFunds will fail and the scan will be triggered by
+        // TransactionStateChanged when the manager reaches READY.
         if ( !catchup_scan_done_ && !catchup_chains_.empty() )
+
         {
-            catchup_scan_done_ = true;
-            node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
-            boost::asio::post( *io_,
-                               [weak_self = weak_from_this()]
-                               {
-                                   if ( auto strong = weak_self.lock() )
+            if ( transaction_manager_ && transaction_manager_->GetState() == TransactionManager::State::READY )
+            {
+                catchup_scan_done_ = true;
+                node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
+                boost::asio::post( *io_,
+                                   [weak_self = weak_from_this()]
                                    {
-                                       strong->PerformStartupCatchupScan();
-                                   }
-                               } );
+                                       if ( auto strong = weak_self.lock() )
+                                       {
+                                           strong->PerformStartupCatchupScan();
+                                       }
+                                   } );
+            }
         }
     }
 
@@ -2427,8 +2434,7 @@ namespace sgns
 
         // 1. Resolve config path (stays in GeniusNode per D-01)
         auto config_path = ResolveBridgeChainsConfigPath();
-        node_logger_->info( "InitializeAndStartBridge: loading bridge chain config from {}",
-                            config_path.string() );
+        node_logger_->info( "InitializeAndStartBridge: loading bridge chain config from {}", config_path.string() );
 
         // 2. Construct provider
         rpc_endpoint_provider_ = std::make_unique<ChainRpcEndpointProvider>();
@@ -2442,8 +2448,7 @@ namespace sgns
 
         // 4. Post Initialize() to io_context — non-blocking
         boost::asio::post( *io_,
-                           [weak_self = weak_from_this(),
-                            config_path = std::move( config_path )]()
+                           [weak_self = weak_from_this(), config_path = std::move( config_path )]()
                            {
                                if ( auto strong = weak_self.lock() )
                                {
@@ -2468,12 +2473,12 @@ namespace sgns
         // single-value-per-position (no OR-array support in serialization), so
         // two separate eth_getLogs calls are made per chain and the results are
         // merged with tx_hash deduplication.
-        const std::string event_sig     = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
-        auto              topic0_hash   = eth::abi::event_signature_hash( event_sig );
-        std::string       topic0_hex    = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+        const std::string event_sig   = "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
+        auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
+        std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
 
         // Bridge V2: bytes32 sgnsDestination + bool destinationYOdd (parity bit).
-        const std::string event_sig_v2  = "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
+        const std::string event_sig_v2   = "BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)";
         auto              topic0_hash_v2 = eth::abi::event_signature_hash( event_sig_v2 );
         std::string       topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
 
@@ -2534,11 +2539,11 @@ namespace sgns
             // D-20: Query current block number to compute scan start
             // Scan from (current_block - scan_depth) to latest
             constexpr uint64_t kBlockNumberRequestId = 99;
-            auto              block_number_req = eth::rpc::make_json_rpc_request( "eth_blockNumber",
-                                                                                   boost::json::array{},
-                                                                                   kBlockNumberRequestId );
-            auto              block_number_resp = transport.call( block_number_req );
-            uint64_t          current_block     = 0;
+            auto               block_number_req      = eth::rpc::make_json_rpc_request( "eth_blockNumber",
+                                                                     boost::json::array{},
+                                                                     kBlockNumberRequestId );
+            auto               block_number_resp     = transport.call( block_number_req );
+            uint64_t           current_block         = 0;
 
             if ( block_number_resp.has_value() )
             {
@@ -2574,7 +2579,8 @@ namespace sgns
             // Helper: process one batch of logs (v1 or v2) through the dedup +
             // UTXO-check + MintFunds pipeline. `is_v2` selects the destination
             // construction path (D-13).
-            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) {
+            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 )
+            {
                 // Insert burn UTXO as READY with UTXO_BRIDGE type (D-20)
                 // MintFunds will later transition it to RESERVED → CONSUMED
                 auto &utxo_mgr = account_->GetUTXOManager();
@@ -2588,8 +2594,7 @@ namespace sgns
                     if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
                     {
                         ++total_skipped;
-                        node_logger_->debug( "CatchUpScan: burn tx {} already seen this scan — skipping",
-                                             tx_hash_hex );
+                        node_logger_->debug( "CatchUpScan: burn tx {} already seen this scan — skipping", tx_hash_hex );
                         continue;
                     }
 
@@ -2647,8 +2652,8 @@ namespace sgns
                         // Expect 6 non-indexed params (id, amount, srcChainID,
                         // destChainID, sgnsDestination, destinationYOdd).
                         static constexpr size_t kExpectedV2DataParams = 6;
-                        static constexpr size_t kSgnsDestinationIndex  = 4;
-                        static constexpr size_t kDestinationYOddIndex  = 5;
+                        static constexpr size_t kSgnsDestinationIndex = 4;
+                        static constexpr size_t kDestinationYOddIndex = 5;
                         if ( !decoded.has_value() || decoded.value().size() < kExpectedV2DataParams )
                         {
                             ++total_skipped;
@@ -2658,16 +2663,14 @@ namespace sgns
                         }
 
                         // sgnsDestination is bytes32 → codec::Hash256 variant.
-                        if ( !std::holds_alternative<eth::codec::Hash256>(
-                                decoded.value()[kSgnsDestinationIndex] ) )
+                        if ( !std::holds_alternative<eth::codec::Hash256>( decoded.value()[kSgnsDestinationIndex] ) )
                         {
                             ++total_skipped;
                             node_logger_->warn( "CatchUpScan v2: sgnsDestination not bytes32 for tx {} — skipping",
                                                 tx_hash_hex );
                             continue;
                         }
-                        const auto &x_bytes = std::get<eth::codec::Hash256>(
-                            decoded.value()[kSgnsDestinationIndex] );
+                        const auto &x_bytes = std::get<eth::codec::Hash256>( decoded.value()[kSgnsDestinationIndex] );
 
                         // destinationYOdd is bool.
                         if ( !std::holds_alternative<bool>( decoded.value()[kDestinationYOddIndex] ) )
