@@ -33,12 +33,14 @@ TEST( AccountCreationTest, CreationWithEthereumKey )
     {
     };
 
-    auto        account1      = GeniusAccount::New( TOKEN_ID,
-                                                    "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                    path1 );
-    auto        account2      = GeniusAccount::New( TOKEN_ID,
-                                                    "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                    path2 );
+    auto account1 = GeniusAccount::NewFromPrivateKey(
+        TOKEN_ID,
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        path1 );
+    auto account2 = GeniusAccount::NewFromPrivateKey(
+        TOKEN_ID,
+        "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        path2 );
     std::string address_main1 = account1->GetAddress();
     std::string address_main2 = account2->GetAddress();
 

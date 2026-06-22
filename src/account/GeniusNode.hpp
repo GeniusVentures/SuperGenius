@@ -94,12 +94,12 @@ namespace sgns
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
-                                                const char         *eth_private_key,
-                                                bool                autodht      = true,
-                                                bool                isprocessor  = true,
-                                                uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false );
+        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
+                                                              const char         *eth_private_key,
+                                                              bool                autodht      = true,
+                                                              bool                isprocessor  = true,
+                                                              uint16_t            base_port    = 40001,
+                                                              bool                is_full_node = false );
 
         /**
          * @brief Creates a node from an existing mnemonic phrase.
@@ -190,7 +190,12 @@ namespace sgns
          */
         std::vector<std::string> GetAvailableAccounts();
 
-        outcome::result<void> AddAccountWithKey( const char *private_key );
+        /**
+         * @brief Adds an account to local storage using an Ethereum private key.
+         * @param[in] private_key Ethereum private key in hex format.
+         * @return Success if the account was created and stored, or an error.
+         */
+        outcome::result<void> AddAccountWithKey( const char *private_key ) const;
 
         /**
          * @brief Adds an account to local storage using a BIP39 mnemonic phrase.
@@ -389,11 +394,17 @@ namespace sgns
          * @brief Returns the configured child token identifier.
          * @return Token identifier from the node runtime configuration.
          */
-        TokenID GetTokenID() const
+        [[nodiscard]] TokenID GetTokenID() const
         {
             return dev_config_.TokenID;
         }
 
+        /**
+         * @brief Returns the current node initialization progress as a percentage and description.
+         *        The percentage ranges from 0.0 (CREATING) to 1.0 (READY), with sub-progress
+         *        reported during database migration and transaction manager initialization.
+         * @return Pair of progress fraction and a human-readable status description.
+         */
         [[nodiscard]] std::pair<float, std::string> GetInitializationStatus() const;
 
         /**
@@ -758,7 +769,8 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
-         * @brief Shuts down
+         * @brief Shuts down node services: cancels health-check timer, unsubscribes disconnect events,
+         *        and stops the transaction GlobalDB.
          */
         void ShutdownForDestruction();
 
