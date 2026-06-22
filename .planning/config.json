@@ -10,7 +10,7 @@
   "project_code": null,
   "claude_md_path": "./CLAUDE.md",
   "git": {
-    "branching_strategy": "none",
+    "branching_strategy": "phase",
     "create_tag": true,
     "phase_branch_template": "gsd/phase-{phase}-{slug}",
     "milestone_branch_template": "gsd/{milestone}-{slug}",
@@ -39,7 +39,7 @@
     "context_coverage_gate": true,
     "code_review": true,
     "code_review_depth": "thorough",
-    "code_review_command": "",
+    "code_review_command": "claude -p --model glm-5.2",
     "code_review_auto_fix": true,
     "pattern_mapper": true,
     "plan_bounce": false,
@@ -63,10 +63,5 @@
   "agent_skills": {},
   "features": {},
   "resolve_model_ids": "omit",
-  "runtime": "claude",
-  "review": {
-    "models": {
-      "codex": "glm-5.2"
-    }
-  }
+  "runtime": "claude"
 }
