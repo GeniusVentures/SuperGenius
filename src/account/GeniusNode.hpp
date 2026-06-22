@@ -638,6 +638,7 @@ namespace sgns
         std::string                    processing_channel_topic_;     ///< Processing task channel topic.
         std::string                    processing_grid_chanel_topic_; ///< Processing grid topic.
         std::vector<std::string>       bootstrap_peers_;
+        uint16_t                       subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
         std::vector<std::string>       bootstrap_fullnodes_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
@@ -666,6 +667,12 @@ namespace sgns
          * @brief Initializes OpenSSL library state used by networking dependencies.
          */
         void InitOpenSSL();
+
+        /**
+         * @brief Loads sgns_config.json which contains net_id, subnet_id, bootstrap_fullnodes, and authorized_full_node.
+         *        All fields are optional and default to safe values (DEV net, empty bootstrap).
+         */
+        void LoadSgnsConfig();
 
         /**
          * @brief Initializes application and dependency loggers.
