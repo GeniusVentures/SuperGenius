@@ -22,6 +22,9 @@ namespace eth::rpc
     class JsonRpcTransport;
 } // namespace eth::rpc
 
+/// @brief Forward declaration for unit test access to private members.
+class PublicChainInputValidatorTestAccess;
+
 namespace sgns
 {
     /**
@@ -36,7 +39,10 @@ namespace sgns
         std::string url;
         uint8_t     consensus_weight = 25;
         std::string bridge_contract_address; ///< Expected bridge contract (hex, "0x...")
-        std::string event_topic0;            ///< Expected event topic0 (hex, "0x...")
+        /// Accepted bridge event topic0 hashes (hex, "0x..."). Carries BOTH the
+        /// v1 BridgeSourceBurned and v2 BridgeOutInitiated topic0 so witness
+        /// validation accepts mints created from either event version.
+        std::vector<std::string> accepted_topic0_hashes;
     };
 
     /**
@@ -137,6 +143,10 @@ namespace sgns
         }
 
     private:
+        /// @brief Friend accessor for unit testing VerifyPublicChainSmartContract
+        ///        and the wired rpc_endpoints_ (mirrors BridgeRelayerTestAccess).
+        friend class ::PublicChainInputValidatorTestAccess;
+
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
          *        using a weighted multi-provider RPC quorum.

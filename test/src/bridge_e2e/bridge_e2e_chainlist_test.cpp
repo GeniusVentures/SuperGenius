@@ -8,6 +8,7 @@
  */
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -17,6 +18,7 @@
 
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "account/BridgeEventTypes.hpp"
+#include "account/MintTransaction.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/chainlist_provider.hpp"
@@ -126,6 +128,34 @@ private:
     std::string receipt_;
 };
 
+// ─── Test Accessor ──────────────────────────────────────────────────────────
+
+/// @brief Friend accessor for the private VerifyPublicChainSmartContract and
+///        the wired rpc_endpoints_ (mirrors BridgeRelayerTestAccess).
+class PublicChainInputValidatorTestAccess
+{
+public:
+    static bool Verify( const PublicChainInputValidator          &validator,
+                        const std::shared_ptr<GeniusTransaction> &tx,
+                        const std::string                        &source_reference )
+    {
+        return validator.VerifyPublicChainSmartContract( tx, source_reference );
+    }
+
+    /// @brief Read the accepted topic0 hashes wired onto the first endpoint for
+    ///        a chain id (the provider stamps every endpoint identically).
+    static std::vector<std::string> AcceptedTopic0Hashes( const PublicChainInputValidator &validator,
+                                                          const std::string               &chain_id )
+    {
+        auto it = validator.rpc_endpoints_.find( chain_id );
+        if ( it == validator.rpc_endpoints_.end() || it->second.empty() )
+        {
+            return {};
+        }
+        return it->second.front().accepted_topic0_hashes;
+    }
+};
+
 // ─── Tests ──────────────────────────────────────────────────────────────────
 
 TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
@@ -168,7 +198,7 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
         ep.url                     = url;
         ep.consensus_weight        = 25;
         ep.bridge_contract_address = kSepoliaContract;
-        ep.event_topic0            = topic0;
+        ep.accepted_topic0_hashes  = { topic0 };
         endpoints.push_back( ep );
     }
     validator.SetRpcEndpoints( "11155111", std::move( endpoints ) );
@@ -197,6 +227,73 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     EXPECT_TRUE( response->find( "\"0xde0dff20aee114e5ac35a9f7a916ab799270e86ae622ec6de8ab330eaacafc81\"" ) !=
                  std::string::npos )
         << "Mock receipt must contain the computed BridgeSourceBurned topic0";
+}
+
+// Regression for the v2-bridge topic0 mismatch: the relayer and catch-up scan
+// mint from BridgeOutInitiated (v2), but every endpoint was configured with
+// only the BridgeSourceBurned (v1) topic0, so witness validation rejected any
+// mint created from a v2 burn. After the fix, the provider wires BOTH topic0
+// hashes and VerifyPublicChainSmartContract accepts a v2 receipt.
+TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receipt )
+{
+    auto config_path = WriteTempBridgeConfig();
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
+
+    // 1. Provider must wire BOTH v1 and v2 topic0 onto each endpoint.
+    ASSERT_TRUE( provider.Initialize( config_path, validator ) );
+    const auto hashes = PublicChainInputValidatorTestAccess::AcceptedTopic0Hashes( validator, "11155111" );
+    ASSERT_EQ( hashes.size(), 2u );
+
+    const auto v1_hash = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    const auto v2_hash = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v1_topic0 = rlp::base::parse::hex_bytes( v1_hash.data(), v1_hash.size() );
+    const std::string v2_topic0 = rlp::base::parse::hex_bytes( v2_hash.data(), v2_hash.size() );
+    EXPECT_NE( std::find( hashes.begin(), hashes.end(), v1_topic0 ), hashes.end() )
+        << "Provider must wire the v1 BridgeSourceBurned topic0";
+    EXPECT_NE( std::find( hashes.begin(), hashes.end(), v2_topic0 ), hashes.end() )
+        << "Provider must wire the v2 BridgeOutInitiated topic0";
+
+    // 2. Validator must accept a receipt whose log carries the v2 topic0.
+    //    Reuse the provider-wired dual hashes across 3 endpoints (75% quorum).
+    std::vector<WeightedRpcEndpoint> endpoints;
+    for ( const auto &url : kSepoliaRpcUrls )
+    {
+        WeightedRpcEndpoint ep;
+        ep.url                     = url;
+        ep.consensus_weight        = 25;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = hashes;
+        endpoints.push_back( std::move( ep ) );
+    }
+    validator.SetRpcEndpoints( "11155111", std::move( endpoints ) );
+
+    const std::string source_ref = "0x" + std::string( 64, 'b' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2_topic0 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "A v2 (BridgeOutInitiated) burn receipt must pass witness validation";
+
+    // 3. Negative control: a topic0 that is NOT in accepted_topic0_hashes is
+    //    still rejected (the fix must not weaken receipt-log validation).
+    const std::string bogus_topic0 = "0x" + std::string( 63, 'c' ) + "1";
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, bogus_topic0 ) );
+        } );
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "A receipt with an unknown topic0 must still be rejected";
 }
 
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )

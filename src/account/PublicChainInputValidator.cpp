@@ -232,9 +232,17 @@ namespace sgns
                 for ( const auto &log_entry : receipt->receipt.logs )
                 {
                     std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
-                    if ( log_addr_hex == ep.bridge_contract_address &&
-                         !log_entry.topics.empty() &&
-                         rlp::base::parse::hex_array_string( log_entry.topics.front() ) == ep.event_topic0 )
+                    if ( log_addr_hex != ep.bridge_contract_address || log_entry.topics.empty() )
+                    {
+                        continue;
+                    }
+                    // Accept any of the configured topic0 hashes (v1 BridgeSourceBurned
+                    // or v2 BridgeOutInitiated) — both event versions can back a mint.
+                    const std::string log_topic0 =
+                        rlp::base::parse::hex_array_string( log_entry.topics.front() );
+                    if ( std::find( ep.accepted_topic0_hashes.begin(),
+                                    ep.accepted_topic0_hashes.end(),
+                                    log_topic0 ) != ep.accepted_topic0_hashes.end() )
                     {
                         log_matched = true;
                         break;
@@ -242,11 +250,12 @@ namespace sgns
                 }
                 if ( !log_matched )
                 {
-                    logger->error( "VerifyPublicChainSmartContract log mismatch bridge={} topic0={} tx={} url={}",
+                    logger->error( "VerifyPublicChainSmartContract log mismatch bridge={} tx={} url={} "
+                                   "(none of {} accepted topic0 hashes matched)",
                                    ep.bridge_contract_address,
-                                   ep.event_topic0,
                                    PreviewValue( source_reference ),
-                                   ep.url );
+                                   ep.url,
+                                   ep.accepted_topic0_hashes.size() );
                     return false;
                 }
             }

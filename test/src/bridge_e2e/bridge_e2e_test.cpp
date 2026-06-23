@@ -357,7 +357,7 @@ void BridgeE2ETest::SetUpTestSuite()
             ep.url                     = url;
             ep.consensus_weight        = 25;
             ep.bridge_contract_address = kBridgeContractLower;
-            ep.event_topic0            = kEventTopic0;
+            ep.accepted_topic0_hashes  = { kEventTopic0 };
             sepolia_eps.push_back( ep );
         }
 

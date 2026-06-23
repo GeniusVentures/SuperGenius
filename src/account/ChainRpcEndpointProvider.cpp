@@ -33,15 +33,20 @@ namespace sgns
     {
         auto logger = base::createLogger( "ChainRpcEndpointProvider" );
 
-        static constexpr std::string_view kBridgeEventSignature = kBridgeSourceBurnedSig;
         static constexpr uint8_t kPublicEndpointWeight = 25;
 
         std::vector<ChainContractPair>             discovered_chains;
         std::vector<uint64_t>                      configured_chain_ids;
 
-        // ── Compute topic0 once ──────────────────────────────────────────
-        auto        topic0_hash = eth::abi::event_signature_hash( std::string( kBridgeEventSignature ) );
-        std::string topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
+        // ── Compute accepted topic0 hashes: BOTH v1 (BridgeSourceBurned) and
+        //    v2 (BridgeOutInitiated). The relayer and catch-up scan mint from
+        //    either version, so witness validation must accept both — otherwise
+        //    mints created from v2 burns are rejected by the receipt-log gate.
+        auto        topic0_hash_v1 = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+        std::string topic0_hex_v1  = rlp::base::parse::hex_bytes( topic0_hash_v1.data(), topic0_hash_v1.size() );
+        auto        topic0_hash_v2 = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+        std::string topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
+        const std::vector<std::string> accepted_topic0_hashes{ topic0_hex_v1, topic0_hex_v2 };
 
         // ── Read and parse bridge_chains_config.json ─────────────────────
         try
@@ -103,8 +108,8 @@ namespace sgns
                 discovered_chains.push_back(
                     { std::string( key ), std::move( contract_addr ), chain_id } );
 
-                logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} topic0={}",
-                              std::string( key ), chain_id, contract_addr, topic0_hex );
+                logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} topic0_v1={} topic0_v2={}",
+                              std::string( key ), chain_id, contract_addr, topic0_hex_v1, topic0_hex_v2 );
             }
         }
         catch ( const std::exception &e )
@@ -124,7 +129,7 @@ namespace sgns
             wrep.url                     = {};
             wrep.consensus_weight       = kPublicEndpointWeight;
             wrep.bridge_contract_address = dc.contract_address;
-            wrep.event_topic0           = topic0_hex;
+            wrep.accepted_topic0_hashes  = accepted_topic0_hashes;
 
             endpoints_by_chain[dc.chain_id].push_back( std::move( wrep ) );
 
