@@ -59,16 +59,42 @@ std::string MakeConfigJson( const std::string &entries )
     return "{ " + entries + " }";
 }
 
+/// @brief Build a single-chain entry that includes an optional "rpc" array.
+std::string MakeConfigJsonEntryWithRpc( const std::string              &chain_name,
+                                        uint64_t                        chain_id,
+                                        const std::string              &contract_addr,
+                                        const std::vector<std::string> &rpc_urls )
+{
+    std::string rpc_array;
+    for ( const auto &url : rpc_urls )
+    {
+        if ( !rpc_array.empty() )
+        {
+            rpc_array += ", ";
+        }
+        rpc_array += "\"" + url + "\"";
+    }
+    return R"(")" + chain_name + R"(": { "chain_id": )" + std::to_string( chain_id ) +
+           R"(, "bridge_contract_address": ")" + contract_addr + R"(", "rpc": [ )" +
+           rpc_array + R"( ] })";
+}
+
 // ─── Test: Observer notified on success ─────────────────────────────────────
 
 TEST( ChainRpcEndpointProviderTest, NotifiesObserversWithChains )
 {
     // Write a config with 2 chains — both should be accepted and reported.
-    std::string entries = MakeConfigJsonEntry( "ethereum-sepolia",
-                                               11155111,
-                                               "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" ) +
+    std::string entries = MakeConfigJsonEntryWithRpc(
+                              "ethereum-sepolia",
+                              11155111,
+                              "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+                              { "https://ethereum-sepolia-rpc.publicnode.com" } ) +
                           ", " +
-                          MakeConfigJsonEntry( "ethereum-mainnet", 1, "0x614577036F0a024DBC1C88BA616b394DD65d105a" );
+                          MakeConfigJsonEntryWithRpc(
+                              "ethereum-mainnet",
+                              1,
+                              "0x614577036F0a024DBC1C88BA616b394DD65d105a",
+                              { "https://ethereum-rpc.publicnode.com" } );
 
     auto tmpfile = WriteTempConfigJson( MakeConfigJson( entries ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
@@ -241,9 +267,11 @@ TEST( ChainRpcEndpointProviderTest, MultipleObserversAllNotified )
 
 TEST( ChainRpcEndpointProviderTest, SucceedsWithNoObservers )
 {
-    std::string entry = MakeConfigJsonEntry( "ethereum-sepolia",
-                                             11155111,
-                                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+    std::string entry = MakeConfigJsonEntryWithRpc(
+        "ethereum-sepolia",
+        11155111,
+        "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        { "https://ethereum-sepolia-rpc.publicnode.com" } );
 
     auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
     ASSERT_TRUE( fs::exists( tmpfile ) );
@@ -260,6 +288,60 @@ TEST( ChainRpcEndpointProviderTest, SucceedsWithNoObservers )
     EXPECT_TRUE( url.has_value() );
 
     // Cleanup
+    std::error_code ec;
+    fs::remove( tmpfile, ec );
+}
+
+// ─── Test: "rpc" array wires real endpoints (no empty-URL placeholder) ──────
+
+TEST( ChainRpcEndpointProviderTest, RpcArrayWiresRealEndpoints )
+{
+    // The provider must read the optional "rpc" array and wire one endpoint per
+    // URL — NOT the old single empty-URL placeholder. GetFirstRpcUrl then returns
+    // the first configured URL, so the catch-up scan and verification have a
+    // real transport target.
+    std::string entry = MakeConfigJsonEntryWithRpc(
+        "ethereum-sepolia",
+        11155111,
+        "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        { "https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.org" } );
+
+    auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
+    ASSERT_TRUE( fs::exists( tmpfile ) );
+
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
+
+    ASSERT_TRUE( provider.Initialize( tmpfile, validator ) );
+
+    auto first_url = validator.GetFirstRpcUrl( "11155111" );
+    ASSERT_TRUE( first_url.has_value() ) << "A chain with a rpc array must wire a real URL";
+    EXPECT_EQ( *first_url, "https://ethereum-sepolia-rpc.publicnode.com" );
+
+    std::error_code ec;
+    fs::remove( tmpfile, ec );
+}
+
+TEST( ChainRpcEndpointProviderTest, ChainWithoutRpcArrayHasNoEndpoints )
+{
+    // No "rpc" array → no endpoints wired (honest fail-closed for validation
+    // and catch-up scan), NOT a placebo empty-URL endpoint that claims success
+    // while nothing works. The chain is still discovered for relayer watch.
+    std::string entry = MakeConfigJsonEntry( "ethereum-sepolia",
+                                             11155111,
+                                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+
+    auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
+    ASSERT_TRUE( fs::exists( tmpfile ) );
+
+    ChainRpcEndpointProvider  provider;
+    PublicChainInputValidator validator;
+
+    ASSERT_TRUE( provider.Initialize( tmpfile, validator ) );
+
+    EXPECT_FALSE( validator.GetFirstRpcUrl( "11155111" ).has_value() )
+        << "A chain without a rpc array must have no RPC endpoint (no placebo URL)";
+
     std::error_code ec;
     fs::remove( tmpfile, ec );
 }

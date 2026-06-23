@@ -79,6 +79,34 @@ static fs::path WriteTempBridgeConfig()
     return path;
 }
 
+/// @brief Write a temp bridge_chains_config.json that includes a "rpc" array
+///        for the Sepolia entry, so the provider wires real endpoints.
+static fs::path WriteTempBridgeConfigWithRpc( const std::vector<std::string> &rpc_urls )
+{
+    auto          path = fs::temp_directory_path() / "e2e_bridge_chains_config_rpc.json";
+    std::ofstream out( path, std::ios::binary | std::ios::trunc );
+    std::string   rpc_array;
+    for ( const auto &url : rpc_urls )
+    {
+        if ( !rpc_array.empty() )
+        {
+            rpc_array += ", ";
+        }
+        rpc_array += "\"" + url + "\"";
+    }
+    const std::string json = R"({
+        "ethereum-sepolia": {
+            "chain_id": 11155111,
+            "bridge_contract_address": ")" +
+                             std::string( kSepoliaContract ) + R"(",
+            "rpc": [ )" + rpc_array + R"( ]
+        }
+    })";
+    out << json;
+    out.close();
+    return path;
+}
+
 /// @brief Build a valid eth_getTransactionReceipt JSON-RPC response with correct
 ///        bridge contract + topic0 so VerifyPublicChainSmartContract passes.
 static std::string BuildValidReceiptJson( const std::string &tx_hash,
@@ -236,7 +264,7 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
 // hashes and VerifyPublicChainSmartContract accepts a v2 receipt.
 TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receipt )
 {
-    auto config_path = WriteTempBridgeConfig();
+    auto config_path = WriteTempBridgeConfigWithRpc( { "https://ethereum-sepolia-rpc.publicnode.com" } );
     ASSERT_TRUE( fs::exists( config_path ) );
 
     PublicChainInputValidator validator;
@@ -294,6 +322,47 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
         } );
     EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "A receipt with an unknown topic0 must still be rejected";
+}
+
+// Regression for the empty-URL placeholder: the provider used to wire a single
+// endpoint with url="" and weight 25, so VerifyPublicChainSmartContract could
+// never reach the 75-weight quorum (and the catch-up scan got an empty URL) for
+// the shipped bridge_chains_config.json — unless tests/app code manually called
+// SetRpcEndpoints/ConfigureRpcEndpoint afterward. Now the provider reads each
+// chain's "rpc" array and wires weight-50 endpoints, so 2 URLs reach quorum with
+// NO manual override.
+TEST( BridgeE2EChainlistTest, ProviderWiredEndpointsReachQuorumWithoutManualOverride )
+{
+    auto config_path = WriteTempBridgeConfigWithRpc(
+        { "https://ethereum-sepolia-rpc.publicnode.com", "https://rpc.sepolia.org" } );
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
+
+    // Provider wires the 2 rpc URLs (2 × 50 = 100 ≥ 75) + both topic0 hashes.
+    // Note: NO manual validator.SetRpcEndpoints / ConfigureRpcEndpoint call.
+    ASSERT_TRUE( provider.Initialize( config_path, validator ) );
+    ASSERT_TRUE( validator.GetFirstRpcUrl( "11155111" ).has_value() )
+        << "Provider must wire a real URL from the rpc array";
+
+    // Mock transport returns a valid receipt (v2 topic0) for any URL.
+    const auto        v2_hash = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v2_topic0 = rlp::base::parse::hex_bytes( v2_hash.data(), v2_hash.size() );
+    const std::string source_ref = "0x" + std::string( 64, 'e' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2_topic0 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "Provider-wired endpoints (from the rpc array) must reach the 75-weight quorum "
+        << "without any manual SetRpcEndpoints/ConfigureRpcEndpoint override";
 }
 
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
