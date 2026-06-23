@@ -23,7 +23,6 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
-#include "FileManager.hpp"
 #include <thread>
 #include <chrono>
 
@@ -533,7 +532,7 @@ int main( int argc, char *argv[] )
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
     auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
+        sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
 
     std::thread status_thread;
 

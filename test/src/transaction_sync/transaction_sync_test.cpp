@@ -70,26 +70,29 @@ namespace sgns
             {
             }
 
-            full_node = sgns::GeniusNode::New( DEV_CONFIG3,
-                                               "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",
-                                               false,
-                                               false,
-                                               40001,
-                                               true );
+            full_node = sgns::GeniusNode::NewFromPrivateKey(
+                DEV_CONFIG3,
+                "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",
+                false,
+                false,
+                40001,
+                true );
             Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 40000 ),
                                           "full_node not ready" );
 
-            node_proc1 = sgns::GeniusNode::New( DEV_CONFIG,
-                                                "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395",
-                                                false,
-                                                false );
+            node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
+                DEV_CONFIG,
+                "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395",
+                false,
+                false );
 
-            node_proc2 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                                "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02",
-                                                false,
-                                                false );
+            node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
+                DEV_CONFIG2,
+                "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02",
+                false,
+                false );
 
             fmt::println( "Node1 started with address: {}", node_proc1->GetAddress() );
             fmt::println( "Node2 started with address: {}", node_proc2->GetAddress() );
@@ -113,10 +116,11 @@ namespace sgns
             full_node.reset();
         }
 
-        outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer( sgns::GeniusAccount &account,
-                                                                                   uint64_t             amount,
-                                                                                   const std::string   &destination,
-            const std::string                   &previous_hash = "" )
+        outcome::result<sgns::TransactionManager::TransactionPair> CreateTransfer(
+            sgns::GeniusAccount &account,
+            uint64_t             amount,
+            const std::string   &destination,
+            const std::string   &previous_hash = "" )
         {
             BOOST_OUTCOME_TRY( auto params,
                                account.GetUTXOManager().CreateTxParameter( amount,
@@ -361,9 +365,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
     for ( size_t index = 0; index < xfer_amounts[0].size(); index++ )
     {
-        auto xfer_amount       = xfer_amounts[0][index];
-        xfer_amount_1         += xfer_amount;
-        auto transfer_result1  = node_proc1->TransferFunds( xfer_amount,
+        auto xfer_amount  = xfer_amounts[0][index];
+        xfer_amount_1    += xfer_amount;
+        auto transfer_result1 = node_proc1->TransferFunds( xfer_amount,
                                                            node_proc2->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -373,9 +377,9 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
         txIDs[0].push_back( transfer_tx_id1 );
 
-        xfer_amount            = xfer_amounts[1][index];
-        xfer_amount_2         += xfer_amount;
-        auto transfer_result2  = node_proc2->TransferFunds( xfer_amount,
+        xfer_amount    = xfer_amounts[1][index];
+        xfer_amount_2 += xfer_amount;
+        auto transfer_result2 = node_proc2->TransferFunds( xfer_amount,
                                                            node_proc1->GetAddress(),
                                                            sgns::TokenID::FromBytes( { 0x00 } ),
                                                            std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
@@ -464,7 +468,9 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     // Verify balance after minting
     EXPECT_EQ( node_proc1->GetBalance(), balance_1_before_invalid ) << "Correct Balance of outgoing transactions";
 
-    auto tx_pair = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(),
+    auto tx_pair = CreateTransfer( *GetAccountFromNode( *node_proc1 ),
+                                   10000000000,
+                                   node_proc2->GetAddress(),
                                    mint_tx_id );
     if ( !tx_pair.has_value() )
     {
@@ -562,10 +568,7 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
-    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ),
-                                    10000000000,
-                                    node_proc2->GetAddress(),
-                                    tx1_id );
+    auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(), tx1_id );
     ASSERT_TRUE( tx_pair2.has_value() );
 
     auto [tx2, proof2]   = tx_pair2.value();
