@@ -365,6 +365,52 @@ TEST( BridgeE2EChainlistTest, ProviderWiredEndpointsReachQuorumWithoutManualOver
         << "without any manual SetRpcEndpoints/ConfigureRpcEndpoint override";
 }
 
+// Regression: bridge_chains_config.json ships EIP-55 mixed-case addresses, but
+// the verifier compares the configured address byte-for-byte against
+// hex_array_string(log.address), which is always lowercase. The provider must
+// normalize the stored address, otherwise receipts from the configured contract
+// are treated as log mismatches and bridge mints fail witness validation.
+TEST( BridgeE2EChainlistTest, MixedCaseConfigAddressNormalizesForReceiptMatch )
+{
+    constexpr const char *kMixedCaseContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
+    const std::string     kLowerCaseContract = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
+
+    auto path = fs::temp_directory_path() / "e2e_bridge_mixed_case.json";
+    {
+        std::ofstream out( path, std::ios::binary | std::ios::trunc );
+        out << R"({ "ethereum-sepolia": { "chain_id": 11155111, "bridge_contract_address": ")"
+            << kMixedCaseContract
+            << R"(", "rpc": [ "https://a.example.rpc", "https://b.example.rpc" ] } })";
+    }
+    ASSERT_TRUE( fs::exists( path ) );
+
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
+    ASSERT_TRUE( provider.Initialize( path, validator ) );
+
+    // A real JSON-RPC node returns the log address lowercase; the verifier
+    // reconstructs it lowercase via hex_array_string. The config value above is
+    // mixed-case — it must be normalized to match.
+    const auto        v1_hash   = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    const std::string v1_topic0 = rlp::base::parse::hex_bytes( v1_hash.data(), v1_hash.size() );
+    const std::string source_ref = "0x" + std::string( 64, '9' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kLowerCaseContract, v1_topic0 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "A mixed-case config address must normalize so the receipt log matches";
+
+    std::error_code ec;
+    fs::remove( path, ec );
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();

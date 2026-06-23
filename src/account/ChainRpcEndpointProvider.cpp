@@ -107,6 +107,12 @@ namespace sgns
                 }
                 std::string contract_addr = boost::json::value_to<std::string>( bridge_it->value() );
 
+                // Normalize to lowercase: receipts reconstruct the log address via
+                // hex_array_string() (always lowercase), and the verifier compares
+                // byte-for-byte. EIP-55 mixed-case config values would otherwise
+                // never match, failing witness validation for valid receipts.
+                contract_addr = rlp::base::parse::ascii_lower( std::move( contract_addr ) );
+
                 // Optional "rpc" array: operator-provided public RPC URLs used
                 // for receipt verification + catch-up scan. Absent/empty is
                 // legal (chain still registers for relayer watch), but then
