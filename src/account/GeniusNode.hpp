@@ -119,22 +119,6 @@ namespace sgns
                                                             bool                is_full_node = false );
 
         /**
-         * @brief Creates a node with a newly generated random BIP39 mnemonic.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Pair of shared node instance (nullptr on failure) and the generated mnemonic phrase.
-         */
-        static std::pair<std::shared_ptr<GeniusNode>, std::string> NewFromRandomMnemonic(
-            const DevConfig_st &dev_config,
-            bool                autodht      = true,
-            bool                isprocessor  = true,
-            uint16_t            base_port    = 40001,
-            bool                is_full_node = false );
-
-        /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
          */
         ~GeniusNode() override;

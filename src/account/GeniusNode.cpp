@@ -202,33 +202,6 @@ namespace sgns
         return instance;
     }
 
-    std::pair<std::shared_ptr<GeniusNode>, std::string> GeniusNode::NewFromRandomMnemonic(
-        const DevConfig_st &dev_config,
-        bool                autodht,
-        bool                isprocessor,
-        uint16_t            base_port,
-        bool                is_full_node )
-    {
-        auto account = GeniusAccount::NewFromRandomMnemonic( dev_config.TokenID,
-                                                             dev_config.BaseWritePath,
-                                                             is_full_node );
-
-        if ( account.first == nullptr )
-        {
-            return std::make_pair( nullptr, account.second );
-        }
-
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account.first ), autodht, isprocessor, base_port, is_full_node ) );
-
-        if ( instance )
-        {
-            instance->BeginDBInitialization();
-        }
-
-        return std::make_pair( instance, account.second );
-    }
-
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
                             std::shared_ptr<GeniusAccount> account,
                             bool                           autodht,
