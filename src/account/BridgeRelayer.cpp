@@ -253,7 +253,12 @@ namespace sgns
         if ( std::holds_alternative<eth::codec::ByteBuffer>( dest_val ) )
         {
             const auto &dest_bytes = std::get<eth::codec::ByteBuffer>( dest_val );
-            destination = rlp::base::parse::hex_bytes( dest_bytes.data(), dest_bytes.size() );
+            // hex_bytes() prepends "0x"; GetAddress() and the v2 decompression
+            // path return a bare 128-char hex string, so strip the prefix —
+            // otherwise v1 mints are addressed to "0x"+key and recipient
+            // (non-full) nodes won't index them as spendable.
+            destination = rlp::base::parse::hex_bytes( dest_bytes.data(), dest_bytes.size() )
+                              .substr( rlp::base::parse::kHexCharsPerByte );
         }
         else if ( std::holds_alternative<eth::codec::Hash256>( dest_val ) )
         {

@@ -674,3 +674,33 @@ TEST( BridgeRelayerTest, DecompressMatchesKnownVector )
     const std::string x_hex_no_prefix = x_hex.substr( 2 ); // strip "0x"
     EXPECT_EQ( dest->substr( 0, 64 ), x_hex_no_prefix ) << "Destination X half must equal the input contract-order X";
 }
+
+TEST( BridgeRelayerTest, V1DestinationIsBareHexMatchingGetAddressFormat )
+{
+    // @regression v1 BridgeSourceBurned carries the 64-byte SG public key in
+    //             sgnsDestination (bytes). ParseBurnEventValues must return a
+    //             bare 128-char hex string with NO "0x" prefix, matching
+    //             GetAddress() and the v2 decompression output. Previously
+    //             hex_bytes() prepended "0x", addressing v1 mints to "0x"+key
+    //             so recipient (non-full) nodes never indexed them as spendable.
+
+    std::array<uint8_t, 64> sgns_dest_arr{};
+    ASSERT_TRUE( rlp::base::parse::hex_array( kTestSgnsDestination, sgns_dest_arr ) )
+        << "Test fixture destination must be valid 64-byte hex";
+    eth::codec::ByteBuffer sgns_dest_bytes( sgns_dest_arr.begin(), sgns_dest_arr.end() );
+
+    std::vector<eth::abi::AbiValue> values;
+    values.push_back( eth::codec::Address{} );        // [0] sender
+    values.push_back( intx::uint256( 1 ) );           // [1] id
+    values.push_back( intx::uint256( 1 ) );           // [2] amount
+    values.push_back( intx::uint256( 11155111 ) );    // [3] srcChainID
+    values.push_back( intx::uint256( 8453 ) );        // [4] destChainID
+    values.push_back( std::move( sgns_dest_bytes ) ); // [5] sgnsDestination (v1 bytes)
+
+    auto result = BridgeRelayer::ParseBurnEventValues( values );
+    ASSERT_TRUE( result.has_value() ) << "v1 values must parse successfully";
+    EXPECT_EQ( result.value().destination.size(), 128U )
+        << "v1 destination must be bare 128-char hex (no \"0x\" prefix)";
+    EXPECT_EQ( result.value().destination, kTestSgnsDestination )
+        << "v1 destination must equal the input public key (GetAddress format)";
+}
