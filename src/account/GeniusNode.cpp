@@ -1223,10 +1223,17 @@ namespace sgns
         {
             io_->stop(); // Stop our io_context
         }
+        const auto caller_thread_id = std::this_thread::get_id();
         for ( auto &t : io_threads_ )
         {
             if ( t.joinable() )
             {
+                if ( t.get_id() == caller_thread_id )
+                {
+                    node_logger_->error( "~GeniusNode called from io_context thread; detaching current thread to avoid self-join" );
+                    t.detach();
+                    continue;
+                }
                 t.join();
             }
         }
@@ -1234,7 +1241,15 @@ namespace sgns
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
-            upnp_thread.join();
+            if ( upnp_thread.get_id() == caller_thread_id )
+            {
+                node_logger_->error( "~GeniusNode called from UPNP thread; detaching current thread to avoid self-join" );
+                upnp_thread.detach();
+            }
+            else
+            {
+                upnp_thread.join();
+            }
         }
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
