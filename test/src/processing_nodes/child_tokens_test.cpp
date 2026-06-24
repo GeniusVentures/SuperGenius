@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cstring>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <ostream>
 #include <random>
 #include <thread>
@@ -45,6 +47,14 @@ namespace
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
 
         std::string key;
         key.reserve( 64 );

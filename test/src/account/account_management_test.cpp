@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include <chrono>
+#include <fstream>
 
 #include <boost/dll/runtime_symbol_info.hpp>
 
@@ -30,6 +31,15 @@ public:
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
         }
+
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        boost::filesystem::create_directories( path );
+        {
+            std::ofstream configFile( path.generic_string() + "/sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
+
         node_ = sgns::GeniusNode::NewFromPrivateKey( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
                                                      "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
                                                      false,
@@ -104,6 +114,19 @@ TEST_F( AccountManagement, SetPayoutAddress )
     }
     catch ( ... )
     {
+    }
+
+    // All nodes in this test are non-processors.
+    // is_processor is now read exclusively from sgns_config.json (defaults to true).
+    boost::filesystem::create_directories( path_receiver );
+    {
+        std::ofstream configFile( path_receiver.generic_string() + "/sgns_config.json" );
+        configFile << R"({"is_processor": false})";
+    }
+    boost::filesystem::create_directories( path_requester );
+    {
+        std::ofstream configFile( path_requester.generic_string() + "/sgns_config.json" );
+        configFile << R"({"is_processor": false})";
     }
 
     auto node_receiver = sgns::GeniusNode::NewFromPrivateKey(

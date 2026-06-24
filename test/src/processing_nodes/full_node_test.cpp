@@ -37,6 +37,14 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
+    // All nodes in this test are non-processors.
+    // is_processor is now read exclusively from sgns_config.json (defaults to true).
+    std::filesystem::create_directories( devConfig.BaseWritePath );
+    {
+        std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+        configFile << R"({"is_processor": false})";
+    }
+
     uint16_t port = static_cast<uint16_t>( 40001 + id );
     auto     node = GeniusNode::NewFromPrivateKey( devConfig, privKey.c_str(), false, port, isFullNode );
     if ( isFullNode )

@@ -70,6 +70,24 @@ namespace sgns
             {
             }
 
+            // All nodes in this test are non-processors.
+            // is_processor is now read exclusively from sgns_config.json (defaults to true).
+            std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG3.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+            std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+            std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG2.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+
             full_node = sgns::GeniusNode::NewFromPrivateKey(
                 DEV_CONFIG3,
                 "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",

@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <thread>
 #include <iostream>
 #include <cstring>
@@ -107,6 +108,14 @@ protected:
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
         DEV_CONFIG.BaseWritePath = baseWrite;
 
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        {
+            std::ofstream configFile( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
+            configFile << R"({"is_processor": false})";
+        }
+
         auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
                                                              key_hex,
                                                              false,
@@ -132,6 +141,14 @@ protected:
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
+
+        // Full node is not a processor.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
         auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, unique_port, true );
