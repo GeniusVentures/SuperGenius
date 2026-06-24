@@ -201,23 +201,15 @@ namespace sgns
 
         for ( auto &[chain_id, endpoints] : endpoints_by_chain )
         {
-            // Skip empty results: a failed/empty chainlist fetch must NOT
-            // overwrite endpoints an operator may have configured via
-            // GeniusNode::ConfigureRpcEndpoint (SetRpcEndpoints replaces, so an
-            // empty write would wipe working private/API-key endpoints and leave
-            // validation + catch-up fail-closed).
-            if ( endpoints.empty() )
-            {
-                logger->info( "ChainRpcEndpointProvider: no fetched endpoints for chain_id={} "
-                              "— preserving any existing configured endpoints",
-                              chain_id );
-                continue;
-            }
-
-            const auto count = endpoints.size();
-            validator.SetRpcEndpoints( std::to_string( chain_id ), std::move( endpoints ) );
-            logger->info( "ChainRpcEndpointProvider: wired {} RPC endpoints for chain_id={}",
-                          count, chain_id );
+            // Merge (not replace) with any existing endpoints: an operator may
+            // have supplied private/API-key endpoints via
+            // GeniusNode::ConfigureRpcEndpoint while this async fetch was in
+            // flight. SetRpcEndpoints is a wholesale replace and would silently
+            // drop them, so AddRpcEndpoints (URL-deduped) preserves them.
+            const auto fetched = endpoints.size();
+            validator.AddRpcEndpoints( std::to_string( chain_id ), std::move( endpoints ) );
+            logger->info( "ChainRpcEndpointProvider: merged {} fetched endpoint(s) for chain_id={}",
+                          fetched, chain_id );
         }
 
         // ── Return value pinned to accepted chains ───────────────────────

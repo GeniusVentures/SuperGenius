@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 
 #include <base/parse_utility.hpp>
@@ -129,12 +130,36 @@ namespace sgns
     }
 
     void PublicChainInputValidator::SetRpcEndpoints( const std::string &chain_id,
-                                                     std::vector<WeightedRpcEndpoint> endpoints )
+                                                      std::vector<WeightedRpcEndpoint> endpoints )
     {
         auto logger = InputValidatorLogger();
         rpc_endpoints_[chain_id] = std::move( endpoints );
         logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
                       chain_id, rpc_endpoints_[chain_id].size() );
+    }
+
+    void PublicChainInputValidator::AddRpcEndpoints( const std::string &chain_id,
+                                                      std::vector<WeightedRpcEndpoint> endpoints )
+    {
+        auto        logger = InputValidatorLogger();
+        auto       &existing = rpc_endpoints_[chain_id];
+        std::unordered_set<std::string> seen;
+        seen.reserve( existing.size() + endpoints.size() );
+        for ( const auto &e : existing )
+        {
+            seen.insert( e.url );
+        }
+        size_t added = 0;
+        for ( auto &e : endpoints )
+        {
+            if ( seen.insert( e.url ).second )
+            {
+                existing.push_back( std::move( e ) );
+                ++added;
+            }
+        }
+        logger->info( "AddRpcEndpoints: chain_id={} added={} total={}",
+                      chain_id, added, existing.size() );
     }
 
     bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,

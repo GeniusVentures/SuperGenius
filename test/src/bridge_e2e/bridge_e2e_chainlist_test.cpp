@@ -160,6 +160,13 @@ public:
         }
         return it->second.front().accepted_topic0_hashes;
     }
+
+    /// @brief Count the wired endpoints for a chain id (after a merge).
+    static size_t EndpointCount( const PublicChainInputValidator &validator, const std::string &chain_id )
+    {
+        auto it = validator.rpc_endpoints_.find( chain_id );
+        return it == validator.rpc_endpoints_.end() ? 0 : it->second.size();
+    }
 };
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -386,6 +393,40 @@ TEST( BridgeE2EChainlistTest, EmptyFetchDoesNotOverwriteExistingEndpoints )
     ASSERT_TRUE( url.has_value() ) << "Operator-configured endpoint must survive the fetch";
     EXPECT_EQ( *url, "https://operator-private.example" )
         << "An empty chainlist result must not overwrite existing endpoints";
+}
+
+// A non-empty chainlist fetch must MERGE with operator-configured endpoints, not
+// replace them. SetRpcEndpoints is a wholesale replace; the provider uses the
+// URL-deduped AddRpcEndpoints so a higher-weight private endpoint supplied via
+// GeniusNode::ConfigureRpcEndpoint survives alongside the fetched public URLs.
+TEST( BridgeE2EChainlistTest, FetchedEndpointsMergeWithExistingOperatorEndpoints )
+{
+    auto config_path = WriteTempBridgeConfig();
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+
+    // Operator pre-configures a private weight-50 endpoint.
+    {
+        const auto        h = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+        WeightedRpcEndpoint ep;
+        ep.url                     = "https://operator-private.example";
+        ep.consensus_weight        = 50;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = { rlp::base::parse::hex_bytes( h.data(), h.size() ) };
+        validator.SetRpcEndpoints( "11155111", { ep } );
+    }
+
+    ChainRpcEndpointProvider provider;
+    provider.SetChainlistFetcher( CannedChainlistFetch ); // 3 Sepolia public URLs
+    ASSERT_TRUE( provider.Initialize( config_path, validator ) );
+
+    // Operator's endpoint is still first (merge preserves order), and the fetched
+    // public URLs were appended (1 operator + 3 fetched = 4).
+    EXPECT_EQ( validator.GetFirstRpcUrl( "11155111" ), std::optional<std::string>{ "https://operator-private.example" } )
+        << "Operator private endpoint must survive a non-empty fetch (merge, not overwrite)";
+    EXPECT_EQ( PublicChainInputValidatorTestAccess::EndpointCount( validator, "11155111" ), 4u )
+        << "Fetched public endpoints must be merged with, not replace, operator endpoints";
 }
 
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )

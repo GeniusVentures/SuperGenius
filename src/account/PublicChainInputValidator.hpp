@@ -73,6 +73,20 @@ namespace sgns
         void SetRpcEndpoints( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
         /**
+         * @brief Merge weighted RPC endpoints into a source chain's existing list.
+         *
+         * Unlike SetRpcEndpoints (wholesale replace), this preserves endpoints
+         * already configured for the chain (e.g. operator-supplied private/API-key
+         * endpoints from GeniusNode::ConfigureRpcEndpoint) and appends the new
+         * ones, deduplicating by URL. Used by the chainlist runtime fetch so an
+         * async non-empty fetch never drops higher-weight private endpoints.
+         *
+         * @param[in] chain_id Source chain identifier (e.g. "1" for Ethereum).
+         * @param[in] endpoints Weighted RPC endpoints to merge (URL-deduped).
+         */
+        void AddRpcEndpoints( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
+        /**
          * @brief Validates local UTXO structure for externally sourced claims.
          * @param[in] params UTXO inputs and outputs carried by the transaction.
          * @param[in] address Source address; ignored for public-chain validation.
