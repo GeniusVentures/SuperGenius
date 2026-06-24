@@ -76,34 +76,61 @@ namespace sgns
         static const SecureStorageFactory &GetSecureStorageFactory();
 
         /**
-         * @brief       Factory constructor of new GeniusAccount.
+         * @brief       Try creating an account by first loading it from storage,
+         * and if failure, create one with @ref NewFromRandomMnemonic
+         * @param[in]   token_id Token ID of the account
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
+         * @brief       Creates an account from an Ethereum private key
          * @param[in]   token_id Token ID of the account.
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
          * @param[in]   base_path Base path to store/retrieve keys.
          * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const char                    *eth_private_key,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromPrivateKey( TokenID                        token_id,
+                                                                 const char                    *eth_private_key,
+                                                                 const boost::filesystem::path &base_path,
+                                                                 bool                           full_node = false );
 
-        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
-                                                               const std::string             &mnemonic,
-                                                               const boost::filesystem::path &base_path,
-                                                               bool                           full_node = false );
-
+        /**
+         * @brief Creates an account by loading directly from storage.
+         * If the account wasn't previously stored, returns `nullptr`.
+         */
         static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
                                                                 std::string_view public_key,
                                                                 bool             full_node = false );
 
         /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
+         * @brief       Creates an account from a BIP39 mnemonic phrase.
+         * @param[in]   token_id Token ID of the account.
+         * @param[in]   mnemonic BIP39 mnemonic phrase.
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
+                                                               const std::string             &mnemonic,
+                                                               const boost::filesystem::path &base_path,
+                                                               bool                           full_node = false );
+
+        /**
+         * @brief Creates an account with a newly generated random BIP39 mnemonic.
+         * @param[in] token_id Token ID of the account.
+         * @param[in] base_path Base path to store/retrieve keys.
+         * @param[in] full_node Whether to initialize as a full node.
+         * @return Pair of shared account instance (nullptr on failure) and the generated mnemonic phrase.
+         */
+        static std::pair<std::shared_ptr<GeniusAccount>, std::string> NewFromRandomMnemonic(
+            TokenID                        token_id,
+            const boost::filesystem::path &base_path,
+            bool                           full_node = false );
 
         static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
 
@@ -134,7 +161,8 @@ namespace sgns
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
-         * @brief       Configures the block response handler.
+         * @brief       Configures database dependencies: nonce store, block response handler,
+         *              head request handler, and block CID lookup method.
          * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
          * @return      true if successfully configured, false otherwise.
          */
@@ -163,8 +191,8 @@ namespace sgns
         [[nodiscard]] TokenID GetToken() const;
 
         /**
-         * @brief       Get the confirmed nonce as a string
-         * @return      The confirmed nonce in string format
+         * @brief       Get the proposed (next available) nonce as a string
+         * @return      The proposed nonce in string format
          */
         [[nodiscard]] std::string GetNonce() const
         {
@@ -205,9 +233,10 @@ namespace sgns
         void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address, const std::string &tx_hash = "" );
 
         /**
-         * @brief       Rollback the local confirmed nonce for a peer
-         * @param[in]   nonce The nonce value to be rolled back to
-         * @param[in]   address The address of the peer
+         * @brief       Rollback the confirmed nonce for the given address.
+         *              Also rolls back local confirmed nonce and tx history when the address is local.
+         * @param[in]   nonce The nonce value to be rolled back from (only rolls back if it matches current)
+         * @param[in]   address The address whose nonce is being rolled back
          */
         void RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
@@ -292,7 +321,7 @@ namespace sgns
                                                                        uint64_t           silent_time_ms = 150 ) const;
         /**
          * @brief       Request heads broadcast for specific topics
-         * @param[in]   topics Vector of topic names to request heads for
+         * @param[in]   topics Set of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
         outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;

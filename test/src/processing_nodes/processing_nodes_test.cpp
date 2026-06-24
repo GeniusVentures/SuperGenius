@@ -43,12 +43,13 @@ protected:
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
         DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
-        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true,
-                                            40054,
-                                            true );
+        node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG2,
+            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false,
+            true,
+            40054,
+            true );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         sgns::test::assertWaitForCondition( [&]
@@ -56,17 +57,19 @@ protected:
                                             std::chrono::milliseconds( 30000 ),
                                             "node_proc1 not ready" );
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+        node_main = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG,
+            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false,
+            false );
 
-        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
-                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true,
-                                            40060,
-                                            true );
+        node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG3,
+            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false,
+            true,
+            40060,
+            true );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),

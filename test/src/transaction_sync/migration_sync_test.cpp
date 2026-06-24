@@ -123,7 +123,12 @@ protected:
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
         DEV_CONFIG.BaseWritePath = baseWrite;
 
-        auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, is_processor, base_port, is_full_node );
+        auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
+                                                             key_hex,
+                                                             false,
+                                                             is_processor,
+                                                             base_port,
+                                                             is_full_node );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
@@ -146,7 +151,7 @@ protected:
                                    outPath };
 
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance    = GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
