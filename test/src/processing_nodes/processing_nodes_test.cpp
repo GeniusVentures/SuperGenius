@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <iostream>
 #include <thread>
@@ -35,6 +37,14 @@ protected:
         DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
         DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
+
+        // Write minimal sgns_config.json for node_main so it does not run as a processor.
+        // is_processor is now read exclusively from this config file (defaults to true).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        {
+            std::ofstream config_file( DEV_CONFIG.BaseWritePath + "sgns_config.json" );
+            config_file << R"({"is_processor": false})";
+        }
 
         node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
             DEV_CONFIG2,
