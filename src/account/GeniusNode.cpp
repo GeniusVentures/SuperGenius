@@ -9,7 +9,6 @@
 #include <stdexcept>
 #include <thread>
 #include <memory>
-#include <exception>
 #include <random>
 
 #include <boost/format.hpp>
@@ -41,7 +40,6 @@
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
-#include "blockchain/ValidatorRegistry.hpp"
 #include <Generators.hpp>
 
 namespace
@@ -151,15 +149,15 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
-                                                 const char         *eth_private_key,
-                                                 bool                autodht,
-                                                 uint16_t            base_port,
-                                                 bool                is_full_node )
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
+                                                               const char         *eth_private_key,
+                                                               bool                autodht,
+                                                               uint16_t            base_port,
+                                                               bool                is_full_node )
     {
         auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
             dev_config,
-            GeniusAccount::New( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
+            GeniusAccount::NewFromPrivateKey( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
             autodht,
             base_port,
             is_full_node ) );
@@ -178,33 +176,25 @@ namespace sgns
                                                              uint16_t            base_port,
                                                              bool                is_full_node )
     {
-        try
+        auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
+                                                       mnemonic,
+                                                       dev_config.BaseWritePath,
+                                                       is_full_node );
+
+        if ( account == nullptr )
         {
-            auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
-                                                           mnemonic,
-                                                           dev_config.BaseWritePath,
-                                                           is_full_node );
-
-            if ( account == nullptr )
-            {
-                return nullptr;
-            }
-
-            auto instance = std::shared_ptr<GeniusNode>(
-                new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
-
-            if ( instance )
-            {
-                instance->BeginDBInitialization();
-            }
-
-            return instance;
+            return nullptr;
         }
-        catch ( const std::invalid_argument &err )
+
+        auto instance = std::shared_ptr<GeniusNode>(
+            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
+
+        if ( instance )
         {
-            std::cerr << "Failed to generate address from mnemonic: " << err.what() << '\n';
+            instance->BeginDBInitialization();
         }
-        return nullptr;
+
+        return instance;
     }
 
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
@@ -1358,9 +1348,9 @@ namespace sgns
         return GeniusAccount::GetAvailableAccounts( write_base_path_ );
     }
 
-    outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key )
+    outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key ) const
     {
-        auto new_account = GeniusAccount::New( this->GetTokenID(), private_key, write_base_path_, is_full_node_ );
+        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(), private_key, write_base_path_, is_full_node_ );
         if ( new_account == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -1368,7 +1358,7 @@ namespace sgns
         return outcome::success();
     }
 
-    outcome::result<void> GeniusNode::AddAccountWithMnemonic( const std::string &mnemonic )
+    outcome::result<void> GeniusNode::AddAccountWithMnemonic( const std::string &mnemonic ) const
     {
         auto new_account = GeniusAccount::NewFromMnemonic( this->GetTokenID(),
                                                            mnemonic,
@@ -1379,6 +1369,16 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
         return outcome::success();
+    }
+
+    outcome::result<std::string> GeniusNode::AddAccountWithRandomMnemonic() const
+    {
+        auto new_account = GeniusAccount::NewFromRandomMnemonic( this->GetTokenID(), write_base_path_, is_full_node_ );
+        if ( new_account.first == nullptr )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return new_account.second;
     }
 
     outcome::result<void> GeniusNode::SelectAccount( std::string_view public_address )
@@ -1697,6 +1697,16 @@ namespace sgns
 
         node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
         return std::make_pair( tx_id, duration );
+    }
+
+    std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
+    {
+        auto res = this->account_->LoadFromSecureStorage( "mnemonic" );
+        if ( res.has_error() )
+        {
+            return std::nullopt;
+        }
+        return res.value();
     }
 
     [[nodiscard]] std::pair<float, std::string> GeniusNode::GetInitializationStatus() const

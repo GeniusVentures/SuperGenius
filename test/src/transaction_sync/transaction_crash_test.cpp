@@ -56,11 +56,11 @@ namespace sgns
             CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
             CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
 
-            node1 = sgns::GeniusNode::New( CONFIG1,
+            node1 = sgns::GeniusNode::NewFromPrivateKey( CONFIG1,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node2 = sgns::GeniusNode::New( CONFIG2,
+            node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
@@ -82,7 +82,7 @@ namespace sgns
         {
             node2.reset();
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-            node2 = sgns::GeniusNode::New( CONFIG2,
+            node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );

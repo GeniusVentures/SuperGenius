@@ -98,7 +98,7 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );

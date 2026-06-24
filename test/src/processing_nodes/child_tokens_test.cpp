@@ -17,7 +17,6 @@
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include <boost/multiprecision/cpp_dec_float.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 using namespace sgns::test;
@@ -61,7 +60,7 @@ namespace
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
 
         if ( setAsAuthorized )
         {

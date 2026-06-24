@@ -58,15 +58,15 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+        node_main = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+        node_proc1 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+        node_proc2 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false );
 

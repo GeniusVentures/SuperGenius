@@ -10,7 +10,6 @@
 #include "account/TokenID.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/wait_condition.hpp"
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 
@@ -39,7 +38,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, port, isFullNode );
+    auto     node = GeniusNode::NewFromPrivateKey( devConfig, privKey.c_str(), false, port, isFullNode );
     if ( isFullNode )
     {
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
