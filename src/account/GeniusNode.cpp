@@ -2415,31 +2415,40 @@ namespace sgns
 
     void GeniusNode::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
     {
-        node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
-                            chains.size() );
-        catchup_chains_ = std::move( chains );
-
-        // P2: If the catchup scan hasn't run yet (READY may have fired before
-        // chains were populated), trigger it now that chains are available.
-        // Only dispatch if transaction_manager_ is in READY state, otherwise
-        // MintFunds will fail and the scan will be triggered by
-        // TransactionStateChanged when the manager reaches READY.
-        if ( !catchup_scan_done_ && !catchup_chains_.empty() )
-
+        bool dispatch_scan = false;
         {
-            if ( transaction_manager_ && transaction_manager_->GetState() == TransactionManager::State::READY )
+            // Serialize with the READY branch of TransactionStateChanged: both
+            // run on io_ (4 threads) and otherwise race on catchup_chains_ /
+            // catchup_scan_done_ and can enqueue the scan twice. GetState() is a
+            // lock-free read, so it is safe under catchup_mutex_ (no lock-order
+            // cycle with state_change_callback_mutex_).
+            std::lock_guard lock( catchup_mutex_ );
+            catchup_chains_ = std::move( chains );
+            node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
+                                catchup_chains_.size() );
+
+            // P2: If the catchup scan hasn't run yet (READY may have fired before
+            // chains were populated), trigger it now that chains are available.
+            if ( !catchup_scan_done_ && !catchup_chains_.empty()
+                 && transaction_manager_
+                 && transaction_manager_->GetState() == TransactionManager::State::READY )
             {
                 catchup_scan_done_ = true;
-                node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
-                boost::asio::post( *io_,
-                                   [weak_self = weak_from_this()]
-                                   {
-                                       if ( auto strong = weak_self.lock() )
-                                       {
-                                           strong->PerformStartupCatchupScan();
-                                       }
-                                   } );
+                dispatch_scan      = true;
             }
+        }
+
+        if ( dispatch_scan )
+        {
+            node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
+            boost::asio::post( *io_,
+                               [weak_self = weak_from_this()]
+                               {
+                                   if ( auto strong = weak_self.lock() )
+                                   {
+                                       strong->PerformStartupCatchupScan();
+                                   }
+                               } );
         }
     }
 
@@ -2506,9 +2515,17 @@ namespace sgns
 
         // Iterate chains discovered via OnRpcEndpointsReady observer callback (D-02, D-03)
         // Uses catchup_chains_ populated by the observer — no hardcoded maps.
+        // Snapshot under catchup_mutex_ so a concurrent OnRpcEndpointsReady write
+        // cannot invalidate the iteration (read side of the scan-guard race).
         auto &validator = transaction_manager_->GetPublicChainInputValidator();
 
-        for ( const auto &chain_entry : catchup_chains_ )
+        std::vector<ChainContractPair> chains_snapshot;
+        {
+            std::lock_guard lock( catchup_mutex_ );
+            chains_snapshot = catchup_chains_;
+        }
+
+        for ( const auto &chain_entry : chains_snapshot )
         {
             auto rpc_url = validator.GetFirstRpcUrl( std::to_string( chain_entry.chain_id ) );
             if ( !rpc_url.has_value() )
@@ -2790,14 +2807,25 @@ namespace sgns
         switch ( new_state )
         {
             case TransactionManager::State::READY:
+            {
                 // D-20: Trigger startup catch-up scan once after CRDT sync completes.
                 // Non-blocking — posted to io_ so the node proceeds normally.
                 // P2: Require chains to be populated before marking the scan done.
                 // Prevents permanent skip when READY fires before OnRpcEndpointsReady
-                // populates catchup_chains_.
-                if ( !catchup_scan_done_ && !catchup_chains_.empty() )
+                // populates catchup_chains_. Serialize the guard with OnRpcEndpointsReady
+                // (both run on the 4-thread io_ pool) to avoid a data race and a
+                // double enqueue of PerformStartupCatchupScan.
+                bool dispatch_scan = false;
                 {
-                    catchup_scan_done_ = true;
+                    std::lock_guard lock( catchup_mutex_ );
+                    if ( !catchup_scan_done_ && !catchup_chains_.empty() )
+                    {
+                        catchup_scan_done_ = true;
+                        dispatch_scan      = true;
+                    }
+                }
+                if ( dispatch_scan )
+                {
                     boost::asio::post( *io_,
                                        [weak_self = weak_from_this()]
                                        {
@@ -2817,6 +2845,7 @@ namespace sgns
                     StartProcessing();
                 }
                 break;
+            }
             case TransactionManager::State::INITIALIZING:
             case TransactionManager::State::SYNCING:
                 if ( isprocessor_ )

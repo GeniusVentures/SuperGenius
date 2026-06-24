@@ -635,6 +635,10 @@ namespace sgns
         DevConfig_st                   dev_config_;                ///< Runtime node configuration.
         bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
+        /// Serializes catchup_scan_done_ + catchup_chains_ across the READY
+        /// state-change callback and OnRpcEndpointsReady, which both run on the
+        /// multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
+        mutable std::mutex             catchup_mutex_;
         std::unique_ptr<ChainRpcEndpointProvider>
                                             rpc_endpoint_provider_;    ///< Owns the provider across async Initialize().
         std::string                         gnus_network_full_path_;   ///< Versioned network DB path.

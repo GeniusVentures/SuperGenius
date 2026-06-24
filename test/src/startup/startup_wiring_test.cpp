@@ -6,10 +6,13 @@
  */
 #include <gtest/gtest.h>
 
+#include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <mutex>
 #include <set>
 #include <string>
+#include <thread>
 #include <type_traits>
 #include <unordered_map>
 #include <vector>
@@ -671,4 +674,71 @@ TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
         EXPECT_FALSE( guard.ShouldTriggerScan() );
         EXPECT_FALSE( guard.scan_done ) << "scan_done must remain false if chains never arrive";
     }
+}
+
+// ─── Tests: Catchup Scan Guard serialization (READY vs OnRpcEndpointsReady) ──
+
+TEST( StartupWiringTest, CatchupScanGuardDispatchesOnceUnderConcurrency )
+{
+    // The READY branch of TransactionStateChanged and OnRpcEndpointsReady both
+    // run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4) and both gate
+    // PerformStartupCatchupScan on (!catchup_scan_done_ && !catchup_chains_).
+    // Without serialization they can both pass the guard and enqueue the scan
+    // twice — a data race + double dispatch. This models the mutex-serialized
+    // guard now used in GeniusNode and asserts the scan is dispatched EXACTLY
+    // once regardless of how the two handlers interleave. The mutex makes the
+    // outcome deterministic (not a flaky test).
+    struct ThreadSafeCatchupGuard
+    {
+        std::atomic<bool> chains_populated{ false };
+        bool              scan_done = false;
+        std::mutex        mtx;
+
+        /// Mirrors GeniusNode: lock → check guard → set scan_done → signal dispatch.
+        bool TryTrigger()
+        {
+            std::lock_guard lock( mtx );
+            if ( !scan_done && chains_populated.load() )
+            {
+                scan_done = true;
+                return true;
+            }
+            return false;
+        }
+    };
+
+    ThreadSafeCatchupGuard guard;
+    guard.chains_populated.store( true );
+
+    std::atomic<int>  dispatch_count{ 0 };
+    std::atomic<bool> go{ false };
+
+    auto worker = [&]()
+    {
+        while ( !go.load() )
+        {
+            // spin until all threads are released together to maximize overlap
+        }
+        if ( guard.TryTrigger() )
+        {
+            ++dispatch_count;
+        }
+    };
+
+    constexpr int        kThreads = 8;
+    std::vector<std::thread> threads;
+    threads.reserve( kThreads );
+    for ( int i = 0; i < kThreads; ++i )
+    {
+        threads.emplace_back( worker );
+    }
+
+    go.store( true ); // release all threads at once
+    for ( auto &t : threads )
+    {
+        t.join();
+    }
+
+    EXPECT_EQ( dispatch_count.load(), 1 ) << "Catchup scan must be dispatched exactly once "
+                                          << "even when READY + OnRpcEndpointsReady race on the io_ pool";
 }
