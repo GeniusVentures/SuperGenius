@@ -116,7 +116,7 @@ namespace sgns::crdt
         std::atomic_bool started_;
 
         sgns::base::Logger m_logger = sgns::base::createLogger( "PubSubBroadcasterExt" );
-        std::vector<std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>> subscriptionFutures_;
+        std::vector<std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>> subscriptionFutures_;
 
         bool AddMultiCIDInfo( const std::vector<CID>                         &cids,
                               const libp2p::peer::PeerId                     &peer_id,
