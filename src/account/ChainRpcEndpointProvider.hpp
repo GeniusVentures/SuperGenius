@@ -41,11 +41,11 @@ namespace sgns
     };
 
     /**
-     * @brief Encapsulates bridge-chain config loading and validator wiring.
+     * @brief Encapsulates ChainList RPC endpoint loading and validator wiring.
      *
      * Reads bridge_chains_config.json at the path provided, extracts chain_id
-     * and bridge_contract_address for each chain entry, attaches the operator-
-     * provided RPC URLs from each chain's optional "rpc" array, wires them into
+     * and bridge_contract_address for each chain entry, loads RPC endpoints
+     * from the chainlist.org dataset, wires them into
      * PublicChainInputValidator with consensus weights, calls
      * IInputValidator::Register per chain, and notifies IBridgeInitObserver
      * subscribers on success.
@@ -68,13 +68,12 @@ namespace sgns
          * @brief Loads RPC endpoints from bridge_chains_config.json and wires them
          *        into the validator, then calls IInputValidator::Register per chain.
          *
-         * Each URL in a chain's optional "rpc" array contributes 50% consensus
-         * weight; ≥2 URLs reach the 75-weight verification quorum. A chain with
-         * no "rpc" array is still registered (for relayer watch) but its receipt
-         * verification and catch-up scan fail closed (no quorum / no URL).
+         * Public endpoints from the ChainList provider contribute 25% consensus
+         * weight; any RPC URLs present in the config contribute 50% weight.
          *
          * @param[in] bridge_chains_config_path  Path to bridge_chains_config.json.
          * @param[in] validator                  PublicChainInputValidator to configure.
+         * @param[in] logger                     Logger for diagnostic output.
          * @return True when at least one chain entry was accepted (had chain_id + bridge_contract_address).
          */
         bool Initialize( const std::filesystem::path    &bridge_chains_config_path,

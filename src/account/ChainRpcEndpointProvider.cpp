@@ -33,14 +33,10 @@ namespace sgns
     {
         auto logger = base::createLogger( "ChainRpcEndpointProvider" );
 
-        // Each operator-provided RPC URL (the optional "rpc" array in
-        // bridge_chains_config.json) contributes 50% consensus weight; ≥2 URLs
-        // per chain reach the 75-weight verification quorum.
-        static constexpr uint8_t kConfigEndpointWeight = 50;
+        static constexpr uint8_t kPublicEndpointWeight = 25;
 
-        std::vector<ChainContractPair>                                       discovered_chains;
-        std::vector<uint64_t>                                                configured_chain_ids;
-        std::unordered_map<uint64_t, std::vector<std::string>>               rpc_urls_by_chain;
+        std::vector<ChainContractPair>             discovered_chains;
+        std::vector<uint64_t>                      configured_chain_ids;
 
         // ── Compute accepted topic0 hashes: BOTH v1 (BridgeSourceBurned) and
         //    v2 (BridgeOutInitiated). The relayer and catch-up scan mint from
@@ -113,35 +109,13 @@ namespace sgns
                 // never match, failing witness validation for valid receipts.
                 contract_addr = rlp::base::parse::ascii_lower( std::move( contract_addr ) );
 
-                // Optional "rpc" array: operator-provided public RPC URLs used
-                // for receipt verification + catch-up scan. Absent/empty is
-                // legal (chain still registers for relayer watch), but then
-                // validation/backfill fail closed (no quorum, no URL).
-                std::vector<std::string> rpc_urls;
-                auto                     rpc_it = chain_obj.find( "rpc" );
-                if ( rpc_it != chain_obj.end() && rpc_it->value().is_array() )
-                {
-                    for ( const auto &rpc_val : rpc_it->value().as_array() )
-                    {
-                        std::string url = boost::json::value_to<std::string>( rpc_val );
-                        if ( !url.empty() )
-                        {
-                            rpc_urls.push_back( std::move( url ) );
-                        }
-                    }
-                }
-                rpc_urls_by_chain[chain_id] = std::move( rpc_urls );
-
                 configured_chain_ids.push_back( chain_id );
 
                 discovered_chains.push_back(
                     { std::string( key ), std::move( contract_addr ), chain_id } );
 
-                logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} rpc_count={} topic0_v1={} topic0_v2={}",
-                              std::string( key ), chain_id,
-                              discovered_chains.back().contract_address,
-                              rpc_urls_by_chain[chain_id].size(),
-                              topic0_hex_v1, topic0_hex_v2 );
+                logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} topic0_v1={} topic0_v2={}",
+                              std::string( key ), chain_id, contract_addr, topic0_hex_v1, topic0_hex_v2 );
             }
         }
         catch ( const std::exception &e )
@@ -157,26 +131,13 @@ namespace sgns
 
         for ( const auto &dc : discovered_chains )
         {
-            std::vector<WeightedRpcEndpoint> endpoints;
+            WeightedRpcEndpoint wrep;
+            wrep.url                     = {};
+            wrep.consensus_weight       = kPublicEndpointWeight;
+            wrep.bridge_contract_address = dc.contract_address;
+            wrep.accepted_topic0_hashes  = accepted_topic0_hashes;
 
-            auto urls_it = rpc_urls_by_chain.find( dc.chain_id );
-            if ( urls_it != rpc_urls_by_chain.end() )
-            {
-                for ( const auto &url : urls_it->second )
-                {
-                    WeightedRpcEndpoint wrep;
-                    wrep.url                     = url;
-                    wrep.consensus_weight        = kConfigEndpointWeight;
-                    wrep.bridge_contract_address = dc.contract_address;
-                    wrep.accepted_topic0_hashes  = accepted_topic0_hashes;
-                    endpoints.push_back( std::move( wrep ) );
-                }
-            }
-            // No "rpc" array → empty endpoint list: the chain is still registered
-            // for relayer watch (via the observer) but VerifyPublicChainSmartContract
-            // and PerformStartupCatchupScan fail closed (no quorum / no URL).
-
-            endpoints_by_chain[dc.chain_id] = std::move( endpoints );
+            endpoints_by_chain[dc.chain_id].push_back( std::move( wrep ) );
 
             // D-02: Register validator for this chain
             IInputValidator::Register( std::to_string( dc.chain_id ), &validator );
