@@ -389,11 +389,13 @@ TEST( StartupWiringTest, ProviderInitializeWithValidConfigReturnsTrue )
     const std::string json = R"({
         "ethereum-sepolia": {
             "chain_id": 11155111,
-            "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
+            "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+            "rpc": ["https://sepolia.infura.io/v3/test"]
         },
         "ethereum-mainnet": {
             "chain_id": 1,
-            "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a"
+            "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a",
+            "rpc": ["https://mainnet.infura.io/v3/test"]
         }
     })";
 
