@@ -353,6 +353,41 @@ TEST( BridgeE2EChainlistTest, FailedFetchLeavesChainWithoutEndpoints )
         << "A failed fetch must leave the chain with no endpoints (fail-closed)";
 }
 
+// An operator may pre-configure a private RPC endpoint (e.g. via
+// GeniusNode::ConfigureRpcEndpoint). A subsequent chainlist fetch that yields
+// no URLs for the chain must NOT overwrite the working endpoint — SetRpcEndpoints
+// replaces, so the provider skips empty results to preserve existing endpoints.
+TEST( BridgeE2EChainlistTest, EmptyFetchDoesNotOverwriteExistingEndpoints )
+{
+    auto config_path = WriteTempBridgeConfig();
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+
+    // Pre-existing operator-supplied endpoint for Sepolia.
+    {
+        const auto        h = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+        WeightedRpcEndpoint ep;
+        ep.url                     = "https://operator-private.example";
+        ep.consensus_weight        = 50;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = { rlp::base::parse::hex_bytes( h.data(), h.size() ) };
+        validator.SetRpcEndpoints( "11155111", { ep } );
+    }
+
+    ChainRpcEndpointProvider provider;
+    // Fetch returns only an unrelated chain → empty result for 11155111.
+    provider.SetChainlistFetcher( []() -> std::optional<std::string> {
+        return std::string{ R"([{"name":"Unrelated","chainId":999,"rpc":["https://x.example"]}])" };
+    } );
+    ASSERT_TRUE( provider.Initialize( config_path, validator ) );
+
+    auto url = validator.GetFirstRpcUrl( "11155111" );
+    ASSERT_TRUE( url.has_value() ) << "Operator-configured endpoint must survive the fetch";
+    EXPECT_EQ( *url, "https://operator-private.example" )
+        << "An empty chainlist result must not overwrite existing endpoints";
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();

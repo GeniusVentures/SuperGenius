@@ -201,6 +201,19 @@ namespace sgns
 
         for ( auto &[chain_id, endpoints] : endpoints_by_chain )
         {
+            // Skip empty results: a failed/empty chainlist fetch must NOT
+            // overwrite endpoints an operator may have configured via
+            // GeniusNode::ConfigureRpcEndpoint (SetRpcEndpoints replaces, so an
+            // empty write would wipe working private/API-key endpoints and leave
+            // validation + catch-up fail-closed).
+            if ( endpoints.empty() )
+            {
+                logger->info( "ChainRpcEndpointProvider: no fetched endpoints for chain_id={} "
+                              "— preserving any existing configured endpoints",
+                              chain_id );
+                continue;
+            }
+
             const auto count = endpoints.size();
             validator.SetRpcEndpoints( std::to_string( chain_id ), std::move( endpoints ) );
             logger->info( "ChainRpcEndpointProvider: wired {} RPC endpoints for chain_id={}",

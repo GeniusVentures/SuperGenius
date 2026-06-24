@@ -29,6 +29,7 @@ namespace sgns
     /// @brief Canonical Solidity event signatures for bridge events.
     ///        Single source of truth — shared by watch registration, catch-up scan,
     ///        and RPC endpoint validation.
+    /// @note  The old signature with 5 parameters it not supported as it was wrong.
     inline constexpr std::string_view kBridgeSourceBurnedSig =
         "BridgeSourceBurned(address,uint256,uint256,uint256,uint256,bytes)";
     inline constexpr std::string_view kBridgeOutInitiatedSig =
