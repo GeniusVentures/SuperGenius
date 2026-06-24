@@ -59,6 +59,18 @@ std::string MakeConfigJson( const std::string &entries )
     return "{ " + entries + " }";
 }
 
+/// @brief Canned chainid.network-format dataset (string-form rpc) for tests —
+///        no network. Covers Sepolia (11155111) and Mainnet (1).
+std::optional<std::string> CannedChainlistJson()
+{
+    return std::string{ R"([
+        {"name":"Ethereum Sepolia","chainId":11155111,
+         "rpc":["https://sepolia.a.example","https://sepolia.b.example","https://sepolia.c.example"]},
+        {"name":"Ethereum","chainId":1,
+         "rpc":["https://mainnet.a.example","https://mainnet.b.example","https://mainnet.c.example"]}
+    ])" };
+}
+
 // ─── Test: Observer notified on success ─────────────────────────────────────
 
 TEST( ChainRpcEndpointProviderTest, NotifiesObserversWithChains )
@@ -75,6 +87,7 @@ TEST( ChainRpcEndpointProviderTest, NotifiesObserversWithChains )
 
     RecordingObserver         recorder;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
@@ -107,6 +120,7 @@ TEST( ChainRpcEndpointProviderTest, DoesNotNotifyObserversWhenInitializeFails )
 
     RecordingObserver         recorder;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
@@ -137,6 +151,7 @@ TEST( ChainRpcEndpointProviderTest, ChainWithoutChainIdIsSkipped )
 
     RecordingObserver         recorder;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );
@@ -162,6 +177,7 @@ TEST( ChainRpcEndpointProviderTest, MalformedJsonReturnsFalse )
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     bool result = false;
@@ -180,6 +196,7 @@ TEST( ChainRpcEndpointProviderTest, MissingFileReturnsFalse )
     fs::path nonexistent = fs::temp_directory_path() / "nonexistent_config_12345.json";
 
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     bool result = provider.Initialize( nonexistent, validator );
@@ -194,6 +211,7 @@ TEST( ChainRpcEndpointProviderTest, EmptyJsonReturnsFalse )
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     bool result = provider.Initialize( tmpfile, validator );
@@ -218,6 +236,7 @@ TEST( ChainRpcEndpointProviderTest, MultipleObserversAllNotified )
     RecordingObserver         recorder1;
     RecordingObserver         recorder2;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     provider.AddObserver( recorder1 );
@@ -249,6 +268,7 @@ TEST( ChainRpcEndpointProviderTest, SucceedsWithNoObservers )
     ASSERT_TRUE( fs::exists( tmpfile ) );
 
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
     PublicChainInputValidator validator;
 
     // No AddObserver call — should still succeed without crashing

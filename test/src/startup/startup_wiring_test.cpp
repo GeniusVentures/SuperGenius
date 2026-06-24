@@ -404,6 +404,14 @@ TEST( StartupWiringTest, ProviderInitializeWithValidConfigReturnsTrue )
     ASSERT_TRUE( fs::exists( path ) );
 
     ChainRpcEndpointProvider  provider;
+    // Inject a canned chainlist fetcher so the test never hits the network.
+    provider.SetChainlistFetcher(
+        []() -> std::optional<std::string> {
+            return std::string{ R"([
+                {"name":"Ethereum Sepolia","chainId":11155111,"rpc":["https://sepolia.a.example"]},
+                {"name":"Ethereum","chainId":1,"rpc":["https://mainnet.a.example"]}
+            ])" };
+        } );
     PublicChainInputValidator validator;
 
     bool result = provider.Initialize( path, validator );

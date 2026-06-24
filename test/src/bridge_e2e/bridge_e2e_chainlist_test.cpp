@@ -55,6 +55,12 @@ static const std::string kChainlistJson = R"([
     }
 ])";
 
+/// @brief Canned chainlist fetch (no network) — returns the Sepolia dataset.
+static std::optional<std::string> CannedChainlistFetch()
+{
+    return kChainlistJson;
+}
+
 /// @brief Compute the BridgeSourceBurned event topic0 to match provider-generated topic0.
 static std::string ComputeBridgeTopic0()
 {
@@ -172,6 +178,7 @@ TEST( BridgeE2EChainlistTest, ChainlistEndpointsWiredWithMockTransport )
     // 3. Create validator + provider
     PublicChainInputValidator validator;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistFetch );
 
     // 4. Inject mock transport factory — verify it was accepted
     validator.SetTransportFactory(
@@ -241,6 +248,7 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
 
     PublicChainInputValidator validator;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistFetch );
 
     // 1. Provider must wire BOTH v1 and v2 topic0 onto each endpoint.
     ASSERT_TRUE( provider.Initialize( config_path, validator ) );
@@ -296,6 +304,55 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
         << "A receipt with an unknown topic0 must still be rejected";
 }
 
+// Option 3: the provider discovers RPC URLs via the runtime chainlist fetch
+// (no config "rpc" array, no manual SetRpcEndpoints). The canned fetch returns
+// 3 Sepolia URLs (3 x 25 = 75) so a verified receipt reaches quorum.
+TEST( BridgeE2EChainlistTest, RuntimeFetchWiresEndpointsThatReachQuorum )
+{
+    auto config_path = WriteTempBridgeConfig();
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistFetch );
+    ASSERT_TRUE( provider.Initialize( config_path, validator ) );
+    ASSERT_TRUE( validator.GetFirstRpcUrl( "11155111" ).has_value() )
+        << "Runtime fetch must wire real endpoints";
+
+    const auto        v2_hash   = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v2_topic0 = rlp::base::parse::hex_bytes( v2_hash.data(), v2_hash.size() );
+    const std::string source_ref = "0x" + std::string( 64, 'f' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2_topic0 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "Runtime-fetched endpoints must reach the 75-weight quorum with no manual override";
+}
+
+// A failed chainlist fetch leaves the chain with no endpoints (fail-closed),
+// but Initialize still returns true (chain registered for relayer watch).
+TEST( BridgeE2EChainlistTest, FailedFetchLeavesChainWithoutEndpoints )
+{
+    auto config_path = WriteTempBridgeConfig();
+    ASSERT_TRUE( fs::exists( config_path ) );
+
+    PublicChainInputValidator validator;
+    ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( []() -> std::optional<std::string> { return std::nullopt; } );
+
+    EXPECT_TRUE( provider.Initialize( config_path, validator ) )
+        << "A failed fetch must not prevent chain discovery (relayer watch still registers)";
+    EXPECT_FALSE( validator.GetFirstRpcUrl( "11155111" ).has_value() )
+        << "A failed fetch must leave the chain with no endpoints (fail-closed)";
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();
@@ -316,6 +373,7 @@ TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 
     Recorder                  recorder;
     ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistFetch );
     PublicChainInputValidator validator;
 
     provider.AddObserver( recorder );

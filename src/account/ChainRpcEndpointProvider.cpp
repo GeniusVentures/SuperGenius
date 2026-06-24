@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <eth/chainlist_provider.hpp>
+#include <eth/rpc_http_transport.hpp>
 
 #include <boost/json.hpp>
 
@@ -20,6 +21,9 @@
 #include "eth/abi_decoder.hpp"
 #include "base/logger.hpp"
 #include "account/InputValidators.hpp"
+
+#include <chrono>
+#include <functional>
 
 namespace sgns
 {
@@ -126,18 +130,70 @@ namespace sgns
             return false;
         }
 
+        // ── Runtime-fetch RPC URLs from chainid.network ─────────────────
+        // Option 3: discover public RPC endpoints at startup by fetching the
+        // chainlist dataset (default https://chainid.network/chains.json), parsing
+        // it, and filtering to the configured chain IDs. This is a network
+        // dependency on the startup path — on failure no endpoints are wired
+        // (validation/backfill fail closed; relayer watch still registers).
+        auto fetcher = chainlist_fetcher_ ? chainlist_fetcher_
+                                          : ChainlistFetcher{ []( ) -> std::optional<std::string> {
+                                                eth::rpc::RpcHttpTransportOptions opts;
+                                                opts.timeout = std::chrono::seconds( 15 );
+                                                return eth::rpc::RpcHttpTransport::HttpsGet(
+                                                    "https://chainid.network/chains.json", opts );
+                                            } };
+
+        std::unordered_map<uint64_t, std::vector<std::string>> rpc_urls_by_chain;
+        if ( auto chainlist_text = fetcher() )
+        {
+            auto parsed_endpoints = eth::rpc::load_chainlist_from_json_text( *chainlist_text );
+            if ( parsed_endpoints.has_value() )
+            {
+                auto filtered = eth::rpc::filter_to_configured_chains(
+                    std::move( parsed_endpoints.value() ), configured_chain_ids );
+                for ( auto &ep : filtered )
+                {
+                    rpc_urls_by_chain[ep.chain_id].push_back( std::move( ep.url_template ) );
+                }
+                logger->info( "ChainRpcEndpointProvider: chainlist fetch yielded {} endpoint(s) "
+                              "across {} configured chain(s)",
+                              filtered.size(), configured_chain_ids.size() );
+            }
+            else
+            {
+                logger->warn( "ChainRpcEndpointProvider: chainlist fetch parse failed — "
+                              "no RPC endpoints wired" );
+            }
+        }
+        else
+        {
+            logger->warn( "ChainRpcEndpointProvider: chainlist fetch failed — no RPC endpoints wired "
+                          "(validation/backfill will fail closed; relayer watch still registers)" );
+        }
+
         // ── Wire RPC endpoints for discovered chains ─────────────────────
         std::unordered_map<uint64_t, std::vector<WeightedRpcEndpoint>> endpoints_by_chain;
 
         for ( const auto &dc : discovered_chains )
         {
-            WeightedRpcEndpoint wrep;
-            wrep.url                     = {};
-            wrep.consensus_weight       = kPublicEndpointWeight;
-            wrep.bridge_contract_address = dc.contract_address;
-            wrep.accepted_topic0_hashes  = accepted_topic0_hashes;
+            std::vector<WeightedRpcEndpoint> endpoints;
 
-            endpoints_by_chain[dc.chain_id].push_back( std::move( wrep ) );
+            auto urls_it = rpc_urls_by_chain.find( dc.chain_id );
+            if ( urls_it != rpc_urls_by_chain.end() )
+            {
+                for ( const auto &url : urls_it->second )
+                {
+                    WeightedRpcEndpoint wrep;
+                    wrep.url                     = url;
+                    wrep.consensus_weight        = kPublicEndpointWeight;
+                    wrep.bridge_contract_address = dc.contract_address;
+                    wrep.accepted_topic0_hashes  = accepted_topic0_hashes;
+                    endpoints.push_back( std::move( wrep ) );
+                }
+            }
+
+            endpoints_by_chain[dc.chain_id] = std::move( endpoints );
 
             // D-02: Register validator for this chain
             IInputValidator::Register( std::to_string( dc.chain_id ), &validator );
