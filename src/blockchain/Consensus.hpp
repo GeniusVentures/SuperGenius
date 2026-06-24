@@ -885,7 +885,7 @@ namespace sgns
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
-        std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>
+        std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.
         std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW }; ///< Accepted timestamp window.
         std::chrono::milliseconds certificate_delay_{

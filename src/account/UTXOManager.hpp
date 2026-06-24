@@ -51,9 +51,9 @@ namespace sgns
          */
         enum class UTXOState : uint8_t
         {
-            UTXO_READY,    ///< UTXO is unspent and available for use
-            UTXO_RESERVED, ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
-            UTXO_CONSUMED  ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_READY = 0,        ///< UTXO is unspent and available for use
+            UTXO_CONSUMED = 1,     ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_RESERVED = 2      ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
         };
 
         /**
