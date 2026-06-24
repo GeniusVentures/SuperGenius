@@ -484,7 +484,6 @@ DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x
 int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
-    bool        is_processor     = true;  // Default value for the last parameter
     bool        is_full_node     = false;
     bool        terminal_mode    = false;
     std::string path_override;
@@ -496,13 +495,11 @@ int main( int argc, char *argv[] )
         if ( arg == "server" )
         {
             start_processing = true;
-            is_processor     = false;
             is_full_node     = true;
         }
         else if ( arg == "jobposter" )
         {
             start_processing = true;
-            is_processor     = false;
             is_full_node     = false;
         }
         else if ( arg == "--full" )
@@ -533,7 +530,7 @@ int main( int argc, char *argv[] )
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
     auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, is_processor, 40101, is_full_node );
+        sgns::GeniusNode::New( DEV_CONFIG, eth_private_key.c_str(), true, 40101, is_full_node );
 
     std::thread status_thread;
 

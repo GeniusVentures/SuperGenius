@@ -19,7 +19,6 @@ using namespace sgns;
  * @param self_address Address for this node
  * @param tokenValue   TokenValueInGNUS to initialize DevConfig.
  * @param tokenId      TokenID to initialize DevConfig.
- * @param isProcessor  Whether this node is a processor node.
  * @param isFullNode   Whether this node should run as a full node.
  * @param folderName   Subfolder name under the binary path for storage.
  * @param privKey      Hex string private key (64 chars) for deterministic identity.
@@ -28,7 +27,6 @@ using namespace sgns;
 static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_address,
                                                        const std::string &tokenValue,
                                                        TokenID            tokenId,
-                                                       bool               isProcessor,
                                                        bool               isFullNode,
                                                        const std::string &folderName,
                                                        const std::string &privKey )
@@ -41,7 +39,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, isProcessor, port, isFullNode );
+    auto     node = GeniusNode::New( devConfig, privKey.c_str(), false, port, isFullNode );
     if ( isFullNode )
     {
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
@@ -65,7 +63,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Full node creation ****" << std::endl;
     auto fullNode =
-        CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), false, true, "node_full_2", fullKey );
+        CreateNodeWithMode( "0xffff", "1.0", TokenID::FromBytes( { 0x01 } ), true, "node_full_2", fullKey );
 
     test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
@@ -73,7 +71,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Original node creation ****" << std::endl;
     auto originalNode =
-        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x00 } ), false, false, "node_original", sharedKey );
+        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x00 } ), false, "node_original", sharedKey );
 
     originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
@@ -106,7 +104,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     std::cout << "****** Recovery node creation ****" << std::endl;
     auto recoveryNode =
-        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x01 } ), false, false, "node_recovery", sharedKey );
+        CreateNodeWithMode( "0xabcd", "1.0", TokenID::FromBytes( { 0x01 } ), false, "node_recovery", sharedKey );
     recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;

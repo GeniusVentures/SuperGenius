@@ -58,12 +58,10 @@ namespace sgns
 
             node1 = sgns::GeniusNode::New( CONFIG1,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
             node2 = sgns::GeniusNode::New( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
@@ -86,7 +84,6 @@ namespace sgns
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
             node2 = sgns::GeniusNode::New( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }

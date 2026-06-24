@@ -68,6 +68,10 @@ protected:
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 
+        // is_processor is now read from sgns_config.json; the parameter is retained
+        // for source compatibility with existing test call sites.
+        (void)isProcessor;
+
         auto binaryPath = boost::dll::program_location().parent_path();
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
@@ -94,7 +98,7 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, uniquePort, isFullNode );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );

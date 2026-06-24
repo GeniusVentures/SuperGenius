@@ -60,18 +60,15 @@ protected:
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                                            false );
 
         node_proc1->StopProcessing();
         node_proc2->StopProcessing();

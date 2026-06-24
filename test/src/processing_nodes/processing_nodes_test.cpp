@@ -40,7 +40,6 @@ protected:
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
-                                            true,
                                             40054,
                                             true );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
@@ -51,13 +50,11 @@ protected:
 
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
 
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false,
-                                            true,
                                             40060,
                                             true );
 
