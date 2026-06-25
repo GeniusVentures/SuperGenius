@@ -144,52 +144,72 @@ namespace sgns
         auto        logger = InputValidatorLogger();
         auto       &existing = rpc_endpoints_[chain_id];
 
-        // Index existing endpoints by URL so a fetched duplicate UPGRADES the
-        // existing entry instead of being dropped. Otherwise a stale v1-only
-        // operator endpoint at the same URL as a fetched v1+v2 endpoint keeps
-        // failing v2 receipts and, being high-weight, can break quorum even
-        // though the fetch supplied the missing v2 metadata.
-        std::unordered_map<std::string, size_t> index;
-        index.reserve( existing.size() + endpoints.size() );
-        for ( size_t i = 0; i < existing.size(); ++i )
+        // The fetched endpoints carry the chain's canonical {v1, v2} topic set
+        // (and bridge contract). That set is a per-chain property — every
+        // endpoint for the chain validates the same bridge events — so union it
+        // into EVERY existing endpoint, not just URL duplicates. Otherwise a
+        // stale v1-only operator endpoint at a different URL keeps failing v2
+        // receipts and, being high-weight, can break quorum even though the
+        // fetch supplied the missing v2 metadata.
+        std::vector<std::string> fetched_topics;
+        std::string              fetched_bridge;
+        for ( const auto &e : endpoints )
         {
-            index.emplace( existing[i].url, i );
+            for ( const auto &h : e.accepted_topic0_hashes )
+            {
+                if ( std::find( fetched_topics.begin(), fetched_topics.end(), h ) == fetched_topics.end() )
+                {
+                    fetched_topics.push_back( h );
+                }
+            }
+            if ( fetched_bridge.empty() && !e.bridge_contract_address.empty() )
+            {
+                fetched_bridge = e.bridge_contract_address;
+            }
         }
 
-        size_t added = 0;
         size_t upgraded = 0;
-        for ( auto &e : endpoints )
+        for ( auto &cur : existing )
         {
-            auto it = index.find( e.url );
-            if ( it == index.end() )
+            bool changed = false;
+            for ( const auto &h : fetched_topics )
             {
-                index.emplace( e.url, existing.size() );
-                existing.push_back( std::move( e ) );
-                ++added;
+                if ( std::find( cur.accepted_topic0_hashes.begin(),
+                                cur.accepted_topic0_hashes.end(),
+                                h ) == cur.accepted_topic0_hashes.end() )
+                {
+                    cur.accepted_topic0_hashes.push_back( h );
+                    changed = true;
+                }
             }
-            else
+            if ( cur.bridge_contract_address.empty() && !fetched_bridge.empty() )
             {
-                // Same URL already configured: union the accepted topic0 hashes
-                // (so a v1-only entry picks up the fetched v2 hash) and fill a
-                // missing bridge contract. Keep the existing weight — it
-                // reflects the operator's intent for that endpoint.
-                auto &cur = existing[it->second];
-                for ( const auto &h : e.accepted_topic0_hashes )
-                {
-                    if ( std::find( cur.accepted_topic0_hashes.begin(),
-                                    cur.accepted_topic0_hashes.end(),
-                                    h ) == cur.accepted_topic0_hashes.end() )
-                    {
-                        cur.accepted_topic0_hashes.push_back( h );
-                    }
-                }
-                if ( cur.bridge_contract_address.empty() )
-                {
-                    cur.bridge_contract_address = e.bridge_contract_address;
-                }
+                cur.bridge_contract_address = fetched_bridge;
+                changed = true;
+            }
+            if ( changed )
+            {
                 ++upgraded;
             }
         }
+
+        // Append fetched endpoints whose URL isn't already present (dedup by URL).
+        std::unordered_set<std::string> seen_urls;
+        seen_urls.reserve( existing.size() + endpoints.size() );
+        for ( const auto &e : existing )
+        {
+            seen_urls.insert( e.url );
+        }
+        size_t added = 0;
+        for ( auto &e : endpoints )
+        {
+            if ( seen_urls.insert( e.url ).second )
+            {
+                existing.push_back( std::move( e ) );
+                ++added;
+            }
+        }
+
         logger->info( "AddRpcEndpoints: chain_id={} added={} upgraded={} total={}",
                       chain_id, added, upgraded, existing.size() );
     }

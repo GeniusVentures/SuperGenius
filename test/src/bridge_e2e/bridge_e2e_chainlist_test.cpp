@@ -544,6 +544,65 @@ TEST( BridgeE2EChainlistTest, DuplicateUrlFetchedUpgradesExistingEndpointMetadat
         << "The upgraded (v1+v2) high-weight endpoint must let a v2 receipt reach quorum";
 }
 
+// The fetched {v1,v2} topic set is a per-chain property, so AddRpcEndpoints must
+// merge it into EVERY existing endpoint — not only duplicate URLs. Here the
+// operator's private endpoint is at a DIFFERENT url (stale v1-only); without the
+// chain-wide upgrade it stays v1-only, is skipped on a v2 receipt, and with only
+// two 25-weight public endpoints (< 75) quorum fails even though the private
+// endpoint returned a valid v2 receipt.
+TEST( BridgeE2EChainlistTest, FetchedTopicSetUpgradesAllExistingEndpointsNotOnlyDuplicates )
+{
+    PublicChainInputValidator validator;
+    const auto        v1_h = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    const auto        v2_h = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v1   = rlp::base::parse::hex_bytes( v1_h.data(), v1_h.size() );
+    const std::string v2   = rlp::base::parse::hex_bytes( v2_h.data(), v2_h.size() );
+
+    // Operator's private endpoint (different URL) is stale v1-only, weight 50.
+    {
+        WeightedRpcEndpoint ep;
+        ep.url                     = "https://operator-private.example";
+        ep.consensus_weight        = 50;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = { v1 }; // stale
+        validator.SetRpcEndpoints( "11155111", { ep } );
+    }
+    // Fetched: two NON-duplicate public URLs carrying {v1,v2} (only 50 weight).
+    {
+        std::vector<WeightedRpcEndpoint> fetched;
+        for ( const auto *url : { "https://public-a.example", "https://public-b.example" } )
+        {
+            WeightedRpcEndpoint ep;
+            ep.url                     = url;
+            ep.consensus_weight        = 25;
+            ep.bridge_contract_address = kSepoliaContract;
+            ep.accepted_topic0_hashes  = { v1, v2 };
+            fetched.push_back( std::move( ep ) );
+        }
+        validator.AddRpcEndpoints( "11155111", std::move( fetched ) );
+    }
+
+    EXPECT_EQ( PublicChainInputValidatorTestAccess::EndpointCount( validator, "11155111" ), 3u )
+        << "Private endpoint (upgraded) + 2 public endpoints appended";
+
+    // Two public endpoints (50 weight) cannot reach quorum alone; the private
+    // endpoint must have been upgraded to {v1,v2} to contribute its 50 weight.
+    const std::string source_ref = "0x" + std::string( 64, '6' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "The fetched {v1,v2} set must upgrade the non-duplicate private endpoint so a "
+        << "v2 receipt reaches quorum (50 private + 25 public)";
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();
