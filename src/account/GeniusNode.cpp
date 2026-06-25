@@ -1455,6 +1455,14 @@ namespace sgns
 
         ResetProcessingMembers();
 
+        // Invalidate any in-flight async bridge init and drop its observer
+        // registrations BEFORE bridge_relayer_ is destroyed. The posted init
+        // job captures this generation token and aborts if stale; resetting the
+        // provider here also releases its raw bridge_relayer_ observer so a
+        // late Initialize() cannot notify a freed relayer.
+        ++bridge_init_generation_;
+        rpc_endpoint_provider_.reset();
+
         auto tx_manager_result = GetTransactionManager();
         if ( tx_manager_result.has_value() )
         {
@@ -2509,15 +2517,34 @@ namespace sgns
             rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
         }
 
-        // 4. Post Initialize() to io_context — non-blocking
+        // 4. Post Initialize() to io_context — non-blocking. Capture a
+        //    generation token + a stable shared_ptr to the transaction manager
+        //    so an account switch (which resets transaction_manager_ /
+        //    bridge_relayer_) cannot leave this job dereferencing a null/freed
+        //    member. The job aborts if the generation is stale.
+        const auto generation = bridge_init_generation_.load();
+        auto       tx_mgr = transaction_manager_; // shared_ptr copy: stable lifetime
         boost::asio::post( *io_,
-                           [weak_self = weak_from_this(), config_path = std::move( config_path )]()
+                           [weak_self = weak_from_this(),
+                            config_path = std::move( config_path ),
+                            generation,
+                            tx_mgr = std::move( tx_mgr )]() mutable
                            {
-                               if ( auto strong = weak_self.lock() )
+                               auto strong = weak_self.lock();
+                               if ( !strong )
                                {
-                                   auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
-                                   strong->rpc_endpoint_provider_->Initialize( config_path, validator );
+                                   return;
                                }
+                               if ( strong->bridge_init_generation_.load() != generation )
+                               {
+                                   return; // account switched — stale init, abort
+                               }
+                               if ( !tx_mgr || !strong->rpc_endpoint_provider_ )
+                               {
+                                   return;
+                               }
+                               auto &validator = tx_mgr->GetPublicChainInputValidator();
+                               strong->rpc_endpoint_provider_->Initialize( config_path, validator );
                            } );
     }
 

@@ -15,6 +15,7 @@
 #include <thread>
 #include <optional>
 #include <mutex>
+#include <atomic>
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -641,6 +642,11 @@ namespace sgns
         mutable std::mutex             catchup_mutex_;
         std::unique_ptr<ChainRpcEndpointProvider>
                                             rpc_endpoint_provider_;    ///< Owns the provider across async Initialize().
+        /// Generation token for async bridge init. Incremented on account
+        /// switch; the posted Initialize() job captures the value at post time
+        /// and aborts if it is stale — so a reset transaction_manager_ /
+        /// bridge_relayer_ is never dereferenced by an in-flight init.
+        std::atomic<uint64_t>          bridge_init_generation_{ 0 };
         std::string                         gnus_network_full_path_;   ///< Versioned network DB path.
         std::string                         processing_channel_topic_; ///< Processing task channel topic.
         std::string                         processing_grid_chanel_topic_; ///< Processing grid topic.

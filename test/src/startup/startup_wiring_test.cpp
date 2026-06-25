@@ -748,3 +748,27 @@ TEST( StartupWiringTest, CatchupScanGuardDispatchesOnceUnderConcurrency )
     EXPECT_EQ( dispatch_count.load(), 1 ) << "Catchup scan must be dispatched exactly once "
                                           << "even when READY + OnRpcEndpointsReady race on the io_ pool";
 }
+
+// Models the generation token that guards async bridge init against an account
+// switch. SelectAccount advances the generation and resets transaction_manager_
+// / bridge_relayer_; the posted Initialize() job captures the generation at post
+// time and must abort if it is stale (else it would dereference a null/freed
+// member). This encodes that abort contract.
+TEST( StartupWiringTest, BridgeInitGenerationAbortsStaleJob )
+{
+    struct BridgeInitGeneration
+    {
+        std::atomic<uint64_t> gen{ 0 };
+    };
+    BridgeInitGeneration g;
+
+    const uint64_t captured_at_post = g.gen.load();
+    auto job_would_proceed = [&]() -> bool {
+        return g.gen.load() == captured_at_post; // abort (false) if stale
+    };
+
+    EXPECT_TRUE( job_would_proceed() ) << "In-flight init runs when no account switch happened";
+
+    ++g.gen; // SelectAccount invalidates in-flight bridge init
+    EXPECT_FALSE( job_would_proceed() ) << "Stale init (posted before an account switch) must abort";
+}
