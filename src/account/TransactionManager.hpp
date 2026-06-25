@@ -350,18 +350,6 @@ namespace sgns
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
 
         /**
-         * @brief Derives the proof key that corresponds to a transaction key by
-         *        replacing "/tx/" with "/proof/".
-         */
-        static outcome::result<std::string> GetExpectedProofKey( const std::string                          &tx_key,
-                                                                 const std::shared_ptr<IGeniusTransactions> &tx );
-
-        /**
-         * @brief Inverse of GetExpectedProofKey — derives the tx key from a proof key.
-         */
-        static outcome::result<std::string> GetExpectedTxKey( const std::string &proof_key );
-
-        /**
          * @brief Fetches the proof for @p tx from the CRDT and runs full verification.
          */
         outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
@@ -375,10 +363,7 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        static bool           DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx );
-        std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
-        AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
-        void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
+        void UpdateAccountUTXOState( const std::shared_ptr<IGeniusTransactions> &tx, bool increment_version );
 
         /**
          * @brief Loads UTXOs from local storage and/or the network, then processes
@@ -664,8 +649,14 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        static std::string        GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx );
-        const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
+        struct InputValidatorSelection
+        {
+            std::string            chain_id;
+            const IInputValidator &validator;
+        };
+
+        InputValidatorSelection SelectInputValidator( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
     };

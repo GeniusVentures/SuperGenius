@@ -628,7 +628,8 @@ namespace sgns
         const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
-        if ( task_result.subtask_results().empty() )
+        const auto &subtask_results = task_result.subtask_results();
+        if ( subtask_results.empty() )
         {
             m_logger->error( "No result found on escrow {}", escrow_path );
             return std::errc::invalid_argument;
@@ -667,7 +668,7 @@ namespace sgns
 
         BOOST_OUTCOME_TRY( auto peer_total, escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const auto subtask_count   = static_cast<uint64_t>( task_result.subtask_results().size() );
+        const auto subtask_count   = static_cast<uint64_t>( subtask_results.size() );
         const auto peers_amount    = peer_total.Value() / subtask_count;
         const auto peer_total_paid = peers_amount * subtask_count;
         const auto escrow_token_id = escrow_params.second.front().token_id;
@@ -682,9 +683,9 @@ namespace sgns
         const auto remainder = escrow_amount - peer_total_paid;
 
         std::vector<OutputDestInfo> payout_peers;
-        payout_peers.reserve( task_result.subtask_results().size() + 1 );
+        payout_peers.reserve( subtask_results.size() + 1 );
 
-        for ( const auto &subtask : task_result.subtask_results() )
+        for ( const auto &subtask : subtask_results )
         {
             m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             payout_peers.push_back( { peers_amount,
@@ -715,15 +716,20 @@ namespace sgns
 
         transfer_transaction->MakeSignature( *account_m );
 
-        TransactionBatch tx_batch;
-        tx_batch.push_back( std::make_pair( transfer_transaction, std::nullopt ) );
-        EnqueueTransaction( std::make_pair( tx_batch, std::move( crdt_transaction ) ) );
+        EnqueueTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } },
+                                             std::move( crdt_transaction ) } );
         return transfer_transaction->GetHash();
     }
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
         m_logger->debug( "Transaction enqueuing" );
+        if ( element.first.empty() )
+        {
+            m_logger->error( "Ignoring empty transaction batch" );
+            return;
+        }
+
         for ( auto &&[tx, _] : element.first )
         {
             auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
@@ -746,8 +752,8 @@ namespace sgns
     {
         SGTransaction::DAGStruct dag;
         std::string              chain_hash;
-        const auto               nonce     = account_m->ReserveNextNonce();
-        auto                     timestamp = std::chrono::system_clock::now();
+        const auto               nonce         = account_m->ReserveNextNonce();
+        auto                     timestamp     = std::chrono::system_clock::now();
         const auto               previous_hash = [&]() -> std::string
         {
             if ( nonce == 0 )
@@ -760,10 +766,8 @@ namespace sgns
                 std::shared_lock tx_lock( tx_mutex_m );
                 for ( const auto &[_, tracked] : tx_processed_m )
                 {
-                    if ( tracked.tx &&
-                         tracked.tx->GetSrcAddress() == account_m->GetAddress() &&
-                         tracked.cached_nonce == previous_nonce &&
-                         tracked.status != TransactionStatus::FAILED &&
+                    if ( tracked.tx && tracked.tx->GetSrcAddress() == account_m->GetAddress() &&
+                         tracked.cached_nonce == previous_nonce && tracked.status != TransactionStatus::FAILED &&
                          tracked.status != TransactionStatus::INVALID )
                     {
                         return tracked.tx->GetHash();
@@ -842,90 +846,75 @@ namespace sgns
         return dag;
     }
 
-    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx )
+    TransactionManager::InputValidatorSelection TransactionManager::SelectInputValidator(
+        const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
-        if ( !tx )
+        std::string chain_id( GENIUS_CHAIN_ID );
+
+        if ( tx )
         {
-            return std::string( GENIUS_CHAIN_ID );
-        }
-        auto chain_id = tx->GetChainId();
-        if ( chain_id.empty() )
-        {
-            if ( tx->GetType() == "mint-v2" )
+            if ( auto tx_chain_id = tx->GetChainId(); !tx_chain_id.empty() )
             {
-                return "public";
+                chain_id = std::move( tx_chain_id );
             }
-            return std::string( GENIUS_CHAIN_ID );
+            else if ( tx->GetType() == "mint-v2" )
+            {
+                chain_id = "public";
+            }
         }
-        return chain_id;
-    }
 
-    const IInputValidator &TransactionManager::GetInputValidator( const std::string &chain_id ) const
-    {
-        if ( chain_id.empty() || chain_id == GENIUS_CHAIN_ID )
+        if ( chain_id == GENIUS_CHAIN_ID )
         {
-            return genius_input_validator_;
+            return { std::move( chain_id ), genius_input_validator_ };
         }
 
-        return public_chain_input_validator_;
+        return { std::move( chain_id ), public_chain_input_validator_ };
     }
 
     outcome::result<void> TransactionManager::SendTransactionItem( TransactionItem &item )
     {
-        auto [transaction_batch, maybe_crdt_transaction]          = item;
-        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
+        auto &[transaction_batch, maybe_crdt_transaction] = item;
 
         m_logger->trace( "{} called", __func__ );
 
-        if ( maybe_crdt_transaction.has_value() && maybe_crdt_transaction.value() )
-        {
-            crdt_transaction = std::move( maybe_crdt_transaction.value() );
-        }
-        else
+        auto crdt_transaction = maybe_crdt_transaction.value_or( nullptr );
+        if ( !crdt_transaction )
         {
             crdt_transaction = globaldb_m->BeginTransaction();
         }
-        std::optional<uint64_t> expected_next_nonce;
+
+        uint64_t expected_next_nonce;
         if ( auto local_confirmed = account_m->GetLocalConfirmedNonce(); local_confirmed.has_value() )
         {
             expected_next_nonce = local_confirmed.value() + 1;
             m_logger->debug( "Using local confirmed nonce {} as send baseline", local_confirmed.value() );
         }
-        else if ( !transaction_batch.empty() )
+        else
         {
             // If confirmed nonce is not available yet, preserve local enqueue order.
             expected_next_nonce = transaction_batch.front().first->GetNonce();
             m_logger->debug( "Local confirmed nonce unavailable, using first queued nonce {} as send baseline",
-                             expected_next_nonce.value() );
+                             expected_next_nonce );
         }
-        std::unordered_set<std::string> topicSet;
-        if ( !transaction_batch.empty() )
-        {
-            topicSet.emplace( full_node_topic_m );
-            topicSet.emplace( account_m->GetAddress() );
-        }
+        std::unordered_set<std::string> topicSet{ full_node_topic_m, account_m->GetAddress() };
 
-        std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
+        std::vector<std::shared_ptr<IGeniusTransactions>> transactions_sent;
+        transactions_sent.reserve( transaction_batch.size() );
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
-            if ( !expected_next_nonce.has_value() )
+            if ( transaction->GetNonce() != expected_next_nonce )
             {
-                expected_next_nonce = transaction->GetNonce();
-            }
-
-            if ( transaction->GetNonce() != expected_next_nonce.value() )
-            {
-                if ( transaction->GetNonce() > expected_next_nonce.value() )
+                if ( transaction->GetNonce() > expected_next_nonce )
                 {
                     m_logger->debug( "Deferring transaction send due to nonce gap - Expected: {}, Tried to send: {}",
-                                     expected_next_nonce.value(),
+                                     expected_next_nonce,
                                      transaction->GetNonce() );
                     return outcome::failure(
                         boost::system::errc::make_error_code( boost::system::errc::resource_unavailable_try_again ) );
                 }
 
                 m_logger->error( "Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
-                                 expected_next_nonce.value(),
+                                 expected_next_nonce,
                                  transaction->GetNonce() );
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
@@ -954,18 +943,17 @@ namespace sgns
             m_logger->debug( "Creating Consensus Proposal for tx {}", transaction_path );
 
             topicSet.merge( transaction->GetTopics() );
-            transactions_sent.insert( transaction );
+            transactions_sent.push_back( transaction );
 
-            expected_next_nonce = expected_next_nonce.value() + 1;
+            expected_next_nonce++;
         }
 
         BOOST_OUTCOME_TRY( crdt_transaction->Commit( topicSet ) );
 
         for ( auto &transaction : transactions_sent )
         {
-            const auto  chain_id           = GetValidationChainId( transaction );
-            const auto &validator          = GetInputValidator( chain_id );
-            const bool  utxo_data_required = validator.RequiresConsensusUTXOData();
+            const auto &[_, validator]    = SelectInputValidator( transaction );
+            const bool utxo_data_required = validator.RequiresConsensusUTXOData();
 
             std::optional<UTXOTransitionCommitment> utxo_commitment;
             std::optional<UTXOWitness>              utxo_witness;
@@ -1066,51 +1054,6 @@ namespace sgns
         return GetBlockChainBase( version::GetNetworkID() );
     }
 
-    outcome::result<std::string> TransactionManager::GetExpectedProofKey(
-        const std::string                          &tx_key,
-        const std::shared_ptr<IGeniusTransactions> &tx )
-    {
-        if ( tx )
-        {
-            return GetTransactionProofPath( *tx );
-        }
-
-        const auto tx_pos = tx_key.find( "/tx/" );
-        if ( tx_pos == std::string::npos )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        std::string proof_key = tx_key;
-        proof_key.replace( tx_pos, 4, "/proof/" );
-
-        if ( proof_key.size() <= tx_pos + 7 )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        return proof_key;
-    }
-
-    outcome::result<std::string> TransactionManager::GetExpectedTxKey( const std::string &proof_key )
-    {
-        const auto proof_pos = proof_key.find( "/proof/" );
-        if ( proof_pos == std::string::npos )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        std::string tx_key = proof_key;
-        tx_key.replace( proof_pos, 7, "/tx/" );
-
-        if ( tx_key.size() <= proof_pos + 4 )
-        {
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
-        }
-
-        return tx_key;
-    }
-
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::DeSerializeTransaction(
         std::string tx_data )
     {
@@ -1134,10 +1077,7 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( ( this->*it->second.first )( tx ) );
-        if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
-        {
-            UpdateAccountUTXOState( CollectTouchedAccounts( tx ), true );
-        }
+        UpdateAccountUTXOState( tx, true );
         return outcome::success();
     }
 
@@ -1154,103 +1094,60 @@ namespace sgns
         auto revert_result = ( this->*( it->second.second ) )( tx );
         utxo_state_tracking_suppression_.fetch_sub( 1 );
         BOOST_OUTCOME_TRY( revert_result );
-        if ( DoesTransactionMutateUTXOState( tx ) && utxo_state_tracking_suppression_.load() == 0 )
-        {
-            UpdateAccountUTXOState( CollectTouchedAccounts( tx ), false );
-        }
+        UpdateAccountUTXOState( tx, false );
         return outcome::success();
     }
 
-    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx )
+    void TransactionManager::UpdateAccountUTXOState( const std::shared_ptr<IGeniusTransactions> &tx,
+                                                     bool                                        increment_version )
     {
-        if ( !tx )
-        {
-            return false;
-        }
-
-        if ( tx->HasUTXOParameters() )
-        {
-            return true;
-        }
-
-        // Legacy mint transactions still create UTXOs for the source account.
-        return tx->GetType() == "mint";
-    }
-
-    std::unordered_set<std::string> TransactionManager::CollectTouchedAccounts(
-        const std::shared_ptr<IGeniusTransactions> &tx ) const
-    {
-        std::unordered_set<std::string> addresses;
-        if ( !tx )
-        {
-            return addresses;
-        }
-
-        if ( tx->HasUTXOParameters() )
-        {
-            auto params_opt = tx->GetUTXOParametersOpt();
-            if ( params_opt.has_value() )
-            {
-                const auto &[inputs, outputs] = params_opt.value();
-                if ( !inputs.empty() )
-                {
-                    if ( full_node_m || tx->GetSrcAddress() == account_m->GetAddress() )
-                    {
-                        addresses.insert( tx->GetSrcAddress() );
-                    }
-                }
-                for ( const auto &output : outputs )
-                {
-                    if ( !output.dest_address.empty() &&
-                         ( full_node_m || output.dest_address == account_m->GetAddress() ) )
-                    {
-                        addresses.insert( output.dest_address );
-                    }
-                }
-            }
-        }
-        else if ( tx->GetType() == "mint" && !tx->GetSrcAddress().empty() &&
-                  ( full_node_m || tx->GetSrcAddress() == account_m->GetAddress() ) )
-        {
-            addresses.insert( tx->GetSrcAddress() );
-        }
-
-        return addresses;
-    }
-
-    TransactionManager::AccountUTXOState TransactionManager::GetOrInitAccountUTXOState(
-        const std::string &address ) const
-    {
-        const auto current_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( address );
-
-        std::unique_lock state_lock( account_utxo_state_mutex_ );
-        auto            &state = account_utxo_state_[address];
-        if ( !state.initialized )
-        {
-            state.version     = 0;
-            state.initialized = true;
-        }
-        state.root = current_root;
-        return state;
-    }
-
-    void TransactionManager::UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses,
-                                                     bool                                   increment_version )
-    {
-        if ( addresses.empty() )
+        if ( !tx || utxo_state_tracking_suppression_.load() != 0 )
         {
             return;
         }
 
         std::unordered_map<std::string, base::Hash256> roots;
-        roots.reserve( addresses.size() );
-        for ( const auto &address : addresses )
+        auto                                           add_address = [this, &roots]( const std::string &address )
         {
             if ( !full_node_m && address != account_m->GetAddress() )
             {
-                continue;
+                return;
             }
-            roots.emplace( address, account_m->GetUTXOManager().ComputeUTXOMerkleRoot( address ) );
+            if ( roots.find( address ) == roots.end() )
+            {
+                roots.emplace( address, account_m->GetUTXOManager().ComputeUTXOMerkleRoot( address ) );
+            }
+        };
+
+        if ( tx->HasUTXOParameters() )
+        {
+            auto params_opt = tx->GetUTXOParametersOpt();
+            if ( !params_opt.has_value() )
+            {
+                return;
+            }
+
+            const auto &[inputs, outputs] = params_opt.value();
+            if ( !inputs.empty() )
+            {
+                add_address( tx->GetSrcAddress() );
+            }
+            for ( const auto &output : outputs )
+            {
+                if ( !output.dest_address.empty() )
+                {
+                    add_address( output.dest_address );
+                }
+            }
+        }
+        else if ( tx->GetType() == "mint" && !tx->GetSrcAddress().empty() ) // Legacy mint transactions still create UTXOs for the source account.
+        {
+            add_address( tx->GetSrcAddress() );
+        }
+
+        if ( roots.empty() )
+        {
+            return;
         }
 
         std::unique_lock state_lock( account_utxo_state_mutex_ );
@@ -2416,11 +2313,25 @@ namespace sgns
         if ( should_delete )
         {
             std::vector<crdt::pb::Element> additional_elements_to_delete;
-            auto                           maybe_proof_key = GetExpectedProofKey( element.key(), new_tx );
-            if ( maybe_proof_key.has_value() )
+            std::optional<std::string>     proof_key;
+            if ( new_tx )
+            {
+                proof_key = GetTransactionProofPath( *new_tx );
+            }
+            else if ( const auto tx_pos = element.key().find( "/tx/" ); tx_pos != std::string::npos )
+            {
+                proof_key = element.key();
+                proof_key->replace( tx_pos, 4, "/proof/" );
+                if ( proof_key->size() <= tx_pos + 7 )
+                {
+                    proof_key.reset();
+                }
+            }
+
+            if ( proof_key.has_value() )
             {
                 crdt::pb::Element proof_element;
-                proof_element.set_key( maybe_proof_key.value() );
+                proof_element.set_key( proof_key.value() );
                 additional_elements_to_delete.push_back( proof_element );
             }
 
@@ -2455,12 +2366,16 @@ namespace sgns
         {
             std::vector<crdt::pb::Element> tombstones;
             tombstones.push_back( element );
-            auto maybe_tx_key = GetExpectedTxKey( element.key() );
-            if ( maybe_tx_key.has_value() )
+            if ( const auto proof_pos = element.key().find( "/proof/" ); proof_pos != std::string::npos )
             {
-                crdt::pb::Element tx_tombstone;
-                tx_tombstone.set_key( maybe_tx_key.value() );
-                tombstones.push_back( tx_tombstone );
+                std::string tx_key = element.key();
+                tx_key.replace( proof_pos, 7, "/tx/" );
+                if ( tx_key.size() > proof_pos + 4 )
+                {
+                    crdt::pb::Element tx_tombstone;
+                    tx_tombstone.set_key( std::move( tx_key ) );
+                    tombstones.push_back( tx_tombstone );
+                }
             }
             maybe_tombstones = tombstones;
         }
@@ -3367,8 +3282,7 @@ namespace sgns
                 m_logger->error( "{}: Missing UTXO parameters for tx={}", __func__, tx->GetHash() );
                 return false;
             }
-            const auto  chain_id  = GetValidationChainId( tx );
-            const auto &validator = GetInputValidator( chain_id );
+            const auto &[_, validator] = SelectInputValidator( tx );
             return validator.ValidateUTXOParameters( params_opt.value(),
                                                      tx->GetSrcAddress(),
                                                      account_m->GetUTXOManager() );
@@ -3406,8 +3320,7 @@ namespace sgns
             return WitnessValidationResult::VALID;
         }
 
-        const auto  chain_id  = GetValidationChainId( tx );
-        const auto &validator = GetInputValidator( chain_id );
+        const auto [chain_id, validator] = SelectInputValidator( tx );
 
         if ( !tx->HasUTXOParameters() )
         {
@@ -3490,12 +3403,6 @@ namespace sgns
         {
             return std::nullopt;
         }
-        auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
-        if ( tx_hash.has_error() )
-        {
-            return std::nullopt;
-        }
-
         UTXOTransitionCommitment          commitment;
         std::vector<std::vector<uint8_t>> consumed_payloads;
         consumed_payloads.reserve( inputs.size() );
@@ -3520,30 +3427,20 @@ namespace sgns
             m_logger->warn( "{}: Could not extract produced outputs for tx={}", __func__, tx->GetHash() );
             return std::nullopt;
         }
-        std::vector<std::vector<uint8_t>> produced_payloads;
-        produced_payloads.reserve( produced_outputs.size() );
         for ( size_t i = 0; i < produced_outputs.size(); ++i )
         {
             const auto &produced_output  = produced_outputs[i];
+            const auto  produced_tx_hash = produced_output.GetTxID();
             auto       *committed_output = commitment.add_produced_outputs();
-            committed_output->set_tx_id_hash( tx_hash.value().data(), tx_hash.value().size() );
-            committed_output->set_output_index( static_cast<uint32_t>( i ) );
+            committed_output->set_tx_id_hash( produced_tx_hash.data(), produced_tx_hash.size() );
+            committed_output->set_output_index( produced_output.GetOutputIdx() );
             committed_output->set_owner_address( produced_output.GetOwnerAddress() );
             const auto token_bytes = produced_output.GetTokenID().bytes();
             committed_output->set_token_id( token_bytes.data(), token_bytes.size() );
             committed_output->set_amount( produced_output.GetAmount() );
-
-            produced_payloads.push_back( SerializeUTXOLeafPayload( produced_output ) );
-        }
-        const auto produced_outputs_root = account_m->GetUTXOManager().ComputeUTXOMerkleRootFromSnapshot(
-            produced_outputs );
-        const auto produced_outputs_root_from_payloads = utxo_merkle::ComputeMerkleRootFromPayloads(
-            std::move( produced_payloads ) );
-        if ( produced_outputs_root != produced_outputs_root_from_payloads )
-        {
-            return std::nullopt;
         }
 
+        const auto produced_outputs_root = utxo_merkle::ComputeMerkleRootFromUTXOs( produced_outputs );
         commitment.set_consumed_outpoints_root( consumed_outpoints_root.data(), consumed_outpoints_root.size() );
         commitment.set_produced_outputs_root( produced_outputs_root.data(), produced_outputs_root.size() );
         return commitment;
