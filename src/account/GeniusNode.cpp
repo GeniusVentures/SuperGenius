@@ -2551,8 +2551,15 @@ namespace sgns
                                {
                                    return;
                                }
+                               // Stale check consulted INSIDE Initialize() after the blocking
+                               // fetch, before it publishes validator pointers / notifies
+                               // observers — so a switch during the fetch aborts publishing.
+                               auto is_cancelled = [weak_self, generation]() -> bool {
+                                   auto s = weak_self.lock();
+                                   return !s || s->bridge_init_generation_.load() != generation;
+                               };
                                auto &validator = tx_mgr->GetPublicChainInputValidator();
-                               provider->Initialize( config_path, validator );
+                               provider->Initialize( config_path, validator, is_cancelled );
                            } );
     }
 

@@ -283,3 +283,34 @@ TEST( ChainRpcEndpointProviderTest, SucceedsWithNoObservers )
     std::error_code ec;
     fs::remove( tmpfile, ec );
 }
+
+// ─── Test: a cancelled (stale) init must not publish anything ───────────────
+
+TEST( ChainRpcEndpointProviderTest, CancelledInitDoesNotRegisterOrNotify )
+{
+    // Models an account switch mid-fetch: Initialize() runs the (canned) fetch,
+    // then the cancellation predicate returns true, so it must abort BEFORE
+    // registering the validator (raw pointer in the global IInputValidator
+    // registry) or notifying observers.
+    std::string entry = MakeConfigJsonEntry( "ethereum-sepolia",
+                                             11155111,
+                                             "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70" );
+    auto tmpfile = WriteTempConfigJson( MakeConfigJson( entry ) );
+    ASSERT_TRUE( fs::exists( tmpfile ) );
+
+    RecordingObserver         recorder;
+    ChainRpcEndpointProvider  provider;
+    provider.SetChainlistFetcher( CannedChainlistJson );
+    provider.AddObserver( recorder );
+
+    PublicChainInputValidator validator;
+    bool result = provider.Initialize( tmpfile, validator, []() { return true; } );
+
+    EXPECT_FALSE( result ) << "A cancelled init must return false";
+    EXPECT_FALSE( recorder.was_called ) << "A cancelled init must not notify observers";
+    EXPECT_FALSE( validator.GetFirstRpcUrl( "11155111" ).has_value() )
+        << "A cancelled init must not wire/register any endpoint";
+
+    std::error_code ec;
+    fs::remove( tmpfile, ec );
+}

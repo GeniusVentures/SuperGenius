@@ -33,7 +33,8 @@ namespace sgns
     }
 
     bool ChainRpcEndpointProvider::Initialize( const std::filesystem::path    &bridge_chains_config_path,
-                                               PublicChainInputValidator       &validator )
+                                               PublicChainInputValidator       &validator,
+                                               CancelChecker                   is_cancelled )
     {
         auto logger = base::createLogger( "ChainRpcEndpointProvider" );
 
@@ -170,6 +171,18 @@ namespace sgns
         {
             logger->warn( "ChainRpcEndpointProvider: chainlist fetch failed — no RPC endpoints wired "
                           "(validation/backfill will fail closed; relayer watch still registers)" );
+        }
+
+        // The chainlist fetch above can block ~15s. Recheck cancellation AFTER it
+        // and BEFORE publishing anything: if the account was switched mid-fetch,
+        // this init is stale — its validator is about to be destroyed and must
+        // not be registered (raw pointer in the global IInputValidator registry)
+        // nor observers notified. This closes the post-generation-check window.
+        if ( is_cancelled && is_cancelled() )
+        {
+            logger->info( "ChainRpcEndpointProvider: initialization cancelled (account switched "
+                          "during fetch) — no endpoints registered, observers not notified" );
+            return false;
         }
 
         // ── Wire RPC endpoints for discovered chains ─────────────────────

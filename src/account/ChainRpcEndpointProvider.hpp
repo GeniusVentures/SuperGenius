@@ -102,10 +102,18 @@ namespace sgns
          *
          * @param[in] bridge_chains_config_path  Path to bridge_chains_config.json.
          * @param[in] validator                  PublicChainInputValidator to configure.
+         * @param[in] is_cancelled               Optional cancellation predicate, checked
+         *            after the blocking chainlist fetch and BEFORE publishing (validator
+         *            registration + observer notification). Used by GeniusNode to abort a
+         *            stale init whose account was switched mid-fetch, so it never publishes
+         *            raw validator pointers / notifies freed observers.
          * @return True when at least one chain entry was accepted (had chain_id + bridge_contract_address).
          */
+        using CancelChecker = std::function<bool()>;
+
         bool Initialize( const std::filesystem::path    &bridge_chains_config_path,
-                         PublicChainInputValidator       &validator );
+                         PublicChainInputValidator       &validator,
+                         CancelChecker                   is_cancelled = {} );
 
     private:
         std::vector<IBridgeInitObserver *> observers_;
