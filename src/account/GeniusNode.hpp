@@ -640,8 +640,8 @@ namespace sgns
         /// state-change callback and OnRpcEndpointsReady, which both run on the
         /// multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex             catchup_mutex_;
-        std::unique_ptr<ChainRpcEndpointProvider>
-                                            rpc_endpoint_provider_;    ///< Owns the provider across async Initialize().
+        std::shared_ptr<ChainRpcEndpointProvider>
+                                            rpc_endpoint_provider_;    ///< Shared so the posted Initialize() job can hold it across an account switch.
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /

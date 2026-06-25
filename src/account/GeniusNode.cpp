@@ -2508,7 +2508,7 @@ namespace sgns
         node_logger_->info( "InitializeAndStartBridge: loading bridge chain config from {}", config_path.string() );
 
         // 2. Construct provider
-        rpc_endpoint_provider_ = std::make_unique<ChainRpcEndpointProvider>();
+        rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
         rpc_endpoint_provider_->AddObserver( *this );
@@ -2518,17 +2518,25 @@ namespace sgns
         }
 
         // 4. Post Initialize() to io_context — non-blocking. Capture a
-        //    generation token + a stable shared_ptr to the transaction manager
-        //    so an account switch (which resets transaction_manager_ /
-        //    bridge_relayer_) cannot leave this job dereferencing a null/freed
-        //    member. The job aborts if the generation is stale.
+        //    generation token + shared ownership of the transaction manager,
+        //    provider, and relayer. Initialize() can block ~15s on the chainlist
+        //    fetch; SelectAccount() may run on another io_ thread during that
+        //    window and reset these members. The shared_ptr captures keep the
+        //    objects alive for the duration of the call (no mid-execution free of
+        //    the provider's chainlist_fetcher_/observers_, and the raw
+        //    bridge_relayer_ observer stays valid). The generation check still
+        //    discards work posted before a completed switch.
         const auto generation = bridge_init_generation_.load();
-        auto       tx_mgr = transaction_manager_; // shared_ptr copy: stable lifetime
+        auto       tx_mgr   = transaction_manager_; // shared_ptr copy: stable lifetime
+        auto       provider = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
+        auto       relayer  = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
         boost::asio::post( *io_,
                            [weak_self = weak_from_this(),
                             config_path = std::move( config_path ),
                             generation,
-                            tx_mgr = std::move( tx_mgr )]() mutable
+                            tx_mgr = std::move( tx_mgr ),
+                            provider = std::move( provider ),
+                            relayer = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
                                if ( !strong )
@@ -2539,12 +2547,12 @@ namespace sgns
                                {
                                    return; // account switched — stale init, abort
                                }
-                               if ( !tx_mgr || !strong->rpc_endpoint_provider_ )
+                               if ( !tx_mgr || !provider )
                                {
                                    return;
                                }
                                auto &validator = tx_mgr->GetPublicChainInputValidator();
-                               strong->rpc_endpoint_provider_->Initialize( config_path, validator );
+                               provider->Initialize( config_path, validator );
                            } );
     }
 
