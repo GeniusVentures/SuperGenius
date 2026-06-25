@@ -16,7 +16,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
@@ -97,7 +97,7 @@ namespace sgns
         BOOST_OUTCOME_TRY( ValidatorRegistry::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
         BOOST_OUTCOME_TRY( Blockchain::MigrateCids( db_3_5_1_, db_3_6_0_ ) );
 
-        auto                  crdt_transaction_ = db_3_6_0_->BeginTransaction();
+        auto                            crdt_transaction_ = db_3_6_0_->BeginTransaction();
         std::unordered_set<std::string> topics_;
 
         topics_.emplace( std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
@@ -130,13 +130,13 @@ namespace sgns
 
             for ( const auto &transaction_key : transaction_keys )
             {
-                auto maybe_transaction = TransactionManager::FetchTransaction( db_3_5_1_, transaction_key );
+                auto maybe_transaction = TransactionManager::FetchTransaction( *db_3_5_1_, transaction_key );
                 if ( !maybe_transaction.has_value() )
                 {
                     logger_->error( "Can't fetch transaction for key {}", transaction_key );
                     continue;
                 }
-                auto& tx = maybe_transaction.value();
+                auto &tx = maybe_transaction.value();
 
                 logger_->debug( "{}: Fetched transaction on {}", __func__, transaction_key );
                 if ( tx->GetHash().empty() )
@@ -148,7 +148,6 @@ namespace sgns
                 const auto new_tx_key = blockchain_base + "tx/" + tx->GetHash();
 
                 logger_->debug( "{}: New TX key {}", __func__, new_tx_key );
-
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );

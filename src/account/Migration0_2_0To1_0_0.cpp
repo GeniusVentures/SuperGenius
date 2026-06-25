@@ -51,7 +51,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key ) :
@@ -178,13 +178,13 @@ namespace sgns
         m_logger->debug( "Initializing legacy DB at path {}", fullPath );
 
         BOOST_OUTCOME_TRY( auto db,
-                     crdt::GlobalDB::New( ioContext_,
-                                          fullPath,
-                                          pubSub_,
-                                          crdt::CrdtOptions::DefaultOptions(),
-                                          graphsync_,
-                                          scheduler_,
-                                          generator_ ) );
+                           crdt::GlobalDB::New( ioContext_,
+                                                fullPath,
+                                                pubSub_,
+                                                crdt::CrdtOptions::DefaultOptions(),
+                                                graphsync_,
+                                                scheduler_,
+                                                generator_ ) );
         m_logger->debug( "Started legacy DB at path {}", fullPath );
 
         return db;
@@ -221,7 +221,7 @@ namespace sgns
             }
 
             std::string transaction_key   = keyOpt.value();
-            auto        maybe_transaction = TransactionManager::FetchTransaction( oldDb, transaction_key );
+            auto        maybe_transaction = TransactionManager::FetchTransaction( *oldDb, transaction_key );
             if ( !maybe_transaction.has_value() )
             {
                 m_logger->error( "Can't fetch transaction for key {}", transaction_key );
@@ -323,8 +323,7 @@ namespace sgns
 
                 sgns::crdt::GlobalDB::Buffer data_transaction;
                 data_transaction.put( tx->SerializeByteVector() );
-                BOOST_OUTCOME_TRY(
-                                     crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
+                BOOST_OUTCOME_TRY( crdt_transaction_->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
                 sgns::crdt::HierarchicalKey  proof_crdt_key( BASE + BuildLegacyProofPath( *tx ) );
                 sgns::crdt::GlobalDB::Buffer proof_transaction;

@@ -526,13 +526,9 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        if ( destination.empty() )
-        {
-            destination = account_m->GetAddress();
-        }
         if ( chainid.empty() )
         {
-            // MintV2 represents bridge/public-chain input. Empty chain id must not fall back to Genius validation.
+            // Canonicalize default MintV2 source-chain metadata for newly created public-chain mints.
             chainid = "public";
         }
 
@@ -560,8 +556,7 @@ namespace sgns
                                     tokenid,
                                     FillDAGStruct( std::move( transaction_hash ) ),
                                     std::move( mint_inputs ),
-                                    destination ) );
-
+                                    std::move( destination ) ) );
         mint_transaction->MakeSignature( *account_m );
 
         // Store the transaction ID before moving the transaction
@@ -580,10 +575,6 @@ namespace sgns
         if ( GetState() != State::READY )
         {
             return outcome::failure( boost::system::error_code{} );
-        }
-        if ( destination.empty() )
-        {
-            destination = account_m->GetAddress();
         }
 
         auto migration_transaction = std::make_shared<MigrationTransaction>(
@@ -637,7 +628,7 @@ namespace sgns
         const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
-        if ( task_result.subtask_results().size() == 0 )
+        if ( task_result.subtask_results().empty() )
         {
             m_logger->error( "No result found on escrow {}", escrow_path );
             return std::errc::invalid_argument;
@@ -648,39 +639,61 @@ namespace sgns
             return std::errc::invalid_argument;
         }
         m_logger->debug( "Fetching escrow from processing DB at {}", escrow_path );
-        BOOST_OUTCOME_TRY( auto transaction, FetchTransaction( globaldb_m, escrow_path ) );
+        BOOST_OUTCOME_TRY( auto transaction, FetchTransaction( *globaldb_m, escrow_path ) );
 
-        std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
-        if ( crdt_transaction && escrow_tx && !escrow_tx->GetSrcAddress().empty() )
+        auto escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
+        if ( !escrow_tx )
+        {
+            m_logger->error( "Transaction at escrow path {} is not an escrow transaction", escrow_path );
+            return std::errc::invalid_argument;
+        }
+
+        const auto escrow_params = escrow_tx->GetUTXOParameters();
+        if ( escrow_params.second.empty() )
+        {
+            m_logger->error( "Escrow transaction {} has no payout output", escrow_tx->GetHash() );
+            return std::errc::invalid_argument;
+        }
+
+        if ( crdt_transaction && !escrow_tx->GetSrcAddress().empty() )
         {
             BOOST_OUTCOME_TRY( crdt_transaction->AddTopic( escrow_tx->GetSrcAddress() ) );
         }
-        std::vector<std::string>    subtask_ids;
-        std::vector<OutputDestInfo> payout_peers;
 
-        BOOST_OUTCOME_TRY( auto escrow_amount_ptr, TokenAmount::New( escrow_tx->GetAmount() ) );
+        const auto escrow_amount = escrow_tx->GetAmount();
+        BOOST_OUTCOME_TRY( auto escrow_amount_ptr, TokenAmount::New( escrow_amount ) );
 
         BOOST_OUTCOME_TRY( auto peers_cut_ptr, TokenAmount::New( escrow_tx->GetPeersCut() ) );
 
         BOOST_OUTCOME_TRY( auto peer_total, escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
 
-        const auto escrowTokenId = escrow_tx->GetUTXOParameters().second[0].token_id;
+        const auto subtask_count   = static_cast<uint64_t>( task_result.subtask_results().size() );
+        const auto peers_amount    = peer_total.Value() / subtask_count;
+        const auto peer_total_paid = peers_amount * subtask_count;
+        const auto escrow_token_id = escrow_params.second.front().token_id;
+        if ( peer_total_paid > escrow_amount )
+        {
+            m_logger->error( "Escrow transaction {} cannot pay {} from amount {}",
+                             escrow_tx->GetHash(),
+                             peer_total_paid,
+                             escrow_amount );
+            return std::errc::invalid_argument;
+        }
+        const auto remainder = escrow_amount - peer_total_paid;
 
-        uint64_t peers_amount = peer_total.Value() / static_cast<uint64_t>( task_result.subtask_results().size() );
-        auto     remainder    = escrow_tx->GetAmount();
+        std::vector<OutputDestInfo> payout_peers;
+        payout_peers.reserve( task_result.subtask_results().size() + 1 );
 
-        for ( auto &subtask : task_result.subtask_results() )
+        for ( const auto &subtask : task_result.subtask_results() )
         {
             m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
-            subtask_ids.push_back( subtask.subtaskid() );
             payout_peers.push_back( { peers_amount,
                                       subtask.node_address(),
                                       TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
-            remainder -= peers_amount;
         }
         //TODO: see what do with token_id here
         m_logger->debug( "Sending to dev {}", remainder );
-        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
+        payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrow_token_id } );
 
         InputUTXOInfo escrow_utxo_input;
         escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();
@@ -688,9 +701,9 @@ namespace sgns
         escrow_utxo_input.signature_  = account_m->Sign( escrow_utxo_input.SerializeForSigning() );
 
         std::string lock_id = escrow_tx->GetUncleHash();
-        if ( lock_id.empty() && !escrow_tx->GetUTXOParameters().second.empty() )
+        if ( lock_id.empty() )
         {
-            lock_id = escrow_tx->GetUTXOParameters().second[0].dest_address;
+            lock_id = escrow_params.second.front().dest_address;
             m_logger->warn(
                 "Escrow transaction {} has empty lock_id but has UTXO parameters - using dest_address as fallback lock_id: {}",
                 escrow_tx->GetHash(),
@@ -711,14 +724,12 @@ namespace sgns
     void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
         m_logger->debug( "Transaction enqueuing" );
+        for ( auto &&[tx, _] : element.first )
         {
-            for ( auto &&[tx, _] : element.first )
+            auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
+            if ( !result )
             {
-                auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
-                if ( !result )
-                {
-                    m_logger->error( "Failed to change transaction state for {}", tx->GetHash() );
-                }
+                m_logger->error( "Failed to change transaction state for {}", tx->GetHash() );
             }
         }
         std::lock_guard lock( mutex_m );
@@ -735,9 +746,86 @@ namespace sgns
     {
         SGTransaction::DAGStruct dag;
         std::string              chain_hash;
-        const auto               nonce         = account_m->ReserveNextNonce();
-        auto                     previous_hash = GetOutgoingPreviousHash( nonce );
-        auto                     timestamp     = std::chrono::system_clock::now();
+        const auto               nonce     = account_m->ReserveNextNonce();
+        auto                     timestamp = std::chrono::system_clock::now();
+        const auto               previous_hash = [&]() -> std::string
+        {
+            if ( nonce == 0 )
+            {
+                return "";
+            }
+
+            const auto previous_nonce = nonce - 1;
+            {
+                std::shared_lock tx_lock( tx_mutex_m );
+                for ( const auto &[_, tracked] : tx_processed_m )
+                {
+                    if ( tracked.tx &&
+                         tracked.tx->GetSrcAddress() == account_m->GetAddress() &&
+                         tracked.cached_nonce == previous_nonce &&
+                         tracked.status != TransactionStatus::FAILED &&
+                         tracked.status != TransactionStatus::INVALID )
+                    {
+                        return tracked.tx->GetHash();
+                    }
+                }
+            }
+
+            auto persisted_hash_result = account_m->GetLocalConfirmedTxHash( previous_nonce );
+            if ( persisted_hash_result.has_value() )
+            {
+                const auto &persisted_hash = persisted_hash_result.value();
+                if ( !persisted_hash.empty() && blockchain_->CheckCertificate( persisted_hash ) )
+                {
+                    m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head",
+                                     persisted_hash,
+                                     nonce );
+                    return persisted_hash;
+                }
+            }
+
+            std::string selected_hash;
+            for ( auto network_id : GetMonitoredNetworkIDs() )
+            {
+                const std::string query_path = GetBlockChainBase( network_id ) + "tx";
+                auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
+                if ( !tx_list.has_value() )
+                {
+                    continue;
+                }
+
+                for ( const auto &[_, value] : tx_list.value() )
+                {
+                    auto tx_result = DeSerializeTransaction( value );
+                    if ( !tx_result.has_value() || !tx_result.value() )
+                    {
+                        continue;
+                    }
+
+                    const auto &candidate = tx_result.value();
+                    if ( candidate->GetSrcAddress() != account_m->GetAddress() ||
+                         candidate->GetNonce() != previous_nonce ||
+                         !blockchain_->CheckCertificate( candidate->GetHash() ) )
+                    {
+                        continue;
+                    }
+
+                    if ( selected_hash.empty() ||
+                         blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                    {
+                        selected_hash = candidate->GetHash();
+                    }
+                }
+            }
+
+            if ( !selected_hash.empty() )
+            {
+                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions",
+                                 selected_hash,
+                                 nonce );
+            }
+            return selected_hash;
+        }();
 
         if ( other_chain_hash.has_value() )
         {
@@ -752,136 +840,6 @@ namespace sgns
         dag.set_uncle_hash( chain_hash );
 
         return dag;
-    }
-
-    std::string TransactionManager::GetOutgoingPreviousHash( uint64_t nonce ) const
-    {
-        if ( nonce == 0 )
-        {
-            return "";
-        }
-
-        auto tracked_hash = GetTrackedOutgoingPreviousHash( nonce );
-        if ( !tracked_hash.empty() )
-        {
-            return tracked_hash;
-        }
-
-        auto persisted_hash = GetPersistedOutgoingPreviousHash( nonce );
-        if ( !persisted_hash.empty() )
-        {
-            return persisted_hash;
-        }
-
-        return QueryOutgoingPreviousHashFromCRDT( nonce );
-    }
-
-    std::string TransactionManager::GetTrackedOutgoingPreviousHash( uint64_t nonce ) const
-    {
-        {
-            std::shared_lock tx_lock( tx_mutex_m );
-            for ( const auto &[_, tracked] : tx_processed_m )
-            {
-                if ( !tracked.tx )
-                {
-                    continue;
-                }
-                if ( tracked.tx->GetSrcAddress() != account_m->GetAddress() )
-                {
-                    continue;
-                }
-                if ( tracked.cached_nonce != ( nonce - 1 ) )
-                {
-                    continue;
-                }
-                if ( tracked.status == TransactionStatus::FAILED || tracked.status == TransactionStatus::INVALID )
-                {
-                    continue;
-                }
-                return tracked.tx->GetHash();
-            }
-        }
-        return "";
-    }
-
-    std::string TransactionManager::GetPersistedOutgoingPreviousHash( uint64_t nonce ) const
-    {
-        if ( nonce == 0 )
-        {
-            return "";
-        }
-
-        auto persisted_hash_result = account_m->GetLocalConfirmedTxHash( nonce - 1 );
-        if ( persisted_hash_result.has_error() )
-        {
-            return "";
-        }
-
-        const auto &persisted_hash = persisted_hash_result.value();
-        if ( persisted_hash.empty() || !blockchain_->CheckCertificate( persisted_hash ) )
-        {
-            return "";
-        }
-
-        m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head", persisted_hash, nonce );
-        return persisted_hash;
-    }
-
-    std::string TransactionManager::QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const
-    {
-        if ( nonce == 0 )
-        {
-            return "";
-        }
-
-        const uint64_t expected_previous_nonce = nonce - 1;
-        std::string    selected_hash;
-        auto           monitored_networks = GetMonitoredNetworkIDs();
-        for ( auto network_id : monitored_networks )
-        {
-            const std::string query_path = GetBlockChainBase( network_id ) + "tx";
-            auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
-            if ( !tx_list.has_value() )
-            {
-                continue;
-            }
-
-            for ( const auto &[_, value] : tx_list.value() )
-            {
-                auto tx_result = DeSerializeTransaction( value );
-                if ( !tx_result.has_value() || !tx_result.value() )
-                {
-                    continue;
-                }
-
-                const auto &candidate = tx_result.value();
-                if ( candidate->GetSrcAddress() != account_m->GetAddress() ||
-                     candidate->GetNonce() != expected_previous_nonce )
-                {
-                    continue;
-                }
-
-                if ( !blockchain_->CheckCertificate( candidate->GetHash() ) )
-                {
-                    continue;
-                }
-
-                if ( selected_hash.empty() ||
-                     blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
-                {
-                    selected_hash = candidate->GetHash();
-                }
-            }
-        }
-
-        if ( !selected_hash.empty() )
-        {
-            m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions",
-                             selected_hash,
-                             nonce );
-            return selected_hash;
-        }
-        return "";
     }
 
     std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx )
@@ -1317,11 +1275,10 @@ namespace sgns
     }
 
     outcome::result<std::shared_ptr<IGeniusTransactions>> TransactionManager::FetchTransaction(
-        const std::shared_ptr<crdt::GlobalDB> &db,
-        std::string_view                       transaction_key )
+        crdt::GlobalDB  &db,
+        std::string_view transaction_key )
     {
-        BOOST_OUTCOME_TRY( auto transaction_data, db->Get( { std::string( transaction_key ) } ) );
-
+        BOOST_OUTCOME_TRY( auto transaction_data, db.Get( { std::string( transaction_key ) } ) );
         return DeSerializeTransaction( transaction_data );
     }
 
@@ -1406,7 +1363,7 @@ namespace sgns
             }
 
             m_logger->debug( "Finding transaction: {}", tx_key );
-            return FetchTransaction( globaldb_m, tx_key );
+            return FetchTransaction( *globaldb_m, tx_key );
         }();
 
         if ( transaction_result.has_error() )

@@ -136,7 +136,7 @@ namespace sgns
                                                 std::string transaction_hash,
                                                 std::string chainid,
                                                 TokenID     tokenid,
-                                                std::string destination = "" );
+                                                std::string destination );
 
         /**
          * @brief Creates and enqueues a one-time migration mint transaction.
@@ -167,9 +167,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -195,8 +195,8 @@ namespace sgns
          * @brief Fetches and deserializes a transaction from the CRDT by key.
          */
         static outcome::result<std::shared_ptr<IGeniusTransactions>> FetchTransaction(
-            const std::shared_ptr<crdt::GlobalDB> &db,
-            std::string_view                       transaction_key );
+            crdt::GlobalDB  &db,
+            std::string_view transaction_key );
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction(
             const base::Buffer &tx_data );
 
@@ -316,10 +316,6 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<IGeniusTransactions> & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
-        std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
-        std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
-        std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;
-        std::string              QueryOutgoingPreviousHashFromCRDT( uint64_t nonce ) const;
 
         /**
          * @brief Commits a TransactionItem to the CRDT.
@@ -379,7 +375,7 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        static bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx );
+        static bool           DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx );
         std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
         void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
@@ -448,7 +444,7 @@ namespace sgns
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
         TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
-        bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
+        bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
         /**
          * @brief Single iteration of the main processing loop.
@@ -630,7 +626,6 @@ namespace sgns
         void ChangeState( State new_state );
 
     public:
-
         enum class WitnessValidationResult : uint8_t
         {
             VALID,
@@ -669,7 +664,7 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        static std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx );
+        static std::string        GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx );
         const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;
