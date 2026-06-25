@@ -109,13 +109,10 @@ namespace sgns
         void StartListeningTopics();
         void StartCore();
 
-        void PrintAccountInfo() const;
-
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
         std::vector<std::vector<uint8_t>> GetTransactions(
             std::optional<TransactionStatus> tx_status = std::nullopt ) const;
-        std::vector<std::vector<uint8_t>> GetTransactions() const;
 
         /**
          * @brief Creates and enqueues a transfer transaction.
@@ -208,8 +205,8 @@ namespace sgns
             return state_m;
         }
 
+        TransactionStatus GetTransactionStatusByTxId( const std::string &txId ) const;
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
-        TransactionStatus GetIncomingStatusByTxId( const std::string &txId ) const;
 
         /**
          * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
@@ -382,7 +379,7 @@ namespace sgns
          * @brief Dispatches to the type-specific reverter registered in transaction_parsers.
          */
         outcome::result<void> RevertTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
-        bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        static bool                  DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx );
         std::unordered_set<std::string> CollectTouchedAccounts( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         AccountUTXOState                GetOrInitAccountUTXOState( const std::string &address ) const;
         void UpdateAccountUTXOState( const std::unordered_set<std::string> &addresses, bool increment_version );
@@ -450,6 +447,7 @@ namespace sgns
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
+        TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
         bool SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
         /**
@@ -529,6 +527,8 @@ namespace sgns
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<IGeniusTransactions> &tx );
+        outcome::result<void> PutProducedUTXOs( const IGeniusTransactions &tx );
+        outcome::result<void> DeleteProducedUTXOs( const IGeniusTransactions &tx );
 
         static const std::unordered_map<std::string, std::pair<TransactionParserFn, TransactionParserFn>>
             transaction_parsers;
@@ -669,7 +669,7 @@ namespace sgns
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
 
-        std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const;
+        static std::string               GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx );
         const IInputValidator    &GetInputValidator( const std::string &chain_id ) const;
         GeniusInputValidator      genius_input_validator_;
         PublicChainInputValidator public_chain_input_validator_;

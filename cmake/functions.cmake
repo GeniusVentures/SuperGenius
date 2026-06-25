@@ -144,44 +144,44 @@ function(install_hfile dir_name)
     )
 endfunction()
 
+function(TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE target)
+    if(MSVC)
+        foreach(arg ${ARGN})
+            target_link_options(${target} PRIVATE
+                "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${arg}>"
+            )
+        endforeach()
+    elseif(APPLE)
+        foreach(arg ${ARGN})
+            target_link_options(${target} PRIVATE
+                "LINKER:-force_load,$<TARGET_FILE:${arg}>"
+            )
+        endforeach()
+    else()
+        target_link_libraries(${target}
+            "-Wl,--whole-archive" ${ARGN} "-Wl,--no-whole-archive"
+        )
+    endif()
+    target_link_libraries(${target} ${ARGN})
+endfunction()
 
-
-MACRO (TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE target)
-  IF (WIN32)
-    FOREACH (arg ${ARGN})
-      TARGET_LINK_LIBRARIES(${target} ${arg})
-      target_link_options(${target} 
-      /WHOLEARCHIVE:$<TARGET_FILE:${arg}>
-    )
-    ENDFOREACH ()
-  ELSE ()
-    IF (APPLE)
-      SET(LINK_FLAGS "-Wl,-force_load")
-      SET(UNDO_FLAGS "")
-    ELSE ()
-      SET(LINK_FLAGS "-Wl,--whole-archive")
-      SET(UNDO_FLAGS "-Wl,--no-whole-archive")
-    ENDIF ()
-    TARGET_LINK_LIBRARIES(${target} ${LINK_FLAGS} ${ARGN} ${UNDO_FLAGS})
-  ENDIF ()
-ENDMACRO ()
-
-MACRO (TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE target link_type)
-  IF (WIN32)
-    FOREACH (arg ${ARGN})
-      TARGET_LINK_LIBRARIES(${target} ${link_type} ${arg})
-      target_link_options(${target} ${link_type}
-      /WHOLEARCHIVE:$<TARGET_FILE:${arg}>
-    )
-    ENDFOREACH ()
-  ELSE ()
-    IF (APPLE)
-        SET(LINK_FLAGS "-Wl,-force_load")
-        SET(UNDO_FLAGS "")
-    ELSE ()
-      SET(LINK_FLAGS "-Wl,--whole-archive")
-      SET(UNDO_FLAGS "-Wl,--no-whole-archive")
-    ENDIF ()
-    TARGET_LINK_LIBRARIES(${target} ${link_type} ${LINK_FLAGS} ${ARGN} ${UNDO_FLAGS})
-  ENDIF ()
-ENDMACRO ()
+function(TARGET_LINK_LIBRARIES_WHOLE_ARCHIVE_W_TYPE target link_type)
+    if(MSVC)
+        foreach(arg ${ARGN})
+            target_link_options(${target} ${link_type}
+                "LINKER:/WHOLEARCHIVE:$<TARGET_FILE:${arg}>"
+            )
+        endforeach()
+    elseif(APPLE)
+        foreach(arg ${ARGN})
+            target_link_options(${target} ${link_type}
+                "LINKER:-force_load,$<TARGET_FILE:${arg}>"
+            )
+        endforeach()
+    else()
+        target_link_libraries(${target}
+            "-Wl,--whole-archive" ${ARGN} "-Wl,--no-whole-archive"
+        )
+    endif()
+    target_link_libraries(${target} ${ARGN})
+endfunction()

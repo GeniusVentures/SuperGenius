@@ -76,13 +76,23 @@ namespace sgns
             }
             return true;
         }
-    } // namespace
 
-    base::Logger TransactionManagerLogger()
-    {
-        // Always call base::createLogger to get the current logger
-        // This will return existing logger or create new one as needed
-        return base::createLogger( "TransactionManager" );
+        base::Logger TransactionManagerLogger()
+        {
+            // Always call base::createLogger to get the current logger
+            // This will return existing logger or create new one as needed
+            return base::createLogger( "TransactionManager" );
+        }
+
+        std::string TransactionManagerLoggerName( const std::string &address, bool full_node )
+        {
+            return "TransactionManager:" + address.substr( 0, 8 ) + ":full=" + ( full_node ? "true" : "false" );
+        }
+
+        base::Logger MakeTransactionManagerLogger( const std::string &address, bool full_node )
+        {
+            return TransactionManagerLogger()->clone( TransactionManagerLoggerName( address, full_node ) );
+        }
     }
 
     const std::unordered_map<
@@ -128,12 +138,9 @@ namespace sgns
                     auto process_result = strong->OnConsensusCertificate( subject_hash );
                     if ( process_result.has_error() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] Failed to process certificate proposal_id={} error={}",
-                            strong->account_m->GetAddress().substr( 0, 8 ),
-                            strong->full_node_m,
-                            certificate.proposal_id(),
-                            process_result.error().message() );
+                        strong->m_logger->error( "Failed to process certificate proposal_id={} error={}",
+                                                 certificate.proposal_id(),
+                                                 process_result.error().message() );
                     }
                     return process_result;
                 }
@@ -235,16 +242,14 @@ namespace sgns
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( timestamp_tolerance ),
         mutability_window_m( mutability_window ),
-        last_loop_time_( std::chrono::steady_clock::now() )
-
+        last_loop_time_( std::chrono::steady_clock::now() ),
+        m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
     {
     }
 
     TransactionManager::~TransactionManager()
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] ~TransactionManager CALLED",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "~TransactionManager CALLED" );
         if ( globaldb_m )
         {
             auto monitored_networks = GetMonitoredNetworkIDs();
@@ -305,16 +310,10 @@ namespace sgns
         }
 
         globaldb_m->AddListenTopic( account_m->GetAddress() );
-        TransactionManagerLogger()->info( "[{} - full: {}] Adding broadcast to full node on {}",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          full_node_topic_m );
+        m_logger->info( "Adding broadcast to full node on {}", full_node_topic_m );
         if ( full_node_m )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Listening full node on {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               full_node_topic_m );
+            m_logger->debug( "Listening full node on {}", full_node_topic_m );
             globaldb_m->AddListenTopic( full_node_topic_m );
         }
     }
@@ -326,9 +325,7 @@ namespace sgns
             return;
         }
 
-        TransactionManagerLogger()->info( "[{} - full: {}] Starting Transaction Manager",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m );
+        m_logger->info( "Starting Transaction Manager" );
 
         ChangeState( State::INITIALIZING );
 
@@ -353,10 +350,12 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_ = now;
+        last_loop_time_           = now;
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
+        elements_to_delete.reserve( deleted_data_queue_.size() );
+        elements_to_process.reserve( new_data_queue_.size() );
         {
             std::lock_guard lock( cv_mutex_ );
             while ( !deleted_data_queue_.empty() )
@@ -373,25 +372,16 @@ namespace sgns
 
         for ( auto &deletion_key : elements_to_delete )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Deleting key: {} ",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               deletion_key );
+            m_logger->debug( "Deleting key: {} ", deletion_key );
             ProcessDeletion( deletion_key );
         }
         for ( auto &new_data : elements_to_process )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Adding key: {} ",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               new_data.first );
+            m_logger->debug( "Adding key: {} ", new_data.first );
             ProcessNewData( new_data );
         }
 
-        TransactionManagerLogger()->trace( "[{} - full: {}] Loop iteration - time since last: {}ms",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           time_since_last_loop );
+        m_logger->trace( "Loop iteration - time since last: {}ms", time_since_last_loop );
 
         switch ( GetState() )
         {
@@ -399,10 +389,7 @@ namespace sgns
                 InitTransactions();
                 if ( GetState() == State::READY )
                 {
-                    TransactionManagerLogger()->debug(
-                        "[{} - full: {}] Transaction Manager is now READY - starting regular updates",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m );
+                    m_logger->debug( "Transaction Manager is now READY - starting regular updates" );
                 }
                 break;
 
@@ -432,28 +419,18 @@ namespace sgns
 
                     if ( retryable_error )
                     {
-                        TransactionManagerLogger()->info(
-                            "[{} - full: {}] Send deferred/retryable ({}). Keeping transaction in queue",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            err.message() );
+                        m_logger->info( "Send deferred/retryable ({}). Keeping transaction in queue", err.message() );
                         break;
                     }
 
                     ChangeState( State::SYNCING );
 
-                    TransactionManagerLogger()->error( "[{} - full: {}] Error in SendTransactionItem: {}",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       err.message() );
+                    m_logger->error( "Error in SendTransactionItem: {}", err.message() );
 
                     auto rollback_result = RollbackTransactions( tx_queue_m.front() );
                     if ( rollback_result.has_error() )
                     {
-                        TransactionManagerLogger()->error( "[{} - full: {}] {} error, couldn't fetch nonce",
-                                                           account_m->GetAddress().substr( 0, 8 ),
-                                                           full_node_m,
-                                                           __func__ );
+                        m_logger->error( "{} error, couldn't fetch nonce", __func__ );
                         break;
                     }
                     tx_queue_m.pop_front();
@@ -464,50 +441,31 @@ namespace sgns
             break;
         }
 
-        bool should_sync = false;
-        if ( !received_first_periodic_sync_response_.load() )
-        {
-            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>( now -
-                                                                                          last_periodic_sync_time_ );
-            should_sync               = time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
-        }
-        else
-        {
-            auto time_since_last_sync = std::chrono::duration_cast<std::chrono::minutes>( now -
-                                                                                          last_periodic_sync_time_ );
-            should_sync               = time_since_last_sync >= PERIODIC_SYNC_INTERVAL;
-        }
+        auto time_since_last_sync = std::chrono::duration_cast<std::chrono::seconds>( now - last_periodic_sync_time_ );
+        bool should_sync          = received_first_periodic_sync_response_.load()
+                                        ? time_since_last_sync >= PERIODIC_SYNC_INTERVAL
+                                        : time_since_last_sync >= INITIAL_PERIODIC_SYNC_INTERVAL;
 
         if ( should_sync )
         {
             auto interval_desc = received_first_periodic_sync_response_.load() ? "10 minutes" : "30 seconds";
-            TransactionManagerLogger()->debug( "[{} - full: {}] Periodic sync - requesting heads (interval: {})",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               interval_desc );
+            m_logger->debug( "Periodic sync - requesting heads (interval: {})", interval_desc );
             auto topics_result = globaldb_m->GetMonitoredTopics();
             if ( topics_result.has_value() )
             {
                 if ( account_m->RequestHeads( topics_result.value() ) )
                 {
                     last_periodic_sync_time_ = now;
-                    TransactionManagerLogger()->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       topics_result.value().size() );
+                    m_logger->debug( "Periodic sync head request sent for {} topics", topics_result.value().size() );
                 }
                 else
                 {
-                    TransactionManagerLogger()->warn( "[{} - full: {}] Periodic sync head request failed",
-                                                      account_m->GetAddress().substr( 0, 8 ),
-                                                      full_node_m );
+                    m_logger->warn( "Periodic sync head request failed" );
                 }
             }
             else
             {
-                TransactionManagerLogger()->warn( "[{} - full: {}] Could not get monitored topics for head request",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m );
+                m_logger->warn( "Could not get monitored topics for head request" );
             }
         }
 
@@ -518,28 +476,19 @@ namespace sgns
         lock.unlock();
 
         // Schedule next tick if not stopped
-        if ( !stopped_.load() )
+        if ( stopped_.load() )
         {
-            boost::asio::post( *ctx_m,
-                               [weak_instance = weak_from_this()]()
-                               {
-                                   if ( auto instance = weak_instance.lock() )
-                                   {
-                                       if ( !instance->stopped_.load() )
-                                       {
-                                           instance->TickOnce();
-                                       }
-                                   }
-                               } );
+            return;
         }
-    }
 
-    void TransactionManager::PrintAccountInfo() const
-    {
-        std::cout << "Account Address: " << account_m->GetAddress() << '\n'
-                  << "Balance: " << std::to_string( account_m->GetUTXOManager().GetBalance() ) << '\n'
-                  << "Token Type: " << account_m->GetToken() << '\n'
-                  << "Nonce: " << account_m->GetNonce() << '\n';
+        boost::asio::post( *ctx_m,
+                           [weak_instance = weak_from_this()]
+                           {
+                               if ( auto instance = weak_instance.lock(); instance && !instance->stopped_.load() )
+                               {
+                                   instance->TickOnce();
+                               }
+                           } );
     }
 
     outcome::result<std::string> TransactionManager::TransferFunds( uint64_t    amount,
@@ -552,7 +501,6 @@ namespace sgns
         }
         BOOST_OUTCOME_TRY(
             auto params,
-
             account_m->GetUTXOManager().CreateTxParameter( amount, std::move( destination ), token_id ) );
         auto [inputs, outputs] = params;
 
@@ -592,10 +540,8 @@ namespace sgns
         base::Hash256 source_input_hash;
         if ( source_hash.has_error() )
         {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Source hash parse inconsistency for mint tx_ref={}, using empty input hash and uncle_hash fallback",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
+            m_logger->warn(
+                "{}: Source hash parse inconsistency for mint tx_ref={}, using empty input hash and uncle_hash fallback",
                 __func__,
                 transaction_hash );
         }
@@ -693,23 +639,15 @@ namespace sgns
     {
         if ( task_result.subtask_results().size() == 0 )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] No result found on escrow {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               escrow_path );
+            m_logger->error( "No result found on escrow {}", escrow_path );
             return std::errc::invalid_argument;
         }
         if ( escrow_path.empty() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Escrow path empty",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->error( "Escrow path empty" );
             return std::errc::invalid_argument;
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] Fetching escrow from processing DB at {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           escrow_path );
+        m_logger->debug( "Fetching escrow from processing DB at {}", escrow_path );
         BOOST_OUTCOME_TRY( auto transaction, FetchTransaction( globaldb_m, escrow_path ) );
 
         std::shared_ptr<EscrowTransaction> escrow_tx = std::dynamic_pointer_cast<EscrowTransaction>( transaction );
@@ -733,11 +671,7 @@ namespace sgns
 
         for ( auto &subtask : task_result.subtask_results() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Paying out {} in {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               peers_amount,
-                                               subtask.token_id() );
+            m_logger->debug( "Paying out {} in {}", peers_amount, subtask.token_id() );
             subtask_ids.push_back( subtask.subtaskid() );
             payout_peers.push_back( { peers_amount,
                                       subtask.node_address(),
@@ -745,10 +679,7 @@ namespace sgns
             remainder -= peers_amount;
         }
         //TODO: see what do with token_id here
-        TransactionManagerLogger()->debug( "[{} - full: {}] Sending to dev {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           remainder );
+        m_logger->debug( "Sending to dev {}", remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrowTokenId } );
 
         InputUTXOInfo escrow_utxo_input;
@@ -760,10 +691,8 @@ namespace sgns
         if ( lock_id.empty() && !escrow_tx->GetUTXOParameters().second.empty() )
         {
             lock_id = escrow_tx->GetUTXOParameters().second[0].dest_address;
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] Escrow transaction {} has empty lock_id but has UTXO parameters - using dest_address as fallback lock_id: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
+            m_logger->warn(
+                "Escrow transaction {} has empty lock_id but has UTXO parameters - using dest_address as fallback lock_id: {}",
                 escrow_tx->GetHash(),
                 lock_id );
         }
@@ -781,19 +710,14 @@ namespace sgns
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] Transaction enqueuing",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "Transaction enqueuing" );
         {
             for ( auto &&[tx, _] : element.first )
             {
                 auto result = ChangeTransactionState( tx, TransactionStatus::CREATED );
                 if ( !result )
                 {
-                    TransactionManagerLogger()->error( "[{} - full: {}] Failed to change transaction state for {}",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       tx->GetHash() );
+                    m_logger->error( "Failed to change transaction state for {}", tx->GetHash() );
                 }
             }
         }
@@ -899,12 +823,7 @@ namespace sgns
             return "";
         }
 
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted head",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            persisted_hash,
-            nonce );
+        m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head", persisted_hash, nonce );
         return persisted_hash;
     }
 
@@ -957,18 +876,15 @@ namespace sgns
 
         if ( !selected_hash.empty() )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Recovered previous hash {} for nonce {} from persisted transactions",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                selected_hash,
-                nonce );
+            m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions",
+                             selected_hash,
+                             nonce );
             return selected_hash;
         }
         return "";
     }
 
-    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    std::string TransactionManager::GetValidationChainId( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         if ( !tx )
         {
@@ -1001,7 +917,7 @@ namespace sgns
         auto [transaction_batch, maybe_crdt_transaction]          = item;
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = nullptr;
 
-        TransactionManagerLogger()->trace( "{} called", __func__ );
+        m_logger->trace( "{} called", __func__ );
 
         if ( maybe_crdt_transaction.has_value() && maybe_crdt_transaction.value() )
         {
@@ -1015,29 +931,23 @@ namespace sgns
         if ( auto local_confirmed = account_m->GetLocalConfirmedNonce(); local_confirmed.has_value() )
         {
             expected_next_nonce = local_confirmed.value() + 1;
-            TransactionManagerLogger()->debug( "[{} - full: {}] Using local confirmed nonce {} as send baseline",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               local_confirmed.value() );
+            m_logger->debug( "Using local confirmed nonce {} as send baseline", local_confirmed.value() );
         }
         else if ( !transaction_batch.empty() )
         {
             // If confirmed nonce is not available yet, preserve local enqueue order.
             expected_next_nonce = transaction_batch.front().first->GetNonce();
-            TransactionManagerLogger()->debug( "[{} - full: {}] Local confirmed nonce unavailable, using first "
-                                               "queued nonce {} as send baseline",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               expected_next_nonce.value() );
+            m_logger->debug( "Local confirmed nonce unavailable, using first queued nonce {} as send baseline",
+                             expected_next_nonce.value() );
         }
-        std::unordered_set<std::string>                topicSet;
-        std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
+        std::unordered_set<std::string> topicSet;
         if ( !transaction_batch.empty() )
         {
             topicSet.emplace( full_node_topic_m );
             topicSet.emplace( account_m->GetAddress() );
         }
 
+        std::set<std::shared_ptr<IGeniusTransactions>> transactions_sent;
         for ( auto &[transaction, maybe_proof] : transaction_batch )
         {
             if ( !expected_next_nonce.has_value() )
@@ -1049,22 +959,16 @@ namespace sgns
             {
                 if ( transaction->GetNonce() > expected_next_nonce.value() )
                 {
-                    TransactionManagerLogger()->debug(
-                        "[{} - full: {}] Deferring transaction send due to nonce gap - Expected: {}, Tried to send: {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        expected_next_nonce.value(),
-                        transaction->GetNonce() );
+                    m_logger->debug( "Deferring transaction send due to nonce gap - Expected: {}, Tried to send: {}",
+                                     expected_next_nonce.value(),
+                                     transaction->GetNonce() );
                     return outcome::failure(
                         boost::system::errc::make_error_code( boost::system::errc::resource_unavailable_try_again ) );
                 }
 
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    expected_next_nonce.value(),
-                    transaction->GetNonce() );
+                m_logger->error( "Transaction with unexpected nonce - Expected: {}, Tried to send: {}",
+                                 expected_next_nonce.value(),
+                                 transaction->GetNonce() );
                 return outcome::failure(
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
@@ -1073,10 +977,7 @@ namespace sgns
             crdt::HierarchicalKey  tx_key( transaction_path );
             crdt::GlobalDB::Buffer data_transaction;
 
-            TransactionManagerLogger()->debug( "[{} - full: {}] Recording the transaction on {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_key.GetKey() );
+            m_logger->debug( "Recording the transaction on {}", tx_key.GetKey() );
 
             data_transaction.put( transaction->SerializeByteVector() );
             BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
@@ -1087,18 +988,12 @@ namespace sgns
                 crdt::GlobalDB::Buffer proof_transaction;
 
                 auto &proof = maybe_proof.value();
-                TransactionManagerLogger()->debug( "[{} - full: {}] Recording the proof on {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   proof_key.GetKey() );
+                m_logger->debug( "Recording the proof on {}", proof_key.GetKey() );
 
                 proof_transaction.put( proof );
                 BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( proof_key ), std::move( proof_transaction ) ) );
             }
-            TransactionManagerLogger()->debug( "[{} - full: {}] Creating Consensus Proposal for tx {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               transaction_path );
+            m_logger->debug( "Creating Consensus Proposal for tx {}", transaction_path );
 
             topicSet.merge( transaction->GetTopics() );
             transactions_sent.insert( transaction );
@@ -1122,13 +1017,10 @@ namespace sgns
                 utxo_commitment = BuildUTXOTransitionCommitment( transaction );
                 if ( !utxo_commitment.has_value() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Missing required UTXO commitment for tx={} type={}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        transaction->GetHash(),
-                        transaction->GetType() );
+                    m_logger->error( "{}: Missing required UTXO commitment for tx={} type={}",
+                                     __func__,
+                                     transaction->GetHash(),
+                                     transaction->GetType() );
                     return outcome::failure( std::errc::invalid_argument );
                 }
 
@@ -1137,13 +1029,10 @@ namespace sgns
                     utxo_witness = BuildUTXOWitness( transaction );
                     if ( !utxo_witness.has_value() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] {}: Missing required UTXO witness for tx={} type={}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            __func__,
-                            transaction->GetHash(),
-                            transaction->GetType() );
+                        m_logger->error( "{}: Missing required UTXO witness for tx={} type={}",
+                                         __func__,
+                                         transaction->GetHash(),
+                                         transaction->GetType() );
                         return outcome::failure( std::errc::invalid_argument );
                     }
                 }
@@ -1282,9 +1171,7 @@ namespace sgns
         auto it = transaction_parsers.find( tx->GetType() );
         if ( it == transaction_parsers.end() )
         {
-            TransactionManagerLogger()->info( "[{} - full: {}] No Parser Available",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m );
+            m_logger->info( "No Parser Available" );
             return std::errc::invalid_argument;
         }
 
@@ -1301,9 +1188,7 @@ namespace sgns
         auto it = transaction_parsers.find( tx->GetType() );
         if ( it == transaction_parsers.end() )
         {
-            TransactionManagerLogger()->info( "[{} - full: {}] No Reverter Available",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m );
+            m_logger->info( "No Reverter Available" );
             return std::errc::invalid_argument;
         }
 
@@ -1318,7 +1203,7 @@ namespace sgns
         return outcome::success();
     }
 
-    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx ) const
+    bool TransactionManager::DoesTransactionMutateUTXOState( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         if ( !tx )
         {
@@ -1458,17 +1343,12 @@ namespace sgns
     outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto proof_path = GetTransactionProofPath( *tx );
-        TransactionManagerLogger()->debug( "[{} - full: {}] Checking the proof in {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           proof_path );
+        m_logger->debug( "Checking the proof in {}", proof_path );
         BOOST_OUTCOME_TRY( auto proof_data, globaldb_m->Get( { proof_path } ) );
 
-        auto proof_data_vector = proof_data.toVector();
+        const auto &proof_data_vector = proof_data.toVector();
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Proof data acquired. Verifying...",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "Proof data acquired. Verifying..." );
         return IBasicProof::VerifyFullProof( proof_data_vector );
     }
 
@@ -1480,34 +1360,23 @@ namespace sgns
         {
             std::string blockchain_base = GetBlockChainBase( network_id );
             std::string query_path      = blockchain_base + "tx";
-            TransactionManagerLogger()->trace( "[{} - full: {}] Probing transactions on {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               query_path );
+            m_logger->trace( "Probing transactions on {}", query_path );
             BOOST_OUTCOME_TRY( auto transaction_list, globaldb_m->QueryKeyValues( query_path ) );
 
-            TransactionManagerLogger()->trace( "[{} - full: {}] Transaction list grabbed from CRDT with Size {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               transaction_list.size() );
+            m_logger->trace( "Transaction list grabbed from CRDT with Size {}", transaction_list.size() );
 
             for ( const auto &[key, value] : transaction_list )
             {
                 auto transaction_key = globaldb_m->KeyToString( key );
                 if ( !transaction_key.has_value() )
                 {
-                    TransactionManagerLogger()->error( "[{} - full: {}] Unable to convert a key to string",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m );
+                    m_logger->error( "Unable to convert a key to string" );
                     continue;
                 }
                 auto process_result = FetchAndProcessTransaction( transaction_key.value(), value );
                 if ( !transaction_key.has_value() )
                 {
-                    TransactionManagerLogger()->error( "[{} - full: {}] Unable to fetch and process transaction {}",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       transaction_key.value() );
+                    m_logger->error( "Unable to fetch and process transaction {}", transaction_key.value() );
                 }
             }
         }
@@ -1523,10 +1392,7 @@ namespace sgns
             auto             tracked = tx_processed_m.find( tx_key );
             if ( tracked != tx_processed_m.end() )
             {
-                TransactionManagerLogger()->trace( "[{} - full: {}] Transaction already processed: {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx_key );
+                m_logger->trace( "Transaction already processed: {}", tx_key );
                 return outcome::success();
             }
         }
@@ -1535,54 +1401,34 @@ namespace sgns
         {
             if ( tx_data.has_value() )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Deserializing transaction: {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx_key );
+                m_logger->debug( "Deserializing transaction: {}", tx_key );
                 return DeSerializeTransaction( tx_data.value() );
             }
 
-            TransactionManagerLogger()->debug( "[{} - full: {}] Finding transaction: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_key );
+            m_logger->debug( "Finding transaction: {}", tx_key );
             return FetchTransaction( globaldb_m, tx_key );
         }();
 
         if ( transaction_result.has_error() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Can't fetch transaction {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_key );
+            m_logger->debug( "Can't fetch transaction {}", tx_key );
             return outcome::failure( transaction_result.error() );
         }
         auto &transaction = transaction_result.value();
 
         if ( transaction->GetHash().empty() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Error, received transaction without hash: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_key );
+            m_logger->error( "Error, received transaction without hash: {}", tx_key );
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] Checking if the transaction has a valid certificate to be confirmed {}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            tx_key );
+        m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", tx_key );
 
         auto next_tx_state = TransactionStatus::VERIFYING;
 
         if ( blockchain_->CheckCertificate( transaction->GetHash() ) )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                tx_key );
+            m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", tx_key );
             next_tx_state = TransactionStatus::CONFIRMED;
         }
         BOOST_OUTCOME_TRY( ChangeTransactionState( transaction, next_tx_state ) );
@@ -1590,34 +1436,58 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> TransactionManager::PutProducedUTXOs( const IGeniusTransactions &tx )
+    {
+        std::vector<GeniusUTXO> outputs;
+        if ( !ExtractProducedUTXOs( tx, outputs ) )
+        {
+            return std::errc::invalid_argument;
+        }
+
+        for ( const auto &output : outputs )
+        {
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( output, output.GetOwnerAddress() ) );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::DeleteProducedUTXOs( const IGeniusTransactions &tx )
+    {
+        std::vector<GeniusUTXO> outputs;
+        if ( !ExtractProducedUTXOs( tx, outputs ) )
+        {
+            return std::errc::invalid_argument;
+        }
+
+        for ( const auto &output : outputs )
+        {
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( output.GetTxID(),
+                                                                       output.GetOutputIdx(),
+                                                                       output.GetOwnerAddress() ) );
+        }
+        return outcome::success();
+    }
+
     outcome::result<void> TransactionManager::ParseTransferTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        auto dest_infos  = transfer_tx->GetDstInfos();
-
-        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        if ( !transfer_tx )
         {
-            auto       hash = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            GeniusUTXO new_utxo( hash, i, dest_infos[i].encrypted_amount, dest_infos[i].token_id );
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, dest_infos[i].dest_address ) );
+            return std::errc::invalid_argument;
+        }
 
-            TransactionManagerLogger()->debug( "[{} - full: {}] Notify {} of transfer of {} to it",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               dest_infos[i].dest_address,
-                                               dest_infos[i].encrypted_amount );
+        auto dest_infos = transfer_tx->GetDstInfos();
+
+        BOOST_OUTCOME_TRY( PutProducedUTXOs( *transfer_tx ) );
+        for ( const auto &dest_info : dest_infos )
+        {
+            m_logger->debug( "Notify {} of transfer of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
         for ( auto &input : transfer_tx->GetInputInfos() )
         {
-            TransactionManagerLogger()->trace( "[{} - full: {}] UTXO to be updated {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.txid_hash_.toReadableString() );
-            TransactionManagerLogger()->trace( "[{} - full: {}] UTXO output {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.output_idx_ );
+            m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
+            m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
         BOOST_OUTCOME_TRY(
             account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetSrcAddress() ) );
@@ -1628,47 +1498,35 @@ namespace sgns
     {
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
-            auto [inputs, outputs] = migration_tx->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( migration_tx->GetHash() ) ).value();
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            auto params = migration_tx->GetUTXOParameters();
+            BOOST_OUTCOME_TRY( PutProducedUTXOs( *migration_tx ) );
+
+            if ( !params.first.empty() )
             {
-                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
+                BOOST_OUTCOME_TRY(
+                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, migration_tx->GetSrcAddress() ) );
             }
 
-            if ( !inputs.empty() )
-            {
-                account_m->GetUTXOManager().ConsumeUTXOs( inputs, migration_tx->GetSrcAddress() );
-            }
-
-            TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (migration), amount {} balance {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              std::to_string( migration_tx->GetAmount() ),
-                                              std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            m_logger->info( "Created tokens (migration), amount {} balance {}",
+                            migration_tx->GetAmount(),
+                            account_m->GetUTXOManager().GetBalance() );
             return outcome::success();
         }
 
         if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
         {
-            auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            auto params = mint_tx_v2->GetUTXOParameters();
+            BOOST_OUTCOME_TRY( PutProducedUTXOs( *mint_tx_v2 ) );
+
+            if ( !params.first.empty() )
             {
-                GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-                account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address );
+                BOOST_OUTCOME_TRY(
+                    account_m->GetUTXOManager().ConsumeUTXOs( params.first, mint_tx_v2->GetSrcAddress() ) );
             }
 
-            if ( !inputs.empty() )
-            {
-                account_m->GetUTXOManager().ConsumeUTXOs( inputs, mint_tx_v2->GetSrcAddress() );
-            }
-
-            TransactionManagerLogger()->info( "[{} - full: {}] Created tokens (mint-v2), amount {} balance {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              std::to_string( mint_tx_v2->GetAmount() ),
-                                              std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            m_logger->info( "Created tokens (mint-v2), amount {} balance {}",
+                            mint_tx_v2->GetAmount(),
+                            account_m->GetUTXOManager().GetBalance() );
             return outcome::success();
         }
 
@@ -1682,11 +1540,9 @@ namespace sgns
         BOOST_OUTCOME_TRY(
             account_m->GetUTXOManager().PutUTXO( GeniusUTXO( hash, 0, mint_tx->GetAmount(), mint_tx->GetTokenID() ),
                                                  mint_tx->GetSrcAddress() ) );
-        TransactionManagerLogger()->info( "[{} - full: {}] Created tokens, amount {} balance {}",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          std::to_string( mint_tx->GetAmount() ),
-                                          std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+        m_logger->info( "Created tokens, amount {} balance {}",
+                        mint_tx->GetAmount(),
+                        account_m->GetUTXOManager().GetBalance() );
 
         return outcome::success();
     }
@@ -1699,19 +1555,12 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        auto [inputs, outputs] = escrow_tx->GetUTXOParameters();
-        auto hash              = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
+        auto params = escrow_tx->GetUTXOParameters();
+        BOOST_OUTCOME_TRY( PutProducedUTXOs( *escrow_tx ) );
 
-        for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+        if ( !params.first.empty() )
         {
-            // output[0] is escrow hold, optional output[1] is change.
-            GeniusUTXO new_utxo( hash, i, outputs[i].encrypted_amount, outputs[i].token_id );
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().PutUTXO( new_utxo, outputs[i].dest_address ) );
-        }
-
-        if ( !inputs.empty() )
-        {
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( inputs, escrow_tx->GetSrcAddress() ) );
+            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
         }
 
         return outcome::success();
@@ -1721,42 +1570,29 @@ namespace sgns
         const std::shared_ptr<IGeniusTransactions> &tx )
     {
         auto transfer_tx = std::dynamic_pointer_cast<TransferTransaction>( tx );
-        auto dest_infos  = transfer_tx->GetDstInfos();
-
-        for ( std::uint32_t i = 0; i < dest_infos.size(); ++i )
+        if ( !transfer_tx )
         {
-            const auto &dest_info = dest_infos[i];
-            auto        hash      = ( base::Hash256::fromReadableString( transfer_tx->GetHash() ) ).value();
-            BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) );
-
-            TransactionManagerLogger()->debug( "[{} - full: {}] Notify {} of deletion of {} to it",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               dest_info.dest_address,
-                                               dest_info.encrypted_amount );
+            return std::errc::invalid_argument;
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Adding origin address to Broadcast: {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           transfer_tx->GetSrcAddress() );
+        auto dest_infos = transfer_tx->GetDstInfos();
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing inputs to be added as UTXOs",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *transfer_tx ) );
+        for ( const auto &dest_info : dest_infos )
+        {
+            m_logger->debug( "Notify {} of deletion of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
+        }
+
+        m_logger->debug( "Adding origin address to Broadcast: {}", transfer_tx->GetSrcAddress() );
+
+        m_logger->debug( "Re-parsing inputs to be added as UTXOs" );
         for ( const auto &input : transfer_tx->GetInputInfos() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Fetching transaction {} ",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               input.txid_hash_.toReadableString() );
+            m_logger->debug( "Fetching transaction {} ", input.txid_hash_.toReadableString() );
             auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
             if ( tx )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx->GetType() );
+                m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
                 BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
             }
         }
@@ -1769,51 +1605,35 @@ namespace sgns
     {
         if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
         {
-            auto [inputs, outputs] = migration_tx->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( migration_tx->GetHash() ) ).value();
+            auto params = migration_tx->GetUTXOParameters();
 
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *migration_tx ) );
+            if ( !params.first.empty() )
             {
-                const auto &dest_info = outputs[i];
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) )
-            }
-            if ( !inputs.empty() )
-            {
-                account_m->GetUTXOManager().RollbackUTXOs( inputs, tx->GetHash() );
+                account_m->GetUTXOManager().RollbackUTXOs( params.first, tx->GetHash() );
             }
 
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] Deleted {} tokens (migration), from tx {}, final balance {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                migration_tx->GetAmount(),
-                migration_tx->GetHash(),
-                std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            m_logger->info( "Deleted {} tokens (migration), from tx {}, final balance {}",
+                            migration_tx->GetAmount(),
+                            migration_tx->GetHash(),
+                            account_m->GetUTXOManager().GetBalance() );
             return outcome::success();
         }
 
         if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
         {
-            auto [inputs, outputs] = mint_tx_v2->GetUTXOParameters();
-            auto hash              = ( base::Hash256::fromReadableString( mint_tx_v2->GetHash() ) ).value();
+            auto params = mint_tx_v2->GetUTXOParameters();
 
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *mint_tx_v2 ) );
+            if ( !params.first.empty() )
             {
-                const auto &dest_info = outputs[i];
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, dest_info.dest_address ) )
-            }
-            if ( !inputs.empty() )
-            {
-                account_m->GetUTXOManager().RollbackUTXOs( inputs, tx->GetHash() );
+                account_m->GetUTXOManager().RollbackUTXOs( params.first, tx->GetHash() );
             }
 
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] Deleted {} tokens (mint-v2), from tx {}, final balance {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                mint_tx_v2->GetAmount(),
-                mint_tx_v2->GetHash(),
-                std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+            m_logger->info( "Deleted {} tokens (mint-v2), from tx {}, final balance {}",
+                            mint_tx_v2->GetAmount(),
+                            mint_tx_v2->GetHash(),
+                            account_m->GetUTXOManager().GetBalance() );
             return outcome::success();
         }
 
@@ -1825,12 +1645,10 @@ namespace sgns
 
         auto hash = ( base::Hash256::fromReadableString( mint_tx->GetHash() ) ).value();
         BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, 0, mint_tx->GetSrcAddress() ) );
-        TransactionManagerLogger()->info( "[{} - full: {}] Deleted {} tokens, from tx {}, final balance {}",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          mint_tx->GetAmount(),
-                                          mint_tx->GetHash(),
-                                          std::to_string( account_m->GetUTXOManager().GetBalance() ) );
+        m_logger->info( "Deleted {} tokens, from tx {}, final balance {}",
+                        mint_tx->GetAmount(),
+                        mint_tx->GetHash(),
+                        account_m->GetUTXOManager().GetBalance() );
 
         return outcome::success();
     }
@@ -1843,26 +1661,19 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
-        if ( auto [inputs, outputs] = escrow_tx->GetUTXOParameters(); !outputs.empty() )
+        if ( auto params = escrow_tx->GetUTXOParameters(); !params.second.empty() )
         {
-            auto hash = ( base::Hash256::fromReadableString( escrow_tx->GetHash() ) ).value();
-            for ( std::uint32_t i = 0; i < outputs.size(); ++i )
-            {
-                BOOST_OUTCOME_TRY( account_m->GetUTXOManager().DeleteUTXO( hash, i, outputs[i].dest_address ) );
-            }
-            for ( auto &input : inputs )
+            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *escrow_tx ) );
+            for ( auto &input : params.first )
             {
                 auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
                 if ( tx )
                 {
-                    TransactionManagerLogger()->debug( "[{} - full: {}] Re-parsing {} transaction",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       tx->GetType() );
+                    m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
                     BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                 }
             }
-            account_m->GetUTXOManager().RollbackUTXOs( inputs, escrow_tx->GetHash() );
+            account_m->GetUTXOManager().RollbackUTXOs( params.first, escrow_tx->GetHash() );
         }
 
         return outcome::success();
@@ -1944,9 +1755,7 @@ namespace sgns
 
             if ( retval == TransactionStatus::CONFIRMED )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Transaction is FINALIZED",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m );
+                m_logger->debug( "Transaction is FINALIZED" );
                 break;
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
@@ -1966,10 +1775,7 @@ namespace sgns
         {
             {
                 std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-                TransactionManagerLogger()->trace( "[{} - full: {}] Searching for transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   txId );
+                m_logger->trace( "Searching for transaction {}", txId );
                 bool found = false;
                 for ( const auto &[_, tracked] : tx_processed_m )
                 {
@@ -1977,19 +1783,14 @@ namespace sgns
                          tracked.tx->GetSrcAddress() == account_m->GetAddress() )
                     {
                         retval = tracked.status;
-                        TransactionManagerLogger()->trace( "[{} - full: {}] Transaction status is {}",
-                                                           account_m->GetAddress().substr( 0, 8 ),
-                                                           full_node_m,
-                                                           static_cast<int>( retval ) );
+                        m_logger->trace( "Transaction status is {}", static_cast<int>( retval ) );
                         found = true;
                         break;
                     }
                 }
                 if ( !found )
                 {
-                    TransactionManagerLogger()->trace( "[{} - full: {}] Transaction untracked",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m );
+                    m_logger->trace( "Transaction untracked" );
                     retval = TransactionStatus::FAILED;
                 }
             }
@@ -1997,10 +1798,7 @@ namespace sgns
             if ( retval == TransactionStatus::INVALID || retval == TransactionStatus::CONFIRMED ||
                  retval == TransactionStatus::FAILED )
             {
-                TransactionManagerLogger()->trace( "[{} - full: {}] Transaction has finalized state {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   static_cast<int>( retval ) );
+                m_logger->trace( "Transaction has finalized state {}", static_cast<int>( retval ) );
                 break;
             }
             std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
@@ -2017,10 +1815,7 @@ namespace sgns
         auto escrow_hash_result = base::Hash256::fromReadableString( originalEscrowId );
         if ( escrow_hash_result.has_error() )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] Invalid original escrow tx id while waiting release: {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              originalEscrowId );
+            m_logger->warn( "Invalid original escrow tx id while waiting release: {}", originalEscrowId );
             return TransactionStatus::INVALID;
         }
         const auto escrow_hash = escrow_hash_result.value();
@@ -2060,20 +1855,13 @@ namespace sgns
         {
             if ( account_m->GetUTXOManager().IsOutPointConsumed( escrow_hash, 0 ) )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Escrow hold ({},0) is consumed",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   originalEscrowId );
+                m_logger->debug( "Escrow hold ({},0) is consumed", originalEscrowId );
                 return TransactionStatus::CONFIRMED;
             }
 
             if ( is_escrow_spent_by_confirmed_transfer() )
             {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] Escrow release confirmed via tracked transfer spend for {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    originalEscrowId );
+                m_logger->debug( "Escrow release confirmed via tracked transfer spend for {}", originalEscrowId );
                 return TransactionStatus::CONFIRMED;
             }
 
@@ -2089,16 +1877,12 @@ namespace sgns
             std::lock_guard missing_lock( missing_tx_mutex_ );
             missing_tx_hashes_.clear();
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] Initializing UTXOs",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "Initializing UTXOs" );
 
         auto utxo_result = account_m->GetUTXOManager().LoadUTXOs( globaldb_m->GetDataStore() );
         if ( utxo_result.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Failed to load UTXOs from storage",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->error( "Failed to load UTXOs from storage" );
         }
 
         bool has_local_utxos    = utxo_result.has_value() && utxo_result.value();
@@ -2109,31 +1893,23 @@ namespace sgns
             auto checkpoint_result = account_m->GetUTXOManager().LoadLatestCheckpoint( account_m->GetAddress() );
             if ( checkpoint_result.has_error() )
             {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] Failed to load local UTXO checkpoint during init: {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    checkpoint_result.error().message() );
+                m_logger->warn( "Failed to load local UTXO checkpoint during init: {}",
+                                checkpoint_result.error().message() );
             }
             else if ( checkpoint_result.value().has_value() )
             {
                 const auto local_root = account_m->GetUTXOManager().ComputeUTXOMerkleRoot( account_m->GetAddress() );
                 if ( local_root != checkpoint_result.value()->utxo_merkle_root )
                 {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m );
+                    m_logger->warn(
+                        "Local UTXO root mismatch with checkpoint during init. Clearing local UTXOs and rebuilding" );
 
                     auto clear_result = account_m->GetUTXOManager().SetUTXOs( std::vector<GeniusUTXO>{},
                                                                               account_m->GetAddress() );
                     if ( clear_result.has_error() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] Failed to clear local UTXOs after checkpoint mismatch: {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            clear_result.error().message() );
+                        m_logger->error( "Failed to clear local UTXOs after checkpoint mismatch: {}",
+                                         clear_result.error().message() );
                     }
                     else
                     {
@@ -2146,32 +1922,22 @@ namespace sgns
         std::unordered_set<std::string> network_hashes;
         bool                            has_network_utxos = false;
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Requesting UTXOs from network during init",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "Requesting UTXOs from network during init" );
         auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
         if ( network_utxos.has_value() && !network_utxos.value().empty() )
         {
             network_hashes    = network_utxos.value();
             has_network_utxos = true;
-            TransactionManagerLogger()->debug( "[{} - full: {}] Received {} UTXOs from network",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               network_hashes.size() );
+            m_logger->debug( "Received {} UTXOs from network", network_hashes.size() );
         }
         else
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] No UTXO response received from network during init",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->debug( "No UTXO response received from network during init" );
         }
 
         if ( !has_local_utxos && !has_network_utxos )
         {
-            TransactionManagerLogger()->info(
-                "[{} - full: {}] No local or network UTXOs found, querying transactions to mount UTXOs",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m );
+            m_logger->info( "No local or network UTXOs found, querying transactions to mount UTXOs" );
             QueryTransactions();
             return;
         }
@@ -2182,31 +1948,22 @@ namespace sgns
         {
             for ( const auto &[address, utxo_data_vector] : utxo_map )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Loaded {} UTXOs for address {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   utxo_data_vector.size(),
-                                                   address.substr( 0, 8 ) );
+                m_logger->debug( "Loaded {} UTXOs for address {}", utxo_data_vector.size(), address.substr( 0, 8 ) );
                 for ( auto &utxo_data : utxo_data_vector )
                 {
                     auto &[utxo_state, utxo] = utxo_data;
                     const auto tx_hash       = utxo.GetTxID().toReadableString();
-                    TransactionManagerLogger()->debug(
-                        "[{} - full: {}] UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        static_cast<uint8_t>( utxo_state ),
-                        tx_hash,
-                        utxo.GetOutputIdx(),
-                        utxo.GetAmount() );
+                    m_logger->debug( "UTXO - state: {}, tx_hash: {}, index: {}, amount: {}",
+                                     static_cast<uint8_t>( utxo_state ),
+                                     tx_hash,
+                                     utxo.GetOutputIdx(),
+                                     utxo.GetAmount() );
 
                     if ( utxo_state != UTXOManager::UTXOState::UTXO_READY )
                     {
-                        TransactionManagerLogger()->debug( "[{} - full: {}] Skipping UTXO in state {} for tx {}",
-                                                           account_m->GetAddress().substr( 0, 8 ),
-                                                           full_node_m,
-                                                           static_cast<uint8_t>( utxo_state ),
-                                                           tx_hash );
+                        m_logger->debug( "Skipping UTXO in state {} for tx {}",
+                                         static_cast<uint8_t>( utxo_state ),
+                                         tx_hash );
                         continue;
                     }
 
@@ -2217,10 +1974,7 @@ namespace sgns
                         auto process_result = FetchAndProcessTransaction( tx_path );
                         if ( !process_result.has_error() )
                         {
-                            TransactionManagerLogger()->debug( "[{} - full: {}] Processed transaction in {}",
-                                                               account_m->GetAddress().substr( 0, 8 ),
-                                                               full_node_m,
-                                                               tx_path );
+                            m_logger->debug( "Processed transaction in {}", tx_path );
                             processed = true;
                             break;
                         }
@@ -2246,10 +2000,7 @@ namespace sgns
                     auto process_result = FetchAndProcessTransaction( tx_path );
                     if ( !process_result.has_error() )
                     {
-                        TransactionManagerLogger()->debug( "[{} - full: {}] Processed transaction in {}",
-                                                           account_m->GetAddress().substr( 0, 8 ),
-                                                           full_node_m,
-                                                           tx_path );
+                        m_logger->debug( "Processed transaction in {}", tx_path );
                         processed = true;
                         break;
                     }
@@ -2285,18 +2036,13 @@ namespace sgns
         // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
         return;
 
-        TransactionManagerLogger()->info( "[{} - full: {}] Missing {} transactions during init",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          missing_count );
+        m_logger->info( "Missing {} transactions during init", missing_count );
 
         auto now = std::chrono::steady_clock::now();
         if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
              now - last_init_tx_request_time_ < std::chrono::milliseconds( k_init_tx_request_cooldown_ms ) )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Skipping tx requests (init cooldown)",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->debug( "Skipping tx requests (init cooldown)" );
             return;
         }
         last_init_tx_request_time_ = now;
@@ -2304,49 +2050,33 @@ namespace sgns
         const auto request_timeout = std::chrono::milliseconds( k_init_tx_request_cooldown_ms );
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Requesting transaction with hash {} (this: {})",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_hash,
-                                               reinterpret_cast<uint64_t>( this ) );
+            m_logger->debug( "Requesting transaction with hash {} (this: {})",
+                             tx_hash,
+                             reinterpret_cast<uint64_t>( this ) );
             auto request_result = account_m->RequestTransaction( request_timeout.count(), tx_hash );
             if ( request_result.has_error() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] Failed to request transaction with hash {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx_hash );
+                m_logger->error( "Failed to request transaction with hash {}", tx_hash );
             }
             else
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Successfully requested transaction with hash {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   tx_hash );
+                m_logger->debug( "Successfully requested transaction with hash {}", tx_hash );
             }
         }
     }
 
     bool TransactionManager::CheckNonce() const
     {
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] Checking if my local confirmed nonce is in sync with the network",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m );
+        m_logger->debug( "Checking if my local confirmed nonce is in sync with the network" );
 
         auto nonce_from_network_result = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
         if ( nonce_from_network_result.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Failed to fetch network nonce: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               nonce_from_network_result.error().message() );
+            m_logger->error( "Failed to fetch network nonce: {}", nonce_from_network_result.error().message() );
             if ( full_node_m )
             {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] Network nonce fetch failed, but we have a full node configured. Allowing for it to boot",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m );
+                m_logger->debug(
+                    "Network nonce fetch failed, but we have a full node configured. Allowing for it to boot" );
                 return true;
             }
             return false;
@@ -2354,9 +2084,7 @@ namespace sgns
         auto maybe_nonce = nonce_from_network_result.value();
         if ( !maybe_nonce.has_value() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Network doesn't have nonce info, trusting local nonce",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->error( "Network doesn't have nonce info, trusting local nonce" );
             return true;
         }
 
@@ -2364,37 +2092,24 @@ namespace sgns
         auto local_nonce_result = account_m->GetLocalConfirmedNonce();
         if ( local_nonce_result.has_error() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] No local nonce found. Network nonce exists: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               network_nonce );
+            m_logger->debug( "No local nonce found. Network nonce exists: {}", network_nonce );
             return false;
         }
         auto local_nonce = local_nonce_result.value();
 
         if ( network_nonce > local_nonce )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Nonce mismatch - Network: {}, Local: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               network_nonce,
-                                               local_nonce );
+            m_logger->error( "Nonce mismatch - Network: {}, Local: {}", network_nonce, local_nonce );
 
             return false;
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] Nonce is in sync with the network - Network: {}, Local: {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           network_nonce,
-                                           local_nonce );
+        m_logger->debug( "Nonce is in sync with the network - Network: {}, Local: {}", network_nonce, local_nonce );
         return true;
     }
 
     void TransactionManager::SyncNonce()
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] Checking if my nonce is updated",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m );
+        m_logger->debug( "Checking if my nonce is updated" );
 
         auto     nonce_result    = account_m->GetConfirmedNonce( NONCE_REQUEST_TIMEOUT_MS );
         uint64_t confirmed_nonce = 0;
@@ -2421,28 +2136,19 @@ namespace sgns
         {
             //Either my old txs are outdated or
             //The responder has not updated yet
-            TransactionManagerLogger()->debug( "[{} - full: {}] Network nonce updated: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               expected_next_nonce );
+            m_logger->debug( "Network nonce updated: {}", expected_next_nonce );
             ChangeState( State::READY );
         }
         else if ( proposed_nonce > expected_next_nonce )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] Local nonce ahead - Local: {}, Expected: {}. Checking for invalid tx",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                proposed_nonce,
-                expected_next_nonce );
+            m_logger->error( "Local nonce ahead - Local: {}, Expected: {}. Checking for invalid tx",
+                             proposed_nonce,
+                             expected_next_nonce );
             std::set<uint64_t> nonces_to_check;
             for ( auto i = expected_next_nonce; i < proposed_nonce; ++i )
             {
                 nonces_to_check.insert( i );
-                TransactionManagerLogger()->debug( "[{} - full: {}] Inserting nonce to check: {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   i );
+                m_logger->debug( "Inserting nonce to check: {}", i );
             }
 
             (void)CheckTransactionValidity( nonces_to_check );
@@ -2450,13 +2156,10 @@ namespace sgns
         else if ( proposed_nonce < expected_next_nonce )
         {
             uint64_t nonce_gap = expected_next_nonce - proposed_nonce;
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] Local nonce behind - Local: {}, Expected: {}. Gap: {}. Waiting to sync",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                proposed_nonce,
-                expected_next_nonce,
-                nonce_gap );
+            m_logger->error( "Local nonce behind - Local: {}, Expected: {}. Gap: {}. Waiting to sync",
+                             proposed_nonce,
+                             expected_next_nonce,
+                             nonce_gap );
 
             // If we're behind at all, we need to catch up - even a gap of 1 means
             // there's transaction data in CRDT that we don't have, and we cannot
@@ -2478,11 +2181,7 @@ namespace sgns
             auto elapsed = std::chrono::duration_cast<std::chrono::seconds>( now - last_head_request_time_.value() );
             if ( elapsed.count() < 30 )
             {
-                TransactionManagerLogger()->trace(
-                    "[{} - full: {}] Skipping head request - too soon since last request ({}s ago)",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    elapsed.count() );
+                m_logger->trace( "Skipping head request - too soon since last request ({}s ago)", elapsed.count() );
                 return;
             }
         }
@@ -2490,29 +2189,19 @@ namespace sgns
         auto topics_result = globaldb_m->GetMonitoredTopics();
         if ( !topics_result.has_value() )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] Could not get monitored topics for head request",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m );
+            m_logger->warn( "Could not get monitored topics for head request" );
             return;
         }
-        TransactionManagerLogger()->info( "[{} - full: {}] Requesting heads for {} topics",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          topics_result.value().size() );
+        m_logger->info( "Requesting heads for {} topics", topics_result.value().size() );
 
         if ( account_m->RequestHeads( topics_result.value() ) )
         {
             last_head_request_time_ = now;
-            TransactionManagerLogger()->debug( "[{} - full: {}] Periodic sync head request sent for {} topics",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               topics_result.value().size() );
+            m_logger->debug( "Periodic sync head request sent for {} topics", topics_result.value().size() );
         }
         else
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] Failed to request heads",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m );
+            m_logger->warn( "Failed to request heads" );
         }
     }
 
@@ -2522,10 +2211,7 @@ namespace sgns
         std::vector<std::string> invalid_transaction_keys;
         {
             std::unique_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking transactions",
-                                               __func__,
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m );
+            m_logger->debug( "{}: Checking transactions", __func__ );
 
             for ( auto &nonce : nonces_to_check )
             {
@@ -2536,43 +2222,29 @@ namespace sgns
                         continue;
                     }
 
-                    TransactionManagerLogger()->debug( "[{} - full: {}] {}: Seeing if transaction {} is valid {}",
-                                                       __func__,
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       tracked.cached_nonce,
-                                                       nonce );
+                    m_logger->debug( "{}: Seeing if transaction {} is valid {}",
+                                     __func__,
+                                     tracked.cached_nonce,
+                                     nonce );
 
                     if ( tracked.cached_nonce == nonce )
                     {
                         bool valid_tx = true;
                         if ( !CheckTransactionAuthorization( *tracked.tx ) )
                         {
-                            TransactionManagerLogger()->error(
-                                "[{} - full: {}] Could not validate signature of transaction with nonce {}",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                nonce );
+                            m_logger->error( "Could not validate signature of transaction with nonce {}", nonce );
                             valid_tx = false;
                         }
                         else
                         {
-                            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction is valid with {}",
-                                                               __func__,
-                                                               account_m->GetAddress().substr( 0, 8 ),
-                                                               full_node_m,
-                                                               nonce );
+                            m_logger->debug( "{}: Transaction is valid with {}", __func__, nonce );
                         }
                         if ( !valid_tx )
                         {
                             // Collect the key for later removal
                             invalid_transaction_keys.push_back( key );
                             changed = true;
-                            TransactionManagerLogger()->debug( "[{} - full: {}] {}: INVALID TX {}",
-                                                               __func__,
-                                                               account_m->GetAddress().substr( 0, 8 ),
-                                                               full_node_m,
-                                                               nonce );
+                            m_logger->debug( "{}: INVALID TX {}", __func__, nonce );
                         }
                         else
                         {
@@ -2595,24 +2267,15 @@ namespace sgns
     {
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction = globaldb_m->BeginTransaction();
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Deleting transaction on {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           tx_key );
+        m_logger->debug( "Deleting transaction on {}", tx_key );
 
         BOOST_OUTCOME_TRY( crdt_transaction->Remove( { std::move( tx_key ) } ) );
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Removed key transaction on {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           tx_key );
+        m_logger->debug( "Removed key transaction on {}", tx_key );
 
         BOOST_OUTCOME_TRY( crdt_transaction->Commit( topics ) );
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Commited tx on {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           tx_key );
+        m_logger->debug( "Commited tx on {}", tx_key );
 
         return outcome::success();
     }
@@ -2628,10 +2291,7 @@ namespace sgns
     {
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Searching for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_hash );
+            m_logger->debug( "Searching for hash {}", tx_hash );
             if ( tracked.tx && tracked.tx->GetHash() == tx_hash )
             {
                 return tracked.tx;
@@ -2685,30 +2345,46 @@ namespace sgns
         return std::nullopt;
     }
 
-    TransactionManager::TransactionStatus TransactionManager::GetOutgoingStatusByTxId( const std::string &txId ) const
+    TransactionManager::TransactionStatus TransactionManager::GetTransactionStatusByTxId(
+        const std::string &txId ) const
     {
-        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-        for ( const auto &[_, tracked] : tx_processed_m )
-        {
-            if ( tracked.tx && tracked.tx->GetHash() == txId && tracked.tx->GetSrcAddress() == account_m->GetAddress() )
-            {
-                return tracked.status;
-            }
-        }
-        return TransactionStatus::INVALID;
+        return GetStatusByTxId( txId, std::nullopt );
     }
 
-    TransactionManager::TransactionStatus TransactionManager::GetIncomingStatusByTxId( const std::string &txId ) const
+    TransactionManager::TransactionStatus TransactionManager::GetOutgoingStatusByTxId( const std::string &txId ) const
     {
+        return GetStatusByTxId( txId, true );
+    }
+
+    TransactionManager::TransactionStatus TransactionManager::GetStatusByTxId( const std::string  &txId,
+                                                                               std::optional<bool> outgoing ) const
+    {
+        auto                                incoming_status = TransactionStatus::INVALID;
         std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
         for ( const auto &[_, tracked] : tx_processed_m )
         {
-            if ( tracked.tx && tracked.tx->GetHash() == txId && tracked.tx->GetSrcAddress() != account_m->GetAddress() )
+            if ( !tracked.tx || tracked.tx->GetHash() != txId )
+            {
+                continue;
+            }
+
+            const auto is_outgoing = tracked.tx->GetSrcAddress() == account_m->GetAddress();
+            if ( outgoing.has_value() )
+            {
+                if ( is_outgoing == outgoing.value() )
+                {
+                    return tracked.status;
+                }
+                continue;
+            }
+
+            if ( is_outgoing )
             {
                 return tracked.status;
             }
+            incoming_status = tracked.status;
         }
-        return TransactionStatus::INVALID;
+        return incoming_status;
     }
 
     bool TransactionManager::SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s )
@@ -2744,10 +2420,7 @@ namespace sgns
         }
         else
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] No outgoing tx found with nonce {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               nonce );
+            m_logger->debug( "No outgoing tx found with nonce {}", nonce );
         }
         return ret;
     }
@@ -2763,29 +2436,20 @@ namespace sgns
             auto maybe_new_tx = DeSerializeTransaction( element.value() );
             if ( maybe_new_tx.has_error() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] Failed to deserialize incoming transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   element.key() );
+                m_logger->error( "Failed to deserialize incoming transaction {}", element.key() );
                 break;
             }
             new_tx = maybe_new_tx.value();
 
             if ( !CheckTransactionAuthorization( *new_tx ) )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] Could not validate signature of transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   element.key() );
+                m_logger->error( "Could not validate signature of transaction {}", element.key() );
                 break;
             }
             if ( KeyExistsInDB( GetTransactionPath( *new_tx ) ) )
             {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] New transaction {} would overwrite an existing one. Preventing that",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    new_tx->GetHash() );
+                m_logger->debug( "New transaction {} would overwrite an existing one. Preventing that",
+                                 new_tx->GetHash() );
                 break;
             }
             should_delete = false;
@@ -2822,16 +2486,10 @@ namespace sgns
             if ( maybe_valid_proof.has_error() || ( !maybe_valid_proof.value() ) )
             {
                 // TODO: kill reputation point of the node.
-                TransactionManagerLogger()->error( "[{} - full: {}] Could not verify proof {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   element.key() );
+                m_logger->error( "Could not verify proof {}", element.key() );
                 break;
             }
-            TransactionManagerLogger()->trace( "[{} - full: {}] Valid proof of {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               element.key() );
+            m_logger->trace( "Valid proof of {}", element.key() );
 
             valid_proof = true;
         } while ( 0 );
@@ -2856,13 +2514,10 @@ namespace sgns
     bool TransactionManager::ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
                                                        const IGeniusTransactions &new_tx ) const
     {
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] {}: Checking if new transaction {} should replace existing one {}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            __func__,
-            new_tx.GetHash(),
-            existing_tx.GetHash() );
+        m_logger->debug( "{}: Checking if new transaction {} should replace existing one {}",
+                         __func__,
+                         new_tx.GetHash(),
+                         existing_tx.GetHash() );
 
         return blockchain_->BestHash( existing_tx.GetHash(), new_tx.GetHash() ) == new_tx.GetHash();
     }
@@ -2882,21 +2537,14 @@ namespace sgns
 
         if ( elapsed < 0 )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Transaction timestamp {} is in the future (current: {}), elapsed: {} ms",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                timestamp,
-                current_timestamp,
-                elapsed );
+            m_logger->debug( "Transaction timestamp {} is in the future (current: {}), elapsed: {} ms",
+                             timestamp,
+                             current_timestamp,
+                             elapsed );
         }
         else
         {
-            TransactionManagerLogger()->trace( "[{} - full: {}] Transaction timestamp {} elapsed: {} ms",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               timestamp,
-                                               elapsed );
+            m_logger->trace( "Transaction timestamp {} elapsed: {} ms", timestamp, elapsed );
         }
 
         return elapsed;
@@ -2921,11 +2569,7 @@ namespace sgns
         // If elapsed is negative, the transaction is from the future - not immutable
         if ( elapsed < 0 )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Transaction from future is not immutable (elapsed: {} ms)",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                elapsed );
+            m_logger->debug( "Transaction from future is not immutable (elapsed: {} ms)", elapsed );
             return false;
         }
 
@@ -2933,21 +2577,15 @@ namespace sgns
 
         if ( is_immutable )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Transaction is immutable (elapsed: {} ms, window: {} ms)",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                elapsed,
-                mutability_window_m.count() );
+            m_logger->debug( "Transaction is immutable (elapsed: {} ms, window: {} ms)",
+                             elapsed,
+                             mutability_window_m.count() );
         }
         else
         {
-            TransactionManagerLogger()->trace(
-                "[{} - full: {}] Transaction is still mutable (elapsed: {} ms, window: {} ms)",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                elapsed,
-                mutability_window_m.count() );
+            m_logger->trace( "Transaction is still mutable (elapsed: {} ms, window: {} ms)",
+                             elapsed,
+                             mutability_window_m.count() );
         }
 
         return is_immutable;
@@ -2957,39 +2595,27 @@ namespace sgns
     {
         timestamp_tolerance_m = std::chrono::milliseconds( timeframe_tolerance );
 
-        TransactionManagerLogger()->info( "[{} - full: {}] Updated timeframe tolerance to {} ms",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          timeframe_tolerance );
+        m_logger->info( "Updated timeframe tolerance to {} ms", timeframe_tolerance );
     }
 
     void TransactionManager::SetMutabilityWindowMs( uint64_t mutability_window )
     {
         mutability_window_m = std::chrono::milliseconds( mutability_window );
 
-        TransactionManagerLogger()->info( "[{} - full: {}] Updated mutability window to {} ms",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          mutability_window );
+        m_logger->info( "Updated mutability window to {} ms", mutability_window );
     }
 
     outcome::result<void> TransactionManager::RemoveTransactionFromProcessedMaps( const std::string &transaction_key,
                                                                                   bool               delete_from_crdt )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] Removing transaction from processed maps: {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           transaction_key );
+        m_logger->debug( "Removing transaction from processed maps: {}", transaction_key );
         bool found = false;
         {
             std::unique_lock tx_lock( tx_mutex_m );
             auto             it = tx_processed_m.find( transaction_key );
             if ( it != tx_processed_m.end() )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] Removing from processed: {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   transaction_key );
+                m_logger->debug( "Removing from processed: {}", transaction_key );
 
                 if ( it->second.tx )
                 {
@@ -3009,10 +2635,7 @@ namespace sgns
 
         if ( !found )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Transaction not found in processed maps: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               transaction_key );
+            m_logger->debug( "Transaction not found in processed maps: {}", transaction_key );
         }
         return outcome::success();
     }
@@ -3022,41 +2645,26 @@ namespace sgns
     {
         auto [key, value] = new_data;
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Trying to deserialize {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           key );
+        m_logger->debug( "Trying to deserialize {}", key );
 
         BOOST_OUTCOME_TRY( auto new_tx, DeSerializeTransaction( value ) );
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Deserialized transaction {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           key );
+        m_logger->debug( "Deserialized transaction {}", key );
 
         if ( new_tx->GetHash().empty() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Empty hash on {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               key );
+            m_logger->error( "Empty hash on {}", key );
             return outcome::failure( boost::system::error_code{} );
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] Verifying if we have a conflicting transaction {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           key );
+        m_logger->debug( "Verifying if we have a conflicting transaction {}", key );
 
         auto conflicting_tx = GetConflictingTransaction( *new_tx );
 
         if ( conflicting_tx.has_value() )
         {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] Found conflicting transaction that passed the FILTER with hash: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                conflicting_tx.value()->GetHash() );
+            m_logger->warn( "Found conflicting transaction that passed the FILTER with hash: {}",
+                            conflicting_tx.value()->GetHash() );
             std::unique_lock tx_lock( tx_mutex_m );
             auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
 
@@ -3064,48 +2672,32 @@ namespace sgns
 
             if ( it->second.status == TransactionStatus::CONFIRMED )
             {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] Conflicting transaction is already CONFIRMED, not adding incoming transaction{}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    key );
+                m_logger->debug( "Conflicting transaction is already CONFIRMED, not adding incoming transaction{}",
+                                 key );
                 tx_lock.unlock();
                 BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
                 tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
             }
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                conflicting_tx.value()->GetHash() );
+            m_logger->warn( "Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
+                            conflicting_tx.value()->GetHash() );
             tx_lock.unlock();
             BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
         }
 
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] Checking if the transaction has a valid certificate to be confirmed {}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            key );
+        m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", key );
 
         auto next_tx_state = TransactionStatus::VERIFYING;
         auto has_cert      = blockchain_->CheckCertificate( new_tx->GetHash() );
 
         if ( has_cert )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Transaction has a valid certificate, marking as CONFIRMED {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                key );
+            m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", key );
             next_tx_state = TransactionStatus::CONFIRMED;
             if ( conflicting_tx.has_value() )
             {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] Setting conflicting transaction to FAILED because the new has a certificate and it doesn't: {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
+                m_logger->warn(
+                    "Setting conflicting transaction to FAILED because the new has a certificate and it doesn't: {}",
                     conflicting_tx.value()->GetHash() );
                 BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
             }
@@ -3117,13 +2709,10 @@ namespace sgns
             const auto current_status = maybe_existing->status;
             if ( current_status == TransactionStatus::FAILED || current_status == TransactionStatus::CONFIRMED )
             {
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] Keeping terminal status {} for tx {}, skipping downgrade to VERIFYING (has_cert={})",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    static_cast<int>( current_status ),
-                    new_tx->GetHash(),
-                    has_cert );
+                m_logger->debug( "Keeping terminal status {} for tx {}, skipping downgrade to VERIFYING (has_cert={})",
+                                 static_cast<int>( current_status ),
+                                 new_tx->GetHash(),
+                                 has_cert );
                 return outcome::success();
             }
         }
@@ -3133,20 +2722,13 @@ namespace sgns
 
     void TransactionManager::ProcessDeletion( std::string key )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] Processing deletion of {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           key );
+        m_logger->debug( "Processing deletion of {}", key );
 
         auto remove_res = RemoveTransactionFromProcessedMaps( key );
 
         if ( remove_res.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Error removing transaction {}: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               key,
-                                               remove_res.error().message() );
+            m_logger->error( "Error removing transaction {}: {}", key, remove_res.error().message() );
         }
     }
 
@@ -3160,11 +2742,7 @@ namespace sgns
         auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
         if ( !datastore )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] RocksDB datastore unavailable, cannot store CID for tx {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                key );
+            m_logger->error( "RocksDB datastore unavailable, cannot store CID for tx {}", key );
             return outcome::failure( std::errc::bad_file_descriptor );
         }
 
@@ -3185,20 +2763,13 @@ namespace sgns
 
     void TransactionManager::ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] Processing new data with key {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           new_data.first );
+        m_logger->debug( "Processing new data with key {}", new_data.first );
 
         auto add_res = AddTransactionToProcessedMaps( new_data );
 
         if ( add_res.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Error adding transaction {}: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               new_data.first,
-                                               add_res.error().message() );
+            m_logger->error( "Error adding transaction {}: {}", new_data.first, add_res.error().message() );
         }
         else
         {
@@ -3207,10 +2778,8 @@ namespace sgns
             if ( !received_first_periodic_sync_response_.load() )
             {
                 received_first_periodic_sync_response_.store( true );
-                TransactionManagerLogger()->info(
-                    "[{} - full: {}] First transaction data received from network, switching to 10-minute periodic sync interval",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m );
+                m_logger->info(
+                    "First transaction data received from network, switching to 10-minute periodic sync interval" );
             }
         }
     }
@@ -3220,11 +2789,7 @@ namespace sgns
         auto store_cid_res = StoreTransactionCID( new_data.first, cid );
         if ( store_cid_res.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] Failed to store CID for key {}: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               new_data.first,
-                                               store_cid_res.error().message() );
+            m_logger->error( "Failed to store CID for key {}: {}", new_data.first, store_cid_res.error().message() );
         }
 
         auto key = new_data.first;
@@ -3238,11 +2803,7 @@ namespace sgns
 
         cv_.notify_one();
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] CRDT new data queued, {} - (queue size: {})",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           key,
-                                           queue_size );
+        m_logger->debug( "CRDT new data queued, {} - (queue size: {})", key, queue_size );
     }
 
     void TransactionManager::DeleteElementCallback( std::string deleted_key )
@@ -3255,11 +2816,7 @@ namespace sgns
         }
         cv_.notify_one();
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] CRDT deleted key queued, {} - (queue size: {})",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           deleted_key,
-                                           queue_size );
+        m_logger->debug( "CRDT deleted key queued, {} - (queue size: {})", deleted_key, queue_size );
     }
 
     void TransactionManager::RegisterStateChangeCallback( StateChangeCallback callback )
@@ -3276,22 +2833,17 @@ namespace sgns
 
     void TransactionManager::ChangeState( State new_state )
     {
+        std::lock_guard lock( state_change_callback_mutex_ );
+        if ( state_m == new_state )
         {
-            std::lock_guard lock( state_change_callback_mutex_ );
-            if ( state_m != new_state )
-            {
-                TransactionManagerLogger()->info( "[{} - full: {}] State changed from {} to {}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  state_m,
-                                                  new_state );
-                auto old_state = state_m;
-                state_m        = new_state;
-                if ( state_change_callback_ )
-                {
-                    state_change_callback_( old_state, new_state );
-                }
-            }
+            return;
+        }
+        m_logger->info( "State changed from {} to {}", state_m, new_state );
+        auto old_state = state_m;
+        state_m        = new_state;
+        if ( state_change_callback_ )
+        {
+            state_change_callback_( old_state, new_state );
         }
     }
 
@@ -3306,11 +2858,7 @@ namespace sgns
         auto monitored_networks = GetMonitoredNetworkIDs();
         for ( auto network_id : monitored_networks )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] Looking for CID of tx {} in network {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               tx_hash,
-                                               network_id );
+            m_logger->debug( "Looking for CID of tx {} in network {}", tx_hash, network_id );
             auto                   key = GetTransactionPath( network_id, tx_hash );
             crdt::GlobalDB::Buffer key_buffer;
 
@@ -3387,36 +2935,23 @@ namespace sgns
 
     outcome::result<ConsensusManager::Check> TransactionManager::OnConsensusCertificate( const std::string &tx_hash )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Consensus certificate arrived for transaction {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx_hash );
+        m_logger->debug( "{}: Consensus certificate arrived for transaction {}", __func__, tx_hash );
         auto tx = GetTransactionByHash( tx_hash );
         if ( !tx )
         {
-            TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Transaction not found for hash {}. Accepting certificate callback and waiting for tx ingestion path",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
+            m_logger->warn(
+                "{}: Transaction not found for hash {}. Accepting certificate callback and waiting for tx ingestion path",
                 __func__,
                 tx_hash );
             return ConsensusManager::Check::Approve;
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx_hash );
+        m_logger->debug( "{}: Checking for conflicting transaction with {}", __func__, tx_hash );
 
         auto conflicting_tx = GetConflictingTransaction( *tx );
 
         if ( conflicting_tx.has_value() )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] Found conflicting transaction: {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              conflicting_tx.value()->GetHash() );
+            m_logger->warn( "Found conflicting transaction: {}", conflicting_tx.value()->GetHash() );
             std::unique_lock tx_lock( tx_mutex_m );
             auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
 
@@ -3424,10 +2959,8 @@ namespace sgns
 
             if ( it->second.status == TransactionStatus::CONFIRMED )
             {
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure what to do {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
+                m_logger->error(
+                    "Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure what to do {}",
                     conflicting_tx.value()->GetHash(),
                     tx_hash );
                 tx_lock.unlock();
@@ -3436,10 +2969,8 @@ namespace sgns
                     auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
                     if ( result.has_error() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] {}: Failed to change conflicting transaction state to FAILED for current tx {}: {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
+                        m_logger->error(
+                            "{}: Failed to change conflicting transaction state to FAILED for current tx {}: {}",
                             __func__,
                             conflicting_tx.value()->GetHash(),
                             result.error().message() );
@@ -3450,36 +2981,27 @@ namespace sgns
                     auto result = ChangeTransactionState( tx, TransactionStatus::FAILED );
                     if ( result.has_error() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] {}: Failed to change transaction state to FAILED for new tx {}: {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            __func__,
-                            tx_hash,
-                            result.error().message() );
+                        m_logger->error( "{}: Failed to change transaction state to FAILED for new tx {}: {}",
+                                         __func__,
+                                         tx_hash,
+                                         result.error().message() );
                     }
                     return outcome::failure( result.error() );
                 }
             }
             else
             {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] Setting conflicting transaction {} to FAILED since the new one {} is confirmed: ",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    conflicting_tx.value()->GetHash(),
-                    tx_hash );
+                m_logger->warn( "Setting conflicting transaction {} to FAILED since the new one {} is confirmed: ",
+                                conflicting_tx.value()->GetHash(),
+                                tx_hash );
                 tx_lock.unlock();
                 auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
                 if ( result.has_error() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Failed to change transaction state to FAILED for hash {}: {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx_hash,
-                        result.error().message() );
+                    m_logger->error( "{}: Failed to change transaction state to FAILED for hash {}: {}",
+                                     __func__,
+                                     tx_hash,
+                                     result.error().message() );
                 }
             }
         }
@@ -3487,39 +3009,25 @@ namespace sgns
         auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
         if ( result.has_error() )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Failed to change transaction state to CONFIRMED for hash {}: {}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx_hash,
-                result.error().message() );
+            m_logger->error( "{}: Failed to change transaction state to CONFIRMED for hash {}: {}",
+                             __func__,
+                             tx_hash,
+                             result.error().message() );
             return outcome::failure( result.error() );
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx_hash );
+        m_logger->debug( "{}: Transaction {} confirmed by consensus", __func__, tx_hash );
 
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
         if ( tx_hash_bin.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Could not parse tx hash for checkpoint tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Could not parse tx hash for checkpoint tx={}", __func__, tx_hash );
             return outcome::failure( tx_hash_bin.error() );
         }
 
         auto validator_registry = blockchain_->GetValidatorRegistry();
         if ( !validator_registry )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: No validator registry, skipping checkpoint",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: No validator registry, skipping checkpoint", __func__ );
             return outcome::failure( std::errc::no_such_device );
         }
 
@@ -3532,14 +3040,11 @@ namespace sgns
                                                                                  registry_hash );
              checkpoint_res.has_error() )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Failed to create UTXO checkpoint tx={} epoch={} err={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx_hash,
-                registry_epoch,
-                checkpoint_res.error().message() );
+            m_logger->error( "{}: Failed to create UTXO checkpoint tx={} epoch={} err={}",
+                             __func__,
+                             tx_hash,
+                             registry_epoch,
+                             checkpoint_res.error().message() );
         }
         return ConsensusManager::Check::Approve;
     }
@@ -3550,10 +3055,7 @@ namespace sgns
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
         if ( nonce_subject.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Received unexpected subject payload",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: Received unexpected subject payload", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
@@ -3568,11 +3070,7 @@ namespace sgns
             auto                                it = tx_processed_m.find( key );
             if ( it == tx_processed_m.end() )
             {
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction not found for hash {}, pending",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx_hash );
+                m_logger->debug( "{}: Transaction not found for hash {}, pending", __func__, tx_hash );
                 return ConsensusManager::Check::Pending;
             }
 
@@ -3583,22 +3081,13 @@ namespace sgns
 
         if ( !tracked_tx )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Tracked transaction missing for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Tracked transaction missing for hash {}", __func__, tx_hash );
             return outcome::failure( std::errc::invalid_argument );
         }
 
         auto reject_and_maybe_fail_local = [&]( const char *reason ) -> ConsensusManager::Check
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Rejecting nonce subject for hash {}: {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash,
-                                               reason );
+            m_logger->error( "{}: Rejecting nonce subject for hash {}: {}", __func__, tx_hash, reason );
 
             // Ensure local outgoing invalid transactions don't stay in VERIFYING forever.
             if ( tracked_tx->GetSrcAddress() == account_m->GetAddress() )
@@ -3610,13 +3099,10 @@ namespace sgns
                     if ( auto fail_result = ChangeTransactionState( tracked_tx, TransactionStatus::FAILED );
                          fail_result.has_error() )
                     {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] {}: Failed to mark rejected local tx as FAILED for hash {}: {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            __func__,
-                            tx_hash,
-                            fail_result.error().message() );
+                        m_logger->error( "{}: Failed to mark rejected local tx as FAILED for hash {}: {}",
+                                         __func__,
+                                         tx_hash,
+                                         fail_result.error().message() );
                     }
                 }
             }
@@ -3626,53 +3112,32 @@ namespace sgns
 
         if ( tracked_nonce != nonce_subject.value().nonce() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Nonce mismatch for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Nonce mismatch for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "nonce mismatch" );
         }
 
         if ( !subject.account_id().empty() && tracked_tx->GetSrcAddress() != subject.account_id() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Account mismatch for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Account mismatch for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "account mismatch" );
         }
 
         if ( tracked_status == TransactionStatus::FAILED )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Transaction status invalid for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Transaction status invalid for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "transaction already failed" );
         }
 
         if ( HasConfirmedInputConflict( tracked_tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Outpoint conflict against finalized transaction "
-                                               "for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Outpoint conflict against finalized transaction for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "input outpoint already finalized by another transaction" );
         }
 
         const auto witness_validation = ValidateWitnessForConsensus( subject, tracked_tx );
         if ( witness_validation == WitnessValidationResult::INVALID )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Witness validation failed for hash {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
+            m_logger->error( "{}: Witness validation failed for hash {}", __func__, tx_hash );
             return reject_and_maybe_fail_local( "witness validation failed" );
         }
 
@@ -3682,14 +3147,11 @@ namespace sgns
             auto eligibility_result = allow_list.IsEligible( migration_tx->GetSrcAddress(), migration_tx->GetAmount() );
             if ( eligibility_result.has_error() )
             {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Failed to evaluate local migration allowlist tx={} src={} err={}, pending",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx_hash,
-                    migration_tx->GetSrcAddress(),
-                    eligibility_result.error().message() );
+                m_logger->warn( "{}: Failed to evaluate local migration allowlist tx={} src={} err={}, pending",
+                                __func__,
+                                tx_hash,
+                                migration_tx->GetSrcAddress(),
+                                eligibility_result.error().message() );
                 return ConsensusManager::Check::Pending;
             }
             if ( !eligibility_result.value() )
@@ -3711,202 +3173,113 @@ namespace sgns
     bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
                                                                  const std::string      &address ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating UTXO params for address {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           address );
+        m_logger->debug( "{}: Validating UTXO params for address {}", __func__, address );
         if ( params.first.empty() || params.second.empty() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty inputs or outputs",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: Empty inputs or outputs", __func__ );
             return false;
         }
 
         if ( !account_m->GetUTXOManager().VerifyParameters( params, address ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: VerifyParameters failed for address {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               address );
+            m_logger->error( "{}: VerifyParameters failed for address {}", __func__, address );
             return false;
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: UTXO params valid for address {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           address );
+        m_logger->debug( "{}: UTXO params valid for address {}", __func__, address );
         return true;
     }
 
     bool TransactionManager::ValidateTransactionForConsensus( const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validating transaction",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__ );
+        m_logger->debug( "{}: Validating transaction", __func__ );
         if ( !tx )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Null transaction",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: Null transaction", __func__ );
             return false;
         }
 
         if ( !CheckTransactionWellFormed( *tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Well-formed check failed tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Well-formed check failed tx={}", __func__, tx->GetHash() );
             return false;
         }
         if ( !CheckTransactionAuthorization( *tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Authorization check failed tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Authorization check failed tx={}", __func__, tx->GetHash() );
             return false;
         }
         if ( !CheckTransactionTimestamp( *tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Timestamp check failed tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Timestamp check failed tx={}", __func__, tx->GetHash() );
             return false;
         }
         if ( !CheckTransactionReplayProtection( *tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Replay protection failed tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Replay protection failed tx={}", __func__, tx->GetHash() );
             return false;
         }
         //TODO - Deal with checking the Mint
         if ( !CheckTransactionTypeRules( tx ) )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Type rules failed tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Type rules failed tx={}", __func__, tx->GetHash() );
             return false;
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction valid tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx->GetHash() );
+        m_logger->debug( "{}: Transaction valid tx={}", __func__, tx->GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionWellFormed( const IGeniusTransactions &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking well-formed tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Checking well-formed tx={}", __func__, tx.GetHash() );
         if ( tx.GetHash().empty() || !tx.CheckHash() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Hash invalid tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash() );
+            m_logger->error( "{}: Hash invalid tx={}", __func__, tx.GetHash() );
             return false;
         }
 
         if ( tx.GetSrcAddress().empty() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Empty source address tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash() );
+            m_logger->error( "{}: Empty source address tx={}", __func__, tx.GetHash() );
             return false;
         }
 
         if ( tx.GetTimestamp() == 0 )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing timestamp tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash() );
+            m_logger->error( "{}: Missing timestamp tx={}", __func__, tx.GetHash() );
             return false;
         }
 
         if ( transaction_parsers.find( tx.GetType() ) == transaction_parsers.end() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Unknown tx type {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetType() );
+            m_logger->error( "{}: Unknown tx type {}", __func__, tx.GetType() );
             return false;
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Well-formed ok tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Well-formed ok tx={}", __func__, tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionAuthorization( const IGeniusTransactions &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking authorization tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Checking authorization tx={}", __func__, tx.GetHash() );
         if ( tx.CheckSignature() || tx.CheckDAGSignatureLegacy() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Authorization ok tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash() );
+            m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
             return true;
         }
-        TransactionManagerLogger()->error( "[{} - full: {}] {}: Authorization failed tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->error( "{}: Authorization failed tx={}", __func__, tx.GetHash() );
         return false;
     }
 
     bool TransactionManager::CheckTransactionTimestamp( const IGeniusTransactions &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking timestamp tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Checking timestamp tx={}", __func__, tx.GetHash() );
         const auto ts = tx.GetTimestamp();
         if ( ts == 0 )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing timestamp tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash() );
+            m_logger->error( "{}: Missing timestamp tx={}", __func__, tx.GetHash() );
             return false;
         }
 
@@ -3916,53 +3289,34 @@ namespace sgns
 
         if ( tolerance_ms > 0 && drift_ms > tolerance_ms )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Timestamp out of tolerance tx={} (elapsed: {} ms, tolerance: {} ms)",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx.GetHash(),
-                elapsed,
-                tolerance_ms );
+            m_logger->error( "{}: Timestamp out of tolerance tx={} (elapsed: {} ms, tolerance: {} ms)",
+                             __func__,
+                             tx.GetHash(),
+                             elapsed,
+                             tolerance_ms );
             return false;
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Timestamp ok tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Timestamp ok tx={}", __func__, tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking replay protection tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Checking replay protection tx={}", __func__, tx.GetHash() );
 
         if ( tx.GetNonce() > 0 )
         {
             const auto previous_hash = tx.GetPreviousHash();
             if ( previous_hash.empty() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous hash tx={}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx.GetHash() );
+                m_logger->error( "{}: Missing previous hash tx={}", __func__, tx.GetHash() );
                 return false;
             }
             auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
             if ( previous_cert_result.has_error() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   previous_hash );
+                m_logger->error( "{}: Missing previous certificate for hash {}", __func__, previous_hash );
                 return false;
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
@@ -3984,11 +3338,7 @@ namespace sgns
         auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
         if ( nonce_result.has_error() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: No confirmed nonce for address {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetSrcAddress() );
+            m_logger->debug( "{}: No confirmed nonce for address {}", __func__, tx.GetSrcAddress() );
             return true;
         }
 
@@ -3997,27 +3347,22 @@ namespace sgns
 
         if ( tx_nonce <= confirmed_nonce )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Nonce too low tx={} nonce={} confirmed={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash(),
-                                               tx_nonce,
-                                               confirmed_nonce );
+            m_logger->error( "{}: Nonce too low tx={} nonce={} confirmed={}",
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce );
             return false;
         }
 
         if ( tx_nonce > confirmed_nonce + nonce_window_m )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Nonce too high tx={} nonce={} confirmed={} window={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx.GetHash(),
-                tx_nonce,
-                confirmed_nonce,
-                nonce_window_m );
+            m_logger->error( "{}: Nonce too high tx={} nonce={} confirmed={} window={}",
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce,
+                             nonce_window_m );
             return false;
         }
 
@@ -4028,48 +3373,32 @@ namespace sgns
                 auto tracked = GetTrackedTxByNonceAndAddress( n, tx.GetSrcAddress() );
                 if ( !tracked.has_value() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Missing intermediate nonce {} for address {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        n,
-                        tx.GetSrcAddress() );
+                    m_logger->error( "{}: Missing intermediate nonce {} for address {}",
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return false;
                 }
                 if ( tracked->status == TransactionStatus::FAILED )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Intermediate nonce {} invalid for address {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        n,
-                        tx.GetSrcAddress() );
+                    m_logger->error( "{}: Intermediate nonce {} invalid for address {}",
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return false;
                 }
             }
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Replay protection ok tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Replay protection ok tx={}", __func__, tx.GetHash() );
         return true;
     }
 
     bool TransactionManager::CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking type rules",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__ );
+        m_logger->debug( "{}: Checking type rules", __func__ );
         if ( !tx )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Null transaction",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: Null transaction", __func__ );
             return false;
         }
 
@@ -4078,11 +3407,7 @@ namespace sgns
             auto params_opt = tx->GetUTXOParametersOpt();
             if ( !params_opt.has_value() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO parameters for tx={}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
+                m_logger->error( "{}: Missing UTXO parameters for tx={}", __func__, tx->GetHash() );
                 return false;
             }
             const auto  chain_id  = GetValidationChainId( tx );
@@ -4101,36 +3426,26 @@ namespace sgns
     {
         if ( !tx )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Null transaction",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__ );
+            m_logger->error( "{}: Null transaction", __func__ );
             return WitnessValidationResult::INVALID;
         }
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject );
-        TransactionManagerLogger()->debug(
-            "[{} - full: {}] {}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
-            "has_utxo_params={} has_commitment={} has_witness={}",
-            account_m->GetAddress().substr( 0, 8 ),
-            full_node_m,
-            __func__,
-            tx->GetHash(),
-            tx->GetSrcAddress(),
-            tx->GetNonce(),
-            nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
-            nonce_subject.has_value(),
-            tx->HasUTXOParameters(),
-            nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
-            nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
+        m_logger->debug( "{}: Start tx={} src={} nonce={} subject_nonce={} has_nonce={} "
+                         "has_utxo_params={} has_commitment={} has_witness={}",
+                         __func__,
+                         tx->GetHash(),
+                         tx->GetSrcAddress(),
+                         tx->GetNonce(),
+                         nonce_subject.has_value() ? nonce_subject.value().nonce() : 0,
+                         nonce_subject.has_value(),
+                         tx->HasUTXOParameters(),
+                         nonce_subject.has_value() && nonce_subject.value().has_utxo_commitment(),
+                         nonce_subject.has_value() && nonce_subject.value().has_utxo_witness() );
 
         if ( nonce_subject.has_error() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Subject has no nonce payload, accepting tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->debug( "{}: Subject has no nonce payload, accepting tx={}", __func__, tx->GetHash() );
             return WitnessValidationResult::VALID;
         }
 
@@ -4139,21 +3454,13 @@ namespace sgns
 
         if ( !tx->HasUTXOParameters() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Tx has no UTXO params, accepting tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->debug( "{}: Tx has no UTXO params, accepting tx={}", __func__, tx->GetHash() );
             return WitnessValidationResult::VALID;
         }
 
         if ( !nonce_subject.value().has_utxo_commitment() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO commitment tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Missing UTXO commitment tx={}", __func__, tx->GetHash() );
             return WitnessValidationResult::INVALID;
         }
 
@@ -4161,16 +3468,13 @@ namespace sgns
         if ( commitment.consumed_outpoints_root().size() != base::Hash256::size() ||
              commitment.produced_outputs_root().size() != base::Hash256::size() )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Invalid commitment root sizes tx={} consumed_size={} "
-                "produced_size={} expected={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx->GetHash(),
-                commitment.consumed_outpoints_root().size(),
-                commitment.produced_outputs_root().size(),
-                base::Hash256::size() );
+            m_logger->error( "{}: Invalid commitment root sizes tx={} consumed_size={} "
+                             "produced_size={} expected={}",
+                             __func__,
+                             tx->GetHash(),
+                             commitment.consumed_outpoints_root().size(),
+                             commitment.produced_outputs_root().size(),
+                             base::Hash256::size() );
             return WitnessValidationResult::INVALID;
         }
         auto consumed_root_result = base::Hash256::fromSpan(
@@ -4178,46 +3482,33 @@ namespace sgns
                        commitment.consumed_outpoints_root().size() ) );
         if ( consumed_root_result.has_error() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to parse commitment consumed root tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Failed to parse commitment consumed root tx={}", __func__, tx->GetHash() );
             return WitnessValidationResult::INVALID;
         }
 
         if ( validator.RequiresConsensusUTXOData() && !nonce_subject.value().has_utxo_witness() )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx->GetHash(),
-                chain_id,
-                validator.RequiresConsensusUTXOData() );
+            m_logger->error( "{}: Missing required UTXO witness tx={} chain_id={} validator_requires_witness={}",
+                             __func__,
+                             tx->GetHash(),
+                             chain_id,
+                             validator.RequiresConsensusUTXOData() );
             return WitnessValidationResult::INVALID;
         }
 
         auto params_opt = tx->GetUTXOParametersOpt();
         if ( !params_opt.has_value() )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing UTXO params payload tx={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx->GetHash() );
+            m_logger->error( "{}: Missing UTXO params payload tx={}", __func__, tx->GetHash() );
             return WitnessValidationResult::INVALID;
         }
         (void)consumed_root_result;
         const bool witness_ok = validator.ValidateWitness( subject, tx, params_opt.value(), blockchain_ );
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Validator witness result tx={} chain_id={} result={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx->GetHash(),
-                                           chain_id,
-                                           witness_ok );
+        m_logger->debug( "{}: Validator witness result tx={} chain_id={} result={}",
+                         __func__,
+                         tx->GetHash(),
+                         chain_id,
+                         witness_ok );
         return witness_ok ? WitnessValidationResult::VALID : WitnessValidationResult::INVALID;
     }
 
@@ -4269,11 +3560,7 @@ namespace sgns
         std::vector<GeniusUTXO> produced_outputs;
         if ( !ExtractProducedUTXOs( *tx, produced_outputs ) )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Could not extract produced outputs for tx={}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__,
-                                              tx->GetHash() );
+            m_logger->warn( "{}: Could not extract produced outputs for tx={}", __func__, tx->GetHash() );
             return std::nullopt;
         }
         std::vector<std::vector<uint8_t>> produced_payloads;
@@ -4488,12 +3775,6 @@ namespace sgns
                 }
             }
         };
-        const auto tx_hash = base::Hash256::fromReadableString( tx->GetHash() );
-        if ( tx_hash.has_error() )
-        {
-            return false;
-        }
-
         if ( !tx->HasUTXOParameters() )
         {
             return false;
@@ -4504,17 +3785,19 @@ namespace sgns
         {
             return false;
         }
-        const auto &[inputs, outputs] = params_opt.value();
-        remove_inputs( inputs );
-        for ( std::uint32_t i = 0; i < outputs.size(); ++i )
+        const auto &inputs = params_opt->first;
+
+        std::vector<GeniusUTXO> produced_outputs;
+        if ( !ExtractProducedUTXOs( *tx, produced_outputs ) )
         {
-            if ( outputs[i].dest_address == tx->GetSrcAddress() )
+            return false;
+        }
+        remove_inputs( inputs );
+        for ( const auto &output : produced_outputs )
+        {
+            if ( output.GetOwnerAddress() == tx->GetSrcAddress() )
             {
-                snapshot.emplace_back( tx_hash.value(),
-                                       i,
-                                       outputs[i].encrypted_amount,
-                                       outputs[i].token_id,
-                                       tx->GetSrcAddress() );
+                snapshot.push_back( output );
             }
         }
         return true;
@@ -4524,31 +3807,21 @@ namespace sgns
     {
         if ( window == 0 )
         {
-            TransactionManagerLogger()->warn( "[{} - full: {}] {}: Nonce window 0, using default {}",
-                                              account_m->GetAddress().substr( 0, 8 ),
-                                              full_node_m,
-                                              __func__,
-                                              DEFAULT_NONCE_WINDOW );
+            m_logger->warn( "{}: Nonce window 0, using default {}", __func__, DEFAULT_NONCE_WINDOW );
             nonce_window_m = DEFAULT_NONCE_WINDOW;
             return;
         }
-        TransactionManagerLogger()->info( "[{} - full: {}] {}: Setting nonce window to {}",
-                                          account_m->GetAddress().substr( 0, 8 ),
-                                          full_node_m,
-                                          __func__,
-                                          window );
+        m_logger->info( "{}: Setting nonce window to {}", __func__, window );
         nonce_window_m = window;
     }
 
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                                       TransactionStatus new_status )
     {
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Changing transaction state to {} for transaction {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           static_cast<int>( new_status ),
-                                           tx->GetHash() );
+        m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
+                         __func__,
+                         static_cast<int>( new_status ),
+                         tx->GetHash() );
         const auto key = GetTransactionPath( *tx );
         switch ( new_status )
         {
@@ -4558,19 +3831,12 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to CREATE a transaction that already exists {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to CREATE a transaction that already exists {}",
+                                     __func__,
+                                     tx->GetHash() );
                     return outcome::failure( std::errc::file_exists );
                 }
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of CREATE to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
+                m_logger->debug( "{}: Set status of CREATE to transaction {}", __func__, tx->GetHash() );
                 tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::CREATED, tx->GetNonce() } );
             }
             break;
@@ -4580,30 +3846,20 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it == tx_processed_m.end() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to SEND a transaction that doesn't exist {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to SEND a transaction that doesn't exist {}",
+                                     __func__,
+                                     tx->GetHash() );
                     return outcome::failure( std::errc::no_such_file_or_directory );
                 }
                 if ( it->second.status != TransactionStatus::CREATED )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to SEND a transaction that is not in CREATED status {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to SEND a transaction that is not in CREATED status {}",
+                                     __func__,
+                                     tx->GetHash() );
                     return outcome::failure( std::errc::invalid_argument );
                 }
                 it->second.status = TransactionStatus::SENDING;
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of SENDING to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
+                m_logger->debug( "{}: Set status of SENDING to transaction {}", __func__, tx->GetHash() );
             }
             break;
             case TransactionStatus::VERIFYING:
@@ -4613,22 +3869,14 @@ namespace sgns
 
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to VERIFY a transaction that is already in VERIFY {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to VERIFY a transaction that is already in VERIFY {}",
+                                     __func__,
+                                     tx->GetHash() );
                     break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Unconfirming transaction {} and verifying it again",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->warn( "{}: Unconfirming transaction {} and verifying it again", __func__, tx->GetHash() );
                     BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
@@ -4636,25 +3884,13 @@ namespace sgns
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of VERIFYING to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] {}: Attempting to resume the proposal handling to transaction {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx->GetHash() );
+                m_logger->debug( "{}: Set status of VERIFYING to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Attempting to resume the proposal handling to transaction {}",
+                                 __func__,
+                                 tx->GetHash() );
                 tx_lock.unlock();
                 BOOST_OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
-                TransactionManagerLogger()->debug(
-                    "[{} - full: {}] {}: Resumed the proposal handling to transaction {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    tx->GetHash() );
+                m_logger->debug( "{}: Resumed the proposal handling to transaction {}", __func__, tx->GetHash() );
             }
 
             break;
@@ -4664,21 +3900,14 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
+                                     __func__,
+                                     tx->GetHash() );
                     break;
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::CONFIRMED, tx->GetNonce() };
 
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of CONFIRMED to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
+                m_logger->debug( "{}: Set status of CONFIRMED to transaction {}", __func__, tx->GetHash() );
                 BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
@@ -4695,21 +3924,14 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::FAILED )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Trying to FAIL a transaction that is already FAILED {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx->GetHash() );
+                    m_logger->error( "{}: Trying to FAIL a transaction that is already FAILED {}",
+                                     __func__,
+                                     tx->GetHash() );
                     break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    TransactionManagerLogger()->debug( "[{} - full: {}] {}: Unconfirming transaction {}",
-                                                       account_m->GetAddress().substr( 0, 8 ),
-                                                       full_node_m,
-                                                       __func__,
-                                                       tx->GetHash() );
+                    m_logger->debug( "{}: Unconfirming transaction {}", __func__, tx->GetHash() );
                     BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
@@ -4728,11 +3950,7 @@ namespace sgns
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
                 account_m->ReleaseNonce( tx->GetNonce() );
 
-                TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of FAILED to transaction {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx->GetHash() );
+                m_logger->debug( "{}: Set status of FAILED to transaction {}", __func__, tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
@@ -4741,22 +3959,17 @@ namespace sgns
 
             break;
             default:
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] {}: Invalid transaction status {} for transaction {}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    static_cast<int>( new_status ),
-                    tx->GetHash() );
+                m_logger->error( "{}: Invalid transaction status {} for transaction {}",
+                                 __func__,
+                                 static_cast<int>( new_status ),
+                                 tx->GetHash() );
                 return outcome::failure( std::errc::invalid_argument );
         }
 
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} state changed to {}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx->GetHash(),
-                                           static_cast<int>( new_status ) );
+        m_logger->debug( "{}: Transaction {} state changed to {}",
+                         __func__,
+                         tx->GetHash(),
+                         static_cast<int>( new_status ) );
         return outcome::success();
     }
 
@@ -4770,7 +3983,6 @@ namespace sgns
         auto result = DeSerializeTransaction( existing_data_result.value() );
         return !result.has_error();
     }
-
 }
 
 fmt::format_context::iterator fmt::formatter<sgns::TransactionManager::State>::format(

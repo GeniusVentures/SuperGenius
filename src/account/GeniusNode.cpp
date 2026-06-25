@@ -2344,13 +2344,7 @@ namespace sgns
             node_logger_->error( "{}: Transactions not ready", __func__ );
             return TransactionManager::TransactionStatus::INVALID;
         }
-        auto manager = manager_result.value();
-        auto retval  = manager->GetOutgoingStatusByTxId( txId );
-        if ( retval == TransactionManager::TransactionStatus::INVALID )
-        {
-            retval = manager->GetIncomingStatusByTxId( txId );
-        }
-        return retval;
+        return manager_result.value()->GetTransactionStatusByTxId( txId );
     }
 
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
