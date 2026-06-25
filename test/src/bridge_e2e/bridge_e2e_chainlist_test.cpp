@@ -429,6 +429,59 @@ TEST( BridgeE2EChainlistTest, FetchedEndpointsMergeWithExistingOperatorEndpoints
         << "Fetched public endpoints must be merged with, not replace, operator endpoints";
 }
 
+// After the private/public merge, an operator endpoint may carry only the legacy
+// v1 topic0 while fetched endpoints carry {v1, v2}. A valid v2 receipt
+// legitimately mismatches the v1-only endpoint; verification must NOT abort on
+// that first endpoint — it must continue and reach quorum on the v1+v2 endpoints.
+TEST( BridgeE2EChainlistTest, V2ReceiptPassesPastStaleV1OnlyOperatorEndpoint )
+{
+    PublicChainInputValidator validator;
+    const auto        v1_h = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    const auto        v2_h = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v1   = rlp::base::parse::hex_bytes( v1_h.data(), v1_h.size() );
+    const std::string v2   = rlp::base::parse::hex_bytes( v2_h.data(), v2_h.size() );
+
+    // Operator's private endpoint, configured BEFORE the v2 upgrade (v1 only).
+    {
+        WeightedRpcEndpoint ep;
+        ep.url                     = "https://operator-private.example";
+        ep.consensus_weight        = 50;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = { v1 }; // stale: v1 only
+        validator.SetRpcEndpoints( "11155111", { ep } );
+    }
+    // Provider merge appends fetched endpoints carrying BOTH v1 + v2.
+    {
+        std::vector<WeightedRpcEndpoint> fetched;
+        for ( const auto &url : kSepoliaRpcUrls )
+        {
+            WeightedRpcEndpoint ep;
+            ep.url                     = url;
+            ep.consensus_weight        = 25;
+            ep.bridge_contract_address = kSepoliaContract;
+            ep.accepted_topic0_hashes  = { v1, v2 };
+            fetched.push_back( std::move( ep ) );
+        }
+        validator.AddRpcEndpoints( "11155111", std::move( fetched ) );
+    }
+
+    // The operator's endpoint is first and mismatches a v2 receipt; without the
+    // continue-on-mismatch fix, verification would return false here.
+    const std::string source_ref = "0x" + std::string( 64, '7' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "A v2 receipt must reach quorum on v1+v2 endpoints, skipping the stale v1-only endpoint";
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();

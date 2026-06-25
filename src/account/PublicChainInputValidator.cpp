@@ -275,13 +275,21 @@ namespace sgns
                 }
                 if ( !log_matched )
                 {
-                    logger->error( "VerifyPublicChainSmartContract log mismatch bridge={} tx={} url={} "
-                                   "(none of {} accepted topic0 hashes matched)",
+                    // Per-endpoint topic mismatch must NOT abort the whole
+                    // verification. After the private/public endpoint merge, an
+                    // operator's endpoint may carry only the legacy v1 topic0
+                    // while fetched endpoints carry {v1, v2}; a valid v2 receipt
+                    // legitimately mismatches the v1-only endpoint and must still
+                    // reach quorum on the v1+v2 endpoints. Treat the mismatch as
+                    // "this endpoint did not confirm" and continue.
+                    logger->debug( "VerifyPublicChainSmartContract topic mismatch bridge={} tx={} url={} "
+                                   "— endpoint covers {} topic0 hash(es); continuing quorum evaluation",
                                    ep.bridge_contract_address,
                                    PreviewValue( source_reference ),
                                    ep.url,
                                    ep.accepted_topic0_hashes.size() );
-                    return false;
+                    ++tried;
+                    continue;
                 }
             }
 
