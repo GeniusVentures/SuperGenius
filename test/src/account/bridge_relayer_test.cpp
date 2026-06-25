@@ -704,3 +704,41 @@ TEST( BridgeRelayerTest, V1DestinationIsBareHexMatchingGetAddressFormat )
     EXPECT_EQ( result.value().destination, kTestSgnsDestination )
         << "v1 destination must equal the input public key (GetAddress format)";
 }
+
+TEST( BridgeRelayerTest, V1DestinationRejectsEmptyPayload )
+{
+    // @regression An empty v1 sgnsDestination must be rejected, not silently
+    //             turned into "" — MintFunds credits an empty destination to the
+    //             relayer's own address, so the burn would be miscredited.
+    std::vector<eth::abi::AbiValue> values;
+    values.push_back( eth::codec::Address{} );             // [0] sender
+    values.push_back( intx::uint256( 1 ) );                // [1] id
+    values.push_back( intx::uint256( 1 ) );                // [2] amount
+    values.push_back( intx::uint256( 11155111 ) );         // [3] srcChainID
+    values.push_back( intx::uint256( 8453 ) );             // [4] destChainID
+    values.push_back( eth::codec::ByteBuffer{} );          // [5] sgnsDestination (empty)
+
+    auto result = BridgeRelayer::ParseBurnEventValues( values );
+    EXPECT_FALSE( result.has_value() ) << "An empty v1 sgnsDestination must be rejected";
+}
+
+TEST( BridgeRelayerTest, V1DestinationRejectsWrongLengthPayload )
+{
+    // @regression A v1 sgnsDestination that is not exactly the 64-byte SG public
+    //             key must be rejected — a wrong-length payload would yield a
+    //             malformed recipient.
+    std::array<uint8_t, 64> full_arr{};
+    ASSERT_TRUE( rlp::base::parse::hex_array( kTestSgnsDestination, full_arr ) );
+    eth::codec::ByteBuffer short_bytes( full_arr.begin(), full_arr.begin() + 32 ); // 32 bytes, not 64
+
+    std::vector<eth::abi::AbiValue> values;
+    values.push_back( eth::codec::Address{} );                  // [0] sender
+    values.push_back( intx::uint256( 1 ) );                     // [1] id
+    values.push_back( intx::uint256( 1 ) );                     // [2] amount
+    values.push_back( intx::uint256( 11155111 ) );              // [3] srcChainID
+    values.push_back( intx::uint256( 8453 ) );                  // [4] destChainID
+    values.push_back( std::move( short_bytes ) );               // [5] sgnsDestination (wrong length)
+
+    auto result = BridgeRelayer::ParseBurnEventValues( values );
+    EXPECT_FALSE( result.has_value() ) << "A non-64-byte v1 sgnsDestination must be rejected";
+}

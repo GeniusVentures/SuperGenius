@@ -215,6 +215,8 @@ namespace sgns
         static constexpr size_t kAmountIndex          = 2;
         static constexpr size_t kSgnsDestinationIndex = 5;
         static constexpr size_t kDestinationYOddIndex = 6;
+        // SG public key is the uncompressed X||Y coordinates (32 + 32 bytes).
+        static constexpr size_t kSgnsPubKeyBytes      = 64;
 
         if ( values.size() < kExpectedMinParams )
         {
@@ -253,6 +255,17 @@ namespace sgns
         if ( std::holds_alternative<eth::codec::ByteBuffer>( dest_val ) )
         {
             const auto &dest_bytes = std::get<eth::codec::ByteBuffer>( dest_val );
+            // Require exactly the 64-byte SG public key (128 hex chars). An empty
+            // or wrong-length payload would otherwise yield "" (which MintFunds
+            // silently credits to the relayer's own address) or a malformed
+            // recipient — reject the burn instead.
+            if ( dest_bytes.size() != kSgnsPubKeyBytes )
+            {
+                BridgeRelayerLogger()->error(
+                    "ParseBurnEventValues: v1 sgnsDestination must be {} bytes, got {}",
+                    kSgnsPubKeyBytes, dest_bytes.size() );
+                return outcome::failure( std::errc::invalid_argument );
+            }
             // hex_bytes() prepends "0x"; GetAddress() and the v2 decompression
             // path return a bare 128-char hex string, so strip the prefix —
             // otherwise v1 mints are addressed to "0x"+key and recipient
