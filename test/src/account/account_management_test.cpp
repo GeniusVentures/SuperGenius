@@ -107,12 +107,12 @@ TEST_F( AccountManagement, SetPayoutAddress )
     {
     }
 
-    auto node_receiver = sgns::GeniusNode::New(
+    auto node_receiver = sgns::GeniusNode::NewFromPrivateKey(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
         "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f",
         false,
         false );
-    auto node_requester = sgns::GeniusNode::New(
+    auto node_requester = sgns::GeniusNode::NewFromPrivateKey(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0",
         false,

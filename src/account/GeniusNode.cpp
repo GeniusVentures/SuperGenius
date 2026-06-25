@@ -310,7 +310,7 @@ namespace sgns
     {
         crdt_backup_config_ = crdt::GlobalDB::BackupOptions{ true, 15, 12, true };
 
-        const std::string config_path = write_base_path_ + "/crdt_config.json";
+        const std::string config_path = write_base_path_ + "crdt_config.json";
         std::ifstream     config_file( config_path );
         if ( !config_file.good() )
         {
