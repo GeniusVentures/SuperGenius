@@ -482,6 +482,68 @@ TEST( BridgeE2EChainlistTest, V2ReceiptPassesPastStaleV1OnlyOperatorEndpoint )
         << "A v2 receipt must reach quorum on v1+v2 endpoints, skipping the stale v1-only endpoint";
 }
 
+// When the fetched chainlist contains a URL the operator already configured
+// (stale, v1-only), AddRpcEndpoints must UPGRADE the existing entry with the
+// fetched {v1,v2} metadata — not drop the fetched record. Otherwise the
+// high-weight endpoint keeps failing v2 receipts and quorum can fail even
+// though the fetch supplied the missing v2 metadata.
+TEST( BridgeE2EChainlistTest, DuplicateUrlFetchedUpgradesExistingEndpointMetadata )
+{
+    PublicChainInputValidator validator;
+    const auto        v1_h = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
+    const auto        v2_h = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
+    const std::string v1   = rlp::base::parse::hex_bytes( v1_h.data(), v1_h.size() );
+    const std::string v2   = rlp::base::parse::hex_bytes( v2_h.data(), v2_h.size() );
+
+    // Operator's high-weight endpoint is stale (v1 only) at a shared URL.
+    {
+        WeightedRpcEndpoint ep;
+        ep.url                     = "https://shared.example";
+        ep.consensus_weight        = 50;
+        ep.bridge_contract_address = kSepoliaContract;
+        ep.accepted_topic0_hashes  = { v1 }; // stale: v1 only
+        validator.SetRpcEndpoints( "11155111", { ep } );
+    }
+    // Fetched: the SAME url (now carrying {v1,v2}) + one additional endpoint.
+    {
+        std::vector<WeightedRpcEndpoint> fetched;
+        WeightedRpcEndpoint a;
+        a.url                     = "https://shared.example"; // duplicate URL
+        a.consensus_weight        = 25;
+        a.bridge_contract_address = kSepoliaContract;
+        a.accepted_topic0_hashes  = { v1, v2 };
+        WeightedRpcEndpoint b;
+        b.url                     = "https://other.example";
+        b.consensus_weight        = 25;
+        b.bridge_contract_address = kSepoliaContract;
+        b.accepted_topic0_hashes  = { v1, v2 };
+        fetched.push_back( std::move( a ) );
+        fetched.push_back( std::move( b ) );
+        validator.AddRpcEndpoints( "11155111", std::move( fetched ) );
+    }
+
+    // shared.example upgraded (not duplicated) + other.example appended = 2.
+    EXPECT_EQ( PublicChainInputValidatorTestAccess::EndpointCount( validator, "11155111" ), 2u )
+        << "A fetched duplicate URL must upgrade the existing entry, not add a duplicate";
+
+    // A v2 receipt reaches quorum because the high-weight shared.example endpoint
+    // was upgraded to {v1,v2} (50 + 25 = 75). Without the upgrade it would stay
+    // v1-only, mismatch v2, and leave only the 25-weight endpoint (< quorum).
+    const std::string source_ref = "0x" + std::string( 64, '8' );
+    validator.SetTransportFactory(
+        [&]( const std::string &, std::chrono::seconds ) {
+            return std::make_unique<FixedReceiptTransport>(
+                BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
+        } );
+
+    SGTransaction::DAGStruct dag;
+    auto mint = std::make_shared<MintTransaction>(
+        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
+        << "The upgraded (v1+v2) high-weight endpoint must let a v2 receipt reach quorum";
+}
+
 TEST( BridgeE2EChainlistTest, ObserverReceivesConfiguredChain )
 {
     auto config_path = WriteTempBridgeConfig();

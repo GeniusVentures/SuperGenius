@@ -143,23 +143,55 @@ namespace sgns
     {
         auto        logger = InputValidatorLogger();
         auto       &existing = rpc_endpoints_[chain_id];
-        std::unordered_set<std::string> seen;
-        seen.reserve( existing.size() + endpoints.size() );
-        for ( const auto &e : existing )
+
+        // Index existing endpoints by URL so a fetched duplicate UPGRADES the
+        // existing entry instead of being dropped. Otherwise a stale v1-only
+        // operator endpoint at the same URL as a fetched v1+v2 endpoint keeps
+        // failing v2 receipts and, being high-weight, can break quorum even
+        // though the fetch supplied the missing v2 metadata.
+        std::unordered_map<std::string, size_t> index;
+        index.reserve( existing.size() + endpoints.size() );
+        for ( size_t i = 0; i < existing.size(); ++i )
         {
-            seen.insert( e.url );
+            index.emplace( existing[i].url, i );
         }
+
         size_t added = 0;
+        size_t upgraded = 0;
         for ( auto &e : endpoints )
         {
-            if ( seen.insert( e.url ).second )
+            auto it = index.find( e.url );
+            if ( it == index.end() )
             {
+                index.emplace( e.url, existing.size() );
                 existing.push_back( std::move( e ) );
                 ++added;
             }
+            else
+            {
+                // Same URL already configured: union the accepted topic0 hashes
+                // (so a v1-only entry picks up the fetched v2 hash) and fill a
+                // missing bridge contract. Keep the existing weight — it
+                // reflects the operator's intent for that endpoint.
+                auto &cur = existing[it->second];
+                for ( const auto &h : e.accepted_topic0_hashes )
+                {
+                    if ( std::find( cur.accepted_topic0_hashes.begin(),
+                                    cur.accepted_topic0_hashes.end(),
+                                    h ) == cur.accepted_topic0_hashes.end() )
+                    {
+                        cur.accepted_topic0_hashes.push_back( h );
+                    }
+                }
+                if ( cur.bridge_contract_address.empty() )
+                {
+                    cur.bridge_contract_address = e.bridge_contract_address;
+                }
+                ++upgraded;
+            }
         }
-        logger->info( "AddRpcEndpoints: chain_id={} added={} total={}",
-                      chain_id, added, existing.size() );
+        logger->info( "AddRpcEndpoints: chain_id={} added={} upgraded={} total={}",
+                      chain_id, added, upgraded, existing.size() );
     }
 
     bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
