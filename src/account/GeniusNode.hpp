@@ -560,10 +560,10 @@ namespace sgns
                                                                           std::chrono::milliseconds timeout );
 
         /**
-         * @brief Waits for an escrow release transaction tied to an escrow hold.
+         * @brief Waits until an escrow hold output is consumed.
          * @param[in] originalEscrowId Hash of the original escrow hold transaction.
          * @param[in] timeout Maximum time to wait.
-         * @return Escrow release transaction status, or INVALID when transactions are not ready.
+         * @return CONFIRMED when consumed, or INVALID when transactions are not ready or the wait times out.
          */
         TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                                     std::chrono::milliseconds timeout );

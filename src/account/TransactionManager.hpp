@@ -178,9 +178,8 @@ namespace sgns
                                                       std::chrono::milliseconds timeout ) const;
 
         /**
-         * @brief Polls until an EscrowReleaseTransaction referencing @p originalEscrowId
-         *        reaches a terminal state or @p timeout expires.
-         * @return TransactionStatus of the release tx, or INVALID if not found within timeout.
+         * @brief Polls until the original escrow hold output is consumed or @p timeout expires.
+         * @return CONFIRMED when consumed, or INVALID on timeout.
          */
         TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                 std::chrono::milliseconds timeout ) const;
@@ -379,7 +378,7 @@ namespace sgns
          *        Full nodes are allowed through even when the network is unreachable.
          * @return true if nonce is in sync (or we're a full node with no network).
          */
-        bool CheckNonce() const;
+        bool IsLocalNonceSynced() const;
 
         /**
          * @brief Compares the local proposed nonce with the network-confirmed nonce.
@@ -392,18 +391,6 @@ namespace sgns
          * @brief Request heads for relevant topics when we detect we're behind.
          */
         void RequestRelevantHeads();
-
-        /**
-         * @brief Validates signatures of outgoing transactions at the given nonces.
-         *
-         * Transactions with invalid signatures (checked current then legacy) are
-         * removed from processed maps and deleted from the CRDT. Valid ones are
-         * promoted to CONFIRMED.
-         *
-         * @param[in] nonces_to_check  Set of nonces to validate.
-         * @return true if any transactions were invalidated.
-         */
-        outcome::result<bool> CheckTransactionValidity( const std::set<uint64_t> &nonces_to_check );
 
         /**
          * @brief Removes a transaction key from the CRDT within an atomic transaction,
@@ -422,7 +409,10 @@ namespace sgns
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
-        TransactionStatus GetStatusByTxId( const std::string &txId, std::optional<bool> outgoing ) const;
+        TransactionStatus WaitForTransaction( const std::string        &txId,
+                                              std::chrono::milliseconds timeout,
+                                              bool                      outgoing ) const;
+        TransactionStatus GetStatusByTxId( const std::string &txId, bool outgoing ) const;
         bool              SetOutgoingStatusByNonce( uint64_t nonce, TransactionStatus s );
 
         /**
@@ -519,18 +509,16 @@ namespace sgns
          * transaction survives. Rejected elements are returned as tombstones
          * together with their associated proof key.
          *
-         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         * @return nullopt to accept.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterTransaction( const crdt::pb::Element &element );
 
         /**
          * @brief CRDT element filter for incoming proofs.
          *
-         * Currently accepts all proofs that are already stored or newly arriving
-         * (full verification path is present but short-circuited).
-         * Invalid proofs are tombstoned together with their associated tx key.
+         * Currently accepts all proofs that are already stored or newly arriving.
          *
-         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         * @return nullopt to accept.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
 
@@ -544,24 +532,6 @@ namespace sgns
          */
         bool ShouldReplaceTransaction( const IGeniusTransactions &existing_tx,
                                        const IGeniusTransactions &new_tx ) const;
-
-        static uint64_t GetCurrentTimestamp();
-
-        /**
-         * @brief Computes @p current_timestamp − @p timestamp in milliseconds.
-         *        Result may be negative when the timestamp is in the future.
-         */
-        int64_t GetElapsedTime( uint64_t timestamp, uint64_t current_timestamp ) const;
-
-        /// @overload Uses the current wall-clock time.
-        int64_t GetElapsedTime( uint64_t timestamp ) const;
-
-        /**
-         * @brief Returns true when the transaction's age exceeds mutability window.
-         *        A window of zero means transactions are always mutable.
-         *        Future-timestamped transactions are never considered immutable.
-         */
-        bool IsTransactionImmutable( const IGeniusTransactions &tx ) const;
 
         /**
          * @brief Removes a transaction from map, reverts its UTXO
