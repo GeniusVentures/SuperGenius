@@ -2274,19 +2274,6 @@ namespace sgns
         }
     }
 
-    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms )
-    {
-        auto manager_result = GetTransactionManager();
-        if ( !manager_result.has_value() )
-        {
-            node_logger_->error( "{}: Transactions not ready", __func__ );
-            return;
-        }
-        auto manager = manager_result.value();
-        manager->SetTimeFrameToleranceMs( timeframe_limit_ms );
-        manager->SetMutabilityWindowMs( mutability_window_ms );
-    }
-
     void GeniusNode::RotateLogFiles( const std::string &base_path )
     {
         std::filesystem::path basePath( base_path );

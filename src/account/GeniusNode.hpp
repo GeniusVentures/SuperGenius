@@ -613,13 +613,6 @@ namespace sgns
          */
         void SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof );
 
-        /**
-         * @brief Configures transaction filtering time windows for tests.
-         * @param[in] timeframe_limit_ms Timestamp tolerance in milliseconds.
-         * @param[in] mutability_window_ms Mutability window in milliseconds.
-         */
-        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
-
         std::string                    write_base_path_; ///< Base path for node databases, logs, and account storage.
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
 

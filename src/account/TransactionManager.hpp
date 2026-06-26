@@ -11,6 +11,7 @@
 #include <deque>
 #include <cstdint>
 #include <chrono>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <optional>
@@ -207,13 +208,6 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
         /**
-         * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
-         * @return The conflicting transaction, or failure if none exists.
-         */
-        outcome::result<std::shared_ptr<IGeniusTransactions>> GetConflictingTransaction(
-            const IGeniusTransactions &element ) const;
-
-        /**
          * @brief Idempotent stop. Sets the stopped flag and wakes the tick loop.
          */
         void Stop();
@@ -269,10 +263,6 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
-
-        void SetTimeFrameToleranceMs( uint64_t timeframe_tolerance );
-        void SetMutabilityWindowMs( uint64_t mutability_window );
-
     private:
         static constexpr std::string_view TRANSACTION_BASE_FORMAT = "/bc-%hu/";
 
@@ -404,8 +394,7 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<IGeniusTransactions> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
-        std::shared_ptr<IGeniusTransactions> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                              const std::string &address ) const;
+        std::optional<TrackedTx> GetConflictingTransaction( const IGeniusTransactions &element ) const;
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
@@ -548,12 +537,6 @@ namespace sgns
          */
         outcome::result<void> AddTransactionToProcessedMaps( crdt::CRDTCallbackManager::NewDataPair new_data );
 
-        /**
-         * @brief Persists a tx-key → CID mapping in the RocksDB datastore so that
-         *        the CID can be retrieved later via GetTransactionCID.
-         */
-        outcome::result<void> StoreTransactionCID( const std::string &key, const std::string &cid );
-
         void ProcessDeletion( std::string deleted_key );
         void ProcessNewData( crdt::CRDTCallbackManager::NewDataPair new_data );
 
@@ -561,7 +544,7 @@ namespace sgns
          * @brief CRDT new-element callback. Stores the CID, pushes the data onto
          *        new_data_queue_, and wakes the tick loop.
          */
-        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
+        void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string_view cid );
 
         /**
          * @brief CRDT deleted-element callback. Pushes the key onto
@@ -596,19 +579,15 @@ namespace sgns
         bool CheckTransactionReplayProtection( const IGeniusTransactions &tx ) const;
         bool CheckTransactionTypeRules( const std::shared_ptr<IGeniusTransactions> &tx ) const;
         std::optional<UTXOTransitionCommitment> BuildUTXOTransitionCommitment(
-            const std::shared_ptr<IGeniusTransactions> &tx ) const;
-        std::optional<UTXOWitness> BuildUTXOWitness( const std::shared_ptr<IGeniusTransactions> &tx ) const;
-        bool                       ApplyTransactionToUTXOSnapshot( const std::shared_ptr<IGeniusTransactions> &tx,
-                                                                   std::vector<GeniusUTXO>                    &snapshot ) const;
+            const IGeniusTransactions &tx,
+            const UTXOTxParameters    &params ) const;
+        std::optional<UTXOWitness> BuildUTXOWitness( const IGeniusTransactions &tx,
+                                                     const UTXOTxParameters    &params ) const;
         WitnessValidationResult    ValidateWitnessForConsensus( const ConsensusSubject                     &subject,
                                                                 const std::shared_ptr<IGeniusTransactions> &tx ) const;
-        bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
-        void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<IGeniusTransactions> &tx,
                                                       TransactionStatus                           new_status );
         bool HasConfirmedInputConflict( const std::shared_ptr<IGeniusTransactions> &candidate_tx ) const;
-
-        bool KeyExistsInDB( const std::string &key ) const;
 
     private:
         static constexpr std::string_view GENIUS_CHAIN_ID = "supergenius";
@@ -630,6 +609,12 @@ template <>
 struct fmt::formatter<sgns::TransactionManager::State> : formatter<std::string_view>
 {
     format_context::iterator format( sgns::TransactionManager::State s, format_context &ctx ) const;
+};
+
+template <>
+struct fmt::formatter<sgns::TransactionManager::TransactionStatus> : formatter<std::string_view>
+{
+    format_context::iterator format( sgns::TransactionManager::TransactionStatus s, format_context &ctx ) const;
 };
 
 #endif
