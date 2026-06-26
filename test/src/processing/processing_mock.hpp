@@ -157,6 +157,16 @@ namespace sgns::test
         {
             return;
         }
+
+        std::vector<std::string> ListTaskKeys() override
+        {
+            return {};
+        }
+
+        outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) override
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
     };
 
     class ProcessingSubTaskQueueChannelImpl : public ProcessingSubTaskQueueChannel
