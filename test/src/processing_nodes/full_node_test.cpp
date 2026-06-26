@@ -84,7 +84,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
 
     test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 20000 ),
-                                  "Recovery node balance not updated in time" );
+                                  "Recovery node initial balance not updated in time" );
 
     std::cout << "****** Minting tokens on original node ****" << std::endl;
     uint64_t beforeMint = originalNode->GetBalance();
@@ -103,7 +103,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );
     }
-
+    
     std::cout << "****** Destroying original node after 10 seconds ****" << std::endl;
     std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
     originalNode.reset();
