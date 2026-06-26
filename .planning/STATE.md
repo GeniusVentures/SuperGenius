@@ -2,20 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Bridge Integration
-current_phase: Phase 5 — Startup Wiring + Mock RPC Transport
-status: context-gathered
-last_updated: "2026-06-16T21:50:51.870Z"
+current_phase: 05.2
+status: ready_to_plan
+last_updated: 2026-06-19T01:43:23.061Z
 progress:
-  total_phases: 10
-  completed_phases: 8
-  total_plans: 20
-  completed_plans: 22
-  percent: 80
+  total_phases: 12
+  completed_phases: 9
+  total_plans: 27
+  completed_plans: 29
+  percent: 75
+stopped_at: Phase 05.2 complete (4/4) — ready to discuss Phase 07
 ---
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** Phase 5 — Startup Wiring + Mock RPC Transport
+**Current Phase:** 07
 
 ## Phase Status
 
@@ -82,7 +83,9 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 - Phase 5: Wire BridgeRelayer::Start() and InitializeRpcEndpoints() into node startup, add mock RPC transport for testing
 - Phase 6 (follow-up): Tier 2 network voting weight classes with reputation scoring
 - See `.planning/notes/rpc-verification-tiers.md` for architecture decisions
+- Phase 05.1 inserted after Phase 5: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (URGENT)
 - Phase 7 added: Deferred Validation and Pending Proposal Lifecycle; renumbered from duplicate Track B Phase 4 to global Phase 7
+- Phase 05.2 inserted after Phase 05.1: Smart contract updated to 32-byte X-only compressed SG public key (bytes32). Event renamed BridgeOutInitiated. C++ side: decode X-only → decompress to full X+Y → match GetAddress(). Versioned catch-up scan. (URGENT)
 
 ## Phase 5 Progress
 

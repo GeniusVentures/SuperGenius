@@ -140,3 +140,15 @@ endif()
 # Install production library only
 supergenius_install(sgns_genius_account)
 supergenius_install(genius_node)
+
+# Copy default bridge chains config to test binary output for dev/test runs
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    ${CMAKE_BINARY_DIR}/test_bin/bridge_chains_config.json
+    COPYONLY
+)
+
+# Install the default config alongside the binary for production
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

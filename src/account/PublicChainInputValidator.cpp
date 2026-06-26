@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 
 #include <base/parse_utility.hpp>
@@ -129,12 +130,88 @@ namespace sgns
     }
 
     void PublicChainInputValidator::SetRpcEndpoints( const std::string &chain_id,
-                                                     std::vector<WeightedRpcEndpoint> endpoints )
+                                                      std::vector<WeightedRpcEndpoint> endpoints )
     {
         auto logger = InputValidatorLogger();
         rpc_endpoints_[chain_id] = std::move( endpoints );
         logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
                       chain_id, rpc_endpoints_[chain_id].size() );
+    }
+
+    void PublicChainInputValidator::AddRpcEndpoints( const std::string &chain_id,
+                                                      std::vector<WeightedRpcEndpoint> endpoints )
+    {
+        auto        logger = InputValidatorLogger();
+        auto       &existing = rpc_endpoints_[chain_id];
+
+        // The fetched endpoints carry the chain's canonical {v1, v2} topic set
+        // (and bridge contract). That set is a per-chain property — every
+        // endpoint for the chain validates the same bridge events — so union it
+        // into EVERY existing endpoint, not just URL duplicates. Otherwise a
+        // stale v1-only operator endpoint at a different URL keeps failing v2
+        // receipts and, being high-weight, can break quorum even though the
+        // fetch supplied the missing v2 metadata.
+        std::vector<std::string> fetched_topics;
+        std::string              fetched_bridge;
+        for ( const auto &e : endpoints )
+        {
+            for ( const auto &h : e.accepted_topic0_hashes )
+            {
+                if ( std::find( fetched_topics.begin(), fetched_topics.end(), h ) == fetched_topics.end() )
+                {
+                    fetched_topics.push_back( h );
+                }
+            }
+            if ( fetched_bridge.empty() && !e.bridge_contract_address.empty() )
+            {
+                fetched_bridge = e.bridge_contract_address;
+            }
+        }
+
+        size_t upgraded = 0;
+        for ( auto &cur : existing )
+        {
+            bool changed = false;
+            for ( const auto &h : fetched_topics )
+            {
+                if ( std::find( cur.accepted_topic0_hashes.begin(),
+                                cur.accepted_topic0_hashes.end(),
+                                h ) == cur.accepted_topic0_hashes.end() )
+                {
+                    cur.accepted_topic0_hashes.push_back( h );
+                    changed = true;
+                }
+            }
+            if ( cur.bridge_contract_address.empty() && !fetched_bridge.empty() )
+            {
+                cur.bridge_contract_address = fetched_bridge;
+                changed = true;
+            }
+            if ( changed )
+            {
+                ++upgraded;
+            }
+        }
+
+        // Append fetched endpoints whose URL isn't already present (dedup by URL).
+        std::unordered_set<std::string> seen_urls;
+        seen_urls.reserve( existing.size() + endpoints.size() );
+        for ( const auto &e : existing )
+        {
+            seen_urls.insert( e.url );
+        }
+        size_t added = 0;
+        for ( auto &e : endpoints )
+        {
+            if ( seen_urls.insert( e.url ).second )
+            {
+                existing.push_back( std::move( e ) );
+                ++added;
+            }
+        }
+
+        logger->info( "AddRpcEndpoints: chain_id={} added={} upgraded={} total={}",
+                      chain_id, added, upgraded, existing.size() );
     }
 
     bool PublicChainInputValidator::VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
@@ -232,9 +309,17 @@ namespace sgns
                 for ( const auto &log_entry : receipt->receipt.logs )
                 {
                     std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
-                    if ( log_addr_hex == ep.bridge_contract_address &&
-                         !log_entry.topics.empty() &&
-                         rlp::base::parse::hex_array_string( log_entry.topics.front() ) == ep.event_topic0 )
+                    if ( log_addr_hex != ep.bridge_contract_address || log_entry.topics.empty() )
+                    {
+                        continue;
+                    }
+                    // Accept any of the configured topic0 hashes (v1 BridgeSourceBurned
+                    // or v2 BridgeOutInitiated) — both event versions can back a mint.
+                    const std::string log_topic0 =
+                        rlp::base::parse::hex_array_string( log_entry.topics.front() );
+                    if ( std::find( ep.accepted_topic0_hashes.begin(),
+                                    ep.accepted_topic0_hashes.end(),
+                                    log_topic0 ) != ep.accepted_topic0_hashes.end() )
                     {
                         log_matched = true;
                         break;
@@ -242,12 +327,21 @@ namespace sgns
                 }
                 if ( !log_matched )
                 {
-                    logger->error( "VerifyPublicChainSmartContract log mismatch bridge={} topic0={} tx={} url={}",
+                    // Per-endpoint topic mismatch must NOT abort the whole
+                    // verification. After the private/public endpoint merge, an
+                    // operator's endpoint may carry only the legacy v1 topic0
+                    // while fetched endpoints carry {v1, v2}; a valid v2 receipt
+                    // legitimately mismatches the v1-only endpoint and must still
+                    // reach quorum on the v1+v2 endpoints. Treat the mismatch as
+                    // "this endpoint did not confirm" and continue.
+                    logger->debug( "VerifyPublicChainSmartContract topic mismatch bridge={} tx={} url={} "
+                                   "— endpoint covers {} topic0 hash(es); continuing quorum evaluation",
                                    ep.bridge_contract_address,
-                                   ep.event_topic0,
                                    PreviewValue( source_reference ),
-                                   ep.url );
-                    return false;
+                                   ep.url,
+                                   ep.accepted_topic0_hashes.size() );
+                    ++tried;
+                    continue;
                 }
             }
 

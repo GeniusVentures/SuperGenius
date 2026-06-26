@@ -15,6 +15,7 @@
 #include <thread>
 #include <optional>
 #include <mutex>
+#include <atomic>
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -27,6 +28,7 @@
 #include "account/PublicChainInputValidator.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/BridgeRelayer.hpp"
+#include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher/hasher_impl.hpp"
@@ -72,7 +74,7 @@ namespace sgns
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
      */
-    class GeniusNode : public IComponent, public std::enable_shared_from_this<GeniusNode>
+    class GeniusNode : public IComponent, public IBridgeInitObserver, public std::enable_shared_from_this<GeniusNode>
     {
     public:
         /**
@@ -661,14 +663,25 @@ namespace sgns
         base::Logger                   node_logger_;               ///< Main node logger.
         DevConfig_st                   dev_config_;                ///< Runtime node configuration.
         bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
-        std::vector<ChainContractPair> bridge_chains_; ///< Chain/contract pairs discovered during startup (D-02).
-        std::string                    gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string                    processing_channel_topic_;     ///< Processing task channel topic.
-        std::string                    processing_grid_chanel_topic_; ///< Processing grid topic.
-        std::vector<std::string>       bootstrap_peers_;
+        std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
+        /// Serializes catchup_scan_done_ + catchup_chains_ across the READY
+        /// state-change callback and OnRpcEndpointsReady, which both run on the
+        /// multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
+        mutable std::mutex             catchup_mutex_;
+        std::shared_ptr<ChainRpcEndpointProvider>
+                                            rpc_endpoint_provider_;    ///< Shared so the posted Initialize() job can hold it across an account switch.
+        /// Generation token for async bridge init. Incremented on account
+        /// switch; the posted Initialize() job captures the value at post time
+        /// and aborts if it is stale — so a reset transaction_manager_ /
+        /// bridge_relayer_ is never dereferenced by an in-flight init.
+        std::atomic<uint64_t>          bridge_init_generation_{ 0 };
+        std::string                         gnus_network_full_path_;   ///< Versioned network DB path.
+        std::string                         processing_channel_topic_; ///< Processing task channel topic.
+        std::string                         processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>            bootstrap_peers_;
         uint16_t                       subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
-        std::vector<std::string>       bootstrap_fullnodes_;
-        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
+        std::vector<std::string>            bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo> bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
@@ -779,30 +792,26 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
-         * @brief Loads RPC endpoints from the evmrelay ChainList provider and wires
-         *        them into the transaction manager's public-chain input validator.
-         *
-         * This is called once during startup after the transaction manager reaches
-         * the READY state and before processing modules are initialized.  It reads
-         * @c chains_config.json to discover configured chains, maps their names to
-         * well-known EVM chain IDs, parses the ChainList data to extract verified
-         * public RPC endpoint URLs, and calls @c PublicChainInputValidator::SetRpcEndpoints
-         * for each configured chain.
-         *
-         * @return ChainContractPair vector for chains with bridge_contract_address (D-02).
+         * @brief Resolves the bridge_chains_config.json path using D-01 priority:
+         *        BaseWritePath → binary-relative → CWD fallback.
+         * @return Resolved filesystem path to bridge_chains_config.json.
          */
-        std::vector<ChainContractPair> InitializeRpcEndpoints();
+        std::filesystem::path ResolveBridgeChainsConfigPath() const;
 
         /**
          * @brief Async bridge initialization launched from INITIALIZING_TRANSACTIONS.
          *
-         * Called via boost::asio::post to execute non-blocking on the io_context.
-         * First calls InitializeRpcEndpoints() to wire RPC endpoints into the validator
-         * and collect ChainContractPair entries for chains with bridge contracts.
-         * Then calls BridgeRelayer::Start() with those pairs (D-04: ordering guaranteed).
-         * Best-effort: log warnings and continue if bridge startup fails.
+         * Thin orchestrator: resolves the config path, constructs the provider,
+         * subscribes BridgeRelayer + self as observers, posts Initialize().
+         * The relayer and catch-up scan receive chains via observer callbacks.
          */
         void InitializeAndStartBridge();
+
+        /**
+         * @brief IBridgeInitObserver callback — stores chain list for catch-up scan.
+         * @param[in] chains  Chain/contract pairs discovered during initialization.
+         */
+        void OnRpcEndpointsReady( std::vector<ChainContractPair> chains ) override;
 
         /**
          * @brief Scans historical blocks for unprocessed bridge burn events after CRDT sync.
