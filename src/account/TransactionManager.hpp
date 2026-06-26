@@ -111,8 +111,7 @@ namespace sgns
 
         std::vector<std::vector<uint8_t>> GetOutTransactions() const;
         std::vector<std::vector<uint8_t>> GetInTransactions() const;
-        std::vector<std::vector<uint8_t>> GetTransactions(
-            std::optional<TransactionStatus> tx_status = std::nullopt ) const;
+        size_t CountTransactions( std::optional<TransactionStatus> tx_status = std::nullopt ) const;
 
         /**
          * @brief Creates and enqueues a transfer transaction.
@@ -250,7 +249,7 @@ namespace sgns
          * @brief Queries all transaction keys from the CRDT across monitored networks
          *        and processes each one via FetchAndProcessTransaction.
          */
-        outcome::result<void> QueryTransactions();
+        void QueryTransactions();
 
         /**
          * @brief Deserializes, parses, and adds a single transaction to the processed map.
@@ -348,11 +347,6 @@ namespace sgns
          */
         static std::vector<uint16_t>                                 GetMonitoredNetworkIDs();
         static outcome::result<std::shared_ptr<IGeniusTransactions>> DeSerializeTransaction( std::string tx_data );
-
-        /**
-         * @brief Fetches the proof for @p tx from the CRDT and runs full verification.
-         */
-        outcome::result<bool> CheckProof( const std::shared_ptr<IGeniusTransactions> &tx );
 
         /**
          * @brief Dispatches to the type-specific parser registered in transaction_parsers.

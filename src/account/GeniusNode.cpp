@@ -2183,15 +2183,15 @@ namespace sgns
         return manager_result.value()->GetOutTransactions();
     }
 
-    const std::vector<std::vector<uint8_t>> GeniusNode::GetTransactions(
+    size_t GeniusNode::CountTransactions(
         std::optional<TransactionManager::TransactionStatus> tx_status ) const
     {
         auto manager_result = GetTransactionManager();
         if ( !manager_result.has_value() )
         {
-            return {};
+            return 0;
         }
-        return manager_result.value()->GetTransactions( tx_status );
+        return manager_result.value()->CountTransactions( tx_status );
     }
 
     // Wait for a transaction to be processed with a timeout

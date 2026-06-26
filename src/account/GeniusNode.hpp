@@ -352,11 +352,11 @@ namespace sgns
         [[nodiscard]] std::vector<std::vector<uint8_t>> GetOutTransactions() const;
 
         /**
-         * @brief Returns serialized transactions filtered by optional status.
+         * @brief Counts known transactions filtered by optional status.
          * @param[in] tx_status Optional transaction status filter.
-         * @return Transaction byte vectors, or an empty vector when transactions are not ready.
+         * @return Number of matching transactions, or zero when transactions are not ready.
          */
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetTransactions(
+        [[nodiscard]] size_t CountTransactions(
             std::optional<TransactionManager::TransactionStatus> tx_status = std::nullopt ) const;
 
         /**

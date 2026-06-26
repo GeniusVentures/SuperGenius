@@ -6,6 +6,7 @@
  */
 #include "account/TransactionManager.hpp"
 
+#include <algorithm>
 #include <utility>
 #include <thread>
 #include <system_error>
@@ -1140,7 +1141,8 @@ namespace sgns
                 }
             }
         }
-        else if ( tx->GetType() == "mint" && !tx->GetSrcAddress().empty() ) // Legacy mint transactions still create UTXOs for the source account.
+        else if ( tx->GetType() == "mint" &&
+                  !tx->GetSrcAddress().empty() ) // Legacy mint transactions still create UTXOs for the source account.
         {
             add_address( tx->GetSrcAddress() );
         }
@@ -1194,32 +1196,22 @@ namespace sgns
         return it->second( transaction_data_vector );
     }
 
-    outcome::result<bool> TransactionManager::CheckProof( const std::shared_ptr<IGeniusTransactions> &tx )
+    void TransactionManager::QueryTransactions()
     {
-        auto proof_path = GetTransactionProofPath( *tx );
-        m_logger->debug( "Checking the proof in {}", proof_path );
-        BOOST_OUTCOME_TRY( auto proof_data, globaldb_m->Get( { proof_path } ) );
-
-        const auto &proof_data_vector = proof_data.toVector();
-
-        m_logger->debug( "Proof data acquired. Verifying..." );
-        return IBasicProof::VerifyFullProof( proof_data_vector );
-    }
-
-    outcome::result<void> TransactionManager::QueryTransactions()
-    {
-        auto monitored_networks = GetMonitoredNetworkIDs();
-
-        for ( auto network_id : monitored_networks )
+        for ( auto network_id : GetMonitoredNetworkIDs() )
         {
-            std::string blockchain_base = GetBlockChainBase( network_id );
-            std::string query_path      = blockchain_base + "tx";
+            const std::string query_path = GetBlockChainBase( network_id ) + "tx";
             m_logger->trace( "Probing transactions on {}", query_path );
-            BOOST_OUTCOME_TRY( auto transaction_list, globaldb_m->QueryKeyValues( query_path ) );
+            auto transaction_list = globaldb_m->QueryKeyValues( query_path );
+            if ( transaction_list.has_error() )
+            {
+                m_logger->error( "Unable to query transactions on {}", query_path );
+                continue;
+            }
 
-            m_logger->trace( "Transaction list grabbed from CRDT with Size {}", transaction_list.size() );
+            m_logger->trace( "Transaction list grabbed from CRDT with Size {}", transaction_list.value().size() );
 
-            for ( const auto &[key, value] : transaction_list )
+            for ( const auto &[key, value] : transaction_list.value() )
             {
                 auto transaction_key = globaldb_m->KeyToString( key );
                 if ( !transaction_key.has_value() )
@@ -1228,14 +1220,12 @@ namespace sgns
                     continue;
                 }
                 auto process_result = FetchAndProcessTransaction( transaction_key.value(), value );
-                if ( !transaction_key.has_value() )
+                if ( process_result.has_error() )
                 {
                     m_logger->error( "Unable to fetch and process transaction {}", transaction_key.value() );
                 }
             }
         }
-
-        return outcome::success();
     }
 
     outcome::result<void> TransactionManager::FetchAndProcessTransaction( const std::string          &tx_key,
@@ -1262,14 +1252,13 @@ namespace sgns
             m_logger->debug( "Finding transaction: {}", tx_key );
             return FetchTransaction( *globaldb_m, tx_key );
         }();
-
         if ( transaction_result.has_error() )
         {
             m_logger->debug( "Can't fetch transaction {}", tx_key );
             return outcome::failure( transaction_result.error() );
         }
-        auto &transaction = transaction_result.value();
 
+        auto &transaction = transaction_result.value();
         if ( transaction->GetHash().empty() )
         {
             m_logger->error( "Error, received transaction without hash: {}", tx_key );
@@ -1437,8 +1426,6 @@ namespace sgns
             m_logger->debug( "Notify {} of deletion of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
-        m_logger->debug( "Adding origin address to Broadcast: {}", transfer_tx->GetSrcAddress() );
-
         m_logger->debug( "Re-parsing inputs to be added as UTXOs" );
         for ( const auto &input : transfer_tx->GetInputInfos() )
         {
@@ -1457,37 +1444,33 @@ namespace sgns
 
     outcome::result<void> TransactionManager::RevertMintTransaction( const std::shared_ptr<IGeniusTransactions> &tx )
     {
-        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        auto revert_utxo_mint = [this]( const auto &mint_tx, const char *label ) -> outcome::result<void>
         {
-            auto params = migration_tx->GetUTXOParameters();
+            auto params = mint_tx->GetUTXOParameters();
 
-            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *migration_tx ) );
+            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *mint_tx ) );
             if ( !params.first.empty() )
             {
-                account_m->GetUTXOManager().RollbackUTXOs( params.first, tx->GetHash() );
+                account_m->GetUTXOManager().RollbackUTXOs( params.first, mint_tx->GetHash() );
             }
 
-            m_logger->info( "Deleted {} tokens (migration), from tx {}, final balance {}",
-                            migration_tx->GetAmount(),
-                            migration_tx->GetHash(),
+            m_logger->info( "Deleted {} tokens ({}), from tx {}, final balance {}",
+                            mint_tx->GetAmount(),
+                            label,
+                            mint_tx->GetHash(),
                             account_m->GetUTXOManager().GetBalance() );
+            return outcome::success();
+        };
+
+        if ( auto migration_tx = std::dynamic_pointer_cast<MigrationTransaction>( tx ) )
+        {
+            BOOST_OUTCOME_TRY( revert_utxo_mint( migration_tx, "migration" ) );
             return outcome::success();
         }
 
         if ( auto mint_tx_v2 = std::dynamic_pointer_cast<MintTransactionV2>( tx ) )
         {
-            auto params = mint_tx_v2->GetUTXOParameters();
-
-            BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *mint_tx_v2 ) );
-            if ( !params.first.empty() )
-            {
-                account_m->GetUTXOManager().RollbackUTXOs( params.first, tx->GetHash() );
-            }
-
-            m_logger->info( "Deleted {} tokens (mint-v2), from tx {}, final balance {}",
-                            mint_tx_v2->GetAmount(),
-                            mint_tx_v2->GetHash(),
-                            account_m->GetUTXOManager().GetBalance() );
+            BOOST_OUTCOME_TRY( revert_utxo_mint( mint_tx_v2, "mint-v2" ) );
             return outcome::success();
         }
 
@@ -1567,22 +1550,13 @@ namespace sgns
         return result;
     }
 
-    std::vector<std::vector<uint8_t>> TransactionManager::GetTransactions(
-        std::optional<TransactionStatus> tx_status ) const
+    size_t TransactionManager::CountTransactions( std::optional<TransactionStatus> tx_status ) const
     {
-        std::vector<std::vector<std::uint8_t>> result;
-        {
-            std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-            result.reserve( tx_processed_m.size() );
-            for ( const auto &[_, value] : tx_processed_m )
-            {
-                if ( !tx_status || value.status == tx_status.value() )
-                {
-                    result.push_back( value.tx->SerializeByteVector() );
-                }
-            }
-        }
-        return result;
+        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
+        return std::count_if( tx_processed_m.cbegin(),
+                              tx_processed_m.cend(),
+                              [&tx_status]( const auto &entry )
+                              { return !tx_status || entry.second.status == tx_status.value(); } );
     }
 
     TransactionManager::TransactionStatus TransactionManager::WaitForTransactionIncoming(

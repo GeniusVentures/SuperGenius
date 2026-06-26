@@ -296,11 +296,9 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_start );
 
     // Get initial transaction counts
-    auto tx_count_node1_start = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_start = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_full_start = node_full->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    auto tx_count_node1_start = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_start = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_full_start = node_full->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
                   tx_count_node1_start,
@@ -412,10 +410,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_final );
 
     // Get final transaction counts
-    auto tx_count_node1_final = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_final = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
+    auto tx_count_node1_final = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_final = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Final tx counts - Node1: {}, Node2: {}", tx_count_node1_final, tx_count_node2_final );
 
