@@ -8,6 +8,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -313,4 +314,31 @@ TEST( ChainRpcEndpointProviderTest, CancelledInitDoesNotRegisterOrNotify )
 
     std::error_code ec;
     fs::remove( tmpfile, ec );
+}
+
+// ─── Test: validator self-deregisters; stale destruction can't clobber newer ─
+
+TEST( ChainRpcEndpointProviderTest, ValidatorSelfDeregistersWithoutClobberingNewerRegistration )
+{
+    // A validator must remove itself from the global IInputValidator registry on
+    // destruction (compare-and-remove), so a stale validator released after an
+    // account switch can never leave a dangling pointer — nor remove a newer
+    // account's registration that overwrote its entry.
+    const std::string cid = "7777777";
+
+    auto a = std::make_unique<PublicChainInputValidator>();
+    a->RegisterForChain( cid );
+    ASSERT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( a.get() ) );
+
+    auto b = std::make_unique<PublicChainInputValidator>();
+    b->RegisterForChain( cid ); // overwrites -> registry now &b
+    ASSERT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( b.get() ) );
+
+    a.reset(); // stale 'a' destroyed; must NOT remove cid (it points to b)
+    EXPECT_EQ( IInputValidator::Get( cid ), static_cast<const IInputValidator *>( b.get() ) )
+        << "Destroying a stale validator must not clobber the newer registration";
+
+    b.reset(); // 'b' destroyed; self-deregisters cid
+    EXPECT_EQ( IInputValidator::Get( cid ), nullptr )
+        << "A validator must self-deregister on destruction (no dangling pointer)";
 }

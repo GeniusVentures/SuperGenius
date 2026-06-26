@@ -88,6 +88,20 @@ namespace sgns
             registry()[chain_id] = validator;
         }
 
+        /// @brief Remove a chain's registration only if it currently points to
+        ///        @p expected (compare-and-remove). Prevents a stale validator
+        ///        from clobbering a newer account's registration when it is
+        ///        destroyed, and lets a validator self-clean on destruction so
+        ///        the registry never holds a dangling pointer.
+        static void UnregisterIf( const std::string &chain_id, ValidatorPtr expected )
+        {
+            auto it = registry().find( chain_id );
+            if ( it != registry().end() && it->second == expected )
+            {
+                registry().erase( it );
+            }
+        }
+
         static ValidatorPtr Get( const std::string &chain_id )
         {
             auto it = registry().find( chain_id );

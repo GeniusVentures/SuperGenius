@@ -65,6 +65,24 @@ namespace sgns
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
+        /// @brief Registers this validator for @p chain_id in the global registry
+        ///        and records it for self-removal on destruction (compare-and-
+        ///        remove), so the registry never holds a dangling pointer after
+        ///        this validator (and its owning transaction manager) is destroyed.
+        void RegisterForChain( const std::string &chain_id )
+        {
+            IInputValidator::Register( chain_id, this );
+            registered_chain_ids_.push_back( chain_id );
+        }
+
+        ~PublicChainInputValidator() override
+        {
+            for ( const auto &chain_id : registered_chain_ids_ )
+            {
+                IInputValidator::UnregisterIf( chain_id, this );
+            }
+        }
+
         /**
          * @brief Configure weighted RPC endpoints for a source chain.
          * @param[in] chain_id Source chain identifier (e.g. "1" for Ethereum).
@@ -177,6 +195,9 @@ namespace sgns
                                              const std::string                        &source_reference ) const;
 
         std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
+
+        /// Chain IDs this validator registered for (self-deregistered on destruction).
+        std::vector<std::string> registered_chain_ids_;
 
         /// @brief Pluggable transport factory for DI-based mock injection (D-07, D-14).
         /// When empty, VerifyPublicChainSmartContract uses the default RpcHttpTransport factory.

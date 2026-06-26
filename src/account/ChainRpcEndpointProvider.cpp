@@ -208,8 +208,11 @@ namespace sgns
 
             endpoints_by_chain[dc.chain_id] = std::move( endpoints );
 
-            // D-02: Register validator for this chain
-            IInputValidator::Register( std::to_string( dc.chain_id ), &validator );
+            // Register validator for this chain. RegisterForChain records the
+            // chain id so the validator self-removes from the global registry on
+            // destruction (compare-and-remove) — the registry then never holds a
+            // dangling pointer after this (possibly stale) manager is released.
+            validator.RegisterForChain( std::to_string( dc.chain_id ) );
         }
 
         for ( auto &[chain_id, endpoints] : endpoints_by_chain )
