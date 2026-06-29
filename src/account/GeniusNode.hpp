@@ -142,6 +142,7 @@ namespace sgns
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
+            INITIALIZING_RPC_CATCH_UP, ///< RPC catch-up service is being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -663,10 +664,11 @@ namespace sgns
         base::Logger                   node_logger_;               ///< Main node logger.
         DevConfig_st                   dev_config_;                ///< Runtime node configuration.
         bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
+        bool                           catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
-        /// Serializes catchup_scan_done_ + catchup_chains_ across the READY
-        /// state-change callback and OnRpcEndpointsReady, which both run on the
-        /// multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
+        /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
+        /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
+        /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex             catchup_mutex_;
         std::shared_ptr<ChainRpcEndpointProvider>
                                             rpc_endpoint_provider_;    ///< Shared so the posted Initialize() job can hold it across an account switch.

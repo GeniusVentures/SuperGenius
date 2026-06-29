@@ -87,6 +87,8 @@ namespace
                 return "INITIALIZING_BLOCKCHAIN";
             case State::INITIALIZING_TRANSACTIONS:
                 return "INITIALIZING_TRANSACTIONS";
+            case State::INITIALIZING_RPC_CATCH_UP:
+                return "INITIALIZING_RPC_CATCH_UP";
             case State::READY:
                 return "READY";
         }
@@ -171,9 +173,9 @@ namespace sgns
                                                                bool                is_full_node )
     {
         auto account = GeniusAccount::NewFromPrivateKey( dev_config.TokenID,
-                                           eth_private_key,
-                                           dev_config.BaseWritePath,
-                                           is_full_node );
+                                                         eth_private_key,
+                                                         dev_config.BaseWritePath,
+                                                         is_full_node );
         if ( account == nullptr )
         {
             return nullptr;
@@ -547,9 +549,12 @@ namespace sgns
                             }
                         } );
                 }
-                blockchain_->Start();
-                InitBootstrapReconnect();
-                StartBootstrapHealthCheck();
+                if ( blockchain_ )
+                {
+                    blockchain_->Start();
+                    InitBootstrapReconnect();
+                    StartBootstrapHealthCheck();
+                }
                 break;
             }
 
@@ -646,7 +651,47 @@ namespace sgns
                 {
                     StartProcessing();
                 }
-                StateTransition( NodeState::READY );
+                StateTransition( NodeState::INITIALIZING_RPC_CATCH_UP );
+                break;
+            }
+
+            case NodeState::INITIALIZING_RPC_CATCH_UP:
+            {
+                bool dispatch_scan = false;
+                bool scan_running  = false;
+                {
+                    std::lock_guard lock( catchup_mutex_ );
+                    if ( !catchup_scan_done_ && !catchup_scan_in_progress_ && !catchup_chains_.empty() &&
+                         transaction_manager_ && transaction_manager_->GetState() == TransactionManager::State::READY )
+                    {
+                        catchup_scan_in_progress_ = true;
+                        dispatch_scan             = true;
+                    }
+                    else if ( catchup_scan_in_progress_ )
+                    {
+                        scan_running = true;
+                    }
+                }
+
+                if ( scan_running )
+                {
+                    break;
+                }
+
+                if ( !dispatch_scan )
+                {
+                    StateTransition( NodeState::READY );
+                    break;
+                }
+
+                boost::asio::post( *io_,
+                                   [weak_self = weak_from_this()]
+                                   {
+                                       if ( auto strong = weak_self.lock() )
+                                       {
+                                           strong->PerformStartupCatchupScan();
+                                       }
+                                   } );
                 break;
             }
 
@@ -1259,7 +1304,8 @@ namespace sgns
             {
                 if ( t.get_id() == caller_thread_id )
                 {
-                    node_logger_->error( "~GeniusNode called from io_context thread; detaching current thread to avoid self-join" );
+                    node_logger_->error(
+                        "~GeniusNode called from io_context thread; detaching current thread to avoid self-join" );
                     t.detach();
                     continue;
                 }
@@ -1272,7 +1318,8 @@ namespace sgns
         {
             if ( upnp_thread.get_id() == caller_thread_id )
             {
-                node_logger_->error( "~GeniusNode called from UPNP thread; detaching current thread to avoid self-join" );
+                node_logger_->error(
+                    "~GeniusNode called from UPNP thread; detaching current thread to avoid self-join" );
                 upnp_thread.detach();
             }
             else
@@ -1397,7 +1444,10 @@ namespace sgns
 
     outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key ) const
     {
-        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(), private_key, write_base_path_, is_full_node_ );
+        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(),
+                                                             private_key,
+                                                             write_base_path_,
+                                                             is_full_node_ );
         if ( new_account == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -1831,6 +1881,9 @@ namespace sgns
 
             case NodeState::INITIALIZING_PROCESSING:
                 return { 0.945f, "Initializing processing modules" };
+
+            case NodeState::INITIALIZING_RPC_CATCH_UP:
+                return { 0.975f, "Checking RPC catch-up scan" };
 
             case NodeState::READY:
                 return { 1.0f, "Ready" };
@@ -2472,40 +2525,21 @@ namespace sgns
 
     void GeniusNode::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
     {
-        bool dispatch_scan = false;
+        bool catchup_available = false;
         {
-            // Serialize with the READY branch of TransactionStateChanged: both
-            // run on io_ (4 threads) and otherwise race on catchup_chains_ /
-            // catchup_scan_done_ and can enqueue the scan twice. GetState() is a
-            // lock-free read, so it is safe under catchup_mutex_ (no lock-order
-            // cycle with state_change_callback_mutex_).
             std::lock_guard lock( catchup_mutex_ );
-            catchup_chains_ = std::move( chains );
+            catchup_chains_   = std::move( chains );
+            catchup_available = !catchup_scan_done_ && !catchup_scan_in_progress_ && !catchup_chains_.empty();
             node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
                                 catchup_chains_.size() );
-
-            // P2: If the catchup scan hasn't run yet (READY may have fired before
-            // chains were populated), trigger it now that chains are available.
-            if ( !catchup_scan_done_ && !catchup_chains_.empty()
-                 && transaction_manager_
-                 && transaction_manager_->GetState() == TransactionManager::State::READY )
-            {
-                catchup_scan_done_ = true;
-                dispatch_scan      = true;
-            }
         }
 
-        if ( dispatch_scan )
+        const auto current_state = state_.load();
+        if ( catchup_available &&
+             ( current_state == NodeState::INITIALIZING_RPC_CATCH_UP || current_state == NodeState::READY ) )
         {
-            node_logger_->info( "GeniusNode: chains arrived — triggering deferred catchup scan" );
-            boost::asio::post( *io_,
-                               [weak_self = weak_from_this()]
-                               {
-                                   if ( auto strong = weak_self.lock() )
-                                   {
-                                       strong->PerformStartupCatchupScan();
-                                   }
-                               } );
+            node_logger_->info( "GeniusNode: chains arrived — entering RPC catch-up state" );
+            StateTransition( NodeState::INITIALIZING_RPC_CATCH_UP );
         }
     }
 
@@ -2537,16 +2571,16 @@ namespace sgns
         //    bridge_relayer_ observer stays valid). The generation check still
         //    discards work posted before a completed switch.
         const auto generation = bridge_init_generation_.load();
-        auto       tx_mgr   = transaction_manager_; // shared_ptr copy: stable lifetime
-        auto       provider = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
-        auto       relayer  = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
+        auto       tx_mgr     = transaction_manager_;   // shared_ptr copy: stable lifetime
+        auto       provider   = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
+        auto       relayer    = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
         boost::asio::post( *io_,
-                           [weak_self = weak_from_this(),
+                           [weak_self   = weak_from_this(),
                             config_path = std::move( config_path ),
                             generation,
-                            tx_mgr = std::move( tx_mgr ),
+                            tx_mgr   = std::move( tx_mgr ),
                             provider = std::move( provider ),
-                            relayer = std::move( relayer )]() mutable
+                            relayer  = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
                                if ( !strong )
@@ -2564,7 +2598,8 @@ namespace sgns
                                // Stale check consulted INSIDE Initialize() after the blocking
                                // fetch, before it publishes validator pointers / notifies
                                // observers — so a switch during the fetch aborts publishing.
-                               auto is_cancelled = [weak_self, generation]() -> bool {
+                               auto is_cancelled = [weak_self, generation]() -> bool
+                               {
                                    auto s = weak_self.lock();
                                    return !s || s->bridge_init_generation_.load() != generation;
                                };
@@ -2577,9 +2612,23 @@ namespace sgns
     {
         node_logger_->info( "CatchUpScan: starting historical burn scan (D-20)" );
 
+        auto finish_catchup = [this]
+        {
+            {
+                std::lock_guard lock( catchup_mutex_ );
+                catchup_scan_in_progress_ = false;
+                catchup_scan_done_        = true;
+            }
+            if ( state_.load() == NodeState::INITIALIZING_RPC_CATCH_UP )
+            {
+                StateTransition( NodeState::READY );
+            }
+        };
+
         if ( !transaction_manager_ )
         {
             node_logger_->warn( "CatchUpScan: transaction_manager_ not available — skipping" );
+            finish_catchup();
             return;
         }
 
@@ -2872,6 +2921,7 @@ namespace sgns
                             chains_scanned,
                             total_backfilled,
                             total_skipped );
+        finish_catchup();
     }
 
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
@@ -2899,34 +2949,6 @@ namespace sgns
         {
             case TransactionManager::State::READY:
             {
-                // D-20: Trigger startup catch-up scan once after CRDT sync completes.
-                // Non-blocking — posted to io_ so the node proceeds normally.
-                // P2: Require chains to be populated before marking the scan done.
-                // Prevents permanent skip when READY fires before OnRpcEndpointsReady
-                // populates catchup_chains_. Serialize the guard with OnRpcEndpointsReady
-                // (both run on the 4-thread io_ pool) to avoid a data race and a
-                // double enqueue of PerformStartupCatchupScan.
-                bool dispatch_scan = false;
-                {
-                    std::lock_guard lock( catchup_mutex_ );
-                    if ( !catchup_scan_done_ && !catchup_chains_.empty() )
-                    {
-                        catchup_scan_done_ = true;
-                        dispatch_scan      = true;
-                    }
-                }
-                if ( dispatch_scan )
-                {
-                    boost::asio::post( *io_,
-                                       [weak_self = weak_from_this()]
-                                       {
-                                           if ( auto strong = weak_self.lock() )
-                                           {
-                                               strong->PerformStartupCatchupScan();
-                                           }
-                                       } );
-                }
-
                 if ( processing_service_ == nullptr )
                 {
                     StateTransition( NodeState::INITIALIZING_PROCESSING );
