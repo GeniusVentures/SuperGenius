@@ -115,28 +115,28 @@ using sgns::GeniusNode;
 namespace
 {
 
-FILE *OpenCommandPipe( const char *command, const char *mode )
-{
+    FILE *OpenCommandPipe( const char *command, const char *mode )
+    {
 #if defined( _WIN32 )
-    return _popen( command, mode );
+        return _popen( command, mode );
 #else
-    return popen( command, mode );
+        return popen( command, mode );
 #endif
-}
+    }
 
-int CloseCommandPipe( FILE *pipe )
-{
+    int CloseCommandPipe( FILE *pipe )
+    {
 #if defined( _WIN32 )
-    return _pclose( pipe );
+        return _pclose( pipe );
 #else
-    return pclose( pipe );
+        return pclose( pipe );
 #endif
-}
+    }
 
 #if defined( _WIN32 )
-constexpr const char *kCastCheckCmd = "where cast 2>NUL";
+    constexpr const char *kCastCheckCmd = "where cast 2>NUL";
 #else
-constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
+    constexpr const char *kCastCheckCmd = "which cast 2>/dev/null";
 #endif
 
 } // namespace
@@ -293,7 +293,7 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Create the full node FIRST — it will create the genesis block.
     // Pattern from blockchain_genesis_test.cpp: WithAuthorizationCanSync
-    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, s_eth_private_key.c_str(), false, false, 40001, true );
+    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, s_eth_private_key.c_str(), false, 40001, true );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
@@ -310,10 +310,10 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Create regular nodes — they will sync genesis from node_main via PubSub.
     // is_processor=false matches the blockchain_genesis_test.cpp pattern.
-    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, s_eth_private_key.c_str(), false, false, 40002 );
+    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, s_eth_private_key.c_str(), false, 40002 );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, s_eth_private_key.c_str(), false, false, 40003 );
+    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, s_eth_private_key.c_str(), false, 40003 );
 
     // Bootstrap PubSub — match blockchain_genesis_test pattern
     node_proc1->GetPubSub()->AddPeers(
