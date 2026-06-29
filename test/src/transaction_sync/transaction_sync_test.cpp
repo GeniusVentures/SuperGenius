@@ -77,10 +77,27 @@ namespace sgns
             {
             }
 
+            // All nodes in this test are non-processors.
+            // is_processor is now read exclusively from sgns_config.json (defaults to true).
+            std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG3.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+            std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+            std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
+            {
+                std::ofstream configFile( DEV_CONFIG2.BaseWritePath + "sgns_config.json" );
+                configFile << R"({"is_processor": false})";
+            }
+
             full_node = sgns::GeniusNode::NewFromPrivateKey(
                 DEV_CONFIG3,
                 "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",
-                false,
                 false,
                 40001,
                 true );
@@ -92,13 +109,11 @@ namespace sgns
             node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
                 DEV_CONFIG,
                 "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395",
-                false,
                 false );
 
             node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
                 DEV_CONFIG2,
                 "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02",
-                false,
                 false );
 
             fmt::println( "Node1 started with address: {}", node_proc1->GetAddress() );

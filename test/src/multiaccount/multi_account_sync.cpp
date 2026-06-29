@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <iostream>
@@ -70,11 +71,22 @@ protected:
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 
+        // is_processor is now read from sgns_config.json; the parameter is retained
+        // for source compatibility with existing test call sites.
+        (void)isProcessor;
+
         auto binaryPath = boost::dll::program_location().parent_path();
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
+
+        // Write sgns_config.json with the intended is_processor value
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
+        }
 
         // Generate deterministic key from self_address
         std::string key;
@@ -96,7 +108,7 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );

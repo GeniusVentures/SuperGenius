@@ -145,7 +145,6 @@ namespace sgns
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
                                                  bool                autodht,
-                                                 bool                isprocessor,
                                                  uint16_t            base_port,
                                                  bool                is_full_node )
     {
@@ -155,7 +154,7 @@ namespace sgns
             return nullptr;
         }
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, isprocessor, base_port, is_full_node ) );
+            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
 
         if ( instance )
         {
@@ -168,7 +167,6 @@ namespace sgns
     std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
                                                                const char         *eth_private_key,
                                                                bool                autodht,
-                                                               bool                isprocessor,
                                                                uint16_t            base_port,
                                                                bool                is_full_node )
     {
@@ -182,7 +180,7 @@ namespace sgns
         }
 
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, isprocessor, base_port, is_full_node ) );
+            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
 
         if ( instance )
         {
@@ -195,7 +193,6 @@ namespace sgns
     std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
                                                              const std::string  &mnemonic,
                                                              bool                autodht,
-                                                             bool                isprocessor,
                                                              uint16_t            base_port,
                                                              bool                is_full_node )
     {
@@ -210,7 +207,7 @@ namespace sgns
         }
 
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, isprocessor, base_port, is_full_node ) );
+            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
 
         if ( instance )
         {
@@ -223,7 +220,6 @@ namespace sgns
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
                             std::shared_ptr<GeniusAccount> account,
                             bool                           autodht,
-                            bool                           isprocessor,
                             uint16_t                       base_port,
                             bool                           is_full_node ) :
         write_base_path_( dev_config.BaseWritePath ),
@@ -231,7 +227,7 @@ namespace sgns
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
         autodht_( autodht ),
-        isprocessor_( isprocessor ),
+        isprocessor_( true ),
         is_full_node_( is_full_node ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
@@ -278,7 +274,8 @@ namespace sgns
         std::ifstream     config_file( config_path );
         if ( !config_file.good() )
         {
-            node_logger_->info( "sgns_config.json not found at {}, using defaults (net_id=144)", config_path );
+            node_logger_->info( "sgns_config.json not found at {}, using defaults (net_id=144, is_processor=true)",
+                                config_path );
             return;
         }
 
@@ -298,6 +295,16 @@ namespace sgns
             auto net_id = static_cast<uint16_t>( config_json["net_id"].GetUint() );
             version::SetNetworkId( net_id );
             node_logger_->info( "sgns_config.json: net_id={}", net_id );
+        }
+        if ( config_json.HasMember( "is_processor" ) && config_json["is_processor"].IsBool() )
+        {
+            isprocessor_ = config_json["is_processor"].GetBool();
+            node_logger_->info( "sgns_config.json: is_processor={}", isprocessor_ );
+        }
+        else
+        {
+            isprocessor_ = true;
+            node_logger_->info( "sgns_config.json: is_processor not set, defaulting to true" );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
@@ -328,7 +335,7 @@ namespace sgns
     {
         crdt_backup_config_ = crdt::GlobalDB::BackupOptions{ true, 15, 12, true };
 
-        const std::string config_path = write_base_path_ + "/crdt_config.json";
+        const std::string config_path = write_base_path_ + "crdt_config.json";
         std::ifstream     config_file( config_path );
         if ( !config_file.good() )
         {

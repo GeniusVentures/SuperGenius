@@ -5,6 +5,8 @@
 #include <termios.h>
 #include <unistd.h>
 #endif
+#include <filesystem>
+#include <fstream>
 #include <thread>
 #include <chrono>
 #include <cstdio>
@@ -63,14 +65,25 @@ namespace sgns
             CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
             CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
 
+            // All nodes in this test are non-processors.
+            // is_processor is now read exclusively from sgns_config.json (defaults to true).
+            std::filesystem::create_directories( CONFIG1.BaseWritePath );
+            {
+                std::ofstream configFile( CONFIG1.BaseWritePath + std::string( "sgns_config.json" ) );
+                configFile << R"({"is_processor": false})";
+            }
+            std::filesystem::create_directories( CONFIG2.BaseWritePath );
+            {
+                std::ofstream configFile( CONFIG2.BaseWritePath + std::string( "sgns_config.json" ) );
+                configFile << R"({"is_processor": false})";
+            }
+
             node1 = sgns::GeniusNode::NewFromPrivateKey( CONFIG1,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
             node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
@@ -93,7 +106,6 @@ namespace sgns
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
             node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
