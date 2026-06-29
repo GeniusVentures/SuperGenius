@@ -555,6 +555,11 @@ namespace sgns
                     InitBootstrapReconnect();
                     StartBootstrapHealthCheck();
                 }
+                else
+                {
+                    node_logger_->warn( "Blockchain creation failed, scheduling delayed retry" );
+                    ScheduleBlockchainRetry( std::chrono::seconds( 10 ) );
+                }
                 break;
             }
 
@@ -1215,12 +1220,12 @@ namespace sgns
             .detach();
     }
 
-    void GeniusNode::ScheduleBlockchainRetry()
+    void GeniusNode::ScheduleBlockchainRetry( std::chrono::seconds delay )
     {
         std::thread(
-            [weak_self = weak_from_this()]
+            [weak_self = weak_from_this(), delay]
             {
-                std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+                std::this_thread::sleep_for( delay );
                 if ( auto strong = weak_self.lock() )
                 {
                     auto current_state = strong->state_.load();

@@ -790,8 +790,9 @@ namespace sgns
 
         /**
          * @brief Schedules a delayed blockchain initialization retry.
+         * @param[in] delay Delay before retrying blockchain initialization.
          */
-        void ScheduleBlockchainRetry();
+        void ScheduleBlockchainRetry( std::chrono::seconds delay = std::chrono::seconds( 5 ) );
 
         /**
          * @brief Resolves the bridge_chains_config.json path using D-01 priority:
