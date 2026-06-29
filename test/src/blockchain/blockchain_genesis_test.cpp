@@ -158,10 +158,10 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     // The nodes should not be able to sync properly without the authorized address set
     // This test verifies that the blockchain sync is blocked when authorization is missing
 
-    std::cout << "Full node state: " << static_cast<int>( node_full->GetTransactionManagerState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetTransactionManagerState() )
+    std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
               << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetTransactionManagerState() )
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
               << std::endl;
 
     std::cout << "=== No Authorization No Sync Test Completed ===" << std::endl;
@@ -388,10 +388,10 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
 
-    std::cout << "Full node state: " << static_cast<int>( node_full->GetTransactionManagerState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetTransactionManagerState() )
+    std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
               << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetTransactionManagerState() )
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
               << std::endl;
 
     // The nodes should not be able to sync properly with wrong authorization

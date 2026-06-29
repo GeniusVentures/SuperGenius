@@ -447,7 +447,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
             {
                 auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
                 return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
-                       node->GetTransactionManagerState() == TransactionManager::State::READY;
+                       node->GetState() == GeniusNode::NodeState::READY;
             },
             std::chrono::milliseconds( 30000 ),
             "node blockchain not ready for consensus configuration" );
@@ -471,7 +471,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
                                  true ); // is genesis authorized
 
     sgns::test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_full not synced" );
 
@@ -507,19 +507,19 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_client->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_client not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer1->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer1 not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer2->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer2 not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer3->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer3 not synced" );
 
@@ -699,7 +699,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
                                  true ); // is genesis authorized
 
     sgns::test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_full not synced" );
 
@@ -737,7 +737,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
             {
                 auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
                 return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
-                       node->GetTransactionManagerState() == TransactionManager::State::READY;
+                       node->GetState() == GeniusNode::NodeState::READY;
             },
             std::chrono::milliseconds( 30000 ),
             "node blockchain not ready for consensus configuration" );
@@ -758,19 +758,19 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
     node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     sgns::test::assertWaitForCondition(
-        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_client->GetState() == sgns::GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_client not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer1->GetState() == sgns::GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer1 not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer2->GetState() == sgns::GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer2 not synced" );
     sgns::test::assertWaitForCondition(
-        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_peer3->GetState() == sgns::GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 30000 ),
         "node_peer3 not synced" );
 

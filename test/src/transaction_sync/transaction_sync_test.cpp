@@ -506,7 +506,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     std::cout << "Invalid tx failed" << std::endl;
 
     test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 20000 ),
         "Node didn't recover from wrong transaction" );
 
@@ -543,11 +543,11 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition(
-        [&]() { return node_proc1->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 20000 ),
         "node_proc1 not synched" );
     test::assertWaitForCondition(
-        [&]() { return node_proc2->GetTransactionManagerState() == TransactionManager::State::READY; },
+        [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
         std::chrono::milliseconds( 20000 ),
         "node_proc2 not synched" );
 
