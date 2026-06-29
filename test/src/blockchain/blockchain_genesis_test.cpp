@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <iostream>
@@ -39,8 +40,7 @@ protected:
                                                   const std::string &dev_addr,
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
-                                                  bool               isFullNode  = false,
-                                                  bool               isProcessor = false )
+                                                  bool               isFullNode = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
@@ -51,6 +51,14 @@ protected:
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
 
         // Generate deterministic key from self_address
         std::string key;
@@ -72,7 +80,7 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
@@ -103,8 +111,7 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
                                  "0xcafe",
                                  "1.0",
                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true, // is full node
-                                 true  // is processor
+                                 true // is full node
     );
 
     // Create regular nodes that should NOT be able to sync without authorization
@@ -112,16 +119,14 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false, // not full node
-                                      false  // not processor
+                                      false // not full node
     );
 
     auto node_regular_2 = CreateNode( "regular_node_no_auth_2",
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false, // not full node
-                                      true   // is processor
+                                      false // not full node
     );
 
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
@@ -166,8 +171,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                  "0xcafe",
                                  "1.0",
                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true, // is full node
-                                 true  // is processor
+                                 true // is full node
     );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
@@ -181,16 +185,14 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false, // not full node
-                                      false  // not processor
+                                      false // not full node
     );
 
     // auto node_regular_2 = CreateNode( "regular_node_with_auth_2",
     //                                   "0xcafe",
     //                                   "1.0",
     //                                   sgns::TokenID::FromBytes( { 0x00 } ),
-    //                                   false, // not full node
-    //                                   true   // is processor
+    //                                   false // not full node
     // );
 
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
@@ -240,7 +242,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                  "0xcafe",
                                  "1.0",
                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true,
                                  true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
@@ -251,15 +252,13 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false,
                                       false );
 
     auto node_regular_2 = CreateNode( "regular_node_tx_test_2",
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false,
-                                      true );
+                                      false );
 
     // Establish connectivity for gossiping blocks/transactions
     node_regular_1->GetPubSub()->AddPeers(
@@ -336,8 +335,7 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
                                  "0xcafe",
                                  "1.0",
                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true, // is full node
-                                 true  // is processor
+                                 true // is full node
     );
     std::cout << "Wrong authorized address set on all nodes" << std::endl;
     std::string wrong_address = "wrong_address_that_does_not_match_any_node";
@@ -348,16 +346,14 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false, // not full node
-                                      false  // not processor
+                                      false // not full node
     );
 
     auto node_regular_2 = CreateNode( "regular_node_wrong_auth_2",
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                      false, // not full node
-                                      true   // is processor
+                                      false // not full node
     );
 
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;

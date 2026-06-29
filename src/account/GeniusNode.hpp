@@ -73,14 +73,14 @@ namespace sgns
          * @brief Creates a node using a generated or persisted account identity.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
-                                                bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
                                                 bool                is_full_node = false );
 
@@ -89,15 +89,15 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] eth_private_key Ethereum private key used to derive the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
         static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
                                                               const char         *eth_private_key,
                                                               bool                autodht      = true,
-                                                              bool                isprocessor  = true,
                                                               uint16_t            base_port    = 40001,
                                                               bool                is_full_node = false );
 
@@ -106,15 +106,15 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] mnemonic Mnemonic phrase used to restore the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
                                                             const std::string  &mnemonic,
                                                             bool                autodht      = true,
-                                                            bool                isprocessor  = true,
                                                             uint16_t            base_port    = 40001,
                                                             bool                is_full_node = false );
 
@@ -661,14 +661,12 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] account Account instance to bind to this node.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
-                    bool                           isprocessor,
                     uint16_t                       base_port,
                     bool                           is_full_node );
 
@@ -678,8 +676,9 @@ namespace sgns
         void InitOpenSSL();
 
         /**
-         * @brief Loads sgns_config.json which contains net_id, subnet_id, bootstrap_fullnodes, and authorized_full_node.
-         *        All fields are optional and default to safe values (DEV net, empty bootstrap).
+         * @brief Loads sgns_config.json which contains net_id, subnet_id, bootstrap_fullnodes,
+         *        authorized_full_node, and is_processor. All fields are optional and default to
+         *        safe values (DEV net, empty bootstrap, is_processor=true).
          */
         void LoadSgnsConfig();
 

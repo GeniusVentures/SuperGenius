@@ -3,6 +3,8 @@
 #include <atomic>
 #include <cstring>
 #include <cstdio>
+#include <filesystem>
+#include <fstream>
 #include <ostream>
 #include <random>
 #include <thread>
@@ -34,7 +36,6 @@ namespace
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
                                                   bool               isFullNode      = false,
-                                                  bool               isProcessor     = false,
                                                   bool               setAsAuthorized = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
@@ -46,6 +47,14 @@ namespace
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
 
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
 
         std::string key;
         key.reserve( 64 );
@@ -61,7 +70,7 @@ namespace
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
 
         if ( setAsAuthorized )
         {
@@ -104,7 +113,7 @@ namespace
 TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
-    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, false, true );
+    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, true );
     test::assertWaitForCondition( [&]() { return node50->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "node50 not synced" );
@@ -251,7 +260,7 @@ class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
 TEST_P( GeniusNodeMintMainTest, MintMainBalance )
 {
     auto p        = GetParam();
-    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true, false, true );
+    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true, true );
     test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "nodefull not synced" );
@@ -325,7 +334,7 @@ protected:
 TEST_P( GeniusNodeMintChildTest, MintChildBalance )
 {
     auto p        = GetParam();
-    auto nodefull = CreateNode( "0xafff", p.tokenValue, p.TokenID, true, false, true );
+    auto nodefull = CreateNode( "0xafff", p.tokenValue, p.TokenID, true, true );
     test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "nodefull not synced" );
@@ -383,7 +392,7 @@ INSTANTIATE_TEST_SUITE_P(
 // Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
-    auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, false, true );
+    auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
     test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "nodefull not synced" );
@@ -463,13 +472,13 @@ protected:
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
-    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true, true );
+    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true );
     test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "node_proc1 not synced" );
 
-    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false, false );
-    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
+    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
+    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false );
 
     node_main->GetPubSub()->AddPeers(
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
