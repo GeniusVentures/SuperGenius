@@ -109,6 +109,20 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingServiceImpl::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    {
+        m_bitswap = std::move( bitswap );
+        // Apply to all existing nodes
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && m_bitswap )
+            {
+                node->setBitswap( m_bitswap );
+            }
+        }
+    }
+
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
@@ -372,6 +386,11 @@ namespace sgns::processing
                 if ( m_mirrorResultCallback )
                 {
                     node->setMirrorResultCallback( m_mirrorResultCallback );
+                }
+                // Apply bitswap to newly created node
+                if ( m_bitswap )
+                {
+                    node->setBitswap( m_bitswap );
                 }
             }
         }

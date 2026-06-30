@@ -687,6 +687,8 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
+        std::shared_ptr<boost::asio::steady_timer> gc_timer_;   ///< Periodic GC timer for result cache cleanup.
+
         /**
          * @brief Constructs a node around an already-created account.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
@@ -712,6 +714,16 @@ namespace sgns
          *        safe values (DEV net, empty bootstrap, is_processor=true).
          */
         void LoadSgnsConfig();
+
+        /**
+         * @brief Starts periodic garbage collection of expired processing results from disk cache.
+         */
+        void StartResultGC();
+
+        /**
+         * @brief Runs one GC pass: evicts expired result files and enforces space cap.
+         */
+        void RunResultGC();
 
         /**
          * @brief Initializes application and dependency loggers.

@@ -681,6 +681,15 @@ namespace sgns
                         } );
                 }
 
+                // Wire bitswap to processing service for data availability checks
+                if ( bitswap_ )
+                {
+                    processing_service_->setBitswap( bitswap_ );
+                }
+
+                // Start periodic result cache GC
+                StartResultGC();
+
                 if ( isprocessor_ )
                 {
                     StartProcessing();
@@ -2532,6 +2541,148 @@ namespace sgns
     const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
     {
         return Blockchain::GetAuthorizedFullNodeAddress();
+    }
+
+    // ── Result Cache GC ──
+
+    void GeniusNode::StartResultGC()
+    {
+        if ( result_retention_hours_ == 0 )
+        {
+            node_logger_->info( "Result retention disabled (retention_hours=0), skipping GC" );
+            return;
+        }
+
+        auto intervalHours = std::max( 1, result_retention_hours_ / 10 );
+        node_logger_->info( "Starting result GC timer: every {} hour(s), retention {} hours, max {} MB",
+                           intervalHours,
+                           result_retention_hours_,
+                           result_retention_max_mb_ );
+
+        gc_timer_ = std::make_shared<boost::asio::steady_timer>( *io_ );
+        std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+
+        auto schedule = [this, weakSelf, intervalHours]()
+        {
+            gc_timer_->expires_from_now( std::chrono::hours( intervalHours ) );
+            gc_timer_->async_wait( [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunResultGC();
+                }
+            } );
+        };
+
+        schedule();
+        // Run one initial pass after a short delay
+        gc_timer_->cancel();
+        gc_timer_->expires_from_now( std::chrono::seconds( 30 ) );
+        gc_timer_->async_wait( [weakSelf, schedule]( const boost::system::error_code &ec )
+        {
+            if ( ec )
+            {
+                return;
+            }
+            if ( auto self = weakSelf.lock() )
+            {
+                self->RunResultGC();
+                schedule();
+            }
+        } );
+    }
+
+    void GeniusNode::RunResultGC()
+    {
+        if ( result_retention_hours_ == 0 || !bitswap_ )
+        {
+            return;
+        }
+
+        auto resultsDir = write_base_path_ + "/" + ipfs_cache_dir_ + "/results";
+        std::error_code ec;
+        if ( !std::filesystem::exists( resultsDir, ec ) )
+        {
+            return;
+        }
+
+        size_t deletedCount = 0;
+        uintmax_t deletedBytes = 0;
+
+        // Collect all result files sorted by age (oldest first)
+        struct FileEntry
+        {
+            std::string                      path;
+            std::filesystem::file_time_type  mtime;
+        };
+        std::vector<FileEntry> files;
+        for ( const auto &entry : std::filesystem::recursive_directory_iterator( resultsDir, ec ) )
+        {
+            if ( ec || !entry.is_regular_file() )
+            {
+                continue;
+            }
+            FileEntry fe;
+            fe.path  = entry.path().string();
+            fe.mtime = entry.last_write_time();
+            files.push_back( fe );
+        }
+
+        std::sort( files.begin(), files.end(),
+                   []( const auto &a, const auto &b ) { return a.mtime < b.mtime; } );
+
+        // Compute cutoff using the clock backing file_time_type
+        using FT = std::filesystem::file_time_type;
+        auto now    = FT::clock::now();
+        auto cutoff = now - std::chrono::hours( result_retention_hours_ );
+
+        uintmax_t totalBytes = 0;
+        for ( const auto &f : files )
+        {
+            totalBytes += std::filesystem::file_size( f.path, ec );
+        }
+
+        // Evict expired files
+        for ( auto it = files.begin(); it != files.end() && totalBytes > 0; ++it )
+        {
+            const auto &path  = it->path;
+            const auto &mtime = it->mtime;
+            bool expired = mtime < cutoff;
+            bool overCap = ( result_retention_max_mb_ > 0 ) &&
+                           ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+            if ( !expired && !overCap )
+            {
+                break;
+            }
+
+            auto fileSize = std::filesystem::file_size( path, ec );
+            std::filesystem::remove( path, ec );
+            if ( !ec )
+            {
+                auto cidStr = std::filesystem::path( path ).filename().string();
+                auto cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                if ( cid )
+                {
+                    bitswap_->unpersistBlock( cid.value() );
+                }
+                deletedCount++;
+                deletedBytes += fileSize;
+                totalBytes -= fileSize;
+            }
+        }
+
+        if ( deletedCount > 0 )
+        {
+            node_logger_->info( "GC: removed {} result files ({} bytes), {} files remaining ({} bytes)",
+                               deletedCount,
+                               deletedBytes,
+                               files.size() - deletedCount,
+                               totalBytes );
+        }
     }
 
     // ── Bootstrap Fullnode Reconnection ──

@@ -116,6 +116,19 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingNode::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    {
+        m_bitswap = bitswap;
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->setBitswap( std::move( bitswap ) );
+            }
+        }
+    }
+
     void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
                                      std::chrono::milliseconds msSubscriptionWaitingDuration )
     {

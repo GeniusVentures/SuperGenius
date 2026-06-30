@@ -1,8 +1,11 @@
 #include "processing_subtask_queue_accessor_impl.hpp"
 #include <fmt/std.h>
+#include <sstream>
 #include <thread>
 #include <utility>
 #include "base/sgns_version.hpp"
+#include <libp2p/multi/content_identifier_codec.hpp>
+#include <bitswap.hpp>
 
 namespace sgns::processing
 {
@@ -63,6 +66,11 @@ namespace sgns::processing
     void SubTaskQueueAccessorImpl::setMirrorResultCallback( std::function<void( const std::string & )> callback )
     {
         m_mirrorResultCallback = std::move( callback );
+    }
+
+    void SubTaskQueueAccessorImpl::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    {
+        m_bitswap = std::move( bitswap );
     }
 
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
@@ -223,6 +231,14 @@ namespace sgns::processing
             return;
         }
 
+        // 9a: Validate output scheme matches (ipfs:// results must have ipfs:// CIDs)
+        if ( !ValidateResultData( subTaskResult, false ) )
+        {
+            m_logger->error( "Result for subtask {} failed output scheme validation", subTaskId );
+            m_processingErrorSink( "Output scheme mismatch for subtask: " + subTaskId );
+            return;
+        }
+
         m_subTaskResultStorage->AddSubTaskResult( subTaskResult );
         // tell local queue manager we completed this task as well.
         m_subTaskQueueManager->ChangeSubTaskProcessingStates( { subTaskId }, true );
@@ -266,6 +282,14 @@ namespace sgns::processing
                              subTaskResult.subtaskid(),
                              validation_res.error().message() );
             m_processingErrorSink( "Invalid external result for subtask: " + subTaskResult.subtaskid() );
+            return false;
+        }
+
+        // 9a+9b: Validate output scheme and data availability for external results
+        if ( !ValidateResultData( subTaskResult, true ) )
+        {
+            m_logger->warn( "Rejecting external result for subtask {} — data not available or scheme mismatch",
+                            subTaskResult.subtaskid() );
             return false;
         }
 
@@ -478,5 +502,65 @@ namespace sgns::processing
                 }
             }
         }
+    }
+
+    bool SubTaskQueueAccessorImpl::ValidateResultData( const SGProcessing::SubTaskResult &result,
+                                                       bool                               requireAvailable ) const
+    {
+        const auto &dataId = result.ipfs_results_data_id();
+        if ( dataId.empty() )
+        {
+            return true; // No IPFS data to validate
+        }
+
+        // 9a: Scheme validation — every non-empty line must be an ipfs:// URL
+        std::istringstream stream( dataId );
+        std::string        line;
+        while ( std::getline( stream, line ) )
+        {
+            if ( line.empty() )
+            {
+                continue;
+            }
+            if ( line.find( "ipfs://" ) != 0 )
+            {
+                m_logger->error( "Result for subtask {} has non-IPFS output: {}",
+                                 result.subtaskid(),
+                                 line );
+                return false;
+            }
+        }
+
+        // 9b: Data availability — check that all CIDs are locally fetchable
+        if ( requireAvailable && m_bitswap )
+        {
+            stream.clear();
+            stream.seekg( 0 );
+            while ( std::getline( stream, line ) )
+            {
+                if ( line.empty() )
+                {
+                    continue;
+                }
+                std::string cidStr = line.substr( 7 ); // strip "ipfs://"
+                auto        cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                if ( !cid )
+                {
+                    m_logger->warn( "Result for subtask {} has unparseable CID: {}",
+                                    result.subtaskid(),
+                                    cidStr );
+                    return false;
+                }
+                if ( !m_bitswap->HasBlock( cid.value() ) )
+                {
+                    m_logger->warn( "Result for subtask {} has unavailable data (CID not in store): {}",
+                                    result.subtaskid(),
+                                    cidStr );
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 }
