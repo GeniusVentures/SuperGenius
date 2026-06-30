@@ -58,6 +58,9 @@ namespace sgns::processing
 
         [[nodiscard]] ProcessingStatus GetProcessingStatus() const;
 
+        /// @brief Set callback for mirroring processing results. When set, results with mirror_result=true trigger a fetch.
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
     private:
         /** Listen to data feed channel.
         * @param processingGridChannelId - identifier of a data feed channel
@@ -107,6 +110,8 @@ namespace sgns::processing
                                                                  userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
         std::string                                              node_address_;
+
+        std::function<void( const std::string & )> m_mirrorResultCallback; ///< Mirror callback propagated to all nodes.
 
         std::set<std::string>                 m_competingPeers;
         std::chrono::steady_clock::time_point m_pendingCreationTimestamp;

@@ -95,6 +95,20 @@ namespace sgns::processing
         m_logger->debug( "[{}] [SERVICE_STOPPED]", node_address_ );
     }
 
+    void ProcessingServiceImpl::setMirrorResultCallback( std::function<void( const std::string & )> callback )
+    {
+        m_mirrorResultCallback = std::move( callback );
+        // Apply to all existing nodes
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && m_mirrorResultCallback )
+            {
+                node->setMirrorResultCallback( m_mirrorResultCallback );
+            }
+        }
+    }
+
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
@@ -354,6 +368,11 @@ namespace sgns::processing
             if ( node != nullptr )
             {
                 m_processingNodes[channelId] = node;
+                // Apply mirror callback to newly created node
+                if ( m_mirrorResultCallback )
+                {
+                    node->setMirrorResultCallback( m_mirrorResultCallback );
+                }
             }
         }
 

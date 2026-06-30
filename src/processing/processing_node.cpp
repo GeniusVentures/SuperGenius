@@ -104,6 +104,18 @@ namespace sgns::processing
         }
     }
 
+    void ProcessingNode::setMirrorResultCallback( std::function<void( const std::string & )> callback )
+    {
+        if ( m_subTaskQueueAccessor )
+        {
+            auto accessor = std::dynamic_pointer_cast<SubTaskQueueAccessorImpl>( m_subTaskQueueAccessor );
+            if ( accessor )
+            {
+                accessor->setMirrorResultCallback( std::move( callback ) );
+            }
+        }
+    }
+
     void ProcessingNode::Initialize( const std::string        &processingQueueChannelId,
                                      std::chrono::milliseconds msSubscriptionWaitingDuration )
     {

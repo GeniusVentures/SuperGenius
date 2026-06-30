@@ -57,6 +57,9 @@ namespace sgns::processing
 
         bool HasQueueOwnership() const;
 
+        /** Set callback for mirroring results from other nodes */
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)
         */

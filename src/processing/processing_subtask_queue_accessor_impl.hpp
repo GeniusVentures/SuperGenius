@@ -48,6 +48,9 @@ namespace sgns::processing
         void CompleteSubTask( const std::string &subTaskId, const SGProcessing::SubTaskResult &subTaskResult ) override;
         bool CreateResultsChannel( const std::string &task_id ) override;
 
+        /// @brief Set callback invoked when a mirrored result arrives. The callback receives the ipfs_results_data_id string.
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
     */
@@ -88,6 +91,8 @@ namespace sgns::processing
         std::shared_ptr<boost::asio::steady_timer> m_stateTimer;
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_resultChannel;
+
+        std::function<void( const std::string & )> m_mirrorResultCallback; ///< Invoked when a mirrored result arrives.
 
         mutable std::mutex                                 m_mutexResults;
         std::map<std::string, SGProcessing::SubTaskResult> m_results;

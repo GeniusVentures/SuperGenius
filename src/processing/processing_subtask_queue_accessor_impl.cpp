@@ -60,6 +60,11 @@ namespace sgns::processing
                          std::this_thread::get_id() );
     }
 
+    void SubTaskQueueAccessorImpl::setMirrorResultCallback( std::function<void( const std::string & )> callback )
+    {
+        m_mirrorResultCallback = std::move( callback );
+    }
+
     bool SubTaskQueueAccessorImpl::CreateResultsChannel( const std::string &task_id )
     {
         bool ret           = false;
@@ -369,6 +374,12 @@ namespace sgns::processing
             if ( result.ParseFromArray( message->data.data(), static_cast<int>( message->data.size() ) ) )
             {
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
+
+                // If this node mirrors results and the result has IPFS data, trigger mirror fetch.
+                if ( _this->m_mirrorResultCallback && !result.ipfs_results_data_id().empty() )
+                {
+                    _this->m_mirrorResultCallback( result.ipfs_results_data_id() );
+                }
 
                 rebroadcast_results = _this->OnResultReceived( std::move( result ) );
             }

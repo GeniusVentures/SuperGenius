@@ -42,6 +42,7 @@
 #include "outcome/outcome.hpp"
 #include <Generators.hpp>
 #include <bitswap.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
 #include "FileManager.hpp"
 
 namespace
@@ -627,6 +628,59 @@ namespace sgns
                     payout_address );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+                // Set up result mirroring for full/archive nodes
+                if ( mirror_results_ && bitswap_ )
+                {
+                    processing_service_->setMirrorResultCallback(
+                        [this]( const std::string &ipfs_results_data_id )
+                        {
+                            // Parse newline-separated CIDs and fetch any we don't already have
+                            std::istringstream stream( ipfs_results_data_id );
+                            std::string        line;
+                            while ( std::getline( stream, line ) )
+                            {
+                                if ( line.empty() )
+                                {
+                                    continue;
+                                }
+                                // Strip "ipfs://" prefix if present
+                                std::string cidStr = line;
+                                if ( cidStr.find( "ipfs://" ) == 0 )
+                                {
+                                    cidStr = cidStr.substr( 7 );
+                                }
+                                auto cid = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                                if ( !cid )
+                                {
+                                    continue;
+                                }
+                                if ( bitswap_->HasBlock( cid.value() ) )
+                                {
+                                    continue; // Already have it
+                                }
+                                node_logger_->info( "Mirroring result data for CID: {}", cidStr );
+                                bitswap_->RequestContent(
+                                    cid.value(),
+                                    [this, cidStr]( libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
+                                    {
+                                        if ( content )
+                                        {
+                                            node_logger_->info( "Successfully mirrored result data: {} ({} files)",
+                                                               cidStr,
+                                                               content.value().files.size() );
+                                        }
+                                        else
+                                        {
+                                            node_logger_->warn( "Failed to mirror result data for CID {}: {}",
+                                                               cidStr,
+                                                               content.error().message() );
+                                        }
+                                    } );
+                            }
+                        } );
+                }
+
                 if ( isprocessor_ )
                 {
                     StartProcessing();
