@@ -41,6 +41,8 @@
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
 #include <Generators.hpp>
+#include <bitswap.hpp>
+#include "FileManager.hpp"
 
 namespace
 {
@@ -308,6 +310,26 @@ namespace sgns
             const std::string addr = config_json["authorized_full_node"].GetString();
             node_logger_->info( "sgns_config.json: setting authorized_full_node" );
             Blockchain::SetAuthorizedFullNodeAddress( addr );
+        }
+        if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
+        {
+            ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();
+            node_logger_->info( "sgns_config.json: ipfs_cache_dir={}", ipfs_cache_dir_ );
+        }
+        if ( config_json.HasMember( "mirror_results" ) && config_json["mirror_results"].IsBool() )
+        {
+            mirror_results_ = config_json["mirror_results"].GetBool();
+            node_logger_->info( "sgns_config.json: mirror_results={}", mirror_results_ );
+        }
+        if ( config_json.HasMember( "result_retention_hours" ) && config_json["result_retention_hours"].IsInt() )
+        {
+            result_retention_hours_ = config_json["result_retention_hours"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_hours={}", result_retention_hours_ );
+        }
+        if ( config_json.HasMember( "result_retention_max_mb" ) && config_json["result_retention_max_mb"].IsInt() )
+        {
+            result_retention_max_mb_ = config_json["result_retention_max_mb"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_max_mb={}", result_retention_max_mb_ );
         }
     }
 
@@ -971,6 +993,19 @@ namespace sgns
 
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water  = low_water;
+
+            // Initialize Bitswap for IPFS content-addressed data exchange
+            bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
+            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>(
+                *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+            bitswap_->initialize();
+            if ( !ipfs_cache_dir_.empty() )
+            {
+                auto fullCachePath = write_base_path_ + "/" + ipfs_cache_dir_;
+                bitswap_->setCacheDir( fullCachePath );
+            }
+            FileManager::GetInstance().InitializeSingletons();
+            FileManager::GetInstance().setBitswap( bitswap_ );
 
             graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
 

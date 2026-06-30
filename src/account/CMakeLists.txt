@@ -100,6 +100,10 @@ target_link_libraries(genius_node
     p2p::p2p_kademlia
     p2p::p2p_identify
     p2p::p2p_ping
+    ipfs-bitswap-proto
+    ipfs-unixfs-proto
+    ipfs-bitswap-cpp
+    AsyncIOManager    
     Boost::Boost.DI
     SGTransactionProto
     ScaledInteger
@@ -113,6 +117,11 @@ target_link_libraries(genius_node
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
+)
+target_include_directories(
+    genius_node
+    PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
 )
 
 add_dependencies(genius_node rlp)

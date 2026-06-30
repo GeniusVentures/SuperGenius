@@ -1,9 +1,23 @@
 {
+    "_comment": "SuperGenius network configuration. All fields optional with safe defaults.",
     "net_id": 144,
+    "_net_id_doc": "144 = DEV, 369 = MAIN, 963 = TEST. Default: 144",
     "is_processor": true,
+    "_is_processor_doc": "Whether this node should run processing services. Default: true",
     "subnet_id": 0,
+    "_subnet_id_doc": "Reserved for future subnet isolation. Default: 0",
     "bootstrap_fullnodes": [
         "/dns4/sg-fullnode-1.gnus.ai/tcp/40102/ipfs/12D3KooWRqFHPFz6YptGnt4wLEGsNuWuv5TLN7rdQ9CFJcbHCWZC"
     ],
-    "authorized_full_node": "8a33bdf1445a68736429d1773be8682362753a0efc6fb9d8b3e8dffe3b74fc91e26b203fd521547a5219eddf1d3ac51fd17a7646c9bca5ef065da131add4e5a2"
+    "_bootstrap_fullnodes_doc": "Multiaddr strings of bootstrap full nodes for pubsub discovery",
+    "authorized_full_node": "8a33bdf1445a68736429d1773be8682362753a0efc6fb9d8b3e8dffe3b74fc91e26b203fd521547a5219eddf1d3ac51fd17a7646c9bca5ef065da131add4e5a2",
+    "_authorized_full_node_doc": "Multiaddr string of the authorized full node peer",
+    "ipfs_cache_dir": "ipfs_cache",
+    "_ipfs_cache_dir_doc": "Directory under base write path for IPFS block flat-file cache. Default: ipfs_cache",
+    "mirror_results": false,
+    "_mirror_results_doc": "If true, this node fetches and persists processing results from other nodes. Full/archive nodes should set this. Default: false",
+    "result_retention_hours": 168,
+    "_result_retention_hours_doc": "Hours to retain processing results before GC. 0 = keep forever (full node). Default: 168 (7 days)",
+    "result_retention_max_mb": 0,
+    "_result_retention_max_mb_doc": "Max MB for result cache before evicting oldest. 0 = no space cap. Default: 0"
 }

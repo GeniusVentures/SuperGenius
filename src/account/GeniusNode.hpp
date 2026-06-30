@@ -41,6 +41,12 @@
 #include <libp2p/event/bus.hpp>
 #include <libp2p/network/connection_manager.hpp>
 
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap
+{
+    class Bitswap;
+}
+
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
  */
@@ -647,6 +653,8 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
         std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
+        std::shared_ptr<libp2p::event::Bus>         bitswap_event_bus_;   ///< Event bus for bitswap.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;            ///< IPFS bitswap service for content-addressed data.
         std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
@@ -660,6 +668,10 @@ namespace sgns
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
         bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
+        std::string                              ipfs_cache_dir_     = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool                                     mirror_results_     = false;        ///< Whether to mirror processing results from other nodes.
+        int                                      result_retention_hours_ = 168;      ///< Hours to retain results before GC (0 = keep forever).
+        int                                      result_retention_max_mb_ = 0;       ///< Max MB for result cache (0 = no space cap).
         base::Logger                             node_logger_;            ///< Main node logger.
         DevConfig_st                             dev_config_;             ///< Runtime node configuration.
         std::string                              gnus_network_full_path_; ///< Versioned network DB path.
