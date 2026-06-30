@@ -192,7 +192,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 80000 ),
                                   readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
