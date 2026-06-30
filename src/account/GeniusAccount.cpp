@@ -38,15 +38,6 @@ namespace
 {
     using namespace sgns;
 
-    std::array<uint8_t, 32> get_elgamal_pubkey()
-    {
-        const auto              elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
-        std::array<uint8_t, 32> exported;
-        export_bits( elgamal_key, exported.begin(), 8, false );
-
-        return exported;
-    }
-
     base::Logger genius_account_logger()
     {
         // Always call base::createLogger to get the current logger
@@ -257,7 +248,12 @@ namespace sgns
             []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
     }
 
-    const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
+    const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED{
+        0xfc, 0x60, 0x52, 0x6c, 0x91, 0xec, 0x81, 0xd5,
+        0xd4, 0xfa, 0xb2, 0x78, 0x04, 0xad, 0x93, 0xd0,
+        0xd4, 0xf9, 0x4b, 0x55, 0xc7, 0x5e, 0xed, 0x6f,
+        0xda, 0x2e, 0xa0, 0xc9, 0xc8, 0x2c, 0x21, 0x36,
+    };
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
                                                                               StorageWithAddress response_value,
