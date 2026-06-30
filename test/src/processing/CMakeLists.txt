@@ -17,3 +17,13 @@
 #     p2p::p2p_logger
 #     ipfs-pubsub
 # )
+
+addtest(task_queue_test
+    task_queue_test.cpp
+)
+
+target_link_libraries(task_queue_test
+    processing_service
+    SGProcessingProto
+    base_crdt_test
+)

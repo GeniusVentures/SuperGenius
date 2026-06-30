@@ -260,6 +260,7 @@ namespace sgns
         
         // Create vector to store chunk hashes
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         
         // Get a mutable copy of the first input node
         sgns::ModelNode model_node = input_nodes[0];
@@ -267,7 +268,7 @@ namespace sgns
         std::cout << "Calling Process() on ProcessingManager..." << std::endl;
         
         // Call Process() - this will load the model and text file and run inference
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
         
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -357,11 +358,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (texture3D)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -450,11 +452,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (texture1D)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -601,11 +604,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (bool)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -740,11 +744,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (buffer)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -877,11 +882,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (float)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1014,11 +1020,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (int)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1153,11 +1160,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (mat2)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1292,11 +1300,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (mat3)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1431,11 +1440,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (mat4)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1549,10 +1559,11 @@ namespace sgns
         // Create mock model node
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (vec2)..." << std::endl;
-        auto proc_result = manager->Process( ioc, chunkhashes, model_node );
+        auto proc_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
         ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
 
         ASSERT_FALSE( proc_result.value().empty() ) << "Result hash should not be empty";
@@ -1677,11 +1688,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (tensor)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1815,11 +1827,12 @@ namespace sgns
 
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (textureCube)..." << std::endl;
 
-        auto process_result = manager->Process( ioc, chunkhashes, model_node );
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
 
         if ( process_result.has_value() ) {
             std::cout << "Process() succeeded!" << std::endl;
@@ -1933,10 +1946,11 @@ namespace sgns
         // Create mock model node
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (vec3)..." << std::endl;
-        auto proc_result = manager->Process( ioc, chunkhashes, model_node );
+        auto proc_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
         ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
 
         ASSERT_FALSE( proc_result.value().empty() ) << "Result hash should not be empty";
@@ -2040,10 +2054,11 @@ namespace sgns
         // Create mock model node
         auto ioc = std::make_shared<boost::asio::io_context>();
         std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
         sgns::ModelNode model_node = input_nodes[0];
 
         std::cout << "Calling Process() on ProcessingManager (vec4)..." << std::endl;
-        auto proc_result = manager->Process( ioc, chunkhashes, model_node );
+        auto proc_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
         ASSERT_TRUE( proc_result ) << "Process failed: " << proc_result.error().message();
 
         ASSERT_FALSE( proc_result.value().empty() ) << "Result hash should not be empty";

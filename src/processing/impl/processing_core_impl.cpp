@@ -98,7 +98,8 @@ namespace sgns::processing
             auto ioc = injector.create<std::shared_ptr<boost::asio::io_context>>();
 
             std::vector<std::vector<uint8_t>> chunk_hashes;
-            auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value() );
+            std::vector<std::string>        output_locations;
+            auto result_retval = processing_manager_->Process( ioc, chunk_hashes, model_retval.value(), output_locations );
 
             DecProcessingSubTaskCount();
             
@@ -117,6 +118,29 @@ namespace sgns::processing
             std::string hash_string( result_retval.value().begin(), result_retval.value().end() );
             result.set_result_hash( hash_string );
             result.set_token_id( token_ID_.bytes().data(), token_ID_.size() );
+
+            // Populate output location(s) in the result so the job requester
+            // can discover where their output was saved (file path, IPFS CID, etc.)
+            if ( !output_locations.empty() )
+            {
+                // Build a delimited string of all non-empty output locations
+                std::string joined_locations;
+                for ( const auto &loc : output_locations )
+                {
+                    if ( !loc.empty() )
+                    {
+                        if ( !joined_locations.empty() )
+                        {
+                            joined_locations += "\n";
+                        }
+                        joined_locations += loc;
+                    }
+                }
+                if ( !joined_locations.empty() )
+                {
+                    result.set_ipfs_results_data_id( joined_locations );
+                }
+            }
 
             return result;
 
