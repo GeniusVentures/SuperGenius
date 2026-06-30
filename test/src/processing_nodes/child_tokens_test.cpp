@@ -38,7 +38,8 @@ namespace
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
                                                   bool               isFullNode      = false,
-                                                  bool               setAsAuthorized = false )
+                                                  bool               setAsAuthorized = false,
+                                                  bool               isProcessor     = false )
     {
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
@@ -53,12 +54,15 @@ namespace
 
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
             std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
+            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
+        }
+        const uint16_t uniquePort = static_cast<uint16_t>( 41000 + id );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "network_config.json" );
+            configFile << R"({"pubsub_port": ")" << uniquePort << R"("})";
         }
 
         std::string key;
@@ -74,8 +78,7 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        auto node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
 
         if ( setAsAuthorized )
         {
@@ -483,13 +486,13 @@ protected:
 
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
-    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true );
+    auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true, true );
     test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "node_proc1 not synced" );
 
     auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
-    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false );
+    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, false, true );
 
     node_main->GetPubSub()->AddPeers(
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
