@@ -753,12 +753,12 @@ namespace sgns
             return existing_records.error();
         }
 
+        auto batch = db->batch();
         if ( existing_records.has_value() )
         {
-            //TODO - not great because it's not atomic, so we lose the record and if we shutdown before we record it is gone.
             for ( const auto &[existing_key, _] : existing_records.value() )
             {
-                if ( auto rem_res = db->remove( existing_key ); rem_res.has_error() )
+                if ( auto rem_res = batch->remove( existing_key ); rem_res.has_error() )
                 {
                     logger_->error( "Failed to remove old UTXO record for address {}", address );
                     return rem_res.error();
@@ -816,12 +816,18 @@ namespace sgns
             base::Buffer key_buf;
             key_buf.put( BuildUTXORecordKey( address, outpoint ) );
 
-            if ( auto put_res = db->put( key_buf, value_buf ); put_res.has_error() )
+            if ( auto put_res = batch->put( key_buf, value_buf ); put_res.has_error() )
             {
                 logger_->error( "Error when storing UTXO record for address {}", address );
                 return put_res.error();
             }
             ++stored;
+        }
+
+        if ( auto commit_res = batch->commit(); commit_res.has_error() )
+        {
+            logger_->error( "Error when committing UTXO records for address {}", address );
+            return commit_res.error();
         }
 
         logger_->info( "Stored {} UTXOs for address {}", stored, address );
