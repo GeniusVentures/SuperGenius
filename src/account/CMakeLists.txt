@@ -38,7 +38,6 @@ target_link_libraries(sgns_genius_account
 )
 
 target_precompile_headers(sgns_genius_account PUBLIC
-    $<BUILD_INTERFACE:<ProofSystem/ElGamalKeyGenerator.hpp$<ANGLE-R>>
     $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
 )
 
@@ -85,7 +84,7 @@ target_link_libraries(genius_node
     gnus_upnp
     sgns_genius_account
     blockchain_genesis
-	ProcessingBase
+ ProcessingBase
     evmrelay
     PRIVATE
     component_factory
