@@ -46,6 +46,14 @@ addtest(account_management_test
 
 target_link_libraries(account_management_test genius_node)
 
+addtest(result_gc_test
+    result_gc_test.cpp
+)
+
+target_link_libraries(result_gc_test
+    GTest::gtest_main
+)
+
 if(MSVC)
     target_link_options(account_management_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
 elseif(APPLE)
