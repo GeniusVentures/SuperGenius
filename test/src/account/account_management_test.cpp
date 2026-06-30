@@ -39,7 +39,7 @@ public:
         boost::filesystem::create_directories( path );
         {
             std::ofstream configFile( path.generic_string() + "/sgns_config.json" );
-            configFile << R"({"is_processor": false})";
+            configFile << R"({"is_processor": true})";
         }
 
 
@@ -128,6 +128,11 @@ TEST_F( AccountManagement, SetPayoutAddress )
     boost::filesystem::create_directories( path_receiver );
     {
         std::ofstream configFile( path_receiver.generic_string() + "/sgns_config.json" );
+        configFile << R"({"is_processor": false})";
+    }
+    boost::filesystem::create_directories( path_requester );
+    {
+        std::ofstream configFile( path_requester.generic_string() + "/sgns_config.json" );
         configFile << R"({"is_processor": false})";
     }
 
