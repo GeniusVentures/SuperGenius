@@ -8,12 +8,12 @@
 #ifndef _CRDT_DATA_FILTER_HPP_
 #define _CRDT_DATA_FILTER_HPP_
 
-#include <unordered_map>
 #include <functional>
 #include <string>
 #include <memory>
 #include <regex>
 #include <shared_mutex>
+#include <vector>
 
 #include "crdt/proto/delta.pb.h"
 
@@ -27,8 +27,16 @@ namespace sgns::crdt
         /**
          * @brief      Element filtering callback definition
          */
-        using ElementFilterCallback  = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
-        using FilterCallbackRegistry = std::unordered_map<std::string, ElementFilterCallback>;
+        using ElementFilterCallback = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
+
+        struct FilterCallbackEntry
+        {
+            std::string           pattern;
+            std::regex            regex;
+            ElementFilterCallback filter;
+        };
+
+        using FilterCallbackRegistry = std::vector<std::shared_ptr<const FilterCallbackEntry>>;
 
         /**
          * @brief       Construct a new CRDTDataFilter object
