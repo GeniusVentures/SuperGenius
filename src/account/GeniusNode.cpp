@@ -1261,6 +1261,42 @@ namespace sgns
         return logger;
     }
 
+    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account )
+    {
+        ResetProcessingMembers();
+
+        // Invalidate any in-flight async bridge init and drop its observer
+        // registrations BEFORE bridge_relayer_ is destroyed. The posted init
+        // job captures this generation token and aborts if stale; resetting the
+        // provider here also releases its raw bridge_relayer_ observer so a
+        // late Initialize() cannot notify a freed relayer.
+        ++bridge_init_generation_;
+        rpc_endpoint_provider_.reset();
+
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
+        }
+        transaction_manager_.reset();
+
+        bridge_relayer_.reset();
+
+        eth_watch_service_.reset();
+
+        if ( blockchain_ )
+        {
+            BOOST_OUTCOME_TRY( blockchain_->Stop() );
+        }
+        blockchain_.reset();
+
+        if ( deconfigure_account && account_ )
+        {
+            account_->DeconfigureDatabaseDependencies();
+        }
+
+        return outcome::success();
+    }
+
     void GeniusNode::ShutdownForDestruction()
     {
         bool expected = false;
@@ -1283,6 +1319,13 @@ namespace sgns
         {
             bootstrap_disconnect_subscription_->unsubscribe();
             bootstrap_disconnect_subscription_.reset();
+        }
+
+        auto services_shutdown = ShutdownAccountBoundServices( true );
+        if ( services_shutdown.has_error() )
+        {
+            node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
+                                 services_shutdown.error().message() );
         }
 
         if ( tx_globaldb_ )
@@ -1515,35 +1558,7 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        ResetProcessingMembers();
-
-        // Invalidate any in-flight async bridge init and drop its observer
-        // registrations BEFORE bridge_relayer_ is destroyed. The posted init
-        // job captures this generation token and aborts if stale; resetting the
-        // provider here also releases its raw bridge_relayer_ observer so a
-        // late Initialize() cannot notify a freed relayer.
-        ++bridge_init_generation_;
-        rpc_endpoint_provider_.reset();
-
-        auto tx_manager_result = GetTransactionManager();
-        if ( tx_manager_result.has_value() )
-        {
-            auto manager = std::move( tx_manager_result.value() );
-            manager->Stop();
-        }
-        transaction_manager_.reset();
-
-        bridge_relayer_.reset();
-
-        eth_watch_service_.reset();
-
-        if ( blockchain_ )
-        {
-            BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
-        }
-        blockchain_.reset();
-
-        account_->DeconfigureDatabaseDependencies();
+        BOOST_OUTCOME_TRY( ShutdownAccountBoundServices( true ) );
 
         if ( account_ )
         {

@@ -835,6 +835,12 @@ namespace sgns
         void ShutdownForDestruction();
 
         /**
+         * @brief Stops account-bound runtime services in dependency order.
+         * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
+         */
+        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account );
+
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
