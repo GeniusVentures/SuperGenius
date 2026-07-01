@@ -180,6 +180,33 @@ namespace sgns
             manager->ProcessDuePendingRetries();
         }
 
+        static void ProcessCertificates( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->ProcessCertificates();
+        }
+
+        static void Close( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->Close();
+        }
+
+        static bool CertificatesPending( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager && manager->certificates_pending_.load();
+        }
+
+        static void AddQuorumReachedProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                              const ConsensusManager::Proposal        &proposal )
+        {
+            ConsensusManager::ProposalState state;
+            state.proposal              = proposal;
+            state.slot_key              = ConsensusManager::GetSlotKey( proposal );
+            state.quorum_reached        = true;
+            state.quorum_reached_ts_ms  = 0;
+            manager->proposals_[proposal.proposal_id()] = std::move( state );
+            manager->certificates_pending_.store( true );
+        }
+
         static void ExpirePendingProposals( const std::shared_ptr<ConsensusManager> &manager )
         {
             manager->ExpirePendingProposals();
@@ -267,7 +294,8 @@ namespace
         }
 
         std::shared_ptr<sgns::ConsensusManager> MakeManager(
-            const std::shared_ptr<sgns::ValidatorRegistry> &registry )
+            const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+            const std::string                              &local_id = kValidatorId )
         {
             auto manager = sgns::ConsensusManager::New(
                 registry,
@@ -275,7 +303,7 @@ namespace
                 pubs_,
                 []( std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
                 { return DummySignature( std::move( payload ) ); },
-                kValidatorId );
+                local_id );
             EXPECT_TRUE( manager );
             return manager;
         }
@@ -422,6 +450,27 @@ TEST( ConsensusPendingLifecycleContractTest, PendingLifecycleConfigDefaultsToThr
     EXPECT_EQ( config.max_pending_per_proposer, 64U );
     EXPECT_EQ( config.max_retained_pending_bytes, 64ULL * 1024ULL * 1024ULL );
     EXPECT_EQ( config.pending_ttl, std::chrono::minutes( 3 ) );
+}
+
+TEST_F( ConsensusPendingLifecycleTest, QuorumCertificateWorkClearsWhenLocalNodeNotInProposalRegistry )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+
+    auto observer_manager = MakeManager( registry, "observer-not-validator" );
+    ASSERT_TRUE( observer_manager );
+
+    auto proposal = MakeProposal( observer_manager, registry, 9, "0xobserver-quorum" );
+
+    sgns::ConsensusPendingLifecycleTestAccess::AddQuorumReachedProposal( observer_manager, proposal );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( observer_manager, proposal.proposal_id() ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( observer_manager ) );
+
+    sgns::ConsensusPendingLifecycleTestAccess::ProcessCertificates( observer_manager );
+
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( observer_manager, proposal.proposal_id() ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( observer_manager ) );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( observer_manager );
 }
 
 TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndCleansAccounting )
