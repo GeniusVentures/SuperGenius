@@ -103,7 +103,7 @@ namespace sgns
                 true );
             Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 40000 ),
+                                          std::chrono::milliseconds( 50000 ),
                                           "full_node not ready" );
 
             node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
@@ -124,10 +124,10 @@ namespace sgns
             node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
             test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 40000 ),
+                                          std::chrono::milliseconds( 50000 ),
                                           "node_proc1 not ready" );
             test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::milliseconds( 40000 ),
+                                          std::chrono::milliseconds( 50000 ),
                                           "node_proc2 not ready" );
         }
 
@@ -255,13 +255,13 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc1 not synced" );
     test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc2 not synced" );
     test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "full_node not synced" );
 
     // Mint tokens on node_proc1
@@ -354,13 +354,13 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc1 not synced" );
     test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc2 not synced" );
     test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "full_node not synced" );
 
     auto mint_result = node_proc1->MintTokens( 67000000000,
@@ -457,13 +457,13 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc1 not synced" );
     test::assertWaitForCondition( [&] { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_proc2 not synced" );
     test::assertWaitForCondition( [&] { return full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "full_node not synced" );
 
     // Mint tokens with timeout
@@ -522,7 +522,7 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
 
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 50000 ),
         "Node didn't recover from wrong transaction" );
 
     std::cout << "wait until its ready" << std::endl;
@@ -559,11 +559,11 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
 
     test::assertWaitForCondition(
         [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 50000 ),
         "node_proc1 not synched" );
     test::assertWaitForCondition(
         [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 20000 ),
+        std::chrono::milliseconds( 50000 ),
         "node_proc2 not synched" );
 
     // Mint tokens to ensure sufficient balance

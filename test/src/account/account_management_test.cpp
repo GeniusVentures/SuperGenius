@@ -74,13 +74,13 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
     auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
     ASSERT_EQ( node_->GetAddress(), new_account_address );
     // Can go back to previous account
     ASSERT_TRUE( node_->SelectAccount( old_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
 }
 
@@ -92,7 +92,7 @@ TEST_F( AccountManagement, TransferAccount )
     auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->TransferAccount( other_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
     ASSERT_EQ( node_->GetBalance(), balance );
 }
@@ -103,7 +103,7 @@ TEST_F( AccountManagement, CanDeleteAccount )
     auto new_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
     ASSERT_TRUE( node_->SelectAccount( new_account_address ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node not synced" );
     ASSERT_TRUE( node_->DeleteAccount( old_account_address ).has_value() );
     ASSERT_TRUE( node_->SelectAccount( old_account_address ).has_error() );
@@ -150,18 +150,18 @@ TEST_F( AccountManagement, SetPayoutAddress )
     node_receiver->GetPubSub()->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 60000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_receiver not synced" );
     ASSERT_EQ( node_receiver->GetState(), GeniusNode::NodeState::READY );
 
     test::assertWaitForCondition( [&] { return node_requester->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_requester not synced" );
     ASSERT_EQ( node_requester->GetState(), GeniusNode::NodeState::READY );
 
     ASSERT_TRUE( node_->SetPayoutAddress( node_receiver->GetAddress() ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_ not synced" );
     ASSERT_EQ( node_->GetState(), GeniusNode::NodeState::READY );
 

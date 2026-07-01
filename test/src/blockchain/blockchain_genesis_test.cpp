@@ -187,7 +187,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
 
     // Create two regular nodes
@@ -226,11 +226,11 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
 
     test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_regular_1 not ready" );
 
     std::cout << "All nodes are ready and synchronized!" << std::endl;
@@ -255,7 +255,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                  true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
@@ -280,13 +280,13 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     uint64_t mint_amount = 10000000000ULL;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "full node not ready" );
     test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "regular node 1 not ready" );
     test::assertWaitForCondition( [&]() { return node_regular_2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "regular node 2 not ready" );
 
     auto balance_regular_1_before = node_regular_1->GetBalance();

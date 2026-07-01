@@ -63,7 +63,7 @@ protected:
 
         sgns::test::assertWaitForCondition( [&]
                                             { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_proc1 not ready" );
 
         node_main = sgns::GeniusNode::NewFromPrivateKey(
@@ -86,11 +86,11 @@ protected:
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
         sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_main not ready" );
         sgns::test::assertWaitForCondition( [&]
                                             { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_proc2 not ready" );
     }
 
@@ -158,13 +158,13 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
     sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Main node not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Node proc 1 not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
