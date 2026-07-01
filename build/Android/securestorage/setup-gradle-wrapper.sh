@@ -11,7 +11,7 @@ if [ -f gradlew ]; then
     exit 0
 fi
 
-GRADLE_VERSION="8.14.3"
+GRADLE_VERSION="8.14.4"
 
 # Check if gradle is installed and what version
 if command -v gradle &> /dev/null; then
@@ -37,15 +37,15 @@ echo "Downloading Gradle wrapper files directly..."
 mkdir -p gradle/wrapper
 
 # Download gradle-wrapper.jar
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradle/wrapper/gradle-wrapper.jar" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar" \
     -o gradle/wrapper/gradle-wrapper.jar
 
 # Download gradlew
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradlew" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew" \
     -o gradlew
 
 # Download gradlew.bat
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradlew.bat" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew.bat" \
     -o gradlew.bat
 
 # Create gradle-wrapper.properties
