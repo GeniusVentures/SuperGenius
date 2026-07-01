@@ -11,6 +11,7 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 
