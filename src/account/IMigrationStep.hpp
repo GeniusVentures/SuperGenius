@@ -6,7 +6,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef SGNS_IMIGRATION_STEP_HPP
+#define SGNS_IMIGRATION_STEP_HPP
 
 #include <string>
 #include <tuple>
@@ -83,3 +84,5 @@ namespace sgns
         }
     };
 } // namespace sgns
+
+#endif // SGNS_IMIGRATION_STEP_HPP

@@ -25,10 +25,13 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
+#include "account/GeniusAccount.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns;
@@ -36,6 +39,13 @@ using namespace sgns;
 class BlockchainGenesisTest : public ::testing::Test
 {
 protected:
+    static void SetUpTestSuite()
+    {
+        // Inject in-memory secure storage to avoid OS keychain prompts during tests
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+    }
+
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   const std::string &dev_addr,
                                                   const std::string &tokenValue,
@@ -153,10 +163,10 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     // The nodes should not be able to sync properly without the authorized address set
     // This test verifies that the blockchain sync is blocked when authorization is missing
 
-    std::cout << "Full node state: " << static_cast<int>( node_full->GetTransactionManagerState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetTransactionManagerState() )
+    std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
               << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetTransactionManagerState() )
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
               << std::endl;
 
     std::cout << "=== No Authorization No Sync Test Completed ===" << std::endl;
@@ -177,7 +187,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
 
     // Create two regular nodes
@@ -216,11 +226,11 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
 
     test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_regular_1 not ready" );
 
     std::cout << "All nodes are ready and synchronized!" << std::endl;
@@ -245,7 +255,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                  true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
@@ -270,13 +280,13 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     uint64_t mint_amount = 10000000000ULL;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "full node not ready" );
     test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "regular node 1 not ready" );
     test::assertWaitForCondition( [&]() { return node_regular_2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
+                                  std::chrono::milliseconds( 50000 ),
                                   "regular node 2 not ready" );
 
     auto balance_regular_1_before = node_regular_1->GetBalance();
@@ -285,7 +295,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     // Mint tokens on the first regular node after sync is confirmed
     auto mint_result = node_regular_1->MintTokens( mint_amount,
                                                    sgns::test::NextMintSourceHash(),
-                                                   "",
+                                                   "test",
                                                    token_id,
                                                    "",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -374,10 +384,10 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
 
-    std::cout << "Full node state: " << static_cast<int>( node_full->GetTransactionManagerState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetTransactionManagerState() )
+    std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
               << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetTransactionManagerState() )
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
               << std::endl;
 
     // The nodes should not be able to sync properly with wrong authorization

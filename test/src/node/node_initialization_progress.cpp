@@ -1,6 +1,8 @@
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include <chrono>
 #include <thread>
@@ -20,6 +22,9 @@ TEST( GeniusNode, InitializationProgress )
     catch ( ... ) //NOLINT(bugprone-empty-catch)
     {
     }
+
+    GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                            { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
     auto node = sgns::GeniusNode::NewFromPrivateKey(
         { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), path.generic_string() + '/' },

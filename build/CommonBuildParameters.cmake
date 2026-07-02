@@ -218,7 +218,7 @@ if(POLICY CMP0167)
     cmake_policy(SET CMP0167 OLD)
 endif()
 find_package(Boost REQUIRED COMPONENTS container date_time filesystem random regex system thread log log_setup program_options unit_test_framework json context coroutine)
-include_directories(${Boost_INCLUDE_DIRS})
+include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 
 # SQLiteModernCpp project
 set(SQLiteModernCpp_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/SQLiteModernCpp")
@@ -381,7 +381,7 @@ set_target_properties(marshalling::crypto3_zk PROPERTIES
 
 # zkLLVM
 set(zkLLVM_INCLUDE_DIR "${ZKLLVM_BUILD_DIR}/zkLLVM/include")
-include_directories(${zkLLVM_INCLUDE_DIR})
+include_directories(SYSTEM ${zkLLVM_INCLUDE_DIR})
 
 
 # circifier

@@ -3,12 +3,19 @@
 #include <boost/dll.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 using namespace sgns;
 namespace fs = boost::filesystem;
 
 TEST( SecureStorage, JsonMigration )
 {
+    // Inject in-memory secure storage to avoid OS keychain prompts during tests
+    GeniusAccount::SetSecureStorageFactory(
+        []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+        {
+            return std::make_shared<MemorySecureStorage>( identifier );
+        } );
     auto binary_parent = boost::dll::program_location().parent_path();
     const fs::path json_storage_path = binary_parent / "json_storage";
     const fs::path test_path = binary_parent / "json_storage_test";

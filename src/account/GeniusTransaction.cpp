@@ -1,10 +1,10 @@
-#include "IGeniusTransactions.hpp"
+#include "GeniusTransaction.hpp"
 
 #include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
-    outcome::result<SGTransaction::DAGStruct> IGeniusTransactions::DeSerializeDAGStruct(
+    outcome::result<SGTransaction::DAGStruct> GeniusTransaction::DeSerializeDAGStruct(
         const std::vector<uint8_t> &data )
     {
         SGTransaction::DAGWrapper dag_wrap;
@@ -18,7 +18,7 @@ namespace sgns
         return dag;
     }
 
-    outcome::result<SGTransaction::DAGStruct> IGeniusTransactions::DeSerializeDAGStruct( const std::string &data )
+    outcome::result<SGTransaction::DAGStruct> GeniusTransaction::DeSerializeDAGStruct( const std::string &data )
     {
         SGTransaction::DAGWrapper dag_wrap;
         if ( !dag_wrap.ParseFromString( data ) )
@@ -31,7 +31,7 @@ namespace sgns
         return dag;
     }
 
-    void IGeniusTransactions::FillHash()
+    void GeniusTransaction::FillHash()
     {
         auto signature = dag_st.signature();
         dag_st.clear_signature();
@@ -44,7 +44,7 @@ namespace sgns
         dag_st.set_signature( std::move( signature ) );
     }
 
-    bool IGeniusTransactions::CheckHash() const
+    bool GeniusTransaction::CheckHash() const
     {
         const auto hash = dag_st.data_hash();
 
@@ -58,7 +58,7 @@ namespace sgns
         return hash == calculated_hash.toReadableString();
     }
 
-    std::vector<uint8_t> IGeniusTransactions::MakeSignature( GeniusAccount &account )
+    std::vector<uint8_t> GeniusTransaction::MakeSignature( GeniusAccount &account )
     {
         dag_st.clear_signature();
         auto serialized = SerializeByteVector();
@@ -71,7 +71,7 @@ namespace sgns
         return signed_vector;
     }
 
-    bool IGeniusTransactions::CheckSignature() const
+    bool GeniusTransaction::CheckSignature() const
     {
         auto       str_signature = dag_st.signature();
 
@@ -82,7 +82,7 @@ namespace sgns
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized );
     }
 
-    bool IGeniusTransactions::CheckDAGSignatureLegacy() const
+    bool GeniusTransaction::CheckDAGSignatureLegacy() const
     {
         auto str_signature = dag_st.signature();
                 SGTransaction::DAGStruct dag_copy = dag_st;
@@ -97,22 +97,22 @@ namespace sgns
         return GeniusAccount::VerifySignature( dag_st.source_addr(), str_signature, serialized ) && CheckHash();
     }
 
-    std::string IGeniusTransactions::GetHash() const
+    std::string GeniusTransaction::GetHash() const
     {
         return dag_st.data_hash();
     }
 
-    std::string IGeniusTransactions::GetPreviousHash() const
+    std::string GeniusTransaction::GetPreviousHash() const
     {
         return dag_st.previous_hash();
     }
 
-    std::string IGeniusTransactions::GetUncleHash() const
+    std::string GeniusTransaction::GetUncleHash() const
     {
         return dag_st.uncle_hash();
     }
 
-    std::unordered_set<std::string> IGeniusTransactions::GetTopics() const
+    std::unordered_set<std::string> GeniusTransaction::GetTopics() const
     {
         return { GetSrcAddress() };
     }

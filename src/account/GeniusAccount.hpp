@@ -4,7 +4,8 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_GENIUS_ACCOUNT_HPP
+#define SGNS_GENIUS_ACCOUNT_HPP
 
 #include <array>
 #include <deque>
@@ -24,7 +25,6 @@
 #include <boost/filesystem/path.hpp>
 #include <WalletCore/PrivateKey.h>
 
-#include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
@@ -45,11 +45,33 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
-                                             std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, ethereum::EthereumKeyGenerator>;
 
-        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+
+        /**
+         * @brief   Factory function type for creating secure storage instances.
+         * @param   identifier  Storage identifier (typically base58-encoded public key).
+         * @return  Shared pointer to the created secure storage backend.
+         */
+        using SecureStorageFactory = std::function<std::shared_ptr<ISecureStorage>( const std::string &identifier )>;
+
+        /**
+         * @brief   Sets the secure storage factory used by all GeniusAccount factory methods.
+         *
+         * By default, the factory creates OS-specific secure storage (Apple Keychain,
+         * Linux secret service, etc.).  Tests can override this to inject
+         * MemorySecureStorage, eliminating keychain prompts entirely.
+         *
+         * @param   factory  Factory function; pass nullptr to restore the default.
+         */
+        static void SetSecureStorageFactory( SecureStorageFactory factory );
+
+        /**
+         * @brief   Returns the current secure storage factory (default if none set).
+         */
+        static const SecureStorageFactory &GetSecureStorageFactory();
 
         /**
          * @brief       Try creating an account by first loading it from storage,
@@ -367,7 +389,6 @@ namespace sgns
         bool                            is_full_node_; ///< Whether this account is a full node
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
@@ -420,3 +441,5 @@ namespace sgns
                        bool                                            full_node );
     };
 }
+
+#endif // SGNS_GENIUS_ACCOUNT_HPP

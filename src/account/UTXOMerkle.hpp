@@ -4,7 +4,8 @@
  * @date       2026-03-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_UTXO_MERKLE_HPP
+#define SGNS_UTXO_MERKLE_HPP
 
 #include "account/GeniusUTXO.hpp"
 #include "crypto/sha/sha256.hpp"
@@ -226,3 +227,4 @@ namespace sgns::utxo_merkle
         return ComputeMerkleRootFromPayloads( std::move( payloads ) );
     }
 }
+#endif // SGNS_UTXO_MERKLE_HPP

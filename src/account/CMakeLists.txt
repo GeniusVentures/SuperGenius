@@ -32,13 +32,12 @@ target_link_libraries(sgns_genius_account
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     wallet_core_rs
-    TrezorCrypto
     protobuf::libprotobuf
     ${WIN_CRYPT_LIBRARY}
+    TrezorCrypto
 )
 
 target_precompile_headers(sgns_genius_account PUBLIC
-    $<BUILD_INTERFACE:<ProofSystem/ElGamalKeyGenerator.hpp$<ANGLE-R>>
     $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
 )
 
@@ -53,18 +52,21 @@ if(MSVC)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
-add_library(genius_node
-    IGeniusTransactions.cpp
+
+set(GENIUS_NODE_SOURCES
+    GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp
     MigrationTransaction.cpp
     ProcessingTransaction.cpp
     EscrowTransaction.cpp
+    GeniusInputValidator.cpp
+    MigrationInputValidator.cpp
     InputValidators.cpp
+    PublicChainInputValidator.cpp
     TransactionManager.cpp
     TokenAmount.cpp
-    BridgeConsensusAdapter.cpp
     MigrationManager.cpp
     Migration0_2_0To1_0_0.cpp
     Migration1_0_0To3_4_0.cpp
@@ -72,22 +74,13 @@ add_library(genius_node
     Migration3_5_0To3_6_0.cpp
     Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
+    ChainRpcEndpointProvider.cpp
+    BridgeRelayer.cpp
 )
 
-target_link_libraries(genius_node
-    PUBLIC
-    Boost::headers
-    ProofSystem
-    outcome
-    logger
-    crdt_globaldb
-    processing_service
-    gnus_upnp
-    sgns_genius_account
-    blockchain_genesis
-	ProcessingBase
-    evmrelay
+set(GENIUS_NODE_LIBS
     PRIVATE
+    AsyncIOManager
     component_factory
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
@@ -108,7 +101,6 @@ target_link_libraries(genius_node
     SGTransactionProto
     ScaledInteger
     sgns_version
-    AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     protobuf::libprotobuf
@@ -117,12 +109,32 @@ target_link_libraries(genius_node
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
+    PUBLIC
+    Boost::headers
+    ProofSystem
+    outcome
+    logger
+    crdt_globaldb
+    processing_service
+    gnus_upnp
+    blockchain_genesis
+    ProcessingBase
+    evmrelay
+    sgns_genius_account
 )
 target_include_directories(
     genius_node
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
+
+# Production library — uses OS keychain (Apple/Windows/Linux secure storage)
+add_library(genius_node ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
+
+# Test library — uses in-memory secure storage via DI factory (no keychain prompts)
+add_library(genius_node_test ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 
 add_dependencies(genius_node rlp)
 
@@ -133,6 +145,18 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
 endif()
 
-# Install both libraries
+# Install production library only
 supergenius_install(sgns_genius_account)
 supergenius_install(genius_node)
+
+# Copy default bridge chains config to test binary output for dev/test runs
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    ${CMAKE_BINARY_DIR}/test_bin/bridge_chains_config.json
+    COPYONLY
+)
+
+# Install the default config alongside the binary for production
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+)

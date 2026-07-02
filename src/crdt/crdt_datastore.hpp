@@ -482,7 +482,6 @@ namespace sgns::crdt
         std::condition_variable         rebroadcastCv_;
         std::unordered_set<std::string> topicNames_;
         mutable std::mutex              topicNamesMutex_;
-        std::mutex                      pendingBroadcastMutex_;
         std::unordered_set<std::string> pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
