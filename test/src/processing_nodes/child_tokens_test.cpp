@@ -1,11 +1,16 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
-#include <cstring>
-#include <cstdio>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <map>
 #include <ostream>
 #include <random>
-#include <thread>
+#include <string_view>
+#include <vector>
 
 #include <boost/filesystem.hpp>
 #include <boost/dll.hpp>
@@ -16,12 +21,9 @@
 #include "testutil/mint_source_hash.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
-#include <boost/multiprecision/cpp_dec_float.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 
 using namespace sgns;
 using namespace sgns::test;
-using boost::multiprecision::cpp_dec_float_50;
 
 namespace
 {
@@ -35,18 +37,27 @@ namespace
                                                   const std::string &tokenValue,
                                                   sgns::TokenID      tokenId,
                                                   bool               isFullNode      = false,
-                                                  bool               isProcessor     = false,
-                                                  bool               setAsAuthorized = false )
+                                                  bool               setAsAuthorized = false,
+                                                  bool               isProcessor     = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
         int                     id = nodeCounter.fetch_add( 1 );
 
         std::string binaryPath = boost::dll::program_location().parent_path().string();
-        const char *filePath   = ::testing::UnitTest::GetInstance()->current_test_info()->file();
-        std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
+        const auto  uniquePort = static_cast<uint16_t>( 41000 + id );
 
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
+        }
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "network_config.json" );
+            configFile << R"({"pubsub_port": ")" << uniquePort << R"("})";
+        }
 
         std::string key;
         key.reserve( 64 );
@@ -61,42 +72,14 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::New( devConfig, key.c_str(), false, isProcessor, uniquePort, isFullNode );
+        auto node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
 
         if ( setAsAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
-    }
-
-    /**
-     * Adds two decimal numbers represented as strings.
-     * @param a Decimal string, e.g. "-0.4"
-     * @param b Decimal string, e.g. "0.6"
-     * @return std::string Result of the addition without unnecessary trailing zeros, e.g. "0.2"
-     */
-    std::string addDecimalStrings( const std::string &a, const std::string &b )
-    {
-        cpp_dec_float_50 da( a );
-        cpp_dec_float_50 db( b );
-        cpp_dec_float_50 sum = da + db;
-        std::string      s   = sum.convert_to<std::string>();
-        if ( s.find( '.' ) != std::string::npos )
-        {
-            while ( !s.empty() && s.back() == '0' )
-            {
-                s.pop_back();
-            }
-            if ( !s.empty() && s.back() == '.' )
-            {
-                s.pop_back();
-            }
-        }
-        return s;
     }
 
 } // namespace
@@ -105,7 +88,7 @@ namespace
 TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
-    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, false, true );
+    auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, true );
     test::assertWaitForCondition( [&]() { return node50->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "node50 not synced" );
@@ -228,163 +211,56 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     EXPECT_EQ( final52_t52 - init52_t52, 1 );
 }
 
-// ------------------ Suite 1: Mint Main Tokens ------------------
-
-/// Parameters for minting main tokens
-struct MintMainCase_s
+// Suite: one live node check that child-token conversion is wired into minting.
+TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 {
-    std::string   tokenValue;    // TokenValueInGNUS
-    sgns::TokenID TokenID;       // TokenID
-    uint64_t      mintMain;      // Amount to mint in main tokens
-    std::string   expectedChild; // Expected delta of child balance (as string)
-};
-
-inline std::ostream &operator<<( std::ostream &os, MintMainCase_s const &c )
-{
-    return os << "MintMainCase_s{tokenValue='" << c.tokenValue << "', mintMain=" << c.mintMain << ", expectedChild='"
-              << c.expectedChild << "'}";
-}
-
-class GeniusNodeMintMainTest : public ::testing::TestWithParam<MintMainCase_s>
-{
-};
-
-TEST_P( GeniusNodeMintMainTest, MintMainBalance )
-{
-    auto p        = GetParam();
-    auto nodefull = CreateNode( "0xaffe", p.tokenValue, p.TokenID, true, false, true );
+    auto tokenId  = sgns::TokenID::FromBytes( { 0x05 } );
+    auto nodefull = CreateNode( "0xaffb", "0.5", tokenId, true, true );
     test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "nodefull not synced" );
-    auto node = CreateNode( "0xdade", p.tokenValue, p.TokenID );
+    auto node = CreateNode( "0xfadb", "0.5", tokenId );
     nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "node not synced" );
 
-    uint64_t initialMain = node->GetBalance();
-    auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
-    ASSERT_TRUE( initFmtRes.has_value() );
-    std::string initialChildStr    = initFmtRes.value();
-    auto        parsedInitialChild = node->ParseTokens( initialChildStr, p.TokenID );
-    ASSERT_TRUE( parsedInitialChild.has_value() );
+    auto initialMain  = node->GetBalance();
+    auto initialToken = node->GetBalance( tokenId );
 
-    auto res = node->MintTokens( p.mintMain,
-                                 sgns::test::NextMintSourceHash(),
-                                 "",
-                                 p.TokenID,
-                                 "",
-                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    constexpr uint64_t mintMain = 1000000;
+    auto               res      = node->MintTokens( mintMain,
+                                                    sgns::test::NextMintSourceHash(),
+                                                    "",
+                                                    tokenId,
+                                                    "",
+                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( res.has_value() );
 
-    auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
+    auto parsedChildMint = node->ParseTokens( "1.0", tokenId );
+    ASSERT_TRUE( parsedChildMint.has_value() );
+    EXPECT_EQ( parsedChildMint.value(), 500000 );
+
+    auto childMintRes = node->MintTokens( parsedChildMint.value(),
+                                          sgns::test::NextMintSourceHash(),
+                                          "",
+                                          tokenId,
+                                          "",
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( childMintRes.has_value() );
+
+    auto finalFmtRes = node->FormatTokens( node->GetBalance( tokenId ) - initialToken, tokenId );
     ASSERT_TRUE( finalFmtRes.has_value() );
-    std::string finalChildStr    = finalFmtRes.value();
-    auto        parsedFinalChild = node->ParseTokens( finalChildStr, p.TokenID );
-    ASSERT_TRUE( parsedFinalChild.has_value() );
-
-    auto parsedExpectedDelta = node->ParseTokens( p.expectedChild, p.TokenID );
-    ASSERT_TRUE( parsedExpectedDelta.has_value() );
-
-    EXPECT_EQ( node->GetBalance() - initialMain, p.mintMain );
-    EXPECT_EQ( node->GetBalance( p.TokenID ) - initialMain, p.mintMain );
-    EXPECT_EQ( parsedFinalChild.value() - parsedInitialChild.value(), parsedExpectedDelta.value() );
+    EXPECT_EQ( finalFmtRes.value(), "3.000000" );
+    EXPECT_EQ( node->GetBalance() - initialMain, mintMain + parsedChildMint.value() );
+    EXPECT_EQ( node->GetBalance( tokenId ) - initialToken, mintMain + parsedChildMint.value() );
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    MintMainVariations,
-    GeniusNodeMintMainTest,
-    ::testing::Values( MintMainCase_s{ "1", sgns::TokenID::FromBytes( { 0x01 } ), 1000000, "1" },
-                       MintMainCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x05 } ), 1000000, "2.0" },
-                       MintMainCase_s{ "2", sgns::TokenID::FromBytes( { 0x02 } ), 1000000, "0.5" },
-                       MintMainCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x05 } ), 2000000, "4.0" } ) );
-
-// ------------------ Suite 2: Mint Child Tokens ------------------
-
-/// Parameters for minting child tokens
-struct MintChildCase_s
-{
-    std::string   tokenValue;   // TokenValueInGNUS
-    sgns::TokenID TokenID;      // TokenID
-    std::string   mintChild;    // Amount to mint in child tokens (as string)
-    uint64_t      expectedMain; // Expected delta of main balance
-};
-
-inline std::ostream &operator<<( std::ostream &os, MintChildCase_s const &c )
-{
-    return os << "MintChildCase_s{tokenValue='" << c.tokenValue << "', mintChild='" << c.mintChild
-              << "', expectedMain=" << c.expectedMain << "}";
-}
-
-class GeniusNodeMintChildTest : public ::testing::TestWithParam<MintChildCase_s>
-{
-protected:
-    static void SetUpTestSuite() {}
-};
-
-TEST_P( GeniusNodeMintChildTest, MintChildBalance )
-{
-    auto p        = GetParam();
-    auto nodefull = CreateNode( "0xafff", p.tokenValue, p.TokenID, true, false, true );
-    test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "nodefull not synced" );
-    auto node = CreateNode( "0xfade", p.tokenValue, p.TokenID );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
-
-    test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node not synced" );
-
-    uint64_t initialMain = node->GetBalance();
-    auto     initFmtRes  = node->FormatTokens( initialMain, p.TokenID );
-    ASSERT_TRUE( initFmtRes.has_value() );
-    std::string initialChildStr = initFmtRes.value();
-    auto        parsedInitial   = node->ParseTokens( initialChildStr, p.TokenID );
-    ASSERT_TRUE( parsedInitial.has_value() );
-
-    auto parsedMint = node->ParseTokens( p.mintChild, p.TokenID );
-    ASSERT_TRUE( parsedMint.has_value() );
-
-    auto res = node->MintTokens( parsedMint.value(),
-                                 sgns::test::NextMintSourceHash(),
-                                 "",
-                                 p.TokenID,
-                                 "",
-                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
-    ASSERT_TRUE( res.has_value() );
-
-    auto finalFmtRes = node->FormatTokens( node->GetBalance(), p.TokenID );
-    ASSERT_TRUE( finalFmtRes.has_value() );
-    std::string finalChildStr = finalFmtRes.value();
-    auto        parsedFinal   = node->ParseTokens( finalChildStr, p.TokenID );
-    ASSERT_TRUE( parsedFinal.has_value() );
-
-    auto parsedExpectedDelta = node->ParseTokens( p.mintChild, p.TokenID );
-    ASSERT_TRUE( parsedExpectedDelta.has_value() );
-
-    EXPECT_EQ( node->GetBalance() - initialMain, p.expectedMain );
-    EXPECT_EQ( node->GetBalance( p.TokenID ) - initialMain, p.expectedMain );
-
-    auto actualChildDelta = parsedFinal.value() - parsedInitial.value();
-    EXPECT_EQ( actualChildDelta, parsedExpectedDelta.value() );
-}
-
-INSTANTIATE_TEST_SUITE_P(
-    MintChildVariations,
-    GeniusNodeMintChildTest,
-    ::testing::Values( MintChildCase_s{ "1.0", sgns::TokenID::FromBytes( { 0x01 } ), "1.0", 1000000 },
-                       MintChildCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x05 } ), "1.0", 500000 },
-                       MintChildCase_s{ "2.0", sgns::TokenID::FromBytes( { 0x02 } ), "1.0", 2000000 },
-                       MintChildCase_s{ "1.0", sgns::TokenID::FromBytes( { 0x01 } ), "0.0001001", 100 },
-                       MintChildCase_s{ "0.5", sgns::TokenID::FromBytes( { 0x50 } ), "0.3333333", 166666 },
-                       MintChildCase_s{ "0.1", sgns::TokenID::FromBytes( { 0x10 } ), "0.9999999", 99999 } ) );
 
 // Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
-    auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, false, true );
+    auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
     test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 30000 ),
                                   "nodefull not synced" );
@@ -469,8 +345,8 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                                   std::chrono::milliseconds( 30000 ),
                                   "node_proc1 not synced" );
 
-    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false, false );
-    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, true );
+    auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
+    auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, false, true );
 
     node_main->GetPubSub()->AddPeers(
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );

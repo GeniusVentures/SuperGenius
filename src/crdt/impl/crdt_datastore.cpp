@@ -82,7 +82,7 @@ namespace sgns::crdt
         crdtInstance->dagWorkers_.reserve( crdtInstance->numberOfDagWorkers );
         for ( int i = 0; i < crdtInstance->numberOfDagWorkers; ++i )
         {
-            auto dagWorker = std::make_unique<DagWorker>();
+            auto  dagWorker  = std::make_unique<DagWorker>();
             auto *worker_ptr = dagWorker.get();
 
             dagWorker->dagWorkerThreadRunning_ = true;
@@ -237,6 +237,7 @@ namespace sgns::crdt
             std::lock_guard lock_jobs( dagWorkerMutex_ );
             pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
         }
+        dagWorkerCv_.notify_all();
         if ( job.created_by_self_ )
         {
             logger_->debug( "Successfully completed self-created job for CID {}",
@@ -375,8 +376,16 @@ namespace sgns::crdt
 
                 while ( self->rebroadcastThreadRunning_ )
                 {
+                    lock.unlock();
                     self->RebroadcastHeads();
-                    self->rebroadcastCv_.wait_for( lock, interval );
+                    lock.lock();
+                    self->rebroadcastCv_.wait_for( lock,
+                                                   interval,
+                                                   [&]
+                                                   {
+                                                       return !self->rebroadcastThreadRunning_ || self->closeStarted_ ||
+                                                              !self->pendingBroadcastTopics_.empty();
+                                                   } );
                 }
             } );
 
@@ -466,28 +475,49 @@ namespace sgns::crdt
 
     void CrdtDatastore::Close()
     {
+        CancelAndCloseNow();
+    }
+
+    void CrdtDatastore::CancelAndCloseNow()
+    {
         bool expected = false;
-        if ( !closeStarted_.compare_exchange_strong( expected, true ) )
+        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
         {
+            logger_->warn( "CancelAndCloseNow called but shutdown has already started" );
             return;
         }
 
+        logger_->info(
+            "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+            pending_jobs_.size(),
+            selfCreatedJobList_.size(),
+            rootCIDJobList_.size(),
+            pendingRootQueue_.size(),
+            activeRootCID_.has_value() );
+
+        closeStarted_ = true;
         StopWorkerLoops();
 
         if ( IsCurrentThreadInternalWorker() )
         {
-            logger_->error( "{}: Close called from CRDT worker thread; deferring waits to helper thread", __func__ );
+            logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
+                            __func__ );
             auto keep_alive = shared_from_this();
-            std::thread(
-                [keep_alive = std::move( keep_alive )]()
-                {
-                    keep_alive->WaitForWorkersToExit();
-                } )
-                .detach();
+            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
             return;
         }
 
         WaitForWorkersToExit();
+
+        started_ = false;
+        logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
+        logger_->debug(
+            "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
+            pending_jobs_.size(),
+            selfCreatedJobList_.size(),
+            rootCIDJobList_.size(),
+            pendingRootQueue_.size(),
+            activeRootCID_.has_value() );
     }
 
     void CrdtDatastore::StopWorkerLoops()
@@ -522,7 +552,7 @@ namespace sgns::crdt
 
     bool CrdtDatastore::IsCurrentThreadInternalWorker() const
     {
-        const auto caller_id = std::this_thread::get_id();
+        const auto      caller_id = std::this_thread::get_id();
         std::lock_guard lock( workerThreadIdsMutex_ );
 
         if ( caller_id == handleNextThreadId_ || caller_id == rebroadcastThreadId_ )
@@ -570,8 +600,8 @@ namespace sgns::crdt
 
         {
             std::lock_guard lock( workerThreadIdsMutex_ );
-            handleNextThreadId_   = {};
-            rebroadcastThreadId_  = {};
+            handleNextThreadId_  = {};
+            rebroadcastThreadId_ = {};
             for ( auto &dagWorker : dagWorkers_ )
             {
                 dagWorker->threadId_ = {};
@@ -945,6 +975,7 @@ namespace sgns::crdt
                     it->second = JobStatus::COMPLETED;
                 }
             }
+            dagWorkerCv_.notify_all();
         }
 
         return outcome::success();
@@ -1061,8 +1092,8 @@ namespace sgns::crdt
     {
         std::unordered_set<std::string> pending_topics;
         {
-            std::lock_guard lock( pendingBroadcastMutex_ );
-            pending_topics = pendingBroadcastTopics_;
+            std::lock_guard lock( rebroadcastMutex_ );
+            pending_topics.swap( pendingBroadcastTopics_ );
         }
 
         std::unordered_set<std::string> topics_to_broadcast = GetTopicNames();
@@ -1118,15 +1149,6 @@ namespace sgns::crdt
                         logger_->trace( "RebroadcastHeads: CID {} ", cid.toString().value() );
                     }
                 }
-            }
-        }
-
-        if ( !pending_topics.empty() )
-        {
-            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
-            for ( const auto &topic : pending_topics )
-            {
-                pendingBroadcastTopics_.erase( topic );
             }
         }
     }
@@ -1433,65 +1455,68 @@ namespace sgns::crdt
 
         auto timeout_duration = std::chrono::minutes( 20 );
         auto start_time       = std::chrono::steady_clock::now();
-        auto last_log_time    = start_time;
+        auto deadline         = start_time + timeout_duration;
+        auto next_log_time    = start_time + std::chrono::seconds( 30 );
 
-        while ( std::chrono::steady_clock::now() - start_time < timeout_duration )
+        std::unique_lock lock( dagWorkerMutex_ );
+        while ( std::chrono::steady_clock::now() < deadline )
         {
             if ( closeStarted_ )
             {
-                std::lock_guard lock( dagWorkerMutex_ );
                 pending_jobs_.erase( cid );
                 logger_->warn( "WaitForJob: Aborting wait for CID {} due to datastore shutdown",
                                cid_string_result.value() );
                 return outcome::failure( Error::NODE_CREATION );
             }
 
+            auto it = pending_jobs_.find( cid );
+            if ( it != pending_jobs_.end() )
             {
-                std::lock_guard lock( dagWorkerMutex_ );
-                auto            it = pending_jobs_.find( cid );
-                if ( it != pending_jobs_.end() )
+                if ( it->second == JobStatus::COMPLETED )
                 {
-                    if ( it->second == JobStatus::COMPLETED )
-                    {
-                        pending_jobs_.erase( it );
-                        logger_->debug( "WaitForJob: CID {} completed successfully", cid_string_result.value() );
-                        return cid;
-                    }
-                    else if ( it->second == JobStatus::FAILED )
-                    {
-                        pending_jobs_.erase( it );
-                        logger_->error( "WaitForJob: CID {} processing failed", cid_string_result.value() );
-                        return outcome::failure( Error::NODE_CREATION );
-                    }
+                    pending_jobs_.erase( it );
+                    logger_->debug( "WaitForJob: CID {} completed successfully", cid_string_result.value() );
+                    return cid;
                 }
-                else
+                if ( it->second == JobStatus::FAILED )
                 {
-                    logger_->error( "WaitForJob: CID {} not found in pending jobs", cid_string_result.value() );
+                    pending_jobs_.erase( it );
+                    logger_->error( "WaitForJob: CID {} processing failed", cid_string_result.value() );
                     return outcome::failure( Error::NODE_CREATION );
                 }
+            }
+            else
+            {
+                logger_->error( "WaitForJob: CID {} not found in pending jobs", cid_string_result.value() );
+                return outcome::failure( Error::NODE_CREATION );
             }
 
             auto current_time = std::chrono::steady_clock::now();
 
             // Log progress every 30 seconds
-            if ( current_time - last_log_time >= std::chrono::seconds( 30 ) )
+            if ( current_time >= next_log_time )
             {
                 auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
                                            .count();
                 logger_->info( "WaitForJob: Still waiting for CID {} (elapsed: {}s)",
                                cid_string_result.value(),
                                elapsed_seconds );
-                last_log_time = current_time;
+                next_log_time = current_time + std::chrono::seconds( 30 );
+                continue;
             }
 
-            // Sleep for the minimum of 500ms or remaining time to avoid tight loops near timeout
-            auto time_remaining = timeout_duration - ( current_time - start_time );
-            auto sleep_duration = std::min( std::chrono::milliseconds( 500 ),
-                                            std::chrono::duration_cast<std::chrono::milliseconds>( time_remaining ) );
-            if ( sleep_duration.count() > 0 )
-            {
-                std::this_thread::sleep_for( sleep_duration );
-            }
+            const auto wait_until = next_log_time < deadline ? next_log_time : deadline;
+            dagWorkerCv_.wait_until( lock,
+                                     wait_until,
+                                     [&]
+                                     {
+                                         if ( closeStarted_ )
+                                         {
+                                             return true;
+                                         }
+                                         const auto it = pending_jobs_.find( cid );
+                                         return it == pending_jobs_.end() || it->second != JobStatus::PENDING;
+                                     } );
         }
 
         // Timeout reached
@@ -1499,10 +1524,7 @@ namespace sgns::crdt
                         cid_string_result.value(),
                         rootCIDJobList_.size() );
         // Clean up the pending job
-        {
-            std::lock_guard lock( dagWorkerMutex_ );
-            pending_jobs_.erase( cid );
-        }
+        pending_jobs_.erase( cid );
         return outcome::failure( Error::NODE_CREATION );
     }
 
@@ -1518,8 +1540,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::MarkJobFailed( const CID &cid )
     {
-        std::lock_guard lock( dagWorkerMutex_ );
-        pending_jobs_[cid] = JobStatus::FAILED;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            pending_jobs_[cid] = JobStatus::FAILED;
+        }
+        dagWorkerCv_.notify_all();
     }
 
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
@@ -1829,7 +1854,7 @@ namespace sgns::crdt
         }
         if ( add_topics_to_broadcast )
         {
-            std::lock_guard<std::mutex> lock( pendingBroadcastMutex_ );
+            std::lock_guard<std::mutex> lock( rebroadcastMutex_ );
             pendingBroadcastTopics_.insert( updated_topics.begin(), updated_topics.end() );
         }
 

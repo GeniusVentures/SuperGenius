@@ -14,6 +14,7 @@
 #include <vector>
 #include <thread>
 #include <optional>
+#include <mutex>
 
 #include <boost/asio.hpp>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -36,6 +37,9 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <processingbase/ProcessingManager.hpp>
+#include <libp2p/peer/peer_info.hpp>
+#include <libp2p/event/bus.hpp>
+#include <libp2p/network/connection_manager.hpp>
 
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
@@ -56,6 +60,8 @@ extern DevConfig_st DEV_CONFIG;
 
 namespace sgns
 {
+    class MigrationManager;
+
     /**
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
@@ -67,56 +73,50 @@ namespace sgns
          * @brief Creates a node using a generated or persisted account identity.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
-                                                bool                isprocessor  = true,
                                                 uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+                                                bool                is_full_node = false );
 
         /**
          * @brief Creates a node bound to the provided Ethereum private key.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] eth_private_key Ethereum private key used to derive the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
-                                                const char         *eth_private_key,
-                                                bool                autodht      = true,
-                                                bool                isprocessor  = true,
-                                                uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false,
-                                                bool                use_upnp     = true );
+        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
+                                                              const char         *eth_private_key,
+                                                              bool                autodht      = true,
+                                                              uint16_t            base_port    = 40001,
+                                                              bool                is_full_node = false );
 
         /**
          * @brief Creates a node from an existing mnemonic phrase.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] mnemonic Mnemonic phrase used to restore the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
+         * @note Whether this node runs processing services is read from
+         *       sgns_config.json (`is_processor`, default true).
          */
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
                                                             const std::string  &mnemonic,
                                                             bool                autodht      = true,
-                                                            bool                isprocessor  = true,
                                                             uint16_t            base_port    = 40001,
-                                                            bool                is_full_node = false,
-                                                            bool                use_upnp     = true );
+                                                            bool                is_full_node = false );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -131,9 +131,9 @@ namespace sgns
             CREATING = 0,              ///< Object construction is in progress.
             MIGRATING_DATABASE,        ///< Versioned database migrations are running.
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
-            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -175,6 +175,26 @@ namespace sgns
         std::vector<std::string> GetAvailableAccounts();
 
         /**
+         * @brief Adds an account to local storage using an Ethereum private key.
+         * @param[in] private_key Ethereum private key in hex format.
+         * @return Success if the account was created and stored, or an error.
+         */
+        outcome::result<void> AddAccountWithKey( const char *private_key ) const;
+
+        /**
+         * @brief Adds an account to local storage using a BIP39 mnemonic phrase.
+         * @param[in] mnemonic BIP39 mnemonic phrase.
+         * @return Success if the account was created and stored, or an error.
+         */
+        outcome::result<void> AddAccountWithMnemonic( const std::string &mnemonic ) const;
+
+        /**
+         * @brief Adds an account to local storage using a newly generated random BIP39 mnemonic.
+         * @return The generated mnemonic phrase on success, or an error.
+         */
+        outcome::result<std::string> AddAccountWithRandomMnemonic() const;
+
+        /**
          * @brief Selects the active account for subsequent node operations.
          * @param[in] public_address Stored account address to activate.
          * @return Success after services are reset and database initialization is restarted, or an address error.
@@ -196,9 +216,9 @@ namespace sgns
         outcome::result<void> DeleteAccount( std::string_view public_address );
 
         /**
-         * @brief Merges data from another account into the currently selected one.
-         * @param[in] public_address Stored account address to transfer into and then delete.
-         * @return Success when transfer and delete both complete.
+         * @brief Merges the active account into another stored account.
+         * @param[in] public_address Stored account address to receive the configured-token balance and become active.
+         * @return Success when transfer, selection, and deletion of the previous active account complete.
          */
         outcome::result<void> MergeAccount( std::string_view public_address );
 
@@ -215,6 +235,23 @@ namespace sgns
          * @return Escrow transaction hash on success, or a validation, balance, or database error.
          */
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
+
+        /**
+         * @brief       Returns the task IDs of jobs submitted by the active account.
+         * @param[in]   limit  Maximum number of task IDs to return (default: 50).
+         * @param[in]   offset Number of task IDs to skip from the end of the list (default: 0).
+         * @return      Vector of task IDs from the in-memory set, newest last.
+         * @note        The on-disk file retains full history; only the most recent
+         *              entries are kept in memory for polling.
+         */
+        std::vector<std::string> GetMyTaskIds( size_t limit = 50, size_t offset = 0 ) const;
+
+        /**
+         * @brief       Retrieves the completed result for a specific job by its task ID.
+         * @param[in]   taskId The task ID (ipfs_block_id) of the job.
+         * @return      The TaskResult if the task has completed, or an error if not found/incomplete.
+         */
+        outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId );
 
         /**
          * @brief Estimates the GNUS cost of a processing request manager.
@@ -243,6 +280,9 @@ namespace sgns
          * @return Version string built from the compiled version metadata.
          */
         std::string GetVersion();
+
+        /** Reloads log level overrides from log_config.json at runtime. */
+        void LoadLogConfig();
 
         /**
          * @brief Creates and submits a mint transaction.
@@ -346,13 +386,27 @@ namespace sgns
         }
 
         /**
+         * @brief Retrieves the BIP39 mnemonic of the active account from secure storage.
+         * @return The mnemonic phrase if found, or std::nullopt.
+         */
+        std::optional<std::string> GetMnemonicOfActiveAccount() const;
+
+        /**
          * @brief Returns the configured child token identifier.
          * @return Token identifier from the node runtime configuration.
          */
-        TokenID GetTokenID() const
+        [[nodiscard]] TokenID GetTokenID() const
         {
             return dev_config_.TokenID;
         }
+
+        /**
+         * @brief Returns the current node initialization progress as a percentage and description.
+         *        The percentage ranges from 0.0 (CREATING) to 1.0 (READY), with sub-progress
+         *        reported during database migration and transaction manager initialization.
+         * @return Pair of progress fraction and a human-readable status description.
+         */
+        [[nodiscard]] std::pair<float, std::string> GetInitializationStatus() const;
 
         /**
          * @brief Returns the current processing service status.
@@ -589,49 +643,63 @@ namespace sgns
     private:
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                              io_work_guard_; ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>                       tx_globaldb_;   ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>                       job_globaldb_;  ///< Reserved job CRDT DB handle.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>            pubsub_;        ///< PubSub networking service.
-        std::shared_ptr<TransactionManager>                   transaction_manager_; ///< Transaction service.
+                                                   io_work_guard_;       ///< Keeps @ref io_ alive.
+        std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
+        std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
+        std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
+        mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
+        std::vector<std::string>                             my_task_ids_;         ///< Recent task IDs submitted by this node (capped in memory).
+        static constexpr size_t                              kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                        is_full_node_;                 ///< Whether this node runs in full-node mode.
-        base::Logger                node_logger_;                  ///< Main node logger.
-        DevConfig_st                dev_config_;                   ///< Runtime node configuration.
-        std::string                 gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string                 processing_channel_topic_;     ///< Processing task channel topic.
-        std::string                 processing_grid_chanel_topic_; ///< Processing grid topic.
-        uint16_t                    pubsubport_;                   ///< Active PubSub TCP port.
-        std::shared_ptr<Blockchain> blockchain_;                   ///< Blockchain service.
+        bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
+        base::Logger                             node_logger_;            ///< Main node logger.
+        DevConfig_st                             dev_config_;             ///< Runtime node configuration.
+        std::string                              gnus_network_full_path_; ///< Versioned network DB path.
+        std::string                              processing_channel_topic_;     ///< Processing task channel topic.
+        std::string                              processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                 bootstrap_peers_;
+        uint16_t                                 subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
+        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
+        std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
+        uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
         /**
          * @brief Constructs a node around an already-created account.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] account Account instance to bind to this node.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] isprocessor Whether this node should run processing services.
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @param[in] use_upnp Whether to attempt UPnP port mapping.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
-                    bool                           isprocessor,
                     uint16_t                       base_port,
-                    bool                           is_full_node,
-                    bool                           use_upnp );
+                    bool                           is_full_node );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
          */
         void InitOpenSSL();
+
+        /**
+         * @brief Loads sgns_config.json which contains net_id, subnet_id, bootstrap_fullnodes,
+         *        authorized_full_node, and is_processor. All fields are optional and default to
+         *        safe values (DEV net, empty bootstrap, is_processor=true).
+         */
+        void LoadSgnsConfig();
 
         /**
          * @brief Initializes application and dependency loggers.
@@ -658,6 +726,11 @@ namespace sgns
          * @return True when network initialization succeeds.
          */
         bool InitNetwork( uint16_t base_port, bool is_full_node );
+
+        /**
+         * @brief Loads the CRDT configuration.
+         */
+        void LoadCrdtConfig();
 
         /**
          * @brief Attempts initial UPnP port mapping for the PubSub port.
@@ -705,6 +778,12 @@ namespace sgns
         void ScheduleBlockchainRetry();
 
         /**
+         * @brief Shuts down node services: cancels health-check timer, unsubscribes disconnect events,
+         *        and stops the transaction GlobalDB.
+         */
+        void ShutdownForDestruction();
+
+        /**
          * @brief Returns the transaction manager when initialized.
          * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
          */
@@ -717,6 +796,41 @@ namespace sgns
          * @brief Starts DHT provider discovery for the processing grid topic.
          */
         void DHTInit();
+
+        /**
+         * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
+         */
+        static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
+         */
+        void InitBootstrapReconnect();
+
+        /**
+         * @brief Start the periodic health-check polling for bootstrap fullnode connections
+         */
+        void StartBootstrapHealthCheck();
+
+        /**
+         * @brief Schedule a reconnection attempt with exponential backoff
+         */
+        void ScheduleBootstrapReconnect( const libp2p::peer::PeerId &peer_id, unsigned attempt );
+
+        /**
+         * @brief Perform the actual reconnection to a bootstrap peer
+         */
+        void DoReconnectToBootstrapPeer( const libp2p::peer::PeerId &peer_id );
+
+        /**
+         * @brief Schedule the next periodic health check
+         */
+        void ScheduleNextHealthCheck();
+
+        /**
+         * @brief Perform a health check on all bootstrap fullnode connections
+         */
+        void PerformHealthCheck();
 
         struct PriceInfo
         {
@@ -742,7 +856,25 @@ namespace sgns
         std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
-        bool                   use_upnp_;                     ///< Whether UPnP mapping is enabled.
+        std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.
+
+        // ── Bootstrap fullnode reconnection ──
+        struct BootstrapReconnectConfig
+        {
+            std::chrono::seconds base_delay{ 5 };
+            std::chrono::seconds max_delay{ 300 };
+            std::chrono::seconds health_check_interval{ 60 };
+            std::chrono::seconds health_check_disconnected_interval{ 15 };
+            double               background_multiplier{ 3.0 };
+        };
+
+        BootstrapReconnectConfig                           reconnect_config_;
+        std::optional<libp2p::event::Handle>               bootstrap_disconnect_subscription_;
+        std::optional<libp2p::basic::Scheduler::Handle>    health_check_handle_;
+        std::unordered_map<libp2p::peer::PeerId, unsigned> reconnect_attempts_;
+        std::mutex                                         reconnect_mutex_;
+
+        crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
 
         /**
          * @brief Submits an escrow payout transaction and waits for confirmation.
@@ -828,6 +960,22 @@ groups:
             boost::replace_all( config, "[basepath]", base_path );
             return config;
         }
+
+        /**
+         * @brief Returns the path to the local task-ID persistence file.
+         * @return Absolute path to my_tasks.json.
+         */
+        std::string MyTasksFilePath() const;
+
+        /**
+         * @brief Loads previously-submitted task IDs from the local JSON file.
+         */
+        void LoadMyTaskIds();
+
+        /**
+         * @brief Writes the current task ID list to the local JSON file.
+         */
+        void PersistMyTaskIds();
     };
 }
 

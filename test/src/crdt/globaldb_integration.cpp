@@ -111,7 +111,7 @@ public:
             sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );
             auto                           keyPair  = keyStore.GetKeyPair().value();
             auto                           pubsub   = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
-            const std::string              listenIp = "127.0.0.1";
+            const std::string              listenIp = "0.0.0.0";
             pubsub->Start( currentPubsubPort, {}, listenIp, {} );
 
             auto io        = std::make_shared<boost::asio::io_context>();
@@ -149,6 +149,7 @@ public:
             {
                 for ( size_t j = i + 1; j < nodes_.size(); ++j )
                 {
+                    std::cout << "Connecting to: " << nodes_[j].pubsub->GetInterfaceAddress() << std::endl;
                     nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }

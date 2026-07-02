@@ -212,6 +212,12 @@ namespace sgns::crdt
         */
         void Close();
 
+        /**
+         * @brief Immediately cancels CRDT work and closes all worker threads.
+         * Safe to call multiple times.
+         */
+        void CancelAndCloseNow();
+
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
@@ -476,13 +482,13 @@ namespace sgns::crdt
         std::condition_variable         rebroadcastCv_;
         std::unordered_set<std::string> topicNames_;
         mutable std::mutex              topicNamesMutex_;
-        std::mutex                      pendingBroadcastMutex_;
         std::unordered_set<std::string> pendingBroadcastTopics_;
 
         CRDTCallbackManager crdt_cb_manager_;
 
         std::map<CID, JobStatus> pending_jobs_;
         bool                     has_full_node_topic_;
+        std::atomic_bool         shutdown_started_{ false };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );

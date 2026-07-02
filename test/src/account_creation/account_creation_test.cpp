@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 
 #include <boost/dll/runtime_symbol_info.hpp>
@@ -10,6 +11,7 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 
@@ -18,6 +20,17 @@ namespace fs = boost::filesystem;
 using namespace sgns;
 
 static const TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
+
+TEST( AccountCreationTest, PredefinedElgamalPublicKeyMatchesSeed )
+{
+    const KeyGenerator::cpp_int generator = KeyGenerator::ElGamal::GENERATOR;
+    const KeyGenerator::cpp_int prime     = KeyGenerator::ElGamal::SAFE_PRIME;
+    const KeyGenerator::cpp_int public_key = powm( generator, KeyGenerator::cpp_int( 0x1234 ), prime );
+    std::array<uint8_t, 32> exported;
+    export_bits( public_key, exported.begin(), 8, false );
+
+    EXPECT_EQ( GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED, exported );
+}
 
 TEST( AccountCreationTest, CreationWithEthereumKey )
 {
@@ -33,12 +46,14 @@ TEST( AccountCreationTest, CreationWithEthereumKey )
     {
     };
 
-    auto        account1      = GeniusAccount::New( TOKEN_ID,
-                                                    "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                    path1 );
-    auto        account2      = GeniusAccount::New( TOKEN_ID,
-                                                    "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                                    path2 );
+    auto account1 = GeniusAccount::NewFromPrivateKey(
+        TOKEN_ID,
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        path1 );
+    auto account2 = GeniusAccount::NewFromPrivateKey(
+        TOKEN_ID,
+        "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        path2 );
     std::string address_main1 = account1->GetAddress();
     std::string address_main2 = account2->GetAddress();
 
@@ -81,7 +96,7 @@ TEST( AccountCreationTest, CreationWithMnemonic )
     ASSERT_EQ( account->GetAddress(), address );
 }
 
-TEST( AccountCreationTest, CreationWithRandomKey )
+TEST( AccountCreationTest, CreationWithRandomMnemonicInAnEmptyDirectory )
 {
     try
     {
@@ -97,5 +112,25 @@ TEST( AccountCreationTest, CreationWithRandomKey )
     std::string address_main1 = account1->GetAddress();
     std::string address_main2 = account2->GetAddress();
 
+    ASSERT_NE( address_main1, address_main2 ) << "Addresses are equal even though they should not be";
+}
+
+TEST( AccountCreationTest, CreationWithRandomMnemonic )
+{
+    try
+    {
+        fs::remove_all( "./account1" );
+        fs::remove_all( "./account2" );
+    }
+    catch ( ... )
+    {
+    };
+
+    auto        account1      = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, fs::path( "./account1" ) );
+    auto        account2      = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, fs::path( "./account2" ) );
+    std::string address_main1 = account1.first->GetAddress();
+    std::string address_main2 = account2.first->GetAddress();
+
     EXPECT_NE( address_main1, address_main2 ) << "Addresses are equal even though they should not be";
+    ASSERT_NE( account1.second, account2.second );
 }

@@ -35,7 +35,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
@@ -96,8 +96,14 @@ namespace sgns
 
     outcome::result<void> MigrationManager::Migrate()
     {
+        total_steps_ = steps_.size();
+        current_step_index_.store( 0 );
+
+        size_t index = 0;
         for ( auto &step : steps_ )
         {
+            current_step_index_.store( ++index ); // 1-based, signals which step we are working on
+
             m_logger->debug( "Starting migration step from {} to {}", step->FromVersion(), step->ToVersion() );
 
             BOOST_OUTCOME_TRY( step->Init() );
@@ -125,6 +131,20 @@ namespace sgns
         m_logger->debug( "All migration steps completed" );
 
         return outcome::success();
+    }
+
+    std::string MigrationManager::GetCurrentStepDescription() const
+    {
+        auto current = current_step_index_.load();
+        if ( current == 0 || total_steps_ == 0 )
+        {
+            return "Preparing migration";
+        }
+        // current is 1-based; steps_ uses 0-based indexing
+        auto &step = steps_[current - 1];
+        return ( boost::format( "Migrating database (step %1% of %2%): v%3% -> v%4%" ) % current % total_steps_ %
+                 step->FromVersion() % step->ToVersion() )
+            .str();
     }
 
 } // namespace sgns

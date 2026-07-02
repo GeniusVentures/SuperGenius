@@ -11,18 +11,21 @@ if [ -f gradlew ]; then
     exit 0
 fi
 
-GRADLE_VERSION="8.2"
+GRADLE_VERSION="8.14.4"
 
 # Check if gradle is installed and what version
 if command -v gradle &> /dev/null; then
     GRADLE_VER=$(gradle --version | grep "^Gradle" | awk '{print $2}')
     echo "Found Gradle $GRADLE_VER"
     
-    # Check if version is at least 6.0
-    if [ "$(printf '%s\n' "6.0" "$GRADLE_VER" | sort -V | head -n1)" = "6.0" ]; then
+    # Check if version is in [6.0, 9.0) — Gradle 9.x removed APIs that AGP 8.x needs.
+    if [ "$(printf '%s\n' "6.0" "$GRADLE_VER" | sort -V | head -n1)" = "6.0" ] && \
+       [ "$(printf '%s\n' "$GRADLE_VER" "9.0" | sort -V | head -n1)" = "$GRADLE_VER" ]; then
         echo "Using installed Gradle to create wrapper..."
         gradle wrapper --gradle-version $GRADLE_VERSION
         exit 0
+    elif [ "$(printf '%s\n' "9.0" "$GRADLE_VER" | sort -V | head -n1)" = "9.0" ]; then
+        echo "Warning: Gradle $GRADLE_VER is too new (>= 9.0 breaks AGP 8.x), downloading wrapper manually"
     else
         echo "Warning: Gradle $GRADLE_VER is too old (need 6.0+)"
     fi
@@ -34,15 +37,15 @@ echo "Downloading Gradle wrapper files directly..."
 mkdir -p gradle/wrapper
 
 # Download gradle-wrapper.jar
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradle/wrapper/gradle-wrapper.jar" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradle/wrapper/gradle-wrapper.jar" \
     -o gradle/wrapper/gradle-wrapper.jar
 
 # Download gradlew
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradlew" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew" \
     -o gradlew
 
 # Download gradlew.bat
-curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}.0/gradlew.bat" \
+curl -L "https://raw.githubusercontent.com/gradle/gradle/v${GRADLE_VERSION}/gradlew.bat" \
     -o gradlew.bat
 
 # Create gradle-wrapper.properties

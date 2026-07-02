@@ -139,6 +139,21 @@ namespace
             return;
         }
 
+        std::vector<std::string> ListTaskKeys() override
+        {
+            std::vector<std::string> ids;
+            for ( const auto &task : m_tasks )
+            {
+                ids.push_back( task.ipfs_block_id() );
+            }
+            return ids;
+        }
+
+        outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) override
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
     private:
         std::list<SGProcessing::Task>                           m_tasks;
         std::map<std::string, std::list<SGProcessing::SubTask>> m_subTasks;

@@ -24,7 +24,6 @@
 #include <boost/filesystem/path.hpp>
 #include <WalletCore/PrivateKey.h>
 
-#include <ProofSystem/ElGamalKeyGenerator.hpp>
 #include <ProofSystem/EthereumKeyGenerator.hpp>
 
 #include "account/TokenID.hpp"
@@ -45,46 +44,88 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>,
-                                             std::pair<KeyGenerator::ElGamal, ethereum::EthereumKeyGenerator>>;
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, ethereum::EthereumKeyGenerator>;
 
-        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Predefined ElGamal public key
+        static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
 
         /**
-         * @brief       Factory constructor of new GeniusAccount.
+         * @brief       Try creating an account by first loading it from storage,
+         * and if failure, create one with @ref NewFromRandomMnemonic
+         * @param[in]   token_id Token ID of the account
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         */
+        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
+                                                   const boost::filesystem::path &base_path,
+                                                   bool                           full_node = false );
+
+        /**
+         * @brief       Creates an account from an Ethereum private key
          * @param[in]   token_id Token ID of the account.
          * @param[in]   eth_private_key Ethereum private key in hex format (0x...).
          * @param[in]   base_path Base path to store/retrieve keys.
          * @param[in]   full_node Whether to initialize as a full node.
          * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const char                    *eth_private_key,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromPrivateKey( TokenID                        token_id,
+                                                                 const char                    *eth_private_key,
+                                                                 const boost::filesystem::path &base_path,
+                                                                 bool                           full_node = false );
 
-        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
-                                                               const std::string             &mnemonic,
-                                                               const boost::filesystem::path &base_path,
-                                                               bool                           full_node = false );
-
+        /**
+         * @brief Creates an account by loading directly from storage.
+         * If the account wasn't previously stored, returns `nullptr`.
+         */
         static std::shared_ptr<GeniusAccount> NewFromPublicKey( TokenID          token_id,
                                                                 std::string_view public_key,
                                                                 bool             full_node = false );
 
         /**
-         * @brief       Factory constructor of new GeniusAccount
-         * @param[in]   token_id Token ID of the account
+         * @brief       Creates an account from a BIP39 mnemonic phrase.
+         * @param[in]   token_id Token ID of the account.
+         * @param[in]   mnemonic BIP39 mnemonic phrase.
+         * @param[in]   base_path Base path to store/retrieve keys.
+         * @param[in]   full_node Whether to initialize as a full node.
+         * @return      Valid pointer if succeeds, nullptr otherwise.
          */
-        static std::shared_ptr<GeniusAccount> New( TokenID                        token_id,
-                                                   const boost::filesystem::path &base_path,
-                                                   bool                           full_node = false );
+        static std::shared_ptr<GeniusAccount> NewFromMnemonic( TokenID                        token_id,
+                                                               const std::string             &mnemonic,
+                                                               const boost::filesystem::path &base_path,
+                                                               bool                           full_node = false );
+
+        /**
+         * @brief Creates an account with a newly generated random BIP39 mnemonic.
+         * @param[in] token_id Token ID of the account.
+         * @param[in] base_path Base path to store/retrieve keys.
+         * @param[in] full_node Whether to initialize as a full node.
+         * @return Pair of shared account instance (nullptr on failure) and the generated mnemonic phrase.
+         */
+        static std::pair<std::shared_ptr<GeniusAccount>, std::string> NewFromRandomMnemonic(
+            TokenID                        token_id,
+            const boost::filesystem::path &base_path,
+            bool                           full_node = false );
 
         static std::vector<std::string> GetAvailableAccounts( const boost::filesystem::path &base_path );
 
         static outcome::result<void> DeleteAccount( std::string_view               public_address,
                                                     const boost::filesystem::path &base_path );
+
+        /**
+         * @brief       Strips the "0x" prefix from an address if present.
+         *              Stored addresses are prefix-free; this normalizes user input for lookups.
+         * @param[in]   address The address string, optionally prefixed with "0x".
+         * @return      A string_view pointing past the "0x" prefix if one was present.
+         */
+        static std::string_view NormalizeAddress( std::string_view address ) noexcept;
+
+        /**
+         * @brief       Validates that a string is a valid 512-bit public key in hex format.
+         *              A valid key is exactly 128 hex characters with no prefix.
+         * @param[in]   key The key string to validate.
+         * @return      true if the key is a valid 128-character hex string, false otherwise.
+         */
+        static bool IsValidPublicKey( std::string_view key ) noexcept;
 
         /**
          * @brief       Initialize the messenger for the account
@@ -94,7 +135,8 @@ namespace sgns
         bool InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub );
 
         /**
-         * @brief       Configures the block response handler.
+         * @brief       Configures database dependencies: nonce store, block response handler,
+         *              head request handler, and block CID lookup method.
          * @param[in]   global_db GlobalDB instance used to store fetched block CIDs.
          * @return      true if successfully configured, false otherwise.
          */
@@ -123,8 +165,8 @@ namespace sgns
         [[nodiscard]] TokenID GetToken() const;
 
         /**
-         * @brief       Get the confirmed nonce as a string
-         * @return      The confirmed nonce in string format
+         * @brief       Get the proposed (next available) nonce as a string
+         * @return      The proposed nonce in string format
          */
         [[nodiscard]] std::string GetNonce() const
         {
@@ -165,9 +207,10 @@ namespace sgns
         void SetPeerConfirmedNonce( uint64_t nonce, const std::string &address, const std::string &tx_hash = "" );
 
         /**
-         * @brief       Rollback the local confirmed nonce for a peer
-         * @param[in]   nonce The nonce value to be rolled back to
-         * @param[in]   address The address of the peer
+         * @brief       Rollback the confirmed nonce for the given address.
+         *              Also rolls back local confirmed nonce and tx history when the address is local.
+         * @param[in]   nonce The nonce value to be rolled back from (only rolls back if it matches current)
+         * @param[in]   address The address whose nonce is being rolled back
          */
         void RollBackPeerConfirmedNonce( uint64_t nonce, const std::string &address );
 
@@ -252,7 +295,7 @@ namespace sgns
                                                                        uint64_t           silent_time_ms = 150 ) const;
         /**
          * @brief       Request heads broadcast for specific topics
-         * @param[in]   topics Vector of topic names to request heads for
+         * @param[in]   topics Set of topic names to request heads for
          * @return      outcome::success if request was sent, error otherwise
          */
         outcome::result<void> RequestHeads( const std::unordered_set<std::string> &topics ) const;
@@ -306,7 +349,7 @@ namespace sgns
             std::string hash;
         };
 
-        static constexpr size_t SIGNATURE_EXP_SIZE = 64; ///< Expected size of the signature in bytes
+        static constexpr size_t SIGNATURE_EXP_SIZE               = 64; ///< Expected size of the signature in bytes
         static constexpr size_t LOCAL_CONFIRMED_TX_HISTORY_LIMIT = 5;
 
         static outcome::result<StorageWithAddress> LoadGeniusAccount( const boost::filesystem::path &base_path );
@@ -322,13 +365,12 @@ namespace sgns
         bool                            is_full_node_; ///< Whether this account is a full node
 
         std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair_;      ///< Ethereum keypair
-        std::shared_ptr<KeyGenerator::ElGamal>          elgamal_address_;  ///< ElGamal keypair
         std::unordered_map<std::string, uint64_t>       confirmed_nonces_; ///< Map of the confirmed nonces from peers
         mutable std::shared_mutex                       nonce_mutex_;      ///< Mutex for the nonce map
         std::set<uint64_t>                              pending_nonces_;   ///< Reserved but not confirmed nonces
         std::optional<uint64_t>                         local_confirmed_nonce_; ///< Highest locally confirmed nonce
         std::deque<ConfirmedTxRecord>                   local_confirmed_transactions_; ///< Recent local confirmed txs
-        std::shared_ptr<AccountMessenger>               messenger_;             ///< Messenger instance
+        std::shared_ptr<AccountMessenger>               messenger_;                    ///< Messenger instance
         UTXOManager                                     utxo_manager_;
 
         // Nonce request tracking
@@ -351,12 +393,11 @@ namespace sgns
                                           get_transaction_cid_method_; ///< Function to get transaction CID by hash
         std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
-        static constexpr std::string_view NONCE_KEY_PREFIX = "gnus-confirmed-nonce-";
-        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX =
-            "gnus-local-confirmed-tx-history-";
+        static constexpr std::string_view NONCE_KEY_PREFIX                      = "gnus-confirmed-nonce-";
+        static constexpr std::string_view LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX = "gnus-local-confirmed-tx-history-";
 
-        void LoadConfirmedNonces();
-        void PersistConfirmedNonce( const std::string &address, uint64_t nonce );
+        void               LoadConfirmedNonces();
+        void               PersistConfirmedNonce( const std::string &address, uint64_t nonce );
         static std::string SerializeConfirmedTxHistory( const std::deque<ConfirmedTxRecord> &history );
         static std::deque<ConfirmedTxRecord> DeserializeConfirmedTxHistory( const std::string &serialized );
         void UpdateLocalConfirmedTxHistoryLocked( uint64_t nonce, const std::string &tx_hash );

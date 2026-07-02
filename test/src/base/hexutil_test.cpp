@@ -12,10 +12,11 @@ using namespace std::string_literals;
  * @when hex it
  * @then hex matches expected encoding
  */
-TEST(Common, Hexutil_Hex) {
-  auto bin = "00010204081020FF"_unhex;
-  auto hexed = hex_upper(bin);
-  ASSERT_EQ(hexed, "00010204081020FF"s);
+TEST( HexUtil, Hex )
+{
+    auto bin   = "00010204081020FF"_unhex;
+    auto hexed = hex_upper( bin );
+    ASSERT_EQ( hexed, "00010204081020FF"s );
 }
 
 /**
@@ -23,16 +24,16 @@ TEST(Common, Hexutil_Hex) {
  * @when unhex
  * @then no exception, result matches expected value
  */
-TEST(Common, Hexutil_UnhexEven) {
-  auto s = "00010204081020ff"s;
+TEST( HexUtil, UnhexEven )
+{
+    auto s = "00010204081020ff"s;
 
-  std::vector<uint8_t> actual;
-  ASSERT_NO_THROW(actual = unhex(s).value())
-      << "unhex result does not contain expected std::vector<uint8_t>";
+    std::vector<uint8_t> actual;
+    ASSERT_NO_THROW( actual = unhex( s ).value() ) << "unhex result does not contain expected std::vector<uint8_t>";
 
-  auto expected = "00010204081020ff"_unhex;
+    auto expected = "00010204081020ff"_unhex;
 
-  ASSERT_EQ(actual, expected);
+    ASSERT_EQ( actual, expected );
 }
 
 /**
@@ -40,9 +41,9 @@ TEST(Common, Hexutil_UnhexEven) {
  * @when unhex
  * @then unhex result contains error
  */
-TEST(Common, Hexutil_UnhexOdd) {
-  ASSERT_NO_THROW({ unhex("0").error(); })
-      << "unhex did not return an error as expected";
+TEST( HexUtil, UnhexOdd )
+{
+    ASSERT_NO_THROW( { unhex( "0" ).error(); } ) << "unhex did not return an error as expected";
 }
 
 /**
@@ -50,16 +51,19 @@ TEST(Common, Hexutil_UnhexOdd) {
  * @when unhex
  * @then unhex result contains error
  */
-TEST(Common, Hexutil_UnhexInvalid) {
-  ASSERT_NO_THROW({ unhex("keks").error(); })
-      << "unhex did not return an error as expected";
+TEST( HexUtil, UnhexInvalid )
+{
+    ASSERT_NO_THROW( { unhex( "keks" ).error(); } ) << "unhex did not return an error as expected";
 }
 
-struct UnhexNumber32Test
-    : public ::testing::TestWithParam<std::pair<std::string, size_t>> {};
+struct UnhexNumber32Test : public ::testing::TestWithParam<std::pair<std::string, size_t>>
+{
+};
 
-namespace {
-  std::pair<std::string, size_t> makePair(std::string s, size_t v) {
-    return std::make_pair(std::move(s), v);
-  }
-}  // namespace
+namespace
+{
+    std::pair<std::string, size_t> makePair( std::string s, size_t v )
+    {
+        return std::make_pair( std::move( s ), v );
+    }
+} // namespace
