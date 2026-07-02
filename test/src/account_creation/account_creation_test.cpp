@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 
 #include <boost/dll/runtime_symbol_info.hpp>
@@ -10,6 +11,7 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
+#include "ProofSystem/ElGamalKeyGenerator.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -19,6 +21,17 @@ namespace fs = boost::filesystem;
 using namespace sgns;
 
 static const TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
+
+TEST( AccountCreationTest, PredefinedElgamalPublicKeyMatchesSeed )
+{
+    const KeyGenerator::cpp_int generator = KeyGenerator::ElGamal::GENERATOR;
+    const KeyGenerator::cpp_int prime     = KeyGenerator::ElGamal::SAFE_PRIME;
+    const KeyGenerator::cpp_int public_key = powm( generator, KeyGenerator::cpp_int( 0x1234 ), prime );
+    std::array<uint8_t, 32> exported;
+    export_bits( public_key, exported.begin(), 8, false );
+
+    EXPECT_EQ( GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED, exported );
+}
 
 TEST( AccountCreationTest, CreationWithEthereumKey )
 {

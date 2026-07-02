@@ -90,6 +90,19 @@ namespace sgns::processing
          * @param[in] taskKey Task key to mark as bad.
          */
         virtual void MarkTaskBad( const std::string &taskKey ) = 0;
+
+        /**
+         * @brief       Lists all known task IDs in the queue.
+         * @return      Vector of task IDs, or empty vector if none found.
+         */
+        virtual std::vector<std::string> ListTaskKeys() = 0;
+
+        /**
+         * @brief       Retrieves the completed task result, if available.
+         * @param[in]   taskId The ID of the task to retrieve the result for.
+         * @return      The TaskResult if the task is completed, or failure otherwise.
+         */
+        virtual outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) = 0;
     };
 }
 

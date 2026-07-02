@@ -22,72 +22,72 @@ on:
         required: false
         type: string
       build_android_arm64v8a_release:
-        description: 'Build Android arm64-v8a Release'
+        description: "Build Android arm64-v8a Release"
         required: true
         default: true
         type: boolean
       build_android_arm64v8a_debug:
-        description: 'Build Android arm64-v8a Debug'
+        description: "Build Android arm64-v8a Debug"
         required: true
         default: true
         type: boolean
       build_android_armv7a_release:
-        description: 'Build Android armeabi-v7a Release'
+        description: "Build Android armeabi-v7a Release"
         required: true
         default: true
         type: boolean
       build_android_armv7a_debug:
-        description: 'Build Android armeabi-v7a Debug'
+        description: "Build Android armeabi-v7a Debug"
         required: true
         default: true
         type: boolean
       build_ios_release:
-        description: 'Build iOS Release'
+        description: "Build iOS Release"
         required: true
         default: true
         type: boolean
       build_ios_debug:
-        description: 'Build iOS Debug'
+        description: "Build iOS Debug"
         required: true
         default: true
         type: boolean
       build_osx_release:
-        description: 'Build OSX Release'
+        description: "Build OSX Release"
         required: true
         default: true
         type: boolean
       build_osx_debug:
-        description: 'Build OSX Debug'
+        description: "Build OSX Debug"
         required: true
         default: true
         type: boolean
       build_linux_x86_64_release:
-        description: 'Build Linux x86_64 Release'
+        description: "Build Linux x86_64 Release"
         required: true
         default: true
         type: boolean
       build_linux_x86_64_debug:
-        description: 'Build Linux x86_64 Debug'
+        description: "Build Linux x86_64 Debug"
         required: true
         default: true
         type: boolean
       build_linux_aarch64_release:
-        description: 'Build Linux aarch64 Release'
+        description: "Build Linux aarch64 Release"
         required: true
         default: true
         type: boolean
       build_linux_aarch64_debug:
-        description: 'Build Linux aarch64 Debug'
+        description: "Build Linux aarch64 Debug"
         required: true
         default: true
         type: boolean
       build_windows_release:
-        description: 'Build Windows Release'
+        description: "Build Windows Release"
         required: true
         default: true
         type: boolean
       build_windows_debug:
-        description: 'Build Windows Debug'
+        description: "Build Windows Debug"
         required: true
         default: true
         type: boolean
@@ -95,11 +95,111 @@ permissions:
   contents: write
   packages: read
 jobs:
+  resolve-runners:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
+    outputs:
+      linux_x64: ${{ steps.pick.outputs.linux_x64 }}
+      linux_arm: ${{ steps.pick.outputs.linux_arm }}
+      windows: ${{ steps.pick.outputs.windows }}
+      mac: ${{ steps.pick.outputs.mac }}
+    steps:
+      - name: Check self-hosted runner availability
+        id: pick
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ORG="${REPO%%/*}"
+          repo_err="$(mktemp)"
+          org_err="$(mktemp)"
+
+          # Some org-scoped runners may not show up via the repo endpoint for this token.
+          # Query both scopes and merge the results.
+          if repo_data="$(gh api "/repos/$REPO/actions/runners" --paginate 2>"$repo_err")"; then
+            echo "Repository runner API query succeeded for $REPO"
+          else
+            echo "Repository runner API query failed for $REPO; continuing with empty repo runner set"
+            repo_data='{"runners":[]}'
+          fi
+
+          if org_data="$(gh api "/orgs/$ORG/actions/runners" --paginate 2>"$org_err")"; then
+            echo "Organization runner API query succeeded for $ORG"
+          else
+            echo "Organization runner API query failed for $ORG; continuing with empty org runner set"
+            org_data='{"runners":[]}'
+          fi
+
+          data="$(jq -n --argjson repo "$repo_data" --argjson org "$org_data" '{runners: (($repo.runners // []) + ($org.runners // []) | unique_by(.id))}')"
+
+          repo_count="$(echo "$repo_data" | jq -r '(.runners // []) | length')"
+          org_count="$(echo "$org_data" | jq -r '(.runners // []) | length')"
+          merged_count="$(echo "$data" | jq -r '(.runners // []) | length')"
+
+          echo "Runner counts: repo=$repo_count org=$org_count merged=$merged_count"
+          if [ "$org_count" -eq 0 ] && [ -s "$org_err" ]; then
+            echo "Org endpoint error output:"
+            cat "$org_err"
+          fi
+
+          echo "Discovered self-hosted runners for $REPO (repo+org merged):"
+          echo "$data" | jq -r '.runners[]? | "- \(.name) | status=\(.status) | busy=\(.busy) | labels=\([.labels[].name] | join(", "))"'
+
+          {
+            echo "## Runner availability"
+            echo
+            echo "Repository: $REPO"
+            echo "Organization: $ORG"
+            echo "Counts: repo=$repo_count org=$org_count merged=$merged_count"
+            echo
+            echo "Discovered runners (repo+org merged):"
+            echo "$data" | jq -r '.runners[]? | "- \(.name) | status=\(.status) | busy=\(.busy) | labels=\([.labels[].name] | join(", "))"'
+            echo
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Define JSON arrays using single quotes so real double-quotes are preserved.
+          SH_LINUX_X64='["self-hosted","sg-ubuntu-linux"]'
+          SH_LINUX_ARM='["self-hosted","sg-arm-linux"]'
+          SH_WINDOWS='["self-hosted","SG-WIN11"]'
+          SH_MAC='["self-hosted","gv-OSX-Large"]'
+          FB_LINUX='["ubuntu-latest"]'
+          FB_LINUX_ARM='["ubuntu-24.04-arm"]'
+          FB_WINDOWS='["windows-latest"]'
+          FB_MAC='["macos-latest"]'
+
+          # Returns the self-hosted label array if at least one matching runner
+          # is online and not busy, otherwise returns the GitHub-hosted fallback.
+          # Match either runner name or label/tag text, case-insensitively.
+          pick_runner() {
+            local label="$1" self_hosted="$2" fallback="$3"
+            if echo "$data" | jq -e --arg L "$label" \
+              '.runners[]
+               | select(.status=="online" and (.busy|not))
+               | select((.name | ascii_downcase) == ($L | ascii_downcase)
+                 or any(.labels[]; (.name | ascii_downcase) == ($L | ascii_downcase)))' \
+              >/dev/null 2>&1; then
+              echo "Selector '$label' matched an available self-hosted runner" >&2
+              echo "- $label: self-hosted" >> "$GITHUB_STEP_SUMMARY"
+              echo "$self_hosted"
+            else
+              echo "Selector '$label' did not match an available self-hosted runner" >&2
+              echo "- $label: fallback" >> "$GITHUB_STEP_SUMMARY"
+              echo "$fallback"
+            fi
+          }
+
+          echo "linux_x64=$(pick_runner 'sg-ubuntu-linux' "$SH_LINUX_X64" "$FB_LINUX")"   >> "$GITHUB_OUTPUT"
+          echo "linux_arm=$(pick_runner 'sg-arm-linux'    "$SH_LINUX_ARM" "$FB_LINUX_ARM")" >> "$GITHUB_OUTPUT"
+          echo "windows=$(pick_runner   'SG-WIN11'        "$SH_WINDOWS"   "$FB_WINDOWS")" >> "$GITHUB_OUTPUT"
+          echo "mac=$(pick_runner       'gv-OSX-Large'    "$SH_MAC"       "$FB_MAC")"     >> "$GITHUB_OUTPUT"
+
   build:
+    needs: resolve-runners
     env:
       GRPC_BUILD_ENABLE_CCACHE: "ON"
       GH_TOKEN: ${{ secrets.GNUS_TOKEN_1 }}
-    runs-on: ${{ matrix.host }}
+    runs-on: ${{ fromJson(needs.resolve-runners.outputs[matrix.runner_key]) }}
     container:
       image: ${{ matrix.container }}
       options: --cap-add=IPC_LOCK
@@ -109,52 +209,52 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [ Android, iOS, OSX, Linux, Windows ]
-        build-type: [ Debug, Release ]
-        abi: [ "" ]
+        target: [Android, iOS, OSX, Linux, Windows]
+        build-type: [Debug, Release]
+        abi: [""]
         include:
           - target: Linux
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: "x86_64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: "x86_64"
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: sg-arm-linux
+            runner_key: linux_arm
             abi: "aarch64"
             build-type: "Release"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Linux
-            host: sg-arm-linux
+            runner_key: linux_arm
             abi: "aarch64"
             build-type: "Debug"
             container: ghcr.io/geniusventures/debian-bullseye:latest
           - target: Windows
-            host: SG-WIN11
+            runner_key: windows
           - target: OSX
-            host: gv-OSX-Large
+            runner_key: mac
           - target: Android
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: arm64-v8a
             build-type: "Release"
           - target: Android
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: arm64-v8a
             build-type: "Debug"
           - target: Android
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: armeabi-v7a
             build-type: "Release"
           - target: Android
-            host: sg-ubuntu-linux
+            runner_key: linux_x64
             abi: armeabi-v7a
             build-type: "Debug"
           - target: iOS
-            host: macos-latest
+            runner_key: mac
         exclude:
           - target: Android
             abi: ""
@@ -211,14 +311,14 @@ jobs:
         run: |
           $gitUsrBinPath = "C:\Program Files\Git\usr\bin"
           $gitBinPath = "C:\Program Files\Git\bin"
-          
+
           foreach ($p in @($gitBinPath, $gitUsrBinPath)) {
             if (Test-Path $p) {
               Add-Content -Path $env:GITHUB_PATH -Value $p
               $env:PATH = "$p;$env:PATH"
             }
           }
-          
+
           Write-Output "Git Bash configured for bash shell commands"
           $bashLocation = (Get-Command bash.exe -ErrorAction SilentlyContinue).Source
           if ($bashLocation) {
@@ -239,7 +339,7 @@ jobs:
 
           echo "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
-          
+
           # Use sudo on Linux to handle root-owned files left by container jobs
           SUDO=""
           if [ "$(uname)" = "Linux" ]; then
@@ -252,7 +352,7 @@ jobs:
             $SUDO rm -rf SuperGenius/* SuperGenius/.* 2>/dev/null || true
             echo "SuperGenius directory cleaned (kept the directory)"
           fi
-          
+
           # Delete sibling dependency directories completely
           for dir in thirdparty zkLLVM; do
             if [ -d "$dir" ]; then
@@ -282,14 +382,14 @@ jobs:
 
           Write-Output "=== CLEANUP ARTIFACTS ==="
           # Clean up artifacts from previous runs (self-hosted runners only)
-          
+
           # Clean contents of SuperGenius directory but keep the directory itself
           if (Test-Path "SuperGenius") {
             Write-Output "Cleaning SuperGenius directory contents..."
             Get-ChildItem -Path "SuperGenius" -Force | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
             Write-Output "SuperGenius directory cleaned (kept the directory)"
           }
-          
+
           # Delete sibling dependency directories completely
           foreach ($dir in @("thirdparty", "zkLLVM")) {
             if (Test-Path $dir) {
@@ -459,7 +559,7 @@ jobs:
         run: |
           # Setup Android SDK
           ANDROID_SDK_ROOT="$HOME/android-sdk"
-          
+
           # Download command-line tools if not present
           if [ ! -d "$ANDROID_SDK_ROOT/cmdline-tools/latest" ]; then
             echo "Downloading Android command-line tools..."
@@ -471,18 +571,18 @@ jobs:
           else
             echo "Android command-line tools already exist"
           fi
-          
+
           # Always accept licenses and install/update required SDK components
           echo "Installing/updating Android SDK components..."
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses || true
           "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          
+
           # Set environment variables
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "$ANDROID_SDK_ROOT/platform-tools" >> $GITHUB_PATH
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          
+
           # Verify SDK installation
           echo "=== Android SDK Setup ==="
           echo "ANDROID_HOME: $ANDROID_SDK_ROOT"
@@ -503,7 +603,7 @@ jobs:
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
           echo "ANDROID_NDK_HOME=$NDK_DIR" >> $GITHUB_ENV
-          
+
           rustup target add aarch64-linux-android
           rustup target add armv7-linux-androideabi
 
@@ -541,7 +641,7 @@ jobs:
       - name: Build SuperGenius
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         run: cmake --build . --config ${{ matrix.build-type }} -j
-      
+
       - name: Install SuperGenius
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         run: cmake --install . --config ${{ matrix.build-type }}
@@ -600,6 +700,15 @@ jobs:
         shell: bash
         run: gh release upload ${{ env.RELEASE_TAG }} ${{ env.FILE_NAME }} --clobber
 
+      - name: Restore CTest cost data
+        if: ${{ matrix.target == 'Linux' || (matrix.build-type == 'Release' && matrix.target == 'Windows') }}
+        uses: actions/cache/restore@v6
+        with:
+          path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
+          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}
+          restore-keys: |
+            ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}
+
       - name: Run tests (Windows)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.build-type == 'Release' && matrix.target == 'Windows' }}
@@ -619,3 +728,10 @@ jobs:
             lock-after=false" > ~/.local/share/keyrings/login.keyring && \
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
             ctest . --verbose -j -C ${{ matrix.build-type }}'
+
+      - name: Save CTest cost data
+        if: ${{ (matrix.target == 'Linux' || (matrix.build-type == 'Release' && matrix.target == 'Windows')) && (success() || failure()) }}
+        uses: actions/cache/save@v6
+        with:
+          path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
+          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}

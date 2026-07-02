@@ -306,4 +306,49 @@ namespace sgns::processing
         }
         return lockMoved;
     }
+
+    std::vector<std::string> TaskQueueImpl::ListTaskKeys()
+    {
+        TaskQueueImplLogger()->debug( "Listing all task keys" );
+        auto queryResult = db_->QueryKeyValues( TaskKeys::TaskListKey() );
+        if ( queryResult.has_failure() || !queryResult.has_value() )
+        {
+            TaskQueueImplLogger()->debug( "No tasks found in queue" );
+            return {};
+        }
+
+        std::vector<std::string> taskIds;
+        for ( const auto &element : queryResult.value() )
+        {
+            if ( element.second.empty() )
+            {
+                continue;
+            }
+            SGProcessing::Task task;
+            if ( task.ParseFromArray( element.second.data(), element.second.size() ) )
+            {
+                taskIds.push_back( task.ipfs_block_id() );
+            }
+        }
+
+        TaskQueueImplLogger()->debug( "Found {} tasks", taskIds.size() );
+        return taskIds;
+    }
+
+    outcome::result<SGProcessing::TaskResult> TaskQueueImpl::GetTaskResult( const std::string &taskId )
+    {
+        TaskQueueImplLogger()->debug( "Fetching result for task: {}", taskId );
+        BOOST_OUTCOME_TRY( auto resultBuffer,
+                           db_->Get( sgns::crdt::HierarchicalKey( TaskKeys::ResultTaskKey( taskId ) ) ) );
+
+        SGProcessing::TaskResult result;
+        if ( !result.ParseFromArray( resultBuffer.data(), resultBuffer.size() ) )
+        {
+            TaskQueueImplLogger()->error( "Failed to parse task result for task: {}", taskId );
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        TaskQueueImplLogger()->debug( "Successfully fetched result for task: {}", taskId );
+        return result;
+    }
 }

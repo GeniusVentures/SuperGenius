@@ -41,9 +41,7 @@ namespace sgns
         /**
          * @brief Constructs an invalid or legacy-default token identifier.
          */
-        TokenID() : data_{}, valid_( false )
-        {
-        }
+        constexpr TokenID() : data_{}, valid_( false ) {}
 
         /**
          * @brief Copy-constructs a token identifier.

@@ -54,6 +54,9 @@ namespace sgns::processing
         bool IsTaskCompleted( const std::string &taskId ) override;
         void MarkTaskBad( const std::string &taskKey ) override;
 
+        std::vector<std::string> ListTaskKeys() override;
+        outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId ) override;
+
     private:
         static constexpr auto LOCK_TIMEOUT = std::chrono::seconds( 10 );
         /**

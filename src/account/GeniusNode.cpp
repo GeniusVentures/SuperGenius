@@ -1180,6 +1180,10 @@ namespace sgns
 
         task_result_storage_ = std::make_shared<processing::SubTaskResultStorageImpl>( tx_globaldb_,
                                                                                        processing_channel_topic_ );
+
+        // Restore previously-submitted task IDs from local file
+        LoadMyTaskIds();
+
         return ret;
     }
 
@@ -1749,7 +1753,47 @@ namespace sgns
             return outcome::failure( Error::DATABASE_WRITE_ERROR );
         }
 
+        // Track this task locally so it can be polled later via GetMyTaskIds()
+        my_task_ids_.push_back( uuidstring );
+        if ( my_task_ids_.size() > kMyTasksMemoryLimit )
+        {
+            my_task_ids_.erase( my_task_ids_.begin() ); // Evict oldest
+        }
+        PersistMyTaskIds();
+
         return tx_id;
+    }
+
+    std::vector<std::string> GeniusNode::GetMyTaskIds( size_t limit, size_t offset ) const
+    {
+        if ( limit == 0 || my_task_ids_.empty() )
+        {
+            return {};
+        }
+
+        // Work from the end (newest entries) backward
+        const size_t total = my_task_ids_.size();
+        const size_t start = ( offset >= total ) ? 0 : ( total - offset );
+        const size_t available = ( start >= limit ) ? ( start - limit ) : 0;
+        const size_t count = start - available;
+
+        std::vector<std::string> result;
+        result.reserve( count );
+        for ( size_t i = available; i < start; ++i )
+        {
+            result.push_back( my_task_ids_[i] );
+        }
+        return result;
+    }
+
+    outcome::result<SGProcessing::TaskResult> GeniusNode::GetTaskResult( const std::string &taskId )
+    {
+        if ( !task_queue_ )
+        {
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+
+        return task_queue_->GetTaskResult( taskId );
     }
 
     uint64_t GeniusNode::GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr )
@@ -3291,5 +3335,109 @@ namespace sgns
                 }
             },
             std::chrono::seconds( 15 ) );
+    }
+
+    std::string GeniusNode::MyTasksFilePath() const
+    {
+        return write_base_path_ + "/my_tasks.json";
+    }
+
+    void GeniusNode::LoadMyTaskIds()
+    {
+        my_task_ids_.clear();
+
+        std::ifstream file( MyTasksFilePath() );
+        if ( !file.is_open() )
+        {
+            return; // No existing file — first run or clean state
+        }
+
+        try
+        {
+            auto j = nlohmann::json::parse( file );
+            if ( j.is_array() )
+            {
+                std::vector<std::string> all_ids;
+                for ( const auto &item : j )
+                {
+                    if ( item.is_string() )
+                    {
+                        all_ids.push_back( item.get<std::string>() );
+                    }
+                }
+
+                // Only keep the most recent entries in memory
+                const size_t total = all_ids.size();
+                const size_t keep  = std::min( total, kMyTasksMemoryLimit );
+                for ( size_t i = total - keep; i < total; ++i )
+                {
+                    my_task_ids_.push_back( std::move( all_ids[i] ) );
+                }
+
+                node_logger_->info( "Loaded {} of {} task IDs from {}",
+                                    my_task_ids_.size(),
+                                    total,
+                                    MyTasksFilePath() );
+            }
+        }
+        catch ( const std::exception &e )
+        {
+            node_logger_->warn( "Failed to parse {}: {}", MyTasksFilePath(), e.what() );
+        }
+    }
+
+    void GeniusNode::PersistMyTaskIds()
+    {
+        try
+        {
+            // Append the newest entry so the on-disk file retains full history
+            const std::string &newest = my_task_ids_.back();
+
+            // Read existing array, append, rewrite
+            nlohmann::json j = nlohmann::json::array();
+            {
+                std::ifstream in( MyTasksFilePath() );
+                if ( in.is_open() )
+                {
+                    try
+                    {
+                        auto existing = nlohmann::json::parse( in );
+                        if ( existing.is_array() )
+                        {
+                            j = std::move( existing );
+                        }
+                    }
+                    catch ( ... )
+                    {
+                        // Corrupt or empty — start fresh
+                    }
+                }
+            }
+
+            // Avoid duplicates (shouldn't happen, but be safe)
+            bool already_present = false;
+            for ( const auto &item : j )
+            {
+                if ( item.is_string() && item.get<std::string>() == newest )
+                {
+                    already_present = true;
+                    break;
+                }
+            }
+            if ( !already_present )
+            {
+                j.push_back( newest );
+            }
+
+            std::ofstream file( MyTasksFilePath() );
+            if ( file.is_open() )
+            {
+                file << j.dump( 2 );
+            }
+        }
+        catch ( const std::exception &e )
+        {
+            node_logger_->warn( "Failed to persist task IDs to {}: {}", MyTasksFilePath(), e.what() );
+        }
     }
 }

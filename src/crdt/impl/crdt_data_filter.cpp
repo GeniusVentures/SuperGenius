@@ -6,6 +6,7 @@
  */
 #include "crdt/crdt_data_filter.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
+#include <algorithm>
 #include <set>
 
 namespace sgns::crdt
@@ -18,28 +19,72 @@ namespace sgns::crdt
 
     bool CRDTDataFilter::RegisterElementFilter( const std::string &pattern, ElementFilterCallback filter )
     {
-        std::lock_guard lock( element_registry_mutex_ );
-        element_registry_[pattern] = std::move( filter );
-        return true;
+        try
+        {
+            auto entry = std::make_shared<FilterCallbackEntry>(
+                FilterCallbackEntry{ pattern, std::regex( pattern ), std::move( filter ) } );
+            std::lock_guard lock( element_registry_mutex_ );
+            auto it = std::find_if( element_registry_.begin(),
+                                    element_registry_.end(),
+                                    [&]( const auto &registered ) { return registered->pattern == pattern; } );
+            if ( it == element_registry_.end() )
+            {
+                element_registry_.push_back( std::move( entry ) );
+            }
+            else
+            {
+                *it = std::move( entry );
+            }
+            return true;
+        }
+        catch ( const std::regex_error & )
+        {
+            return false;
+        }
     }
 
     bool CRDTDataFilter::RegisterTombstoneFilter( const std::string &pattern, ElementFilterCallback filter )
     {
-        std::lock_guard lock( tombstone_registry_mutex_ );
-        tombstone_registry_[pattern] = std::move( filter );
-        return true;
+        try
+        {
+            auto entry = std::make_shared<FilterCallbackEntry>(
+                FilterCallbackEntry{ pattern, std::regex( pattern ), std::move( filter ) } );
+            std::lock_guard lock( tombstone_registry_mutex_ );
+            auto it = std::find_if( tombstone_registry_.begin(),
+                                    tombstone_registry_.end(),
+                                    [&]( const auto &registered ) { return registered->pattern == pattern; } );
+            if ( it == tombstone_registry_.end() )
+            {
+                tombstone_registry_.push_back( std::move( entry ) );
+            }
+            else
+            {
+                *it = std::move( entry );
+            }
+            return true;
+        }
+        catch ( const std::regex_error & )
+        {
+            return false;
+        }
     }
 
     void CRDTDataFilter::UnregisterElementFilter( const std::string &pattern )
     {
         std::lock_guard lock( element_registry_mutex_ );
-        element_registry_.erase( pattern );
+        element_registry_.erase( std::remove_if( element_registry_.begin(),
+                                                 element_registry_.end(),
+                                                 [&]( const auto &entry ) { return entry->pattern == pattern; } ),
+                                 element_registry_.end() );
     }
 
     void CRDTDataFilter::UnregisterTombstoneFilter( const std::string &pattern )
     {
         std::lock_guard lock( tombstone_registry_mutex_ );
-        tombstone_registry_.erase( pattern );
+        tombstone_registry_.erase( std::remove_if( tombstone_registry_.begin(),
+                                                   tombstone_registry_.end(),
+                                                   [&]( const auto &entry ) { return entry->pattern == pattern; } ),
+                                   tombstone_registry_.end() );
     }
 
     void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
@@ -47,10 +92,10 @@ namespace sgns::crdt
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
 
-        std::unordered_map<std::string, ElementFilterCallback> registry_copy;
+        FilterCallbackRegistry registry_snapshot;
         {
             std::shared_lock lock( element_registry_mutex_ );
-            registry_copy = element_registry_;
+            registry_snapshot = element_registry_;
         }
 
         for ( int i = 0; i < delta.elements_size(); ++i )
@@ -58,11 +103,11 @@ namespace sgns::crdt
             const auto &element        = delta.elements( i );
             bool        filter_matched = false;
 
-            for ( const auto &[pattern, filter] : registry_copy )
+            for ( const auto &entry : registry_snapshot )
             {
-                if ( std::regex regex( pattern ); std::regex_match( element.key(), regex ) )
+                if ( std::regex_match( element.key(), entry->regex ) )
                 {
-                    auto result = filter( element );
+                    auto result = entry->filter( element );
 
                     if ( result.has_value() )
                     {

@@ -246,6 +246,23 @@ namespace sgns
         outcome::result<std::string> ProcessImage( const std::string &jsondata );
 
         /**
+         * @brief       Returns the task IDs of jobs submitted by the active account.
+         * @param[in]   limit  Maximum number of task IDs to return (default: 50).
+         * @param[in]   offset Number of task IDs to skip from the end of the list (default: 0).
+         * @return      Vector of task IDs from the in-memory set, newest last.
+         * @note        The on-disk file retains full history; only the most recent
+         *              entries are kept in memory for polling.
+         */
+        std::vector<std::string> GetMyTaskIds( size_t limit = 50, size_t offset = 0 ) const;
+
+        /**
+         * @brief       Retrieves the completed result for a specific job by its task ID.
+         * @param[in]   taskId The task ID (ipfs_block_id) of the job.
+         * @return      The TaskResult if the task has completed, or an error if not found/incomplete.
+         */
+        outcome::result<SGProcessing::TaskResult> GetTaskResult( const std::string &taskId );
+
+        /**
          * @brief Estimates the GNUS cost of a processing request manager.
          * @param[in] procmgr Processing manager containing parsed request data.
          * @return Estimated cost in minions, or 0 when the request size, price, or cost calculation fails.
@@ -654,6 +671,8 @@ namespace sgns
         std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
         std::shared_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
         std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
+        std::vector<std::string>                             my_task_ids_;         ///< Recent task IDs submitted by this node (capped in memory).
+        static constexpr size_t                              kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
@@ -1017,6 +1036,22 @@ groups:
             boost::replace_all( config, "[basepath]", base_path );
             return config;
         }
+
+        /**
+         * @brief Returns the path to the local task-ID persistence file.
+         * @return Absolute path to my_tasks.json.
+         */
+        std::string MyTasksFilePath() const;
+
+        /**
+         * @brief Loads previously-submitted task IDs from the local JSON file.
+         */
+        void LoadMyTaskIds();
+
+        /**
+         * @brief Writes the current task ID list to the local JSON file.
+         */
+        void PersistMyTaskIds();
     };
 }
 

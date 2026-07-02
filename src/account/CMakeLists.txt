@@ -32,13 +32,12 @@ target_link_libraries(sgns_genius_account
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     wallet_core_rs
-    TrezorCrypto
     protobuf::libprotobuf
     ${WIN_CRYPT_LIBRARY}
+    TrezorCrypto
 )
 
 target_precompile_headers(sgns_genius_account PUBLIC
-    $<BUILD_INTERFACE:<ProofSystem/ElGamalKeyGenerator.hpp$<ANGLE-R>>
     $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
 )
 
@@ -80,19 +79,8 @@ set(GENIUS_NODE_SOURCES
 )
 
 set(GENIUS_NODE_LIBS
-    PUBLIC
-    Boost::headers
-    ProofSystem
-    outcome
-    logger
-    crdt_globaldb
-    processing_service
-    gnus_upnp
-    sgns_genius_account
-    blockchain_genesis
-    ProcessingBase
-    evmrelay
     PRIVATE
+    AsyncIOManager
     component_factory
     crdt_graphsync_dagsyncer
     p2p::p2p_basic_host
@@ -109,7 +97,6 @@ set(GENIUS_NODE_LIBS
     SGTransactionProto
     ScaledInteger
     sgns_version
-    AsyncIOManager
     ${WIN_API_LIBRARY}
     ${USER_ENV_LIBRARY}
     protobuf::libprotobuf
@@ -118,6 +105,18 @@ set(GENIUS_NODE_LIBS
     ${WIN_CRYPT_LIBRARY}
     transfer_proof
     processing_proof
+    PUBLIC
+    Boost::headers
+    ProofSystem
+    outcome
+    logger
+    crdt_globaldb
+    processing_service
+    gnus_upnp
+    blockchain_genesis
+    ProcessingBase
+    evmrelay
+    sgns_genius_account
 )
 
 # Production library — uses OS keychain (Apple/Windows/Linux secure storage)

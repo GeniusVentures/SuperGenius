@@ -7,7 +7,7 @@
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
 #include "crypto/hasher/hasher_impl.hpp"
-#include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/storage/base_rocksdb_test.hpp"
 
 using namespace sgns;
 using namespace sgns::base;
@@ -18,11 +18,24 @@ static const Hash256              DUMMY_HASH{};
 static const TokenID              TOKEN_1 = TokenID::FromBytes( { 0x01 } );
 static crypto::HasherImpl         HASHER;
 
-class UTXOManagerTest : public test::CRDTFixture
+std::vector<GeniusUTXO> BalanceUTXOs()
+{
+    return {
+        GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ),
+        GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ),
+        GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ),
+        GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ),
+    };
+}
+
+class UTXOManagerTest : public test::RocksDBFixture
 {
 public:
-    UTXOManagerTest() : CRDTFixture( "utxo_crdt_test" )
+    UTXOManagerTest() : RocksDBFixture( "utxo_manager_test" ) {}
+
+    void SetUp() override
     {
+        RocksDBFixture::SetUp();
         utxo_manager = std::make_shared<UTXOManager>(
             std::string( PRIV_KEY ),
             []( const std::vector<uint8_t> &data )
@@ -35,17 +48,10 @@ public:
                 auto hashed = HASHER.sha2_256( data );
                 return signature == std::vector( hashed.begin(), hashed.end() );
             } );
-        auto result = utxo_manager->LoadUTXOs( db_->GetDataStore() );
-        if ( result.has_error() )
-        {
-            logger->error( "Error when loading UTXOs" );
-            throw result.error();
-        }
-        if ( result.value() )
-        {
-            logger->error( "DB already contained UTXOs" );
-            throw "DB already contained UTXOs";
-        }
+
+        auto result = utxo_manager->LoadUTXOs( db_ );
+        ASSERT_TRUE( result.has_value() ) << result.error().message();
+        ASSERT_FALSE( result.value() ) << "DB already contained UTXOs";
     }
 
     ~UTXOManagerTest() override = default;
@@ -70,21 +76,13 @@ TEST_F( UTXOManagerTest, InitialUTXOCount )
 
 TEST_F( UTXOManagerTest, TotalBalance )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( BalanceUTXOs() ).has_value() );
     EXPECT_EQ( utxo_manager->GetBalance(), 140ull );
 }
 
 TEST_F( UTXOManagerTest, BalanceByToken )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ).value() );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( BalanceUTXOs() ).has_value() );
     EXPECT_EQ( utxo_manager->GetBalance( TOKEN_1 ), 70ull );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ), 30ull );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0x03 } ) ), 40ull );
@@ -92,29 +90,30 @@ TEST_F( UTXOManagerTest, BalanceByToken )
 
 TEST_F( UTXOManagerTest, BalanceByTokenNonexistent )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 3, 40, sgns::TokenID::FromBytes( { 0x03 } ) ) ).value() );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( BalanceUTXOs() ).has_value() );
     EXPECT_EQ( utxo_manager->GetBalance( sgns::TokenID::FromBytes( { 0xFF } ) ), 0ull );
 }
 
 TEST_F( UTXOManagerTest, StringTemplateBalance )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ),
+                         GeniusUTXO( DUMMY_HASH, 1, 50, sgns::TokenID::FromBytes( { 0x02 } ) ),
+                     } )
+                     .has_value() );
     std::string s = std::to_string( utxo_manager->GetBalance() );
     EXPECT_EQ( s, std::to_string( utxo_manager->GetBalance() ) );
 }
 
 TEST_F( UTXOManagerTest, RefreshNoUTXOsLeavesAll )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ),
+                         GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ),
+                     } )
+                     .has_value() );
     size_t before = utxo_manager->GetUTXOs().size();
     utxo_manager->ConsumeUTXOs( {} );
     EXPECT_EQ( utxo_manager->GetUTXOs().size(), before );
@@ -122,10 +121,13 @@ TEST_F( UTXOManagerTest, RefreshNoUTXOsLeavesAll )
 
 TEST_F( UTXOManagerTest, RefreshPartialUTXOsRemovesOnlySpecified )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ) ).value() );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ),
+                         GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ),
+                         GeniusUTXO( DUMMY_HASH, 2, 20, TOKEN_1 ),
+                     } )
+                     .has_value() );
     InputUTXOInfo info;
     info.txid_hash_  = DUMMY_HASH;
     info.output_idx_ = 1; // remove idx 1
@@ -136,9 +138,12 @@ TEST_F( UTXOManagerTest, RefreshPartialUTXOsRemovesOnlySpecified )
 
 TEST_F( UTXOManagerTest, RefreshAllUTXOsRemovesAll )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ) ).value() );
-    EXPECT_TRUE(
-        utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ) ).value() );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( DUMMY_HASH, 0, 50, TOKEN_1 ),
+                         GeniusUTXO( DUMMY_HASH, 1, 30, sgns::TokenID::FromBytes( { 0x02 } ) ),
+                     } )
+                     .has_value() );
     std::vector<InputUTXOInfo> infos;
     for ( const auto &utxo : utxo_manager->GetUTXOs() )
     {
@@ -154,7 +159,7 @@ TEST_F( UTXOManagerTest, RefreshAllUTXOsRemovesAll )
 
 TEST_F( UTXOManagerTest, VerifyParameters )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( HASHER.sha2_256( {} ), 0, 420, TOKEN_1 ) ).value() );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( { GeniusUTXO( HASHER.sha2_256( {} ), 0, 420, TOKEN_1 ) } ).has_value() );
     auto tx = utxo_manager->CreateTxParameter( 69, "foobar", TOKEN_1 );
     EXPECT_TRUE( tx.has_value() );
     EXPECT_TRUE( utxo_manager->VerifyParameters( tx.value() ) );
@@ -171,10 +176,14 @@ TEST_F( UTXOManagerTest, VerifyParameters )
 
 TEST_F( UTXOManagerTest, Storage )
 {
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 420, TOKEN_1 ) ).value() );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 420, TOKEN_1 ) ).value() );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( DUMMY_HASH, 0, 420, TOKEN_1 ),
+                         GeniusUTXO( DUMMY_HASH, 1, 420, TOKEN_1 ),
+                     } )
+                     .has_value() );
 
-    auto res = utxo_manager->LoadUTXOs( db_->GetDataStore() );
+    auto res = utxo_manager->LoadUTXOs( db_ );
     EXPECT_TRUE( res.has_value() );
     EXPECT_TRUE( res.value() );
 
@@ -215,8 +224,12 @@ TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
     const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
     const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
 
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_a, 0, 55, TOKEN_1 ) ) );
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( hash_b, 1, 77, sgns::TokenID::FromBytes( { 0x03 } ) ) ) );
+    ASSERT_TRUE( utxo_manager
+                     ->SetUTXOs( {
+                         GeniusUTXO( hash_a, 0, 55, TOKEN_1 ),
+                         GeniusUTXO( hash_b, 1, 77, sgns::TokenID::FromBytes( { 0x03 } ) ),
+                     } )
+                     .has_value() );
 
     const auto root_before = utxo_manager->ComputeUTXOMerkleRoot();
 
@@ -233,10 +246,10 @@ TEST_F( UTXOManagerTest, CheckpointRoundtrip )
 {
     const std::array<uint8_t, 1> seed_tx{ 0x11 };
     const std::array<uint8_t, 1> seed_registry{ 0x22 };
-    const auto                   tx_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_tx ) );
+    const auto                   tx_hash       = HASHER.sha2_256( gsl::span<const uint8_t>( seed_tx ) );
     const auto                   registry_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_registry ) );
 
-    EXPECT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( tx_hash, 0, 123, TOKEN_1 ) ) );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( { GeniusUTXO( tx_hash, 0, 123, TOKEN_1 ) } ).has_value() );
 
     ASSERT_TRUE( utxo_manager->CreateCheckpoint( 7, tx_hash, registry_hash ).has_value() );
     auto checkpoint_res = utxo_manager->LoadLatestCheckpoint();
