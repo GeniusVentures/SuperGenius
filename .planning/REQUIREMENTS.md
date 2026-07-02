@@ -1,0 +1,87 @@
+# Requirements: SuperGenius — GeniusNode Construction Refactor
+
+**Defined:** 2026-07-02
+**Core Value:** Constructing a `GeniusNode` must be a single, self-documenting call driven by config files — no overloaded factory methods carrying boolean network/role flags that are really config concerns.
+
+## v1 Requirements
+
+Requirements for this refactor milestone. Each maps to roadmap phases.
+
+### Interface
+
+- [ ] **INTF-01**: `GeniusNode::New` is the sole public factory, with signature `New(dev_config, AccountSource)` — replacing the three current factories at `src/account/GeniusNode.hpp:82,98,115`.
+- [ ] **INTF-02**: `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`; `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option.
+- [ ] **INTF-03**: The private constructor takes `(dev_config, AccountSource)` and creates the account AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved from `node_type` before account creation (resolves the init-order hinge — see `.planning/research/ARCHITECTURE.md`).
+- [ ] **INTF-04**: The old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, and `NewFromMnemonic` factories are deleted entirely (no deprecated stubs).
+
+### Config
+
+- [ ] **CFG-01**: `autodht` and `base_port` are read from `network_config.json` inside `InitNetwork()` (default `true` and `40001`); `base_port` uses numeric `IsUint()` (not the string style of `pubsub_port`).
+- [ ] **CFG-02**: `node_type` ("Full"/"Light"/"Archive") is read from `sgns_config.json` inside `LoadSgnsConfig()`; a new `NodeType` enum and `NodeTypeFromString()` helper are introduced (enum co-located with `NodeState`/`Error` at `GeniusNode.hpp:129`).
+- [ ] **CFG-03**: `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set exactly once during construction, and treated as immutable afterward (no setter).
+- [ ] **CFG-04**: Every new config read defaults safely on missing key, byte-identical to today's behavior (`autodht=true`, `base_port=40001`, `node_type=Light`), and WARN-logs unrecognized/ill-typed values.
+
+### Migration
+
+- [ ] **MIG-01**: All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/NodeExample.cpp:532`, 17 across `test/src/`) migrate to `New(dev_config, FromPrivateKey{...})`; no compatibility shim.
+- [ ] **MIG-02**: A shared test helper writes a minimal `network_config.json` (`base_port`, `autodht`) and `sgns_config.json` (`node_type`, `is_processor`), extending the existing `sgns_config.json` write pattern already used in tests.
+- [ ] **MIG-03**: Full build passes and the existing CTest suite stays green, with no behavior change for default or pre-existing config files.
+- [ ] **MIG-04**: A verification grep confirms no `NewFromPrivateKey` / `NewFromMnemonic` / old `New(autodht, base_port, is_full_node)` references remain in `src/`, `example/`, or `test/`.
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### NodeType Propagation
+
+- **PROP-01**: Replace `is_full_node_` (GeniusNode), `full_node_m` (TransactionManager — 60+ refs), `is_full_node_` (UTXOManager, MigrationManager, GeniusAccount) with the `NodeType` enum throughout.
+- **PROP-02**: Distinct runtime behavior between `Archive` and `Full` node types (e.g. pruning policy).
+
+### Config Hardening
+
+- **HARD-01**: Migrate `pubsub_port` from string to numeric field.
+- **HARD-02**: Introduce config schema versioning / on-disk migration tooling.
+
+## Out of Scope
+
+Explicitly excluded. Documented to prevent scope creep.
+
+| Feature | Reason |
+|---------|--------|
+| Compatibility shim / deprecated wrappers | Only this repo consumes the factory; a shim delays cleanup and defeats the milestone's purpose |
+| Propagating `NodeType` into TransactionManager/UTXOManager/MigrationManager/GeniusAccount | 60+ refs in TransactionManager alone — separate larger milestone (see PROP-01) |
+| Distinct Archive vs Full runtime behavior | Both → `is_full_node_=true` today; vocabulary now, behavior later (see PROP-02) |
+| JSON schema validation framework | `HasMember + IsXxx` guards suffice for this milestone |
+| Changes to `DevConfig_st` plumbing | Only the GeniusNode construction surface changes |
+| Migrating `pubsub_port` to numeric | Out of scope; only adding new keys (see HARD-01) |
+| Additional node roles (Validator/Bootstrap/Watcher) | Not introduced; Full/Light/Archive only |
+| Config schema versioning / migration tooling | Defaults cover backward compat (see HARD-02) |
+| Refactoring the GeniusNode god-class (2831-line file) | Separate concern; only the construction API changes |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| INTF-01 | — | Pending |
+| INTF-02 | — | Pending |
+| INTF-03 | — | Pending |
+| INTF-04 | — | Pending |
+| CFG-01 | — | Pending |
+| CFG-02 | — | Pending |
+| CFG-03 | — | Pending |
+| CFG-04 | — | Pending |
+| MIG-01 | — | Pending |
+| MIG-02 | — | Pending |
+| MIG-03 | — | Pending |
+| MIG-04 | — | Pending |
+
+**Coverage:**
+- v1 requirements: 12 total
+- Mapped to phases: 0
+- Unmapped: 12 ⚠️ (populated during roadmap creation)
+
+---
+*Requirements defined: 2026-07-02*
+*Last updated: 2026-07-02 after initial definition*
