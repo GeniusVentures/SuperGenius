@@ -13,15 +13,15 @@
 
 ### Phase 1: Config-Driven Settings Foundation
 
-**Goal:** Introduce config-file reads for network and node-type settings as an additive, behavior-preserving layer. After this phase, `autodht`/`base_port` are read from `network_config.json`, `node_type` (+ `NodeType` enum) is read from `sgns_config.json`, and all missing keys fall back to today's exact defaults. The old factories still work unchanged (params still drive behavior) — this phase adds read paths without removing anything.
+**Goal:** Introduce config-file reads for network settings as an additive, behavior-preserving layer. After this phase, `auto_dht` and `port_seed` (renamed from `base_port`) are read from `network_config.json` (config wins if present; param is fallback), all missing keys fall back to today's exact defaults, and the `port_seed` ↔ `pubsub_port` priority is Doxygen-documented. The old factories still work unchanged — this phase adds read paths without removing anything. (node_type/NodeType enum deferred to Phase 2 per 01-CONTEXT.md D-09.)
 
 **Success Criteria**:
-1. `InitNetwork()` resolves `autodht` and `base_port` from `network_config.json` with defaults `true` / `40001` (numeric `IsUint` for `base_port`)
-2. `LoadSgnsConfig()` parses `node_type` ("Full"/"Light"/"Archive") into a new `NodeType` enum member via `NodeTypeFromString()`
-3. Every new read defaults safely on missing key and WARN-logs unrecognized/ill-typed values
-4. Existing factory signatures and call sites are untouched; full build + CTest green with no behavior change
+1. `InitNetwork()` resolves `auto_dht` and `port_seed` from `network_config.json` with defaults `true` / `40001` (numeric `IsUint` for `port_seed`); config overrides the constructor param when present
+2. Every new read defaults safely on missing key and WARN-logs unrecognized/ill-typed values
+3. Port resolution priority (`pubsub_port` > `port_seed`-derived) is Doxygen-documented; `base_port` renamed to `port_seed` throughout touched code
+4. A test proves config overrides the param; existing factory signatures and call sites are otherwise untouched; full build + CTest green with no behavior change
 
-**Requirements:** CFG-01, CFG-02, CFG-04
+**Requirements:** CFG-01, CFG-04
 **Dependencies:** none
 **UI hint**: no
 
@@ -29,17 +29,17 @@
 
 ### Phase 2: Variant Factory + Constructor Reorder
 
-**Goal:** Collapse the three overloaded factories into a single `New(dev_config, AccountSource)` and reorder the private constructor so the account is created after `LoadSgnsConfig()` resolves `node_type_` → `is_full_node_` (resolving the init-order hinge from `research/ARCHITECTURE.md`). Delete the old factories entirely. `is_full_node_` is now derived from `node_type_`, not passed as a param.
+**Goal:** Collapse the three overloaded factories into a single `New(dev_config, AccountSource)` and reorder the private constructor so the account is created after `LoadSgnsConfig()` resolves `node_type_` → `is_full_node_` (resolving the init-order hinge from `research/ARCHITECTURE.md`). Delete the old factories entirely. `is_full_node_` is now derived from `node_type_`, not passed as a param. Also introduces the `NodeType` enum + `node_type` config read (moved from Phase 1 per 01-CONTEXT.md D-09).
 
 **Success Criteria**:
 1. `New(dev_config, AccountSource)` is the sole public factory; `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>` with `FromPublicKey` promoted to public
 2. Private constructor signature is `(dev_config, AccountSource)`; account is created via `std::visit` AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved first
-3. `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set once during construction, immutable afterward
+3. `LoadSgnsConfig()` parses `node_type` ("Full"/"Light"/"Archive") into a new `NodeType` enum via `NodeTypeFromString()`; `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set once during construction, immutable afterward
 4. Old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, `NewFromMnemonic` are deleted (no stubs)
-5. `NodeType` enum introduced; downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) receive the bool unchanged
+5. Downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) receive the bool unchanged
 
-**Requirements:** INTF-01, INTF-02, INTF-03, INTF-04, CFG-03
-**Dependencies:** Phase 1 (needs config read paths + NodeType enum in place)
+**Requirements:** INTF-01, INTF-02, INTF-03, INTF-04, CFG-02, CFG-03
+**Dependencies:** Phase 1 (needs network config read paths + port_seed rename in place)
 **UI hint**: no
 
 ---
@@ -64,13 +64,13 @@
 
 | Requirement | Phase | Description |
 |-------------|-------|-------------|
-| CFG-01 | 1 | autodht + base_port in network_config.json |
-| CFG-02 | 1 | node_type in sgns_config.json + NodeType enum |
+| CFG-01 | 1 | auto_dht + port_seed in network_config.json |
 | CFG-04 | 1 | Safe defaults + logging |
 | INTF-01 | 2 | Single New() factory |
 | INTF-02 | 2 | 4-source variant |
 | INTF-03 | 2 | Ctor reorder |
 | INTF-04 | 2 | Remove old factories |
+| CFG-02 | 2 | node_type in sgns_config.json + NodeType enum |
 | CFG-03 | 2 | Derived is_full_node_ |
 | MIG-01 | 3 | Migrate 18 call sites |
 | MIG-02 | 3 | Test config-write helper |
