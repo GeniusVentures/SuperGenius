@@ -4,6 +4,7 @@
  * @date       2025-09-06
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
+#include <algorithm>
 #include <regex>
 #include "crdt/crdt_callback_manager.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -23,15 +24,30 @@ namespace sgns::crdt
 
     bool CRDTCallbackManager::RegisterNewDataCallback( const std::string &pattern, NewDataCallback callback )
     {
+        auto entry = std::shared_ptr<const NewDataCallbackEntry>{};
+        try
+        {
+            entry = std::make_shared<NewDataCallbackEntry>(
+                NewDataCallbackEntry{ pattern, std::regex( pattern ), std::move( callback ) } );
+        }
+        catch ( const std::regex_error &e )
+        {
+            logger_->error( "Regex error for pattern '{}': {}", pattern, e.what() );
+            return false;
+        }
+
         bool            ret = false;
         std::lock_guard lock( new_data_callback_registry_mutex_ );
 
         logger_->debug( "Attempting to register new data callback for pattern: '{}'", pattern );
 
-        if ( new_data_callback_registry_.find( pattern ) == new_data_callback_registry_.end() )
+        auto it = std::find_if( new_data_callback_registry_.begin(),
+                                new_data_callback_registry_.end(),
+                                [&]( const auto &registered ) { return registered->pattern == pattern; } );
+        if ( it == new_data_callback_registry_.end() )
         {
-            new_data_callback_registry_[pattern] = std::move( callback );
-            ret                                  = true;
+            new_data_callback_registry_.push_back( std::move( entry ) );
+            ret = true;
             logger_->info( "Successfully registered new data callback for pattern: '{}'", pattern );
         }
         else
@@ -45,15 +61,30 @@ namespace sgns::crdt
 
     bool CRDTCallbackManager::RegisterDeletedDataCallback( const std::string &pattern, DeletedDataCallback callback )
     {
+        auto entry = std::shared_ptr<const DeletedDataCallbackEntry>{};
+        try
+        {
+            entry = std::make_shared<DeletedDataCallbackEntry>(
+                DeletedDataCallbackEntry{ pattern, std::regex( pattern ), std::move( callback ) } );
+        }
+        catch ( const std::regex_error &e )
+        {
+            logger_->error( "Regex error for delete pattern '{}': {}", pattern, e.what() );
+            return false;
+        }
+
         bool            ret = false;
         std::lock_guard lock( deleted_data_callback_registry_mutex_ );
 
         logger_->debug( "Attempting to register deleted data callback for pattern: '{}'", pattern );
 
-        if ( deleted_data_callback_registry_.find( pattern ) == deleted_data_callback_registry_.end() )
+        auto it = std::find_if( deleted_data_callback_registry_.begin(),
+                                deleted_data_callback_registry_.end(),
+                                [&]( const auto &registered ) { return registered->pattern == pattern; } );
+        if ( it == deleted_data_callback_registry_.end() )
         {
-            deleted_data_callback_registry_[pattern] = std::move( callback );
-            ret                                      = true;
+            deleted_data_callback_registry_.push_back( std::move( entry ) );
+            ret = true;
             logger_->info( "Successfully registered deleted data callback for pattern: '{}'", pattern );
         }
         else
@@ -69,10 +100,12 @@ namespace sgns::crdt
     {
         std::lock_guard lock( new_data_callback_registry_mutex_ );
 
-        auto it = new_data_callback_registry_.find( pattern );
+        auto it = std::find_if( new_data_callback_registry_.begin(),
+                                new_data_callback_registry_.end(),
+                                [&]( const auto &registered ) { return registered->pattern == pattern; } );
         if ( it != new_data_callback_registry_.end() )
         {
-            new_data_callback_registry_.erase( pattern );
+            new_data_callback_registry_.erase( it );
             logger_->info( "Successfully unregistered new data callback for pattern: '{}'", pattern );
         }
         else
@@ -88,10 +121,12 @@ namespace sgns::crdt
     {
         std::lock_guard lock( deleted_data_callback_registry_mutex_ );
 
-        auto it = deleted_data_callback_registry_.find( pattern );
+        auto it = std::find_if( deleted_data_callback_registry_.begin(),
+                                deleted_data_callback_registry_.end(),
+                                [&]( const auto &registered ) { return registered->pattern == pattern; } );
         if ( it != deleted_data_callback_registry_.end() )
         {
-            deleted_data_callback_registry_.erase( pattern );
+            deleted_data_callback_registry_.erase( it );
             logger_->info( "Successfully unregistered deleted data callback for pattern: '{}'", pattern );
         }
         else
@@ -112,53 +147,43 @@ namespace sgns::crdt
                         cid,
                         value.size() );
 
-        NewDataCallbackRegistry registry_copy;
+        NewDataCallbackRegistry registry_snapshot;
         {
             std::shared_lock lock( new_data_callback_registry_mutex_ );
-            registry_copy = new_data_callback_registry_;
-            logger_->debug( "Copied {} registered patterns for matching", registry_copy.size() );
+            registry_snapshot = new_data_callback_registry_;
+            logger_->debug( "Snapshotted {} registered patterns for matching", registry_snapshot.size() );
         }
         work_journal_->MarkProcessing( key );
 
-        if ( registry_copy.empty() )
+        if ( registry_snapshot.empty() )
         {
             logger_->warn( "No new data callbacks registered - key '{}' will not trigger any callbacks", key );
             return;
         }
 
         bool callback_triggered = false;
-        for ( const auto &[pattern, callback] : registry_copy )
+        for ( const auto &entry : registry_snapshot )
         {
-            logger_->debug( "Testing key '{}' against pattern '{}'", key, pattern );
+            logger_->debug( "Testing key '{}' against pattern '{}'", key, entry->pattern );
 
-            try
+            const bool matches = std::regex_match( key, entry->regex );
+            logger_->debug( "Regex match result for key '{}' vs pattern '{}': {}",
+                            key,
+                            entry->pattern,
+                            matches ? "MATCH" : "NO MATCH" );
+            if ( matches )
             {
-                std::regex regex( pattern );
-                bool       matches = std::regex_match( key, regex );
-
-                logger_->debug( "Regex match result for key '{}' vs pattern '{}': {}",
-                                key,
-                                pattern,
-                                matches ? "MATCH" : "NO MATCH" );
-
-                if ( matches )
+                logger_->info( "Executing callback for key '{}' matching pattern '{}'", key, entry->pattern );
+                entry->callback( std::make_pair( key, value ), cid );
+                if ( auto work_entry = work_journal_->GetEntry( key );
+                     work_entry.has_value() && work_entry->state == CRDTWorkJournal::State::Processing )
                 {
-                    logger_->info( "Executing callback for key '{}' matching pattern '{}'", key, pattern );
-                    callback( std::make_pair( key, value ), cid );
-                    if ( auto entry = work_journal_->GetEntry( key );
-                         entry.has_value() && entry->state == CRDTWorkJournal::State::Processing )
+                    if ( !work_journal_->MarkDone( key ) )
                     {
-                        if ( !work_journal_->MarkDone( key ) )
-                        {
-                            logger_->error( "Failed to auto-complete CRDT work for key '{}'", key );
-                        }
+                        logger_->error( "Failed to auto-complete CRDT work for key '{}'", key );
                     }
-                    callback_triggered = true;
                 }
-            }
-            catch ( const std::regex_error &e )
-            {
-                logger_->error( "Regex error for pattern '{}': {}", pattern, e.what() );
+                callback_triggered = true;
             }
         }
 
@@ -176,14 +201,14 @@ namespace sgns::crdt
     {
         logger_->debug( "DeleteDataCallback triggered for key: '{}', cid: '{}'", deleted_key, cid );
 
-        DeletedDataCallbackRegistry registry_copy;
+        DeletedDataCallbackRegistry registry_snapshot;
         {
             std::shared_lock lock( deleted_data_callback_registry_mutex_ );
-            registry_copy = deleted_data_callback_registry_;
-            logger_->debug( "Copied {} registered delete patterns for matching", registry_copy.size() );
+            registry_snapshot = deleted_data_callback_registry_;
+            logger_->debug( "Snapshotted {} registered delete patterns for matching", registry_snapshot.size() );
         }
 
-        if ( registry_copy.empty() )
+        if ( registry_snapshot.empty() )
         {
             logger_->warn( "No deleted data callbacks registered - key '{}' will not trigger any callbacks",
                            deleted_key );
@@ -191,32 +216,22 @@ namespace sgns::crdt
         }
 
         bool callback_triggered = false;
-        for ( const auto &[pattern, callback] : registry_copy )
+        for ( const auto &entry : registry_snapshot )
         {
-            logger_->debug( "Testing deleted key '{}' against pattern '{}'", deleted_key, pattern );
+            logger_->debug( "Testing deleted key '{}' against pattern '{}'", deleted_key, entry->pattern );
 
-            try
+            const bool matches = std::regex_match( deleted_key, entry->regex );
+            logger_->debug( "Regex match result for deleted key '{}' vs pattern '{}': {}",
+                            deleted_key,
+                            entry->pattern,
+                            matches ? "MATCH" : "NO MATCH" );
+            if ( matches )
             {
-                std::regex regex( pattern );
-                bool       matches = std::regex_match( deleted_key, regex );
-
-                logger_->debug( "Regex match result for deleted key '{}' vs pattern '{}': {}",
-                                deleted_key,
-                                pattern,
-                                matches ? "MATCH" : "NO MATCH" );
-
-                if ( matches )
-                {
-                    logger_->info( "Executing delete callback for key '{}' matching pattern '{}'",
-                                   deleted_key,
-                                   pattern );
-                    callback( deleted_key, cid );
-                    callback_triggered = true;
-                }
-            }
-            catch ( const std::regex_error &e )
-            {
-                logger_->error( "Regex error for delete pattern '{}': {}", pattern, e.what() );
+                logger_->info( "Executing delete callback for key '{}' matching pattern '{}'",
+                               deleted_key,
+                               entry->pattern );
+                entry->callback( deleted_key, cid );
+                callback_triggered = true;
             }
         }
 

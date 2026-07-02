@@ -1,3 +1,4 @@
+#include <chrono>
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -112,7 +113,6 @@ protected:
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
     }
 
@@ -172,8 +172,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
                                  true, // is processor
                                  true );
     sgns::test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_full not synced" );
+                                        std::chrono::milliseconds( 30000 ),
+                                        "node_full not synced" );
     auto node_original = CreateNode( "node_multi_1",
                                      "0xcafe",
                                      "1.0",
@@ -184,8 +184,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     sgns::test::assertWaitForCondition( [&]() { return node_original->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_original not synced" );
+                                        std::chrono::milliseconds( 30000 ),
+                                        "node_original not synced" );
 
     auto balance_original_start = node_original->GetBalance();
     // Mint some tokens
@@ -225,8 +225,8 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     sgns::test::assertWaitForCondition( [&]() { return node_duplicated->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_duplicated not synced" );
+                                        std::chrono::milliseconds( 30000 ),
+                                        "node_duplicated not synced" );
 
     mint_result = node_duplicated->MintTokens( 60000,
                                                sgns::test::NextMintSourceHash(),
@@ -260,8 +260,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                                  true );
 
     sgns::test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_full not synced" );
+                                        std::chrono::milliseconds( 30000 ),
+                                        "node_full not synced" );
     auto node_same_addr_1 = CreateNode( "duplicate_address_12345", // same self_address
                                         "0xcafe",                  // dev_addr
                                         "1.0",
@@ -283,11 +283,11 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     sgns::test::assertWaitForCondition( [&]() { return node_same_addr_1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
-                                  "node_same_addr_1 not synced" );
+                                        std::chrono::milliseconds( 20000 ),
+                                        "node_same_addr_1 not synced" );
     sgns::test::assertWaitForCondition( [&]() { return node_same_addr_2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 20000 ),
-                                  "node_same_addr_2 not synced" );
+                                        std::chrono::milliseconds( 20000 ),
+                                        "node_same_addr_2 not synced" );
 
     // Verify nodes have the same address (they should since they use same self_address)
     ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )
@@ -312,7 +312,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                                     .size();
     auto tx_count_node2_start = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
                                     .size();
-    auto tx_count_full_start = node_full->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    auto tx_count_full_start  = node_full->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
 
     fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
                   tx_count_node1_start,
@@ -332,9 +332,10 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
     std::cout << "Mint transaction 1 ID: " << mint_result_1.value().first << std::endl;
 
-    sgns::test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == balance_node2_start + 50000000000; },
-                                  std::chrono::milliseconds( 30000 ),
-                                  "node_same_addr_2 balance not synced" );
+    sgns::test::assertWaitForCondition( [&]()
+                                        { return node_same_addr_2->GetBalance() == balance_node2_start + 50000000000; },
+                                        std::chrono::milliseconds( 30000 ),
+                                        "node_same_addr_2 balance not synced" );
     //TODO - this is not working at the moment
     //auto mint_received = node_same_addr_2->WaitForTransactionOutgoing(
     //    mint_result_1.value().first,
@@ -403,9 +404,10 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
         [&]() { return node_same_addr_1->GetBalance() == ( balance_node1_after_mint - correct_tokens_transferred ); },
         std::chrono::milliseconds( 50000 ),
         "node_same_addr_1 balance not synced" );
-    sgns::test::assertWaitForCondition( [&]() { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_same_addr_2 balance not synced" );
+    sgns::test::assertWaitForCondition( [&]()
+                                        { return node_same_addr_2->GetBalance() == node_same_addr_1->GetBalance(); },
+                                        std::chrono::milliseconds( 50000 ),
+                                        "node_same_addr_2 balance not synced" );
 
     fmt::println( "Balances after bootstrap - Node1: {}, Node2: {}",
                   node_same_addr_2->GetBalance(),
@@ -447,7 +449,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
     {
-       sgns::test::assertWaitForCondition(
+        sgns::test::assertWaitForCondition(
             [&]()
             {
                 auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
@@ -807,15 +809,25 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
             ASSERT_TRUE( load.has_value() ) << "registry load failed during " << step;
             EXPECT_EQ( load.value().epoch(), initial_epoch ) << "registry epoch changed unexpectedly at " << step;
             EXPECT_EQ( registry->GetRegistryCid(), initial_cid ) << "registry CID changed unexpectedly at " << step;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 250 ) );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
     };
 
-    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint1 = node_client->MintTokens( 100,
+                                          sgns::test::NextMintSourceHash(),
+                                          "",
+                                          TokenID::FromBytes( { 0x00 } ),
+                                          "",
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
     assert_registry_immutable( "tx1" );
 
-    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint2 = node_client->MintTokens( 250,
+                                          sgns::test::NextMintSourceHash(),
+                                          "",
+                                          TokenID::FromBytes( { 0x00 } ),
+                                          "",
+                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     assert_registry_immutable( "tx2" );
 

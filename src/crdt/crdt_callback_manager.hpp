@@ -8,9 +8,10 @@
 
 #include <functional>
 #include <memory>
+#include <regex>
 #include <string>
-#include <unordered_map>
 #include <shared_mutex>
+#include <vector>
 
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
@@ -22,12 +23,28 @@ namespace sgns::crdt
     class CRDTCallbackManager
     {
     public:
-        using NewDataPair             = std::pair<std::string, base::Buffer>;
-        using NewDataCallback         = std::function<void( NewDataPair new_data, std::string cid )>;
-        using NewDataCallbackRegistry = std::unordered_map<std::string, NewDataCallback>;
+        using NewDataPair     = std::pair<std::string, base::Buffer>;
+        using NewDataCallback = std::function<void( NewDataPair new_data, std::string cid )>;
 
-        using DeletedDataCallback         = std::function<void( std::string deleted_key, std::string cid )>;
-        using DeletedDataCallbackRegistry = std::unordered_map<std::string, DeletedDataCallback>;
+        struct NewDataCallbackEntry
+        {
+            std::string     pattern;
+            std::regex      regex;
+            NewDataCallback callback;
+        };
+
+        using NewDataCallbackRegistry = std::vector<std::shared_ptr<const NewDataCallbackEntry>>;
+
+        using DeletedDataCallback = std::function<void( std::string deleted_key, std::string cid )>;
+
+        struct DeletedDataCallbackEntry
+        {
+            std::string         pattern;
+            std::regex          regex;
+            DeletedDataCallback callback;
+        };
+
+        using DeletedDataCallbackRegistry = std::vector<std::shared_ptr<const DeletedDataCallbackEntry>>;
 
         /**
          * @brief       Construct a new CRDTCallbackManager object
@@ -38,14 +55,14 @@ namespace sgns::crdt
          */
         ~CRDTCallbackManager();
         /**
-         * @brief       Registers a callback for when new data gets recorded to a specific pattern 
+         * @brief       Registers a callback for when new data gets recorded to a specific pattern
          * @param[in]   pattern Regex pattern that the key should match to call the callback
          * @param[in]   callback The callback itself
          * @return      true if registered, false otherwise
          */
         bool RegisterNewDataCallback( const std::string &pattern, NewDataCallback callback );
         /**
-         * @brief       Registers a callback for when data gets deleted to a specific pattern 
+         * @brief       Registers a callback for when data gets deleted to a specific pattern
          * @param[in]   pattern Regex pattern that the key should match to call the callback
          * @param[in]   callback The callback itself
          * @return      true if registered, false otherwise
@@ -63,7 +80,7 @@ namespace sgns::crdt
         void UnregisterDeletedDataCallback( const std::string &pattern );
 
         /**
-         * @brief       Executes a registered new data callback that matches the key 
+         * @brief       Executes a registered new data callback that matches the key
          * @param[in]   key key of the CRDT
          * @param[in]   value value contained on the key
          * @param[in]   cid content identifier associated with the value
