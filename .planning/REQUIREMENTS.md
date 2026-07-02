@@ -64,24 +64,24 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INTF-01 | — | Pending |
-| INTF-02 | — | Pending |
-| INTF-03 | — | Pending |
-| INTF-04 | — | Pending |
-| CFG-01 | — | Pending |
-| CFG-02 | — | Pending |
-| CFG-03 | — | Pending |
-| CFG-04 | — | Pending |
-| MIG-01 | — | Pending |
-| MIG-02 | — | Pending |
-| MIG-03 | — | Pending |
-| MIG-04 | — | Pending |
+| CFG-01 | Phase 1 | Pending |
+| CFG-02 | Phase 1 | Pending |
+| CFG-04 | Phase 1 | Pending |
+| INTF-01 | Phase 2 | Pending |
+| INTF-02 | Phase 2 | Pending |
+| INTF-03 | Phase 2 | Pending |
+| INTF-04 | Phase 2 | Pending |
+| CFG-03 | Phase 2 | Pending |
+| MIG-01 | Phase 3 | Pending |
+| MIG-02 | Phase 3 | Pending |
+| MIG-03 | Phase 3 | Pending |
+| MIG-04 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 12 total
-- Mapped to phases: 0
-- Unmapped: 12 ⚠️ (populated during roadmap creation)
+- Mapped to phases: 12
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-02*
-*Last updated: 2026-07-02 after initial definition*
+*Last updated: 2026-07-02 after roadmap creation*
