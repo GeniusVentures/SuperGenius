@@ -1021,11 +1021,11 @@ namespace sgns::crdt
             return false; // No failure recorded
         }
 
-        // Consider failure "recent" for 5 minutes (300 seconds)
+        // Consider failure "recent" for 3 minutes (180 seconds)
         // This prevents immediate re-requests but allows retry after some time
         uint64_t       now             = GetCurrentTimestamp();
         uint64_t       failure_age     = now - it->second;
-        const uint64_t FAILURE_TIMEOUT = 300; // 5 minutes
+        const uint64_t FAILURE_TIMEOUT = 180; // 3 minutes
 
         if ( failure_age > FAILURE_TIMEOUT )
         {
