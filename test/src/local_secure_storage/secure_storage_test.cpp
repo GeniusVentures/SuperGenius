@@ -101,10 +101,12 @@ INSTANTIATE_TEST_SUITE_P( SecureStorage,
 
 #elif defined( __APPLE__ )
 
-#include "local_secure_storage/impl/Apple.hpp"
+// Use in-memory storage for tests — avoids keychain password prompts.
+// AppleSecureStorage is tested separately in integration tests.
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 INSTANTIATE_TEST_SUITE_P( SecureStorage,
                           SecureStorageTest,
-                          testing::Values( std::make_shared<AppleSecureStorage>( TEST_ID ) ) );
+                          testing::Values( std::make_shared<MemorySecureStorage>( TEST_ID ) ) );
 
 #endif

@@ -11,8 +11,11 @@
 #include <chrono>
 #include <cstdio>
 #include <boost/dll.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
 {
@@ -53,6 +56,10 @@ namespace sgns
      */
         static void SetUpTestSuite()
         {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
             CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
@@ -125,10 +132,10 @@ namespace sgns
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
                                               sgns::test::NextMintSourceHash(),
-                                              "",
+                                              "test",
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",
-                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

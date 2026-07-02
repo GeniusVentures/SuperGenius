@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STORAGE_DATABASE_ERROR_HPP
+#define STORAGE_DATABASE_ERROR_HPP
 
 #include "outcome/outcome.hpp"
 
@@ -35,3 +36,5 @@ namespace sgns::storage
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::storage, DatabaseError );
+
+#endif // STORAGE_DATABASE_ERROR_HPP

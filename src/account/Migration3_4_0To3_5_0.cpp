@@ -19,7 +19,7 @@ namespace sgns
 
     namespace
     {
-        std::string BuildLegacyTransactionPath_3_5_0( const IGeniusTransactions &tx )
+        std::string BuildLegacyTransactionPath_3_5_0( const GeniusTransaction &tx )
         {
             return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );
@@ -245,7 +245,7 @@ namespace sgns
 
         struct TransactionRecord
         {
-            std::shared_ptr<IGeniusTransactions> tx;
+            std::shared_ptr<GeniusTransaction> tx;
             std::string                          key;
         };
 

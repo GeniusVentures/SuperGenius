@@ -52,12 +52,29 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
+    /// Global factory override (null = use default SecureStorageImpl)
+    GeniusAccount::SecureStorageFactory g_storage_factory;
+
     outcome::result<std::shared_ptr<JSONBackend>> CreateSecureStorage( std::string_view public_key_hex )
     {
         BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key_hex ) );
 
-        return std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
-                                                    libp2p::multi::detail::encodeBase58( vec ) );
+        const std::string identifier( std::string( SECURE_STORAGE_PREFIX ) +
+                                      libp2p::multi::detail::encodeBase58( vec ) );
+
+        if ( g_storage_factory )
+        {
+            auto storage = g_storage_factory( identifier );
+            auto backend = std::dynamic_pointer_cast<JSONBackend>( storage );
+            if ( backend )
+            {
+                return backend;
+            }
+            genius_account_logger()->error( "Custom secure storage factory did not return a JSONBackend" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::make_shared<SecureStorageImpl>( identifier );
     }
 
     std::vector<std::string> ReadPublicKeysFromFile( const boost::filesystem::path &file_path )
@@ -251,6 +268,16 @@ namespace sgns
         0xfc, 0x60, 0x52, 0x6c, 0x91, 0xec, 0x81, 0xd5, 0xd4, 0xfa, 0xb2, 0x78, 0x04, 0xad, 0x93, 0xd0,
         0xd4, 0xf9, 0x4b, 0x55, 0xc7, 0x5e, 0xed, 0x6f, 0xda, 0x2e, 0xa0, 0xc9, 0xc8, 0x2c, 0x21, 0x36,
     };
+
+    void GeniusAccount::SetSecureStorageFactory( SecureStorageFactory factory )
+    {
+        g_storage_factory = std::move( factory );
+    }
+
+    const GeniusAccount::SecureStorageFactory &GeniusAccount::GetSecureStorageFactory()
+    {
+        return g_storage_factory;
+    }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
                                                                               StorageWithAddress response_value,
@@ -719,7 +746,6 @@ namespace sgns
         eth_keypair_( std::move( eth_keypair ) ),
         storage_( std::move( storage ) ),
         utxo_manager_(
-            is_full_node_,
             GetAddress(),
             [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
             []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
@@ -978,7 +1004,7 @@ namespace sgns
             }
         }
 
-        return outcome::failure( std::errc::no_message_available );
+        return outcome::failure( std::errc::no_message );
     }
 
     outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const

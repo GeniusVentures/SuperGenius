@@ -7,7 +7,8 @@
  * @copyright   Copyright (c) 2025
  */
 
-#pragma once
+#ifndef SGNS_SCALED_INTEGER_HPP
+#define SGNS_SCALED_INTEGER_HPP
 
 #include <string>
 #include <memory>
@@ -201,3 +202,5 @@ namespace sgns
     };
 
 } // namespace sgns
+
+#endif // SGNS_SCALED_INTEGER_HPP

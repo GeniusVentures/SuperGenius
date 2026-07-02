@@ -10,13 +10,13 @@
 
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 
 namespace sgns
 {
     using namespace boost::multiprecision;
 
-    class ProcessingTransaction final : public IGeniusTransactions
+    class ProcessingTransaction final : public GeniusTransaction
     {
     public:
         static std::shared_ptr<ProcessingTransaction> DeSerializeByteVector( const std::vector<uint8_t> &data );
@@ -28,7 +28,10 @@ namespace sgns
 
         ~ProcessingTransaction() override = default;
 
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
+
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
 
         uint256_t GetJobHash() const

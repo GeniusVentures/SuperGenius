@@ -6,7 +6,8 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef SGNS_MIGRATION_MANAGER_HPP
+#define SGNS_MIGRATION_MANAGER_HPP
 
 #include <memory>
 #include <deque>
@@ -104,3 +105,5 @@ namespace sgns
 } // namespace sgns
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, MigrationManager::Error );
+
+#endif // SGNS_MIGRATION_MANAGER_HPP

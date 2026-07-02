@@ -4,7 +4,8 @@
  * @date       2025-07-21
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef ACCOUNT_MESSENGER_HPP
+#define ACCOUNT_MESSENGER_HPP
 
 #include <string>
 #include <memory>
@@ -127,9 +128,8 @@ namespace sgns
          */
         outcome::result<void> RequestAccountCreation( uint64_t                                            timeout_ms,
                                                       std::function<void( outcome::result<std::string> )> callback );
-        outcome::result<void> RequestValidatorRegistry(
-            uint64_t                                            timeout_ms,
-            std::function<void( outcome::result<std::string> )> callback );
+        outcome::result<void> RequestValidatorRegistry( uint64_t                                            timeout_ms,
+                                                        std::function<void( outcome::result<std::string> )> callback );
 
         /**
          * @brief       Request a block by CID from the network (retries until timeout)
@@ -412,3 +412,5 @@ namespace sgns
  * @brief       Macro for declaring error handling in the AccountMessenger class.
  */
 OUTCOME_HPP_DECLARE_ERROR_2( sgns, AccountMessenger::Error );
+
+#endif // ACCOUNT_MESSENGER_HPP

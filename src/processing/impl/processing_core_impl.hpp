@@ -6,7 +6,8 @@
  *             Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef PROCESSING_CORE_IMPL_HPP
+#define PROCESSING_CORE_IMPL_HPP
 
 #include <cmath>
 #include <memory>
@@ -96,17 +97,19 @@ namespace sgns::processing
         /// Shared pointer to the task queue for retrieving tasks and subtasks
         std::shared_ptr<ProcessingTaskQueue> task_queue_;
         /// The Token ID to be used on the results of the processed subtasks
-        TokenID                              token_ID_;
+        TokenID token_ID_;
         /// The maximum number of subtasks that can be processed concurrently.
-        uint32_t                             max_processing_subtask_count_;
+        uint32_t max_processing_subtask_count_;
 
         /// Mutex to protect access to the processing subtask count
         std::mutex subtask_count_mutex_;
         /// The current count of subtasks being processed
-        uint32_t   processing_subtask_count_{ 0 };
+        uint32_t processing_subtask_count_{ 0 };
         /// The last processing manager used for processing a subtask, kept here to allow progress retrieval during processing
         mutable std::shared_ptr<sgprocessing::ProcessingManager> processing_manager_;
     };
 }
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::processing, ProcessingCoreImpl::Error );
+
+#endif // PROCESSING_CORE_IMPL_HPP

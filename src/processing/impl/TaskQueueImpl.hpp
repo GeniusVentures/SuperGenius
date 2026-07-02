@@ -4,7 +4,8 @@
  * @date       2026-05-18
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef TASK_QUEUE_IMPL_HPP
+#define TASK_QUEUE_IMPL_HPP
 
 #include <unordered_set>
 #include <string>
@@ -95,3 +96,4 @@ namespace sgns::processing
         std::unordered_set<std::string> incompatible_jobs_;
     };
 }
+#endif // TASK_QUEUE_IMPL_HPP

@@ -6,18 +6,19 @@ addtest(processing_nodes_test
 target_include_directories(processing_nodes_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(processing_nodes_test
-    genius_node
+    genius_node_test
+    json_secure_storage
 )
 if(WIN32)
-    target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(processing_nodes_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
 elseif(APPLE)
-    target_link_options(processing_nodes_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(processing_nodes_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 
 else()
     target_link_options(processing_nodes_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()
@@ -29,19 +30,19 @@ addtest(child_tokens_test
 target_include_directories(child_tokens_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(child_tokens_test
-    genius_node
+    genius_node_test
     json_secure_storage
 )
 if(WIN32)
-    target_link_options(child_tokens_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(child_tokens_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
 elseif(APPLE)
-    target_link_options(child_tokens_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(child_tokens_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 
 else()
     target_link_options(child_tokens_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()
@@ -54,19 +55,19 @@ addtest(full_node_test
 target_include_directories(full_node_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(full_node_test
-    genius_node
+    genius_node_test
     json_secure_storage
 )
 if(WIN32)
-    target_link_options(full_node_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(full_node_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 
 elseif(APPLE)
-    target_link_options(full_node_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(full_node_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 
 else()
     target_link_options(full_node_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()

@@ -212,7 +212,7 @@ namespace sgns
         instance->consensus_manager_->RegisterSubjectHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -224,12 +224,12 @@ namespace sgns
                     switch ( decision_result.value() )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
-                            return ConsensusManager::Check::Approve;
+                            return ConsensusManager::ValidationResult::Approve();
                         case ValidatorRegistry::BatchSubjectDecision::Pending:
-                            return ConsensusManager::Check::Pending;
+                            return ConsensusManager::ValidationResult::Pending();
                         case ValidatorRegistry::BatchSubjectDecision::Reject:
                         default:
-                            return ConsensusManager::Check::Reject;
+                            return ConsensusManager::ValidationResult::Reject();
                     }
                 }
                 return outcome::failure( std::errc::owner_dead );
@@ -1687,25 +1687,46 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( subject_type );
     }
 
+    bool Blockchain::RegisterProposalCleanupHandler( std::string_view                             subject_type,
+                                                       ConsensusManager::ProposalCleanupHandler     handler )
+    {
+        return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::RegisterSlotKeyHandler( std::string_view                    subject_type,
+                                             ConsensusManager::SlotKeyHandler     handler )
+    {
+        ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterSlotKeyHandler( std::string_view subject_type )
+    {
+        ConsensusManager::UnregisterSlotKeyHandler( subject_type );
+    }
+
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
+        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, transaction,
+                                                       utxo_commitment, utxo_witness );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
         BOOST_OUTCOME_TRY( auto &&nonce_subject,
-                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
+                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, transaction,
+                                                        utxo_commitment, utxo_witness ) );
         BOOST_OUTCOME_TRY( auto &&nonce_proposal,
                            consensus_manager_->CreateProposal( nonce_subject,
                                                                account_id,
@@ -1727,6 +1748,12 @@ namespace sgns
             return outcome::success();
         }
         return consensus_manager_->ResumeProposalHandling( hash );
+    }
+
+    outcome::result<void> Blockchain::TryResumePendingDependency(
+        const ConsensusManager::PendingDependencyKey &dependency )
+    {
+        return consensus_manager_->WakePendingDependency( dependency );
     }
 
     bool Blockchain::CheckCertificate( const std::string &subject_hash ) const
