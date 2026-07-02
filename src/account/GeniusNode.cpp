@@ -131,14 +131,14 @@ namespace sgns
 
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
                                                  bool                autodht,
-                                                 uint16_t            base_port,
+                                                 uint16_t            port_seed,
                                                  bool                is_full_node )
     {
         auto instance = std::shared_ptr<GeniusNode>(
             new GeniusNode( dev_config,
                             GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node ),
                             autodht,
-                            base_port,
+                            port_seed,
                             is_full_node ) );
 
         if ( instance )
@@ -152,14 +152,14 @@ namespace sgns
     std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
                                                                const char         *eth_private_key,
                                                                bool                autodht,
-                                                               uint16_t            base_port,
+                                                               uint16_t            port_seed,
                                                                bool                is_full_node )
     {
         auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
             dev_config,
             GeniusAccount::NewFromPrivateKey( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
             autodht,
-            base_port,
+            port_seed,
             is_full_node ) );
 
         if ( instance )
@@ -173,7 +173,7 @@ namespace sgns
     std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
                                                              const std::string  &mnemonic,
                                                              bool                autodht,
-                                                             uint16_t            base_port,
+                                                             uint16_t            port_seed,
                                                              bool                is_full_node )
     {
         auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
@@ -187,7 +187,7 @@ namespace sgns
         }
 
         auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
+            new GeniusNode( dev_config, std::move( account ), autodht, port_seed, is_full_node ) );
 
         if ( instance )
         {
@@ -200,7 +200,7 @@ namespace sgns
     GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
                             std::shared_ptr<GeniusAccount> account,
                             bool                           autodht,
-                            uint16_t                       base_port,
+                            uint16_t                       port_seed,
                             bool                           is_full_node ) :
         write_base_path_( dev_config.BaseWritePath ),
         account_( std::move( account ) ),
@@ -232,7 +232,7 @@ namespace sgns
 
         LoadSgnsConfig();
 
-        if ( !InitNetwork( base_port, is_full_node_ ) )
+        if ( !InitNetwork( port_seed, is_full_node_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
         }
@@ -765,7 +765,17 @@ namespace sgns
         return true;
     }
 
-    bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
+    uint16_t GeniusNode::GetPubsubPort() const noexcept
+    {
+        return pubsubport_;
+    }
+
+    bool GeniusNode::IsAutodhtEnabled() const noexcept
+    {
+        return autodht_;
+    }
+
+    bool GeniusNode::InitNetwork( uint16_t port_seed, bool is_full_node )
     {
         bool                ret         = true;
         std::string         config_path = write_base_path_ + "/network_config.json";
@@ -829,6 +839,38 @@ namespace sgns
                 if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
                 {
                     low_water = config_json["low_water"].GetInt();
+                }
+
+                // ── port_seed: numeric read (intentional divergence from the legacy
+                //    string-based pubsub_port read above — see HARD-01 / CONTEXT D-08).
+                //    Config wins when present; the constructor param is the fallback.
+                if ( config_json.HasMember( "port_seed" ) )
+                {
+                    if ( config_json["port_seed"].IsUint() )
+                    {
+                        port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                        node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}", port_seed );
+                    }
+                }
+
+                // ── auto_dht: bool read. JSON key "auto_dht" -> member autodht_ (D-07).
+                //    Config wins when present; the constructor param (assigned in the ctor
+                //    init-list) is the fallback.
+                if ( config_json.HasMember( "auto_dht" ) )
+                {
+                    if ( config_json["auto_dht"].IsBool() )
+                    {
+                        autodht_ = config_json["auto_dht"].GetBool();
+                        node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}", autodht_ );
+                    }
                 }
 
                 // ── Parse reconnect config ──
@@ -908,14 +950,18 @@ namespace sgns
             node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking", bootstrap_peer_infos_.size() );
         }
 
-        // Port selection logic
+        // Port resolution priority (Doxygen: see InitNetwork declaration):
+        //   1. pubsub_port (string override from network_config.json) -> config_port
+        //   2. else: port_seed (constructor param, or network_config.json "port_seed"
+        //      key when present) derives the port via GenerateRandomPort(port_seed, address).
+        // Logic unchanged this phase — only documented (CONTEXT D-04).
         if ( config_port != 0 )
         {
             pubsubport_ = config_port;
         }
         else
         {
-            pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
+            pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
         }
 
         do
