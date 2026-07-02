@@ -379,12 +379,13 @@ namespace sgns::crdt
                     lock.unlock();
                     self->RebroadcastHeads();
                     lock.lock();
-                    self->rebroadcastCv_.wait_for(
-                        lock,
-                        interval,
-                        [&]
-                        { return !self->rebroadcastThreadRunning_ || self->closeStarted_ ||
-                                 !self->pendingBroadcastTopics_.empty(); } );
+                    self->rebroadcastCv_.wait_for( lock,
+                                                   interval,
+                                                   [&]
+                                                   {
+                                                       return !self->rebroadcastThreadRunning_ || self->closeStarted_ ||
+                                                              !self->pendingBroadcastTopics_.empty();
+                                                   } );
                 }
             } );
 
@@ -1463,7 +1464,6 @@ namespace sgns::crdt
             if ( closeStarted_ )
             {
                 pending_jobs_.erase( cid );
-                lock.unlock();
                 logger_->warn( "WaitForJob: Aborting wait for CID {} due to datastore shutdown",
                                cid_string_result.value() );
                 return outcome::failure( Error::NODE_CREATION );
@@ -1475,21 +1475,18 @@ namespace sgns::crdt
                 if ( it->second == JobStatus::COMPLETED )
                 {
                     pending_jobs_.erase( it );
-                    lock.unlock();
                     logger_->debug( "WaitForJob: CID {} completed successfully", cid_string_result.value() );
                     return cid;
                 }
                 if ( it->second == JobStatus::FAILED )
                 {
                     pending_jobs_.erase( it );
-                    lock.unlock();
                     logger_->error( "WaitForJob: CID {} processing failed", cid_string_result.value() );
                     return outcome::failure( Error::NODE_CREATION );
                 }
             }
             else
             {
-                lock.unlock();
                 logger_->error( "WaitForJob: CID {} not found in pending jobs", cid_string_result.value() );
                 return outcome::failure( Error::NODE_CREATION );
             }
@@ -1501,11 +1498,9 @@ namespace sgns::crdt
             {
                 auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>( current_time - start_time )
                                            .count();
-                lock.unlock();
                 logger_->info( "WaitForJob: Still waiting for CID {} (elapsed: {}s)",
                                cid_string_result.value(),
                                elapsed_seconds );
-                lock.lock();
                 next_log_time = current_time + std::chrono::seconds( 30 );
                 continue;
             }
