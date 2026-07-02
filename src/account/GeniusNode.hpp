@@ -73,7 +73,7 @@ namespace sgns
          * @brief Creates a node using a generated or persisted account identity.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          * @note Whether this node runs processing services is read from
@@ -81,7 +81,7 @@ namespace sgns
          */
         static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
                                                 bool                autodht      = true,
-                                                uint16_t            base_port    = 40001,
+                                                uint16_t            port_seed    = 40001,
                                                 bool                is_full_node = false );
 
         /**
@@ -89,7 +89,7 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] eth_private_key Ethereum private key used to derive the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled.
          * @note Whether this node runs processing services is read from
@@ -98,7 +98,7 @@ namespace sgns
         static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
                                                               const char         *eth_private_key,
                                                               bool                autodht      = true,
-                                                              uint16_t            base_port    = 40001,
+                                                              uint16_t            port_seed    = 40001,
                                                               bool                is_full_node = false );
 
         /**
@@ -106,7 +106,7 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] mnemonic Mnemonic phrase used to restore the account identity.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
          * @note Whether this node runs processing services is read from
@@ -115,7 +115,7 @@ namespace sgns
         static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
                                                             const std::string  &mnemonic,
                                                             bool                autodht      = true,
-                                                            uint16_t            base_port    = 40001,
+                                                            uint16_t            port_seed    = 40001,
                                                             bool                is_full_node = false );
 
         /**
@@ -173,6 +173,20 @@ namespace sgns
          * @return Public addresses stored under the configured base write path.
          */
         std::vector<std::string> GetAvailableAccounts();
+
+        /**
+         * @brief Returns the resolved PubSub listening port.
+         * @return The TCP port selected during @ref InitNetwork (from @c pubsub_port override
+         *         or derived from @c port_seed). Test/read-only observable; does not mutate state.
+         */
+        uint16_t GetPubsubPort() const noexcept;
+
+        /**
+         * @brief Returns whether DHT discovery is enabled after config resolution.
+         * @return The resolved @c autodht_ value (constructor param, or the @c auto_dht key
+         *         from @c network_config.json when present — config wins). Read-only observable.
+         */
+        bool IsAutodhtEnabled() const noexcept;
 
         /**
          * @brief Adds an account to local storage using an Ethereum private key.
@@ -680,13 +694,13 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] account Account instance to bind to this node.
          * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          */
         GeniusNode( const DevConfig_st            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
-                    uint16_t                       base_port,
+                    uint16_t                       port_seed,
                     bool                           is_full_node );
 
         /**
@@ -721,11 +735,22 @@ namespace sgns
 
         /**
          * @brief Initializes PubSub, GraphSync networking, and optional DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Deterministic per-address port seed used to derive the node
+         *            listening port when @c pubsub_port is not set. Fallback when the
+         *            @c port_seed key is absent from @c network_config.json; overridable by
+         *            that key when present (config wins, param is fallback).
          * @param[in] is_full_node Whether to use full-node connection limits.
          * @return True when network initialization succeeds.
+         *
+         * @par Port resolution priority
+         * The PubSub listening port is resolved in priority order:
+         *   1. @c pubsub_port (string override read from @c network_config.json) takes
+         *      priority when present and non-empty.
+         *   2. Otherwise @c port_seed (the constructor param, or the @c port_seed key from
+         *      @c network_config.json when present) derives the port via
+         *      @c GenerateRandomPort(port_seed, account_address).
          */
-        bool InitNetwork( uint16_t base_port, bool is_full_node );
+        bool InitNetwork( uint16_t port_seed, bool is_full_node );
 
         /**
          * @brief Loads the CRDT configuration.
