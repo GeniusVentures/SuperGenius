@@ -35,10 +35,10 @@
 1. `New(dev_config, AccountSource)` is the sole public factory; `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>` with `FromPublicKey` promoted to public
 2. Private constructor signature is `(dev_config, AccountSource)`; account is created via `std::visit` AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved first
 3. `LoadSgnsConfig()` parses `node_type` ("Full"/"Light"/"Archive") into a new `NodeType` enum via `NodeTypeFromString()`; `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set once during construction, immutable afterward
-4. Old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, `NewFromMnemonic` are deleted (no stubs)
+4. `New(dev_config, AccountSource)` is canonical; the old `New(autodht, port_seed, is_full_node)`, `NewFromPrivateKey`, `NewFromMnemonic` are **retained** (deleted in Phase 3 as the first migration step — see `02-CONTEXT.md` D-01) so the build stays green while the 18 call sites await migration
 5. Downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) receive the bool unchanged
 
-**Requirements:** INTF-01, INTF-02, INTF-03, INTF-04, CFG-02, CFG-03
+**Requirements:** INTF-01, INTF-02, INTF-03, CFG-02, CFG-03  *(INTF-04 moved to Phase 3 per `02-CONTEXT.md` D-01)*
 **Dependencies:** Phase 1 (needs network config read paths + port_seed rename in place)
 **UI hint**: no
 
@@ -46,7 +46,7 @@
 
 ### Phase 3: Call-Site Migration + Verification
 
-**Goal:** Migrate all 18 existing call sites to the new `New(dev_config, AccountSource)` API with no compatibility shim, establish a shared test config-write helper, and verify the full build + test suite is green with no behavior regression and no stale references to the old factories.
+**Goal:** Delete the old factories (INTF-04, moved from Phase 2 per `02-CONTEXT.md` D-01), migrate all 18 existing call sites to the new `New(dev_config, AccountSource)` API with no compatibility shim, establish a shared test config-write helper, and verify the full build + test suite is green with no behavior regression and no stale references to the old factories.
 
 **Success Criteria**:
 1. All 18 `NewFromPrivateKey(...)` call sites (1 in `example/node_test/`, 17 in `test/src/`) rewritten to `New(dev_config, FromPrivateKey{...})`
@@ -54,7 +54,7 @@
 3. Full build passes; existing CTest suite green; no behavior change for default or pre-existing config files
 4. Verification grep confirms no `NewFromPrivateKey` / `NewFromMnemonic` / old `New(autodht, base_port, is_full_node)` references remain in `src/`, `example/`, `test/`
 
-**Requirements:** MIG-01, MIG-02, MIG-03, MIG-04
+**Requirements:** INTF-04, MIG-01, MIG-02, MIG-03, MIG-04
 **Dependencies:** Phase 2 (needs the new `New()` factory to exist)
 **UI hint**: no
 
@@ -69,7 +69,7 @@
 | INTF-01 | 2 | Single New() factory |
 | INTF-02 | 2 | 4-source variant |
 | INTF-03 | 2 | Ctor reorder |
-| INTF-04 | 2 | Remove old factories |
+| INTF-04 | 3 | Remove old factories (moved from Phase 2 per D-01) |
 | CFG-02 | 2 | node_type in sgns_config.json + NodeType enum |
 | CFG-03 | 2 | Derived is_full_node_ |
 | MIG-01 | 3 | Migrate 18 call sites |

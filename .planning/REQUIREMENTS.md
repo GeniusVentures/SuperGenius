@@ -69,7 +69,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTF-01 | Phase 2 | Pending |
 | INTF-02 | Phase 2 | Pending |
 | INTF-03 | Phase 2 | Pending |
-| INTF-04 | Phase 2 | Pending |
+| INTF-04 | Phase 3 | Pending |
 | CFG-02 | Phase 2 | Pending |
 | CFG-03 | Phase 2 | Pending |
 | MIG-01 | Phase 3 | Pending |
