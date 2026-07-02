@@ -57,3 +57,21 @@ else()
         "-Wl,--no-whole-archive"
     )
 endif()
+
+addtest(network_config_precedence_test
+    network_config_precedence_test.cpp
+)
+
+target_link_libraries(network_config_precedence_test genius_node)
+
+if(MSVC)
+    target_link_options(network_config_precedence_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+elseif(APPLE)
+    target_link_options(network_config_precedence_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+else()
+    target_link_options(network_config_precedence_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
