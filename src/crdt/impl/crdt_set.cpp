@@ -519,7 +519,7 @@ namespace sgns::crdt
     {
         if ( this->dataStore_ == nullptr )
         {
-            return outcome::failure( boost::system::error_code{} );
+            return outcome::failure( std::errc::owner_dead );
         }
 
         auto priority_key = this->PriorityKey( aKey );
@@ -533,6 +533,28 @@ namespace sgns::crdt
         valueBuffer.put( strPriority );
 
         return this->dataStore_->put( keyBuffer, valueBuffer );
+    }
+
+    outcome::result<void> CrdtSet::SetPriority( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                                const std::string                           &aKey,
+                                                uint64_t                                     aPriority )
+    {
+        if ( aDataStore == nullptr )
+        {
+            return outcome::failure( std::errc::owner_dead );
+        }
+
+        auto priority_key = this->PriorityKey( aKey );
+
+        std::string strPriority = std::to_string( aPriority + 1 );
+
+        Buffer keyBuffer;
+        keyBuffer.put( priority_key.GetKey() );
+
+        Buffer valueBuffer;
+        valueBuffer.put( strPriority );
+
+        return aDataStore->put( keyBuffer, valueBuffer );
     }
 
     outcome::result<void> CrdtSet::SetValue( const std::string &aKey,
@@ -618,7 +640,7 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( aDataStore->put( valueKeyBuffer, aValue ) );
 
         // store priority
-        BOOST_OUTCOME_TRY( this->SetPriority( aKey, aPriority ) );
+        BOOST_OUTCOME_TRY( this->SetPriority( aDataStore, aKey, aPriority ) );
 
         // trigger add hook
         if ( putHookFunc_ != nullptr )

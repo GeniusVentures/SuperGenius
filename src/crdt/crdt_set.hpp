@@ -307,6 +307,10 @@ namespace sgns::crdt
 
         static void PrintTombs( const std::vector<Element> &aTombs );
 
+        outcome::result<void> SetPriority( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+                                           const std::string                           &aKey,
+                                           uint64_t                                     aPriority );
+
         std::shared_ptr<DataStore> dataStore_ = nullptr;
         HierarchicalKey            namespaceKey_;
         std::mutex                 mutex_;

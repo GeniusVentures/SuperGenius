@@ -81,6 +81,65 @@ INSTANTIATE_TEST_SUITE_P( FormatMinionsCases,
                                              FormatMinionsParam{ 1000000ULL, "1.000000" },
                                              FormatMinionsParam{ 999999999ULL, "999.999999" } ) );
 
+// ======================== Child Token Conversion Tests ========================
+struct ConvertToChildTokenParam
+{
+    std::string ratio;
+    uint64_t    raw_minions;
+    std::string expected_child;
+};
+
+class ConvertToChildTokenTest : public ::testing::TestWithParam<ConvertToChildTokenParam>
+{
+};
+
+TEST_P( ConvertToChildTokenTest, FormatsMainMinionsAsChildTokens )
+{
+    auto [ratio, raw_minions, expected_child] = GetParam();
+    auto r                                    = TokenAmount::ConvertToChildToken( raw_minions, ratio );
+    ASSERT_TRUE( r.has_value() );
+    EXPECT_EQ( r.value(), expected_child );
+
+    auto parsed = TokenAmount::ConvertFromChildToken( r.value(), ratio );
+    ASSERT_TRUE( parsed.has_value() );
+    EXPECT_EQ( parsed.value(), raw_minions );
+}
+
+INSTANTIATE_TEST_SUITE_P( ConvertToChildTokenCases,
+                          ConvertToChildTokenTest,
+                          ::testing::Values( ConvertToChildTokenParam{ "1", 1000000, "1.000000" },
+                                             ConvertToChildTokenParam{ "0.5", 1000000, "2.000000" },
+                                             ConvertToChildTokenParam{ "2", 1000000, "0.500000" },
+                                             ConvertToChildTokenParam{ "0.5", 2000000, "4.000000" } ) );
+
+struct ConvertFromChildTokenParam
+{
+    std::string ratio;
+    std::string child_amount;
+    uint64_t    expected_minions;
+};
+
+class ConvertFromChildTokenTest : public ::testing::TestWithParam<ConvertFromChildTokenParam>
+{
+};
+
+TEST_P( ConvertFromChildTokenTest, ParsesChildTokensAsMainMinions )
+{
+    auto [ratio, child_amount, expected_minions] = GetParam();
+    auto r                                       = TokenAmount::ConvertFromChildToken( child_amount, ratio );
+    ASSERT_TRUE( r.has_value() );
+    EXPECT_EQ( r.value(), expected_minions );
+}
+
+INSTANTIATE_TEST_SUITE_P( ConvertFromChildTokenCases,
+                          ConvertFromChildTokenTest,
+                          ::testing::Values( ConvertFromChildTokenParam{ "1.0", "1.0", 1000000 },
+                                             ConvertFromChildTokenParam{ "0.5", "1.0", 500000 },
+                                             ConvertFromChildTokenParam{ "2.0", "1.0", 2000000 },
+                                             ConvertFromChildTokenParam{ "1.0", "0.0001001", 100 },
+                                             ConvertFromChildTokenParam{ "0.5", "0.3333333", 166666 },
+                                             ConvertFromChildTokenParam{ "0.1", "0.9999999", 99999 } ) );
+
 // ======================== CalculateCostMinions Zero Rate Tests ========================
 TEST( CalculateCostMinionsZeroRate, ReturnsErrorOnZeroPrice )
 {

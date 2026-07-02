@@ -1,6 +1,6 @@
 /**
  * @file       base_crdt_test.hpp
- * @brief      
+ * @brief
  * @date       2024-04-03
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
@@ -35,7 +35,7 @@ namespace test
         static void SetUpTestSuite();
         static void TearDownTestSuite();
 
-        static const std::string                                basePath;
+        static const std::string                         basePath;
         std::shared_ptr<boost::asio::io_context>         io_;
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSub> pubs_;
 

@@ -37,7 +37,7 @@ public:
         boost::filesystem::create_directories( path );
         {
             std::ofstream configFile( path.generic_string() + "/sgns_config.json" );
-            configFile << R"({"is_processor": false})";
+            configFile << R"({"is_processor": true})";
         }
 
         node_ = sgns::GeniusNode::NewFromPrivateKey( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
