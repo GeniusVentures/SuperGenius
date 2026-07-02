@@ -14,6 +14,7 @@
 #include <vector>
 #include <thread>
 #include <optional>
+#include <variant>
 #include <mutex>
 
 #include <boost/asio.hpp>
@@ -63,6 +64,20 @@ namespace sgns
     class MigrationManager;
 
     /**
+     * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
+     *
+     * Owned std::string payloads — a std::variant owns its active alternative, so
+     * non-owning views (const char*/std::string_view) would dangle once the variant
+     * is stored/passed. TokenID and other dev_config fields are NOT part of the
+     * variant; they come from dev_config.
+     */
+    struct NewAccount {};                                   ///< Generate a new identity.
+    struct FromPrivateKey { std::string eth_private_key; }; ///< Restore from an Ethereum hex private key.
+    struct FromMnemonic   { std::string mnemonic; };        ///< Restore from a BIP39 mnemonic.
+    struct FromPublicKey  { std::string public_address; };  ///< Load from storage by public address (read-only).
+    using AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>;
+
+    /**
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
      */
@@ -83,6 +98,19 @@ namespace sgns
                                                 bool                autodht      = true,
                                                 uint16_t            port_seed    = 40001,
                                                 bool                is_full_node = false );
+
+        /**
+         * @brief Canonical node factory (INTF-01). Account identity is chosen via
+         *        AccountSource; node role (is_full_node_) is derived from node_type in
+         *        sgns_config.json, not a param. Old factories are retained this phase
+         *        (deleted in Phase 3 per 02-CONTEXT.md D-01).
+         * @param[in] dev_config Runtime configuration (paths, token, payout data).
+         * @param[in] source Account-creation source (NewAccount / FromPrivateKey / FromMnemonic / FromPublicKey).
+         * @return Shared node instance after asynchronous DB init is scheduled, or nullptr
+         *         on account-restore or initialization failure (D-04).
+         */
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+                                                AccountSource       source );
 
         /**
          * @brief Creates a node bound to the provided Ethereum private key.
@@ -159,6 +187,19 @@ namespace sgns
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
         };
 
+        /**
+         * @brief Deployment node role, read from sgns_config.json ("node_type").
+         *
+         * Drives the derived is_full_node_ flag (Full/Archive -> true, Light -> false).
+         * Co-located with NodeState/Error per CFG-02.
+         */
+        enum class NodeType : uint8_t
+        {
+            Full    = 0, ///< Full node (is_full_node_ = true).
+            Light   = 1, ///< Light node (is_full_node_ = false). Default on missing/unknown key.
+            Archive = 2, ///< Archive node (is_full_node_ = true; behavior identical to Full this milestone).
+        };
+
 #ifdef SGNS_DEBUG
         static constexpr std::chrono::milliseconds TIMEOUT_ESCROW_PAY{ 50000 }; ///< Debug escrow payout timeout.
         static constexpr std::chrono::milliseconds TIMEOUT_TRANSFER{ 50000 };   ///< Debug transfer timeout.
@@ -187,6 +228,20 @@ namespace sgns
          *         from @c network_config.json when present — config wins). Read-only observable.
          */
         bool IsAutodhtEnabled() const noexcept;
+
+        /**
+         * @brief Returns whether this node runs in full-node mode after config resolution.
+         * @return The resolved @c is_full_node_ (derived from @c node_type_ in the
+         *         AccountSource constructor: Full/Archive -> true, Light -> false).
+         *         Test/read-only observable; does not mutate state.
+         */
+        bool IsFullNode() const noexcept;
+
+        /**
+         * @brief Returns the resolved node role.
+         * @return The @c node_type_ read from sgns_config.json (default Light). Read-only observable.
+         */
+        NodeType GetNodeType() const noexcept;
 
         /**
          * @brief Adds an account to local storage using an Ethereum private key.
@@ -674,6 +729,7 @@ namespace sgns
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
         bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
+        NodeType                                 node_type_ = NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger                             node_logger_;            ///< Main node logger.
         DevConfig_st                             dev_config_;             ///< Runtime node configuration.
         std::string                              gnus_network_full_path_; ///< Versioned network DB path.
@@ -702,6 +758,20 @@ namespace sgns
                     bool                           autodht,
                     uint16_t                       port_seed,
                     bool                           is_full_node );
+
+        /**
+         * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
+         *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
+         *
+         * Account creation runs via std::visit over the AccountSource variant, with
+         * is_full_node_ already derived. Throws std::runtime_error on account-restore
+         * failure; the public New(dev_config, AccountSource) catches and returns nullptr (D-04).
+         * Old private constructor above is retained this phase (deleted in Phase 3).
+         *
+         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
+         * @param[in] source Account-creation source variant.
+         */
+        GeniusNode( const DevConfig_st &dev_config, AccountSource source );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
