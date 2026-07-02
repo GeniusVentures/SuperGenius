@@ -10,6 +10,7 @@
 #include <thread>
 #include <memory>
 #include <random>
+#include <cctype>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -79,6 +80,25 @@ namespace
                 return "READY";
         }
         return "UNKNOWN";
+    }
+
+    // Case-insensitive parse of the "node_type" sgns_config.json value (CONTEXT D-02).
+    // Returns nullopt for unrecognized values; the caller (LoadSgnsConfig) WARN-logs + defaults to Light.
+    std::optional<sgns::GeniusNode::NodeType> NodeTypeFromString( std::string_view s )
+    {
+        std::string lower;
+        lower.reserve( s.size() );
+        for ( char c : s )
+        {
+            lower.push_back( static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) ) );
+        }
+        if ( lower == "full" )
+            return sgns::GeniusNode::NodeType::Full;
+        if ( lower == "light" )
+            return sgns::GeniusNode::NodeType::Light;
+        if ( lower == "archive" )
+            return sgns::GeniusNode::NodeType::Archive;
+        return std::nullopt;
     }
 }
 
@@ -285,6 +305,31 @@ namespace sgns
         {
             isprocessor_ = true;
             node_logger_->info( "sgns_config.json: is_processor not set, defaulting to true" );
+        }
+        // node_type read (CFG-02 / CONTEXT D-02). Sets node_type_ ONLY — does NOT touch
+        // is_full_node_ (the AccountSource ctor derives it; the retained old ctor keeps its param).
+        if ( config_json.HasMember( "node_type" ) && config_json["node_type"].IsString() )
+        {
+            const auto parsed = NodeTypeFromString( config_json["node_type"].GetString() );
+            if ( parsed )
+            {
+                node_type_ = *parsed;
+                node_logger_->info( "sgns_config.json: node_type={}",
+                                    *parsed == sgns::GeniusNode::NodeType::Full    ? "Full"
+                                    : *parsed == sgns::GeniusNode::NodeType::Archive ? "Archive"
+                                                                                    : "Light" );
+            }
+            else
+            {
+                node_type_ = sgns::GeniusNode::NodeType::Light; // default on unrecognized value
+                node_logger_->warn( "sgns_config.json: node_type '{}' unrecognized, defaulting to Light",
+                                    config_json["node_type"].GetString() );
+            }
+        }
+        else
+        {
+            node_type_ = sgns::GeniusNode::NodeType::Light; // default on missing key
+            node_logger_->info( "sgns_config.json: node_type not set, defaulting to Light" );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
@@ -773,6 +818,16 @@ namespace sgns
     bool GeniusNode::IsAutodhtEnabled() const noexcept
     {
         return autodht_;
+    }
+
+    bool GeniusNode::IsFullNode() const noexcept
+    {
+        return is_full_node_;
+    }
+
+    GeniusNode::NodeType GeniusNode::GetNodeType() const noexcept
+    {
+        return node_type_;
     }
 
     bool GeniusNode::InitNetwork( uint16_t port_seed, bool is_full_node )
