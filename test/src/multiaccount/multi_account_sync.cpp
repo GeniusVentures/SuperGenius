@@ -1,3 +1,4 @@
+#include <chrono>
 #include <gtest/gtest.h>
 
 #include <cmath>
@@ -801,10 +802,15 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 
     auto assert_registry_immutable = [&]( const char *step )
     {
-        auto load = registry->LoadRegistry();
-        ASSERT_TRUE( load.has_value() ) << "registry load failed during " << step;
-        EXPECT_EQ( load.value().epoch(), initial_epoch ) << "registry epoch changed unexpectedly at " << step;
-        EXPECT_EQ( registry->GetRegistryCid(), initial_cid ) << "registry CID changed unexpectedly at " << step;
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+        while ( std::chrono::steady_clock::now() < deadline )
+        {
+            auto load = registry->LoadRegistry();
+            ASSERT_TRUE( load.has_value() ) << "registry load failed during " << step;
+            EXPECT_EQ( load.value().epoch(), initial_epoch ) << "registry epoch changed unexpectedly at " << step;
+            EXPECT_EQ( registry->GetRegistryCid(), initial_cid ) << "registry CID changed unexpectedly at " << step;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
     };
 
     auto mint1 = node_client->MintTokens( 100,
