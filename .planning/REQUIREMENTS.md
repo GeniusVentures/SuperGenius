@@ -16,10 +16,10 @@ Requirements for this refactor milestone. Each maps to roadmap phases.
 
 ### Config
 
-- [ ] **CFG-01**: `autodht` and `base_port` are read from `network_config.json` inside `InitNetwork()` (default `true` and `40001`); `base_port` uses numeric `IsUint()` (not the string style of `pubsub_port`).
+- [x] **CFG-01**: `autodht` and `base_port` are read from `network_config.json` inside `InitNetwork()` (default `true` and `40001`); `base_port` uses numeric `IsUint()` (not the string style of `pubsub_port`).
 - [ ] **CFG-02**: `node_type` ("Full"/"Light"/"Archive") is read from `sgns_config.json` inside `LoadSgnsConfig()`; a new `NodeType` enum and `NodeTypeFromString()` helper are introduced (enum co-located with `NodeState`/`Error` at `GeniusNode.hpp:129`).
 - [ ] **CFG-03**: `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set exactly once during construction, and treated as immutable afterward (no setter).
-- [ ] **CFG-04**: Every new config read defaults safely on missing key, byte-identical to today's behavior (`autodht=true`, `base_port=40001`, `node_type=Light`), and WARN-logs unrecognized/ill-typed values.
+- [x] **CFG-04**: Every new config read defaults safely on missing key, byte-identical to today's behavior (`autodht=true`, `base_port=40001`, `node_type=Light`), and WARN-logs unrecognized/ill-typed values.
 
 ### Migration
 
@@ -64,8 +64,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CFG-01 | Phase 1 | Pending |
-| CFG-04 | Phase 1 | Pending |
+| CFG-01 | Phase 1 | Complete |
+| CFG-04 | Phase 1 | Complete |
 | INTF-01 | Phase 2 | Pending |
 | INTF-02 | Phase 2 | Pending |
 | INTF-03 | Phase 2 | Pending |

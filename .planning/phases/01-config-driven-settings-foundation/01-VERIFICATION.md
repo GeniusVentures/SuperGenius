@@ -1,10 +1,16 @@
 ---
-status: human_needed
+status: passed
 phase: 1-config-driven-settings-foundation
 verified: 2026-07-02
 verifier: inline (orchestrator) — gsd-verifier subagent unavailable in this environment
-score: 8/9 must_haves statically verified; 1 pending build/test execution
+score: 9/9 must_haves satisfied (8 static + 1 user-confirmed build/test)
+approved_by_user: 2026-07-02
 ---
+
+> **Status updated to `passed` on user approval (2026-07-02).** The build + `ctest` were run
+> in the user's environment and confirmed green (the `human_verification` items below are
+> satisfied). Static verification was performed inline by the orchestrator; the compile/test
+> execution was confirmed by the operator.
 
 # Phase 1 Verification — Config-Driven Settings Foundation
 
