@@ -149,6 +149,25 @@ namespace sgns
         return base::createLogger( "GeniusNode" );
     }
 
+    // Canonical factory (INTF-01). try/catch preserves the nullptr-on-failure contract (D-04):
+    // the reordered ctor throws on account-restore/loggers/network failure; here it becomes nullptr.
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )
+    {
+        try
+        {
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config, source ) );
+            if ( instance )
+            {
+                instance->BeginDBInitialization();
+            }
+            return instance;
+        }
+        catch ( ... ) //NOLINT(bugprone-empty-catch)
+        {
+            return nullptr;
+        }
+    }
+
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
                                                  bool                autodht,
                                                  uint16_t            port_seed,
@@ -253,6 +272,96 @@ namespace sgns
         LoadSgnsConfig();
 
         if ( !InitNetwork( port_seed, is_full_node_ ) )
+        {
+            throw std::runtime_error( "Network initialization error" );
+        }
+        node_logger_->debug( "Account Address {}", account_->GetAddress() );
+
+        // Initializes the thread pool for IO context
+        io_threads_.reserve( io_thread_count_ );
+        for ( unsigned i = 0; i < io_thread_count_; ++i )
+        {
+            io_threads_.emplace_back( [ctx = io_] { ctx->run(); } );
+        }
+
+        LoadCrdtConfig();
+    }
+
+    // Reordered constructor (INTF-03 / CONTEXT D-05). Account is created via std::visit
+    // AFTER LoadSgnsConfig() resolves node_type_ -> is_full_node_ (the init-order hinge fix).
+    // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
+    // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
+    // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source ) :
+        write_base_path_( dev_config.BaseWritePath ),
+        io_( std::make_shared<boost::asio::io_context>() ),
+        io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
+        autodht_( true ),
+        isprocessor_( true ),
+        dev_config_( dev_config ),
+        processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
+        processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
+        m_lastApiCall( std::chrono::system_clock::now() - MIN_API_CALL_INTERVAL ),
+        scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
+            std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
+            libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
+        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
+    {
+        // Rotate log files before initializing logging system
+        RotateLogFiles( write_base_path_ );
+        InitOpenSSL();
+
+        if ( !InitLoggers( write_base_path_ ) )
+        {
+            throw std::runtime_error( "Could not configure loggers" );
+        }
+
+        node_logger_->info( sgns::version::SuperGeniusVersionText() );
+
+        LoadSgnsConfig(); // resolves node_type_
+
+        is_full_node_ = ( node_type_ != NodeType::Light ); // CFG-03 derivation
+
+        // Create the account with is_full_node_ already known (the hinge fix).
+        account_ = std::visit(
+            [this]( auto &&src ) -> std::shared_ptr<GeniusAccount> {
+                using T = std::decay_t<decltype( src )>;
+                if constexpr ( std::is_same_v<T, NewAccount> )
+                {
+                    return GeniusAccount::New( dev_config_.TokenID, write_base_path_, is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPrivateKey> )
+                {
+                    return GeniusAccount::NewFromPrivateKey( dev_config_.TokenID,
+                                                             src.eth_private_key.c_str(),
+                                                             write_base_path_,
+                                                             is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromMnemonic> )
+                {
+                    return GeniusAccount::NewFromMnemonic( dev_config_.TokenID,
+                                                           src.mnemonic,
+                                                           write_base_path_,
+                                                           is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPublicKey> )
+                {
+                    // FromPublicKey carries a public_address; GeniusAccount::NewFromPublicKey
+                    // takes no base_path and consumes an address-like string_view.
+                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID,
+                                                            src.public_address,
+                                                            is_full_node_ );
+                }
+            },
+            source );
+        if ( !account_ )
+        {
+            throw std::runtime_error( "Account creation failed" ); // D-04: New() catches -> nullptr
+        }
+
+        // Default port_seed (40001); Phase-1 config layer overrides from network_config.json when present.
+        if ( !InitNetwork( 40001, is_full_node_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
         }

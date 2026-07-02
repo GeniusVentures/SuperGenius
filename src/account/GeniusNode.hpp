@@ -728,7 +728,7 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
+        bool                                     is_full_node_ = false;   ///< Whether this node runs in full-node mode.
         NodeType                                 node_type_ = NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger                             node_logger_;            ///< Main node logger.
         DevConfig_st                             dev_config_;             ///< Runtime node configuration.
