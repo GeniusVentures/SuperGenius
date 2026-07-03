@@ -395,7 +395,7 @@ namespace sgns::test::anvil
             std::string     rpc    = rpc_url_;
             std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>/dev/null";
             std::string     *ready = new std::string();
-            bool             result = sgns::waitForCondition(
+            bool             result = waitForCondition(
                 [&cmd, ready]()
                 {
                     int         exit_code = -1;
@@ -431,7 +431,7 @@ namespace sgns::test::anvil
         {
             if ( anvil_pid_ > 0 )
             {
-                std::kill( anvil_pid_, SIGTERM );
+                kill( anvil_pid_, SIGTERM );
                 int status = 0;
                 waitpid( anvil_pid_, &status, 0 );
                 spdlog::info( "anvil_fixture: stopped anvil pid={} status={}", anvil_pid_, status );
