@@ -137,6 +137,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Requested transaction not finalized within timeout";
         case sgns::GeniusNode::Error::TRANSACTION_FAILED:
             return "Requested transaction failed";
+        case sgns::GeniusNode::Error::INVALID_NODE_TYPE:
+            return "sgns_config.json node_type was not Full/Light/Archive";
     }
     return "Unknown error";
 }
