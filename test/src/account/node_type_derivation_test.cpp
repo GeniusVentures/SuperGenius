@@ -54,7 +54,7 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
-    EXPECT_EQ( node->GetNodeType(), NodeType::Full );
+    EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );
 }
 
