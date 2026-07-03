@@ -52,13 +52,7 @@ protected:
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
 
         // Generate deterministic key from self_address
         std::string key;

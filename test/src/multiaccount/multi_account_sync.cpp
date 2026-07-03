@@ -80,12 +80,7 @@ protected:
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
 
-        // Write sgns_config.json with the intended is_processor value
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
-        }
 
         // Generate deterministic key from self_address
         std::string key;

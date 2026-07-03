@@ -4,7 +4,6 @@
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
-#include <fstream>
 #include <gtest/gtest.h>
 
 using namespace sgns;
@@ -33,12 +32,6 @@ namespace
         boost::filesystem::create_directories( path );
         return path;
     }
-
-    void WriteSgnsConfig( const boost::filesystem::path &base, const std::string &json )
-    {
-        std::ofstream ofs( ( base / "sgns_config.json" ).generic_string() );
-        ofs << json;
-    }
 } // namespace
 
 // Scene A (CONTEXT D-02/CFG-03): the new canonical factory derives is_full_node_ from the
@@ -47,10 +40,11 @@ namespace
 // body before New() returns, so it is observable immediately (no READY wait needed).
 TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 {
-    auto base = MakeTempDir( "ntd_derivation" );
-    WriteSgnsConfig( base, R"({"node_type": "full"})" );
+    auto         base       = MakeTempDir( "ntd_derivation" );
+    const auto   dev_config = MakeDevConfig( base );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true );
 
-    auto node = sgns::GeniusNode::New( MakeDevConfig( base ), FromPrivateKey{ TEST_PRIVATE_KEY } );
+    auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
@@ -63,9 +57,10 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 // std::visit returns nullptr -> ctor throws "Account creation failed" -> New() catches -> nullptr.
 TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
 {
-    auto base = MakeTempDir( "ntd_failure" );
-    WriteSgnsConfig( base, R"({})" );
+    auto         base       = MakeTempDir( "ntd_failure" );
+    const auto   dev_config = MakeDevConfig( base );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
 
-    auto node = sgns::GeniusNode::New( MakeDevConfig( base ), FromPrivateKey{ "not-a-valid-hex-key" } );
+    auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ "not-a-valid-hex-key" } );
     EXPECT_EQ( node, nullptr );
 }
