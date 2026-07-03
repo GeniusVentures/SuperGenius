@@ -56,6 +56,10 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ## Context
 
+**Current State (v1.0 — shipped 2026-07-03):** The GeniusNode construction-refactor milestone is complete. `New(dev_config, AccountSource)` is the sole public factory; `auto_dht`/`port_seed`/`node_type` are config-driven; `is_full_node_` is derived from `NodeType` in a reordered ctor (init-order hinge fixed); all ~25 call sites migrated; old factories deleted. Full build + CTest green; no behavior change for default/pre-existing configs. GSD subagent runtime was broken this milestone — all plan/execute/verify ran inline via the workflow's documented fallbacks.
+
+**Next Milestone Goals:** TBD — run `/gsd-new-milestone`. Candidate work (deferred to v2, see `.planning/milestones/v1.0-REQUIREMENTS.md`): `NodeType` downstream propagation (PROP-01), distinct Archive-vs-Full runtime behavior (PROP-02), `pubsub_port` numeric cleanup (HARD-01), config schema versioning (HARD-02). Also consider restoring the GSD subagent runtime before the next milestone.
+
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
 - `GeniusNode` is a god-class facade (`src/account/GeniusNode.cpp` is 2,831 lines) — see `.planning/codebase/CONCERNS.md`.
