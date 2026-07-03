@@ -136,6 +136,33 @@ Plans:
 
 ---
 
+### Phase 04.1: Anvil Local Bridge E2E Test (INSERTED)
+
+**Goal:** Self-contained local-Anvil E2E test — forks Sepolia, funds Anvil account #0 via `anvil_impersonateAccount`, sends bridge burn with `cast send`, verifies MintTokens pipeline, tests replay rejection. Also exercises Phase 5's startup catch-up scan (nodes scan RPC for historical burns and auto-mint).
+
+**Depends on:** Phase 4, Phase 5
+**Status:** In progress
+**Plans:** 1/2 plans complete
+
+Plans:
+- [x] 04.1-01-PLAN.md — AnvilProcess helper + BridgeAnvilE2ETest (positive burn-to-mint + replay rejection) + Sepolia-direct fallback
+- [ ] 04.1-02-PLAN.md — Startup catch-up scan E2E: nodes start, scan RPC for historical burns via BridgeRelayer watch, auto-mint, verify
+
+---
+
+### Phase 04.2: P2P RLPx Burn Event Gossip (INSERTED)
+
+**Goal:** Move RLPx burn event gossip from deferred to active. Nodes receive real bridge events via devp2p RLPx protocol, watch them stream for 10-20 seconds (1-2s intervals), verify each mints on SuperGenius. Requires real Sepolia PRIVATE_KEY.
+
+**Depends on:** Phase 04.1, Phase 5
+**Status:** Not started
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 04.2 to break down)
+
+---
+
 ### Phase 5: Startup Wiring + Mock RPC Transport
 
 **Goal:** Wire `BridgeRelayer::Start()` and `InitializeRpcEndpoints()` into the node startup path so the burn→MintFunds pipeline actually runs in normal nodes. Add in-process mock RPC transport for Tier 1 verification testing. On startup (especially full/archive nodes), after syncing CRDT data, check for unprocessed bridged transactions that need to be minted.
