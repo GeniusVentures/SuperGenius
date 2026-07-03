@@ -4,7 +4,6 @@
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
-#include <fstream>
 #include <gtest/gtest.h>
 
 using namespace sgns;
@@ -12,8 +11,9 @@ using namespace sgns;
 namespace
 {
     // Same private key across every scene -> same account address ->
-    // GenerateRandomPort(seed, address) is deterministic. autodht/is_full_node flags do
-    // not affect port derivation, so the only variable between scenes is the config file.
+    // GenerateRandomPort(seed, address) is deterministic. The only variable between scenes
+    // is the config file (the canonical New(dev_config, AccountSource) factory has no
+    // autodht/port_seed params — those come only from network_config.json).
     constexpr const char *TEST_PRIVATE_KEY =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
@@ -35,56 +35,45 @@ namespace
         boost::filesystem::create_directories( path );
         return path;
     }
-
-    void WriteNetworkConfig( const boost::filesystem::path &base, const std::string &json )
-    {
-        std::ofstream ofs( ( base / "network_config.json" ).generic_string() );
-        ofs << json;
-    }
 } // namespace
 
-// Scene A (CONTEXT D-01/D-02): config "auto_dht": false overrides constructor autodht=true.
-// autodht_ is initialised from the param in the ctor init-list, then reassigned from the
-// config key inside InitNetwork when present. A false getter result proves the override.
-TEST( NetworkConfigPrecedence, AutoDhtConfigOverridesParam )
+// Scene A (reframed in Phase 3): the canonical New(dev_config, AccountSource) factory has no
+// autodht param — auto_dht comes only from network_config.json. Writing "auto_dht": false and
+// constructing via New proves the resolved autodht_ is config-driven (false).
+TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 {
     auto base = MakeTempDir( "ncp_autodht" );
-    WriteNetworkConfig( base, R"({"auto_dht": false})" );
+    const auto dev_config = MakeDevConfig( base );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
 
-    auto node = sgns::GeniusNode::NewFromPrivateKey( MakeDevConfig( base ),
-                                                     TEST_PRIVATE_KEY,
-                                                     /*autodht=*/true,
-                                                     /*port_seed=*/40001,
-                                                     /*is_full_node=*/true );
+    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
-    // Param was true; config "auto_dht": false must win.
+    // config "auto_dht": false drives the resolved value.
     EXPECT_FALSE( node->IsAutodhtEnabled() );
 }
 
-// Scene B (CONTEXT D-01/D-02): config "port_seed": 49999 overrides constructor port_seed=40001.
-// pubsubport_ is resolved synchronously in InitNetwork. With no "pubsub_port" key present,
-// the else-branch runs GenerateRandomPort(port_seed, address). GenerateRandomPort returns a
-// value in [base, base+300], so:
-//   - param-only (40001) would resolve into [40001, 40301]
-//   - config-overridden (49999) resolves into [49999, 50299]
-// These ranges do not overlap, so a resolved port >= 49999 unambiguously proves the config
-// key overrode the param. Single construction avoids second-port-bind flakiness.
-TEST( NetworkConfigPrecedence, PortSeedConfigOverridesParam )
+// Scene B (reframed in Phase 3): port_seed comes only from network_config.json. pubsubport_ is
+// resolved synchronously in InitNetwork; with no "pubsub_port" key, the else-branch runs
+// GenerateRandomPort(port_seed, address), which returns a value in [base, base+300]. So:
+//   - default port_seed (40001) resolves into [40001, 40301]
+//   - config port_seed=49999 resolves into [49999, 50299]
+// These ranges do not overlap, so a resolved port >= 49999 unambiguously proves port_seed is
+// config-driven at 49999. Single construction avoids second-port-bind flakiness.
+TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
 {
     auto base = MakeTempDir( "ncp_port_seed" );
-    WriteNetworkConfig( base, R"({"port_seed": 49999})" );
+    const auto dev_config = MakeDevConfig( base );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/49999, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
 
-    auto node = sgns::GeniusNode::NewFromPrivateKey( MakeDevConfig( base ),
-                                                     TEST_PRIVATE_KEY,
-                                                     /*autodht=*/false,
-                                                     /*port_seed=*/40001,
-                                                     /*is_full_node=*/true );
+    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     const auto resolved = node->GetPubsubPort();
-    // Impossible if the param (40001) had been used; only reachable via the config override.
+    // Impossible with the default port_seed (40001); only reachable via config port_seed=49999.
     EXPECT_GE( resolved, 49999u );
 }

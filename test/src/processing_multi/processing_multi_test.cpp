@@ -59,25 +59,23 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        // Write minimal sgns_config.json for node_main so it does not run as a processor.
-        // is_processor is now read exclusively from this config file (defaults to true).
+        // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        {
-            std::ofstream config_file( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
-            config_file << R"({"is_processor": false})";
-        }
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
 
-        node_main = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false );
+        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+                           sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG2,
-                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+                            sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG3,
-                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+                            sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
         node_proc1->StopProcessing();
         node_proc2->StopProcessing();
