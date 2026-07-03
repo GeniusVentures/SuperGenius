@@ -1,6 +1,18 @@
-#pragma once
+#ifndef SGNS_SECURE_STORAGE_HPP
+#define SGNS_SECURE_STORAGE_HPP
 
-#ifdef __ANDROID__
+// Compile-time override for tests: -DSGNS_USE_MEMORY_SECURE_STORAGE
+// Uses in-memory storage — no keychain prompts, no file I/O, no cleanup.
+#ifdef SGNS_USE_MEMORY_SECURE_STORAGE
+
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
+
+namespace sgns
+{
+    using SecureStorageImpl = MemorySecureStorage;
+}
+
+#elif defined( __ANDROID__ )
 
 #include "local_secure_storage/impl/Android.hpp"
 
@@ -37,3 +49,5 @@ namespace sgns
 }
 
 #endif
+
+#endif // SGNS_SECURE_STORAGE_HPP

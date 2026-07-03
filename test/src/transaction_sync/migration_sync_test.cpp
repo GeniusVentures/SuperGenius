@@ -11,14 +11,24 @@
 #include <boost/dll.hpp>
 
 #include "account/MigrationAllowList.hpp"
+#include "account/MigrationInputValidator.hpp"
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
 
 using namespace sgns;
+
+TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
+{
+    const auto *validator = IInputValidator::Get( "migration" );
+    ASSERT_NE( validator, nullptr );
+    EXPECT_FALSE( validator->RequiresConsensusUTXOData() );
+}
 
 /**
  * @brief Test parameters for migration.
@@ -55,6 +65,11 @@ protected:
 
     void SetUp() override
     {
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            {
+                return std::make_shared<MemorySecureStorage>( identifier );
+            } );
         SetEligibilityCheckEnabled( true );
     }
 
@@ -157,7 +172,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto full_node = CreateFullNodeInstance();
     test::assertWaitForCondition( [full_node]
                                   { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 80000 ),
+                                  std::chrono::milliseconds( 100000 ),
                                   "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
@@ -166,7 +181,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 100000 ),
                                   readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );

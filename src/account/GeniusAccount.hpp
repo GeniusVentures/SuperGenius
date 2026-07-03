@@ -4,7 +4,8 @@
  * @date       2024-03-11
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_GENIUS_ACCOUNT_HPP
+#define SGNS_GENIUS_ACCOUNT_HPP
 
 #include <array>
 #include <deque>
@@ -48,6 +49,29 @@ namespace sgns
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds
+
+        /**
+         * @brief   Factory function type for creating secure storage instances.
+         * @param   identifier  Storage identifier (typically base58-encoded public key).
+         * @return  Shared pointer to the created secure storage backend.
+         */
+        using SecureStorageFactory = std::function<std::shared_ptr<ISecureStorage>( const std::string &identifier )>;
+
+        /**
+         * @brief   Sets the secure storage factory used by all GeniusAccount factory methods.
+         *
+         * By default, the factory creates OS-specific secure storage (Apple Keychain,
+         * Linux secret service, etc.).  Tests can override this to inject
+         * MemorySecureStorage, eliminating keychain prompts entirely.
+         *
+         * @param   factory  Factory function; pass nullptr to restore the default.
+         */
+        static void SetSecureStorageFactory( SecureStorageFactory factory );
+
+        /**
+         * @brief   Returns the current secure storage factory (default if none set).
+         */
+        static const SecureStorageFactory &GetSecureStorageFactory();
 
         /**
          * @brief       Try creating an account by first loading it from storage,
@@ -417,3 +441,5 @@ namespace sgns
                        bool                                            full_node );
     };
 }
+
+#endif // SGNS_GENIUS_ACCOUNT_HPP

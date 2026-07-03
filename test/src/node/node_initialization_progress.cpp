@@ -1,6 +1,8 @@
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include <chrono>
 #include <thread>
@@ -11,7 +13,7 @@ using namespace sgns;
 
 TEST( GeniusNode, InitializationProgress )
 {
-    boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    boost::filesystem::path path = boost::dll::program_location().parent_path() / "init_progress_node";
 
     try
     {
@@ -20,6 +22,9 @@ TEST( GeniusNode, InitializationProgress )
     catch ( ... ) //NOLINT(bugprone-empty-catch)
     {
     }
+
+    GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                            { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
     const auto base_write_path = path.generic_string() + '/';
     sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/40069, /*auto_dht=*/false );

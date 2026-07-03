@@ -29,7 +29,10 @@
  * @note This file is auto-generated. Do not edit manually.
  */
 
-#pragma once
+#ifndef SGNS_SGNSV_H
+#define SGNS_SGNSV_H
+
+// clang-format off
 
 #include <cstdint>
 #ifdef __cplusplus
@@ -141,3 +144,7 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
+
+// clang-format on
+
+#endif // SGNS_SGNSV_H

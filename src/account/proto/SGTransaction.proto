@@ -48,6 +48,7 @@ enum UTXOEntryState
 {
     UTXO_ENTRY_READY = 0;
     UTXO_ENTRY_CONSUMED = 1;
+    UTXO_ENTRY_RESERVED = 2;
 }
 
 message UTXOEntryRecord

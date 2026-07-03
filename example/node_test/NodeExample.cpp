@@ -280,7 +280,7 @@ static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns
     }
     try
     {
-        node->MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node->MintTokens( std::stoull( args[1] ), "supergenius", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     }
     catch ( const std::exception &e )
     {

@@ -1,78 +1,153 @@
----
+# SuperGenius clang-tidy configuration
+#
+# Encodes rules from:
+#   - CLAUDE.md → SuperGenius Naming Convention Overrides (takes precedence)
+#   - Software Engineering Handbook → C++ Coding Standards (baseline)
+#     https://docs.gnus.ai/technical-information/software-engineering-handbook/c++-coding-standards/
+#
+# Each check maps to a specific Handbook rule.
+#   [Required]  = Handbook "Standard" the code already follows; should pass clean.
+#   [Recommended] = Handbook "Guideline" or target the code is converging on;
+#                    warnings are expected on some files.
+#
+# Run: clang-tidy <file> -- -std=c++17
+#
+# ─────────────────────────────────────────────────────────────
+# The checks are organized in groups:
+#   1. Bug detection & security         [Required]
+#   2. CERT security coding standards   [Required]
+#   3. Core guidelines code follows     [Required]
+#   4. Modernization                    [Recommended]
+#   5. Readability & simplification     [Recommended]
+#   6. Performance                      [Recommended]
+#   7. Miscellaneous safety             [Recommended]
+#   8. Naming conventions               [Recommended]
+# ─────────────────────────────────────────────────────────────
+#
+# Handbook rule mapping:
+#   Standard 11 → readability-braces-around-statements
+#   Standard 14 → enum constants casing (see CheckOptions)
+#   Standard 15 → cppcoreguidelines-init-variables,
+#                 cppcoreguidelines-pro-type-member-init,
+#                 readability-redundant-member-init
+#   Guideline 24 → cppcoreguidelines-avoid-goto
+#   Guideline 27 → readability-implicit-bool-conversion
+#   Standards 36–47 → readability-identifier-naming (see CheckOptions)
+#   Standard 40 → m_ member prefix (see CheckOptions)
+#   Standard 51 → google-readability-casting
+#   Standard 56 (modified) → modernize-use-nullptr
+#   Standard 63 (modified) → cppcoreguidelines-special-member-functions
+#   Standard 64 → (covered by bugprone-* virtual-destructor)
+#   Standard 75 → misc-non-private-member-variables-in-classes
+#   Standard 92 → modernize-use-override
+#   Standard 101 → readability-make-member-function-const
+#   CLAUDE.md → cppcoreguidelines-avoid-magic-numbers (allow 0,1,-1,2)
+#   CLAUDE.md → cppcoreguidelines-prefer-member-initializer
+#   CLAUDE.md → modernize-use-noexcept
+
 Checks: >
-  boost-*,
-  -boost-use-ranges,
-
+  -*,
   bugprone-*,
-  -bugprone-easily-swappable-parameters,
-  -bugprone-reserved-identifier,
-
   cert-*,
-  -cert-dcl37-c,
-  -cert-dcl51-cpp,
   -cert-err58-cpp,
-
-  concurrency-*,
-
-  cppcoreguidelines-*,
-  -cppcoreguidelines-avoid-do-while,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -cppcoreguidelines-non-private-member-variables-in-classes,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-reinterpret-cast,
-  -cppcoreguidelines-special-member-functions,
-
-  google-build-explicit-make-pair,
-  google-build-namespaces,
-  google-default-arguments,
-  google-global-names-in-headers,
-  google-readability-avoid-underscore-in-googletest-name,
+  cppcoreguidelines-avoid-magic-numbers,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-avoid-goto,
   google-readability-casting,
-  google-runtime-int,
-  google-runtime-operator,
-  google-upgrade-googletest-case,
-
-  hicpp-multiway-paths-covered,
-
-  misc-*,
-  -misc-include-cleaner,
-  -misc-non-private-member-variables-in-classes,
-
-  modernize-*,
-  -modernize-use-default-member-init,
-  -modernize-use-trailing-return-type,
-
+  modernize-use-nullptr,
+  modernize-use-override,
+  misc-non-private-member-variables-in-classes,
+  readability-implicit-bool-conversion,
+  readability-braces-around-statements,
+  readability-delete-null-pointer,
+  readability-container-size-empty,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-special-member-functions,
+  readability-make-member-function-const,
+  readability-redundant-member-init,
+  readability-avoid-const-params-in-decls,
+  misc-unused-parameters,
+  modernize-use-using,
+  modernize-use-emplace,
+  modernize-avoid-bind,
+  modernize-use-noexcept,
+  readability-else-after-return,
+  readability-redundant-string-cstr,
+  readability-simplify-boolean-expr,
+  readability-simplify-subscript-expr,
+  readability-static-accessed-through-instance,
+  readability-const-return-type,
+  readability-use-anyofallof,
   performance-*,
-
-  portability-*,
-
-  readability-*,
-  -readability-identifier-length,
-  -readability-magic-numbers,
-  -readability-math-missing-parentheses,
-  -readability-named-parameter,
-  -readability-qualified-auto
-
-FormatStyle: file
+  misc-misleading-bidirectional,
+  misc-const-correctness,
+  misc-static-assert,
+  readability-identifier-naming
 
 CheckOptions:
-  misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic: true
+  # ─── Naming: SuperGenius conventions ──────────────────────────
+  #   CLAUDE.md overrides the Handbook where noted.
+  #   See: documentation/.../c++-coding-standards.md §5
 
-  performance-unnecessary-value-param.IncludeStyle: google
+  # Types: PascalCase (Handbook Standard 39)
+  #   In clang-tidy, CamelCase = PascalCase-like (UpperCamelCase)
+  - key:   readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key:   readability-identifier-naming.StructCase
+    value: CamelCase
+  - key:   readability-identifier-naming.EnumCase
+    value: CamelCase
 
-  readability-identifier-naming.DefaultCase: lower_case
+  # Enum constants: UPPER_CASE (Handbook Standard 14)
+  #   Some newer scoped enums use PascalCase — warnings expected.
+  - key:   readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
 
-  readability-identifier-naming.ClassCase: CamelCase
+  # Functions / methods: PascalCase (Handbook Standard 42, Guideline 18)
+  #   Some free functions use camelBack (e.g. createLogger); warnings expected.
+  #   In clang-tidy, CamelCase = UpperCamelCase / PascalCase
+  - key:   readability-identifier-naming.FunctionCase
+    value: CamelCase
+  - key:   readability-identifier-naming.MethodCase
+    value: CamelCase
 
-  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+  # Variables / parameters: camelCase (lowerCamelCase)
+  #   CLAUDE.md explicitly drops the Handbook 'a' prefix for args/locals.
+  #   In clang-tidy, camelBack = lowerCamelCase
+  - key:   readability-identifier-naming.VariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.LocalVariableCase
+    value: camelBack
+  - key:   readability-identifier-naming.ParameterCase
+    value: camelBack
 
-  readability-identifier-naming.EnumCase: CamelCase
-  readability-identifier-naming.EnumConstantCase: UPPER_CASE
+  # Members: m_ prefix + camelCase (Handbook Standard 40)
+  #   Some files use trailing _ instead — warnings expected.
+  #   In clang-tidy, camelBack = lowerCamelCase
+  - key:   readability-identifier-naming.MemberCase
+    value: camelBack
+  - key:   readability-identifier-naming.MemberPrefix
+    value: 'm_'
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: 'm_'
+  - key:   readability-identifier-naming.ProtectedMemberPrefix
+    value: 'm_'
 
-  readability-identifier-naming.FunctionCase: CamelCase
+  # Compile-time constants: k prefix + PascalCase
+  #   CLAUDE.md override: kPascalCase instead of Handbook UPPER_CASE.
+  #   In clang-tidy, CamelCase = UpperCamelCase / PascalCase
+  - key:   readability-identifier-naming.ConstantCase
+    value: CamelCase
+  - key:   readability-identifier-naming.ConstantPrefix
+    value: 'k'
+  - key:   readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key:   readability-identifier-naming.GlobalConstantPrefix
+    value: 'k'
 
-  readability-identifier-naming.TypeAliasCase: CamelCase
-  readability-identifier-naming.TypeDefCase: CamelCase
-
-  modernize-use-std-print.ReplacementPrintFunction: "fmt::print"
-  modernize-use-std-print.ReplacementPrintlnFunction: "fmt::println"
+  # ─── Magic numbers: allowed values ────────────────────────────
+  #   Per CLAUDE.md: 0, 1, -1 are always allowed in trivial contexts.
+  #   2 is also commonly used (binary, pair operations).
+  - key:   cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues
+    value: '0;1;-1;2'
