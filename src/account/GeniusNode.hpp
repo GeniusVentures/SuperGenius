@@ -84,20 +84,6 @@ namespace sgns
     class GeniusNode : public IComponent, public std::enable_shared_from_this<GeniusNode>
     {
     public:
-        /**
-         * @brief Creates a node using a generated or persisted account identity.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] port_seed Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
-         */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
-                                                bool                autodht      = true,
-                                                uint16_t            port_seed    = 40001,
-                                                bool                is_full_node = false );
 
         /**
          * @brief Canonical node factory (INTF-01). Account identity is chosen via
@@ -133,40 +119,6 @@ namespace sgns
         static outcome::result<void> WriteSgnsConfig( const std::string &base_path,
                                                       const std::string &node_type,
                                                       bool               is_processor );
-
-        /**
-         * @brief Creates a node bound to the provided Ethereum private key.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] eth_private_key Ethereum private key used to derive the account identity.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] port_seed Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
-         */
-        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
-                                                              const char         *eth_private_key,
-                                                              bool                autodht      = true,
-                                                              uint16_t            port_seed    = 40001,
-                                                              bool                is_full_node = false );
-
-        /**
-         * @brief Creates a node from an existing mnemonic phrase.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] mnemonic Mnemonic phrase used to restore the account identity.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] port_seed Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
-         */
-        static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
-                                                            const std::string  &mnemonic,
-                                                            bool                autodht      = true,
-                                                            uint16_t            port_seed    = 40001,
-                                                            bool                is_full_node = false );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -767,20 +719,6 @@ namespace sgns
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
-
-        /**
-         * @brief Constructs a node around an already-created account.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] account Account instance to bind to this node.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] port_seed Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         */
-        GeniusNode( const DevConfig_st            &dev_config,
-                    std::shared_ptr<GeniusAccount> account,
-                    bool                           autodht,
-                    uint16_t                       port_seed,
-                    bool                           is_full_node );
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
