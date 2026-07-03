@@ -1,10 +1,19 @@
 ---
-status: human_needed
+status: passed
 phase: 2-variant-factory-constructor-reorder
 verified: 2026-07-02
 verifier: inline (orchestrator) — gsd-verifier subagent unavailable in this environment
-score: 6/7 must_haves statically verified; 1 pending build/test execution
+score: 7/7 must_haves satisfied (6 static + 1 user-confirmed build/test)
+approved_by_user: 2026-07-02
 ---
+
+> **Status updated to `passed` on user approval (2026-07-02).** Build + `ctest` run in the
+> user's environment confirmed green (`node_type_derivation_test` passes; regression subset
+> `account_management_test`/`node_initialization_progress`/`utxo_manager_test`/
+> `network_config_precedence_test` green — old factories retained, no behavior change). Two
+> compile fixes were applied during execution (premature `*/` in a Doxygen block; bare
+> `NodeType::Full` → `GeniusNode::NodeType::Full` in the test). Static verification was inline;
+> compile/test execution confirmed by the operator.
 
 # Phase 2 Verification — Variant Factory + Constructor Reorder
 

@@ -9,16 +9,16 @@ Requirements for this refactor milestone. Each maps to roadmap phases.
 
 ### Interface
 
-- [ ] **INTF-01**: `GeniusNode::New` is the sole public factory, with signature `New(dev_config, AccountSource)` — replacing the three current factories at `src/account/GeniusNode.hpp:82,98,115`.
-- [ ] **INTF-02**: `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`; `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option.
-- [ ] **INTF-03**: The private constructor takes `(dev_config, AccountSource)` and creates the account AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved from `node_type` before account creation (resolves the init-order hinge — see `.planning/research/ARCHITECTURE.md`).
+- [x] **INTF-01**: `GeniusNode::New` is the sole public factory, with signature `New(dev_config, AccountSource)` — replacing the three current factories at `src/account/GeniusNode.hpp:82,98,115`.
+- [x] **INTF-02**: `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`; `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option.
+- [x] **INTF-03**: The private constructor takes `(dev_config, AccountSource)` and creates the account AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved from `node_type` before account creation (resolves the init-order hinge — see `.planning/research/ARCHITECTURE.md`).
 - [ ] **INTF-04**: The old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, and `NewFromMnemonic` factories are deleted entirely (no deprecated stubs).
 
 ### Config
 
 - [x] **CFG-01**: `autodht` and `base_port` are read from `network_config.json` inside `InitNetwork()` (default `true` and `40001`); `base_port` uses numeric `IsUint()` (not the string style of `pubsub_port`).
-- [ ] **CFG-02**: `node_type` ("Full"/"Light"/"Archive") is read from `sgns_config.json` inside `LoadSgnsConfig()`; a new `NodeType` enum and `NodeTypeFromString()` helper are introduced (enum co-located with `NodeState`/`Error` at `GeniusNode.hpp:129`).
-- [ ] **CFG-03**: `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set exactly once during construction, and treated as immutable afterward (no setter).
+- [x] **CFG-02**: `node_type` ("Full"/"Light"/"Archive") is read from `sgns_config.json` inside `LoadSgnsConfig()`; a new `NodeType` enum and `NodeTypeFromString()` helper are introduced (enum co-located with `NodeState`/`Error` at `GeniusNode.hpp:129`).
+- [x] **CFG-03**: `is_full_node_` is derived from `node_type_` (Full/Archive → true, Light → false), set exactly once during construction, and treated as immutable afterward (no setter).
 - [x] **CFG-04**: Every new config read defaults safely on missing key, byte-identical to today's behavior (`autodht=true`, `base_port=40001`, `node_type=Light`), and WARN-logs unrecognized/ill-typed values.
 
 ### Migration
@@ -66,12 +66,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | CFG-01 | Phase 1 | Complete |
 | CFG-04 | Phase 1 | Complete |
-| INTF-01 | Phase 2 | Pending |
-| INTF-02 | Phase 2 | Pending |
-| INTF-03 | Phase 2 | Pending |
+| INTF-01 | Phase 2 | Complete |
+| INTF-02 | Phase 2 | Complete |
+| INTF-03 | Phase 2 | Complete |
 | INTF-04 | Phase 3 | Pending |
-| CFG-02 | Phase 2 | Pending |
-| CFG-03 | Phase 2 | Pending |
+| CFG-02 | Phase 2 | Complete |
+| CFG-03 | Phase 2 | Complete |
 | MIG-01 | Phase 3 | Pending |
 | MIG-02 | Phase 3 | Pending |
 | MIG-03 | Phase 3 | Pending |
