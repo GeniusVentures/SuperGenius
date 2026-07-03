@@ -483,7 +483,6 @@ DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x
 int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
-    bool        is_full_node     = false;
     bool        terminal_mode    = false;
     std::string path_override;
 
@@ -494,16 +493,10 @@ int main( int argc, char *argv[] )
         if ( arg == "server" )
         {
             start_processing = true;
-            is_full_node     = true;
         }
         else if ( arg == "jobposter" )
         {
             start_processing = true;
-            is_full_node     = false;
-        }
-        else if ( arg == "--full" )
-        {
-            is_full_node = true;
         }
         else if ( arg == "--terminal" )
         {
@@ -528,10 +521,9 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
-    // Config-driven construction (Phase 3): write the network/sgns config files that the
-    // canonical New(dev_config, AccountSource) factory reads.
+    // network_config.json: port_seed + auto_dht (no shipped network_config.json, so write it).
+    // node_type/is_processor come from the shipped sgns_config.json (operator-managed, like a real deployment).
     sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40101, /*auto_dht=*/true );
-    sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, is_full_node ? "Full" : "Light", /*is_processor=*/true );
 
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );

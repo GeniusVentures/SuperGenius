@@ -101,46 +101,6 @@ namespace
             return sgns::GeniusNode::NodeType::Archive;
         return std::nullopt;
     }
-
-    // Read an existing JSON object file into a fresh Document (empty object if missing/invalid).
-    // Used by WriteNetworkConfig/WriteSgnsConfig to MERGE into existing config instead of
-    // truncating (preserves test/example-specific keys like pubsub_port, bootstrap_fullnodes).
-    rapidjson::Document ReadExistingJson( const std::string &file_path )
-    {
-        rapidjson::Document doc;
-        doc.SetObject();
-        std::ifstream in( file_path );
-        if ( in.good() )
-        {
-            std::stringstream ss;
-            ss << in.rdbuf();
-            const std::string existing = ss.str();
-            if ( !existing.empty() )
-            {
-                rapidjson::Document tmp;
-                tmp.Parse( existing.c_str() );
-                if ( !tmp.HasParseError() && tmp.IsObject() )
-                {
-                    doc.CopyFrom( tmp, doc.GetAllocator() );
-                }
-            }
-        }
-        return doc;
-    }
-
-    bool WriteJsonDoc( const std::string &file_path, const rapidjson::Document &doc )
-    {
-        rapidjson::StringBuffer buf;
-        rapidjson::Writer<rapidjson::StringBuffer> w( buf );
-        doc.Accept( w );
-        std::ofstream ofs( file_path );
-        if ( !ofs.good() )
-        {
-            return false;
-        }
-        ofs << buf.GetString();
-        return ofs.good();
-    }
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -215,39 +175,12 @@ namespace sgns
     {
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
-        const std::string file_path = base_path + "/network_config.json";
-        rapidjson::Document doc = ReadExistingJson( file_path ); // MERGE: preserve existing keys (e.g. pubsub_port)
-        auto &a = doc.GetAllocator();
-        auto set_uint = [ &doc, &a ]( const char *k, unsigned v )
-        {
-            auto it = doc.FindMember( k );
-            if ( it != doc.MemberEnd() )
-            {
-                it->value.SetUint( v );
-            }
-            else
-            {
-                doc.AddMember( rapidjson::Value( k, a ), v, a );
-            }
-        };
-        auto set_bool = [ &doc, &a ]( const char *k, bool v )
-        {
-            auto it = doc.FindMember( k );
-            if ( it != doc.MemberEnd() )
-            {
-                it->value.SetBool( v );
-            }
-            else
-            {
-                doc.AddMember( rapidjson::Value( k, a ), v, a );
-            }
-        };
-        set_uint( "port_seed", port_seed );
-        set_bool( "auto_dht", auto_dht );
-        if ( !WriteJsonDoc( file_path, doc ) )
+        std::ofstream ofs( base_path + "/network_config.json" );
+        if ( !ofs.good() )
         {
             return Error::DATABASE_WRITE_ERROR;
         }
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" ) << " }";
         return outcome::success();
     }
 
@@ -261,39 +194,12 @@ namespace sgns
         }
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
-        const std::string file_path = base_path + "/sgns_config.json";
-        rapidjson::Document doc = ReadExistingJson( file_path ); // MERGE: preserve existing keys (e.g. bootstrap_fullnodes, net_id)
-        auto &a = doc.GetAllocator();
-        auto set_str = [ &doc, &a ]( const char *k, const std::string &v )
-        {
-            auto it = doc.FindMember( k );
-            if ( it != doc.MemberEnd() )
-            {
-                it->value.SetString( v.c_str(), v.size(), a );
-            }
-            else
-            {
-                doc.AddMember( rapidjson::Value( k, a ), rapidjson::Value( v.c_str(), v.size(), a ), a );
-            }
-        };
-        auto set_bool = [ &doc, &a ]( const char *k, bool v )
-        {
-            auto it = doc.FindMember( k );
-            if ( it != doc.MemberEnd() )
-            {
-                it->value.SetBool( v );
-            }
-            else
-            {
-                doc.AddMember( rapidjson::Value( k, a ), v, a );
-            }
-        };
-        set_str( "node_type", node_type );
-        set_bool( "is_processor", is_processor );
-        if ( !WriteJsonDoc( file_path, doc ) )
+        std::ofstream ofs( base_path + "/sgns_config.json" );
+        if ( !ofs.good() )
         {
             return Error::DATABASE_WRITE_ERROR;
         }
+        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" ) << " }";
         return outcome::success();
     }
 
