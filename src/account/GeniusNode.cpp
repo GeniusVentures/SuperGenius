@@ -168,6 +168,36 @@ namespace sgns
         }
     }
 
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
+                                                          uint16_t            port_seed,
+                                                          bool                auto_dht )
+    {
+        std::ofstream ofs( base_path + "/network_config.json" );
+        if ( !ofs.good() )
+        {
+            return Error::DATABASE_WRITE_ERROR;
+        }
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" ) << " }";
+        return outcome::success();
+    }
+
+    outcome::result<void> GeniusNode::WriteSgnsConfig( const std::string &base_path,
+                                                       const std::string &node_type,
+                                                       bool               is_processor )
+    {
+        if ( !NodeTypeFromString( node_type ) ) // case-insensitive validation (Phase-2 D-02)
+        {
+            return Error::INVALID_NODE_TYPE;
+        }
+        std::ofstream ofs( base_path + "/sgns_config.json" );
+        if ( !ofs.good() )
+        {
+            return Error::DATABASE_WRITE_ERROR;
+        }
+        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" ) << " }";
+        return outcome::success();
+    }
+
     std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
                                                  bool                autodht,
                                                  uint16_t            port_seed,

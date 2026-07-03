@@ -113,6 +113,28 @@ namespace sgns
                                                 AccountSource       source );
 
         /**
+         * @brief Writes a minimal network_config.json for test/example setup (MIG-02).
+         * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
+         * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
+         * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
+         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file (deterministic minimal config).
+         */
+        static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
+                                                        uint16_t            port_seed,
+                                                        bool                auto_dht );
+
+        /**
+         * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
+         * @param[in] base_path Directory whose sgns_config.json will be (over)written.
+         * @param[in] node_type Role string — validated case-insensitively (Full/Light/Archive); any other value returns Error::INVALID_NODE_TYPE.
+         * @param[in] is_processor Whether processing services run (key "is_processor").
+         * @return Error::INVALID_NODE_TYPE on an unrecognized node_type; failure on I/O error; success otherwise.
+         */
+        static outcome::result<void> WriteSgnsConfig( const std::string &base_path,
+                                                      const std::string &node_type,
+                                                      bool               is_processor );
+
+        /**
          * @brief Creates a node bound to the provided Ethereum private key.
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] eth_private_key Ethereum private key used to derive the account identity.
@@ -185,6 +207,7 @@ namespace sgns
             TRANSACTIONS_NOT_READY    = 13, ///< Transaction manager is not ready.
             TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction did not finalize within the timeout.
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
+            INVALID_NODE_TYPE         = 16, ///< sgns_config.json node_type string was not Full/Light/Archive.
         };
 
         /**
