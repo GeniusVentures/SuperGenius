@@ -16,6 +16,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -172,6 +173,8 @@ namespace sgns
                                                           uint16_t            port_seed,
                                                           bool                auto_dht )
     {
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
         std::ofstream ofs( base_path + "/network_config.json" );
         if ( !ofs.good() )
         {
@@ -189,6 +192,8 @@ namespace sgns
         {
             return Error::INVALID_NODE_TYPE;
         }
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
         std::ofstream ofs( base_path + "/sgns_config.json" );
         if ( !ofs.good() )
         {
