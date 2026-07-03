@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Bridge Integration
-current_phase: 6
+current_phase: 04.1
 status: ready_to_plan
-last_updated: "2026-06-19T20:52:14.022Z"
+last_updated: "2026-07-02T21:29:34.025Z"
 progress:
-  total_phases: 13
-  completed_phases: 10
+  total_phases: 14
+  completed_phases: 11
   total_plans: 31
-  completed_plans: 30
-  percent: 77
+  completed_plans: 33
+  percent: 79
 ---
 
 # Project State: SuperGenius Bridge Integration
 
-**Current Phase:** 6
+**Current Phase:** 04.1
 
 ## Phase Status
 
@@ -85,6 +85,7 @@ Plan 03-01 addressed 4 Codex review findings from PR #298:
 - Phase 05.1 inserted after Phase 5: Refactor: Move RPC endpoint initialization from GeniusNode to ChainRpcEndpointProvider (URGENT)
 - Phase 7 added: Deferred Validation and Pending Proposal Lifecycle; renumbered from duplicate Track B Phase 4 to global Phase 7
 - Phase 05.2 inserted after Phase 05.1: Smart contract updated to 32-byte X-only compressed SG public key (bytes32). Event renamed BridgeOutInitiated. C++ side: decode X-only → decompress to full X+Y → match GetAddress(). Versioned catch-up scan. (URGENT)
+- Phase 04.1 inserted after Phase 4: Anvil local bridge E2E: use TokenContracts .env for Anvil instance, private key bridge tx, scan. Fallback: direct Sepolia test. (URGENT)
 
 ## Phase 5 Progress
 
