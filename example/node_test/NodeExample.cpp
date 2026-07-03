@@ -528,8 +528,13 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
+    // Config-driven construction (Phase 3): write the network/sgns config files that the
+    // canonical New(dev_config, AccountSource) factory reads.
+    sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40101, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, is_full_node ? "Full" : "Light", /*is_processor=*/true );
+
     auto node_instance =
-        sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG, eth_private_key.c_str(), true, 40101, is_full_node );
+        sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
 
     std::thread status_thread;
 
