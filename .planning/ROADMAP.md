@@ -155,11 +155,11 @@ Plans:
 **Goal:** Move RLPx burn event gossip from deferred to active. Nodes receive real bridge events via devp2p RLPx protocol, watch them stream for 10-20 seconds (1-2s intervals), verify each mints on SuperGenius. Requires real Sepolia PRIVATE_KEY.
 
 **Depends on:** Phase 04.1, Phase 5
-**Status:** Not started
-**Plans:** 0 plans
+**Status:** Planned
+**Plans:** 1 plan
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 04.2 to break down)
+- [ ] 04.2-01-PLAN.md — Live-Sepolia RLPx E2E: 3 nodes each run EthWatchService in production RLPx mode (kDiscoverFirst), BridgeRelayer auto-mints streamed burns (10 burns at 1-2s cadence), all-3-nodes mint verification
 
 ---
 
