@@ -67,9 +67,9 @@ namespace sgns
      * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
      *
      * Owned std::string payloads — a std::variant owns its active alternative, so
-     * non-owning views (const char*/std::string_view) would dangle once the variant
-     * is stored/passed. TokenID and other dev_config fields are NOT part of the
-     * variant; they come from dev_config.
+     * non-owning views such as const char* or std::string_view would dangle once the
+     * variant is stored or passed. TokenID and other dev_config fields are NOT part of
+     * the variant; they come from dev_config.
      */
     struct NewAccount {};                                   ///< Generate a new identity.
     struct FromPrivateKey { std::string eth_private_key; }; ///< Restore from an Ethereum hex private key.
