@@ -12,7 +12,7 @@ Requirements for this refactor milestone. Each maps to roadmap phases.
 - [x] **INTF-01**: `GeniusNode::New` is the sole public factory, with signature `New(dev_config, AccountSource)` — replacing the three current factories at `src/account/GeniusNode.hpp:82,98,115`.
 - [x] **INTF-02**: `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`; `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option.
 - [x] **INTF-03**: The private constructor takes `(dev_config, AccountSource)` and creates the account AFTER `LoadSgnsConfig()` so `is_full_node_` is resolved from `node_type` before account creation (resolves the init-order hinge — see `.planning/research/ARCHITECTURE.md`).
-- [ ] **INTF-04**: The old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, and `NewFromMnemonic` factories are deleted entirely (no deprecated stubs).
+- [x] **INTF-04**: The old `New(autodht, base_port, is_full_node)`, `NewFromPrivateKey`, and `NewFromMnemonic` factories are deleted entirely (no deprecated stubs).
 
 ### Config
 
@@ -23,10 +23,10 @@ Requirements for this refactor milestone. Each maps to roadmap phases.
 
 ### Migration
 
-- [ ] **MIG-01**: All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/NodeExample.cpp:532`, 17 across `test/src/`) migrate to `New(dev_config, FromPrivateKey{...})`; no compatibility shim.
-- [ ] **MIG-02**: A shared test helper writes a minimal `network_config.json` (`base_port`, `autodht`) and `sgns_config.json` (`node_type`, `is_processor`), extending the existing `sgns_config.json` write pattern already used in tests.
-- [ ] **MIG-03**: Full build passes and the existing CTest suite stays green, with no behavior change for default or pre-existing config files.
-- [ ] **MIG-04**: A verification grep confirms no `NewFromPrivateKey` / `NewFromMnemonic` / old `New(autodht, base_port, is_full_node)` references remain in `src/`, `example/`, or `test/`.
+- [x] **MIG-01**: All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/NodeExample.cpp:532`, 17 across `test/src/`) migrate to `New(dev_config, FromPrivateKey{...})`; no compatibility shim.
+- [x] **MIG-02**: A shared test helper writes a minimal `network_config.json` (`base_port`, `autodht`) and `sgns_config.json` (`node_type`, `is_processor`), extending the existing `sgns_config.json` write pattern already used in tests.
+- [x] **MIG-03**: Full build passes and the existing CTest suite stays green, with no behavior change for default or pre-existing config files.
+- [x] **MIG-04**: A verification grep confirms no `NewFromPrivateKey` / `NewFromMnemonic` / old `New(autodht, base_port, is_full_node)` references remain in `src/`, `example/`, or `test/`.
 
 ## v2 Requirements
 
@@ -69,13 +69,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INTF-01 | Phase 2 | Complete |
 | INTF-02 | Phase 2 | Complete |
 | INTF-03 | Phase 2 | Complete |
-| INTF-04 | Phase 3 | Pending |
+| INTF-04 | Phase 3 | Complete |
 | CFG-02 | Phase 2 | Complete |
 | CFG-03 | Phase 2 | Complete |
-| MIG-01 | Phase 3 | Pending |
-| MIG-02 | Phase 3 | Pending |
-| MIG-03 | Phase 3 | Pending |
-| MIG-04 | Phase 3 | Pending |
+| MIG-01 | Phase 3 | Complete |
+| MIG-02 | Phase 3 | Complete |
+| MIG-03 | Phase 3 | Complete |
+| MIG-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 12 total

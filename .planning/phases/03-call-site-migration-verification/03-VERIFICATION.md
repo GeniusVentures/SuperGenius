@@ -1,10 +1,23 @@
 ---
-status: human_needed
+status: passed
 phase: 3-call-site-migration-verification
 verified: 2026-07-03
 verifier: inline (orchestrator) — gsd-verifier subagent unavailable in this environment
-score: static gates PASS; build/ctest pending user environment
+score: all gates satisfied (static + user-confirmed build/test green)
+approved_by_user: 2026-07-03
 ---
+
+> **Status updated to `passed` on user approval (2026-07-03).** Full build + CTest suite run
+> green in the user's environment. Several execution-round fixes were applied before approval:
+> (1) helpers now `create_directories` on the parent path (processing_nodes_test had run with
+> default config because its per-node dir didn't exist when the ofstream wrote); (2) helpers
+> **truncate** (write exactly `port_seed`+`auto_dht` / `node_type`+`is_processor`) per design
+> review — merge was reverted as over-engineering; (3) NodeExample uses the **shipped**
+> `example/node_test/sgns_config.json` (with `node_type` added) instead of `WriteSgnsConfig`,
+> and the dead `is_full_node` CLI flag was removed; (4) all redundant manual `ofstream` config
+> writes removed — every config write flows through the helpers; (5) corrected 3 wrong
+> `is_processor` values; (6) added the missing `INVALID_NODE_TYPE` case to the Error switch
+> (`-Wswitch`). Compile + full CTest green confirmed by the operator.
 
 # Phase 3 Verification — Call-Site Migration + Verification
 
