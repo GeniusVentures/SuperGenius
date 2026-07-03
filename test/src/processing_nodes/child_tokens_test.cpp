@@ -50,12 +50,6 @@ namespace
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            // pubsub_port is a test-specific exact-port override (legacy string style, HARD-01);
-            // WriteNetworkConfig merges port_seed/auto_dht around it without dropping it.
-            std::ofstream configFile( devConfig.BaseWritePath + "network_config.json" );
-            configFile << R"({"pubsub_port": ")" << uniquePort << R"("})";
-        }
 
         std::string key;
         key.reserve( 64 );
