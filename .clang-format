@@ -1,4 +1,4 @@
-# GNUS-NEO-SWARM / SuperGenius clang-format configuration
+#  SuperGenius clang-format configuration
 #
 # Encodes formatting rules from:
 #   - CLAUDE.md Code Style section (takes precedence)

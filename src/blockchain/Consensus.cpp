@@ -509,14 +509,20 @@ namespace sgns
         return validators;
     }
 
-    bool ConsensusManager::IsCurrentAggregator( const Proposal                    &proposal,
-                                                const ValidatorRegistry::Registry &registry ) const
+    ConsensusManager::AggregatorRole ConsensusManager::GetAggregatorRole(
+        const Proposal                    &proposal,
+        const ValidatorRegistry::Registry &registry ) const
     {
-        ConsensusManagerLogger()->trace( "{}: Checking if is current aggregator for proposal", __func__ );
+        ConsensusManagerLogger()->trace( "{}: Checking local aggregator role for proposal", __func__ );
         auto ordered = GetOrderedActiveValidators( registry );
         if ( ordered.empty() )
         {
-            return false;
+            return AggregatorRole::NotInRegistry;
+        }
+
+        if ( std::find( ordered.begin(), ordered.end(), account_address_ ) == ordered.end() )
+        {
+            return AggregatorRole::NotInRegistry;
         }
 
         sgns::crypto::HasherImpl hasher;
@@ -531,7 +537,8 @@ namespace sgns
         const auto round = GetCurrentRound( proposal.timestamp() );
         const auto index = ( base_index + round ) % ordered.size();
 
-        return ordered[index] == account_address_;
+        return ordered[index] == account_address_ ? AggregatorRole::CurrentAggregator
+                                                  : AggregatorRole::ActiveButNotAggregator;
     }
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
@@ -2010,7 +2017,19 @@ namespace sgns
                 continue;
             }
 
-            if ( !IsCurrentAggregator( state.proposal, proposal_registry ) )
+            const auto aggregator_role = GetAggregatorRole( state.proposal, proposal_registry );
+            if ( aggregator_role == AggregatorRole::NotInRegistry )
+            {
+                ConsensusManagerLogger()->debug(
+                    "{}: local node not in proposal registry; clearing local proposal for hash {} proposal_id={}",
+                    __func__,
+                    GetPrintableSubjectHash( state.proposal.subject() ),
+                    state.proposal.proposal_id().substr( 0, 8 ) );
+                ClearProposalSlot( state.proposal );
+                continue;
+            }
+
+            if ( aggregator_role == AggregatorRole::ActiveButNotAggregator )
             {
                 ConsensusManagerLogger()->debug( "{}: not aggregator for proposal for hash {} proposal_id={}",
                                                  __func__,

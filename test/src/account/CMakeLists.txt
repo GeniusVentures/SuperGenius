@@ -17,7 +17,7 @@ addtest(utxo_manager_test
 target_link_libraries(utxo_manager_test
     genius_node_test
     json_secure_storage
-    base_crdt_test
+    base_rocksdb_test
 )
 
 if(MSVC)

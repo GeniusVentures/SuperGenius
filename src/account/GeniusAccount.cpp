@@ -38,15 +38,6 @@ namespace
 {
     using namespace sgns;
 
-    std::array<uint8_t, 32> get_elgamal_pubkey()
-    {
-        const auto              elgamal_key = KeyGenerator::ElGamal( 0x1234_cppui256 ).GetPublicKey().public_key_value;
-        std::array<uint8_t, 32> exported;
-        export_bits( elgamal_key, exported.begin(), 8, false );
-
-        return exported;
-    }
-
     base::Logger genius_account_logger()
     {
         // Always call base::createLogger to get the current logger
@@ -255,8 +246,7 @@ namespace
 
         ethereum::EthereumKeyGenerator eth_key( key_seed );
 
-        return std::make_pair( std::move( storage ),
-                               std::make_pair( KeyGenerator::ElGamal( std::move( key_seed ) ), std::move( eth_key ) ) );
+        return std::make_pair( std::move( storage ), std::move( eth_key ) );
     }
 }
 
@@ -274,7 +264,10 @@ namespace sgns
             []( char c ) { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ) || ( c >= 'A' && c <= 'F' ); } );
     }
 
-    const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED = get_elgamal_pubkey();
+    const std::array<uint8_t, 32> GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED{
+        0xfc, 0x60, 0x52, 0x6c, 0x91, 0xec, 0x81, 0xd5, 0xd4, 0xfa, 0xb2, 0x78, 0x04, 0xad, 0x93, 0xd0,
+        0xd4, 0xf9, 0x4b, 0x55, 0xc7, 0x5e, 0xed, 0x6f, 0xda, 0x2e, 0xa0, 0xc9, 0xc8, 0x2c, 0x21, 0x36,
+    };
 
     void GeniusAccount::SetSecureStorageFactory( SecureStorageFactory factory )
     {
@@ -290,21 +283,18 @@ namespace sgns
                                                                               StorageWithAddress response_value,
                                                                               bool               full_node )
     {
-        auto [storage, addresses]           = std::move( response_value );
-        auto [elgamal_address, eth_address] = std::move( addresses );
+        auto [storage, eth_address] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
             new GeniusAccount( std::make_shared<ethereum::EthereumKeyGenerator>( std::move( eth_address ) ),
                                token_id,
                                std::move( storage ),
                                full_node ) );
-        instance->elgamal_address_ = std::make_shared<KeyGenerator::ElGamal>( std::move( elgamal_address ) );
 
         return instance;
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const char                    *eth_private_key,
                                                        const boost::filesystem::path &base_path,
                                                        bool                           full_node )
     {
@@ -314,9 +304,17 @@ namespace sgns
             return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
         }
 
-        genius_account_logger()->info(
-            "Could not load Genius address from storage, attempting to generate from ethereum private key" );
+        genius_account_logger()->error(
+            "Could not find existing Genius address, generating one from a random mnemonic" );
 
+        return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+    }
+
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPrivateKey( TokenID                        token_id,
+                                                                     const char                    *eth_private_key,
+                                                                     const boost::filesystem::path &base_path,
+                                                                     bool                           full_node )
+    {
         auto response = GenerateGeniusAddress( eth_private_key, base_path );
         if ( response.has_error() )
         {
@@ -326,6 +324,21 @@ namespace sgns
 
         genius_account_logger()->debug( "Generated a Genius address from private key" );
         return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+    }
+
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID          token_id,
+                                                                    std::string_view public_key,
+                                                                    bool             full_node )
+    {
+        if ( auto response = LoadGeniusAccount( public_key ); response.has_value() )
+        {
+            genius_account_logger()->debug( "Loaded existing Genius address" );
+            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
+        }
+
+        genius_account_logger()->error( "Could not load Genius address from storage" );
+
+        return nullptr;
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromMnemonic( TokenID                        token_id,
@@ -349,7 +362,10 @@ namespace sgns
             genius_account_logger()->debug( "Generated a Genius address from private key" );
             auto account = CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
 
-            account->storage_->Save( "mnemonic", wallet.getMnemonic() );
+            if ( account->storage_->Save( "mnemonic", wallet.getMnemonic() ).has_failure() )
+            {
+                genius_account_logger()->error( "Failed to save mnemonic to secure storage" );
+            }
 
             return account;
         }
@@ -361,37 +377,15 @@ namespace sgns
         return nullptr;
     }
 
-    std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPublicKey( TokenID          token_id,
-                                                                    std::string_view public_key,
-                                                                    bool             full_node )
+    std::pair<std::shared_ptr<GeniusAccount>, std::string> GeniusAccount::NewFromRandomMnemonic(
+        TokenID                        token_id,
+        const boost::filesystem::path &base_path,
+        bool                           full_node )
     {
-        if ( auto response = LoadGeniusAccount( public_key ); response.has_value() )
-        {
-            genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
-        }
-
-        genius_account_logger()->error( "Could not load Genius address from storage" );
-
-        return nullptr;
-    }
-
-    std::shared_ptr<GeniusAccount> GeniusAccount::New( TokenID                        token_id,
-                                                       const boost::filesystem::path &base_path,
-                                                       bool                           full_node )
-    {
-        if ( auto response = LoadGeniusAccount( base_path ); response.has_value() )
-        {
-            genius_account_logger()->debug( "Loaded existing Genius address" );
-            return CreateInstanceFromResponse( token_id, std::move( response.value() ), full_node );
-        }
-
-        genius_account_logger()->error(
-            "Could not find existing Genius address, generating one from a random mnemonic" );
-
         TW::HDWallet wallet( 128, "" );
-
-        return GeniusAccount::NewFromMnemonic( token_id, wallet.getMnemonic(), base_path, full_node );
+        std::string  mnemonic = wallet.getMnemonic();
+        auto         account  = NewFromMnemonic( token_id, mnemonic, base_path, full_node );
+        return { account, mnemonic };
     }
 
     std::string_view GeniusAccount::NormalizeAddress( std::string_view address ) noexcept
@@ -538,9 +532,7 @@ namespace sgns
 
         BOOST_OUTCOME_TRY( AppendPublicKeyToFile( base_path, pub_key ) );
 
-        auto elgamal = KeyGenerator::ElGamal( std::move( key_seed ) );
-
-        return std::make_pair( std::move( storage ), std::make_pair( std::move( elgamal ), std::move( eth_key ) ) );
+        return std::make_pair( std::move( storage ), std::move( eth_key ) );
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )

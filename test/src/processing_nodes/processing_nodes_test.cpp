@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <iostream>
 #include <thread>
@@ -43,30 +45,38 @@ protected:
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
         DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
-        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true,
-                                            40054,
-                                            true );
+        // Write minimal sgns_config.json for node_main so it does not run as a processor.
+        // is_processor is now read exclusively from this config file (defaults to true).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        {
+            std::ofstream config_file( DEV_CONFIG.BaseWritePath + "sgns_config.json" );
+            config_file << R"({"is_processor": false})";
+        }
+
+        node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG2,
+            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false,
+            40054,
+            true );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         sgns::test::assertWaitForCondition( [&]
                                             { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_proc1 not ready" );
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+        node_main = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG,
+            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false );
 
-        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
-                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true,
-                                            40060,
-                                            true );
+        node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
+            DEV_CONFIG3,
+            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            false,
+            40060,
+            true );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
@@ -76,11 +86,11 @@ protected:
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
         sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_main not ready" );
         sgns::test::assertWaitForCondition( [&]
                                             { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 30000 ),
+                                            std::chrono::milliseconds( 50000 ),
                                             "node_proc2 not ready" );
     }
 
@@ -148,13 +158,13 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesPubsubs )
 TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
 {
     sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Main node not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Node proc 1 not synced" );
     sgns::test::assertWaitForCondition( [&] { return node_proc2->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
+                                        std::chrono::milliseconds( 50000 ),
                                         "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),

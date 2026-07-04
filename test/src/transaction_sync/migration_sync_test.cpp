@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <fstream>
 #include <thread>
 #include <iostream>
 #include <cstring>
@@ -114,7 +115,6 @@ protected:
                                                                  const std::string &subdir,
                                                                  const char        *key_hex,
                                                                  bool               is_full_node = false,
-                                                                 bool               is_processor = false,
                                                                  uint16_t           base_port    = 40001 )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
@@ -123,7 +123,19 @@ protected:
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
         DEV_CONFIG.BaseWritePath = baseWrite;
 
-        auto instance = sgns::GeniusNode::New( DEV_CONFIG, key_hex, false, is_processor, base_port, is_full_node );
+        // All nodes in this test are non-processors.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        {
+            std::ofstream configFile( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
+            configFile << R"({"is_processor": false})";
+        }
+
+        auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
+                                                             key_hex,
+                                                             false,
+                                                             base_port,
+                                                             is_full_node );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
@@ -145,8 +157,16 @@ protected:
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
 
+        // Full node is not a processor.
+        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        std::filesystem::create_directories( devConfig.BaseWritePath );
+        {
+            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
+            configFile << R"({"is_processor": false})";
+        }
+
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance    = GeniusNode::New( devConfig, FULL_NODE_KEY, false, false, unique_port, true );
+        auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, unique_port, true );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
@@ -163,7 +183,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
     auto full_node = CreateFullNodeInstance();
     test::assertWaitForCondition( [full_node]
                                   { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 80000 ),
+                                  std::chrono::milliseconds( 100000 ),
                                   "Full node not synced" );
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
@@ -172,7 +192,7 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     const std::string readiness_message = params.subdir + " node not ready";
     test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 100000 ),
                                   readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );

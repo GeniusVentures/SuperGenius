@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Pre-commit lint hook — GNUS-NEO-SWARM
+# Pre-commit lint hook —
 #
 # Runs clang-tidy and clang-format on staged C++ files.
 # - clang-tidy + clang-format must be on PATH (hard fail if missing).

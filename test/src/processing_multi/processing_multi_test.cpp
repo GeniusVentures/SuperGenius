@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <iostream>
@@ -64,20 +65,25 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
-        node_main = sgns::GeniusNode::New( DEV_CONFIG,
+        // Write minimal sgns_config.json for node_main so it does not run as a processor.
+        // is_processor is now read exclusively from this config file (defaults to true).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        {
+            std::ofstream config_file( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
+            config_file << R"({"is_processor": false})";
+        }
+
+        node_main = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
+        node_proc1 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
+        node_proc2 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                                            false );
 
         node_proc1->StopProcessing();
         node_proc2->StopProcessing();

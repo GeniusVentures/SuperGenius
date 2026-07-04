@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# Install GNUS-NEO-SWARM pre-commit hook
+# Install pre-commit hook
 #
 # Creates a symlink from .git/hooks/pre-commit → scripts/pre-commit-lint.sh
 # ==============================================================================

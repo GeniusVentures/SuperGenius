@@ -22,6 +22,9 @@ namespace eth::rpc
     class JsonRpcTransport;
 } // namespace eth::rpc
 
+/// @brief Forward declaration for unit test access to private members.
+class PublicChainInputValidatorTestAccess;
+
 namespace sgns
 {
     /**
@@ -36,7 +39,10 @@ namespace sgns
         std::string url;
         uint8_t     consensus_weight = 25;
         std::string bridge_contract_address; ///< Expected bridge contract (hex, "0x...")
-        std::string event_topic0;            ///< Expected event topic0 (hex, "0x...")
+        /// Accepted bridge event topic0 hashes (hex, "0x..."). Carries BOTH the
+        /// v1 BridgeSourceBurned and v2 BridgeOutInitiated topic0 so witness
+        /// validation accepts mints created from either event version.
+        std::vector<std::string> accepted_topic0_hashes;
     };
 
     /**
@@ -59,12 +65,44 @@ namespace sgns
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
+        /// @brief Registers this validator for @p chain_id in the global registry
+        ///        and records it for self-removal on destruction (compare-and-
+        ///        remove), so the registry never holds a dangling pointer after
+        ///        this validator (and its owning transaction manager) is destroyed.
+        void RegisterForChain( const std::string &chain_id )
+        {
+            IInputValidator::Register( chain_id, this );
+            registered_chain_ids_.push_back( chain_id );
+        }
+
+        ~PublicChainInputValidator() override
+        {
+            for ( const auto &chain_id : registered_chain_ids_ )
+            {
+                IInputValidator::UnregisterIf( chain_id, this );
+            }
+        }
+
         /**
          * @brief Configure weighted RPC endpoints for a source chain.
          * @param[in] chain_id Source chain identifier (e.g. "1" for Ethereum).
          * @param[in] endpoints Weighted RPC endpoint URLs for verifying burn receipts.
          */
         void SetRpcEndpoints( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
+        /**
+         * @brief Merge weighted RPC endpoints into a source chain's existing list.
+         *
+         * Unlike SetRpcEndpoints (wholesale replace), this preserves endpoints
+         * already configured for the chain (e.g. operator-supplied private/API-key
+         * endpoints from GeniusNode::ConfigureRpcEndpoint) and appends the new
+         * ones, deduplicating by URL. Used by the chainlist runtime fetch so an
+         * async non-empty fetch never drops higher-weight private endpoints.
+         *
+         * @param[in] chain_id Source chain identifier (e.g. "1" for Ethereum).
+         * @param[in] endpoints Weighted RPC endpoints to merge (URL-deduped).
+         */
+        void AddRpcEndpoints( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
         /**
          * @brief Validates local UTXO structure for externally sourced claims.
@@ -180,6 +218,10 @@ namespace sgns
         }
 
     private:
+        /// @brief Friend accessor for unit testing VerifyPublicChainSmartContract
+        ///        and the wired rpc_endpoints_ (mirrors BridgeRelayerTestAccess).
+        friend class ::PublicChainInputValidatorTestAccess;
+
         /**
          * @brief Verifies that the referenced public-chain smart-contract event matches the transaction
          *        using a weighted multi-provider RPC quorum.
@@ -196,6 +238,9 @@ namespace sgns
                                              const std::string                        &source_reference ) const;
 
         std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
+
+        /// Chain IDs this validator registered for (self-deregistered on destruction).
+        std::vector<std::string> registered_chain_ids_;
 
         /// @brief Pluggable transport factory for DI-based mock injection (D-07, D-14).
         /// When empty, VerifyPublicChainSmartContract uses the default RpcHttpTransport factory.

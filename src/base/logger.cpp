@@ -1,5 +1,4 @@
 #include "base/logger.hpp"
-#include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
@@ -15,28 +14,32 @@ namespace
         logger.set_pattern( "[%Y-%m-%d %H:%M:%S.%F][th:%t][%l][%n] %v" );
     }
 
-    std::shared_ptr<spdlog::logger> createLogger( const std::string &tag, bool debug_mode = false, const std::string &basepath = "" )
+    std::shared_ptr<spdlog::logger> createLogger( const std::string &tag,
+                                                  bool               debug_mode = false,
+                                                  const std::string &basepath   = "" )
     {
         std::shared_ptr<spdlog::logger> logger;
 #if defined( ANDROID )
-        if (basepath.size() > 0)
+        if ( basepath.size() > 0 )
         {
-            logger = spdlog::basic_logger_mt(tag, basepath);
+            logger = spdlog::basic_logger_mt( tag, basepath );
         }
-        else {
-            logger = spdlog::android_logger_mt(tag);
+        else
+        {
+            logger = spdlog::android_logger_mt( tag );
         }
-        
+
 #else
-        if (basepath.size() > 0)
+        if ( basepath.size() > 0 )
         {
-            logger = spdlog::basic_logger_mt(tag, basepath);
+            logger = spdlog::basic_logger_mt( tag, basepath );
             // Note: flush_on level will be set per-logger in InitLoggers based on the actual log level used
         }
-        else {
-            logger = spdlog::stdout_color_mt(tag); 
+        else
+        {
+            logger = spdlog::stdout_color_mt( tag );
         }
-        
+
 #endif
         if ( debug_mode )
         {
@@ -52,12 +55,12 @@ namespace
 
 namespace sgns::base
 {
-    Logger createLogger( const std::string &tag, const std::string& basepath )
+    Logger createLogger( const std::string &tag, const std::string &basepath )
     {
         static std::mutex           mutex;
         std::lock_guard<std::mutex> lock( mutex );
         auto                        logger = spdlog::get( tag );
-        if (logger != nullptr && !basepath.empty())
+        if ( logger != nullptr && !basepath.empty() )
         {
             // Drop any existing logger with this name to force recreation with file sink
             logger = nullptr;
@@ -65,9 +68,9 @@ namespace sgns::base
             logger = ::createLogger( tag, false, basepath );
             return logger;
         }
-        
+
         // For console loggers, use existing if available
-        
+
         if ( logger == nullptr )
         {
             logger = ::createLogger( tag, false, basepath );

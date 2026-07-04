@@ -104,7 +104,7 @@ protected:
     static inline constexpr const char *kNode3Dir = "/catchup_node3/";
 
     /** @brief PubSub port base for the catch-up fixture (Plan 04.1-01 used 40011..40013). */
-    static inline constexpr unsigned int kNodeMainPort = 40031u;
+    static inline constexpr unsigned int kNodeMainPort  = 40031u;
     static inline constexpr unsigned int kNodeProc1Port = 40032u;
     static inline constexpr unsigned int kNodeProc2Port = 40033u;
 
@@ -120,6 +120,12 @@ protected:
 }
 )JSON";
 
+    /** @brief Per-node sgns_config filename (read by GeniusNode::LoadSgnsConfig). */
+    static inline constexpr const char *kSgnsConfigFilename = "sgns_config.json";
+
+    /** @brief Content of the per-node sgns_config.json — every test node is a non-processor. */
+    static inline constexpr const char *kSgnsConfigContent = R"JSON({"is_processor": false})JSON";
+
     /** @brief Timeout for the auto-mint path after node READY (scan runs after CRDT sync). */
     static inline constexpr std::chrono::milliseconds kCatchupMintTimeout{ 30000 };
 
@@ -130,7 +136,8 @@ protected:
     static inline constexpr std::chrono::milliseconds kValidatorReadyPollInterval{ 50 };
 
     /** @brief Anvil-path signing key (hex, no 0x prefix) — public test value. */
-    static inline constexpr const char *kAnvilAccount0HexKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    static inline constexpr const char *kAnvilAccount0HexKey =
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     /**
      * @brief Starts Anvil, funds account #0, seeds pre-node burns, and bootstraps the 3-node cluster.
@@ -154,6 +161,18 @@ protected:
     static void WriteBridgeChainsConfig( const std::string &base_write_path );
 
     /**
+     * @brief Writes kSgnsConfigContent into the given BaseWritePath directory.
+     *
+     * Creates the directory if missing. The file is read by GeniusNode::LoadSgnsConfig()
+     * (BaseWritePath/sgns_config.json) and sets is_processor=false for the node. The develop
+     * refactor moved is_processor out of the New() signature into this file, so each node's
+     * non-processor setting is supplied here rather than as a constructor argument.
+     *
+     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
+     */
+    static void WriteSgnsConfig( const std::string &baseWritePath );
+
+    /**
      * @brief Sends one ERC-1155 safeTransferFrom self-transfer burn to the local Anvil fork.
      *
      * The burn form mirrors Plan 04.1-01: cast send <contract> "<kTransferSig>"
@@ -170,9 +189,21 @@ std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_proc2 = nullptr;
 sgns::test::anvil::AnvilProcess BridgeAnvilCatchupE2ETest::s_anvil;
 std::vector<std::string>        BridgeAnvilCatchupE2ETest::s_pre_node_burn_hashes;
 
-DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node1" };
-DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node2" };
-DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node3" };
+DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG  = { "0xcafe",
+                                                        "0.65",
+                                                        "1.0",
+                                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                                        "./catchup_node1" };
+DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG2 = { "0xcafe",
+                                                        "0.65",
+                                                        "1.0",
+                                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                                        "./catchup_node2" };
+DevConfig_st BridgeAnvilCatchupE2ETest::DEV_CONFIG3 = { "0xcafe",
+                                                        "0.65",
+                                                        "1.0",
+                                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                                        "./catchup_node3" };
 
 void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base_write_path )
 {
@@ -184,16 +215,26 @@ void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base
     spdlog::info( "catchup_e2e: wrote {}", config_path );
 }
 
+void BridgeAnvilCatchupE2ETest::WriteSgnsConfig( const std::string &baseWritePath )
+{
+    std::filesystem::create_directories( baseWritePath );
+    const std::string kConfigPath = baseWritePath + kSgnsConfigFilename;
+    std::ofstream     out( kConfigPath, std::ios::binary | std::ios::trunc );
+    out << kSgnsConfigContent;
+    out.close();
+    spdlog::info( "catchup_e2e: wrote {}", kConfigPath );
+}
+
 std::string BridgeAnvilCatchupE2ETest::SendOneAnvilBurn()
 {
     const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    std::string       cast_cmd    = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " +
-                                 sender_addr + " " + sender_addr + " 0 " + std::to_string( kMintAmount ) +
-                                 " 0x --private-key " + sgns::test::anvil::kAnvilAccount0PrivateKey +
-                                 " --rpc-url " + s_anvil.RpcUrl() + " --json 2>&1";
+    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
+                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
+                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() +
+                           " --json 2>&1";
 
-    int          cast_rc     = -1;
-    std::string  cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
+    int         cast_rc     = -1;
+    std::string cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
     if ( cast_rc != 0 )
     {
         spdlog::error( "catchup_e2e: cast send failed rc={} output={}", cast_rc, cast_output );
@@ -233,21 +274,28 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
     {
         s_anvil.Stop();
-        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
-                     << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
+        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of " << sgns::test::anvil::kGnusHolderSepolia
+                     << " — skipping";
     }
 
     // Per-node BaseWritePath from binary location (Plan 04.1-01 pattern), distinct subdirs.
-    const std::string binary_path   = boost::dll::program_location().parent_path().string();
-    DEV_CONFIG.BaseWritePath        = binary_path + kNode1Dir;
-    DEV_CONFIG2.BaseWritePath       = binary_path + kNode2Dir;
-    DEV_CONFIG3.BaseWritePath       = binary_path + kNode3Dir;
+    const std::string binary_path = boost::dll::program_location().parent_path().string();
+    DEV_CONFIG.BaseWritePath      = binary_path + kNode1Dir;
+    DEV_CONFIG2.BaseWritePath     = binary_path + kNode2Dir;
+    DEV_CONFIG3.BaseWritePath     = binary_path + kNode3Dir;
 
     // Write per-node bridge_chains_config.json so ResolveBridgeChainsConfigPath() finds it at
     // priority 1 and OnRpcEndpointsReady populates catchup_chains_.
     WriteBridgeChainsConfig( DEV_CONFIG.BaseWritePath );
     WriteBridgeChainsConfig( DEV_CONFIG2.BaseWritePath );
     WriteBridgeChainsConfig( DEV_CONFIG3.BaseWritePath );
+
+    // Write per-node sgns_config.json so LoadSgnsConfig() reads is_processor=false for every
+    // node. The develop refactor moved is_processor out of the New() signature into this file,
+    // matching the pre-develop New() isprocessor=false argument used for all three nodes.
+    WriteSgnsConfig( DEV_CONFIG.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG2.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG3.BaseWritePath );
 
     // PRE-NODE BURN SEEDING (the heart of this test): send kNumCatchupBurns ERC-1155
     // burns to the local Anvil fork BEFORE any node exists, so the burns are historical
@@ -266,16 +314,15 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // Create the full node first — it builds the genesis block. Auto-catch-up scan is
     // gated on catchup_chains_ being populated (from bridge_chains_config.json) AND TM READY.
     spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
-    node_main = GeniusNode::New( DEV_CONFIG, kAnvilAccount0HexKey, false, false, kNodeMainPort, true );
+    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, kAnvilAccount0HexKey, false, kNodeMainPort, true );
 
     // Poll node_main past CREATING so the transaction manager / validator are constructible.
     // ConfigureRpcEndpoint logs "before transaction manager is ready" and returns if the
     // TM is not yet available; waiting for state != CREATING avoids that race.
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return node_main->GetState() != GeniusNode::NodeState::CREATING; },
-        kNodeReadyTimeout,
-        "node_main leaves CREATING so validator accepts RPC URL priming",
-        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return node_main->GetState() != GeniusNode::NodeState::CREATING; },
+                               kNodeReadyTimeout,
+                               "node_main leaves CREATING so validator accepts RPC URL priming",
+                               nullptr );
 
     // PRIME THE VALIDATOR WITH THE ANVIL RPC URL BEFORE THE SCAN QUERIES IT.
     // Single local source — weight 100 alone satisfies the >= 75 consensus threshold (D-11).
@@ -284,7 +331,7 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         ep.url                     = s_anvil.RpcUrl();
         ep.consensus_weight        = 100;
         ep.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
-        ep.event_topic0            = sgns::test::anvil::kBridgeEventTopic0;
+        ep.accepted_topic0_hashes  = { sgns::test::anvil::kBridgeEventTopic0 };
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep };
         node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
         spdlog::info( "catchup_e2e: primed validator with {} Anvil RPC endpoint at {}",
@@ -305,8 +352,8 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     spdlog::info( "catchup_e2e: node_main READY" );
 
     // Create processor nodes and bootstrap PubSub (Plan 04.1-01 pattern, distinct ports).
-    node_proc1 = GeniusNode::New( DEV_CONFIG2, kAnvilAccount0HexKey, false, false, kNodeProc1Port );
-    node_proc2 = GeniusNode::New( DEV_CONFIG3, kAnvilAccount0HexKey, false, false, kNodeProc2Port );
+    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, kAnvilAccount0HexKey, false, kNodeProc1Port );
+    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, kAnvilAccount0HexKey, false, kNodeProc2Port );
 
     node_proc1->GetPubSub()->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );

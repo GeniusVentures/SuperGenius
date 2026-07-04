@@ -729,12 +729,22 @@ namespace sgns
          */
         bool IsTimestampSane( uint64_t timestamp_ms ) const;
         /**
-         * @brief Checks whether local node is the active aggregator for a proposal round.
+         * @brief Local node's certificate aggregation role for a proposal round.
+         */
+        enum class AggregatorRole
+        {
+            NotInRegistry,          ///< Local node is not an active validator in the proposal registry.
+            ActiveButNotAggregator, ///< Local node is active, but another validator owns this round.
+            CurrentAggregator,      ///< Local node owns certificate creation for this round.
+        };
+        /**
+         * @brief Evaluates the local node's aggregation role for a proposal round.
          * @param[in] proposal Proposal being evaluated.
          * @param[in] registry Active validator registry snapshot.
-         * @return `true` when local node is current aggregator.
+         * @return Local aggregation role relative to the proposal registry and current round.
          */
-        bool IsCurrentAggregator( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
+        AggregatorRole GetAggregatorRole( const Proposal &proposal,
+                                          const ValidatorRegistry::Registry &registry ) const;
         /**
          * @brief Returns active validators in deterministic ordering.
          * @param[in] registry Validator registry snapshot.
@@ -949,7 +959,7 @@ namespace sgns
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
-        std::shared_future<std::shared_ptr<libp2p::protocol::Subscription>>
+        std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.
         std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW }; ///< Accepted timestamp window.
         std::chrono::milliseconds certificate_delay_{
