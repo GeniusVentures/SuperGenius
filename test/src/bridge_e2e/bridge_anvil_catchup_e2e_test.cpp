@@ -86,12 +86,6 @@ protected:
     /** @brief Pre-node burn tx hashes seeded on the local Anvil fork before any node starts. */
     static std::vector<std::string> s_pre_node_burn_hashes;
 
-    /** @brief Sepolia GNUS contract address (mixed-case EIP-55). */
-    static inline constexpr const char *kSepoliaContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
-
-    /** @brief ERC-1155 safeTransferFrom function selector. */
-    static inline constexpr const char *kTransferSig = "safeTransferFrom(address,address,uint256,uint256,bytes)";
-
     /** @brief Base mint amount per burn (base units). */
     static inline constexpr unsigned int kMintAmount = 1u;
 
@@ -173,14 +167,18 @@ protected:
     static void WriteSgnsConfig( const std::string &baseWritePath );
 
     /**
-     * @brief Sends one ERC-1155 safeTransferFrom self-transfer burn to the local Anvil fork.
+     * @brief Sends one real GNUS bridgeOut() burn to the local Anvil fork.
      *
-     * The burn form mirrors Plan 04.1-01: cast send <contract> "<kTransferSig>"
-     * <sender> <sender> 0 <amount> 0x --private-key <key> --rpc-url <anvil> --json.
+     * Wraps sgns::test::anvil::SendBridgeOutBurn, seeding the destination from
+     * node_main's deterministic SG address (the catch-up fixture's node_main is
+     * created from kAnvilAccount0HexKey, so its GetAddress() is deterministic and
+     * identical across runs). The burn now uses the real bridgeOut entrypoint
+     * consumed by BridgeRelayer's v2 parsing branch.
      *
+     * @param[in] sgns_destination_128  Bare 128-char hex X||Y from node_main->GetAddress().
      * @return Parsed 0x-prefixed transaction hash, or empty string on failure.
      */
-    static std::string SendOneAnvilBurn();
+    static std::string SendOneAnvilBurn( const std::string &sgns_destination_128 );
 };
 
 std::shared_ptr<GeniusNode>     BridgeAnvilCatchupE2ETest::node_main  = nullptr;
@@ -225,27 +223,9 @@ void BridgeAnvilCatchupE2ETest::WriteSgnsConfig( const std::string &baseWritePat
     spdlog::info( "catchup_e2e: wrote {}", kConfigPath );
 }
 
-std::string BridgeAnvilCatchupE2ETest::SendOneAnvilBurn()
+std::string BridgeAnvilCatchupE2ETest::SendOneAnvilBurn( const std::string &sgns_destination_128 )
 {
-    const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
-                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
-                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() +
-                           " --json 2>&1";
-
-    int         cast_rc     = -1;
-    std::string cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    if ( cast_rc != 0 )
-    {
-        spdlog::error( "catchup_e2e: cast send failed rc={} output={}", cast_rc, cast_output );
-        return {};
-    }
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    if ( tx_hash.empty() )
-    {
-        spdlog::error( "catchup_e2e: could not parse transactionHash from cast output: {}", cast_output );
-    }
-    return tx_hash;
+    return sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(), kMintAmount, sgns_destination_128 );
 }
 
 void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
@@ -297,24 +277,28 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     WriteSgnsConfig( DEV_CONFIG2.BaseWritePath );
     WriteSgnsConfig( DEV_CONFIG3.BaseWritePath );
 
-    // PRE-NODE BURN SEEDING (the heart of this test): send kNumCatchupBurns ERC-1155
-    // burns to the local Anvil fork BEFORE any node exists, so the burns are historical
-    // by the time the catch-up scan runs.
+    // Create the full node first — it builds the genesis block. Auto-catch-up scan is
+    // gated on catchup_chains_ being populated (from bridge_chains_config.json) AND TM READY.
+    // NOTE: NewFromPrivateKey is hoisted BEFORE the burn-seeding loop so node_main's
+    // deterministic GetAddress() (derived from kAnvilAccount0HexKey) is available to
+    // seed the bridgeOut destination. The poll/prime/READY-wait sequence stays below
+    // in its original order — only the construction call precedes the burns.
+    spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
+    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, kAnvilAccount0HexKey, false, kNodeMainPort, true );
+
+    // PRE-NODE BURN SEEDING (the heart of this test): send kNumCatchupBurns real
+    // bridgeOut() burns to the local Anvil fork seeded with node_main's SG address,
+    // so the burns are historical by the time the catch-up scan runs.
     spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
     for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
     {
-        const std::string tx_hash = SendOneAnvilBurn();
+        const std::string tx_hash = SendOneAnvilBurn( node_main->GetAddress() );
         ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
         s_pre_node_burn_hashes.push_back( tx_hash );
         spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
     }
     ASSERT_EQ( s_pre_node_burn_hashes.size(), kNumCatchupBurns )
         << "Did not seed the expected number of pre-node burns";
-
-    // Create the full node first — it builds the genesis block. Auto-catch-up scan is
-    // gated on catchup_chains_ being populated (from bridge_chains_config.json) AND TM READY.
-    spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
-    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, kAnvilAccount0HexKey, false, kNodeMainPort, true );
 
     // Poll node_main past CREATING so the transaction manager / validator are constructible.
     // ConfigureRpcEndpoint logs "before transaction manager is ready" and returns if the
@@ -331,7 +315,7 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         ep.url                     = s_anvil.RpcUrl();
         ep.consensus_weight        = 100;
         ep.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
-        ep.accepted_topic0_hashes  = { sgns::test::anvil::kBridgeEventTopic0 };
+        ep.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep };
         node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
         spdlog::info( "catchup_e2e: primed validator with {} Anvil RPC endpoint at {}",

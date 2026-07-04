@@ -30,6 +30,9 @@
 #include <spdlog/spdlog.h>
 
 #include "base/util.hpp"
+#include <base/parse_utility.hpp>         // rlp::base::parse::hex_bytes
+#include <eth/abi_decoder.hpp>            // eth::abi::event_signature_hash
+#include "account/BridgeEventTypes.hpp"   // sgns::kBridgeOutInitiatedSig (canonical sig string)
 
 namespace sgns::test::anvil
 {
@@ -59,15 +62,21 @@ namespace sgns::test::anvil
     inline constexpr const char *kSepoliaBridgeContractLower = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
 
     /**
-     * @brief BridgeOutInitiated event topic0 (v2 signature, hex with 0x prefix).
+     * @brief BridgeOutInitiated event topic0 (v2), DERIVED from the canonical signature
+     *        via keccak256 — never a hardcoded hash.
      *
-     * keccak256("BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)").
-     * Both downstream test files construct their accepted_topic0_hashes from this
-     * constant, so the v2 topic0 propagates automatically — no per-file topic0 edits
-     * are required beyond this one line.
+     * Computed as eth::abi::event_signature_hash(kBridgeOutInitiatedSig) (the same call the
+     * relayer and ChainRpcEndpointProvider use), hex-encoded with the 0x prefix. Both
+     * downstream test files build accepted_topic0_hashes from this, so the v2 topic0
+     * propagates automatically and cannot drift from the contract/relayer definition.
+     *
+     * @return 0x-prefixed keccak256 hash hex of the v2 BridgeOutInitiated signature.
      */
-    inline constexpr const char *kBridgeEventTopic0 =
-        "0xafc92ac6b47a7def03c9905a815ef0108134b18254db535467dfbb83792424b5";
+    static inline std::string BridgeEventTopic0()
+    {
+        const auto hash = eth::abi::event_signature_hash( std::string( sgns::kBridgeOutInitiatedSig ) );
+        return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+    }
 
     /**
      * @brief Destination chain ID used in the bridgeOut() test burn — Ethereum mainnet (1).

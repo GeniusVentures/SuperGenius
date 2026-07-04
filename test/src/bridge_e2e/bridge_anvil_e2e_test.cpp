@@ -209,12 +209,6 @@ protected:
 
     static sgns::test::anvil::AnvilProcess s_anvil;
 
-    /** @brief Sepolia GNUS contract address (mixed-case EIP-55). */
-    static inline constexpr const char *kSepoliaContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
-
-    /** @brief ERC-1155 safeTransferFrom function selector. */
-    static inline constexpr const char *kTransferSig = "safeTransferFrom(address,address,uint256,uint256,bytes)";
-
     /** @brief Small test mint amount in base units. */
     static inline constexpr uint64_t kMintAmount = 1u;
 
@@ -350,7 +344,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         ep.url                     = s_anvil.RpcUrl();
         ep.consensus_weight        = 100;
         ep.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
-        ep.accepted_topic0_hashes  = { sgns::test::anvil::kBridgeEventTopic0 };
+        ep.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
 
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep };
         node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
@@ -388,21 +382,12 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
     const uint64_t initial_balance = node_main->GetBalance( dest_addr );
     spdlog::info( "bridge_anvil: initial balance = {}", initial_balance );
 
-    // Build cast send command targeting the LOCAL Anvil RPC (D-14 Path A).
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
-                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
-                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() +
-                           " --json 2>&1";
-
+    // Send a real bridgeOut() burn targeting the LOCAL Anvil RPC (D-14 Path A).
     spdlog::info( "bridge_anvil: sending burn transaction to local Anvil" );
-    int         cast_rc     = -1;
-    std::string cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    spdlog::info( "bridge_anvil: cast send output: {}", cast_output );
-    ASSERT_EQ( cast_rc, 0 ) << "cast send failed with exit code " << cast_rc;
-
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    ASSERT_FALSE( tx_hash.empty() ) << "Could not parse transactionHash from cast output";
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), kMintAmount, node_main->GetAddress() );
     spdlog::info( "bridge_anvil: burn tx hash = {}", tx_hash );
+    ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
 
     // Feed burn tx hash into the MintTokens pipeline.
     spdlog::info( "bridge_anvil: triggering MintTokens on node_main" );
@@ -439,20 +424,12 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
  */
 TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
 {
-    const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    const std::string dest_addr   = node_main->GetAddress();
+    const std::string dest_addr = node_main->GetAddress();
 
-    // Send a fresh burn tx to local Anvil.
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
-                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
-                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() +
-                           " --json 2>&1";
-    int         cast_rc  = -1;
-    std::string cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    ASSERT_EQ( cast_rc, 0 ) << "cast send failed: " << cast_output;
-
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    ASSERT_FALSE( tx_hash.empty() ) << "Could not parse transactionHash";
+    // Send a fresh bridgeOut() burn tx to local Anvil.
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), kMintAmount, node_main->GetAddress() );
+    ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
     // First mint should succeed.
