@@ -65,7 +65,7 @@ using sgns::GeniusNode;
  *   1. Writes per-node bridge_chains_config.json (drives catchup_chains_).
  *   2. Seeds pre-node burns.
  *   3. Creates node_main.
- *   4. Polls node_main out of INITIALIZING (validator is constructible).
+ *   4. Polls node_main past CREATING (validator is constructible).
  *   5. Calls ConfigureRpcEndpoint to prime the URL map.
  *   6. Polls node_main to READY (the auto-scan can now run with a primed URL).
  *   7. Creates the two processor nodes and bootstraps PubSub.
@@ -268,13 +268,13 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
     node_main = GeniusNode::New( DEV_CONFIG, kAnvilAccount0HexKey, false, false, kNodeMainPort, true );
 
-    // Poll node_main out of INITIALIZING so the validator can accept ConfigureRpcEndpoint.
+    // Poll node_main past CREATING so the transaction manager / validator are constructible.
     // ConfigureRpcEndpoint logs "before transaction manager is ready" and returns if the
-    // TM is not yet constructible; waiting for state != INITIALIZING avoids that race.
+    // TM is not yet available; waiting for state != CREATING avoids that race.
     ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return node_main->GetState() != GeniusNode::NodeState::INITIALIZING; },
+        [&]() { return node_main->GetState() != GeniusNode::NodeState::CREATING; },
         kNodeReadyTimeout,
-        "node_main leaves INITIALIZING so validator accepts RPC URL priming",
+        "node_main leaves CREATING so validator accepts RPC URL priming",
         nullptr );
 
     // PRIME THE VALIDATOR WITH THE ANVIL RPC URL BEFORE THE SCAN QUERIES IT.
