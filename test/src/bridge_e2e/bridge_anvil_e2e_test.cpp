@@ -181,6 +181,33 @@ namespace
         out.close();
     }
 
+    /**
+     * @brief Writes a per-node bridge_chains_config.json (sepolia-only subset).
+     *
+     * Scoping @c catchup_chains_ to ethereum-sepolia ensures PerformStartupCatchupScan
+     * only queries the local Anvil fork (the one chain that actually exists on the
+     * fork) and doesn't attempt RPC queries against mainnet, BSC, Polygon, or Base
+     * chains that have no endpoints primed on the fork.
+     *
+     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
+     */
+    void WriteBridgeChainsConfig( const std::string &baseWritePath )
+    {
+        constexpr const char *kBridgeChainsConfigContent = R"JSON({
+    "ethereum-sepolia": {
+        "chain_id": 11155111,
+        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
+    }
+}
+)JSON";
+        constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
+        std::filesystem::create_directories( baseWritePath );
+        const std::string kConfigPath = baseWritePath + kBridgeChainsConfigFilename;
+        std::ofstream     out( kConfigPath, std::ios::binary | std::ios::trunc );
+        out << kBridgeChainsConfigContent;
+        out.close();
+    }
+
 } // namespace
 
 // =============================================================================
@@ -298,6 +325,13 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     WriteSgnsConfig( DEV_CONFIG.BaseWritePath );
     WriteSgnsConfig( DEV_CONFIG2.BaseWritePath );
     WriteSgnsConfig( DEV_CONFIG3.BaseWritePath );
+
+    // Scope catchup_chains_ to ethereum-sepolia only — prevents PerformStartupCatchupScan
+    // from querying RPC endpoints for mainnet/BSC/Polygon/Base chains that don't exist on
+    // the local Anvil fork (the default bridge_chains_config.json has all 8 chains).
+    WriteBridgeChainsConfig( DEV_CONFIG.BaseWritePath );
+    WriteBridgeChainsConfig( DEV_CONFIG2.BaseWritePath );
+    WriteBridgeChainsConfig( DEV_CONFIG3.BaseWritePath );
 
     spdlog::info( "bridge_anvil: creating 3-node cluster against local Anvil" );
 
