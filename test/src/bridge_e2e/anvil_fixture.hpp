@@ -19,11 +19,13 @@
 #include <unistd.h>
 #include <csignal>
 #include <cstdint>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
 #include <string>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -56,8 +58,25 @@ namespace sgns::test::anvil
     /** @brief Sepolia bridge contract address, lowercase hex with 0x prefix (D-02). */
     inline constexpr const char *kSepoliaBridgeContractLower = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
 
-    /** @brief Bridge BridgeSourceBurned event topic0 (hex with 0x prefix). */
-    inline constexpr const char *kBridgeEventTopic0 = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
+    /**
+     * @brief BridgeOutInitiated event topic0 (v2 signature, hex with 0x prefix).
+     *
+     * keccak256("BridgeOutInitiated(address,uint256,uint256,uint256,uint256,bytes32,bool)").
+     * Both downstream test files construct their accepted_topic0_hashes from this
+     * constant, so the v2 topic0 propagates automatically — no per-file topic0 edits
+     * are required beyond this one line.
+     */
+    inline constexpr const char *kBridgeEventTopic0 =
+        "0xafc92ac6b47a7def03c9905a815ef0108134b18254db535467dfbb83792424b5";
+
+    /**
+     * @brief Destination chain ID used in the bridgeOut() test burn — Ethereum mainnet (1).
+     *
+     * MUST differ from kSepoliaChainId ("11155111") because GNUSBridge.sol requires
+     * destChainID != srcChainID; mainnet is the natural canonical pairing and is
+     * never confused with the test's Sepolia fork.
+     */
+    inline constexpr const char *kDestChainId = "1";
 
     /** @brief Default public Sepolia RPC endpoint used as the Anvil --fork-url source (D-03). */
     inline constexpr const char *kSepoliaRpcPublicnode = "https://ethereum-sepolia-rpc.publicnode.com";
@@ -204,6 +223,114 @@ namespace sgns::test::anvil
     }
 
     /**
+     * @brief Derives the bridgeOut() destination args from a node's 128-char SG address.
+     *
+     * This is the inverse of the relayer's v2 decompression contract
+     * (evmrelay/src/eth/secp256k1_utility.cpp::DecompressXOnlyPubkey). The relayer
+     * consumes the bytes32 sgnsDestination DIRECTLY as contract_x_bytes (LSB-first
+     * in hex), reversing it internally to big-endian before secp256k1 decompression.
+     * node->GetAddress() returns the bare 128-char hex X||Y where both halves are
+     * already LSB-first contract byte order. Therefore the bytes32 passed to
+     * bridgeOut must equal node X in contract (LSB-first) byte order — which is the
+     * first 64 chars of GetAddress() UNCHANGED, with a 0x prefix and NO reversal.
+     *
+     * destinationYOdd is the parity of the Y half. In LSB-first/contract order the
+     * FIRST byte of the Y half is its LSB, so its low bit equals Y mod 2 = true
+     * parity. secp256k1_utility.cpp:190 maps false->0x02 (even Y), true->0x03 (odd Y).
+     *
+     * @param[in] sgns_address_128  Bare 128-char hex X||Y returned by node->GetAddress().
+     * @return { "0x" + X_half_64chars, destination_y_odd }, or { "", false } on invalid input.
+     */
+    static inline std::pair<std::string, bool>
+    BridgeDestinationFromSgnsAddress( const std::string &sgns_address_128 ) noexcept
+    {
+        constexpr unsigned int kSgnsAddressHexLen = 128u;
+        constexpr unsigned int kHalfLen           = 64u;
+        constexpr unsigned int kByteHexChars      = 2u;
+
+        if ( sgns_address_128.size() != kSgnsAddressHexLen )
+        {
+            return { "", false };
+        }
+        for ( char c : sgns_address_128 )
+        {
+            if ( !std::isxdigit( static_cast<unsigned char>( c ) ) )
+            {
+                return { "", false };
+            }
+        }
+        const std::string x_half         = sgns_address_128.substr( 0, kHalfLen );
+        const std::string y_half         = sgns_address_128.substr( kHalfLen, kHalfLen );
+        const std::string y_first_byte_hex = y_half.substr( 0, kByteHexChars );
+
+        unsigned int y_first_byte = 0u;
+        try
+        {
+            y_first_byte = static_cast<unsigned int>( std::stoul( y_first_byte_hex, nullptr, 16 ) );
+        }
+        catch ( ... )
+        {
+            return { "", false };
+        }
+        const bool destination_y_odd = ( y_first_byte & 1u ) != 0u;
+        return { "0x" + x_half, destination_y_odd };
+    }
+
+    /**
+     * @brief Sends a real GNUS bridgeOut() burn on the local Anvil fork.
+     *
+     * Replaces the prior safeTransferFrom(self,self,0,amount,0x) burn-seeding, which
+     * was NOT a burn on the hybrid ERC-20/ERC-1155 GNUS contract and reverted at gas
+     * estimate. This helper exercises the production burn path consumed by
+     * BridgeRelayer's v2 parsing branch (eth::DecompressXOnlyPubkey). Uses --unlocked
+     * + --from account #0 to match the verified-correct FundAccount0WithGnus funding
+     * pattern (Anvil default mnemonic unlocks account #0; --private-key is not needed).
+     *
+     * @param[in] anvil_rpc_url       HTTP RPC URL of the local Anvil instance.
+     * @param[in] amount              Burn amount in base units.
+     * @param[in] sgns_destination_128  Bare 128-char hex X||Y from node->GetAddress().
+     * @return Parsed 0x-prefixed burn tx hash, or empty string on failure.
+     */
+    static inline std::string SendBridgeOutBurn( const std::string &anvil_rpc_url,
+                                                 uint64_t           amount,
+                                                 const std::string &sgns_destination_128 )
+    {
+        constexpr unsigned int kGnusTokenId = 0u;
+
+        const auto dest = BridgeDestinationFromSgnsAddress( sgns_destination_128 );
+        if ( dest.first.empty() )
+        {
+            spdlog::error( "SendBridgeOutBurn: invalid sgns destination address (len={})",
+                           sgns_destination_128.size() );
+            return {};
+        }
+        const std::string dest_bytes32 = dest.first;
+        const std::string dest_y_odd   = dest.second ? "true" : "false";
+
+        const std::string cast_cmd =
+            std::string( "cast send " ) + kSepoliaBridgeContractLower +
+            " \"bridgeOut(uint256,uint256,uint256,bytes32,bool)\" " + std::to_string( amount ) + " " +
+            std::to_string( kGnusTokenId ) + " " + kDestChainId + " " + dest_bytes32 + " " + dest_y_odd +
+            " --unlocked --from " + kAnvilAccount0Address + " --rpc-url " + anvil_rpc_url + " --json 2>&1";
+
+        int         rc     = -1;
+        std::string output = RunShellCapture( cast_cmd, rc );
+        if ( rc != 0 )
+        {
+            spdlog::error( "SendBridgeOutBurn: cast send failed rc={} output={}", rc, output );
+            return {};
+        }
+        const std::string tx_hash = ParseTxHashFromCastJson( output );
+        if ( tx_hash.empty() )
+        {
+            spdlog::error( "SendBridgeOutBurn: could not parse transactionHash from cast output: {}", output );
+            return {};
+        }
+        spdlog::info( "SendBridgeOutBurn: burn tx hash = {}", tx_hash );
+        return tx_hash;
+    }
+
+    /**
      * @brief Funds Anvil account #0 with 1 GNUS (1e18 wei) via anvil_impersonateAccount (D-08/D-09).
      *
      * Impersonates a known Sepolia GNUS holder, sends an ERC-20 transfer(address,uint256)
@@ -231,7 +358,7 @@ namespace sgns::test::anvil
         std::string transfer_cmd = std::string( "cast send " ) + kSepoliaBridgeContractLower +
                                    " \"transfer(address,uint256)\" " + kAnvilAccount0Address +
                                    " 1000000000000000000 --from " + kGnusHolderSepolia +
-                                   " --rpc-url " + anvil_rpc_url + " --json 2>&1";
+                                   " --unlocked --rpc-url " + anvil_rpc_url + " --json 2>&1";
         int transfer_rc = -1;
         RunShellCapture( transfer_cmd, transfer_rc );
         if ( transfer_rc != 0 )
