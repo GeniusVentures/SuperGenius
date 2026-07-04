@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -159,6 +160,27 @@ namespace
         return BytesToHex( decoded );
     }
 
+    /**
+     * @brief Writes a per-node sgns_config.json setting is_processor=false.
+     *
+     * The develop refactor moved is_processor out of the GeniusNode::New() signature into
+     * sgns_config.json (read by GeniusNode::LoadSgnsConfig). All nodes in these E2E fixtures
+     * are non-processors, so each node's BaseWritePath gets this file to preserve the
+     * pre-develop New() isprocessor=false behavior.
+     *
+     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
+     */
+    void WriteSgnsConfig( const std::string &baseWritePath )
+    {
+        constexpr const char *kSgnsConfigContent  = R"({"is_processor": false})";
+        constexpr const char *kSgnsConfigFilename = "sgns_config.json";
+        std::filesystem::create_directories( baseWritePath );
+        const std::string kConfigPath = baseWritePath + kSgnsConfigFilename;
+        std::ofstream     out( kConfigPath, std::ios::binary | std::ios::trunc );
+        out << kSgnsConfigContent;
+        out.close();
+    }
+
 } // namespace
 
 // =============================================================================
@@ -187,12 +209,6 @@ protected:
 
     static sgns::test::anvil::AnvilProcess s_anvil;
 
-    /** @brief Sepolia GNUS contract address (mixed-case EIP-55). */
-    static inline constexpr const char *kSepoliaContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
-
-    /** @brief ERC-1155 safeTransferFrom function selector. */
-    static inline constexpr const char *kTransferSig = "safeTransferFrom(address,address,uint256,uint256,bytes)";
-
     /** @brief Small test mint amount in base units. */
     static inline constexpr uint64_t kMintAmount = 1u;
 
@@ -206,7 +222,8 @@ protected:
     static inline constexpr std::chrono::milliseconds kReplayTimeout{ 5000 };
 
     /** @brief Anvil-path signing key (hex, no 0x prefix) — public test value. */
-    static inline constexpr const char *kAnvilAccount0HexKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    static inline constexpr const char *kAnvilAccount0HexKey =
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
     /**
      * @brief Starts Anvil, funds account #0, and bootstraps the 3-node cluster.
@@ -219,14 +236,26 @@ protected:
     static void TearDownTestSuite();
 };
 
-std::shared_ptr<GeniusNode>            BridgeAnvilE2ETest::node_main  = nullptr;
-std::shared_ptr<GeniusNode>            BridgeAnvilE2ETest::node_proc1 = nullptr;
-std::shared_ptr<GeniusNode>            BridgeAnvilE2ETest::node_proc2 = nullptr;
-sgns::test::anvil::AnvilProcess        BridgeAnvilE2ETest::s_anvil;
+std::shared_ptr<GeniusNode>     BridgeAnvilE2ETest::node_main  = nullptr;
+std::shared_ptr<GeniusNode>     BridgeAnvilE2ETest::node_proc1 = nullptr;
+std::shared_ptr<GeniusNode>     BridgeAnvilE2ETest::node_proc2 = nullptr;
+sgns::test::anvil::AnvilProcess BridgeAnvilE2ETest::s_anvil;
 
-DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./anvil_node1" };
-DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./anvil_node2" };
-DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./anvil_node3" };
+DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG  = { "0xcafe",
+                                                 "0.65",
+                                                 "1.0",
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 "./anvil_node1" };
+DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG2 = { "0xcafe",
+                                                 "0.65",
+                                                 "1.0",
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 "./anvil_node2" };
+DevConfig_st BridgeAnvilE2ETest::DEV_CONFIG3 = { "0xcafe",
+                                                 "0.65",
+                                                 "1.0",
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 "./anvil_node3" };
 
 void BridgeAnvilE2ETest::SetUpTestSuite()
 {
@@ -254,8 +283,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
     {
         s_anvil.Stop();
-        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
-                     << sgns::test::anvil::kGnusHolderSepolia
+        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of " << sgns::test::anvil::kGnusHolderSepolia
                      << " — skipping Anvil path; run Sepolia-direct test instead";
     }
 
@@ -265,10 +293,16 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     DEV_CONFIG2.BaseWritePath = binary_path + "/anvil_node2/";
     DEV_CONFIG3.BaseWritePath = binary_path + "/anvil_node3/";
 
+    // Write per-node sgns_config.json (is_processor=false) — the develop refactor moved
+    // is_processor out of New() into this file. Matches the pre-develop isprocessor=false arg.
+    WriteSgnsConfig( DEV_CONFIG.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG2.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG3.BaseWritePath );
+
     spdlog::info( "bridge_anvil: creating 3-node cluster against local Anvil" );
 
     // Create full node first — it builds the genesis block.
-    node_main = GeniusNode::New( DEV_CONFIG, kAnvilAccount0HexKey, false, false, 40011, true );
+    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, kAnvilAccount0HexKey, false, 40011, true );
 
     // Trigger StoreGenesisRegistry on the full node's address.
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
@@ -283,8 +317,8 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     spdlog::info( "bridge_anvil: node_main READY, creating processor nodes" );
 
     // Regular nodes sync genesis via PubSub (Phase 4 pattern, ports 40012/40013).
-    node_proc1 = GeniusNode::New( DEV_CONFIG2, kAnvilAccount0HexKey, false, false, 40012 );
-    node_proc2 = GeniusNode::New( DEV_CONFIG3, kAnvilAccount0HexKey, false, false, 40013 );
+    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, kAnvilAccount0HexKey, false, 40012 );
+    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, kAnvilAccount0HexKey, false, 40013 );
 
     node_proc1->GetPubSub()->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
@@ -310,7 +344,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         ep.url                     = s_anvil.RpcUrl();
         ep.consensus_weight        = 100;
         ep.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
-        ep.event_topic0            = sgns::test::anvil::kBridgeEventTopic0;
+        ep.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
 
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep };
         node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
@@ -348,20 +382,12 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
     const uint64_t initial_balance = node_main->GetBalance( dest_addr );
     spdlog::info( "bridge_anvil: initial balance = {}", initial_balance );
 
-    // Build cast send command targeting the LOCAL Anvil RPC (D-14 Path A).
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
-                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
-                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() + " --json 2>&1";
-
+    // Send a real bridgeOut() burn targeting the LOCAL Anvil RPC (D-14 Path A).
     spdlog::info( "bridge_anvil: sending burn transaction to local Anvil" );
-    int          cast_rc     = -1;
-    std::string  cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    spdlog::info( "bridge_anvil: cast send output: {}", cast_output );
-    ASSERT_EQ( cast_rc, 0 ) << "cast send failed with exit code " << cast_rc;
-
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    ASSERT_FALSE( tx_hash.empty() ) << "Could not parse transactionHash from cast output";
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), kMintAmount, node_main->GetAddress() );
     spdlog::info( "bridge_anvil: burn tx hash = {}", tx_hash );
+    ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
 
     // Feed burn tx hash into the MintTokens pipeline.
     spdlog::info( "bridge_anvil: triggering MintTokens on node_main" );
@@ -398,19 +424,12 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
  */
 TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
 {
-    const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    const std::string dest_addr   = node_main->GetAddress();
+    const std::string dest_addr = node_main->GetAddress();
 
-    // Send a fresh burn tx to local Anvil.
-    std::string cast_cmd = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " + sender_addr +
-                           " " + sender_addr + " 0 " + std::to_string( kMintAmount ) + " 0x --private-key " +
-                           sgns::test::anvil::kAnvilAccount0PrivateKey + " --rpc-url " + s_anvil.RpcUrl() + " --json 2>&1";
-    int          cast_rc     = -1;
-    std::string  cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    ASSERT_EQ( cast_rc, 0 ) << "cast send failed: " << cast_output;
-
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    ASSERT_FALSE( tx_hash.empty() ) << "Could not parse transactionHash";
+    // Send a fresh bridgeOut() burn tx to local Anvil.
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), kMintAmount, node_main->GetAddress() );
+    ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
     // First mint should succeed.
@@ -491,7 +510,8 @@ protected:
     static inline constexpr const char *kBridgeContractLower = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
 
     /** @brief Bridge event topic0 (BridgeSourceBurned). */
-    static inline constexpr const char *kEventTopic0 = "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
+    static inline constexpr const char *kEventTopic0 =
+        "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62";
 
     /** @brief Mint finalization timeout (Sepolia block confirmation). */
     static inline constexpr std::chrono::milliseconds kMintTimeout{ 10000 };
@@ -518,9 +538,21 @@ std::shared_ptr<GeniusNode> BridgeSepoliaDirectFallbackTest::node_proc1 = nullpt
 std::shared_ptr<GeniusNode> BridgeSepoliaDirectFallbackTest::node_proc2 = nullptr;
 std::string                 BridgeSepoliaDirectFallbackTest::s_eth_private_key;
 
-DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_fb_node1" };
-DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_fb_node2" };
-DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_fb_node3" };
+DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG  = { "0xcafe",
+                                                              "0.65",
+                                                              "1.0",
+                                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                                              "./sepolia_fb_node1" };
+DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG2 = { "0xcafe",
+                                                              "0.65",
+                                                              "1.0",
+                                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                                              "./sepolia_fb_node2" };
+DevConfig_st BridgeSepoliaDirectFallbackTest::DEV_CONFIG3 = { "0xcafe",
+                                                              "0.65",
+                                                              "1.0",
+                                                              sgns::TokenID::FromBytes( { 0x00 } ),
+                                                              "./sepolia_fb_node3" };
 
 void BridgeSepoliaDirectFallbackTest::SetUpTestSuite()
 {
@@ -554,7 +586,8 @@ void BridgeSepoliaDirectFallbackTest::SetUpTestSuite()
     // D-16: cast binary required.
     if ( !sgns::test::anvil::CastAvailable() )
     {
-        GTEST_SKIP() << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
+        GTEST_SKIP()
+            << "cast binary not found — install Foundry: https://book.getfoundry.sh/getting-started/installation";
     }
 
     // Per-node BaseWritePath.
@@ -563,10 +596,16 @@ void BridgeSepoliaDirectFallbackTest::SetUpTestSuite()
     DEV_CONFIG2.BaseWritePath = binary_path + "/sepolia_fb_node2/";
     DEV_CONFIG3.BaseWritePath = binary_path + "/sepolia_fb_node3/";
 
+    // Write per-node sgns_config.json (is_processor=false) — the develop refactor moved
+    // is_processor out of New() into this file. Matches the pre-develop isprocessor=false arg.
+    WriteSgnsConfig( DEV_CONFIG.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG2.BaseWritePath );
+    WriteSgnsConfig( DEV_CONFIG3.BaseWritePath );
+
     spdlog::info( "bridge_sepolia_fb: creating 3-node cluster against live Sepolia" );
 
     // Full node first (creates genesis). Ports 40021/40022/40023.
-    node_main = GeniusNode::New( DEV_CONFIG, s_eth_private_key.c_str(), false, false, 40021, true );
+    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, s_eth_private_key.c_str(), false, 40021, true );
 
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
     spdlog::info( "bridge_sepolia_fb: authorized full node = {}", node_main->GetAddress().substr( 0, 16 ) );
@@ -576,8 +615,8 @@ void BridgeSepoliaDirectFallbackTest::SetUpTestSuite()
                                "node_main READY",
                                nullptr );
 
-    node_proc1 = GeniusNode::New( DEV_CONFIG2, s_eth_private_key.c_str(), false, false, 40022 );
-    node_proc2 = GeniusNode::New( DEV_CONFIG3, s_eth_private_key.c_str(), false, false, 40023 );
+    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, s_eth_private_key.c_str(), false, 40022 );
+    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, s_eth_private_key.c_str(), false, 40023 );
 
     node_proc1->GetPubSub()->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
@@ -609,7 +648,7 @@ void BridgeSepoliaDirectFallbackTest::SetUpTestSuite()
             ep.url                     = url;
             ep.consensus_weight        = 25;
             ep.bridge_contract_address = kBridgeContractLower;
-            ep.event_topic0            = kEventTopic0;
+            ep.accepted_topic0_hashes  = { kEventTopic0 };
             sepolia_eps.push_back( ep );
         }
         node_main->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, sepolia_eps );
@@ -665,8 +704,8 @@ TEST_F( BridgeSepoliaDirectFallbackTest, BurnToMintPipeline )
                            s_eth_private_key + " --rpc-url " + kSepoliaRpc + " --json 2>&1";
 
     spdlog::info( "bridge_sepolia_fb: sending burn transaction to live Sepolia" );
-    int          cast_rc     = -1;
-    std::string  cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
+    int         cast_rc     = -1;
+    std::string cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
     spdlog::info( "bridge_sepolia_fb: cast send output: {}", cast_output );
     ASSERT_EQ( cast_rc, 0 ) << "cast send failed: " << cast_output;
 
