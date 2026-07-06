@@ -2748,7 +2748,14 @@ namespace sgns
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
-        rpc_endpoint_provider_->AddObserver( *this );
+        rpc_endpoint_provider_->AddObserverCallback(
+            [weak_self = weak_from_this()]( std::vector<ChainContractPair> chains )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->OnRpcEndpointsReady( std::move( chains ) );
+                }
+            } );
         if ( bridge_relayer_ )
         {
             rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
@@ -2776,14 +2783,11 @@ namespace sgns
                             relayer  = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
-                               if ( !strong )
-                               {
-                                   return;
-                               }
-                               if ( strong->bridge_init_generation_.load() != generation )
+                               if ( !strong || strong->bridge_init_generation_.load() != generation )
                                {
                                    return; // account switched — stale init, abort
                                }
+                               strong.reset();
                                if ( !tx_mgr || !provider )
                                {
                                    return;
