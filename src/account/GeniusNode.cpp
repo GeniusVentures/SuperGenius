@@ -817,7 +817,7 @@ namespace sgns
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::debug );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
