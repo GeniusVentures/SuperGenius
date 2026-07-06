@@ -1179,9 +1179,31 @@ namespace sgns
                 crdt::KeyPairFileStorage( write_base_path_ + pubsubKeyPath ).GetKeyPair().value(),
                 config );
 
-            auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
-            pubs.wait();
-            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
+            auto pubs               = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
+            if ( auto pubsub_start_error = pubs.get(); pubsub_start_error )
+            {
+                node_logger_->error( "PubSub failed to start on {}:{}: {}",
+                                     pubsub_bind_address,
+                                     pubsubport_,
+                                     pubsub_start_error.message() );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+
+            auto pubsub_interface_address = pubsub_->GetInterfaceAddress();
+            if ( pubsub_interface_address.empty() )
+            {
+                node_logger_->error( "PubSub started without an interface address on {}:{}",
+                                     pubsub_bind_address,
+                                     pubsubport_ );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+            node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
 
             if ( upnp_enabled )
             {
