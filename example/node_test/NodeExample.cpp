@@ -523,10 +523,8 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
-    // network_config.json: port_seed + auto_dht (no shipped network_config.json, so write it).
-    // node_type/is_processor come from the shipped sgns_config.json (operator-managed, like a real deployment).
-    sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40101, /*auto_dht=*/true );
-
+    // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
+    // the shipped network_config.json (both operator-managed, like a real deployment).
     auto node_instance =
         sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
 
