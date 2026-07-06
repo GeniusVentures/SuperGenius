@@ -41,12 +41,23 @@ protected:
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
 
-        DEV_CONFIG.BaseWritePath  = ( binary_path + "/node1/" );
-        DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
-        DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
+        DEV_CONFIG.BaseWritePath  = ( binary_path + "/pnt_node1/" );
+        DEV_CONFIG2.BaseWritePath = ( binary_path + "/pnt_node2/" );
+        DEV_CONFIG3.BaseWritePath = ( binary_path + "/pnt_node3/" );
+
+        auto prepare_node_dir = []( const std::string &path )
+        {
+            std::filesystem::remove_all( path );
+            std::filesystem::create_directories( path );
+            std::ofstream bridge_config_file( path + "bridge_chains_config.json" );
+            bridge_config_file << "{}";
+        };
+
+        prepare_node_dir( DEV_CONFIG.BaseWritePath );
+        prepare_node_dir( DEV_CONFIG2.BaseWritePath );
+        prepare_node_dir( DEV_CONFIG3.BaseWritePath );
 
         // node_main: non-processor, light node. Config-driven construction (Phase 3).
-        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
 
