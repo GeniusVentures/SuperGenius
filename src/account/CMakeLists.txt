@@ -122,16 +122,16 @@ set(GENIUS_NODE_LIBS
     evmrelay
     sgns_genius_account
 )
+
+
+# Production library — uses OS keychain (Apple/Windows/Linux secure storage)
+add_library(genius_node ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
 target_include_directories(
     genius_node
     PRIVATE
     ${AsyncIOManager_INCLUDE_DIR}
 )
-
-# Production library — uses OS keychain (Apple/Windows/Linux secure storage)
-add_library(genius_node ${GENIUS_NODE_SOURCES})
-target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
-
 # Test library — uses in-memory secure storage via DI factory (no keychain prompts)
 add_library(genius_node_test ${GENIUS_NODE_SOURCES})
 target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
