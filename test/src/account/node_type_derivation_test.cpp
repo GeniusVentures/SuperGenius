@@ -1,6 +1,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
@@ -32,6 +33,15 @@ namespace
         boost::filesystem::create_directories( path );
         return path;
     }
+
+    // In-memory secure storage (no file/platform keychain access) — must be set before any
+    // GeniusNode construction so account creation uses the test backend.
+    void UseMemorySecureStorage()
+    {
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+    }
 } // namespace
 
 // Scene A (CONTEXT D-02/CFG-03): the new canonical factory derives is_full_node_ from the
@@ -40,6 +50,7 @@ namespace
 // body before New() returns, so it is observable immediately (no READY wait needed).
 TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 {
+    UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_derivation" );
     const auto   dev_config = MakeDevConfig( base );
     GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true );
@@ -57,6 +68,7 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 // std::visit returns nullptr -> ctor throws "Account creation failed" -> New() catches -> nullptr.
 TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
 {
+    UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_failure" );
     const auto   dev_config = MakeDevConfig( base );
     GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );

@@ -117,7 +117,7 @@ addtest(network_config_precedence_test
     network_config_precedence_test.cpp
 )
 
-target_link_libraries(network_config_precedence_test genius_node)
+target_link_libraries(network_config_precedence_test genius_node json_secure_storage)
 
 if(MSVC)
     target_link_options(network_config_precedence_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
@@ -135,7 +135,7 @@ addtest(node_type_derivation_test
     node_type_derivation_test.cpp
 )
 
-target_link_libraries(node_type_derivation_test genius_node)
+target_link_libraries(node_type_derivation_test genius_node json_secure_storage)
 
 if(MSVC)
     target_link_options(node_type_derivation_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)

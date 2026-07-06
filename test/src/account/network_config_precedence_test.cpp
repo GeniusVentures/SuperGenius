@@ -1,7 +1,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
-
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
@@ -35,6 +35,15 @@ namespace
         boost::filesystem::create_directories( path );
         return path;
     }
+
+    // In-memory secure storage (no file/platform keychain access) — must be set before any
+    // GeniusNode construction so account creation uses the test backend.
+    void UseMemorySecureStorage()
+    {
+        GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+    }
 } // namespace
 
 // Scene A (reframed in Phase 3): the canonical New(dev_config, AccountSource) factory has no
@@ -42,6 +51,7 @@ namespace
 // constructing via New proves the resolved autodht_ is config-driven (false).
 TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 {
+    UseMemorySecureStorage();
     auto base = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
@@ -64,6 +74,7 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 // config-driven at 49999. Single construction avoids second-port-bind flakiness.
 TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
 {
+    UseMemorySecureStorage();
     auto base = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/49999, /*auto_dht=*/false );
