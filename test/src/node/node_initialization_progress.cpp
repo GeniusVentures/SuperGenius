@@ -13,7 +13,7 @@ using namespace sgns;
 
 TEST( GeniusNode, InitializationProgress )
 {
-    boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    boost::filesystem::path path = boost::dll::program_location().parent_path() / "init_progress_node";
 
     try
     {
