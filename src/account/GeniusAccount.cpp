@@ -1268,13 +1268,22 @@ namespace sgns
 
     void GeniusAccount::SetNonceStore( std::shared_ptr<storage::rocksdb> db )
     {
-        nonce_db_ = std::move( db );
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db_ = std::move( db );
+        }
         LoadConfirmedNonces();
     }
 
     void GeniusAccount::LoadConfirmedNonces()
     {
-        if ( !nonce_db_ )
+        std::shared_ptr<storage::rocksdb> nonce_db;
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db = nonce_db_;
+        }
+
+        if ( !nonce_db )
         {
             return;
         }
@@ -1283,7 +1292,7 @@ namespace sgns
 
         base::Buffer prefix;
         prefix.put( std::string( NONCE_KEY_PREFIX ) );
-        auto query_res = nonce_db_->query( prefix );
+        auto query_res = nonce_db->query( prefix );
         if ( query_res.has_error() )
         {
             return;
@@ -1319,7 +1328,7 @@ namespace sgns
         std::deque<ConfirmedTxRecord> local_history;
         base::Buffer                  local_history_key;
         local_history_key.put( std::string( LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX ) + self_address );
-        if ( auto local_history_res = nonce_db_->get( local_history_key ); local_history_res.has_value() )
+        if ( auto local_history_res = nonce_db->get( local_history_key ); local_history_res.has_value() )
         {
             local_history = DeserializeConfirmedTxHistory( std::string( local_history_res.value().toString() ) );
         }
@@ -1345,7 +1354,13 @@ namespace sgns
 
     void GeniusAccount::PersistConfirmedNonce( const std::string &address, uint64_t nonce )
     {
-        if ( !nonce_db_ )
+        std::shared_ptr<storage::rocksdb> nonce_db;
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db = nonce_db_;
+        }
+
+        if ( !nonce_db )
         {
             return;
         }
@@ -1355,7 +1370,7 @@ namespace sgns
 
         base::Buffer nonce_value;
         nonce_value.put( std::to_string( nonce ) );
-        auto nonce_put_res = nonce_db_->put( nonce_key, nonce_value );
+        auto nonce_put_res = nonce_db->put( nonce_key, nonce_value );
         if ( nonce_put_res.has_error() )
         {
             genius_account_logger()->error( "Failed to persist nonce for {:.8}", address );
@@ -1377,7 +1392,7 @@ namespace sgns
 
         base::Buffer history_value;
         history_value.put( SerializeConfirmedTxHistory( history_copy ) );
-        auto history_put_res = nonce_db_->put( history_key, history_value );
+        auto history_put_res = nonce_db->put( history_key, history_value );
         if ( history_put_res.has_error() )
         {
             genius_account_logger()->error( "Failed to persist confirmed tx history for {}", address.substr( 0, 8 ) );
