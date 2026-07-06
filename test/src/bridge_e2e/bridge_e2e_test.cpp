@@ -293,7 +293,9 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Create the full node FIRST — it will create the genesis block.
     // Pattern from blockchain_genesis_test.cpp: WithAuthorizationCanSync
-    node_main = GeniusNode::NewFromPrivateKey( DEV_CONFIG, s_eth_private_key.c_str(), false, 40001, true );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    node_main = GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ s_eth_private_key } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
@@ -310,10 +312,14 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Create regular nodes — they will sync genesis from node_main via PubSub.
     // is_processor=false matches the blockchain_genesis_test.cpp pattern.
-    node_proc1 = GeniusNode::NewFromPrivateKey( DEV_CONFIG2, s_eth_private_key.c_str(), false, 40002 );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40002, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    node_proc1 = GeniusNode::New( DEV_CONFIG2, sgns::FromPrivateKey{ s_eth_private_key } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    node_proc2 = GeniusNode::NewFromPrivateKey( DEV_CONFIG3, s_eth_private_key.c_str(), false, 40003 );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40003, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    node_proc2 = GeniusNode::New( DEV_CONFIG3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub — match blockchain_genesis_test pattern
     node_proc1->GetPubSub()->AddPeers(
