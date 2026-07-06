@@ -68,7 +68,7 @@ namespace sgns
                 return false;
             }
 
-            std::string json_text( std::istreambuf_iterator<char>( file ), std::istreambuf_iterator<char>() );
+            std::string json_text{ std::istreambuf_iterator<char>( file ), std::istreambuf_iterator<char>() };
             file.close();
 
             if ( json_text.empty() )

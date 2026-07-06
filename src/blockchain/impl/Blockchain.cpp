@@ -140,7 +140,7 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                    (void) strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
@@ -195,11 +195,19 @@ namespace sgns
                     {
                         return outcome::success();
                     }
-                    auto proposal_result = strong->consensus_manager_->CreateProposal(
-                        subject,
-                        strong->account_->GetAddress(),
-                        strong->validator_registry_->GetRegistryCid(),
-                        strong->validator_registry_->GetRegistryEpoch() );
+                    std::string registry_cid   = strong->validator_registry_->GetRegistryCid();
+                    uint64_t    registry_epoch = strong->validator_registry_->GetRegistryEpoch();
+                    auto        batch_payload  = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                    // In case the batch has already started, use the current CID and epoch
+                    if ( batch_payload.has_value() )
+                    {
+                        registry_cid   = batch_payload.value().base_registry_cid();
+                        registry_epoch = batch_payload.value().base_registry_epoch();
+                    }
+                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
+                                                                                       strong->account_->GetAddress(),
+                                                                                       registry_cid,
+                                                                                       registry_epoch );
                     if ( proposal_result.has_error() )
                     {
                         return outcome::failure( proposal_result.error() );
@@ -420,7 +428,7 @@ namespace sgns
             blockchain_logger()->debug( "{}: Genesis CID: {}", __func__, genesis_cid.value().toString() );
             crdt::GlobalDB::Buffer genesis_cid_value;
             genesis_cid_value.putBuffer( genesis_cid.value() );
-            (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
+            (void) new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
             BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
         }
 
@@ -434,7 +442,7 @@ namespace sgns
             {
                 blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
 
-                (void)new_store->put( entry.first, entry.second );
+                (void) new_store->put( entry.first, entry.second );
                 BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
             }
         }
@@ -576,7 +584,7 @@ namespace sgns
                                         key_str );
                         continue;
                     }
-                    (void)InitAccountCreationCID( address );
+                    (void) InitAccountCreationCID( address );
                 }
             }
 
@@ -1022,8 +1030,8 @@ namespace sgns
             logger_->error( "[{}] Failed to store genesis CID, rolling back genesis block",
                             account_->GetAddress().substr( 0, 8 ) );
 
-            (void)db_->Remove( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ),
-                               { std::string( BLOCKCHAIN_TOPIC ) } );
+            (void) db_->Remove( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ),
+                                { std::string( BLOCKCHAIN_TOPIC ) } );
 
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
@@ -1474,8 +1482,8 @@ namespace sgns
                 break;
             }
 
-            const bool existing_genesis_ok = !genesis_known ||
-                                             existing_block.genesis_block_cid() == cids_.genesis_.value();
+            const bool existing_genesis_ok   = !genesis_known ||
+                                               existing_block.genesis_block_cid() == cids_.genesis_.value();
             const bool existing_signature_ok = VerifySignature( existing_block );
 
             if ( !( existing_genesis_ok && existing_signature_ok ) )
@@ -1687,14 +1695,13 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( subject_type );
     }
 
-    bool Blockchain::RegisterProposalCleanupHandler( std::string_view                             subject_type,
-                                                       ConsensusManager::ProposalCleanupHandler     handler )
+    bool Blockchain::RegisterProposalCleanupHandler( std::string_view                         subject_type,
+                                                     ConsensusManager::ProposalCleanupHandler handler )
     {
         return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
     }
 
-    void Blockchain::RegisterSlotKeyHandler( std::string_view                    subject_type,
-                                             ConsensusManager::SlotKeyHandler     handler )
+    void Blockchain::RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler )
     {
         ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
     }
@@ -1712,8 +1719,12 @@ namespace sgns
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, transaction,
-                                                       utxo_commitment, utxo_witness );
+        return ConsensusManager::CreateNonceSubject( account_id,
+                                                     nonce,
+                                                     tx_hash,
+                                                     transaction,
+                                                     utxo_commitment,
+                                                     utxo_witness );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
@@ -1724,9 +1735,9 @@ namespace sgns
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        BOOST_OUTCOME_TRY( auto &&nonce_subject,
-                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, transaction,
-                                                        utxo_commitment, utxo_witness ) );
+        BOOST_OUTCOME_TRY(
+            auto &&nonce_subject,
+            CreateConsensusNonceSubject( account_id, nonce, tx_hash, transaction, utxo_commitment, utxo_witness ) );
         BOOST_OUTCOME_TRY( auto &&nonce_proposal,
                            consensus_manager_->CreateProposal( nonce_subject,
                                                                account_id,
