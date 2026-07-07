@@ -884,8 +884,7 @@ namespace sgns
             return outcome::success( BatchSubjectDecision::Pending );
         }
 
-        if ( registry_result.value().epoch() != payload.base_registry_epoch() ||
-             GetRegistryCid() != payload.base_registry_cid() )
+        if ( registry_result.value().epoch() != payload.base_registry_epoch() )
         {
             return outcome::success( BatchSubjectDecision::Reject );
         }
@@ -904,15 +903,7 @@ namespace sgns
             {
                 return BatchCertificateDecision::Approve;
             }
-        }
-
-        auto current_registry_result = LoadRegistry();
-        if ( current_registry_result.has_error() ||
-             !ValidateCertificate( certificate, current_registry_result.value() ) )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
+            applying_batch_subject_ids_.insert( subject_hash );
         }
 
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
@@ -922,8 +913,24 @@ namespace sgns
             applying_batch_subject_ids_.erase( subject_hash );
             return BatchCertificateDecision::Reject;
         }
-        const auto &payload         = payload_result.value();
-        auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
+
+        const auto &payload              = payload_result.value();
+        auto        base_registry_result = LoadRegistryByCid( payload.base_registry_cid() );
+        if ( base_registry_result.has_error() )
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Stalled;
+        }
+        if ( base_registry_result.value().epoch() != payload.base_registry_epoch() ||
+             !ValidateCertificate( certificate, base_registry_result.value(), payload.base_registry_cid() ) )
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Reject;
+        }
+
+        auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
                                                     payload.base_registry_epoch(),
                                                     payload.certificate_count(),
                                                     std::string( payload.batch_root() ) );
@@ -932,14 +939,6 @@ namespace sgns
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             applying_batch_subject_ids_.erase( subject_hash );
             return BatchCertificateDecision::Reject;
-        }
-
-        auto base_registry_result = LoadRegistry( payload.base_registry_cid() );
-        if ( base_registry_result.has_error() )
-        {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Stalled;
         }
 
         std::vector<sgns::ConsensusCertificate> certificates;
@@ -1088,8 +1087,9 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        RegistryUpdate  update      = decoded_update.value();
-        const Registry *current_ptr = nullptr;
+        RegistryUpdate          update = decoded_update.value();
+        std::optional<Registry> current_registry;
+        const Registry         *current_ptr = nullptr;
 
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
@@ -1123,6 +1123,24 @@ namespace sgns
 
         {
             std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
+            if ( cached_registry_ )
+            {
+                const auto current_epoch           = cached_registry_->epoch();
+                const auto incoming_epoch          = decoded.value().registry().epoch();
+                const bool same_epoch_noncanonical = incoming_epoch == current_epoch && !cached_registry_id_.empty() &&
+                                                     cached_registry_id_ <= cid;
+                if ( incoming_epoch < current_epoch || same_epoch_noncanonical )
+                {
+                    logger_->debug(
+                        "{}: ignoring non-canonical registry update cid={} epoch={} current_cid={} current_epoch={}",
+                        __func__,
+                        cid,
+                        incoming_epoch,
+                        cached_registry_id_,
+                        current_epoch );
+                    return;
+                }
+            }
             cached_update_      = decoded.value();
             cached_registry_    = decoded.value().registry();
             cached_registry_id_ = cid;
@@ -1222,9 +1240,9 @@ namespace sgns
             }
 
             Registry expected;
-            auto     batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
-                                         ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
-                                         : outcome::failure( std::errc::invalid_argument );
+            auto batch_payload = certificate.has_proposal() && certificate.proposal().has_subject()
+                                     ? ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() )
+                                     : outcome::failure( std::errc::invalid_argument );
             if ( batch_payload.has_value() )
             {
                 const auto &payload = batch_payload.value();
@@ -1325,36 +1343,11 @@ namespace sgns
                 return false;
             }
 
-            const std::string prev_registry_cid = update.prev_registry_hash();
-            std::string       current_id;
-            {
-                std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
-                current_id = cached_registry_id_;
-            }
-            if ( current_id.empty() || prev_registry_cid != current_id )
-            {
-                logger_->error( "{}: prev registry CID mismatch", __func__ );
-                return false;
-            }
-
             logger_->info( "{}: certificate-based update verified", __func__ );
             return true;
         }
 
-        const std::string prev_registry_cid = update.prev_registry_hash();
-        std::string       current_id;
-        {
-            std::shared_lock lock( cache_mutex_ );
-            current_id = cached_registry_id_;
-        }
-        if ( current_id.empty() || prev_registry_cid != current_id )
-        {
-            //TODO - Check if the CID checking is necessary, because we could receive out-of-order updates
-            logger_->error( "{}: prev registry CID mismatch", __func__ );
-            return false;
-        }
-
-        if ( update.registry().epoch() != current_registry->epoch() + 1 )
+        if ( update.registry().epoch() != base_registry->epoch() + 1 )
         {
             logger_->error( "{}: epoch not next expected", __func__ );
             return false;
