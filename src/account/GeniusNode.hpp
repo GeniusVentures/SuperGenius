@@ -79,10 +79,25 @@ namespace sgns
      * variant is stored or passed. TokenID and other dev_config fields are NOT part of
      * the variant; they come from dev_config.
      */
-    struct NewAccount {};                                   ///< Generate a new identity.
-    struct FromPrivateKey { std::string eth_private_key; }; ///< Restore from an Ethereum hex private key.
-    struct FromMnemonic   { std::string mnemonic; };        ///< Restore from a BIP39 mnemonic.
-    struct FromPublicKey  { std::string public_address; };  ///< Load from storage by public address (read-only).
+    struct IN_PROGRESS
+    {
+    }; ///< Generate a new identity.
+
+    struct FromPrivateKey
+    {
+        std::string eth_private_key;
+    }; ///< Restore from an Ethereum hex private key.
+
+    struct FromMnemonic
+    {
+        std::string mnemonic;
+    }; ///< Restore from a BIP39 mnemonic.
+
+    struct FromPublicKey
+    {
+        std::string public_address;
+    }; ///< Load from storage by public address (read-only).
+
     using AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>;
 
     /**
@@ -92,7 +107,6 @@ namespace sgns
     class GeniusNode : public IComponent, public IBridgeInitObserver, public std::enable_shared_from_this<GeniusNode>
     {
     public:
-
         /**
          * @brief Canonical node factory (INTF-01). Account identity is chosen via
          *        AccountSource; node role (is_full_node_) is derived from node_type in
@@ -103,8 +117,7 @@ namespace sgns
          * @return Shared node instance after asynchronous DB init is scheduled, or nullptr
          *         on account-restore or initialization failure (D-04).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
-                                                AccountSource       source );
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config, AccountSource source );
 
         /**
          * @brief Writes a minimal network_config.json for test/example setup (MIG-02).
@@ -114,8 +127,8 @@ namespace sgns
          * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file (deterministic minimal config).
          */
         static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
-                                                        uint16_t            port_seed,
-                                                        bool                auto_dht );
+                                                         uint16_t           port_seed,
+                                                         bool               auto_dht );
 
         /**
          * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
@@ -712,42 +725,43 @@ namespace sgns
         std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
-        std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
-        std::shared_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
-        std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
-        std::vector<std::string>                             my_task_ids_;         ///< Recent task IDs submitted by this node (capped in memory).
-        static constexpr size_t                              kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
+        std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
+        std::shared_ptr<BridgeRelayer>                   bridge_relayer_;    ///< Bridge burn→mint relayer.
+        std::shared_ptr<processing::ProcessingTaskQueue> task_queue_;        ///< Processing task queue.
+        std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
+        static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                                     is_full_node_ = false;   ///< Whether this node runs in full-node mode.
-        NodeType                                 node_type_ = NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
-        base::Logger                   node_logger_;               ///< Main node logger.
-        DevConfig_st                   dev_config_;                ///< Runtime node configuration.
-        bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
-        bool                           catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
+        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
+        NodeType node_type_ =
+            NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
+        base::Logger node_logger_; ///< Main node logger.
+        DevConfig_st dev_config_;  ///< Runtime node configuration.
+        bool         catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
+        bool         catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
         /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
-        mutable std::mutex             catchup_mutex_;
+        mutable std::mutex catchup_mutex_;
         std::shared_ptr<ChainRpcEndpointProvider>
-                                            rpc_endpoint_provider_;    ///< Shared so the posted Initialize() job can hold it across an account switch.
+            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
         /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t>          bridge_init_generation_{ 0 };
-        std::string                         gnus_network_full_path_;   ///< Versioned network DB path.
-        std::string                         processing_channel_topic_; ///< Processing task channel topic.
-        std::string                         processing_grid_chanel_topic_; ///< Processing grid topic.
-        std::vector<std::string>            bootstrap_peers_;
-        uint16_t                       subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
-        std::vector<std::string>            bootstrap_fullnodes_;
-        std::vector<libp2p::peer::PeerInfo> bootstrap_fullnode_infos_;
+        std::atomic<uint64_t>                    bridge_init_generation_{ 0 };
+        std::string                              gnus_network_full_path_;       ///< Versioned network DB path.
+        std::string                              processing_channel_topic_;     ///< Processing task channel topic.
+        std::string                              processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                 bootstrap_peers_;
+        uint16_t                                 subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
+        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
