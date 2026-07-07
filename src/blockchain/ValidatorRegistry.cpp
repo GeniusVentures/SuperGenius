@@ -767,30 +767,24 @@ namespace sgns
         return certificate;
     }
 
-    void ValidatorRegistry::OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate )
+    outcome::result<void> ValidatorRegistry::OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate )
     {
         if ( !certificate.has_proposal() )
         {
-            return;
-        }
-        if ( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
-        {
-            return;
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto subject_hash_result = ExtractConsensusSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash_result.has_error() )
-        {
-            return;
-        }
+        BOOST_OUTCOME_TRY( ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() ) );
+
+        BOOST_OUTCOME_TRY( auto subject_hash_result, ExtractConsensusSubjectHash( certificate.proposal().subject() ) );
 
         const auto key = BuildBatchKey( certificate.registry_cid(), certificate.registry_epoch() );
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            pending_certificate_subjects_by_base_[key].insert( subject_hash_result.value() );
+            pending_certificate_subjects_by_base_[key].insert( subject_hash_result );
         }
 
-        (void)TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
+        return TryCreateAndSubmitBatchProposal( certificate.registry_cid(), certificate.registry_epoch() );
     }
 
     outcome::result<void> ValidatorRegistry::TryCreateAndSubmitBatchProposal( const std::string &base_registry_cid,
@@ -808,9 +802,14 @@ namespace sgns
             return outcome::success();
         }
 
-        if ( GetRegistryCid() != base_registry_cid || GetRegistryEpoch() != base_registry_epoch )
+        auto base_registry_result = LoadRegistryByCid( base_registry_cid );
+        if ( base_registry_result.has_error() )
         {
-            return outcome::failure( std::errc::operation_canceled );
+            return outcome::failure( base_registry_result.error() );
+        }
+        if ( base_registry_result.value().epoch() != base_registry_epoch )
+        {
+            return outcome::failure( std::errc::invalid_argument );
         }
 
         auto selected_result = SelectBatchSubjects( base_registry_cid,
@@ -867,9 +866,9 @@ namespace sgns
 
         const auto &payload         = payload_result.value();
         auto        selected_result = SelectBatchSubjects( payload.base_registry_cid(),
-                                                    payload.base_registry_epoch(),
-                                                    payload.certificate_count(),
-                                                    std::string( payload.batch_root() ) );
+                                                           payload.base_registry_epoch(),
+                                                           payload.certificate_count(),
+                                                           std::string( payload.batch_root() ) );
         if ( selected_result.has_error() )
         {
             if ( selected_result.error() == std::errc::resource_unavailable_try_again )

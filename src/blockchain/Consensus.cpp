@@ -1420,7 +1420,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto registry_result = registry_->LoadRegistry( proposal.registry_cid() );
+        auto registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( registry_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: registry load error={} cid={}",
@@ -1628,7 +1628,7 @@ namespace sgns
             return;
         }
 
-        auto proposal_registry_result = registry_->LoadRegistry( proposal.registry_cid() );
+        auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
             ConsensusManagerLogger()->warn(
@@ -1896,7 +1896,7 @@ namespace sgns
                     round );
                 continue;
             }
-            auto proposal_registry_result = registry_->LoadRegistry( state.proposal.registry_cid() );
+            auto proposal_registry_result = registry_->LoadRegistryByCid( state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry load error={} proposal_id={}",
@@ -2159,7 +2159,7 @@ namespace sgns
                                              certificate.proposal_id() );
             return Check::Reject;
         }
-        auto registry_ret = registry_->LoadRegistry( certificate.registry_cid() );
+        auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
         if ( registry_ret.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
@@ -2294,7 +2294,7 @@ namespace sgns
                 return;
             }
 
-            auto proposal_registry_result = registry_->LoadRegistry( proposal_state.proposal.registry_cid() );
+            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal_state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->warn( "{}: deferred vote: registry load error={} proposal_id={}",
