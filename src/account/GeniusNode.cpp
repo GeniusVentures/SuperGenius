@@ -2493,9 +2493,10 @@ namespace sgns
     std::string GeniusNode::GetAddress() const
     {
         std::string address = "UNVAILABLE";
-        if ( account_ )
+        auto        account = account_;
+        if ( account )
         {
-            address = account_->GetAddress();
+            address = account->GetAddress();
         }
         return address;
     }
