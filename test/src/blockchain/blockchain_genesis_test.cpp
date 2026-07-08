@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <iostream>
 #include <cstdint>
@@ -62,13 +61,7 @@ protected:
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
 
         // Generate deterministic key from self_address
         std::string key;
@@ -90,7 +83,9 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;

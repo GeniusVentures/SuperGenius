@@ -8,6 +8,8 @@
 #include <deque>
 #include <condition_variable>
 #include <algorithm>
+#include <chrono>
+#include <cstdint>
 
 namespace
 {
@@ -233,6 +235,9 @@ namespace sgns::crdt
 
             ClearRequestStatus( cid );
             BOOST_OUTCOME_TRY( auto subscription, RequestNode( peerID, address, cid ) );
+            const auto    request_start_time      = std::chrono::steady_clock::now();
+            auto          next_in_progress_log_at = request_start_time + std::chrono::seconds( 30 );
+            std::uint64_t in_progress_checks      = 0;
 
             while ( true )
             {
@@ -345,6 +350,22 @@ namespace sgns::crdt
                     case Graphsync::RequestState::IN_PROGRESS:
                     {
                         // Still in progress, keep waiting
+                        ++in_progress_checks;
+                        const auto now = std::chrono::steady_clock::now();
+                        if ( now >= next_in_progress_log_at )
+                        {
+                            const auto elapsed_seconds =
+                                std::chrono::duration_cast<std::chrono::seconds>( now - request_start_time ).count();
+                            logger_->debug( "Request for CID {} from peer {} still IN_PROGRESS after {}s "
+                                            "(checks={}, stopped={}, instance={})",
+                                            cid.toString().value(),
+                                            peerID.toBase58(),
+                                            elapsed_seconds,
+                                            in_progress_checks,
+                                            is_stopped_.load(),
+                                            reinterpret_cast<size_t>( this ) );
+                            next_in_progress_log_at = now + std::chrono::seconds( 30 );
+                        }
                         logger_->trace( "Request for CID {} from peer {} - In Progress",
                                         cid.toString().value(),
                                         peerID.toBase58() );
@@ -1201,6 +1222,7 @@ namespace sgns::crdt
         logger_->debug( "Stopping Dagsyncer" );
         is_stopped_ = true;
         graphsync_->stop();
+        logger_->debug( "Dagsyncer Stopped" );
     }
 
 }

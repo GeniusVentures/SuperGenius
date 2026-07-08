@@ -4,7 +4,6 @@
 #include <atomic>
 #include <ctime>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <map>
 #include <ostream>
@@ -55,14 +54,6 @@ namespace
         DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
-        }
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "network_config.json" );
-            configFile << R"({"pubsub_port": ")" << uniquePort << R"("})";
-        }
 
         std::string key;
         key.reserve( 64 );
@@ -77,7 +68,9 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        auto node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor );
+        auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         if ( setAsAuthorized )
         {

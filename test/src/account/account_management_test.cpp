@@ -37,21 +37,16 @@ public:
         // All nodes in this test are non-processors.
         // is_processor is now read exclusively from sgns_config.json (defaults to true).
         boost::filesystem::create_directories( path );
-        {
-            std::ofstream configFile( path.generic_string() + "/sgns_config.json" );
-            configFile << R"({"is_processor": true})";
-        }
+        sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/40069, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/', /*node_type=*/"Full", /*is_processor=*/true );
 
 
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-        node_ = sgns::GeniusNode::NewFromPrivateKey( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
-                                                     "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
-                                                     false,
-                                                     40069,
-                                                     true );
+        node_ = sgns::GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
+                                       sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
         test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
@@ -126,24 +121,18 @@ TEST_F( AccountManagement, SetPayoutAddress )
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
     boost::filesystem::create_directories( path_receiver );
-    {
-        std::ofstream configFile( path_receiver.generic_string() + "/sgns_config.json" );
-        configFile << R"({"is_processor": false})";
-    }
+    sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/', /*port_seed=*/40001, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( path_receiver.generic_string() + '/', /*node_type=*/"Light", /*is_processor=*/false );
     boost::filesystem::create_directories( path_requester );
-    {
-        std::ofstream configFile( path_requester.generic_string() + "/sgns_config.json" );
-        configFile << R"({"is_processor": false})";
-    }
+    sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/', /*port_seed=*/40001, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( path_requester.generic_string() + '/', /*node_type=*/"Light", /*is_processor=*/false );
 
-    auto node_receiver = sgns::GeniusNode::NewFromPrivateKey(
+    auto node_receiver = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
-        "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f",
-        false );
-    auto node_requester = sgns::GeniusNode::NewFromPrivateKey(
+        sgns::FromPrivateKey{ "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f" } );
+    auto node_requester = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
-        "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0",
-        false );
+        sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
 
     node_->GetPubSub()->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
