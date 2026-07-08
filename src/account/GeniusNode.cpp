@@ -10,6 +10,7 @@
 #include <thread>
 #include <memory>
 #include <random>
+#include <cctype>
 #include <filesystem>
 #include <set>
 
@@ -17,6 +18,7 @@
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
@@ -97,6 +99,25 @@ namespace
         }
         return "UNKNOWN";
     }
+
+    // Case-insensitive parse of the "node_type" sgns_config.json value (CONTEXT D-02).
+    // Returns nullopt for unrecognized values; the caller (LoadSgnsConfig) WARN-logs + defaults to Light.
+    std::optional<sgns::GeniusNode::NodeType> NodeTypeFromString( std::string_view s )
+    {
+        std::string lower;
+        lower.reserve( s.size() );
+        for ( char c : s )
+        {
+            lower.push_back( static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) ) );
+        }
+        if ( lower == "full" )
+            return sgns::GeniusNode::NodeType::Full;
+        if ( lower == "light" )
+            return sgns::GeniusNode::NodeType::Light;
+        if ( lower == "archive" )
+            return sgns::GeniusNode::NodeType::Archive;
+        return std::nullopt;
+    }
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -133,6 +154,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Requested transaction not finalized within timeout";
         case sgns::GeniusNode::Error::TRANSACTION_FAILED:
             return "Requested transaction failed";
+        case sgns::GeniusNode::Error::INVALID_NODE_TYPE:
+            return "sgns_config.json node_type was not Full/Light/Archive";
     }
     return "Unknown error";
 }
@@ -146,92 +169,70 @@ namespace sgns
         return base::createLogger( "GeniusNode" );
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
-                                                 bool                autodht,
-                                                 uint16_t            base_port,
-                                                 bool                is_full_node )
+    // Canonical factory (INTF-01). try/catch preserves the nullptr-on-failure contract (D-04):
+    // the reordered ctor throws on account-restore/loggers/network failure; here it becomes nullptr.
+    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )
     {
-        auto account = GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node );
-        if ( account == nullptr )
+        try
+        {
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config, source ) );
+            if ( instance )
+            {
+                instance->BeginDBInitialization();
+            }
+            return instance;
+        }
+        catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
             return nullptr;
         }
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
-
-        if ( instance )
-        {
-            instance->BeginDBInitialization();
-        }
-
-        return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
-                                                               const char         *eth_private_key,
-                                                               bool                autodht,
-                                                               uint16_t            base_port,
-                                                               bool                is_full_node )
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
+                                                          uint16_t            port_seed,
+                                                          bool                auto_dht )
     {
-        auto account = GeniusAccount::NewFromPrivateKey( dev_config.TokenID,
-                                                         eth_private_key,
-                                                         dev_config.BaseWritePath,
-                                                         is_full_node );
-        if ( account == nullptr )
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
+        std::ofstream ofs( base_path + "/network_config.json" );
+        if ( !ofs.good() )
         {
-            return nullptr;
+            return Error::DATABASE_WRITE_ERROR;
         }
-
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
-
-        if ( instance )
-        {
-            instance->BeginDBInitialization();
-        }
-
-        return instance;
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" ) << " }";
+        return outcome::success();
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
-                                                             const std::string  &mnemonic,
-                                                             bool                autodht,
-                                                             uint16_t            base_port,
-                                                             bool                is_full_node )
+    outcome::result<void> GeniusNode::WriteSgnsConfig( const std::string &base_path,
+                                                       const std::string &node_type,
+                                                       bool               is_processor )
     {
-        auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
-                                                       mnemonic,
-                                                       dev_config.BaseWritePath,
-                                                       is_full_node );
-
-        if ( account == nullptr )
+        if ( !NodeTypeFromString( node_type ) ) // case-insensitive validation (Phase-2 D-02)
         {
-            return nullptr;
+            return Error::INVALID_NODE_TYPE;
         }
-
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
-
-        if ( instance )
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
+        std::ofstream ofs( base_path + "/sgns_config.json" );
+        if ( !ofs.good() )
         {
-            instance->BeginDBInitialization();
+            return Error::DATABASE_WRITE_ERROR;
         }
-
-        return instance;
+        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" ) << " }";
+        return outcome::success();
     }
 
-    GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
-                            std::shared_ptr<GeniusAccount> account,
-                            bool                           autodht,
-                            uint16_t                       base_port,
-                            bool                           is_full_node ) :
+    // Reordered constructor (INTF-03 / CONTEXT D-05). Account is created via std::visit
+    // AFTER LoadSgnsConfig() resolves node_type_ -> is_full_node_ (the init-order hinge fix).
+    // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
+    // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
+    // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
+    GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source ) :
         write_base_path_( dev_config.BaseWritePath ),
-        account_( std::move( account ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
-        autodht_( autodht ),
+        autodht_( true ),
         isprocessor_( true ),
-        is_full_node_( is_full_node ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
@@ -253,9 +254,49 @@ namespace sgns
 
         node_logger_->info( sgns::version::SuperGeniusVersionText() );
 
-        LoadSgnsConfig();
+        LoadSgnsConfig(); // resolves node_type_
 
-        if ( !InitNetwork( base_port, is_full_node_ ) )
+        is_full_node_ = ( node_type_ != NodeType::Light ); // CFG-03 derivation
+
+        // Create the account with is_full_node_ already known (the hinge fix).
+        account_ = std::visit(
+            [this]( auto &&src ) -> std::shared_ptr<GeniusAccount> {
+                using T = std::decay_t<decltype( src )>;
+                if constexpr ( std::is_same_v<T, NewAccount> )
+                {
+                    return GeniusAccount::New( dev_config_.TokenID, write_base_path_, is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPrivateKey> )
+                {
+                    return GeniusAccount::NewFromPrivateKey( dev_config_.TokenID,
+                                                             src.eth_private_key.c_str(),
+                                                             write_base_path_,
+                                                             is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromMnemonic> )
+                {
+                    return GeniusAccount::NewFromMnemonic( dev_config_.TokenID,
+                                                           src.mnemonic,
+                                                           write_base_path_,
+                                                           is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPublicKey> )
+                {
+                    // FromPublicKey carries a public_address; GeniusAccount::NewFromPublicKey
+                    // takes no base_path and consumes an address-like string_view.
+                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID,
+                                                            src.public_address,
+                                                            is_full_node_ );
+                }
+            },
+            source );
+        if ( !account_ )
+        {
+            throw std::runtime_error( "Account creation failed" ); // D-04: New() catches -> nullptr
+        }
+
+        // Default port_seed (40001); Phase-1 config layer overrides from network_config.json when present.
+        if ( !InitNetwork( 40001, is_full_node_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
         }
@@ -308,6 +349,31 @@ namespace sgns
         {
             isprocessor_ = true;
             node_logger_->info( "sgns_config.json: is_processor not set, defaulting to true" );
+        }
+        // node_type read (CFG-02 / CONTEXT D-02). Sets node_type_ ONLY — does NOT touch
+        // is_full_node_ (the AccountSource ctor derives it; the retained old ctor keeps its param).
+        if ( config_json.HasMember( "node_type" ) && config_json["node_type"].IsString() )
+        {
+            const auto parsed = NodeTypeFromString( config_json["node_type"].GetString() );
+            if ( parsed )
+            {
+                node_type_ = *parsed;
+                node_logger_->info( "sgns_config.json: node_type={}",
+                                    *parsed == sgns::GeniusNode::NodeType::Full    ? "Full"
+                                    : *parsed == sgns::GeniusNode::NodeType::Archive ? "Archive"
+                                                                                    : "Light" );
+            }
+            else
+            {
+                node_type_ = sgns::GeniusNode::NodeType::Light; // default on unrecognized value
+                node_logger_->warn( "sgns_config.json: node_type '{}' unrecognized, defaulting to Light",
+                                    config_json["node_type"].GetString() );
+            }
+        }
+        else
+        {
+            node_type_ = sgns::GeniusNode::NodeType::Light; // default on missing key
+            node_logger_->info( "sgns_config.json: node_type not set, defaulting to Light" );
         }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
@@ -836,7 +902,7 @@ namespace sgns
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
         auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::debug );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
         auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
@@ -946,7 +1012,27 @@ namespace sgns
         return true;
     }
 
-    bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
+    uint16_t GeniusNode::GetPubsubPort() const noexcept
+    {
+        return pubsubport_;
+    }
+
+    bool GeniusNode::IsAutodhtEnabled() const noexcept
+    {
+        return autodht_;
+    }
+
+    bool GeniusNode::IsFullNode() const noexcept
+    {
+        return is_full_node_;
+    }
+
+    GeniusNode::NodeType GeniusNode::GetNodeType() const noexcept
+    {
+        return node_type_;
+    }
+
+    bool GeniusNode::InitNetwork( uint16_t port_seed, bool is_full_node )
     {
         bool                ret         = true;
         std::string         config_path = write_base_path_ + "/network_config.json";
@@ -1010,6 +1096,38 @@ namespace sgns
                 if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
                 {
                     low_water = config_json["low_water"].GetInt();
+                }
+
+                // ── port_seed: numeric read (intentional divergence from the legacy
+                //    string-based pubsub_port read above — see HARD-01 / CONTEXT D-08).
+                //    Config wins when present; the constructor param is the fallback.
+                if ( config_json.HasMember( "port_seed" ) )
+                {
+                    if ( config_json["port_seed"].IsUint() )
+                    {
+                        port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                        node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}", port_seed );
+                    }
+                }
+
+                // ── auto_dht: bool read. JSON key "auto_dht" -> member autodht_ (D-07).
+                //    Config wins when present; the constructor param (assigned in the ctor
+                //    init-list) is the fallback.
+                if ( config_json.HasMember( "auto_dht" ) )
+                {
+                    if ( config_json["auto_dht"].IsBool() )
+                    {
+                        autodht_ = config_json["auto_dht"].GetBool();
+                        node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}", autodht_ );
+                    }
                 }
 
                 // ── Parse reconnect config ──
@@ -1089,14 +1207,18 @@ namespace sgns
             node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking", bootstrap_peer_infos_.size() );
         }
 
-        // Port selection logic
+        // Port resolution priority (Doxygen: see InitNetwork declaration):
+        //   1. pubsub_port (string override from network_config.json) -> config_port
+        //   2. else: port_seed (constructor param, or network_config.json "port_seed"
+        //      key when present) derives the port via GenerateRandomPort(port_seed, address).
+        // Logic unchanged this phase — only documented (CONTEXT D-04).
         if ( config_port != 0 )
         {
             pubsubport_ = config_port;
         }
         else
         {
-            pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
+            pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
         }
 
         do

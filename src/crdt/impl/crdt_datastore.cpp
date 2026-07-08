@@ -125,6 +125,10 @@ namespace sgns::crdt
                             dagThreadRunning = false;
                         }
                     }
+                    if ( auto self = weakptr.lock() )
+                    {
+                        self->logger_->debug( "DAG worker thread finished at {}", std::this_thread::get_id() );
+                    }
                 } );
             crdtInstance->dagWorkers_.emplace_back( std::move( dagWorker ) );
         }
@@ -572,22 +576,33 @@ namespace sgns::crdt
 
     void CrdtDatastore::WaitForWorkersToExit()
     {
+        logger_->debug( "WaitForWorkersToExit: waiting for {} DAG worker(s)", dagWorkers_.size() );
+        std::size_t worker_index = 0;
         for ( auto &dagWorker : dagWorkers_ )
         {
             if ( dagWorker->dagWorkerFuture_.valid() )
             {
+                logger_->debug( "WaitForWorkersToExit: waiting for DAG worker {} thread_id={}",
+                                worker_index,
+                                dagWorker->threadId_ );
                 dagWorker->dagWorkerFuture_.wait();
+                logger_->debug( "WaitForWorkersToExit: DAG worker {} finished", worker_index );
             }
+            ++worker_index;
         }
 
         if ( handleNextFuture_.valid() )
         {
+            logger_->debug( "WaitForWorkersToExit: waiting for HandleNext thread_id={}", handleNextThreadId_ );
             handleNextFuture_.wait();
+            logger_->debug( "WaitForWorkersToExit: HandleNext finished" );
         }
 
         if ( rebroadcastFuture_.valid() )
         {
+            logger_->debug( "WaitForWorkersToExit: waiting for rebroadcast thread_id={}", rebroadcastThreadId_ );
             rebroadcastFuture_.wait();
+            logger_->debug( "WaitForWorkersToExit: rebroadcast finished" );
         }
 
         {
@@ -703,12 +718,14 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::HandleRootCIDBlock( const CID &aCid )
     {
+        logger_->debug( "{}: begin for root CID {}", __func__, aCid.toString().value() );
         auto root_job_result = CreateRootJob( aCid );
         if ( root_job_result.has_failure() )
         {
             MarkJobFailed( aCid );
             return root_job_result.as_failure();
         }
+        logger_->debug( "{}: root job created for root CID {}", __func__, aCid.toString().value() );
 
         auto links_result = GetLinksToFetch( root_job_result.value() );
         if ( links_result.has_failure() )
@@ -716,6 +733,10 @@ namespace sgns::crdt
             MarkJobFailed( aCid );
             return links_result.as_failure();
         }
+        logger_->debug( "{}: {} link(s) discovered for root CID {}",
+                        __func__,
+                        links_result.value().size(),
+                        aCid.toString().value() );
 
         auto fetch_result = FetchNodes( root_job_result.value(), links_result.value() );
         if ( fetch_result.has_failure() )
@@ -723,6 +744,7 @@ namespace sgns::crdt
             MarkJobFailed( aCid );
             return fetch_result.as_failure();
         }
+        logger_->debug( "{}: fetch complete for root CID {}", __func__, aCid.toString().value() );
         return outcome::success();
     }
 
@@ -730,6 +752,7 @@ namespace sgns::crdt
     {
         logger_->debug( "{}: Creating the Root Job for CID {}", __func__, aRootCID.toString().value() );
         dagSyncer_->InitCIDBlock( aRootCID );
+        logger_->debug( "{}: InitCIDBlock complete for root CID {}", __func__, aRootCID.toString().value() );
         BOOST_OUTCOME_TRY( auto root_node, dagSyncer_->getNode( aRootCID ) );
 
         logger_->debug( "{}: Root Job created for CID {}", __func__, aRootCID.toString().value() );
@@ -844,7 +867,19 @@ namespace sgns::crdt
             }
 
             dagSyncer_->InitCIDBlock( cid );
+            logger_->debug( "{}: InitCIDBlock complete for node {} from Root Job {}",
+                            __func__,
+                            cid.toString().value(),
+                            aRootJob.root_node_->getCID().toString().value() );
+            logger_->debug( "{}: getNode begin for node {} from Root Job {}",
+                            __func__,
+                            cid.toString().value(),
+                            aRootJob.root_node_->getCID().toString().value() );
             BOOST_OUTCOME_TRY( auto node, dagSyncer_->getNode( cid ) );
+            logger_->debug( "{}: getNode complete for node {} from Root Job {}",
+                            __func__,
+                            cid.toString().value(),
+                            aRootJob.root_node_->getCID().toString().value() );
 
             RootCIDJob newRootJob;
 
@@ -922,13 +957,17 @@ namespace sgns::crdt
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
         BOOST_OUTCOME_TRY( MergeDataFromDelta( node_to_process->getCID(), delta ) );
+        logger_->debug( "{}: Merge complete for {}", __func__, cid_string );
 
         logger_->debug( "{}: Recording block on DAG Syncher {}", __func__, cid_string );
         BOOST_OUTCOME_TRY( dagSyncer_->addNode( node_to_process ) );
+        logger_->debug( "{}: addNode complete for {}", __func__, cid_string );
 
         (void)dagSyncer_->DeleteCIDBlock( node_to_process->getCID() );
+        logger_->debug( "{}: DeleteCIDBlock complete for {}", __func__, cid_string );
 
         BOOST_OUTCOME_TRY( auto links, GetLinksToFetch( job_to_process ) );
+        logger_->debug( "{}: GetLinksToFetch complete for {}, links={}", __func__, cid_string, links.size() );
         const bool should_fetch_links = !job_to_process.created_by_self_ && !links.empty();
 
         if ( links.empty() && !is_root )
@@ -960,6 +999,7 @@ namespace sgns::crdt
             UpdateCRDTHeads( job_to_process.root_node_->getCID(),
                              delta.priority(),
                              job_to_process.created_by_self_ || has_full_node_topic_ );
+            logger_->debug( "{}: UpdateCRDTHeads complete for {}", __func__, root_cid_string );
             {
                 std::unique_lock lk( dagWorkerMutex_ );
                 activeRootCID_.reset(); // this root fully done
@@ -1041,7 +1081,7 @@ namespace sgns::crdt
                 if ( it != cid_string_cache_.end() )
                 {
                     cid_string = it->second;
-                    logger_->debug( "CID string cache hit for CID {}", cid_string );
+                    logger_->trace( "CID string cache hit for CID {}", cid_string );
                 }
             }
 
@@ -1054,7 +1094,7 @@ namespace sgns::crdt
                     cid_string = strHeadResult.value();
                     std::lock_guard<std::mutex> lock( cid_string_cache_mutex_ );
                     cid_string_cache_[head] = cid_string;
-                    logger_->debug( "CID string cache miss - cached CID {}", cid_string );
+                    logger_->trace( "CID string cache miss - cached CID {}", cid_string );
                 }
                 else
                 {

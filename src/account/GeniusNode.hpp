@@ -14,6 +14,7 @@
 #include <vector>
 #include <thread>
 #include <optional>
+#include <variant>
 #include <mutex>
 #include <atomic>
 
@@ -77,6 +78,35 @@ namespace sgns
     class MigrationManager;
 
     /**
+     * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
+     *
+     * Owned std::string payloads — a std::variant owns its active alternative, so
+     * non-owning views such as const char* or std::string_view would dangle once the
+     * variant is stored or passed. TokenID and other dev_config fields are NOT part of
+     * the variant; they come from dev_config.
+     */
+    struct NewAccount
+    {
+    }; ///< Generate a new identity.
+
+    struct FromPrivateKey
+    {
+        std::string eth_private_key;
+    }; ///< Restore from an Ethereum hex private key.
+
+    struct FromMnemonic
+    {
+        std::string mnemonic;
+    }; ///< Restore from a BIP39 mnemonic.
+
+    struct FromPublicKey
+    {
+        std::string public_address;
+    }; ///< Load from storage by public address (read-only).
+
+    using AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>;
+
+    /**
      * @brief High-level facade that initializes and coordinates account, networking,
      *        transaction, blockchain, and processing subsystems.
      */
@@ -84,53 +114,38 @@ namespace sgns
     {
     public:
         /**
-         * @brief Creates a node using a generated or persisted account identity.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
+         * @brief Canonical node factory (INTF-01). Account identity is chosen via
+         *        AccountSource; node role (is_full_node_) is derived from node_type in
+         *        sgns_config.json, not a param. Old factories are retained this phase
+         *        (deleted in Phase 3 per 02-CONTEXT.md D-01).
+         * @param[in] dev_config Runtime configuration (paths, token, payout data).
+         * @param[in] source Account-creation source (NewAccount / FromPrivateKey / FromMnemonic / FromPublicKey).
+         * @return Shared node instance after asynchronous DB init is scheduled, or nullptr
+         *         on account-restore or initialization failure (D-04).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
-                                                bool                autodht      = true,
-                                                uint16_t            base_port    = 40001,
-                                                bool                is_full_node = false );
+        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config, AccountSource source );
 
         /**
-         * @brief Creates a node bound to the provided Ethereum private key.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] eth_private_key Ethereum private key used to derive the account identity.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
+         * @brief Writes a minimal network_config.json for test/example setup (MIG-02).
+         * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
+         * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
+         * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
+         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file (deterministic minimal config).
          */
-        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
-                                                              const char         *eth_private_key,
-                                                              bool                autodht      = true,
-                                                              uint16_t            base_port    = 40001,
-                                                              bool                is_full_node = false );
+        static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
+                                                         uint16_t           port_seed,
+                                                         bool               auto_dht );
 
         /**
-         * @brief Creates a node from an existing mnemonic phrase.
-         * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] mnemonic Mnemonic phrase used to restore the account identity.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
-         * @return Shared node instance after asynchronous database initialization is scheduled, or nullptr on restore failure.
-         * @note Whether this node runs processing services is read from
-         *       sgns_config.json (`is_processor`, default true).
+         * @brief Writes a minimal sgns_config.json for test/example setup; validates node_type (MIG-02).
+         * @param[in] base_path Directory whose sgns_config.json will be (over)written.
+         * @param[in] node_type Role string — validated case-insensitively (Full/Light/Archive); any other value returns Error::INVALID_NODE_TYPE.
+         * @param[in] is_processor Whether processing services run (key "is_processor").
+         * @return Error::INVALID_NODE_TYPE on an unrecognized node_type; failure on I/O error; success otherwise.
          */
-        static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
-                                                            const std::string  &mnemonic,
-                                                            bool                autodht      = true,
-                                                            uint16_t            base_port    = 40001,
-                                                            bool                is_full_node = false );
+        static outcome::result<void> WriteSgnsConfig( const std::string &base_path,
+                                                      const std::string &node_type,
+                                                      bool               is_processor );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -172,6 +187,20 @@ namespace sgns
             TRANSACTIONS_NOT_READY    = 13, ///< Transaction manager is not ready.
             TRANSACTION_NOT_FINALIZED = 14, ///< Requested transaction did not finalize within the timeout.
             TRANSACTION_FAILED        = 15, ///< Requested transaction failed.
+            INVALID_NODE_TYPE         = 16, ///< sgns_config.json node_type string was not Full/Light/Archive.
+        };
+
+        /**
+         * @brief Deployment node role, read from sgns_config.json ("node_type").
+         *
+         * Drives the derived is_full_node_ flag (Full/Archive -> true, Light -> false).
+         * Co-located with NodeState/Error per CFG-02.
+         */
+        enum class NodeType : uint8_t
+        {
+            Full    = 0, ///< Full node (is_full_node_ = true).
+            Light   = 1, ///< Light node (is_full_node_ = false). Default on missing/unknown key.
+            Archive = 2, ///< Archive node (is_full_node_ = true; behavior identical to Full this milestone).
         };
 
 #ifdef SGNS_DEBUG
@@ -188,6 +217,34 @@ namespace sgns
          * @return Public addresses stored under the configured base write path.
          */
         std::vector<std::string> GetAvailableAccounts();
+
+        /**
+         * @brief Returns the resolved PubSub listening port.
+         * @return The TCP port selected during @ref InitNetwork (from @c pubsub_port override
+         *         or derived from @c port_seed). Test/read-only observable; does not mutate state.
+         */
+        uint16_t GetPubsubPort() const noexcept;
+
+        /**
+         * @brief Returns whether DHT discovery is enabled after config resolution.
+         * @return The resolved @c autodht_ value (constructor param, or the @c auto_dht key
+         *         from @c network_config.json when present — config wins). Read-only observable.
+         */
+        bool IsAutodhtEnabled() const noexcept;
+
+        /**
+         * @brief Returns whether this node runs in full-node mode after config resolution.
+         * @return The resolved @c is_full_node_ (derived from @c node_type_ in the
+         *         AccountSource constructor: Full/Archive -> true, Light -> false).
+         *         Test/read-only observable; does not mutate state.
+         */
+        bool IsFullNode() const noexcept;
+
+        /**
+         * @brief Returns the resolved node role.
+         * @return The @c node_type_ read from sgns_config.json (default Light). Read-only observable.
+         */
+        NodeType GetNodeType() const noexcept;
 
         /**
          * @brief Adds an account to local storage using an Ethereum private key.
@@ -667,54 +724,56 @@ namespace sgns
     private:
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                   io_work_guard_;       ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
-        std::shared_ptr<libp2p::event::Bus>         bitswap_event_bus_;   ///< Event bus for bitswap.
-        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;            ///< IPFS bitswap service for content-addressed data.
-        std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
+                                                     io_work_guard_;     ///< Keeps @ref io_ alive.
+        std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB>              job_globaldb_;      ///< Reserved job CRDT DB handle.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
+        std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
+        std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
-        std::shared_ptr<eth::EthWatchService>                 eth_watch_service_;   ///< Shared EVM event watcher.
-        std::shared_ptr<BridgeRelayer>                        bridge_relayer_;      ///< Bridge burn→mint relayer.
-        std::shared_ptr<processing::ProcessingTaskQueue>      task_queue_;          ///< Processing task queue.
-        std::vector<std::string>                             my_task_ids_;         ///< Recent task IDs submitted by this node (capped in memory).
-        static constexpr size_t                              kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
+        std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
+        std::shared_ptr<BridgeRelayer>                   bridge_relayer_;    ///< Bridge burn→mint relayer.
+        std::shared_ptr<processing::ProcessingTaskQueue> task_queue_;        ///< Processing task queue.
+        std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
+        static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
         std::shared_ptr<processing::ProcessingCoreImpl>       processing_core_;     ///< Processing engine core.
         std::shared_ptr<processing::ProcessingServiceImpl>    processing_service_;  ///< Processing network service.
         std::shared_ptr<processing::SubTaskResultStorageImpl> task_result_storage_; ///< Subtask result store.
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                                     is_full_node_;           ///< Whether this node runs in full-node mode.
-        std::string                              ipfs_cache_dir_     = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
-        bool                                     mirror_results_     = false;        ///< Whether to mirror processing results from other nodes.
-        int                                      result_retention_hours_ = 168;      ///< Hours to retain results before GC (0 = keep forever).
-        int                                      result_retention_max_mb_ = 0;       ///< Max MB for result cache (0 = no space cap).
-        bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
-        bool                           catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
+        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
+        NodeType node_type_ =
+            NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
+        base::Logger node_logger_; ///< Main node logger.
+        DevConfig_st dev_config_;  ///< Runtime node configuration.
+        std::string  ipfs_cache_dir_           = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool         mirror_results_           = false; ///< Whether to mirror processing results from other nodes.
+        int          result_retention_hours_   = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int          result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
+        bool         catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
+        bool         catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
         /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
-        mutable std::mutex             catchup_mutex_;
+        mutable std::mutex catchup_mutex_;
         std::shared_ptr<ChainRpcEndpointProvider>
-                                            rpc_endpoint_provider_;    ///< Shared so the posted Initialize() job can hold it across an account switch.
+            rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
         /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t>          bridge_init_generation_{ 0 };
-        base::Logger                   node_logger_;               ///< Main node logger.
-        DevConfig_st                   dev_config_;                ///< Runtime node configuration.
-        std::string                    gnus_network_full_path_;   ///< Versioned network DB path.
-        std::string                    processing_channel_topic_; ///< Processing task channel topic.
-        std::string                    processing_grid_chanel_topic_; ///< Processing grid topic.
-        std::vector<std::string>       bootstrap_peers_;
-        uint16_t                       subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
-        std::vector<std::string>       bootstrap_fullnodes_;
-        std::vector<libp2p::peer::PeerInfo> bootstrap_fullnode_infos_;
+        std::atomic<uint64_t>                    bridge_init_generation_{ 0 };
+        std::string                              gnus_network_full_path_;       ///< Versioned network DB path.
+        std::string                              processing_channel_topic_;     ///< Processing task channel topic.
+        std::string                              processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::vector<std::string>                 bootstrap_peers_;
+        uint16_t                                 subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
+        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
@@ -724,18 +783,18 @@ namespace sgns
         std::shared_ptr<boost::asio::steady_timer> gc_timer_;   ///< Periodic GC timer for result cache cleanup.
 
         /**
-         * @brief Constructs a node around an already-created account.
+         * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
+         *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
+         *
+         * Account creation runs via std::visit over the AccountSource variant, with
+         * is_full_node_ already derived. Throws std::runtime_error on account-restore
+         * failure; the public New(dev_config, AccountSource) catches and returns nullptr (D-04).
+         * Old private constructor above is retained this phase (deleted in Phase 3).
+         *
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
-         * @param[in] account Account instance to bind to this node.
-         * @param[in] autodht Whether to start DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
-         * @param[in] is_full_node Whether the node should run in full-node mode.
+         * @param[in] source Account-creation source variant.
          */
-        GeniusNode( const DevConfig_st            &dev_config,
-                    std::shared_ptr<GeniusAccount> account,
-                    bool                           autodht,
-                    uint16_t                       base_port,
-                    bool                           is_full_node );
+        GeniusNode( const DevConfig_st &dev_config, AccountSource source );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
@@ -779,11 +838,22 @@ namespace sgns
 
         /**
          * @brief Initializes PubSub, GraphSync networking, and optional DHT discovery.
-         * @param[in] base_port Base pubsub port used to derive the node listening port.
+         * @param[in] port_seed Deterministic per-address port seed used to derive the node
+         *            listening port when @c pubsub_port is not set. Fallback when the
+         *            @c port_seed key is absent from @c network_config.json; overridable by
+         *            that key when present (config wins, param is fallback).
          * @param[in] is_full_node Whether to use full-node connection limits.
          * @return True when network initialization succeeds.
+         *
+         * @par Port resolution priority
+         * The PubSub listening port is resolved in priority order:
+         *   1. @c pubsub_port (string override read from @c network_config.json) takes
+         *      priority when present and non-empty.
+         *   2. Otherwise @c port_seed (the constructor param, or the @c port_seed key from
+         *      @c network_config.json when present) derives the port via
+         *      @c GenerateRandomPort(port_seed, account_address).
          */
-        bool InitNetwork( uint16_t base_port, bool is_full_node );
+        bool InitNetwork( uint16_t port_seed, bool is_full_node );
 
         /**
          * @brief Loads the CRDT configuration.

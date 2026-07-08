@@ -3,7 +3,6 @@
 
 #include <cmath>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <iostream>
 #include <cstdint>
@@ -82,12 +81,7 @@ protected:
 
         DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
 
-        // Write sgns_config.json with the intended is_processor value
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
-        }
 
         // Generate deterministic key from self_address
         std::string key;
@@ -109,7 +103,9 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor );
+        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );

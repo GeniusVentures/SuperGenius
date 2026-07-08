@@ -43,13 +43,11 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
     std::filesystem::create_directories( devConfig.BaseWritePath );
-    {
-        std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-        configFile << R"({"is_processor": false})";
-    }
-
     uint16_t port = static_cast<uint16_t>( 40001 + id );
-    auto     node = GeniusNode::NewFromPrivateKey( devConfig, privKey.c_str(), false, port, isFullNode );
+    GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+
+    auto     node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )
     {
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );

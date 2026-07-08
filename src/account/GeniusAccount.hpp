@@ -415,6 +415,7 @@ namespace sgns
             get_validator_weight_method_; ///< Function to get validator weight for an address
         std::function<outcome::result<std::string>( const std::string & )>
                                           get_transaction_cid_method_; ///< Function to get transaction CID by hash
+        mutable std::mutex                nonce_db_mutex_;             ///< Mutex for nonce database pointer access
         std::shared_ptr<storage::rocksdb> nonce_db_;                   ///< RocksDB for nonce persistence
 
         static constexpr std::string_view NONCE_KEY_PREFIX                      = "gnus-confirmed-nonce-";

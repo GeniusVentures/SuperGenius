@@ -45,20 +45,16 @@ protected:
         DEV_CONFIG2.BaseWritePath = ( binary_path + "/node2/" );
         DEV_CONFIG3.BaseWritePath = ( binary_path + "/node3/" );
 
-        // Write minimal sgns_config.json for node_main so it does not run as a processor.
-        // is_processor is now read exclusively from this config file (defaults to true).
+        // node_main: non-processor, light node. Config-driven construction (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        {
-            std::ofstream config_file( DEV_CONFIG.BaseWritePath + "sgns_config.json" );
-            config_file << R"({"is_processor": false})";
-        }
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
 
-        node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40054, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
-            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false,
-            40054,
-            true );
+            sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         sgns::test::assertWaitForCondition( [&]
@@ -66,17 +62,15 @@ protected:
                                             std::chrono::milliseconds( 50000 ),
                                             "node_proc1 not ready" );
 
-        node_main = sgns::GeniusNode::NewFromPrivateKey(
+        node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
-            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false );
+            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
-        node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40060, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
-            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false,
-            40060,
-            true );
+            sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),

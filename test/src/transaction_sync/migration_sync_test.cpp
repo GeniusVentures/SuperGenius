@@ -123,19 +123,12 @@ protected:
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
         DEV_CONFIG.BaseWritePath = baseWrite;
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        {
-            std::ofstream configFile( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
-            configFile << R"({"is_processor": false})";
-        }
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, base_port, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, is_full_node ? "Full" : "Light", /*is_processor=*/false );
 
-        auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
-                                                             key_hex,
-                                                             false,
-                                                             base_port,
-                                                             is_full_node );
+        auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
@@ -157,16 +150,12 @@ protected:
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
 
-        // Full node is not a processor.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
-
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, unique_port, true );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, unique_port, /*auto_dht=*/false );
+        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false );
+        auto     instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
