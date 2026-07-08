@@ -79,7 +79,7 @@ namespace sgns
      * variant is stored or passed. TokenID and other dev_config fields are NOT part of
      * the variant; they come from dev_config.
      */
-    struct IN_PROGRESS
+    struct NewAccount
     {
     }; ///< Generate a new identity.
 
