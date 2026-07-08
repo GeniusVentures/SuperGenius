@@ -1092,16 +1092,14 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        RegistryUpdate          update = decoded_update.value();
-        std::optional<Registry> current_registry;
-        const Registry         *current_ptr = nullptr;
+        RegistryUpdate  update      = decoded_update.value();
+        const Registry *current_ptr = nullptr;
 
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
             if ( cached_registry_ )
             {
-                current_registry = cached_registry_.value();
-                current_ptr      = &current_registry.value();
+                current_ptr = &cached_registry_.value();
             }
         }
 
@@ -1202,9 +1200,9 @@ namespace sgns
             current_id = cached_registry_id_;
         }
 
-        std::optional<Registry> loaded_base_registry;
-        const Registry         *base_registry = current_registry;
-        if ( !prev_registry_cid.empty() && ( !base_registry || current_id.empty() || prev_registry_cid != current_id ) )
+        const Registry *base_registry = current_registry;
+        bool needs_to_fetch_registry  = !base_registry || current_id.empty() || prev_registry_cid != current_id;
+        if ( !prev_registry_cid.empty() && ( needs_to_fetch_registry ) )
         {
             auto base_registry_result = LoadRegistryByCid( prev_registry_cid );
             if ( base_registry_result.has_error() )
@@ -1212,8 +1210,7 @@ namespace sgns
                 logger_->error( "{}: base registry unavailable cid={}", __func__, prev_registry_cid );
                 return false;
             }
-            loaded_base_registry = base_registry_result.value();
-            base_registry        = &loaded_base_registry.value();
+            base_registry = &base_registry_result.value();
         }
 
         if ( !base_registry && prev_registry_cid.empty() )
