@@ -58,21 +58,21 @@ void ProcessingServiceTest::SetUp( std::string name, std::string loggerConfig )
 #ifdef SGNS_DEBUGLOGS
     libp2p::log::setLevelOfGroup( name, soralog::Level::OFF );
 
-    auto loggerProcQM = base::createLogger( "ProcessingSubTaskQueueManager" );
+    auto loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
     loggerProcQM->set_level( spdlog::level::trace );
 
-    loggerProcQM = base::createLogger( "ProcessingSubTaskQueue" );
+    loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueue" );
     loggerProcQM->set_level( spdlog::level::off );
 
-    loggerProcQM = base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
+    loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
     loggerProcQM->set_level( spdlog::level::trace );
-    auto loggerProcEngine = base::createLogger( "ProcessingEngine" );
+    auto loggerProcEngine = sgns::base::createLogger( "ProcessingEngine" );
     loggerProcEngine->set_level( spdlog::level::off );
-    auto loggerQueueChannel = base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
+    auto loggerQueueChannel = sgns::base::createLogger( "ProcessingSubTaskQueueChannelPubSub" );
     loggerQueueChannel->set_level( spdlog::level::off );
-    auto loggerBroadcaster = base::createLogger( "PubSubBroadcasterExt" );
+    auto loggerBroadcaster = sgns::base::createLogger( "PubSubBroadcasterExt" );
     loggerBroadcaster->set_level( spdlog::level::trace );
-    auto loggerPubsub = base::createLogger( "GossipPubSub" );
+    auto loggerPubsub = sgns::base::createLogger( "GossipPubSub" );
     loggerPubsub->set_level( spdlog::level::trace );
 #else
     libp2p::log::setLevelOfGroup( name, soralog::Level::OFF );
