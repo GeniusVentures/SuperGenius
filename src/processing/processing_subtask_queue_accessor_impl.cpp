@@ -1,6 +1,7 @@
 #include "processing_subtask_queue_accessor_impl.hpp"
 #include <fmt/std.h>
 #include <sstream>
+#include <string_view>
 #include <thread>
 #include <utility>
 #include "base/sgns_version.hpp"
@@ -65,6 +66,7 @@ namespace sgns::processing
 
     void SubTaskQueueAccessorImpl::setMirrorResultCallback( std::function<void( const std::string & )> callback )
     {
+        std::lock_guard<std::mutex> guard( m_mutexMirrorCallback );
         m_mirrorResultCallback = std::move( callback );
     }
 
@@ -400,9 +402,15 @@ namespace sgns::processing
                 _this->m_logger->debug( "[RESULT_RECEIVED]. ({}).", result.subtaskid() );
 
                 // If this node mirrors results and the result has IPFS data, trigger mirror fetch.
-                if ( _this->m_mirrorResultCallback && !result.ipfs_results_data_id().empty() )
+                std::function<void( const std::string & )> mirrorResultCallback;
                 {
-                    _this->m_mirrorResultCallback( result.ipfs_results_data_id() );
+                    std::lock_guard<std::mutex> guard( _this->m_mutexMirrorCallback );
+                    mirrorResultCallback = _this->m_mirrorResultCallback;
+                }
+
+                if ( mirrorResultCallback && !result.ipfs_results_data_id().empty() )
+                {
+                    mirrorResultCallback( result.ipfs_results_data_id() );
                 }
 
                 rebroadcast_results = _this->OnResultReceived( std::move( result ) );
@@ -507,6 +515,8 @@ namespace sgns::processing
     bool SubTaskQueueAccessorImpl::ValidateResultData( const SGProcessing::SubTaskResult &result,
                                                        bool                               requireAvailable ) const
     {
+        static constexpr std::string_view kIpfsUriScheme = "ipfs://";
+
         const auto &dataId = result.ipfs_results_data_id();
         if ( dataId.empty() )
         {
@@ -522,7 +532,7 @@ namespace sgns::processing
             {
                 continue;
             }
-            if ( line.find( "ipfs://" ) != 0 )
+            if ( line.compare( 0, kIpfsUriScheme.size(), kIpfsUriScheme.data(), kIpfsUriScheme.size() ) != 0 )
             {
                 m_logger->error( "Result for subtask {} has non-IPFS output: {}",
                                  result.subtaskid(),
@@ -542,7 +552,7 @@ namespace sgns::processing
                 {
                     continue;
                 }
-                std::string cidStr = line.substr( 7 ); // strip "ipfs://"
+                std::string cidStr = line.substr( kIpfsUriScheme.size() );
                 auto        cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
                 if ( !cid )
                 {

@@ -13,6 +13,7 @@
 #include <cctype>
 #include <filesystem>
 #include <set>
+#include <string_view>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -752,9 +753,24 @@ namespace sgns
                 // Set up result mirroring for full/archive nodes
                 if ( mirror_results_ && bitswap_ )
                 {
+                    auto weak_self = weak_from_this();
                     processing_service_->setMirrorResultCallback(
-                        [this]( const std::string &ipfs_results_data_id )
+                        [weak_self]( const std::string &ipfs_results_data_id )
                         {
+                            auto strong = weak_self.lock();
+                            if ( !strong )
+                            {
+                                return;
+                            }
+
+                            auto bitswap = strong->bitswap_;
+                            if ( !bitswap )
+                            {
+                                return;
+                            }
+
+                            static constexpr std::string_view kIpfsUriScheme = "ipfs://";
+
                             // Parse newline-separated CIDs and fetch any we don't already have
                             std::istringstream stream( ipfs_results_data_id );
                             std::string        line;
@@ -766,35 +782,46 @@ namespace sgns
                                 }
                                 // Strip "ipfs://" prefix if present
                                 std::string cidStr = line;
-                                if ( cidStr.find( "ipfs://" ) == 0 )
+                                if ( cidStr.compare( 0,
+                                                     kIpfsUriScheme.size(),
+                                                     kIpfsUriScheme.data(),
+                                                     kIpfsUriScheme.size() ) == 0 )
                                 {
-                                    cidStr = cidStr.substr( 7 );
+                                    cidStr = cidStr.substr( kIpfsUriScheme.size() );
                                 }
                                 auto cid = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
                                 if ( !cid )
                                 {
                                     continue;
                                 }
-                                if ( bitswap_->HasBlock( cid.value() ) )
+                                if ( bitswap->HasBlock( cid.value() ) )
                                 {
                                     continue; // Already have it
                                 }
-                                node_logger_->info( "Mirroring result data for CID: {}", cidStr );
-                                bitswap_->RequestContent(
+                                strong->node_logger_->info( "Mirroring result data for CID: {}", cidStr );
+                                bitswap->RequestContent(
                                     cid.value(),
-                                    [this, cidStr]( libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
+                                    [weak_self, cidStr](
+                                        libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
                                     {
+                                        auto strong = weak_self.lock();
+                                        if ( !strong )
+                                        {
+                                            return;
+                                        }
+
                                         if ( content )
                                         {
-                                            node_logger_->info( "Successfully mirrored result data: {} ({} files)",
-                                                               cidStr,
-                                                               content.value().files.size() );
+                                            strong->node_logger_->info(
+                                                "Successfully mirrored result data: {} ({} files)",
+                                                cidStr,
+                                                content.value().files.size() );
                                         }
                                         else
                                         {
-                                            node_logger_->warn( "Failed to mirror result data for CID {}: {}",
-                                                               cidStr,
-                                                               content.error().message() );
+                                            strong->node_logger_->warn( "Failed to mirror result data for CID {}: {}",
+                                                                        cidStr,
+                                                                        content.error().message() );
                                         }
                                     } );
                             }

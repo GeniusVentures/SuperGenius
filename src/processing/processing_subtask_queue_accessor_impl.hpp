@@ -106,6 +106,7 @@ namespace sgns::processing
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_resultChannel;
 
         std::function<void( const std::string & )> m_mirrorResultCallback; ///< Invoked when a mirrored result arrives.
+        mutable std::mutex                         m_mutexMirrorCallback;
 
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap; ///< For data availability checks on IPFS results.
 
