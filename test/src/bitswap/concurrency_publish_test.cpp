@@ -5,6 +5,8 @@
 #include <atomic>
 #include <vector>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 
 using namespace sgns::ipfs_bitswap;
 
@@ -21,8 +23,14 @@ TEST_F( PublishConcurrencyTest, PublishFileCallbackOnIoContext )
 {
     std::atomic<bool> callbackFired{ false };
 
+    auto tmpPath = std::filesystem::temp_directory_path() / "bitswap_test_publish_file.txt";
+    {
+        std::ofstream ofs( tmpPath );
+        ofs << "test content";
+    }
+
     bitswap_->PublishFile(
-        "/tmp/test_file.txt",
+        tmpPath.string(),
         [&callbackFired]( libp2p::outcome::result<CID> )
         {
             callbackFired.store( true, std::memory_order_release );
@@ -37,6 +45,7 @@ TEST_F( PublishConcurrencyTest, PublishFileCallbackOnIoContext )
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
 
+    std::filesystem::remove( tmpPath );
     EXPECT_TRUE( callbackFired.load() );
 }
 
@@ -49,8 +58,15 @@ TEST_F( PublishConcurrencyTest, PublishDirectoryCallbackOnIoContext )
 {
     std::atomic<bool> callbackFired{ false };
 
+    auto tmpDir = std::filesystem::temp_directory_path() / "bitswap_test_publish_dir";
+    std::filesystem::create_directory( tmpDir );
+    {
+        std::ofstream ofs( tmpDir / "test.txt" );
+        ofs << "test content";
+    }
+
     bitswap_->PublishDirectory(
-        "/tmp/test_dir",
+        tmpDir.string(),
         [&callbackFired]( libp2p::outcome::result<CID> )
         {
             callbackFired.store( true, std::memory_order_release );
@@ -65,6 +81,7 @@ TEST_F( PublishConcurrencyTest, PublishDirectoryCallbackOnIoContext )
         std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
     }
 
+    std::filesystem::remove_all( tmpDir );
     EXPECT_TRUE( callbackFired.load() );
 }
 
@@ -100,6 +117,12 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
     std::atomic<bool> running{ true };
     std::vector<std::thread> threads;
 
+    auto tmpPath = std::filesystem::temp_directory_path() / "bitswap_test_async_publish.txt";
+    {
+        std::ofstream ofs( tmpPath );
+        ofs << "test content";
+    }
+
     for ( int t = 0; t < 4; ++t )
     {
         threads.emplace_back(
@@ -125,14 +148,14 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
     for ( int t = 0; t < 2; ++t )
     {
         threads.emplace_back(
-            [this, &asyncCallbacksFired, &errors, &running]()
+            [this, &asyncCallbacksFired, &errors, &running, &tmpPath]()
             {
                 while ( running.load( std::memory_order_acquire ) )
                 {
                     try
                     {
                         bitswap_->PublishFile(
-                            "/tmp/test_async_file.txt",
+                            tmpPath.string(),
                             [&asyncCallbacksFired]( libp2p::outcome::result<CID> )
                             {
                                 asyncCallbacksFired.fetch_add(
@@ -154,6 +177,8 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
     {
         th.join();
     }
+
+    std::filesystem::remove( tmpPath );
 
     EXPECT_EQ( errors.load(), 0 );
     EXPECT_GT( asyncCallbacksFired.load(), 0 );
