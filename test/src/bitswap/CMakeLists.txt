@@ -47,3 +47,27 @@ target_link_libraries(concurrency_get_block_test
     bitswap_test_stubs
     ipfs-bitswap-cpp
 )
+
+addtest(concurrency_content_request_test
+    concurrency_content_request_test.cpp
+)
+target_link_libraries(concurrency_content_request_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
+
+addtest(concurrency_request_context_test
+    concurrency_request_context_test.cpp
+)
+target_link_libraries(concurrency_request_context_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
+
+addtest(concurrency_callback_test
+    concurrency_callback_test.cpp
+)
+target_link_libraries(concurrency_callback_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
