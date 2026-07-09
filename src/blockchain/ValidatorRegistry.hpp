@@ -4,7 +4,8 @@
  * @date       2025-10-16
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_VALIDATOR_REGISTRY_HPP
+#define SGNS_VALIDATOR_REGISTRY_HPP
 
 #include <cstdint>
 #include <functional>
@@ -472,17 +473,18 @@ namespace sgns
          * @brief Initializes local cache from persistent storage.
          */
         void InitializeCache();
+
         /**
          * @brief Builds map key for pending certificate subjects by base registry.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
          */
-        inline static std::string BuildBatchKey( const std::string &base_registry_cid,
-                                                 uint64_t           base_registry_epoch )
+        inline static std::string BuildBatchKey( const std::string &base_registry_cid, uint64_t base_registry_epoch )
         {
             return fmt::format( "{}:{}", base_registry_cid, base_registry_epoch );
         }
+
         /**
          * @brief Computes deterministic batch root from subject hashes.
          * @param[in] subject_hashes Subject hashes included in the batch.
@@ -561,3 +563,5 @@ namespace sgns
     };
 
 }
+
+#endif // SGNS_VALIDATOR_REGISTRY_HPP

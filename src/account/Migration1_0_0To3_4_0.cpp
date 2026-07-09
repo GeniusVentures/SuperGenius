@@ -17,7 +17,7 @@ namespace sgns
 {
     namespace
     {
-        std::string BuildLegacyProofPath_1_0_0( const IGeniusTransactions &tx )
+        std::string BuildLegacyProofPath_1_0_0( const GeniusTransaction &tx )
         {
             return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );

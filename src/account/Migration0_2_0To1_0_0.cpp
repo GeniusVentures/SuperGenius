@@ -34,13 +34,13 @@ namespace sgns
 {
     namespace
     {
-        std::string BuildLegacyTransactionPath( const IGeniusTransactions &tx )
+        std::string BuildLegacyTransactionPath( const GeniusTransaction &tx )
         {
             return tx.GetSrcAddress() + "/tx/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );
         }
 
-        std::string BuildLegacyProofPath( const IGeniusTransactions &tx )
+        std::string BuildLegacyProofPath( const GeniusTransaction &tx )
         {
             return tx.GetSrcAddress() + "/proof/" + tx.GetTransactionSpecificPath() + "/" +
                    std::to_string( tx.dag_st.nonce() );

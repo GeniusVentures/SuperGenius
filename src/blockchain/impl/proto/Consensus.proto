@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package sgns;
 
+import "account/proto/SGTransaction.proto";
+
+// Re-export SGTransaction types for use in oneof fields
+// (protobuf requires messages to be imported before use in oneof)
+
 // Deterministic hash of a canonical UTF-8 string.
 message HashOfAString {
   bytes hash = 1;
@@ -59,6 +64,19 @@ message NonceSubject {
   bytes tx_hash = 2;
   UTXOTransitionCommitment utxo_commitment = 3;
   UTXOWitness utxo_witness = 4;
+  EmbeddedTransaction transaction = 5;
+}
+
+message EmbeddedTransaction {
+  oneof transaction {
+    SGTransaction.TransferTx transfer = 1;
+    SGTransaction.MintTxV2 mint_v2 = 2;
+    SGTransaction.MintTx mint = 3;
+    SGTransaction.ProcessingTx processing = 4;
+    SGTransaction.MigrationTx migration = 5;
+    SGTransaction.EscrowTx escrow = 6;
+    SGTransaction.EscrowReleaseTx escrow_release = 7;
+  }
 }
 
 message TaskResultSubject {

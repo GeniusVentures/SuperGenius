@@ -17,7 +17,7 @@ namespace sgns
                                                   std::vector<std::string> node_addresses,
                                                   SGTransaction::DAGStruct dag ) :
 
-        IGeniusTransactions( "process", SetDAGWithType( std::move( dag ), "process" ) ), //
+        GeniusTransaction( "process", SetDAGWithType( std::move( dag ), "process" ) ), //
         job_id_( std::move( job_id ) ),
         subtask_ids_( std::move( subtask_ids ) ),
         node_addresses_( std::move( node_addresses ) )
@@ -64,6 +64,26 @@ namespace sgns
             std::cerr << "Failed to serialize transaction\n";
         }
         return serialized_proto;
+    }
+
+    EmbeddedTransaction ProcessingTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        EmbeddedTransaction embedded;
+        SGTransaction::ProcessingTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+        tx_struct.set_mpc_magic_key( 0 );
+        tx_struct.set_offset( 0 );
+        tx_struct.set_job_cid( job_id_ );
+        for ( const auto &str : subtask_ids_ )
+        {
+            tx_struct.add_subtask_cids( str );
+        }
+        for ( const auto &str : node_addresses_ )
+        {
+            tx_struct.add_node_addresses( str );
+        }
+        *embedded.mutable_processing() = tx_struct;
+        return embedded;
     }
 
     std::shared_ptr<ProcessingTransaction> ProcessingTransaction::DeSerializeByteVector(

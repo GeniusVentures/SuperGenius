@@ -5,12 +5,17 @@
 #include <termios.h>
 #include <unistd.h>
 #endif
+#include <filesystem>
+#include <fstream>
 #include <thread>
 #include <chrono>
 #include <cstdio>
 #include <boost/dll.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
 {
@@ -51,20 +56,29 @@ namespace sgns
      */
         static void SetUpTestSuite()
         {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
             CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
             CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
 
+            // All nodes in this test are non-processors.
+            // is_processor is now read exclusively from sgns_config.json (defaults to true).
+            std::filesystem::create_directories( CONFIG1.BaseWritePath );
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG1.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG1.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            std::filesystem::create_directories( CONFIG2.BaseWritePath );
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+
             node1 = sgns::GeniusNode::New( CONFIG1,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+                           sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
             node2 = sgns::GeniusNode::New( CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+                           sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
 
@@ -85,9 +99,7 @@ namespace sgns
             node2.reset();
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
             node2 = sgns::GeniusNode::New( CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+                           sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
     };
@@ -113,10 +125,10 @@ namespace sgns
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
                                               sgns::test::NextMintSourceHash(),
-                                              "",
+                                              "test",
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",
-                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;

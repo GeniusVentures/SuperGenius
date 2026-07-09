@@ -1,6 +1,8 @@
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include <chrono>
 #include <thread>
@@ -11,7 +13,7 @@ using namespace sgns;
 
 TEST( GeniusNode, InitializationProgress )
 {
-    boost::filesystem::path path = boost::dll::program_location().parent_path() / "am_full_node";
+    boost::filesystem::path path = boost::dll::program_location().parent_path() / "init_progress_node";
 
     try
     {
@@ -21,13 +23,15 @@ TEST( GeniusNode, InitializationProgress )
     {
     }
 
-    auto node = sgns::GeniusNode::NewFromPrivateKey(
-        { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), path.generic_string() + '/' },
-        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
-        false,
-        true,
-        40069,
-        true );
+    GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
+    const auto base_write_path = path.generic_string() + '/';
+    sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/40069, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true );
+    auto node = sgns::GeniusNode::New(
+        { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },
+        sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     auto last_percentage = 0.0F;

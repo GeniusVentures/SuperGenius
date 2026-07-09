@@ -39,6 +39,7 @@ rel/
 *.dir
 Debug
 Release
+RelWithDebInfo
 .vs
 *.aps
 *.db
@@ -135,4 +136,3 @@ out/
 modules.xml
 .idea/misc.xml
 *.ipr
-

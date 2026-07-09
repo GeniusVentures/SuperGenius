@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <iostream>
@@ -20,12 +21,14 @@
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 class ProcessingMultiTest : public ::testing::Test
 {
@@ -42,6 +45,10 @@ protected:
 
     static void SetUpTestSuite()
     {
+        sgns::GeniusAccount::SetSecureStorageFactory(
+            []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+            { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+
         std::string binary_path = boost::dll::program_location().parent_path().string();
         std::strncpy( DEV_CONFIG.BaseWritePath,
                       ( binary_path + "/node1/" ).c_str(),
@@ -58,20 +65,23 @@ protected:
         DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
         DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
 
+        // node_main: non-processor (is_processor=false), light node. Config-driven construction (Phase 3).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+
         node_main = sgns::GeniusNode::New( DEV_CONFIG,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false,
-                                           false );
+                           sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
         node_proc1 = sgns::GeniusNode::New( DEV_CONFIG2,
-                                            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                            sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
         node_proc2 = sgns::GeniusNode::New( DEV_CONFIG3,
-                                            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                            false,
-                                            true );
+                            sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
         node_proc1->StopProcessing();
         node_proc2->StopProcessing();
@@ -139,13 +149,13 @@ TEST_F( ProcessingMultiTest, MintTokens )
 {
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "",
+                           "test",
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
