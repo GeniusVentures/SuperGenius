@@ -24,7 +24,7 @@ TEST_F( ContentRequestConcurrencyTest, ConcurrentTimeoutAndProcessing )
 
     std::vector<uint8_t> testData = { 0x01, 0x02, 0x03 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -52,7 +52,7 @@ TEST_F( ContentRequestConcurrencyTest, ConcurrentTimeoutAndProcessing )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -86,7 +86,7 @@ TEST_F( ContentRequestConcurrencyTest, MultiBlockConcurrentArrival )
 
     std::vector<uint8_t> testData = { 0x10, 0x20, 0x30, 0x40 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -114,8 +114,8 @@ TEST_F( ContentRequestConcurrencyTest, MultiBlockConcurrentArrival )
                 {
                     try
                     {
-                        (void)bitswap_->HasBlock( storedCid );
-                        auto result = bitswap_->GetBlock( storedCid );
+                        (void)bitswap_->HasBlock( *storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -150,7 +150,7 @@ TEST_F( ContentRequestConcurrencyTest, QueueProcessingUnderStrand )
     std::vector<uint8_t> testData1 = { 0xAA, 0xBB };
     std::vector<uint8_t> testData2 = { 0xCC, 0xDD };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData1,
@@ -181,11 +181,11 @@ TEST_F( ContentRequestConcurrencyTest, QueueProcessingUnderStrand )
                     {
                         if ( ( counter++ + t ) % 2 == 0 )
                         {
-                            (void)bitswap_->HasBlock( storedCid );
+                            (void)bitswap_->HasBlock( *storedCid );
                         }
                         else
                         {
-                            auto result = bitswap_->GetBlock( storedCid );
+                            auto result = bitswap_->GetBlock( *storedCid );
                             (void)result;
                         }
                     }

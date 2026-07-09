@@ -24,7 +24,7 @@ TEST_F( CallbackReentrancyTest, ReenterDuringCallback )
 
     std::vector<uint8_t> testData = { 0x01, 0x02, 0x03, 0x04 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -52,10 +52,10 @@ TEST_F( CallbackReentrancyTest, ReenterDuringCallback )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         if ( result )
                         {
-                            (void)bitswap_->HasBlock( storedCid );
+                            (void)bitswap_->HasBlock( *storedCid );
                         }
                     }
                     catch ( ... )
@@ -89,7 +89,7 @@ TEST_F( CallbackReentrancyTest, NestedRequestFromCallback )
 
     std::vector<uint8_t> testData = { 0x10, 0x20, 0x30, 0x40, 0x50 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -118,12 +118,12 @@ TEST_F( CallbackReentrancyTest, NestedRequestFromCallback )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         if ( result && depth < 3 )
                         {
                             ++depth;
-                            (void)bitswap_->HasBlock( storedCid );
-                            auto r2 = bitswap_->GetBlock( storedCid );
+                            (void)bitswap_->HasBlock( *storedCid );
+                            auto r2 = bitswap_->GetBlock( *storedCid );
                             (void)r2;
                         }
                         depth = 0;
@@ -159,7 +159,7 @@ TEST_F( CallbackReentrancyTest, ConcurrentCallbacksNoDeadlock )
 
     std::vector<uint8_t> testData = { 0xAA, 0xBB, 0xCC };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -190,11 +190,11 @@ TEST_F( CallbackReentrancyTest, ConcurrentCallbacksNoDeadlock )
                         switch ( t % 3 )
                         {
                         case 0:
-                            (void)bitswap_->HasBlock( storedCid );
+                            (void)bitswap_->HasBlock( *storedCid );
                             break;
                         case 1:
                         {
-                            auto result = bitswap_->GetBlock( storedCid );
+                            auto result = bitswap_->GetBlock( *storedCid );
                             (void)result;
                         }
                         break;

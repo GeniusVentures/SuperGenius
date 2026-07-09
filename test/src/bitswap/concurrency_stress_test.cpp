@@ -37,18 +37,13 @@ TEST_F( BitswapStressTest, ConcurrentAccessNoCrashes )
             {
                 std::vector<uint8_t> testData = {
                     static_cast<uint8_t>( t ), 0x42, 0x43, 0x44 };
-                CID dummyCid;
-                {
-                    std::array<uint8_t, 34> raw;
-                    raw.fill( static_cast<uint8_t>( t ) );
-                    dummyCid = CID(
-                        libp2p::multi::ContentIdentifierVersion::V0,
-                        libp2p::multi::MulticodecType::Code::DAG_PB,
-                        libp2p::multi::Multihash::create(
-                            libp2p::multi::sha256,
-                            libp2p::common::ByteArray( 32, static_cast<uint8_t>( t ) ) )
-                            .value() );
-                }
+                CID dummyCid(
+                    libp2p::multi::ContentIdentifier::Version::V0,
+                    libp2p::multi::MulticodecType::Code::DAG_PB,
+                    libp2p::multi::Multihash::create(
+                        libp2p::multi::sha256,
+                        libp2p::common::ByteArray( 32, static_cast<uint8_t>( t ) ) )
+                        .value() );
 
                 int counter = 0;
                 while ( running.load( std::memory_order_acquire ) )
@@ -88,7 +83,8 @@ TEST_F( BitswapStressTest, ConcurrentAccessNoCrashes )
                                                                libp2p::common::ByteArray(
                                                                    32,
                                                                    static_cast<uint8_t>( t ) ) )
-                                                               .value() ),
+                                                               .value() )
+                            .value(),
                                                        {} } );
                             break;
                         case 7:
@@ -267,25 +263,21 @@ TEST_F( BitswapStressTest, ProviderMapConcurrentAccess )
         threads.emplace_back(
             [this, t, &running, &errors]()
             {
-                CID dummyCid;
-                {
-                    std::array<uint8_t, 34> raw;
-                    raw.fill( static_cast<uint8_t>( t ) );
-                    dummyCid = CID(
-                        libp2p::multi::ContentIdentifierVersion::V0,
-                        libp2p::multi::MulticodecType::Code::DAG_PB,
-                        libp2p::multi::Multihash::create(
-                            libp2p::multi::sha256,
-                            libp2p::common::ByteArray( 32, static_cast<uint8_t>( t ) ) )
-                            .value() );
-                }
+                CID dummyCid(
+                    libp2p::multi::ContentIdentifier::Version::V0,
+                    libp2p::multi::MulticodecType::Code::DAG_PB,
+                    libp2p::multi::Multihash::create(
+                        libp2p::multi::sha256,
+                        libp2p::common::ByteArray( 32, static_cast<uint8_t>( t ) ) )
+                        .value() );
 
                 libp2p::peer::PeerInfo pi{
                     libp2p::peer::PeerId::fromHash(
                         libp2p::multi::Multihash::create(
                             libp2p::multi::sha256,
                             libp2p::common::ByteArray( 32, static_cast<uint8_t>( t ) ) )
-                            .value() ),
+                            .value() )
+                            .value(),
                     {}
                 };
 
@@ -352,25 +344,21 @@ TEST_F( BitswapStressTest, FullSystemStress )
             {
                 std::vector<uint8_t> testData = {
                     static_cast<uint8_t>( t ), 0x10, 0x20, 0x30, 0x40 };
-                CID dummyCid;
-                {
-                    std::array<uint8_t, 34> raw;
-                    raw.fill( static_cast<uint8_t>( t + 1 ) );
-                    dummyCid = CID(
-                        libp2p::multi::ContentIdentifierVersion::V0,
-                        libp2p::multi::MulticodecType::Code::DAG_PB,
-                        libp2p::multi::Multihash::create(
-                            libp2p::multi::sha256,
-                            libp2p::common::ByteArray( 32, static_cast<uint8_t>( t + 1 ) ) )
-                            .value() );
-                }
+                CID dummyCid(
+                    libp2p::multi::ContentIdentifier::Version::V0,
+                    libp2p::multi::MulticodecType::Code::DAG_PB,
+                    libp2p::multi::Multihash::create(
+                        libp2p::multi::sha256,
+                        libp2p::common::ByteArray( 32, static_cast<uint8_t>( t + 1 ) ) )
+                        .value() );
 
                 libp2p::peer::PeerInfo pi{
                     libp2p::peer::PeerId::fromHash(
                         libp2p::multi::Multihash::create(
                             libp2p::multi::sha256,
                             libp2p::common::ByteArray( 32, static_cast<uint8_t>( t + 2 ) ) )
-                            .value() ),
+                            .value() )
+                            .value(),
                     {}
                 };
 

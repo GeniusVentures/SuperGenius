@@ -10,6 +10,7 @@
 #include <libp2p/network/dialer.hpp>
 #include <libp2p/network/listener_manager.hpp>
 #include <libp2p/network/connection_manager.hpp>
+#include <libp2p/network/route_helper.hpp>
 #include <libp2p/peer/peer_repository.hpp>
 #include <libp2p/peer/address_repository.hpp>
 #include <libp2p/peer/key_repository.hpp>
@@ -17,6 +18,8 @@
 #include <libp2p/event/bus.hpp>
 #include <libp2p/protocol/relay/relay_addresses.hpp>
 #include <libp2p/protocol/identify/observed_addresses.hpp>
+
+#include <bitswap.hpp>
 
 #include <gtest/gtest.h>
 
@@ -56,47 +59,35 @@ namespace sgns::ipfs_bitswap
     class StubDialer : public libp2p::network::Dialer
     {
     public:
-        void dial( const libp2p::multi::Multiaddress &,
-                   libp2p::peer::ProtocolPredicate,
-                   libp2p::network::Dialer::DialResultFunc ) override
+        void dial(
+            const libp2p::peer::PeerInfo &,
+            DialResultFunc,
+            std::chrono::milliseconds,
+            const libp2p::network::RouteHelper::SourceAddresses &,
+            bool = false,
+            bool = false ) override
         {
         }
 
-        void dial( libp2p::multi::Multiaddress &&,
-                   libp2p::peer::ProtocolPredicate,
-                   libp2p::network::Dialer::DialResultFunc ) override
+        void newStream(
+            const libp2p::peer::PeerInfo &,
+            libp2p::StreamProtocols,
+            libp2p::StreamAndProtocolOrErrorCb cb,
+            std::chrono::milliseconds,
+            const libp2p::network::RouteHelper::SourceAddresses & ) override
         {
+            cb( libp2p::StreamAndProtocolOrError(
+                libp2p::StreamAndProtocol{} ) );
         }
 
-        void dial( const libp2p::peer::PeerInfo &,
-                   libp2p::peer::ProtocolPredicate,
-                   libp2p::network::Dialer::DialResultFunc,
-                   std::chrono::milliseconds ) override
+        void newStream(
+            const libp2p::peer::PeerId &,
+            libp2p::StreamProtocols,
+            libp2p::StreamAndProtocolOrErrorCb cb,
+            const libp2p::network::RouteHelper::SourceAddresses & ) override
         {
-        }
-
-        void dial( libp2p::peer::PeerInfo &&,
-                   libp2p::peer::ProtocolPredicate,
-                   libp2p::network::Dialer::DialResultFunc,
-                   std::chrono::milliseconds ) override
-        {
-        }
-
-        void newStream( const libp2p::peer::PeerInfo &,
-                        libp2p::StreamProtocols,
-                        libp2p::StreamAndProtocolOrErrorCb cb,
-                        std::chrono::milliseconds ) override
-        {
-            cb( libp2p::outcome::result<std::shared_ptr<libp2p::connection::Stream>>(
-                libp2p::outcome::success() ) );
-        }
-
-        void newStream( const libp2p::peer::PeerId &,
-                        libp2p::StreamProtocols,
-                        libp2p::StreamAndProtocolOrErrorCb cb ) override
-        {
-            cb( libp2p::outcome::result<std::shared_ptr<libp2p::connection::Stream>>(
-                libp2p::outcome::success() ) );
+            cb( libp2p::StreamAndProtocolOrError(
+                libp2p::StreamAndProtocol{} ) );
         }
     };
 
@@ -146,36 +137,54 @@ namespace sgns::ipfs_bitswap
             return {};
         }
 
-        libp2p::event::Handle setProtocolHandler(
-            libp2p::StreamProtocols,
-            libp2p::StreamAndProtocolCb,
-            libp2p::ProtocolPredicate = {} ) override
+        libp2p::network::Router &getRouter() override
         {
-            return libp2p::event::Handle();
+            return router_;
         }
 
-        void removeProtocolHandlers(
-            const libp2p::peer::Protocol & ) override
+        void onConnection(
+            libp2p::outcome::result<std::shared_ptr<libp2p::connection::CapableConnection>> ) override
         {
         }
 
-        void removeAll() override
+        void onConnectionRelay(
+            libp2p::peer::PeerId,
+            libp2p::outcome::result<std::shared_ptr<libp2p::connection::CapableConnection>> ) override
         {
         }
+
+        void removeRelayedConnections(
+            libp2p::peer::PeerId ) override
+        {
+        }
+
+    private:
+        StubRouter router_;
     };
 
     class StubConnectionManager : public libp2p::network::ConnectionManager
     {
     public:
-        std::vector<libp2p::peer::PeerId>
-        getConnectedness() const override
+        std::vector<ConnectionSPtr> getConnections() const override
         {
             return {};
         }
 
+        std::vector<ConnectionSPtr> getConnectionsToPeer(
+            const libp2p::peer::PeerId & ) const override
+        {
+            return {};
+        }
+
+        ConnectionSPtr getBestConnectionForPeer(
+            const libp2p::peer::PeerId & ) const override
+        {
+            return nullptr;
+        }
+
         void addConnectionToPeer(
             const libp2p::peer::PeerId &,
-            std::shared_ptr<libp2p::connection::CapableConnection> ) override
+            ConnectionSPtr ) override
         {
         }
 
@@ -184,30 +193,67 @@ namespace sgns::ipfs_bitswap
         {
         }
 
+        void onConnectionClosed(
+            const libp2p::peer::PeerId &,
+            const std::shared_ptr<libp2p::connection::CapableConnection> & ) override
+        {
+        }
+
+        void removeRelayedConnections(
+            const libp2p::peer::PeerId & ) override
+        {
+        }
+
         void collectGarbage() override
         {
         }
 
-        const std::string &getBestConnection(
-            const libp2p::peer::PeerId & ) const override
+        void purgeIdleConnections() override
         {
-            static const std::string empty;
-            return empty;
         }
 
-        libp2p::network::ConnectionManager::Config &getConfig() override
+        void tagPeer(
+            const libp2p::peer::PeerId &,
+            const std::string &,
+            int ) override
+        {
+        }
+
+        void untagPeer(
+            const libp2p::peer::PeerId &,
+            const std::string & ) override
+        {
+        }
+
+        void protectPeer(
+            const libp2p::peer::PeerId &,
+            const std::string & ) override
+        {
+        }
+
+        bool unprotectPeer(
+            const libp2p::peer::PeerId &,
+            const std::string & ) override
+        {
+            return false;
+        }
+
+        void forceTrim() override
+        {
+        }
+
+        Config &getConfig() override
         {
             return config_;
         }
 
-        const libp2p::network::ConnectionManager::Config &getConfig()
-            const override
+        const Config &getConfig() const override
         {
             return config_;
         }
 
     private:
-        libp2p::network::ConnectionManager::Config config_{};
+        Config config_{};
     };
 
     class StubNetwork : public libp2p::network::Network
@@ -241,38 +287,41 @@ namespace sgns::ipfs_bitswap
     class StubAddressRepository : public libp2p::peer::AddressRepository
     {
     public:
-        libp2p::outcome::result<void> addAddresses(
+        using Milliseconds = std::chrono::milliseconds;
+
+        void bootstrap( const libp2p::multi::Multiaddress &,
+                        std::function<BootstrapCallback> ) override
+        {
+        }
+
+        libp2p::outcome::result<bool> addAddresses(
             const libp2p::peer::PeerId &,
             gsl::span<const libp2p::multi::Multiaddress>,
-            libp2p::peer::ttl::ttl_type ) override
+            Milliseconds ) override
+        {
+            return true;
+        }
+
+        libp2p::outcome::result<bool> upsertAddresses(
+            const libp2p::peer::PeerId &,
+            gsl::span<const libp2p::multi::Multiaddress>,
+            Milliseconds ) override
+        {
+            return true;
+        }
+
+        libp2p::outcome::result<void> updateAddresses(
+            const libp2p::peer::PeerId &,
+            Milliseconds ) override
         {
             return libp2p::outcome::success();
         }
 
-        libp2p::outcome::result<void> upsertAddresses(
-            const libp2p::peer::PeerId &,
-            gsl::span<const libp2p::multi::Multiaddress>,
-            libp2p::peer::ttl::ttl_type ) override
-        {
-            return libp2p::outcome::success();
-        }
-
-        void updateAddresses(
-            const libp2p::peer::PeerId &,
-            libp2p::peer::ttl::ttl_type ) override
-        {
-        }
-
-        void removeAddresses(
-            const libp2p::peer::PeerId &,
-            gsl::span<const libp2p::multi::Multiaddress> ) override
-        {
-        }
-
-        std::vector<libp2p::multi::Multiaddress> getAddresses(
+        libp2p::outcome::result<std::vector<libp2p::multi::Multiaddress>>
+        getAddresses(
             const libp2p::peer::PeerId & ) const override
         {
-            return {};
+            return std::vector<libp2p::multi::Multiaddress>{};
         }
 
         void clear( const libp2p::peer::PeerId & ) override
@@ -292,15 +341,28 @@ namespace sgns::ipfs_bitswap
     class StubKeyRepository : public libp2p::peer::KeyRepository
     {
     public:
-        void addPublicKey( const libp2p::peer::PeerId &,
-                           const libp2p::crypto::PublicKey & ) override
+        libp2p::outcome::result<void> addPublicKey(
+            const libp2p::peer::PeerId &,
+            const libp2p::crypto::PublicKey & ) override
         {
+            return libp2p::outcome::success();
         }
 
         libp2p::outcome::result<PubVecPtr>
-        getPublicKeys( const libp2p::peer::PeerId & ) const override
+        getPublicKeys( const libp2p::peer::PeerId & ) override
         {
             return PubVecPtr{};
+        }
+
+        libp2p::outcome::result<KeyPairVecPtr> getKeyPairs() override
+        {
+            return KeyPairVecPtr{};
+        }
+
+        libp2p::outcome::result<void> addKeyPair(
+            const KeyPair & ) override
+        {
+            return libp2p::outcome::success();
         }
 
         void clear( const libp2p::peer::PeerId & ) override
@@ -310,11 +372,6 @@ namespace sgns::ipfs_bitswap
         std::unordered_set<libp2p::peer::PeerId> getPeers() const override
         {
             return {};
-        }
-
-        libp2p::outcome::result<KeyPairVecPtr> getAllKeyPairs() const
-        {
-            return KeyPairVecPtr{};
         }
     };
 
@@ -329,32 +386,37 @@ namespace sgns::ipfs_bitswap
             return libp2p::outcome::success();
         }
 
-        std::vector<libp2p::peer::Protocol>
+        libp2p::outcome::result<void> removeProtocols(
+            const libp2p::peer::PeerId &,
+            gsl::span<const libp2p::peer::Protocol> ) override
+        {
+            return libp2p::outcome::success();
+        }
+
+        libp2p::outcome::result<std::vector<libp2p::peer::Protocol>>
         getProtocols( const libp2p::peer::PeerId & ) const override
         {
-            return {};
+            return std::vector<libp2p::peer::Protocol>{};
         }
 
-        std::set<libp2p::peer::Protocol>
+        libp2p::outcome::result<std::vector<libp2p::peer::Protocol>>
         supportsProtocols( const libp2p::peer::PeerId &,
-                           gsl::span<const libp2p::peer::Protocol> ) const override
+                           const std::set<libp2p::peer::Protocol> & ) const override
         {
-            return {};
+            return std::vector<libp2p::peer::Protocol>{};
         }
 
-        void removeProtocols( const libp2p::peer::PeerId &,
-                              gsl::span<const libp2p::peer::Protocol> ) override
+        void clear( const libp2p::peer::PeerId & ) override
         {
+        }
+
+        std::unordered_set<libp2p::peer::PeerId> getPeers() const override
+        {
+            return {};
         }
 
         void collectGarbage() override
         {
-        }
-
-        const std::set<libp2p::peer::PeerId> &getPeers() const override
-        {
-            static const std::set<libp2p::peer::PeerId> empty;
-            return empty;
         }
     };
 
@@ -416,7 +478,8 @@ namespace sgns::ipfs_bitswap
             return libp2p::peer::PeerId::fromHash(
                 libp2p::multi::Multihash::create( libp2p::multi::sha256,
                                                   libp2p::common::ByteArray( 32, 0 ) )
-                    .value() );
+                    .value() )
+                .value();
         }
 
         libp2p::peer::PeerInfo getPeerInfo() const override
@@ -493,18 +556,16 @@ namespace sgns::ipfs_bitswap
                         libp2p::StreamAndProtocolOrErrorCb cb,
                         std::chrono::milliseconds = {} ) override
         {
-            cb( libp2p::outcome::result<
-                std::shared_ptr<libp2p::connection::Stream>>(
-                libp2p::outcome::success() ) );
+            cb( libp2p::StreamAndProtocolOrError(
+                libp2p::StreamAndProtocol{} ) );
         }
 
         void newStream( const libp2p::peer::PeerId &,
                         libp2p::StreamProtocols,
                         libp2p::StreamAndProtocolOrErrorCb cb ) override
         {
-            cb( libp2p::outcome::result<
-                std::shared_ptr<libp2p::connection::Stream>>(
-                libp2p::outcome::success() ) );
+            cb( libp2p::StreamAndProtocolOrError(
+                libp2p::StreamAndProtocol{} ) );
         }
 
         libp2p::outcome::result<void> listen(

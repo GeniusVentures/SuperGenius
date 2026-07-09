@@ -24,7 +24,7 @@ TEST_F( RequestContextTimerTest, ResponseTimeoutDuringResponse )
 
     std::vector<uint8_t> testData = { 0x01, 0x02, 0x03, 0x04 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -52,7 +52,7 @@ TEST_F( RequestContextTimerTest, ResponseTimeoutDuringResponse )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -86,7 +86,7 @@ TEST_F( RequestContextTimerTest, MultiCallbackConcurrentFire )
 
     std::vector<uint8_t> testData = { 0x10, 0x20, 0x30 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -114,7 +114,7 @@ TEST_F( RequestContextTimerTest, MultiCallbackConcurrentFire )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -148,7 +148,7 @@ TEST_F( RequestContextTimerTest, AddCallbackDuringHandleResponse )
 
     std::vector<uint8_t> testData = { 0xAA, 0xBB, 0xCC, 0xDD, 0xEE };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -176,7 +176,7 @@ TEST_F( RequestContextTimerTest, AddCallbackDuringHandleResponse )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )

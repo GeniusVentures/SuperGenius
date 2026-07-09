@@ -23,7 +23,7 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetBlockSameCid )
 
     std::vector<uint8_t> testData = { 0x01, 0x02, 0x03, 0x04 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -51,7 +51,7 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetBlockSameCid )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -85,7 +85,7 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetHasBlock )
 
     std::vector<uint8_t> testData = { 0x0A, 0x0B, 0x0C };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -115,11 +115,11 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetHasBlock )
                     {
                         if ( t % 2 == 0 )
                         {
-                            (void)bitswap_->HasBlock( storedCid );
+                            (void)bitswap_->HasBlock( *storedCid );
                         }
                         else
                         {
-                            auto result = bitswap_->GetBlock( storedCid );
+                            auto result = bitswap_->GetBlock( *storedCid );
                             (void)result;
                         }
                     }
@@ -156,7 +156,7 @@ TEST_F( GetBlockConcurrencyTest, GetBlockLazyLoadRace )
 
     std::vector<uint8_t> testData = { 0x10, 0x20, 0x30, 0x40, 0x50 };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -184,7 +184,7 @@ TEST_F( GetBlockConcurrencyTest, GetBlockLazyLoadRace )
                 {
                     try
                     {
-                        auto result = bitswap_->GetBlock( storedCid );
+                        auto result = bitswap_->GetBlock( *storedCid );
                         (void)result;
                     }
                     catch ( ... )
@@ -215,7 +215,7 @@ TEST_F( GetBlockConcurrencyTest, ConstCorrectnessVerification )
 {
     std::vector<uint8_t> testData = { 0xAA, 0xBB, 0xCC };
     std::atomic<bool>    stored{ false };
-    CID                  storedCid;
+    std::optional<CID>   storedCid;
 
     bitswap_->PublishData(
         testData,
@@ -235,6 +235,6 @@ TEST_F( GetBlockConcurrencyTest, ConstCorrectnessVerification )
 
     ASSERT_TRUE( stored.load() );
 
-    auto result = bitswap_->GetBlock( storedCid );
+    auto result = bitswap_->GetBlock( *storedCid );
     EXPECT_TRUE( result.has_value() || result.has_error() );
 }

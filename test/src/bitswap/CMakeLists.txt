@@ -9,7 +9,10 @@ target_include_directories(bitswap_test_stubs PUBLIC
 target_link_libraries(bitswap_test_stubs PUBLIC
     ipfs-bitswap-cpp
     p2p::p2p_basic_host
+    p2p::p2p_cid
     Boost::headers
+    GTest::gtest_main
+    GTest::gmock_main
 )
 
 include_directories(
