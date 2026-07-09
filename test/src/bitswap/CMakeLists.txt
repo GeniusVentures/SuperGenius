@@ -71,3 +71,12 @@ target_link_libraries(concurrency_callback_test
     bitswap_test_stubs
     ipfs-bitswap-cpp
 )
+
+# Combined stress test
+addtest(concurrency_stress_test
+    concurrency_stress_test.cpp
+)
+target_link_libraries(concurrency_stress_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
