@@ -1,6 +1,5 @@
 {
     "net_id": 144,
-    "is_processor": true,
     "node_type": "Light",
     "subnet_id": 0,
     "bootstrap_fullnodes": [
