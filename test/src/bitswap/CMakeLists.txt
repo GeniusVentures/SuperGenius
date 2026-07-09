@@ -1,0 +1,49 @@
+add_library(bitswap_test_stubs STATIC
+    stubs.cpp
+)
+
+target_include_directories(bitswap_test_stubs PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+target_link_libraries(bitswap_test_stubs PUBLIC
+    ipfs-bitswap-cpp
+    p2p::p2p_basic_host
+    Boost::headers
+)
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+addtest(concurrency_cache_dir_test
+    concurrency_cache_dir_test.cpp
+)
+target_link_libraries(concurrency_cache_dir_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
+
+addtest(concurrency_config_test
+    concurrency_config_test.cpp
+)
+target_link_libraries(concurrency_config_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
+
+addtest(concurrency_publish_test
+    concurrency_publish_test.cpp
+)
+target_link_libraries(concurrency_publish_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
+
+addtest(concurrency_get_block_test
+    concurrency_get_block_test.cpp
+)
+target_link_libraries(concurrency_get_block_test
+    bitswap_test_stubs
+    ipfs-bitswap-cpp
+)
