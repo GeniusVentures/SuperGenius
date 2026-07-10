@@ -17,6 +17,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <fmt/format.h>
@@ -151,13 +152,13 @@ namespace sgns
          * @brief Loads the currently active registry.
          * @return Registry snapshot or an error.
          */
-        outcome::result<Registry> LoadRegistry() const;
+        outcome::result<Registry> LoadCurrentRegistry() const;
         /**
          * @brief Loads a registry by CID.
          * @param[in] cid Registry CID.
          * @return Registry snapshot or an error.
          */
-        outcome::result<Registry> LoadRegistry( const std::string &cid ) const;
+        outcome::result<Registry> LoadRegistryByCid( const std::string &cid ) const;
         /**
          * @brief Loads the currently active registry update payload.
          * @return Registry update or an error.
@@ -248,7 +249,7 @@ namespace sgns
          * @brief Handles a finalized consensus certificate.
          * @param[in] certificate Finalized certificate.
          */
-        void OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
+        outcome::result<void> OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
 
         /**
          * @brief Decision result when evaluating a registry-batch subject.
@@ -383,13 +384,10 @@ namespace sgns
         /**
          * @brief Verifies registry update signatures and consistency.
          * @param[in] update Update to verify.
-         * @param[in] current_registry Current registry snapshot, if available.
          * @param[in] enforce_time_window Whether timestamp window checks are enforced.
          * @return `true` when update is valid.
          */
-        bool VerifyUpdate( const RegistryUpdate &update,
-                           const Registry       *current_registry,
-                           bool                  enforce_time_window ) const;
+        bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
         /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
@@ -397,7 +395,8 @@ namespace sgns
          * @return `true` when certificate is valid.
          */
         bool ValidateCertificate( const sgns::ConsensusCertificate &certificate,
-                                  const Registry                   &current_registry ) const;
+                                  const Registry                   &current_registry,
+                                  std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Validates certificate suitability for generating a registry update.
          * @param[in] certificate Certificate to validate.
@@ -405,7 +404,8 @@ namespace sgns
          * @return `true` when certificate can drive a registry update.
          */
         bool ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
-                                           const Registry                   &current_registry ) const;
+                                           const Registry                   &current_registry,
+                                           std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.

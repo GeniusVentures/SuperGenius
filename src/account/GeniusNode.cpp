@@ -237,8 +237,7 @@ namespace sgns
         scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
             std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
             libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
-        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
-        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() )
     {
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
@@ -1165,7 +1164,7 @@ namespace sgns
 
             gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
                                       base58key_;
-            auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
+            auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
 
             //Set a pubsub config, use no signing because we can verify with proof and dag structure
             libp2p::protocol::gossip::Config config;
@@ -1180,8 +1179,30 @@ namespace sgns
                 config );
 
             auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
-            pubs.wait();
-            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
+            if ( auto pubsub_start_error = pubs.get(); pubsub_start_error )
+            {
+                node_logger_->error( "PubSub failed to start on {}:{}: {}",
+                                     pubsub_bind_address,
+                                     pubsubport_,
+                                     pubsub_start_error.message() );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+
+            auto pubsub_interface_address = pubsub_->GetInterfaceAddress();
+            if ( pubsub_interface_address.empty() )
+            {
+                node_logger_->error( "PubSub started without an interface address on {}:{}",
+                                     pubsub_bind_address,
+                                     pubsubport_ );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+            node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
 
             if ( upnp_enabled )
             {
@@ -1714,6 +1735,10 @@ namespace sgns
 
     void GeniusNode::ResetProcessingMembers()
     {
+        if ( processing_service_ )
+        {
+            processing_service_->StopProcessing();
+        }
         processing_service_.reset();
         task_result_storage_.reset();
         processing_core_.reset();
@@ -1894,10 +1919,10 @@ namespace sgns
         }
 
         // Work from the end (newest entries) backward
-        const size_t total = my_task_ids_.size();
-        const size_t start = ( offset >= total ) ? 0 : ( total - offset );
+        const size_t total     = my_task_ids_.size();
+        const size_t start     = ( offset >= total ) ? 0 : ( total - offset );
         const size_t available = ( start >= limit ) ? ( start - limit ) : 0;
-        const size_t count = start - available;
+        const size_t count     = start - available;
 
         std::vector<std::string> result;
         result.reserve( count );
@@ -2255,7 +2280,7 @@ namespace sgns
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC = __func__;
-        boost::asio::post( *processing_callback_pool_,
+        boost::asio::post( boost::asio::system_executor{},
                            [weak_self( weak_from_this() ), task_id, taskresult]()
                            {
                                if ( auto strong = weak_self.lock() )
@@ -2330,7 +2355,7 @@ namespace sgns
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        boost::asio::post( *processing_callback_pool_,
+        boost::asio::post( boost::asio::system_executor{},
                            [weak_self( weak_from_this() ), task_id]()
                            {
                                if ( auto strong = weak_self.lock() )
@@ -2748,7 +2773,14 @@ namespace sgns
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
-        rpc_endpoint_provider_->AddObserver( *this );
+        rpc_endpoint_provider_->AddObserverCallback(
+            [weak_self = weak_from_this()]( std::vector<ChainContractPair> chains )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->OnRpcEndpointsReady( std::move( chains ) );
+                }
+            } );
         if ( bridge_relayer_ )
         {
             rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
@@ -2776,14 +2808,11 @@ namespace sgns
                             relayer  = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
-                               if ( !strong )
-                               {
-                                   return;
-                               }
-                               if ( strong->bridge_init_generation_.load() != generation )
+                               if ( !strong || strong->bridge_init_generation_.load() != generation )
                                {
                                    return; // account switched — stale init, abort
                                }
+                               strong.reset();
                                if ( !tx_mgr || !provider )
                                {
                                    return;
@@ -2905,8 +2934,8 @@ namespace sgns
             // Scan from (current_block - scan_depth) to latest
             constexpr uint64_t kBlockNumberRequestId = 99;
             auto               block_number_req      = eth::rpc::make_json_rpc_request( "eth_blockNumber",
-                                                                     boost::json::array{},
-                                                                     kBlockNumberRequestId );
+                                                                                        boost::json::array{},
+                                                                                        kBlockNumberRequestId );
             auto               block_number_resp     = transport.call( block_number_req );
             uint64_t           current_block         = 0;
 
@@ -3496,10 +3525,7 @@ namespace sgns
                     my_task_ids_.push_back( std::move( all_ids[i] ) );
                 }
 
-                node_logger_->info( "Loaded {} of {} task IDs from {}",
-                                    my_task_ids_.size(),
-                                    total,
-                                    MyTasksFilePath() );
+                node_logger_->info( "Loaded {} of {} task IDs from {}", my_task_ids_.size(), total, MyTasksFilePath() );
             }
         }
         catch ( const std::exception &e )

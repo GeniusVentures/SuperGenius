@@ -132,6 +132,9 @@ namespace sgns::crdt
         {
             m_crdtDatastore->CancelAndCloseNow();
         }
+        m_broadcaster.reset();
+        m_crdtDatastore.reset();
+        m_datastore.reset();
 
         started_.store( false );
         m_logger->info( "GlobalDB shutdown finished" );
@@ -168,8 +171,7 @@ namespace sgns::crdt
                 auto is_retryable_open_error = []( storage::DatabaseError error )
                 {
                     return error == storage::DatabaseError::IO_ERROR || error == storage::DatabaseError::BUSY ||
-                           error == storage::DatabaseError::TRY_AGAIN_ ||
-                           error == storage::DatabaseError::TIMED_OUT ||
+                           error == storage::DatabaseError::TRY_AGAIN_ || error == storage::DatabaseError::TIMED_OUT ||
                            error == storage::DatabaseError::SHUTDOWN_IN_PROGRESS;
                 };
 
@@ -190,12 +192,13 @@ namespace sgns::crdt
                         {
                             if ( !( backup_options_.enabled && backup_options_.auto_restore_on_repair_failure ) )
                             {
-                                m_logger->error( "Backup restore is disabled; cannot recover corrupted DB from backup" );
+                                m_logger->error(
+                                    "Backup restore is disabled; cannot recover corrupted DB from backup" );
                                 return false;
                             }
 
                             ::ROCKSDB_NAMESPACE::BackupEngineReadOnly *backup_engine = nullptr;
-                            ::ROCKSDB_NAMESPACE::BackupEngineOptions    backup_options_engine( backup_directory_ );
+                            ::ROCKSDB_NAMESPACE::BackupEngineOptions   backup_options_engine( backup_directory_ );
                             auto open_backup_status = ::ROCKSDB_NAMESPACE::BackupEngineReadOnly::Open(
                                 ::ROCKSDB_NAMESPACE::Env::Default(),
                                 backup_options_engine,
@@ -214,10 +217,9 @@ namespace sgns::crdt
                             ::ROCKSDB_NAMESPACE::RestoreOptions restore_options;
                             restore_options.keep_log_files = false;
 
-                            auto restore_status =
-                                backup_guard->RestoreDBFromLatestBackup( databasePathAbsolute,
-                                                                         databasePathAbsolute,
-                                                                         restore_options );
+                            auto restore_status = backup_guard->RestoreDBFromLatestBackup( databasePathAbsolute,
+                                                                                           databasePathAbsolute,
+                                                                                           restore_options );
                             if ( !restore_status.ok() )
                             {
                                 m_logger->error( "Restore from latest backup failed: {}", restore_status.ToString() );
@@ -231,10 +233,9 @@ namespace sgns::crdt
 
                         if ( !restoreFromLatestBackup() )
                         {
-                            m_logger->critical(
-                                "Restore from backup failed for corrupted DB {}. "
-                                "Terminating process to preserve on-disk state for forensic analysis.",
-                                databasePathAbsolute );
+                            m_logger->critical( "Restore from backup failed for corrupted DB {}. "
+                                                "Terminating process to preserve on-disk state for forensic analysis.",
+                                                databasePathAbsolute );
                             std::abort();
                         }
                     }
@@ -243,19 +244,17 @@ namespace sgns::crdt
                 // Lock-retry loop: only for transient / retryable errors (lock, busy, etc.)
                 while ( !dataStoreResult.has_value() )
                 {
-                    auto errorCode =
-                        static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
+                    auto errorCode = static_cast<storage::DatabaseError>( dataStoreResult.error().value() );
 
                     if ( is_retryable_open_error( errorCode ) && lock_retry_count < kMaxLockRetries )
                     {
                         ++lock_retry_count;
-                        m_logger->warn(
-                            "Database {} not open yet ({}). Retrying open in {}ms ({}/{})",
-                            databasePathAbsolute,
-                            dataStoreResult.error().message(),
-                            kRetrySleep.count(),
-                            lock_retry_count,
-                            kMaxLockRetries );
+                        m_logger->warn( "Database {} not open yet ({}). Retrying open in {}ms ({}/{})",
+                                        databasePathAbsolute,
+                                        dataStoreResult.error().message(),
+                                        kRetrySleep.count(),
+                                        lock_retry_count,
+                                        kMaxLockRetries );
                         std::this_thread::sleep_for( kRetrySleep );
                         dataStoreResult = RocksDB::create( databasePathAbsolute, options );
                         continue;
@@ -269,7 +268,9 @@ namespace sgns::crdt
 
                 if ( lock_retry_count > 0 )
                 {
-                    m_logger->info( "Opened database {} after {} open retries", databasePathAbsolute, lock_retry_count );
+                    m_logger->info( "Opened database {} after {} open retries",
+                                    databasePathAbsolute,
+                                    lock_retry_count );
                 }
 
                 dataStore = std::move( dataStoreResult.value() );
@@ -359,7 +360,7 @@ namespace sgns::crdt
             return;
         }
 
-        ::ROCKSDB_NAMESPACE::BackupEngine *backup_engine = nullptr;
+        ::ROCKSDB_NAMESPACE::BackupEngine       *backup_engine = nullptr;
         ::ROCKSDB_NAMESPACE::BackupEngineOptions backup_options_engine( backup_directory_ );
         auto open_status = ::ROCKSDB_NAMESPACE::BackupEngine::Open( ::ROCKSDB_NAMESPACE::Env::Default(),
                                                                     backup_options_engine,
@@ -413,7 +414,7 @@ namespace sgns::crdt
                 while ( !stop_backup_thread_.load() )
                 {
                     std::unique_lock<std::mutex> lock( backup_wait_mutex_ );
-                    const bool stop_requested = backup_wait_cv_.wait_for(
+                    const bool                   stop_requested = backup_wait_cv_.wait_for(
                         lock,
                         std::chrono::minutes( backup_options_.interval_minutes ),
                         [this]() { return stop_backup_thread_.load(); } );
@@ -590,17 +591,41 @@ namespace sgns::crdt
 
     void GlobalDB::UnregisterElementFilter( const std::string &pattern )
     {
-        m_crdtDatastore->UnregisterElementFilter( pattern );
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+        auto crdt_datastore = m_crdtDatastore;
+        if ( crdt_datastore )
+        {
+            crdt_datastore->UnregisterElementFilter( pattern );
+        }
     }
 
     void GlobalDB::UnregisterNewElementCallback( const std::string &pattern )
     {
-        m_crdtDatastore->UnregisterNewElementCallback( pattern );
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+        auto crdt_datastore = m_crdtDatastore;
+        if ( crdt_datastore )
+        {
+            crdt_datastore->UnregisterNewElementCallback( pattern );
+        }
     }
 
     void GlobalDB::UnregisterDeletedElementCallback( const std::string &pattern )
     {
-        m_crdtDatastore->UnregisterDeletedElementCallback( pattern );
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+        auto crdt_datastore = m_crdtDatastore;
+        if ( crdt_datastore )
+        {
+            crdt_datastore->UnregisterDeletedElementCallback( pattern );
+        }
     }
 
     std::shared_ptr<GlobalDB::RocksDB> GlobalDB::GetDataStore()

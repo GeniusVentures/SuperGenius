@@ -736,7 +736,7 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
+        bool                                                  is_full_node_ = false; ///< Whether this node runs in full-node mode.
         NodeType node_type_ =
             NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger node_logger_; ///< Main node logger.
@@ -754,12 +754,13 @@ namespace sgns
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
         /// bridge_relayer_ is never dereferenced by an in-flight init.
-        std::atomic<uint64_t>                    bridge_init_generation_{ 0 };
-        std::string                              gnus_network_full_path_;       ///< Versioned network DB path.
-        std::string                              processing_channel_topic_;     ///< Processing task channel topic.
-        std::string                              processing_grid_chanel_topic_; ///< Processing grid topic.
+        std::atomic<uint64_t> bridge_init_generation_{ 0 };
+        std::string           gnus_network_full_path_;       ///< Versioned network DB path.
+        std::string           processing_channel_topic_;     ///< Processing task channel topic.
+        std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
+        uint16_t              subnet_id_ = 0;                ///< Subnet ID from sgns_config.json (reserved).
+
         std::vector<std::string>                 bootstrap_peers_;
-        uint16_t                                 subnet_id_ = 0; ///< Subnet ID from sgns_config.json (reserved).
         std::vector<std::string>                 bootstrap_fullnodes_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
@@ -998,8 +999,6 @@ namespace sgns
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsyncnetwork_; ///< GraphSync network.
-
-        std::unique_ptr<boost::asio::thread_pool> processing_callback_pool_; ///< Processing callback execution pool.
 
         std::atomic<NodeState> state_{ NodeState::CREATING }; ///< Current node lifecycle state.
         std::atomic_bool       shutdown_started_{ false };    ///< Whether shutdown has been initiated.

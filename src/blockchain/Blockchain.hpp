@@ -199,7 +199,7 @@ namespace sgns
          * @param[in] utxo_witness Optional UTXO witness payload.
          * @return Constructed subject or an error.
          */
-        outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject(
+        static outcome::result<ConsensusManager::Subject> CreateConsensusNonceSubject(
             const std::string                             &account_id,
             uint64_t                                       nonce,
             const std::string                             &tx_hash,
