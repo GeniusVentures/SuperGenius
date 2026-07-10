@@ -55,14 +55,149 @@ groups:
  *
  * Extends ProcessingServiceTest to create a real Bitswap instance from a pubsub
  * node, enabling end-to-end tests of mirror callbacks and availability gates.
+ *
+ * The two pubsub nodes (and their libp2p hosts) are created ONCE via
+ * SetUpTestSuite and shared across all tests in this fixture.  This avoids
+ * the rapid create/destroy cycle of libp2p hosts that causes sequential-test
+ * failures on Linux (pubsub mesh instability, resource leaks).
  */
 class ResultDurabilityTest : public ProcessingServiceTest
 {
 public:
+    // ── Suite-level (one-time) pubsub lifecycle ──────────────────────
+
+    static void SetUpTestSuite()
+    {
+        // Initialize the logging system before creating libp2p hosts.
+        // Mirrors ProcessingServiceTest::SetUp(name, loggerConfig).
+        auto logSystem = std::make_shared<soralog::LoggingSystem>(
+            std::make_shared<soralog::ConfiguratorFromYAML>(
+                std::make_shared<libp2p::log::Configurator>(),
+                durability_logger_config ) );
+        if ( auto result = logSystem->configure(); result.has_error )
+            throw std::domain_error( "Unable to configure soralog" );
+        libp2p::log::setLoggingSystem( logSystem );
+        libp2p::log::setLevelOfGroup( "result_durability_test", soralog::Level::OFF );
+        s_logger_initialized = true;
+
+        libp2p::protocol::gossip::Config config;
+        config.echo_forward_mode       = true;
+        config.sign_messages           = true;
+        config.seen_cache_limit        = 10;
+        config.heartbeat_interval_msec = std::chrono::milliseconds{ 100 };
+
+        std::vector<std::string> bootstrap_nodes;
+        for ( size_t i = 0; i < 2; ++i )
+        {
+            int  port = 40001 + i;
+            auto node = std::make_shared<GossipPubSub>( config );
+
+            Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
+            for ( auto &bn : bootstrap_nodes )
+                Color::PrintInfo( "  with bootstrap node: ", bn );
+
+            s_pubsub_futures.push_back( node->Start( port, bootstrap_nodes ) );
+
+            std::chrono::milliseconds nodeStartTime;
+            ASSERT_WAIT_FOR_CONDITION(
+                [&]()
+                {
+                    auto &f = s_pubsub_futures[i];
+                    if ( f.wait_for( std::chrono::milliseconds( 0 ) ) == std::future_status::ready )
+                    {
+                        try
+                        {
+                            if ( auto result = f.get(); result )
+                            {
+                                Color::PrintError( "PubSub node ", i, " failed to start: ", result.message() );
+                                return false;
+                            }
+                            Color::PrintInfo( "PubSub node ", i, " started successfully" );
+                            return true;
+                        }
+                        catch ( const std::exception &e )
+                        {
+                            Color::PrintError( "PubSub node ", i, " start exception: ", e.what() );
+                            return false;
+                        }
+                    }
+                    return false;
+                },
+                std::chrono::milliseconds( 5000 ),
+                "PubSub node startup failed",
+                &nodeStartTime );
+
+            s_pubsub_nodes.push_back( node );
+
+            if ( i == 0 )
+            {
+                bootstrap_nodes = { node->GetInterfaceAddress() };
+                Color::PrintInfo( "PubSub node 0 started on address ", bootstrap_nodes[0] );
+            }
+        }
+    }
+
+    static void TearDownTestSuite()
+    {
+        for ( auto &pubs : s_pubsub_nodes )
+        {
+            if ( pubs )
+                pubs->Stop();
+        }
+        // Allow time for libp2p shutdown
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        s_pubsub_nodes.clear();
+        s_pubsub_futures.clear();
+    }
+
+    // ── Per-test setup / teardown ────────────────────────────────────
+
     void SetUp() override
     {
-        ProcessingServiceTest::SetUp( "result_durability_test", durability_logger_config );
-        ProcessingServiceTest::Initialize( 2, 50 );
+        // The logging system was already configured in SetUpTestSuite.
+        if ( !s_logger_initialized )
+        {
+            ProcessingServiceTest::SetUp( "result_durability_test", durability_logger_config );
+            s_logger_initialized = true;
+        }
+
+        // Reuse the suite-level pubsub nodes instead of creating new ones.
+        m_pubsub_nodes   = s_pubsub_nodes;
+        m_pubsub_futures.clear();
+
+        // Create fresh accessors, managers, and engines per test (same as
+        // the second half of ProcessingServiceTest::Initialize).
+        for ( size_t i = 0; i < 2; ++i )
+        {
+            std::string nodeId = "NODE_" + std::to_string( i + 1 );
+            auto        pubsub_node = m_pubsub_nodes[i];
+
+            auto processingCore = m_processing_cores.emplace_back(
+                std::make_shared<ProcessingCoreImpl>( 50 ) );
+            auto queuePubSubChannel = m_processing_queues_channel_pub_subs.emplace_back(
+                std::make_shared<ProcessingSubTaskQueueChannelPubSub>( pubsub_node, "QUEUE_CHANNEL_ID" ) );
+            auto processingQueueManager = m_processing_queues_managers.emplace_back(
+                std::make_shared<ProcessingSubTaskQueueManager>( queuePubSubChannel,
+                                                                 pubsub_node->GetAsioContext(),
+                                                                 nodeId,
+                                                                 []( const std::string & ) {} ) );
+            m_processing_engines.emplace_back(
+                std::make_shared<ProcessingEngine>( nodeId, processingCore, []( const std::string & ) {}, [] {} ) );
+            m_IsTaskFinalized.emplace_back( std::make_unique<std::atomic<bool>>( false ) );
+
+            auto queueAccessor = m_processing_queues_accessors.emplace_back(
+                std::make_shared<SubTaskQueueAccessorImpl>(
+                    pubsub_node,
+                    processingQueueManager,
+                    std::make_shared<SubTaskResultStorageMock>(),
+                    [this, i, nodeId]( const SGProcessing::TaskResult & )
+                    {
+                        m_IsTaskFinalized[i]->store( true );
+                        Color::PrintInfo( "Task finalized by ", nodeId );
+                    },
+                    []( const std::string & ) {} ) );
+            queueAccessor->CreateResultsChannel( "test" );
+        }
 
         // Create a real Bitswap from node 0's host for availability checks.
         auto host = m_pubsub_nodes[0]->GetHost();
@@ -85,21 +220,42 @@ public:
 
     void TearDown() override
     {
-        // Reset bitswap before tearing down pubsub (bitswap holds host refs).
+        // Reset bitswap before tearing down accessors (bitswap holds host refs).
         if ( bitswap_ )
-        {
             bitswap_.reset();
-        }
         if ( bitswap_event_bus_ )
-        {
             bitswap_event_bus_.reset();
-        }
 
         // Clean up temp cache.
         std::error_code ec;
         fs::remove_all( temp_cache_dir_, ec );
 
-        ProcessingServiceTest::TearDown();
+        // Destroy per-test objects (engines, accessors, managers, channels, cores)
+        // but NOT the pubsub nodes — they live in s_pubsub_nodes across tests.
+        for ( auto &s : m_processing_services )
+        {
+            if ( s ) s->StopProcessing();
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+
+        for ( auto &engine : m_processing_engines )
+        {
+            if ( engine ) engine->StopQueueProcessing();
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+        m_processing_engines.clear();
+
+        m_processing_queues_accessors.clear();
+        m_processing_queues_managers.clear();
+        m_processing_queues_channel_pub_subs.clear();
+        m_processing_cores.clear();
+        m_IsTaskFinalized.clear();
+
+        m_processing_services.clear();
+
+        // Detach pubsub references (the real nodes live in s_pubsub_nodes).
+        m_pubsub_nodes.clear();
+        m_pubsub_futures.clear();
     }
 
     /**
@@ -147,6 +303,11 @@ public:
     std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_;
     std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_;
     fs::path                                     temp_cache_dir_;
+
+    // ── Suite-level (shared) pubsub nodes ────────────────────────────
+    static inline std::vector<std::shared_ptr<GossipPubSub>> s_pubsub_nodes;
+    static inline std::vector<std::future<std::error_code>>  s_pubsub_futures;
+    static inline bool                                       s_logger_initialized = false;
 };
 
 // ═══════════════════════════════════════════════════════════════════════
