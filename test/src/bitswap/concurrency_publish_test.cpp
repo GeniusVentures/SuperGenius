@@ -141,6 +141,7 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
                     {
                         errors.fetch_add( 1, std::memory_order_relaxed );
                     }
+                    std::this_thread::yield();
                 }
             } );
     }
@@ -166,6 +167,10 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
                     {
                         errors.fetch_add( 1, std::memory_order_relaxed );
                     }
+                    // Throttle to prevent overwhelming the io_context with
+                    // posted handlers that would take excessive time to drain.
+                    std::this_thread::sleep_for(
+                        std::chrono::milliseconds( 1 ) );
                 }
             } );
     }
@@ -179,8 +184,7 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
     }
 
     // Drain all pending io_context work — PublishFile callbacks are posted
-    // asynchronously and must complete before we remove the temp file, or
-    // they will throw std::runtime_error("File not found") and terminate.
+    // asynchronously and must complete before we remove the temp file.
     drainIoContext();
 
     std::filesystem::remove( tmpPath );

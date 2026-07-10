@@ -684,12 +684,13 @@ namespace sgns::ipfs_bitswap
         std::unique_ptr<StubHost>                stubHost_;
         std::shared_ptr<Bitswap>                 bitswap_;
 
-        /// @brief Drain all pending io_context work by stopping the event loop.
+        /// @brief Drain all pending io_context work.
+        /// Resets the work guard so io_context::run() returns naturally after
+        /// the handler queue is empty, then joins the io thread.
         /// Must be called before removing resources that pending callbacks depend on.
         void drainIoContext()
         {
             ioWork_.reset();
-            ioContext_->stop();
             if ( ioThread_.joinable() )
             {
                 ioThread_.join();
