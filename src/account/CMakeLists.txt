@@ -92,7 +92,6 @@ set(GENIUS_NODE_LIBS
     ipfs-bitswap-cpp
     AsyncIOManager    
     Boost::Boost.DI
-    SGTransactionProto
     ScaledInteger
     sgns_version
     ${WIN_API_LIBRARY}
@@ -109,6 +108,7 @@ set(GENIUS_NODE_LIBS
     outcome
     logger
     crdt_globaldb
+    SGTransactionProto
     processing_service
     gnus_upnp
     blockchain_genesis

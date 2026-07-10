@@ -9,5 +9,8 @@ add_library(migration STATIC
 target_link_libraries(migration
     PUBLIC
     sgns_genius_account
+    PRIVATE
+    SGTransactionProto
+    SGProcessingProto
 )
 supergenius_install(migration)
