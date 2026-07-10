@@ -37,10 +37,11 @@ TEST_F( RequestContextTimerTest, ResponseTimeoutDuringResponse )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds publishTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
+                               std::chrono::milliseconds( 5000 ),
+                               "PublishData callback did not fire",
+                               &publishTime );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -99,10 +100,11 @@ TEST_F( RequestContextTimerTest, MultiCallbackConcurrentFire )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds publishTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
+                               std::chrono::milliseconds( 5000 ),
+                               "PublishData callback did not fire",
+                               &publishTime );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -161,10 +163,11 @@ TEST_F( RequestContextTimerTest, AddCallbackDuringHandleResponse )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds publishTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
+                               std::chrono::milliseconds( 5000 ),
+                               "PublishData callback did not fire",
+                               &publishTime );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )

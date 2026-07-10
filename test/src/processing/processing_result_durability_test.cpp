@@ -444,7 +444,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_RejectsNonIpfsPrefix )
     auto badResult = makeResult( "SCHEME_TEST", "file:///tmp/out.raw" );
     accessor->CompleteSubTask( "SCHEME_TEST", badResult );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+    std::chrono::milliseconds settleTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return error_occurred.load(); },
+                               std::chrono::milliseconds( 2000 ),
+                               "Expected error callback for file:// scheme",
+                               &settleTime );
     EXPECT_TRUE( error_occurred.load() ) << "Scheme validation should reject file:// prefix";
 }
 

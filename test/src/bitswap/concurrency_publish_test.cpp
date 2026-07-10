@@ -36,14 +36,11 @@ TEST_F( PublishConcurrencyTest, PublishFileCallbackOnIoContext )
             callbackFired.store( true, std::memory_order_release );
         } );
 
-    for ( int i = 0; i < 100; ++i )
-    {
-        if ( callbackFired.load( std::memory_order_acquire ) )
-        {
-            break;
-        }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds publishTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return callbackFired.load(); },
+                               std::chrono::milliseconds( 5000 ),
+                               "PublishFile callback did not fire",
+                               &publishTime );
 
     std::filesystem::remove( tmpPath );
     EXPECT_TRUE( callbackFired.load() );
@@ -72,14 +69,11 @@ TEST_F( PublishConcurrencyTest, PublishDirectoryCallbackOnIoContext )
             callbackFired.store( true, std::memory_order_release );
         } );
 
-    for ( int i = 0; i < 100; ++i )
-    {
-        if ( callbackFired.load( std::memory_order_acquire ) )
-        {
-            break;
-        }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds publishTime;
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return callbackFired.load(); },
+                               std::chrono::milliseconds( 5000 ),
+                               "PublishDirectory callback did not fire",
+                               &publishTime );
 
     std::filesystem::remove_all( tmpDir );
     EXPECT_TRUE( callbackFired.load() );
