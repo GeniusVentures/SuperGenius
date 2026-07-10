@@ -17,7 +17,6 @@
 #include <boost/asio/io_context.hpp>
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 #include "base/logger.hpp"
-#include "upnp.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "outcome/outcome.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>

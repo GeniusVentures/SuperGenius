@@ -6,7 +6,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#include "account/Migration0_2_0To1_0_0.hpp"
+#include "Migration0_2_0To1_0_0.hpp"
 
 #include <filesystem>
 #include <boost/format.hpp>

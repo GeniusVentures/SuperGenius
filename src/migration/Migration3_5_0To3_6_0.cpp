@@ -1,6 +1,6 @@
 #include "Migration3_5_0To3_6_0.hpp"
 
-#include "account/MigrationManager.hpp"
+#include "MigrationManager.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
