@@ -88,7 +88,6 @@ set(GENIUS_NODE_LIBS
     p2p::p2p_identify
     p2p::p2p_ping
     Boost::Boost.DI
-    SGTransactionProto
     ScaledInteger
     sgns_version
     ${WIN_API_LIBRARY}
@@ -105,6 +104,7 @@ set(GENIUS_NODE_LIBS
     outcome
     logger
     crdt_globaldb
+    SGTransactionProto
     processing_service
     gnus_upnp
     blockchain_genesis
