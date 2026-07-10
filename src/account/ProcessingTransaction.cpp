@@ -8,7 +8,7 @@
 #include "account/ProcessingTransaction.hpp"
 
 #include <utility>
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 
 namespace sgns
 {
@@ -22,10 +22,9 @@ namespace sgns
         subtask_ids_( std::move( subtask_ids ) ),
         node_addresses_( std::move( node_addresses ) )
     {
-        auto hasher_   = std::make_shared<sgns::crypto::HasherImpl>();
-        auto hash_data = hasher_->blake2b_256( SerializeByteVector() );
+        auto hash_data = crypto::blake2b_256( SerializeByteVector() );
         dag_st.set_data_hash( hash_data.toReadableString() );
-        hash_data = hasher_->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        hash_data = crypto::blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
         job_hash_ = uint256_t{ "0x" + hash_data.toReadableString() };
     }
 

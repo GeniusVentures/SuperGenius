@@ -21,7 +21,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include <gsl/span>
 #include "testutil/storage/base_crdt_test.hpp"
 
@@ -133,8 +133,7 @@ namespace
         dag_copy.clear_signature();
         dag_copy.clear_data_hash();
         auto   serialized_bytes = tx_obj->SerializeByteVector( dag_copy );
-        sgns::crypto::HasherImpl hasher;
-        auto hash = hasher.blake2b_256(
+        auto hash = sgns::crypto::blake2b_256(
             gsl::span<const uint8_t>( serialized_bytes.data(), serialized_bytes.size() ) );
 
         // Step 4: Rebuild the TransferTx proto with the correct data_hash
@@ -212,9 +211,9 @@ public:
 
         tm_ = TransactionManager::New(
             db_, io_, account_,
-            std::make_shared<crypto::HasherImpl>(),
             blockchain_,
             false,  // full_node
+            0,      // subnet_id
             kTimestampTolerance,
             kMutabilityWindow );
         assert( tm_ != nullptr );

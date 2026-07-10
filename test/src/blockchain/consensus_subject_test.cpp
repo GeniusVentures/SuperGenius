@@ -4,7 +4,7 @@
 #include "blockchain/Consensus.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 
 namespace sgns
 {
@@ -56,8 +56,7 @@ namespace
 
     void RefreshPayloadHash( sgns::ConsensusSubject &subject )
     {
-        sgns::crypto::HasherImpl hasher;
-        auto payload_hash = hasher.sha2_256(
+        auto payload_hash = sgns::crypto::sha2_256(
             gsl::span<const uint8_t>(
                 reinterpret_cast<const uint8_t *>( subject.payload().data() ),
                 subject.payload().size() ) );
@@ -311,10 +310,8 @@ TEST( ConsensusSubjectTest, Sanitization_Blake2bHashOfKnownDataMatches )
 {
     // Given: Known input bytes and their expected blake2b_256 hash
     const std::vector<uint8_t> input = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07 };
-    sgns::crypto::HasherImpl hasher;
-
     // When: Computing blake2b_256 of the known bytes
-    const auto hash = hasher.blake2b_256(
+    const auto hash = sgns::crypto::blake2b_256(
         gsl::span<const uint8_t>( input.data(), input.size() ) );
 
     // Then: Hash has correct size (32 bytes)
@@ -373,8 +370,7 @@ TEST( ConsensusSubjectTest, Sanitization_HashMismatch_RejectsBeforeParse )
 {
     // Given: An embedded transaction and a mismatched tx_hash (simulating tampering)
     const auto embedded = MakeTestEmbeddedTransfer();
-    sgns::crypto::HasherImpl  hasher;
-    const auto hash_of_different_data = hasher.blake2b_256(
+    const auto hash_of_different_data = sgns::crypto::blake2b_256(
         gsl::span<const uint8_t>(
             reinterpret_cast<const uint8_t*>( "wrong data" ), 10 ) );
 

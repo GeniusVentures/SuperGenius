@@ -8,7 +8,6 @@
 
 #include <utility>
 
-#include "crypto/hasher/hasher_impl.hpp"
 #include "base/blob.hpp"
 
 namespace sgns

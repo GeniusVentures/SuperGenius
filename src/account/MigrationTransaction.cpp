@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 
 #include "base/blob.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 
 namespace sgns
 {
@@ -201,8 +201,7 @@ namespace sgns
                                                              const TokenID   &token_id )
     {
         const auto payload = fmt::format( "migration:{}:{}:{}", from_version, source_address, token_id.ToHex() );
-        auto hasher = std::make_shared<crypto::HasherImpl>();
-        return hasher->blake2b_256( std::vector<uint8_t>( payload.begin(), payload.end() ) ).toReadableString();
+        return crypto::blake2b_256( std::vector<uint8_t>( payload.begin(), payload.end() ) ).toReadableString();
     }
 
     MigrationTransaction MigrationTransaction::New( uint64_t                 amount,

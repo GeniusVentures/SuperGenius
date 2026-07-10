@@ -23,7 +23,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
 
 namespace sgns
@@ -705,8 +705,7 @@ namespace sgns
             payload.push_back( '\n' );
             payload += subject_hashes[i];
         }
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( payload.data(), payload.size() );
+        auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
