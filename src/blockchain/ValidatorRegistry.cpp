@@ -1092,18 +1092,8 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        RegistryUpdate  update      = decoded_update.value();
-        const Registry *current_ptr = nullptr;
-
-        {
-            std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
-            if ( cached_registry_ )
-            {
-                current_ptr = &cached_registry_.value();
-            }
-        }
-
-        if ( !VerifyUpdate( update, current_ptr, false ) )
+        RegistryUpdate update = decoded_update.value();
+        if ( !VerifyUpdate( update, false ) )
         {
             logger_->error( "{}: verification failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
@@ -1175,9 +1165,7 @@ namespace sgns
         return std::vector<uint8_t>( serialized.begin(), serialized.end() );
     }
 
-    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update,
-                                          const Registry       *current_registry,
-                                          bool                  enforce_time_window ) const
+    bool ValidatorRegistry::VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const
     {
         logger_->trace( "{}: entry validators={}", __func__, update.registry().validators().size() );
         if ( update.registry().validators().empty() )
@@ -1194,13 +1182,15 @@ namespace sgns
         }
 
         const std::string prev_registry_cid = update.prev_registry_hash();
-        std::string       current_id;
+        std::optional<Registry> base_registry_snapshot;
+        std::string             current_id;
         {
             std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
-            current_id = cached_registry_id_;
+            base_registry_snapshot = cached_registry_;
+            current_id             = cached_registry_id_;
         }
 
-        const Registry *base_registry = current_registry;
+        const Registry *base_registry = base_registry_snapshot ? &base_registry_snapshot.value() : nullptr;
         bool needs_to_fetch_registry  = !base_registry || current_id.empty() || prev_registry_cid != current_id;
         if ( !prev_registry_cid.empty() && ( needs_to_fetch_registry ) )
         {
@@ -1210,7 +1200,8 @@ namespace sgns
                 logger_->error( "{}: base registry unavailable cid={}", __func__, prev_registry_cid );
                 return false;
             }
-            base_registry = &base_registry_result.value();
+            base_registry_snapshot = base_registry_result.value();
+            base_registry          = &base_registry_snapshot.value();
         }
 
         if ( !base_registry && prev_registry_cid.empty() )

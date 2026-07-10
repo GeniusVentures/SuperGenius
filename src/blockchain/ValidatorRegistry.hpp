@@ -384,13 +384,10 @@ namespace sgns
         /**
          * @brief Verifies registry update signatures and consistency.
          * @param[in] update Update to verify.
-         * @param[in] current_registry Current registry snapshot, if available.
          * @param[in] enforce_time_window Whether timestamp window checks are enforced.
          * @return `true` when update is valid.
          */
-        bool VerifyUpdate( const RegistryUpdate &update,
-                           const Registry       *current_registry,
-                           bool                  enforce_time_window ) const;
+        bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
         /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
