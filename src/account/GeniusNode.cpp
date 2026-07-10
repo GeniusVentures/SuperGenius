@@ -40,7 +40,7 @@
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
-#include "account/MigrationManager.hpp"
+#include "migration/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"

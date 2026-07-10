@@ -67,12 +67,6 @@ set(GENIUS_NODE_SOURCES
     PublicChainInputValidator.cpp
     TransactionManager.cpp
     TokenAmount.cpp
-    MigrationManager.cpp
-    Migration0_2_0To1_0_0.cpp
-    Migration1_0_0To3_4_0.cpp
-    Migration3_4_0To3_5_0.cpp
-    Migration3_5_0To3_6_0.cpp
-    Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
@@ -116,6 +110,7 @@ set(GENIUS_NODE_LIBS
     blockchain_genesis
     ProcessingBase
     evmrelay
+    migration
     sgns_genius_account
 )
 

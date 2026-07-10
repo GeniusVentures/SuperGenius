@@ -9,8 +9,8 @@
 #include <filesystem>
 
 #include "MigrationManager.hpp"
-#include "TransactionManager.hpp"
-#include "TransferTransaction.hpp"
+#include "account/TransactionManager.hpp"
+#include "account/TransferTransaction.hpp"
 #include "base/sgns_version.hpp"
 
 namespace sgns

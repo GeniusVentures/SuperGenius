@@ -10,7 +10,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
-#include "account/MigrationManager.hpp"
+#include "MigrationManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 

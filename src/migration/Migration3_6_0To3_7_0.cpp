@@ -1,7 +1,7 @@
 #include "Migration3_6_0To3_7_0.hpp"
 
+#include "MigrationManager.hpp"
 #include "account/MigrationAllowList.hpp"
-#include "account/MigrationManager.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/proto/SGTransaction.pb.h"

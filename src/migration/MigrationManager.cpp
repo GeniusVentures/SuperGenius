@@ -6,12 +6,12 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#include "account/MigrationManager.hpp"
-#include "account/Migration0_2_0To1_0_0.hpp"
-#include "account/Migration1_0_0To3_4_0.hpp"
-#include "account/Migration3_4_0To3_5_0.hpp"
-#include "account/Migration3_5_0To3_6_0.hpp"
-#include "account/Migration3_6_0To3_7_0.hpp"
+#include "MigrationManager.hpp"
+#include "Migration0_2_0To1_0_0.hpp"
+#include "Migration1_0_0To3_4_0.hpp"
+#include "Migration3_4_0To3_5_0.hpp"
+#include "Migration3_5_0To3_6_0.hpp"
+#include "Migration3_6_0To3_7_0.hpp"
 
 #include <boost/format.hpp>
 #include <boost/system/error_code.hpp>
