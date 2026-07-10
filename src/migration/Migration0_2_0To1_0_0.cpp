@@ -13,9 +13,7 @@
 #include <boost/system/error_code.hpp>
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
-#include "proof/IBasicProof.hpp"
 #include "MigrationManager.hpp"
-#include "base/sgns_version.hpp"
 
 namespace
 {
