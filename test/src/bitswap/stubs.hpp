@@ -684,6 +684,18 @@ namespace sgns::ipfs_bitswap
         std::unique_ptr<StubHost>                stubHost_;
         std::shared_ptr<Bitswap>                 bitswap_;
 
+        /// @brief Drain all pending io_context work by stopping the event loop.
+        /// Must be called before removing resources that pending callbacks depend on.
+        void drainIoContext()
+        {
+            ioWork_.reset();
+            ioContext_->stop();
+            if ( ioThread_.joinable() )
+            {
+                ioThread_.join();
+            }
+        }
+
     private:
         std::unique_ptr<boost::asio::io_context::work> ioWork_;
         std::thread                                     ioThread_;

@@ -178,6 +178,11 @@ TEST_F( PublishConcurrencyTest, MultiConcurrentPublish )
         th.join();
     }
 
+    // Drain all pending io_context work — PublishFile callbacks are posted
+    // asynchronously and must complete before we remove the temp file, or
+    // they will throw std::runtime_error("File not found") and terminate.
+    drainIoContext();
+
     std::filesystem::remove( tmpPath );
 
     EXPECT_EQ( errors.load(), 0 );
