@@ -752,7 +752,7 @@ TEST( ConsensusSubjectTest, TimestampTolerance_DefaultIsFiveMinutes )
 
     // Then: Default tolerance equals 5 minutes in milliseconds
     EXPECT_EQ( DEFAULT_TOLERANCE_MS, FIVE_MINUTES_MS );
-    // This validates the DevConfig_st default value matches the required ±5 minutes
+    // This validates the GeniusNodeConfig default value matches the required ±5 minutes
 }
 
 TEST( ConsensusSubjectTest, TimestampTolerance_ConfigurationChangesValue )

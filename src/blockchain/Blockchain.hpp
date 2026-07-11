@@ -537,6 +537,7 @@ namespace sgns
         bool              filters_registered_   = false; ///< Indicates CRDT filters were registered.
         bool              callbacks_registered_ = false; ///< Indicates CRDT callbacks were registered.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
+        std::atomic<bool> start_deferred_{ false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
         bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
         bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
 
