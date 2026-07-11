@@ -14,6 +14,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <chrono>
+#include "testutil/wait_condition.hpp"
 
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
@@ -327,21 +329,17 @@ void BridgeE2ETest::SetUpTestSuite()
     node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY
-    auto sync_deadline = std::chrono::steady_clock::now() + kBlockchainInitTimeout;
-    while ( std::chrono::steady_clock::now() < sync_deadline )
-    {
-        if ( node_proc1->GetState() == GeniusNode::NodeState::READY &&
-             node_proc2->GetState() == GeniusNode::NodeState::READY )
-        {
-            spdlog::info( "bridge_e2e: all processor nodes synced and READY" );
-            break;
-        }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-    }
-    if ( node_proc1->GetState() != GeniusNode::NodeState::READY )
-    {
-        spdlog::warn( "bridge_e2e: node_proc1 did not sync within timeout — proceeding with node_main only" );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]() {
+            return node_proc1->GetState() == GeniusNode::NodeState::READY &&
+                   node_proc2->GetState() == GeniusNode::NodeState::READY;
+        },
+        kBlockchainInitTimeout,
+        "Processor nodes did not sync to READY within timeout",
+        &elapsed );
+
+    spdlog::info( "bridge_e2e: all processor nodes synced and READY" );
 
     spdlog::info( "bridge_e2e: 3-node cluster ready" );
 

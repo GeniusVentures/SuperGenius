@@ -8,6 +8,8 @@
 #include <ipfs_lite/ipfs/impl/in_memory_datastore.hpp>
 #include <thread>
 #include <atomic>
+#include <chrono>
+#include "testutil/wait_condition.hpp"
 #include "crdt_custom_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
 
@@ -133,10 +135,12 @@ namespace sgns::crdt
             std::thread t2(
                 [&]()
                 {
-                    while ( !did_interrupt && !t1_finished )
-                    {
-                        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-                    }
+                    std::chrono::milliseconds elapsed;
+                    ASSERT_WAIT_FOR_CONDITION(
+                        [&]() { return did_interrupt || t1_finished; },
+                        std::chrono::milliseconds( 5000 ),
+                        "Thread 1 did not finish or interrupt within timeout",
+                        &elapsed );
                     if ( !use_atomic && !t1_finished )
                     {
                         EXPECT_OUTCOME_TRUE_1( crdtDatastore_->PutKey( key1, initial_value, { "test" } ) );

@@ -4,6 +4,8 @@
 #include <thread>
 #include <atomic>
 #include <vector>
+#include <chrono>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::ipfs_bitswap;
 
@@ -36,10 +38,12 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetBlockSameCid )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -98,10 +102,12 @@ TEST_F( GetBlockConcurrencyTest, ConcurrentGetHasBlock )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -169,10 +175,12 @@ TEST_F( GetBlockConcurrencyTest, GetBlockLazyLoadRace )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -228,10 +236,12 @@ TEST_F( GetBlockConcurrencyTest, ConstCorrectnessVerification )
             }
         } );
 
-    while ( !stored.load( std::memory_order_acquire ) )
-    {
-        std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     ASSERT_TRUE( stored.load() );
 
