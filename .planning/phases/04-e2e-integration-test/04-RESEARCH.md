@@ -330,9 +330,9 @@ protected:
     static std::shared_ptr<GeniusNode> node_main;
     static std::shared_ptr<GeniusNode> node_proc1;
     static std::shared_ptr<GeniusNode> node_proc2;
-    static DevConfig_st DEV_CONFIG;
-    static DevConfig_st DEV_CONFIG2;
-    static DevConfig_st DEV_CONFIG3;
+    static DevConfig_st gGeniusNodeConfig;
+    static DevConfig_st gGeniusNodeConfig2;
+    static DevConfig_st gGeniusNodeConfig3;
     static std::string s_eth_private_key;
 
     static void SetUpTestSuite()
@@ -346,18 +346,18 @@ protected:
         
         // Per-node BaseWritePath
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        DEV_CONFIG.BaseWritePath  = binary_path + "/node1/";
-        DEV_CONFIG2.BaseWritePath = binary_path + "/node2/";
-        DEV_CONFIG3.BaseWritePath = binary_path + "/node3/";
+        gGeniusNodeConfig.BaseWritePath  = binary_path + "/node1/";
+        gGeniusNodeConfig2.BaseWritePath = binary_path + "/node2/";
+        gGeniusNodeConfig3.BaseWritePath = binary_path + "/node3/";
         
         // Full node first (creates genesis)
-        node_main = GeniusNode::New(DEV_CONFIG, s_eth_private_key.c_str(), false, false, 40001, true);
+        node_main = GeniusNode::New(gGeniusNodeConfig, s_eth_private_key.c_str(), false, false, 40001, true);
         sgns::Blockchain::SetAuthorizedFullNodeAddress(node_main->GetAddress());
         // Wait for READY state (60s timeout)
         
         // Processor nodes
-        node_proc1 = GeniusNode::New(DEV_CONFIG2, s_eth_private_key.c_str(), false, false, 40002);
-        node_proc2 = GeniusNode::New(DEV_CONFIG3, s_eth_private_key.c_str(), false, false, 40003);
+        node_proc1 = GeniusNode::New(gGeniusNodeConfig2, s_eth_private_key.c_str(), false, false, 40002);
+        node_proc2 = GeniusNode::New(gGeniusNodeConfig3, s_eth_private_key.c_str(), false, false, 40003);
         
         // PubSub bootstrap
         node_proc1->GetPubSub()->AddPeers({...});
@@ -372,9 +372,9 @@ protected:
         node_main.reset();
         node_proc1.reset();
         node_proc2.reset();
-        std::filesystem::remove_all(DEV_CONFIG.BaseWritePath);
-        std::filesystem::remove_all(DEV_CONFIG2.BaseWritePath);
-        std::filesystem::remove_all(DEV_CONFIG3.BaseWritePath);
+        std::filesystem::remove_all(gGeniusNodeConfig.BaseWritePath);
+        std::filesystem::remove_all(gGeniusNodeConfig2.BaseWritePath);
+        std::filesystem::remove_all(gGeniusNodeConfig3.BaseWritePath);
     }
 };
 ```

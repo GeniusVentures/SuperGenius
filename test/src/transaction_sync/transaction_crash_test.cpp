@@ -36,12 +36,12 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> node2 = nullptr;
 
         // Configuration for node instances
-        static inline DevConfig_st CONFIG1 = { "0xcafe",
+        static inline GeniusNodeConfig CONFIG1 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./node_crash1" };
-        static inline DevConfig_st CONFIG2 = { "0xcafe",
+        static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),

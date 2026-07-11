@@ -37,9 +37,9 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> node_proc1;
     static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
-    static DevConfig_st DEV_CONFIG;
-    static DevConfig_st DEV_CONFIG2;
-    static DevConfig_st DEV_CONFIG3;
+    static NodeConfig gGeniusNodeConfig;
+    static NodeConfig gGeniusNodeConfig2;
+    static NodeConfig gGeniusNodeConfig3;
 
     static std::string binary_path;
 
@@ -50,38 +50,38 @@ protected:
             { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
-        std::strncpy( DEV_CONFIG.BaseWritePath,
+        std::strncpy( gGeniusNodeConfig.BaseWritePath,
                       ( binary_path + "/node1/" ).c_str(),
-                      sizeof( DEV_CONFIG.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG2.BaseWritePath,
+                      sizeof( gGeniusNodeConfig.BaseWritePath ) );
+        std::strncpy( gGeniusNodeConfig2.BaseWritePath,
                       ( binary_path + "/node2/" ).c_str(),
-                      sizeof( DEV_CONFIG2.BaseWritePath ) );
-        std::strncpy( DEV_CONFIG3.BaseWritePath,
+                      sizeof( gGeniusNodeConfig2.BaseWritePath ) );
+        std::strncpy( gGeniusNodeConfig3.BaseWritePath,
                       ( binary_path + "/node3/" ).c_str(),
-                      sizeof( DEV_CONFIG3.BaseWritePath ) );
+                      sizeof( gGeniusNodeConfig3.BaseWritePath ) );
 
         // Ensure null termination in case the string is too long
-        DEV_CONFIG.BaseWritePath[sizeof( DEV_CONFIG.BaseWritePath ) - 1]   = '\0';
-        DEV_CONFIG2.BaseWritePath[sizeof( DEV_CONFIG2.BaseWritePath ) - 1] = '\0';
-        DEV_CONFIG3.BaseWritePath[sizeof( DEV_CONFIG3.BaseWritePath ) - 1] = '\0';
+        gGeniusNodeConfig.BaseWritePath[sizeof( gGeniusNodeConfig.BaseWritePath ) - 1]   = '\0';
+        gGeniusNodeConfig2.BaseWritePath[sizeof( gGeniusNodeConfig2.BaseWritePath ) - 1] = '\0';
+        gGeniusNodeConfig3.BaseWritePath[sizeof( gGeniusNodeConfig3.BaseWritePath ) - 1] = '\0';
 
         // Write minimal sgns_config.json for node_main so it does not run as a processor.
         // is_processor is now read exclusively from this config file (defaults to true).
-        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        std::filesystem::create_directories( gGeniusNodeConfig.BaseWritePath );
         {
-            std::ofstream config_file( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
+            std::ofstream config_file( gGeniusNodeConfig.BaseWritePath + std::string( "sgns_config.json" ) );
             config_file << R"({"is_processor": false})";
         }
 
-        node_main = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
+        node_main = sgns::GeniusNode::NewFromPrivateKey( gGeniusNodeConfig,
                                            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                            false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc1 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG2,
+        node_proc1 = sgns::GeniusNode::NewFromPrivateKey( gGeniusNodeConfig2,
                                             "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false );
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-        node_proc2 = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG3,
+        node_proc2 = sgns::GeniusNode::NewFromPrivateKey( gGeniusNodeConfig3,
                                             "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
                                             false );
 
@@ -103,21 +103,21 @@ protected:
     {
         std::cout << "Tear down main" << std::endl;
         delete node_main;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG.BaseWritePath ) )
+        // if ( !std::filesystem::remove_all( gGeniusNodeConfig.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete main node files\n";
         // }
 
         std::cout << "Tear down 2" << std::endl;
         delete node_proc1;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath ) )
+        // if ( !std::filesystem::remove_all( gGeniusNodeConfig2.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 2 files\n";
         // }
 
         std::cout << "Tear down 3" << std::endl;
         delete node_proc2;
-        // if ( !std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath ) )
+        // if ( !std::filesystem::remove_all( gGeniusNodeConfig3.BaseWritePath ) )
         // {
         //     std::cerr << "Could not delete node 3 files\n";
         // }
@@ -129,17 +129,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_main  = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingMultiTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingMultiTest::DEV_CONFIG  = { "0xcafe",
+NodeConfig ProcessingMultiTest::gGeniusNodeConfig  = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG2 = { "0xcafe",
+NodeConfig ProcessingMultiTest::gGeniusNodeConfig2 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
-DevConfig_st ProcessingMultiTest::DEV_CONFIG3 = { "0xcafe",
+NodeConfig ProcessingMultiTest::gGeniusNodeConfig3 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
@@ -289,7 +289,7 @@ TEST_F( ProcessingMultiTest, ProcessOne )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
+    //TODO: convert gGeniusNodeConfig.Cut from string to fixed and use below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 
@@ -365,7 +365,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
 
     // ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
-    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
+    //TODO: convert gGeniusNodeConfig.Cut from string to fixed and use below
     // ASSERT_EQ( balance_node1 + balance_node2 + ( cost * 65 ) / 100,
     //            node_proc1->GetBalance() + node_proc2->GetBalance() );
 

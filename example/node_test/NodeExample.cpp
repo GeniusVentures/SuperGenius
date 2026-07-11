@@ -478,7 +478,7 @@ static std::string generate_eth_private_key()
     return oss.str();
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
+NodeConfig gGeniusNodeConfig{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
 
 int main( int argc, char *argv[] )
 {
@@ -521,7 +521,7 @@ int main( int argc, char *argv[] )
 
     if ( !path_override.empty() )
     {
-        DEV_CONFIG.BaseWritePath = path_override;
+        gGeniusNodeConfig.BaseWritePath = path_override;
         logger->info( "Using custom path: {}", path_override );
     }
 
@@ -529,7 +529,7 @@ int main( int argc, char *argv[] )
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
     auto node_instance =
-        sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG, eth_private_key.c_str(), true, 40101, is_full_node );
+        sgns::GeniusNode::NewFromPrivateKey( gGeniusNodeConfig, eth_private_key.c_str(), true, 40101, is_full_node );
 
     std::thread status_thread;
 

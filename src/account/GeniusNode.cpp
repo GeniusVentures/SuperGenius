@@ -143,7 +143,7 @@ namespace sgns
         return base::createLogger( "GeniusNode" );
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
+    std::shared_ptr<GeniusNode> GeniusNode::New( const GeniusNodeConfig &dev_config,
                                                  bool                autodht,
                                                  uint16_t            base_port,
                                                  bool                is_full_node )
@@ -164,7 +164,7 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const GeniusNodeConfig &dev_config,
                                                                const char         *eth_private_key,
                                                                bool                autodht,
                                                                uint16_t            base_port,
@@ -190,7 +190,7 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
+    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const GeniusNodeConfig &dev_config,
                                                              const std::string  &mnemonic,
                                                              bool                autodht,
                                                              uint16_t            base_port,
@@ -217,7 +217,7 @@ namespace sgns
         return instance;
     }
 
-    GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
+    GeniusNode::GeniusNode( const GeniusNodeConfig            &dev_config,
                             std::shared_ptr<GeniusAccount> account,
                             bool                           autodht,
                             uint16_t                       base_port,
@@ -590,9 +590,9 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
-                // TS-01: Wire configurable timestamp tolerance from DevConfig_st
+                // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
-                // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
+                // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
                 // Phase 6 (D-01..D-10): Wire slot-hash populator bridging
@@ -715,8 +715,12 @@ namespace sgns
 
             case NodeState::INITIALIZING_RPC_CATCH_UP:
             {
+                // The historical burn catch-up scan queries external chain RPCs and is
+                // a best-effort background task. It must NOT gate the node READY state:
+                // dispatch it asynchronously and proceed to READY immediately. When the
+                // scan finishes, finish_catchup() only resets the scan flags and is a
+                // no-op transition once the node is already READY.
                 bool dispatch_scan = false;
-                bool scan_running  = false;
                 {
                     std::lock_guard lock( catchup_mutex_ );
                     if ( !catchup_scan_done_ && !catchup_scan_in_progress_ && !catchup_chains_.empty() &&
@@ -725,31 +729,21 @@ namespace sgns
                         catchup_scan_in_progress_ = true;
                         dispatch_scan             = true;
                     }
-                    else if ( catchup_scan_in_progress_ )
-                    {
-                        scan_running = true;
-                    }
                 }
 
-                if ( scan_running )
+                if ( dispatch_scan )
                 {
-                    break;
-                }
-
-                if ( !dispatch_scan )
-                {
-                    StateTransition( NodeState::READY );
-                    break;
-                }
-
-                boost::asio::post( *io_,
-                                   [weak_self = weak_from_this()]
-                                   {
-                                       if ( auto strong = weak_self.lock() )
+                    boost::asio::post( *io_,
+                                       [weak_self = weak_from_this()]
                                        {
-                                           strong->PerformStartupCatchupScan();
-                                       }
-                                   } );
+                                           if ( auto strong = weak_self.lock() )
+                                           {
+                                               strong->PerformStartupCatchupScan();
+                                           }
+                                       } );
+                }
+
+                StateTransition( NodeState::READY );
                 break;
             }
 
@@ -2605,7 +2599,7 @@ namespace sgns
     {
         std::filesystem::path bridge_chains_path;
 
-        // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
+        // Primary: use GeniusNodeConfig BaseWritePath (writable on all platforms including Android)
         if ( !dev_config_.BaseWritePath.empty() )
         {
             bridge_chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "bridge_chains_config.json";
@@ -2670,6 +2664,12 @@ namespace sgns
 
         // 2. Construct provider
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
+
+        // 2b. Inject chainlist fetcher from GeniusNodeConfig (test DI — defaults to network fetch)
+        if ( dev_config_.chainlist_fetcher )
+        {
+            rpc_endpoint_provider_->SetChainlistFetcher( dev_config_.chainlist_fetcher );
+        }
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
         rpc_endpoint_provider_->AddObserver( *this );

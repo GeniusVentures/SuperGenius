@@ -43,7 +43,7 @@ struct NodeParams
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline DevConfig_st DEV_CONFIG = {
+    static inline GeniusNodeConfig gGeniusGeniusNodeConfig = {
         "0xdeef",                             // Addr
         "0.65",                               // Cut
         "1.0",                                // TokenValueInGNUS
@@ -121,17 +121,17 @@ protected:
         RemovePrefixedSubdirs( nodeDir );
 
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
-        DEV_CONFIG.BaseWritePath = baseWrite;
+        gGeniusGeniusNodeConfig.BaseWritePath = baseWrite;
 
         // All nodes in this test are non-processors.
         // is_processor is now read exclusively from sgns_config.json (defaults to true).
-        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        std::filesystem::create_directories( gGeniusGeniusNodeConfig.BaseWritePath );
         {
-            std::ofstream configFile( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
+            std::ofstream configFile( gGeniusGeniusNodeConfig.BaseWritePath + std::string( "sgns_config.json" ) );
             configFile << R"({"is_processor": false})";
         }
 
-        auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
+        auto instance = sgns::GeniusNode::NewFromPrivateKey( gGeniusGeniusNodeConfig,
                                                              key_hex,
                                                              false,
                                                              base_port,
@@ -151,7 +151,7 @@ protected:
         fs::remove_all( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        DevConfig_st devConfig = { std::string( FULL_NODE_ADDR ),
+        GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
                                    "0.65",
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),

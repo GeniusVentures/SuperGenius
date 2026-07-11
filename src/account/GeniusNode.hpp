@@ -49,16 +49,17 @@
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
  */
-typedef struct DevConfig
+typedef struct GeniusNodeConfig
 {
     std::string   Addr;             ///< Developer payout address.
     std::string   Cut;              ///< Developer or peer cut encoded as a string.
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-} DevConfig_st;
+    sgns::ChainlistFetcher chainlist_fetcher{}; ///< Optional: injected chainlist source (nullptr → fetch from network).
+} GeniusNodeConfig;
 
-extern DevConfig_st DEV_CONFIG;
+extern GeniusNodeConfig gGeniusNodeConfig;
 
 constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
 constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical blocks to scan for unprocessed burns (D-20)
@@ -87,7 +88,7 @@ namespace sgns
          * @note Whether this node runs processing services is read from
          *       sgns_config.json (`is_processor`, default true).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+        static std::shared_ptr<GeniusNode> New( const GeniusNodeConfig &dev_config,
                                                 bool                autodht      = true,
                                                 uint16_t            base_port    = 40001,
                                                 bool                is_full_node = false );
@@ -103,7 +104,7 @@ namespace sgns
          * @note Whether this node runs processing services is read from
          *       sgns_config.json (`is_processor`, default true).
          */
-        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
+        static std::shared_ptr<GeniusNode> NewFromPrivateKey( const GeniusNodeConfig &dev_config,
                                                               const char         *eth_private_key,
                                                               bool                autodht      = true,
                                                               uint16_t            base_port    = 40001,
@@ -120,7 +121,7 @@ namespace sgns
          * @note Whether this node runs processing services is read from
          *       sgns_config.json (`is_processor`, default true).
          */
-        static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
+        static std::shared_ptr<GeniusNode> NewFromMnemonic( const GeniusNodeConfig &dev_config,
                                                             const std::string  &mnemonic,
                                                             bool                autodht      = true,
                                                             uint16_t            base_port    = 40001,
@@ -503,7 +504,7 @@ namespace sgns
          * @param[in]   amount  Amount in Minion Tokens (1e-6 GNUS).
          * @param[in]   tokenId Optional token identifier:
          *                         – empty: default (minion to GNUS) formatting
-         *                         – matches DevConfig.TokenID: child-token formatting
+         *                         – matches GeniusNodeConfig.TokenID: child-token formatting
          *                         – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the formatted string in GNUS or an error.
          */
@@ -514,7 +515,7 @@ namespace sgns
          * @param[in]   str      String representation of an amount in GNUS.
          * @param[in]   tokenId  Optional token identifier:
          *                          – empty: default (GNUS to minion) parsing
-         *                          – matches DevConfig.TokenID: child-token parsing
+         *                          – matches GeniusNodeConfig.TokenID: child-token parsing
          *                          – otherwise: returns Error::TOKEN_ID_MISMATCH
          * @return      Outcome result with the parsed amount in Minion Tokens (1e-6 GNUS) or an error.
          */
@@ -681,7 +682,7 @@ namespace sgns
         bool                                                  isprocessor_; ///< Whether processing service should run.
         bool                           is_full_node_;              ///< Whether this node runs in full-node mode.
         base::Logger                   node_logger_;               ///< Main node logger.
-        DevConfig_st                   dev_config_;                ///< Runtime node configuration.
+        GeniusNodeConfig                   dev_config_;                ///< Runtime node configuration.
         bool                           catchup_scan_done_ = false; ///< Guards single-shot startup catch-up scan (D-20).
         bool                           catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
@@ -717,7 +718,7 @@ namespace sgns
          * @param[in] base_port Base pubsub port used to derive the node listening port.
          * @param[in] is_full_node Whether the node should run in full-node mode.
          */
-        GeniusNode( const DevConfig_st            &dev_config,
+        GeniusNode( const GeniusNodeConfig            &dev_config,
                     std::shared_ptr<GeniusAccount> account,
                     bool                           autodht,
                     uint16_t                       base_port,

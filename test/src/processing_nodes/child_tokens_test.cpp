@@ -31,8 +31,8 @@ namespace
 {
     /**
      * @brief Helper to create a GeniusNode with its own directory and cleanup.
-     * @param tokenValue TokenValueInGNUS to initialize DevConfig.
-     * @param tokenId TokenID to initialize DevConfig.
+     * @param tokenValue TokenValueInGNUS to initialize GeniusGeniusNodeConfig.
+     * @param tokenId TokenID to initialize GeniusGeniusNodeConfig.
      * @return shared_ptr to the initialized GeniusNode.
      */
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
@@ -52,7 +52,7 @@ namespace
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
         const auto  uniquePort = static_cast<uint16_t>( 41000 + id );
 
-        DevConfig_st devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
