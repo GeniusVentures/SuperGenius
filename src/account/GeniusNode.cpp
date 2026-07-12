@@ -603,6 +603,51 @@ namespace sgns
                                                                 blockchain_,
                                                                 is_full_node_,
                                                                 subnet_id_ );
+                // Phase 6 (D-01): wire the slot-hash populator so CreateVote fills
+                // slot_0/1/2_hash before signing. When no endpoints are configured,
+                // GetSlotHash returns empty vectors and all slots abstain (D-05).
+                if ( blockchain_ )
+                {
+                    std::weak_ptr<TransactionManager> weak_tm = transaction_manager_;
+                    blockchain_->SetSlotHashPopulator(
+                        [weak_tm]( sgns::ConsensusVote &vote )
+                        {
+                            auto tm = weak_tm.lock();
+                            if ( !tm )
+                            {
+                                return;
+                            }
+                            const auto &validator = tm->GetPublicChainInputValidator();
+                            const auto  chain_id  = validator.GetFirstConfiguredChainId();
+                            if ( !chain_id.has_value() )
+                            {
+                                return;
+                            }
+                            for ( size_t slot = 0; slot < 3; ++slot )
+                            {
+                                auto hash = validator.GetSlotHash( slot, *chain_id );
+                                if ( !hash.empty() )
+                                {
+                                    std::string hash_str(
+                                        reinterpret_cast<const char *>( hash.data() ),
+                                        hash.size() );
+                                    switch ( slot )
+                                    {
+                                        case 0:
+                                            vote.set_slot_0_hash( hash_str );
+                                            break;
+                                        case 1:
+                                            vote.set_slot_1_hash( hash_str );
+                                            break;
+                                        case 2:
+                                            vote.set_slot_2_hash( hash_str );
+                                            break;
+                                    }
+                                }
+                            }
+                        } );
+                }
+
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -2704,8 +2749,9 @@ namespace sgns
             node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
             return;
         }
+        const size_t endpoint_count = endpoints.size();
         transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
-        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoints.size(), chain_id );
+        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoint_count, chain_id );
     }
 
     std::filesystem::path GeniusNode::ResolveBridgeChainsConfigPath() const
