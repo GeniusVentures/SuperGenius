@@ -155,9 +155,9 @@ protected:
     static std::shared_ptr<GeniusNode> node_proc1;
     static std::shared_ptr<GeniusNode> node_proc2;
 
-    static GeniusNodeConfig gGeniusNodeConfig;
-    static GeniusNodeConfig gGeniusNodeConfig2;
-    static GeniusNodeConfig gGeniusNodeConfig3;
+    static GeniusNodeConfig DEV_CONFIG;
+    static GeniusNodeConfig DEV_CONFIG2;
+    static GeniusNodeConfig DEV_CONFIG3;
 
     static std::string s_eth_private_key;
 
@@ -198,9 +198,9 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 
 std::string BridgeE2ETest::s_eth_private_key;
 
-GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
-GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
-GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
 
 // --- Fixture implementation ---
 
@@ -285,15 +285,17 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Set per-node BaseWritePath
     std::string binary_path   = boost::dll::program_location().parent_path().string();
-    gGeniusNodeConfig.BaseWritePath  = binary_path + "/node1/";
-    gGeniusNodeConfig2.BaseWritePath = binary_path + "/node2/";
-    gGeniusNodeConfig3.BaseWritePath = binary_path + "/node3/";
+    DEV_CONFIG.BaseWritePath  = binary_path + "/node1/";
+    DEV_CONFIG2.BaseWritePath = binary_path + "/node2/";
+    DEV_CONFIG3.BaseWritePath = binary_path + "/node3/";
 
     spdlog::info( "bridge_e2e: creating 3-node cluster for E2E test" );
 
     // Create the full node FIRST — it will create the genesis block.
     // Pattern from blockchain_genesis_test.cpp: WithAuthorizationCanSync
-    node_main = GeniusNode::NewFromPrivateKey( gGeniusNodeConfig, s_eth_private_key.c_str(), false, 40001, true );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    node_main = GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ s_eth_private_key } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
@@ -310,10 +312,14 @@ void BridgeE2ETest::SetUpTestSuite()
 
     // Create regular nodes — they will sync genesis from node_main via PubSub.
     // is_processor=false matches the blockchain_genesis_test.cpp pattern.
-    node_proc1 = GeniusNode::NewFromPrivateKey( gGeniusNodeConfig2, s_eth_private_key.c_str(), false, 40002 );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40002, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    node_proc1 = GeniusNode::New( DEV_CONFIG2, sgns::FromPrivateKey{ s_eth_private_key } );
     std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-    node_proc2 = GeniusNode::NewFromPrivateKey( gGeniusNodeConfig3, s_eth_private_key.c_str(), false, 40003 );
+    GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40003, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    node_proc2 = GeniusNode::New( DEV_CONFIG3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub — match blockchain_genesis_test pattern
     node_proc1->GetPubSub()->AddPeers(
@@ -370,9 +376,9 @@ void BridgeE2ETest::TearDownTestSuite()
     node_proc2.reset();
 
     // Remove test data directories
-    std::filesystem::remove_all( gGeniusNodeConfig.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig2.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig3.BaseWritePath );
+    std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
+    std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
+    std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
 }
 
 /**
