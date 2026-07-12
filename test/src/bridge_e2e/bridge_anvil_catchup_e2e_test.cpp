@@ -132,8 +132,14 @@ protected:
     /** @brief Poll interval when waiting for node_main to leave INITIALIZING before priming the URL map. */
     static inline constexpr std::chrono::milliseconds kValidatorReadyPollInterval{ 50 };
 
-    /** @brief Anvil-path signing key (hex, no 0x prefix) — public test value. */
-    static inline constexpr const char *kAnvilAccount0HexKey = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    /** @brief Anvil deterministic account private keys (hex, no 0x prefix) — public test values.
+     *         Each index gets a distinct key so every node occupies a separate validator slot
+     *         and PubSub peer id (mirrors bridge_anvil_e2e_test.cpp). */
+    static inline constexpr const char *kAnvilAccountHexKeys[] = {
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",  // Account #0
+        "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",  // Account #1
+        "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",  // Account #2
+    };
 
     /**
      * @brief Starts Anvil, funds account #0, seeds pre-node burns, and bootstraps the 3-node cluster.
@@ -289,15 +295,15 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
     sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, kNodeMainPort, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, "Full", /*is_processor=*/false );
-    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, kNodeProc1Port, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, "Light", /*is_processor=*/false );
-    node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
+    node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, kNodeProc2Port, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, "Light", /*is_processor=*/false );
-    node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
+    node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
 
     // Prime the validator URL map with the local Anvil endpoint BEFORE the catch-up
     // scan fires at READY, so PerformStartupCatchupScan queries eth_getLogs against
