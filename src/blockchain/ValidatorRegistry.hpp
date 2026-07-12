@@ -97,9 +97,9 @@ namespace sgns
             // this value AND whose penalty_score is below penalty_threshold_ is
             // promoted to Role::FULL. The promoted node's weight then accumulates
             // up to full_max_weight_, flowing into EvaluateSlotQuorum via
-            // validator.weight() with no tally-side special case. Conservative
-            // default between regular_max_weight_ (100) and full_max_weight_ (5000).
-            uint64_t full_promotion_weight_ = 500; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
+            // validator.weight() with no tally-side special case. Equal to regular_max_weight_ so the approve-branch clamp
+			// does not prevent reaching the threshold.
+            uint64_t full_promotion_weight_ = 100; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
         };
 
         /**
