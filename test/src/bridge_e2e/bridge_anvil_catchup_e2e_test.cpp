@@ -89,12 +89,6 @@ protected:
     /** @brief Pre-node burn tx hashes seeded on the local Anvil fork before any node starts. */
     static std::vector<std::string> s_pre_node_burn_hashes;
 
-    /** @brief Sepolia GNUS contract address (mixed-case EIP-55). */
-    static inline constexpr const char *kSepoliaContract = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
-
-    /** @brief ERC-1155 safeTransferFrom function selector. */
-    static inline constexpr const char *kTransferSig = "safeTransferFrom(address,address,uint256,uint256,bytes)";
-
     /** @brief Base mint amount per burn (base units). */
     static inline constexpr unsigned int kMintAmount = 1u;
 
@@ -163,10 +157,13 @@ protected:
     static void WriteBridgeChainsConfig( const std::string &base_write_path );
 
     /**
-     * @brief Sends one ERC-1155 safeTransferFrom self-transfer burn to the local Anvil fork.
+     * @brief Sends one real GNUS bridgeOut() burn to the local Anvil fork.
      *
-     * The burn form mirrors Plan 04.1-01: cast send <contract> "<kTransferSig>"
-     * <sender> <sender> 0 <amount> 0x --private-key <key> --rpc-url <anvil> --json.
+     * Uses sgns::test::anvil::SendBridgeOutBurn, which exercises the production
+     * burn path consumed by the catch-up scan (emits BridgeOutInitiated, the
+     * only topic0 PerformStartupCatchupScan filters for besides BridgeSourceBurned).
+     * The destination is node_main's SGNS address — node_main MUST be created
+     * before this helper is called.
      *
      * @return Parsed 0x-prefixed transaction hash, or empty string on failure.
      */
@@ -197,25 +194,19 @@ void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base
 
 std::string BridgeAnvilCatchupE2ETest::SendOneAnvilBurn()
 {
-    const std::string sender_addr = sgns::test::anvil::kAnvilAccount0Address;
-    std::string       cast_cmd    = "cast send " + std::string( kSepoliaContract ) + " \"" + kTransferSig + "\" " +
-                                 sender_addr + " " + sender_addr + " 0 " + std::to_string( kMintAmount ) +
-                                 " 0x --private-key " + sgns::test::anvil::kAnvilAccount0PrivateKey +
-                                 " --rpc-url " + s_anvil.RpcUrl() + " --json 2>&1";
-
-    int          cast_rc     = -1;
-    std::string  cast_output = sgns::test::anvil::RunShellCapture( cast_cmd, cast_rc );
-    if ( cast_rc != 0 )
+    // node_main is the destination; it is created in SetUpTestSuite before this
+    // helper is called. SendBridgeOutBurn exercises the production bridgeOut()
+    // path, emitting BridgeOutInitiated — the topic0 PerformStartupCatchupScan
+    // filters eth_getLogs by. The prior safeTransferFrom(self,self,0,amount,0x)
+    // form emitted TransferSingle, which never matched the scan's EventFilter
+    // and left the central balance assertion unsatisfiable (see CR-01).
+    if ( !node_main )
     {
-        spdlog::error( "catchup_e2e: cast send failed rc={} output={}", cast_rc, cast_output );
+        spdlog::error( "catchup_e2e: SendOneAnvilBurn called before node_main was created" );
         return {};
     }
-    const std::string tx_hash = sgns::test::anvil::ParseTxHashFromCastJson( cast_output );
-    if ( tx_hash.empty() )
-    {
-        spdlog::error( "catchup_e2e: could not parse transactionHash from cast output: {}", cast_output );
-    }
-    return tx_hash;
+    return sgns::test::anvil::SendBridgeOutBurn(
+        s_anvil.RpcUrl(), static_cast<uint64_t>( kMintAmount ), node_main->GetAddress() );
 }
 
 void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
@@ -261,20 +252,6 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
     }
 
-    // PRE-NODE BURN SEEDING (the heart of this test): send kNumCatchupBurns ERC-1155
-    // burns to the local Anvil fork BEFORE any node exists, so the burns are historical
-    // by the time the catch-up scan runs.
-    spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
-    for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
-    {
-        const std::string tx_hash = SendOneAnvilBurn();
-        ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
-        s_pre_node_burn_hashes.push_back( tx_hash );
-        spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
-    }
-    ASSERT_EQ( s_pre_node_burn_hashes.size(), kNumCatchupBurns )
-        << "Did not seed the expected number of pre-node burns";
-
     // Inject a chainlist fetcher returning only the Anvil RPC endpoint, so the
     // catch-up scan queries the local fork instead of chainid.network.
     {
@@ -289,14 +266,35 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         }
     }
 
-    // Create all three nodes first so ValidatorRegistry syncs via CRDT between peers.
-    // The pre-node burns persist on Anvil's fork state — ordering of node creation
-    // vs. burn seeding doesn't matter; Anvil holds the fork state until Stop().
+    // Create node_main FIRST so its SGNS address is available as the bridgeOut()
+    // destination for the pre-node burn seeding below. The catch-up scan only
+    // fires after the full cluster reaches READY (the wait-for-condition at the
+    // end of SetUpTestSuite), so node_main will not advance past INITIALIZING
+    // before the burns are seeded — the seeded burns are still historical by
+    // scan time.
     spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
     sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, kNodeMainPort, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, "Full", /*is_processor=*/false );
     node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
 
+    // PRE-NODE BURN SEEDING (the heart of this test): send kNumCatchupBurns real
+    // bridgeOut() burns to the local Anvil fork targeting node_main's SGNS
+    // address, so the burns are historical by the time the catch-up scan runs
+    // and emit the BridgeOutInitiated topic0 that PerformStartupCatchupScan
+    // filters eth_getLogs by.
+    spdlog::info( "catchup_e2e: seeding {} pre-node burns against local Anvil", kNumCatchupBurns );
+    for ( unsigned int i = 0u; i < kNumCatchupBurns; ++i )
+    {
+        const std::string tx_hash = SendOneAnvilBurn();
+        ASSERT_FALSE( tx_hash.empty() ) << "Failed to seed pre-node burn #" << i;
+        s_pre_node_burn_hashes.push_back( tx_hash );
+        spdlog::info( "catchup_e2e: pre-node burn #{} tx_hash={}", i, tx_hash );
+    }
+    ASSERT_EQ( s_pre_node_burn_hashes.size(), kNumCatchupBurns )
+        << "Did not seed the expected number of pre-node burns";
+
+    // Create the two processor nodes so ValidatorRegistry syncs via CRDT between peers.
+    // The pre-node burns persist on Anvil's fork state until Stop().
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, kNodeProc1Port, /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, "Light", /*is_processor=*/false );
     node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
