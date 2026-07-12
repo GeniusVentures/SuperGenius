@@ -621,15 +621,18 @@ namespace sgns::test::anvil
             }
             std::string     rpc    = rpc_url_;
             std::string     cmd    = "cast block-number --rpc-url " + rpc + " 2>/dev/null";
-            std::string     *ready = new std::string();
-            bool             result = waitForCondition(
-                [&cmd, ready]()
+            // Stack-allocated capture: the value is never read after the loop, so a
+            // heap new/delete pair is gratuitous and leaks if waitForCondition (or
+            // the lambda) ever throws.
+            std::string     ready;
+            bool            result = waitForCondition(
+                [&cmd, &ready]()
                 {
                     int         exit_code = -1;
                     std::string out       = RunShellCapture( cmd, exit_code );
                     if ( exit_code == 0 && !out.empty() )
                     {
-                        *ready = out;
+                        ready = std::move( out );
                         return true;
                     }
                     return false;
@@ -637,7 +640,6 @@ namespace sgns::test::anvil
                 timeout,
                 nullptr,
                 std::chrono::milliseconds( kAnvilPollIntervalMs ) );
-            delete ready;
             if ( result )
             {
                 spdlog::info( "anvil_fixture: anvil ready at {}", rpc );
