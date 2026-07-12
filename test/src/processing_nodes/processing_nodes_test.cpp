@@ -27,9 +27,9 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> node_proc1;
     static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
-    static GeniusNodeConfig gGeniusNodeConfig;
-    static GeniusNodeConfig gGeniusNodeConfig2;
-    static GeniusNodeConfig gGeniusNodeConfig3;
+    static GeniusNodeConfig DEV_CONFIG;
+    static GeniusNodeConfig DEV_CONFIG2;
+    static GeniusNodeConfig DEV_CONFIG3;
 
     static std::string binary_path;
 
@@ -41,24 +41,31 @@ protected:
 
         std::string binary_path = boost::dll::program_location().parent_path().string();
 
-        gGeniusNodeConfig.BaseWritePath  = ( binary_path + "/node1/" );
-        gGeniusNodeConfig2.BaseWritePath = ( binary_path + "/node2/" );
-        gGeniusNodeConfig3.BaseWritePath = ( binary_path + "/node3/" );
+        DEV_CONFIG.BaseWritePath  = ( binary_path + "/pnt_node1/" );
+        DEV_CONFIG2.BaseWritePath = ( binary_path + "/pnt_node2/" );
+        DEV_CONFIG3.BaseWritePath = ( binary_path + "/pnt_node3/" );
 
-        // Write minimal sgns_config.json for node_main so it does not run as a processor.
-        // is_processor is now read exclusively from this config file (defaults to true).
-        std::filesystem::create_directories( gGeniusNodeConfig.BaseWritePath );
+        auto prepare_node_dir = []( const std::string &path )
         {
-            std::ofstream config_file( gGeniusNodeConfig.BaseWritePath + "sgns_config.json" );
-            config_file << R"({"is_processor": false})";
-        }
+            std::filesystem::remove_all( path );
+            std::filesystem::create_directories( path );
+            std::ofstream bridge_config_file( path + "bridge_chains_config.json" );
+            bridge_config_file << "{}";
+        };
 
-        node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
-            gGeniusNodeConfig2,
-            "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false,
-            40054,
-            true );
+        prepare_node_dir( DEV_CONFIG.BaseWritePath );
+        prepare_node_dir( DEV_CONFIG2.BaseWritePath );
+        prepare_node_dir( DEV_CONFIG3.BaseWritePath );
+
+        // node_main: non-processor, light node. Config-driven construction (Phase 3).
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40054, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        node_proc1 = sgns::GeniusNode::New(
+            DEV_CONFIG2,
+            sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         sgns::test::assertWaitForCondition( [&]
@@ -66,17 +73,15 @@ protected:
                                             std::chrono::milliseconds( 50000 ),
                                             "node_proc1 not ready" );
 
-        node_main = sgns::GeniusNode::NewFromPrivateKey(
-            gGeniusNodeConfig,
-            "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false );
+        node_main = sgns::GeniusNode::New(
+            DEV_CONFIG,
+            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
-        node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
-            gGeniusNodeConfig3,
-            "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-            false,
-            40060,
-            true );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40060, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        node_proc2 = sgns::GeniusNode::New(
+            DEV_CONFIG3,
+            sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
@@ -112,17 +117,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
-GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig  = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
-GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig2 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
-GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig3 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
@@ -530,7 +535,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance main (After):   " << node_main->GetBalance() << std::endl;
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
-    //TODO: convert gGeniusNodeConfig.Cut from string to fixed and use below
+    //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
     auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
     ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
