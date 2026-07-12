@@ -27,9 +27,9 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> node_proc1;
     static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
-    static DevConfig_st DEV_CONFIG;
-    static DevConfig_st DEV_CONFIG2;
-    static DevConfig_st DEV_CONFIG3;
+    static GeniusNodeConfig DEV_CONFIG;
+    static GeniusNodeConfig DEV_CONFIG2;
+    static GeniusNodeConfig DEV_CONFIG3;
 
     static std::string binary_path;
 
@@ -117,17 +117,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),

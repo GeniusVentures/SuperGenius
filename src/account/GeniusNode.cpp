@@ -168,7 +168,7 @@ namespace sgns
 
     // Canonical factory (INTF-01). try/catch preserves the nullptr-on-failure contract (D-04):
     // the reordered ctor throws on account-restore/loggers/network failure; here it becomes nullptr.
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )
+    std::shared_ptr<GeniusNode> GeniusNode::New( const GeniusNodeConfig &dev_config, AccountSource source )
     {
         try
         {
@@ -224,7 +224,7 @@ namespace sgns
     // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
     // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
     // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source ) :
+    GeniusNode::GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source ) :
         write_base_path_( dev_config.BaseWritePath ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
@@ -644,6 +644,51 @@ namespace sgns
                                                                 blockchain_,
                                                                 is_full_node_,
                                                                 subnet_id_ );
+                // Phase 6 (D-01): wire the slot-hash populator so CreateVote fills
+                // slot_0/1/2_hash before signing. When no endpoints are configured,
+                // GetSlotHash returns empty vectors and all slots abstain (D-05).
+                if ( blockchain_ )
+                {
+                    std::weak_ptr<TransactionManager> weak_tm = transaction_manager_;
+                    blockchain_->SetSlotHashPopulator(
+                        [weak_tm]( sgns::ConsensusVote &vote )
+                        {
+                            auto tm = weak_tm.lock();
+                            if ( !tm )
+                            {
+                                return;
+                            }
+                            const auto &validator = tm->GetPublicChainInputValidator();
+                            const auto  chain_id  = validator.GetFirstConfiguredChainId();
+                            if ( !chain_id.has_value() )
+                            {
+                                return;
+                            }
+                            for ( size_t slot = 0; slot < 3; ++slot )
+                            {
+                                auto hash = validator.GetSlotHash( slot, *chain_id );
+                                if ( !hash.empty() )
+                                {
+                                    std::string hash_str(
+                                        reinterpret_cast<const char *>( hash.data() ),
+                                        hash.size() );
+                                    switch ( slot )
+                                    {
+                                        case 0:
+                                            vote.set_slot_0_hash( hash_str );
+                                            break;
+                                        case 1:
+                                            vote.set_slot_1_hash( hash_str );
+                                            break;
+                                        case 2:
+                                            vote.set_slot_2_hash( hash_str );
+                                            break;
+                                    }
+                                }
+                            }
+                        } );
+                }
+
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -655,9 +700,9 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
-                // TS-01: Wire configurable timestamp tolerance from DevConfig_st
+                // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
-                // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
+                // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
                 // Initialize shared EthWatchService for EVM event detection
@@ -2698,15 +2743,16 @@ namespace sgns
             node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
             return;
         }
+        const size_t endpoint_count = endpoints.size();
         transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
-        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoints.size(), chain_id );
+        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoint_count, chain_id );
     }
 
     std::filesystem::path GeniusNode::ResolveBridgeChainsConfigPath() const
     {
         std::filesystem::path bridge_chains_path;
 
-        // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
+        // Primary: use GeniusNodeConfig BaseWritePath (writable on all platforms including Android)
         if ( !dev_config_.BaseWritePath.empty() )
         {
             bridge_chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "bridge_chains_config.json";
@@ -2771,6 +2817,12 @@ namespace sgns
 
         // 2. Construct provider
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
+
+        // 2a. Inject custom chainlist fetcher if provided (test injection point via GeniusNodeConfig.ChainlistFetcher)
+        if ( dev_config_.ChainlistFetcher )
+        {
+            rpc_endpoint_provider_->SetChainlistFetcher( dev_config_.ChainlistFetcher );
+        }
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
         rpc_endpoint_provider_->AddObserverCallback(

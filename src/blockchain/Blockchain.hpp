@@ -187,6 +187,14 @@ namespace sgns
          */
         void RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler );
 
+        /**
+         * @brief      Forwards a slot-hash populator to the consensus manager (Phase 6, D-01).
+         * @param[in]  populator  Callback invoked during CreateVote before signing.
+         * @details    GeniusNode wires this during blockchain initialization to bridge
+         *             TransactionManager::GetPublicChainInputValidator() into vote creation.
+         */
+        void SetSlotHashPopulator( ConsensusManager::SlotHashPopulator populator );
+
         void UnregisterSlotKeyHandler( std::string_view subject_type );
 
         /**
@@ -529,6 +537,7 @@ namespace sgns
         bool              filters_registered_   = false; ///< Indicates CRDT filters were registered.
         bool              callbacks_registered_ = false; ///< Indicates CRDT callbacks were registered.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
+        std::atomic<bool> start_deferred_{ false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
         bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
         bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
 

@@ -1184,6 +1184,16 @@ namespace sgns
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
 
+        // Phase 6 (D-01): populate slot_N_hash fields before signing so the
+        // signature commits to them (T-06-01). No-op when no populator is set.
+        if ( slot_hash_populator_ )
+        {
+            slot_hash_populator_( vote );
+            ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
+                                             __func__,
+                                             proposal_id.substr( 0, 8 ) );
+        }
+
         auto signing_bytes = VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
         {
@@ -1304,6 +1314,87 @@ namespace sgns
         return cert;
     }
 
+    bool ConsensusManager::IsBridgeMintSubject( const Proposal &proposal )
+    {
+        // Fail-closed (RESEARCH Pattern 2): any decode failure returns false so
+        // the single-pool IsQuorum path applies. Only a successfully-decoded
+        // NonceSubject carrying a kMintV2 with non-empty chain_id is a bridge
+        // mint (mirror TransactionManager::GetValidationChainId).
+        const auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+        if ( nonce_payload.has_error() )
+        {
+            return false;
+        }
+        const auto &transaction = nonce_payload.value().transaction();
+        if ( transaction.transaction_case() != EmbeddedTransaction::kMintV2 )
+        {
+            return false;
+        }
+        const auto &mint = transaction.mint_v2();
+        // proto3 bytes field: empty chain_id == native mint (not bridge).
+        return !mint.chain_id().empty();
+    }
+
+    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::EvaluateQuorum(
+        const Proposal                    &proposal,
+        const std::vector<Vote>           &votes,
+        const ValidatorRegistry::Registry &registry ) const
+    {
+        QuorumTally tally;
+
+        if ( IsBridgeMintSubject( proposal ) )
+        {
+            // Bridge-mint subject: cumulative slot tally (D-06).
+            const auto slot_result = registry_->EvaluateSlotQuorum( votes, registry );
+            tally.total_weight     = ValidatorRegistry::TotalWeight( registry );
+            tally.approved_weight  = slot_result.total_voting_reputation;
+            tally.has_quorum       = slot_result.has_quorum;
+            tally.qualified_sum    = slot_result.qualified_sum;
+            tally.slot_threshold   = slot_result.threshold;
+            ConsensusManagerLogger()->debug(
+                "{}: bridge-mint slot tally hash {} proposal_id={} qualified_sum={} "
+                "threshold={} total_voting_rep={} has_quorum={}",
+                __func__,
+                GetPrintableSubjectHash( proposal.subject() ),
+                proposal.proposal_id().substr( 0, 8 ),
+                slot_result.qualified_sum,
+                slot_result.threshold,
+                slot_result.total_voting_reputation,
+                slot_result.has_quorum );
+            return tally;
+        }
+
+        // Non-bridge subject: unchanged single-pool IsQuorum path.
+        const uint64_t total_weight = ValidatorRegistry::TotalWeight( registry );
+        uint64_t       approved_weight = 0;
+        std::unordered_set<std::string> seen;
+        for ( const auto &vote : votes )
+        {
+            if ( vote.proposal_id() != proposal.proposal_id() )
+            {
+                continue;
+            }
+            if ( !seen.insert( vote.voter_id() ).second )
+            {
+                continue;
+            }
+            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
+            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
+            {
+                continue;
+            }
+            if ( vote.approve() )
+            {
+                approved_weight += validator->weight();
+            }
+        }
+        tally.total_weight    = total_weight;
+        tally.approved_weight = approved_weight;
+        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
+        // qualified_sum / slot_threshold remain zero for non-bridge (observability).
+        return tally;
+    }
+
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes(
         const Proposal                    &proposal,
         const std::vector<Vote>           &votes,
@@ -1392,7 +1483,20 @@ namespace sgns
         QuorumTally tally;
         tally.total_weight    = total_weight;
         tally.approved_weight = approved_weight;
-        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
+        // Phase 6 (D-06): route the final has_quorum decision through the
+        // shared EvaluateQuorum dispatcher so bridge-mint subjects use the
+        // cumulative slot model. The non-bridge branch recomputes the same
+        // single-pool IsQuorum result; sig verification stays in this loop.
+        // Both TallyVotes (certificate creation) and the incremental HandleVote
+        // tally agree on bridge-mint quorum via this single helper (Pitfall 1).
+        auto quorum_result = EvaluateQuorum( proposal, votes, registry );
+        if ( quorum_result.has_error() )
+        {
+            return quorum_result.error();
+        }
+        tally.has_quorum     = quorum_result.value().has_quorum;
+        tally.qualified_sum  = quorum_result.value().qualified_sum;
+        tally.slot_threshold = quorum_result.value().slot_threshold;
         ConsensusManagerLogger()->debug(
             "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
             __func__,
@@ -2326,7 +2430,20 @@ namespace sgns
             if ( is_active_validator )
             {
                 it->second.approved_weight += validator->weight();
-                has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
+                // Phase 6 (D-06): for bridge-mint subjects, recompute has_quorum
+                // via the shared EvaluateQuorum dispatcher over the accumulated
+                // vote vector so the incremental tally agrees with TallyVotes
+                // (RESEARCH Pitfall 1 / T-06-10). For non-bridge subjects, keep
+                // the existing fast-path incremental IsQuorum call.
+                if ( IsBridgeMintSubject( proposal_state.proposal ) )
+                {
+                    auto slot_tally = EvaluateQuorum( proposal_state.proposal, it->second.votes, proposal_registry );
+                    has_quorum      = !slot_tally.has_error() && slot_tally.value().has_quorum;
+                }
+                else
+                {
+                    has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
+                }
                 if ( has_quorum )
                 {
                     if ( !it->second.quorum_reached )

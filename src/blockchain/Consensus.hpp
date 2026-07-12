@@ -63,6 +63,19 @@ namespace sgns
         using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
 
         /**
+         * @brief      Callback invoked during CreateVote to populate slot_N_hash
+         *             fields before signing (Phase 6, D-01).
+         * @details    Set once at init time by GeniusNode (via Blockchain::SetSlotHashPopulator)
+         *             to bridge TransactionManager::GetPublicChainInputValidator
+         *             into ConsensusManager's vote-creation path. When unset,
+         *             CreateVote behaves exactly as before (backward compatible).
+         *             The callback is invoked AFTER proposal_id/voter_id/approve/
+         *             timestamp are set but BEFORE VoteSigningBytes, so the
+         *             resulting signature commits to the slot hashes (T-06-01).
+         */
+        using SlotHashPopulator = std::function<void( ConsensusVote &vote )>;
+
+        /**
          * @brief Creates a ConsensusManager instance.
          * @param[in] registry Validator registry used for voter set and weights.
          * @param[in] db GlobalDB instance used for persistence and CRDT interactions.
@@ -216,6 +229,10 @@ namespace sgns
             uint64_t total_weight    = 0;     ///< The total maximum weight of the quorum
             uint64_t approved_weight = 0;     ///< The weight which was already approved
             bool     has_quorum      = false; ///< Flag indicating if quorum was reached
+            // Phase 6 (D-06): populated only for bridge-mint subjects; zero for
+            // non-bridge subjects (observability -- the slot-tally result).
+            uint64_t qualified_sum  = 0;      ///< Slot-weighted qualified contribution.
+            uint64_t slot_threshold = 0;      ///< total_voting_reputation * 0.75 (D-06).
         };
 
         /**
@@ -323,6 +340,17 @@ namespace sgns
                                           Signer             sign );
 
         /**
+         * @brief      Injects the slot-hash populator used by CreateVote (Phase 6, D-01).
+         * @param[in]  populator  Callback that fills slot_N_hash fields on a vote.
+         * @details    Set by GeniusNode during blockchain initialization. When the
+         *             callback is unset (default), CreateVote skips slot population.
+         */
+        void SetSlotHashPopulator( SlotHashPopulator populator )
+        {
+            slot_hash_populator_ = std::move( populator );
+        }
+
+        /**
          * @brief Builds and signs an aggregated vote bundle.
          * @param[in] proposal_id Proposal identifier associated with the votes.
          * @param[in] aggregator_id Validator identifier of the aggregator.
@@ -362,6 +390,41 @@ namespace sgns
          * @return Quorum tally result or an error.
          */
         outcome::result<QuorumTally> TallyVotes( const Proposal &proposal, const std::vector<Vote> &votes ) const;
+
+        /**
+         * @brief Phase 6 (D-06): classifies a proposal's subject as a bridge mint.
+         *
+         * A bridge mint is a NonceSubject whose embedded transaction case is
+         * kMintV2 AND whose chain_id is non-empty (mirror
+         * TransactionManager::GetValidationChainId). Any decode failure returns
+         * false (fail-closed: single-pool quorum applies).
+         *
+         * @param[in] proposal Proposal whose subject is inspected.
+         * @return `true` when the subject is a bridge mint; `false` otherwise.
+         */
+        static bool IsBridgeMintSubject( const Proposal &proposal );
+
+        /**
+         * @brief Phase 6 (D-06): single quorum dispatcher.
+         *
+         * For non-bridge subjects: computes the single-pool tally (total weight,
+         * approved weight, IsQuorum) -- identical to the pre-Phase-6 behavior.
+         * For bridge-mint subjects: delegates to ValidatorRegistry::EvaluateSlotQuorum
+         * (cumulative slot model with 50/25/75 weighting and >=2-validator PUBLIC
+         * deduplication).
+         *
+         * Used by BOTH TallyVotes (certificate creation) and the incremental
+         * HandleVote tally so the two sites agree on bridge-mint quorum
+         * (RESEARCH Pitfall 1 mitigation / T-06-10).
+         *
+         * @param[in] proposal Proposal being evaluated.
+         * @param[in] votes   Votes to tally.
+         * @param[in] registry Registry snapshot used for weight resolution.
+         * @return Quorum tally result.
+         */
+        outcome::result<QuorumTally> EvaluateQuorum( const Proposal                    &proposal,
+                                                     const std::vector<Vote>           &votes,
+                                                     const ValidatorRegistry::Registry &registry ) const;
 
         /**
          * @brief Computes canonical bytes to sign a proposal.
@@ -873,13 +936,14 @@ namespace sgns
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
-                                        slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
-        static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
-        mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
-        Signer                          signer_;                     ///< Local signing callback.
-        std::string                     account_address_;            ///< Local validator/account id.
-        std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
-        std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
+                                  slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
+        static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
+        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
+        Signer                    signer_;                            ///< Local signing callback.
+        SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
+        std::string               account_address_;                   ///< Local validator/account id.
+        std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
+        std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>

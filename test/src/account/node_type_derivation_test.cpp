@@ -15,7 +15,7 @@ namespace
     constexpr const char *TEST_PRIVATE_KEY =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
-    DevConfig_st MakeDevConfig( const boost::filesystem::path &base )
+    GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
         return { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
