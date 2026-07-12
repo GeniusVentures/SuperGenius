@@ -478,7 +478,7 @@ static std::string generate_eth_private_key()
     return oss.str();
 }
 
-NodeConfig gGeniusNodeConfig{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
+GeniusNodeConfig gGeniusNodeConfig{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
 
 int main( int argc, char *argv[] )
 {
