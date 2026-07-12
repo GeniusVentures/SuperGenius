@@ -40,7 +40,7 @@ namespace sgns
 
     /**
      * @brief      Implements Consensus with weighted voting.
-     *             
+     *
      *      This class implements a consensus algorithm using pubsub messages.
      * A subject needs to be created and with it a proposal as well. The proposal gets sent to the network
      * and gets voted by peers who receive it. This class has hooks to be filled by the caller to register methods
@@ -660,9 +660,9 @@ namespace sgns
          */
         struct SlotState
         {
-            std::string best_proposal_id; ///< Current best proposal id in the slot.
-            std::string best_tx_hash;     ///< Hash used for deterministic tie-breaking.
-            bool        voted = false;    ///< Whether local vote has already been cast for the slot.
+            std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
+            std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
+            std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
         };
 
         /**
@@ -743,8 +743,7 @@ namespace sgns
          * @param[in] registry Active validator registry snapshot.
          * @return Local aggregation role relative to the proposal registry and current round.
          */
-        AggregatorRole GetAggregatorRole( const Proposal &proposal,
-                                          const ValidatorRegistry::Registry &registry ) const;
+        AggregatorRole GetAggregatorRole( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
         /**
          * @brief Returns active validators in deterministic ordering.
          * @param[in] registry Validator registry snapshot.

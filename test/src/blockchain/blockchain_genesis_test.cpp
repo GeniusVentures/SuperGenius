@@ -60,14 +60,12 @@ protected:
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
+            std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
+            bridgeConfigFile << "{}";
         }
 
         // Generate deterministic key from self_address
@@ -90,7 +88,9 @@ protected:
                          } );
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         // NewFromPrivateKey starts PubSub synchronously in the constructor
         // (InitNetwork -> pubs.wait()) and kicks off async DB/blockchain init.
@@ -170,10 +170,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     // This test verifies that the blockchain sync is blocked when authorization is missing
 
     std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
-              << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
-              << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() ) << std::endl;
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() ) << std::endl;
 
     std::cout << "=== No Authorization No Sync Test Completed ===" << std::endl;
 }
@@ -251,11 +249,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     std::cout << "=== Starting With Authorization Sync + Transactions Test ===" << std::endl;
 
     // Create the full node first (this will be the genesis creator)
-    auto node_full = CreateNode( "full_node_with_auth",
-                                 "0xcafe",
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true );
+    auto node_full = CreateNode( "full_node_with_auth", "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -391,10 +385,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
 
     std::cout << "Full node state: " << static_cast<int>( node_full->GetState() ) << std::endl;
-    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() )
-              << std::endl;
-    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() )
-              << std::endl;
+    std::cout << "Regular node 1 state: " << static_cast<int>( node_regular_1->GetState() ) << std::endl;
+    std::cout << "Regular node 2 state: " << static_cast<int>( node_regular_2->GetState() ) << std::endl;
 
     // The nodes should not be able to sync properly with wrong authorization
     // This test verifies that the blockchain sync is blocked when wrong authorization is set

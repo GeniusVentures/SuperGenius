@@ -62,7 +62,8 @@ namespace sgns
                 return false;
             }
             auto slot_it = manager->slot_states_.find( proposal_it->second.slot_key );
-            return slot_it != manager->slot_states_.end() && slot_it->second.voted;
+            return slot_it != manager->slot_states_.end() &&
+                   slot_it->second.voted_proposal_ids.find( proposal_id ) != slot_it->second.voted_proposal_ids.end();
         }
 
         static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
@@ -71,10 +72,10 @@ namespace sgns
             manager->HandleProposal( proposal );
         }
 
-        static bool AddPendingProposal( const std::shared_ptr<ConsensusManager>        &manager,
-                                        const ConsensusManager::Proposal               &proposal,
-                                        const std::string                              &subject_hash,
-                                        const ConsensusManager::ValidationResult       &validation_result )
+        static bool AddPendingProposal( const std::shared_ptr<ConsensusManager>  &manager,
+                                        const ConsensusManager::Proposal         &proposal,
+                                        const std::string                        &subject_hash,
+                                        const ConsensusManager::ValidationResult &validation_result )
         {
             return manager->AddPendingProposal( proposal, subject_hash, validation_result );
         }
@@ -97,9 +98,8 @@ namespace sgns
             return manager ? manager->pending_entries_.size() : 0U;
         }
 
-        static std::size_t PendingDependencyWaiterCount(
-            const std::shared_ptr<ConsensusManager>       &manager,
-            const ConsensusManager::PendingDependencyKey  &dependency )
+        static std::size_t PendingDependencyWaiterCount( const std::shared_ptr<ConsensusManager>      &manager,
+                                                         const ConsensusManager::PendingDependencyKey &dependency )
         {
             if ( !manager )
             {
@@ -125,35 +125,32 @@ namespace sgns
             return it == manager->pending_count_by_proposer_.end() ? 0U : it->second;
         }
 
-        static std::chrono::milliseconds PendingTtlForProposal(
-            const std::shared_ptr<ConsensusManager> &manager,
-            const std::string                       &proposal_id )
+        static std::chrono::milliseconds PendingTtlForProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                                                const std::string                       &proposal_id )
         {
             auto it = manager->pending_entries_.find( proposal_id );
             if ( it == manager->pending_entries_.end() )
             {
                 return std::chrono::milliseconds( 0 );
             }
-            return std::chrono::duration_cast<std::chrono::milliseconds>(
-                it->second.expires_at - it->second.admitted_at );
+            return std::chrono::duration_cast<std::chrono::milliseconds>( it->second.expires_at -
+                                                                          it->second.admitted_at );
         }
 
-        static std::chrono::milliseconds PendingRetryDelayForProposal(
-            const std::shared_ptr<ConsensusManager> &manager,
-            const std::string                       &proposal_id )
+        static std::chrono::milliseconds PendingRetryDelayForProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                                                       const std::string &proposal_id )
         {
             auto it = manager->pending_entries_.find( proposal_id );
             if ( it == manager->pending_entries_.end() )
             {
                 return std::chrono::milliseconds( 0 );
             }
-            return std::chrono::duration_cast<std::chrono::milliseconds>(
-                it->second.next_retry_at - it->second.admitted_at );
+            return std::chrono::duration_cast<std::chrono::milliseconds>( it->second.next_retry_at -
+                                                                          it->second.admitted_at );
         }
 
-        static std::size_t PendingScheduledRetryCount(
-            const std::shared_ptr<ConsensusManager> &manager,
-            const std::string                       &proposal_id )
+        static std::size_t PendingScheduledRetryCount( const std::shared_ptr<ConsensusManager> &manager,
+                                                       const std::string                       &proposal_id )
         {
             auto it = manager->pending_entries_.find( proposal_id );
             return it == manager->pending_entries_.end() ? 0U : it->second.scheduled_retry_count;
@@ -199,10 +196,11 @@ namespace sgns
                                               const ConsensusManager::Proposal        &proposal )
         {
             ConsensusManager::ProposalState state;
-            state.proposal              = proposal;
-            state.slot_key              = ConsensusManager::GetSlotKey( proposal );
-            state.quorum_reached        = true;
-            state.quorum_reached_ts_ms  = 0;
+            state.proposal             = proposal;
+            state.slot_key             = ConsensusManager::GetSlotKey( proposal );
+            state.quorum_reached       = true;
+            state.quorum_reached_ts_ms = 0;
+
             manager->proposals_[proposal.proposal_id()] = std::move( state );
             manager->certificates_pending_.store( true );
         }
@@ -241,8 +239,7 @@ namespace
         "D-09 per-proposer pending count limit",
         "D-10 retained-byte admission limit",
         "D-11 local capacity refusal without reject vote",
-        "D-12 pending TTL expiry"
-    };
+        "D-12 pending TTL expiry" };
     const std::string kValidatorId = "validator-pending-lifecycle";
 
     std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
@@ -253,14 +250,14 @@ namespace
     class ConsensusPendingLifecycleTest : public test::CRDTFixture
     {
     public:
-        ConsensusPendingLifecycleTest() : CRDTFixture( "consensus_pending_lifecycle_test" ) {}
+        ConsensusPendingLifecycleTest() : CRDTFixture( "consensus_pending_lifecycle_test" )
+        {
+        }
 
     protected:
         static std::vector<std::string> PendingBehaviorNames()
         {
-            return std::vector<std::string>(
-                kConsensusPendingBehaviors.begin(),
-                kConsensusPendingBehaviors.end() );
+            return std::vector<std::string>( kConsensusPendingBehaviors.begin(), kConsensusPendingBehaviors.end() );
         }
 
         std::shared_ptr<sgns::ValidatorRegistry> MakeRegistry()
@@ -275,15 +272,13 @@ namespace
                 { cb( outcome::failure( std::errc::not_supported ) ); } );
             EXPECT_TRUE( registry );
 
-            auto store_result = registry->StoreGenesisRegistry(
-                kValidatorId,
-                DummySignature );
+            auto store_result = registry->StoreGenesisRegistry( kValidatorId, DummySignature );
             EXPECT_FALSE( store_result.has_error() );
 
             ASSERT_WAIT_FOR_CONDITION(
                 [&registry]()
                 {
-                    auto load = registry->LoadRegistry();
+                    auto load = registry->LoadCurrentRegistry();
                     return load.has_value() && !registry->GetRegistryCid().empty();
                 },
                 std::chrono::milliseconds( 2000 ),
@@ -293,9 +288,8 @@ namespace
             return registry;
         }
 
-        std::shared_ptr<sgns::ConsensusManager> MakeManager(
-            const std::shared_ptr<sgns::ValidatorRegistry> &registry,
-            const std::string                              &local_id = kValidatorId )
+        std::shared_ptr<sgns::ConsensusManager> MakeManager( const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+                                                             const std::string &local_id = kValidatorId )
         {
             auto manager = sgns::ConsensusManager::New(
                 registry,
@@ -330,26 +324,23 @@ namespace
             return sgns::UTXOWitness{};
         }
 
-        sgns::ConsensusManager::Proposal MakeProposal(
-            const std::shared_ptr<sgns::ConsensusManager>   &manager,
-            const std::shared_ptr<sgns::ValidatorRegistry>  &registry,
-            uint64_t                                         nonce,
-            const std::string                               &account )
+        sgns::ConsensusManager::Proposal MakeProposal( const std::shared_ptr<sgns::ConsensusManager>  &manager,
+                                                       const std::shared_ptr<sgns::ValidatorRegistry> &registry,
+                                                       uint64_t                                        nonce,
+                                                       const std::string                              &account )
         {
-            auto subject_result = sgns::ConsensusManager::CreateNonceSubject(
-                kValidatorId,
-                nonce,
-                account,
-                sgns::EmbeddedTransaction{},
-                MakeTestCommitment(),
-                MakeTestWitness() );
+            auto subject_result = sgns::ConsensusManager::CreateNonceSubject( kValidatorId,
+                                                                              nonce,
+                                                                              account,
+                                                                              sgns::EmbeddedTransaction{},
+                                                                              MakeTestCommitment(),
+                                                                              MakeTestWitness() );
             EXPECT_TRUE( subject_result.has_value() );
 
-            auto proposal_result = manager->CreateProposal(
-                subject_result.value(),
-                kValidatorId,
-                registry->GetRegistryCid(),
-                registry->GetRegistryEpoch() );
+            auto proposal_result = manager->CreateProposal( subject_result.value(),
+                                                            kValidatorId,
+                                                            registry->GetRegistryCid(),
+                                                            registry->GetRegistryEpoch() );
             EXPECT_TRUE( proposal_result.has_value() );
             return proposal_result.value();
         }
@@ -364,13 +355,11 @@ TEST( ConsensusPendingLifecycleContractTest, HarnessIsDiscoverable )
      * Then it exposes the future behavior slots for PEND-01 through PEND-07
      * and avoids bridge or EVM RPC concerns.
      */
-    const auto behaviors = std::vector<std::string>(
-        kConsensusPendingBehaviors.begin(),
-        kConsensusPendingBehaviors.end() );
+    const auto behaviors = std::vector<std::string>( kConsensusPendingBehaviors.begin(),
+                                                     kConsensusPendingBehaviors.end() );
 
     ASSERT_EQ( behaviors.size(), kConsensusPendingBehaviors.size() );
-    EXPECT_STREQ( sgns::ConsensusPendingLifecycleTestAccess::Scope(),
-                  "consensus pending lifecycle" );
+    EXPECT_STREQ( sgns::ConsensusPendingLifecycleTestAccess::Scope(), "consensus pending lifecycle" );
     EXPECT_FALSE( sgns::NONCE_SUBJECT_TYPE.empty() );
 }
 
@@ -408,9 +397,7 @@ TEST( ConsensusPendingLifecycleContractTest, PendingResultCarriesTypedCertificat
     using PendingDependencyKey = sgns::ConsensusManager::PendingDependencyKey;
 
     const auto dependency = PendingDependencyKey::Certificate( "tx-previous-cert" );
-    const auto pending    = sgns::ConsensusManager::ValidationResult::Pending(
-        { dependency },
-        std::chrono::seconds( 2 ) );
+    const auto pending = sgns::ConsensusManager::ValidationResult::Pending( { dependency }, std::chrono::seconds( 2 ) );
 
     ASSERT_EQ( pending.check, sgns::ConsensusManager::Check::Pending );
     ASSERT_EQ( pending.dependencies.size(), 1U );
@@ -486,18 +473,16 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     config.pending_ttl = std::chrono::seconds( 10 );
     manager->SetPendingLifecycleConfig( config );
 
-    auto proposal    = MakeProposal( manager, registry, 11, "0xpending-index" );
-    auto proposal_id = proposal.proposal_id();
-    const auto dep_a = PendingDependencyKey::Certificate( "cert-a" );
-    const auto dep_b = PendingDependencyKey::Certificate( "cert-b" );
+    auto       proposal    = MakeProposal( manager, registry, 11, "0xpending-index" );
+    auto       proposal_id = proposal.proposal_id();
+    const auto dep_a       = PendingDependencyKey::Certificate( "cert-a" );
+    const auto dep_b       = PendingDependencyKey::Certificate( "cert-b" );
 
     const bool admitted = sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
         manager,
         proposal,
         "subject-hash",
-        sgns::ConsensusManager::ValidationResult::Pending(
-            { dep_a, dep_b },
-            std::chrono::seconds( 2 ) ) );
+        sgns::ConsensusManager::ValidationResult::Pending( { dep_a, dep_b }, std::chrono::seconds( 2 ) ) );
 
     EXPECT_TRUE( admitted );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 1U );
@@ -510,14 +495,12 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal( manager, proposal_id ),
                std::chrono::seconds( 2 ) );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        proposal_id,
-        "test-reset" ) );
+    EXPECT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager, proposal_id, "test-reset" ) );
 
-    config.max_pending_proposals = 1;
+    config.max_pending_proposals    = 1;
     config.max_pending_per_proposer = 1;
-    config.pending_ttl = std::chrono::seconds( 10 );
+    config.pending_ttl              = std::chrono::seconds( 10 );
     manager->SetPendingLifecycleConfig( config );
 
     auto first  = MakeProposal( manager, registry, 21, "0xcapacity-first" );
@@ -537,16 +520,16 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 1U );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, first.proposal_id() ) );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, second.proposal_id() ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, second.proposal_id() ) );
+    EXPECT_FALSE(
+        sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, second.proposal_id() ) );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        first.proposal_id(),
-        "test-reset" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager,
+                                                                                   first.proposal_id(),
+                                                                                   "test-reset" ) );
 
-    config.max_pending_proposals = 2;
+    config.max_pending_proposals    = 2;
     config.max_pending_per_proposer = 1;
-    config.pending_ttl = std::chrono::seconds( 10 );
+    config.pending_ttl              = std::chrono::seconds( 10 );
     manager->SetPendingLifecycleConfig( config );
 
     auto remove_first  = MakeProposal( manager, registry, 31, "0xremove-first" );
@@ -559,49 +542,45 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     const auto dependency = PendingDependencyKey::Certificate( "shared-cert" );
     const auto pending    = sgns::ConsensusManager::ValidationResult::Pending( { dependency } );
 
-    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
-        manager,
-        remove_first,
-        "subject-first",
-        pending ) );
-    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
-        manager,
-        remove_second,
-        "subject-second",
-        pending ) );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal( manager,
+                                                                                remove_first,
+                                                                                "subject-first",
+                                                                                pending ) );
+    ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal( manager,
+                                                                                remove_second,
+                                                                                "subject-second",
+                                                                                pending ) );
 
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 2U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-a" ), 1U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-b" ), 1U );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        remove_first.proposal_id(),
-        "test-remove" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager,
+                                                                                   remove_first.proposal_id(),
+                                                                                   "test-remove" ) );
 
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_first.proposal_id() ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_second.proposal_id() ) );
+    EXPECT_FALSE(
+        sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_first.proposal_id() ) );
+    EXPECT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_second.proposal_id() ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 1U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-a" ), 0U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingCountForProposer( manager, "validator-b" ), 1U );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
-        manager,
-        remove_third,
-        "subject-third",
-        pending ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal( manager,
+                                                                                remove_third,
+                                                                                "subject-third",
+                                                                                pending ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, remove_third.proposal_id() ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 2U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingDependencyWaiterCount( manager, dependency ), 2U );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        remove_second.proposal_id(),
-        "test-reset" ) );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        remove_third.proposal_id(),
-        "test-reset" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager,
+                                                                                   remove_second.proposal_id(),
+                                                                                   "test-reset" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager,
+                                                                                   remove_third.proposal_id(),
+                                                                                   "test-reset" ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
 
     manager->SetPendingLifecycleConfig( sgns::ConsensusManager::PendingLifecycleConfig{} );
@@ -630,38 +609,38 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     sgns::ConsensusPendingLifecycleTestAccess::ContinueProposalAfterSubject( manager, retry_proposal );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, retry_proposal_id ) );
 
-    config = sgns::ConsensusManager::PendingLifecycleConfig{};
-    config.pending_ttl = std::chrono::seconds( 10 );
+    config                               = sgns::ConsensusManager::PendingLifecycleConfig{};
+    config.pending_ttl                   = std::chrono::seconds( 10 );
     config.min_dependency_retry_interval = std::chrono::milliseconds( 0 );
     manager->SetPendingLifecycleConfig( config );
 
-    std::unordered_map<std::string, int> handler_attempts;
+    std::unordered_map<std::string, int>                                                            handler_attempts;
     std::unordered_map<std::string, std::function<sgns::ConsensusManager::ValidationResult( int )>> handler_scripts;
-    ASSERT_TRUE( manager->RegisterSubjectHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        [&]( const sgns::ConsensusManager::Subject &subject )
-            -> outcome::result<sgns::ConsensusManager::ValidationResult>
-        {
-            auto nonce_subject = sgns::ConsensusManager::DecodeNonceSubject( subject );
-            if ( nonce_subject.has_error() )
-            {
-                return outcome::failure( nonce_subject.error() );
-            }
-            const auto &tx_hash = nonce_subject.value().tx_hash();
-            auto       &attempt = handler_attempts[tx_hash];
-            ++attempt;
-            auto script_it = handler_scripts.find( tx_hash );
-            if ( script_it == handler_scripts.end() )
-            {
-                return sgns::ConsensusManager::ValidationResult::Approve();
-            }
-            return script_it->second( attempt );
-        } ) );
+    ASSERT_TRUE( manager->RegisterSubjectHandler( sgns::NONCE_SUBJECT_TYPE,
+                                                  [&]( const sgns::ConsensusManager::Subject &subject )
+                                                      -> outcome::result<sgns::ConsensusManager::ValidationResult>
+                                                  {
+                                                      auto nonce_subject = sgns::ConsensusManager::DecodeNonceSubject(
+                                                          subject );
+                                                      if ( nonce_subject.has_error() )
+                                                      {
+                                                          return outcome::failure( nonce_subject.error() );
+                                                      }
+                                                      const auto &tx_hash = nonce_subject.value().tx_hash();
+                                                      auto       &attempt = handler_attempts[tx_hash];
+                                                      ++attempt;
+                                                      auto script_it = handler_scripts.find( tx_hash );
+                                                      if ( script_it == handler_scripts.end() )
+                                                      {
+                                                          return sgns::ConsensusManager::ValidationResult::Approve();
+                                                      }
+                                                      return script_it->second( attempt );
+                                                  } ) );
 
-    auto dependency_proposal    = MakeProposal( manager, registry, 51, "0xdependency-tx2" );
-    auto dependency_proposal_id = dependency_proposal.proposal_id();
-    const auto predecessor_key  = PendingDependencyKey::Certificate( "0xdependency-tx1" );
-    const auto wrong_key        = PendingDependencyKey::Certificate( "0xdependency-tx2" );
+    auto       dependency_proposal    = MakeProposal( manager, registry, 51, "0xdependency-tx2" );
+    auto       dependency_proposal_id = dependency_proposal.proposal_id();
+    const auto predecessor_key        = PendingDependencyKey::Certificate( "0xdependency-tx1" );
+    const auto wrong_key              = PendingDependencyKey::Certificate( "0xdependency-tx2" );
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
         manager,
         dependency_proposal,
@@ -671,21 +650,19 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     ASSERT_TRUE( manager->WakePendingDependency( wrong_key ).has_value() );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, dependency_proposal_id ) );
     EXPECT_EQ( handler_attempts["0xdependency-tx2"], 0 );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal(
-        manager,
-        dependency_proposal_id ) );
+    EXPECT_FALSE(
+        sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, dependency_proposal_id ) );
 
     ASSERT_TRUE( manager->WakePendingDependency( predecessor_key ).has_value() );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, dependency_proposal_id ) );
     EXPECT_EQ( handler_attempts["0xdependency-tx2"], 1 );
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal(
-        manager,
-        dependency_proposal_id ) );
+    EXPECT_TRUE(
+        sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, dependency_proposal_id ) );
 
-    auto multi_proposal    = MakeProposal( manager, registry, 52, "0xmulti-dep" );
-    auto multi_proposal_id = multi_proposal.proposal_id();
-    const auto multi_a     = PendingDependencyKey::Certificate( "0xmulti-a" );
-    const auto multi_b     = PendingDependencyKey::Certificate( "0xmulti-b" );
+    auto       multi_proposal      = MakeProposal( manager, registry, 52, "0xmulti-dep" );
+    auto       multi_proposal_id   = multi_proposal.proposal_id();
+    const auto multi_a             = PendingDependencyKey::Certificate( "0xmulti-a" );
+    const auto multi_b             = PendingDependencyKey::Certificate( "0xmulti-b" );
     handler_scripts["0xmulti-dep"] = [&]( int attempt )
     {
         if ( attempt == 1 )
@@ -709,53 +686,44 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, multi_proposal_id ) );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::LocalVoteCastForProposal( manager, multi_proposal_id ) );
 
-    config = sgns::ConsensusManager::PendingLifecycleConfig{};
-    config.pending_ttl = std::chrono::seconds( 10 );
+    config                               = sgns::ConsensusManager::PendingLifecycleConfig{};
+    config.pending_ttl                   = std::chrono::seconds( 10 );
     config.min_dependency_retry_interval = std::chrono::seconds( 10 );
-    config.scheduled_retry_delays = {
-        std::chrono::seconds( 1 ),
-        std::chrono::seconds( 2 ),
-        std::chrono::seconds( 5 ),
-        std::chrono::seconds( 10 )
-    };
+    config.scheduled_retry_delays        = { std::chrono::seconds( 1 ),
+                                             std::chrono::seconds( 2 ),
+                                             std::chrono::seconds( 5 ),
+                                             std::chrono::seconds( 10 ) };
     manager->SetPendingLifecycleConfig( config );
 
-    auto scheduled_proposal    = MakeProposal( manager, registry, 53, "0xscheduled" );
-    auto scheduled_proposal_id = scheduled_proposal.proposal_id();
-    const auto scheduled_dep   = PendingDependencyKey::Certificate( "0xscheduled-dep" );
-    handler_scripts["0xscheduled"] = [&]( int )
-    {
-        return sgns::ConsensusManager::ValidationResult::Pending( { scheduled_dep } );
-    };
+    auto       scheduled_proposal    = MakeProposal( manager, registry, 53, "0xscheduled" );
+    auto       scheduled_proposal_id = scheduled_proposal.proposal_id();
+    const auto scheduled_dep         = PendingDependencyKey::Certificate( "0xscheduled-dep" );
+    handler_scripts["0xscheduled"]   = [&]( int )
+    { return sgns::ConsensusManager::ValidationResult::Pending( { scheduled_dep } ); };
     ASSERT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::AddPendingProposal(
         manager,
         scheduled_proposal,
         "0xscheduled",
         sgns::ConsensusManager::ValidationResult::Pending( { scheduled_dep } ) ) );
-    EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal(
-                   manager,
-                   scheduled_proposal_id ),
-               std::chrono::seconds( 1 ) );
+    EXPECT_EQ(
+        sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal( manager, scheduled_proposal_id ),
+        std::chrono::seconds( 1 ) );
 
-    const std::array<std::chrono::seconds, 4> expected_delays = {
-        std::chrono::seconds( 2 ),
-        std::chrono::seconds( 5 ),
-        std::chrono::seconds( 10 ),
-        std::chrono::seconds( 10 )
-    };
+    const std::array<std::chrono::seconds, 4> expected_delays = { std::chrono::seconds( 2 ),
+                                                                  std::chrono::seconds( 5 ),
+                                                                  std::chrono::seconds( 10 ),
+                                                                  std::chrono::seconds( 10 ) };
     for ( std::size_t i = 0; i < expected_delays.size(); ++i )
     {
         sgns::ConsensusPendingLifecycleTestAccess::ForcePendingRetryDue( manager, scheduled_proposal_id );
         sgns::ConsensusPendingLifecycleTestAccess::ProcessDuePendingRetries( manager );
         EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, scheduled_proposal_id ) );
-        EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingScheduledRetryCount(
-                       manager,
-                       scheduled_proposal_id ),
-                   i + 1 );
-        EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal(
-                       manager,
-                       scheduled_proposal_id ),
-                   expected_delays[i] );
+        EXPECT_EQ(
+            sgns::ConsensusPendingLifecycleTestAccess::PendingScheduledRetryCount( manager, scheduled_proposal_id ),
+            i + 1 );
+        EXPECT_EQ(
+            sgns::ConsensusPendingLifecycleTestAccess::PendingRetryDelayForProposal( manager, scheduled_proposal_id ),
+            expected_delays[i] );
     }
 
     const auto scheduled_attempts_after_dependency = handler_attempts["0xscheduled"];
@@ -765,21 +733,19 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_EQ( handler_attempts["0xscheduled"], scheduled_attempts_after_dependency );
     EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, scheduled_proposal_id ) );
 
-    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal(
-        manager,
-        scheduled_proposal_id,
-        "test-reset" ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::RemovePendingProposal( manager,
+                                                                                   scheduled_proposal_id,
+                                                                                   "test-reset" ) );
 
     int cleanup_count = 0;
-    ASSERT_TRUE( manager->RegisterProposalCleanupHandler(
-        sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &tx_hash )
-        {
-            if ( tx_hash == "0xttl" )
-            {
-                ++cleanup_count;
-            }
-        } ) );
+    ASSERT_TRUE( manager->RegisterProposalCleanupHandler( sgns::NONCE_SUBJECT_TYPE,
+                                                          [&]( const std::string &tx_hash )
+                                                          {
+                                                              if ( tx_hash == "0xttl" )
+                                                              {
+                                                                  ++cleanup_count;
+                                                              }
+                                                          } ) );
 
     auto ttl_proposal    = MakeProposal( manager, registry, 54, "0xttl" );
     auto ttl_proposal_id = ttl_proposal.proposal_id();
@@ -787,8 +753,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
         manager,
         ttl_proposal,
         "0xttl",
-        sgns::ConsensusManager::ValidationResult::Pending(
-            { PendingDependencyKey::Certificate( "0xttl-dep" ) } ) ) );
+        sgns::ConsensusManager::ValidationResult::Pending( { PendingDependencyKey::Certificate( "0xttl-dep" ) } ) ) );
     sgns::ConsensusPendingLifecycleTestAccess::ForcePendingExpired( manager, ttl_proposal_id );
     sgns::ConsensusPendingLifecycleTestAccess::ExpirePendingProposals( manager );
     sgns::ConsensusPendingLifecycleTestAccess::ExpirePendingProposals( manager );

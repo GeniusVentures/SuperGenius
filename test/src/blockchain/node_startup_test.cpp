@@ -81,13 +81,13 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/" + kNodeDirPrefix + std::to_string( id ) + "/";
 
-        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         // is_processor is read from sgns_config.json; this test uses non-processor nodes.
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
+            std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
+            bridgeConfigFile << "{}";
         }
 
         std::hash<std::string> hasher;
@@ -102,7 +102,9 @@ protected:
         } );
 
         uint16_t uniquePort = static_cast<uint16_t>( kBasePort + id );
-        return GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+        return GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
     }
 
     void SetUp() override

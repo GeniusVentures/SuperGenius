@@ -1175,6 +1175,12 @@ namespace sgns
                 query );
         };
 
+        {
+            std::lock_guard lock( block_responses_mutex_ );
+            block_responses_.erase( req_id );
+            block_first_response_time_.erase( req_id );
+        }
+
         auto request_result = send_request( req_id );
         logger_->debug( "[{}] Requesting {} {} with req_id {} and timeout {}",
                         address_.substr( 0, 8 ),
@@ -1182,12 +1188,6 @@ namespace sgns
                         target,
                         req_id,
                         timeout_ms );
-
-        {
-            std::lock_guard lock( block_responses_mutex_ );
-            block_responses_.erase( req_id );
-            block_first_response_time_.erase( req_id );
-        }
 
         if ( request_result.has_error() )
         {

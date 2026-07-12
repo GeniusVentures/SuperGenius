@@ -38,17 +38,17 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> node_proc2;
         static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
-        static inline GeniusNodeConfig gGeniusNodeConfig  = { "0xcafe",
+        static inline DevConfig_st DEV_CONFIG  = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                    "./node10" };
-        static inline GeniusNodeConfig gGeniusNodeConfig2 = { "0xcafe",
+        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                    "./node20" };
-        static inline GeniusNodeConfig gGeniusNodeConfig3 = { "0xcafe",
+        static inline DevConfig_st DEV_CONFIG3 = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
@@ -63,58 +63,46 @@ namespace sgns
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
             std::string binary_path   = boost::dll::program_location().parent_path().string();
-            gGeniusNodeConfig.BaseWritePath  = binary_path + "/node10/";
-            gGeniusNodeConfig2.BaseWritePath = binary_path + "/node20/";
-            gGeniusNodeConfig3.BaseWritePath = binary_path + "/node_full/";
+            DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
+            DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";
+            DEV_CONFIG3.BaseWritePath = binary_path + "/node_full/";
 
             try
             {
-                std::filesystem::remove_all( gGeniusNodeConfig.BaseWritePath );
-                std::filesystem::remove_all( gGeniusNodeConfig2.BaseWritePath );
-                std::filesystem::remove_all( gGeniusNodeConfig3.BaseWritePath );
+                std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
+                std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
+                std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
             }
             catch ( ... )
             {
             }
 
-            // All nodes in this test are non-processors.
-            // is_processor is now read exclusively from sgns_config.json (defaults to true).
-            std::filesystem::create_directories( gGeniusNodeConfig3.BaseWritePath );
-            {
-                std::ofstream configFile( gGeniusNodeConfig3.BaseWritePath + "sgns_config.json" );
-                configFile << R"({"is_processor": false})";
-            }
-            std::filesystem::create_directories( gGeniusNodeConfig.BaseWritePath );
-            {
-                std::ofstream configFile( gGeniusNodeConfig.BaseWritePath + "sgns_config.json" );
-                configFile << R"({"is_processor": false})";
-            }
-            std::filesystem::create_directories( gGeniusNodeConfig2.BaseWritePath );
-            {
-                std::ofstream configFile( gGeniusNodeConfig2.BaseWritePath + "sgns_config.json" );
-                configFile << R"({"is_processor": false})";
-            }
+            // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
+            std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false );
+            std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
 
-            full_node = sgns::GeniusNode::NewFromPrivateKey(
-                gGeniusNodeConfig3,
-                "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780",
-                false,
-                40001,
-                true );
+            full_node = sgns::GeniusNode::New(
+                DEV_CONFIG3,
+                sgns::FromPrivateKey{ "9389e5f08c01e791dc436abab7a61a502515ddc7f91cb09f10289e147c651780" } );
             Blockchain::SetAuthorizedFullNodeAddress( full_node->GetAddress() );
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 50000 ),
                                           "full_node not ready" );
 
-            node_proc1 = sgns::GeniusNode::NewFromPrivateKey(
-                gGeniusNodeConfig,
-                "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395",
-                false );
+            node_proc1 = sgns::GeniusNode::New(
+                DEV_CONFIG,
+                sgns::FromPrivateKey{ "1f06d98b1d1613ad98279f8d57ce30580e8a7a0385dc85da713333f53a928395" } );
 
-            node_proc2 = sgns::GeniusNode::NewFromPrivateKey(
-                gGeniusNodeConfig2,
-                "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02",
-                false );
+            node_proc2 = sgns::GeniusNode::New(
+                DEV_CONFIG2,
+                sgns::FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
 
             fmt::println( "Node1 started with address: {}", node_proc1->GetAddress() );
             fmt::println( "Node2 started with address: {}", node_proc2->GetAddress() );

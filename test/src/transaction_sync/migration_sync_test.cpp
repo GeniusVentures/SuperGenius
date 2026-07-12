@@ -43,7 +43,7 @@ struct NodeParams
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline GeniusNodeConfig gGeniusGeniusNodeConfig = {
+    static inline DevConfig_st DEV_CONFIG = {
         "0xdeef",                             // Addr
         "0.65",                               // Cut
         "1.0",                                // TokenValueInGNUS
@@ -121,21 +121,14 @@ protected:
         RemovePrefixedSubdirs( nodeDir );
 
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
-        gGeniusGeniusNodeConfig.BaseWritePath = baseWrite;
+        DEV_CONFIG.BaseWritePath = baseWrite;
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
-        std::filesystem::create_directories( gGeniusGeniusNodeConfig.BaseWritePath );
-        {
-            std::ofstream configFile( gGeniusGeniusNodeConfig.BaseWritePath + std::string( "sgns_config.json" ) );
-            configFile << R"({"is_processor": false})";
-        }
+        // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
+        std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, base_port, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, is_full_node ? "Full" : "Light", /*is_processor=*/false );
 
-        auto instance = sgns::GeniusNode::NewFromPrivateKey( gGeniusGeniusNodeConfig,
-                                                             key_hex,
-                                                             false,
-                                                             base_port,
-                                                             is_full_node );
+        auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
@@ -151,22 +144,18 @@ protected:
         fs::remove_all( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
+        DevConfig_st devConfig = { std::string( FULL_NODE_ADDR ),
                                    "0.65",
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
 
-        // Full node is not a processor.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
-
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, unique_port, true );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, unique_port, /*auto_dht=*/false );
+        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false );
+        auto     instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
