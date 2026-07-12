@@ -263,7 +263,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     // D-16: skip cleanly when Foundry binaries are missing.
     if ( !sgns::test::anvil::AnvilAvailable() || !sgns::test::anvil::CastAvailable() )
     {
-        FAIL() << "Foundry (anvil + cast) required: https://book.getfoundry.sh/getting-started/installation";
+        GTEST_SKIP() << "Install Foundry (anvil + cast): https://book.getfoundry.sh/getting-started/installation";
     }
 
     // D-03: resolve fork URL (RPC_SEPOLIA override or default public Sepolia).
@@ -279,7 +279,9 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     // D-08/D-09: fund account #0 with GNUS via impersonation. D-10: skip cleanly on failure.
     if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
     {
-        FAIL() << "Could not fund Anvil account #0 via impersonation of " << sgns::test::anvil::kGnusHolderSepolia;
+        s_anvil.Stop();
+        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
+                     << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
     }
 
     // Per-node BaseWritePath from binary location (Phase 4 pattern).
