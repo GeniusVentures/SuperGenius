@@ -27,9 +27,9 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> node_proc1;
     static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
-    static NodeConfig gGeniusNodeConfig;
-    static NodeConfig gGeniusNodeConfig2;
-    static NodeConfig gGeniusNodeConfig3;
+    static GeniusNodeConfig gGeniusNodeConfig;
+    static GeniusNodeConfig gGeniusNodeConfig2;
+    static GeniusNodeConfig gGeniusNodeConfig3;
 
     static std::string binary_path;
 
@@ -112,17 +112,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
-NodeConfig ProcessingNodesTest::gGeniusNodeConfig  = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig  = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
-NodeConfig ProcessingNodesTest::gGeniusNodeConfig2 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig2 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
-NodeConfig ProcessingNodesTest::gGeniusNodeConfig3 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::gGeniusNodeConfig3 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
