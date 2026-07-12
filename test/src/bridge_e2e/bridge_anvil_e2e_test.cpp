@@ -483,6 +483,10 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
                                "First Anvil mint balance increase",
                                nullptr );
 
+    // Capture the post-first-mint baseline BEFORE submitting the second mint, so
+    // a duplicate mint is detectable as a balance increase above this value.
+    const uint64_t balance_before_replay = s_nodes[0]->GetBalance( dest_addr );
+
     // Second mint with the SAME tx hash must be rejected by the dedup cache.
     auto second_result = s_nodes[0]->MintTokens( kMintAmount,
                                                 tx_hash,
@@ -494,9 +498,15 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     bool replay_rejected = second_result.has_error();
     if ( !replay_rejected )
     {
-        const uint64_t balance_after_replay = s_nodes[0]->GetBalance( dest_addr );
-        EXPECT_EQ( balance_after_replay, s_nodes[0]->GetBalance( dest_addr ) )
-            << "Balance should not increase for a replayed Anvil burn tx hash";
+        // The dedup cache failed to reject the replay synchronously. Give any
+        // erroneously-accepted duplicate time to settle, then assert the balance
+        // did not increase above the pre-replay baseline — this is the actual
+        // dedup guarantee under test.
+        EXPECT_WAIT_FOR_CONDITION(
+            [&]() { return s_nodes[0]->GetBalance( dest_addr ) == balance_before_replay; },
+            kReplayTimeout,
+            "Balance must not increase from a replayed Anvil burn tx hash",
+            nullptr );
         spdlog::info( "bridge_anvil: second mint returned OK but balance unchanged" );
     }
     else
