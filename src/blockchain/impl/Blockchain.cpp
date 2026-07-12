@@ -1725,6 +1725,10 @@ namespace sgns
         {
             consensus_manager_->SetSlotHashPopulator( std::move( populator ) );
         }
+        else
+        {
+            logger_->warn( "SetSlotHashPopulator: consensus manager not initialized, populator discarded" );
+        }
     }
 
     void Blockchain::UnregisterSubjectHandler( std::string_view subject_type )
