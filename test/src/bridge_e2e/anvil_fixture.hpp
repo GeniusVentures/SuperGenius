@@ -72,10 +72,14 @@ namespace sgns::test::anvil
      *
      * @return 0x-prefixed keccak256 hash hex of the v2 BridgeOutInitiated signature.
      */
-    static inline std::string BridgeEventTopic0()
+    static inline const std::string &BridgeEventTopic0()
     {
-        const auto hash = eth::abi::event_signature_hash( std::string( sgns::kBridgeOutInitiatedSig ) );
-        return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+        static const std::string kTopic0 = []()
+        {
+            const auto hash = eth::abi::event_signature_hash( std::string( sgns::kBridgeOutInitiatedSig ) );
+            return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+        }();
+        return kTopic0;
     }
 
     /**
