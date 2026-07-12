@@ -96,6 +96,12 @@ namespace sgns::test::anvil
     /** @brief Poll interval for Anvil readiness checks. */
     inline constexpr unsigned int kAnvilPollIntervalMs = 100u;
 
+    /** @brief Grace period (ms) to wait for the Anvil child to exit after SIGTERM before SIGKILL. */
+    inline constexpr unsigned int kStopGracePeriodMs = 5000u;
+
+    /** @brief Poll interval (ms) for waitpid(WNOHANG) while waiting for the Anvil child to exit. */
+    inline constexpr unsigned int kStopPollIntervalMs = 50u;
+
     // =========================================================================
     // Reused Phase 4 popen/_popen wrapper — copied verbatim as static inline.
     // The original lives in an anonymous namespace in bridge_e2e_test.cpp; the
@@ -561,15 +567,36 @@ namespace sgns::test::anvil
         }
 
         /**
-         * @brief Stops the Anvil subprocess via SIGTERM + waitpid (RAII safety net).
+         * @brief Stops the Anvil subprocess via SIGTERM with SIGKILL escalation (RAII safety net).
+         *
+         * Sends SIGTERM, then polls waitpid(WNOHANG) for a bounded grace period
+         * (kStopGracePeriodMs). If the child has not exited by then (e.g. stuck RPC
+         * or hung fork), escalates to SIGKILL and a final blocking waitpid so a
+         * misbehaving Anvil cannot hang test-suite teardown via the destructor.
          */
         void Stop()
         {
             if ( anvil_pid_ > 0 )
             {
                 kill( anvil_pid_, SIGTERM );
-                int status = 0;
-                waitpid( anvil_pid_, &status, 0 );
+                int  status      = 0;
+                bool reaped      = waitForCondition(
+                    [this, &status]()
+                    {
+                        pid_t wp = waitpid( anvil_pid_, &status, WNOHANG );
+                        return wp == anvil_pid_;
+                    },
+                    std::chrono::milliseconds( kStopGracePeriodMs ),
+                    nullptr,
+                    std::chrono::milliseconds( kStopPollIntervalMs ) );
+                if ( !reaped )
+                {
+                    spdlog::warn( "anvil_fixture: anvil pid={} did not exit within {}ms after SIGTERM — escalating to SIGKILL",
+                                  anvil_pid_,
+                                  kStopGracePeriodMs );
+                    kill( anvil_pid_, SIGKILL );
+                    waitpid( anvil_pid_, &status, 0 );
+                }
                 spdlog::info( "anvil_fixture: stopped anvil pid={} status={}", anvil_pid_, status );
                 anvil_pid_ = -1;
             }
