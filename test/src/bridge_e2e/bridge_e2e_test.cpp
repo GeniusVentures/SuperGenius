@@ -155,9 +155,9 @@ protected:
     static std::shared_ptr<GeniusNode> node_proc1;
     static std::shared_ptr<GeniusNode> node_proc2;
 
-    static NodeConfig gGeniusNodeConfig;
-    static NodeConfig gGeniusNodeConfig2;
-    static NodeConfig gGeniusNodeConfig3;
+    static GeniusNodeConfig gGeniusNodeConfig;
+    static GeniusNodeConfig gGeniusNodeConfig2;
+    static GeniusNodeConfig gGeniusNodeConfig3;
 
     static std::string s_eth_private_key;
 
@@ -198,9 +198,9 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 
 std::string BridgeE2ETest::s_eth_private_key;
 
-NodeConfig BridgeE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
-NodeConfig BridgeE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
-NodeConfig BridgeE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
+GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
+GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
+GeniusNodeConfig BridgeE2ETest::gGeniusNodeConfig3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
 
 // --- Fixture implementation ---
 
