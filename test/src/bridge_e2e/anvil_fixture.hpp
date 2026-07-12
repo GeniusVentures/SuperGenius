@@ -292,6 +292,57 @@ namespace sgns::test::anvil
     }
 
     /**
+     * @brief Validates an Anvil RPC URL against the strict shape used by this fixture.
+     *
+     * The URL is interpolated into a `cast ... --rpc-url <url> ...` shell command
+     * (RunShellCapture invokes /bin/sh -c). Reject any URL containing characters
+     * outside the http(s)://[host]:[port] shape so a caller-supplied URL with shell
+     * metacharacters (`;`, backtick, `$(...)`, quotes) cannot inject commands. The
+     * fixture constructs URLs only as `http://127.0.0.1:<port>`, so the allow-list
+     * (letters, digits, `.`, `:`, `/`, `_`, `-`) covers every legitimate value.
+     *
+     * @param[in] url  Caller-supplied RPC URL to validate.
+     * @return true if @p url starts with `http://` or `https://` and contains only
+     *         allow-listed characters afterward; false otherwise.
+     */
+    static inline bool IsValidAnvilRpcUrl( const std::string &url )
+    {
+        constexpr const char *kHttpScheme  = "http://";
+        constexpr const char *kHttpsScheme = "https://";
+        const size_t          kHttpLen     = std::strlen( kHttpScheme );
+        const size_t          kHttpsLen    = std::strlen( kHttpsScheme );
+        bool                   has_scheme = false;
+        size_t                 scheme_len  = 0u;
+        if ( url.compare( 0u, kHttpLen, kHttpScheme ) == 0 )
+        {
+            has_scheme  = true;
+            scheme_len  = kHttpLen;
+        }
+        else if ( url.compare( 0u, kHttpsLen, kHttpsScheme ) == 0 )
+        {
+            has_scheme  = true;
+            scheme_len  = kHttpsLen;
+        }
+        if ( !has_scheme )
+        {
+            return false;
+        }
+        for ( size_t i = scheme_len; i < url.size(); ++i )
+        {
+            const unsigned char c = static_cast<unsigned char>( url[i] );
+            const bool          ok = ( c >= '0' && c <= '9' ) ||
+                            ( c >= 'a' && c <= 'z' ) ||
+                            ( c >= 'A' && c <= 'Z' ) ||
+                            c == '.' || c == ':' || c == '/' || c == '_' || c == '-';
+            if ( !ok )
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * @brief Sends a real GNUS bridgeOut() burn on the local Anvil fork.
      *
      * Replaces the prior safeTransferFrom(self,self,0,amount,0x) burn-seeding, which
@@ -311,6 +362,15 @@ namespace sgns::test::anvil
                                                  const std::string &sgns_destination_128 )
     {
         constexpr unsigned int kGnusTokenId = 0u;
+
+        // Defensive: anvil_rpc_url is interpolated into a shell command. Reject
+        // anything outside the strict http(s)://[host]:[port] shape so a future
+        // caller passing a URL with shell metacharacters cannot inject commands.
+        if ( !IsValidAnvilRpcUrl( anvil_rpc_url ) )
+        {
+            spdlog::error( "SendBridgeOutBurn: rejected anvil_rpc_url with disallowed characters: {}", anvil_rpc_url );
+            return {};
+        }
 
         const auto dest = BridgeDestinationFromSgnsAddress( sgns_destination_128 );
         if ( dest.first.empty() )
