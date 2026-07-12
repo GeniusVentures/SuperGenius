@@ -38,17 +38,17 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> node_proc2;
         static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
-        static inline DevConfig_st DEV_CONFIG  = { "0xcafe",
+        static inline GeniusNodeConfig DEV_CONFIG  = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                    "./node10" };
-        static inline DevConfig_st DEV_CONFIG2 = { "0xcafe",
+        static inline GeniusNodeConfig DEV_CONFIG2 = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                    "./node20" };
-        static inline DevConfig_st DEV_CONFIG3 = { "0xcafe",
+        static inline GeniusNodeConfig DEV_CONFIG3 = { "0xcafe",
                                                    "0.65",
                                                    "1.0",
                                                    sgns::TokenID::FromBytes( { 0x00 } ),

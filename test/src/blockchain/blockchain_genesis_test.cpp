@@ -60,7 +60,7 @@ protected:
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {

@@ -168,7 +168,7 @@ namespace sgns
 
     // Canonical factory (INTF-01). try/catch preserves the nullptr-on-failure contract (D-04):
     // the reordered ctor throws on account-restore/loggers/network failure; here it becomes nullptr.
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )
+    std::shared_ptr<GeniusNode> GeniusNode::New( const GeniusNodeConfig &dev_config, AccountSource source )
     {
         try
         {
@@ -224,7 +224,7 @@ namespace sgns
     // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
     // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
     // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
-    GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source ) :
+    GeniusNode::GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source ) :
         write_base_path_( dev_config.BaseWritePath ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
@@ -700,9 +700,9 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
-                // TS-01: Wire configurable timestamp tolerance from DevConfig_st
+                // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
-                // Default: 300000ms (±5 minutes), overridable via DevConfig_st aggregate init.
+                // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
                 // Initialize shared EthWatchService for EVM event detection
@@ -2752,7 +2752,7 @@ namespace sgns
     {
         std::filesystem::path bridge_chains_path;
 
-        // Primary: use DevConfig_st BaseWritePath (writable on all platforms including Android)
+        // Primary: use GeniusNodeConfig BaseWritePath (writable on all platforms including Android)
         if ( !dev_config_.BaseWritePath.empty() )
         {
             bridge_chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "bridge_chains_config.json";
@@ -2817,6 +2817,12 @@ namespace sgns
 
         // 2. Construct provider
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
+
+        // 2a. Inject custom chainlist fetcher if provided (test injection point via GeniusNodeConfig.ChainlistFetcher)
+        if ( dev_config_.ChainlistFetcher )
+        {
+            rpc_endpoint_provider_->SetChainlistFetcher( dev_config_.ChainlistFetcher );
+        }
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
         rpc_endpoint_provider_->AddObserverCallback(

@@ -43,7 +43,7 @@ struct NodeParams
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline DevConfig_st DEV_CONFIG = {
+    static inline GeniusNodeConfig DEV_CONFIG = {
         "0xdeef",                             // Addr
         "0.65",                               // Cut
         "1.0",                                // TokenValueInGNUS
@@ -144,7 +144,7 @@ protected:
         fs::remove_all( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        DevConfig_st devConfig = { std::string( FULL_NODE_ADDR ),
+        GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
                                    "0.65",
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),

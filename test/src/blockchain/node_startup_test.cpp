@@ -81,7 +81,7 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/" + kNodeDirPrefix + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         // is_processor is read from sgns_config.json; this test uses non-processor nodes.
         std::filesystem::create_directories( devConfig.BaseWritePath );
