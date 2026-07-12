@@ -127,7 +127,7 @@ protected:
     static inline constexpr unsigned int kNodeCount = 3u;
 
     static std::array<std::shared_ptr<GeniusNode>, kNodeCount> s_nodes;
-    static std::array<DevConfig_st, kNodeCount>                s_configs;
+    static std::array<GeniusNodeConfig, kNodeCount>                s_configs;
     static std::string                                          s_eth_private_key;
 
     static inline constexpr const char *kSepoliaContract     = "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70";
@@ -145,7 +145,7 @@ protected:
 };
 
 std::array<std::shared_ptr<GeniusNode>, BridgeSepoliaE2ETest::kNodeCount> BridgeSepoliaE2ETest::s_nodes;
-std::array<DevConfig_st, BridgeSepoliaE2ETest::kNodeCount>                BridgeSepoliaE2ETest::s_configs = { {
+std::array<GeniusNodeConfig, BridgeSepoliaE2ETest::kNodeCount>                BridgeSepoliaE2ETest::s_configs = { {
     { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node0" },
     { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node1" },
     { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./sepolia_node2" },

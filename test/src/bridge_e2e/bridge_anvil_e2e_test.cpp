@@ -28,7 +28,6 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
-#include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
@@ -184,21 +183,6 @@ namespace
         out.close();
     }
 
-    /**
-     * @brief Writes a per-node sgns_config.json with is_processor=false so every
-     *        node participates in consensus validation (dual-pool bridge-mint
-     *        quorum requires multiple validators).
-     *
-     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
-     */
-    void WriteSgnsConfig( const std::string &baseWritePath )
-    {
-        constexpr const char *kSgnsConfigContent  = R"({"is_processor": false})";
-        constexpr const char *kSgnsConfigFilename = "sgns_config.json";
-        std::ofstream out( baseWritePath + kSgnsConfigFilename, std::ios::binary | std::ios::trunc );
-        out << kSgnsConfigContent;
-    }
-
 } // namespace
 
 // =============================================================================
@@ -304,7 +288,8 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     {
         s_configs[i].BaseWritePath = binary_path + "/node" + std::to_string( i ) + "/";
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
-        WriteSgnsConfig( s_configs[i].BaseWritePath );
+        sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, kBasePort + i, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath, ( i == 0u ) ? "Full" : "Light", /*is_processor=*/false );
     }
 
     // Inject a chainlist fetcher that returns only the Anvil RPC endpoint, so
@@ -318,14 +303,14 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         };
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {
-            s_configs[i].chainlist_fetcher = fetcher;
+            s_configs[i].ChainlistFetcher = fetcher;
         }
     }
 
     spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
 
     // Create full node [0] first — it builds the genesis block.
-    s_nodes[0] = GeniusNode::NewFromPrivateKey( s_configs[0], kAnvilAccountHexKeys[0], false, kBasePort, true );
+    s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
 
     // Trigger StoreGenesisRegistry on the full node's address.
     sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
@@ -343,7 +328,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     // Create processor nodes [1..kNodeCount-1] and bootstrap PubSub mesh.
     for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {
-        s_nodes[i] = GeniusNode::NewFromPrivateKey( s_configs[i], kAnvilAccountHexKeys[i], false, kBasePort + i );
+        s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ kAnvilAccountHexKeys[i] } );
     }
     for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {

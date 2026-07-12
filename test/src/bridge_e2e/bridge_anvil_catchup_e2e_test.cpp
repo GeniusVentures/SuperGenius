@@ -279,7 +279,7 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         };
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {
-            s_configs[i].chainlist_fetcher = fetcher;
+            s_configs[i].ChainlistFetcher = fetcher;
         }
     }
 
@@ -287,9 +287,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     // The pre-node burns persist on Anvil's fork state — ordering of node creation
     // vs. burn seeding doesn't matter; Anvil holds the fork state until Stop().
     spdlog::info( "catchup_e2e: creating node_main (full node, port {})", kNodeMainPort );
-    node_main  = GeniusNode::NewFromPrivateKey( s_configs[0], kAnvilAccount0HexKey, true, kNodeMainPort,  true );
-    node_proc1 = GeniusNode::NewFromPrivateKey( s_configs[1], kAnvilAccount0HexKey, true, kNodeProc1Port );
-    node_proc2 = GeniusNode::NewFromPrivateKey( s_configs[2], kAnvilAccount0HexKey, true, kNodeProc2Port );
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, kNodeMainPort, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, "Full", /*is_processor=*/false );
+    node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, kNodeProc1Port, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, "Light", /*is_processor=*/false );
+    node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
+
+    sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, kNodeProc2Port, /*auto_dht=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, "Light", /*is_processor=*/false );
+    node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccount0HexKey } );
 
     // Prime the validator URL map with the local Anvil endpoint BEFORE the catch-up
     // scan fires at READY, so PerformStartupCatchupScan queries eth_getLogs against

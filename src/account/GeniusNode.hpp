@@ -57,9 +57,10 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-} DevConfig_st;
+    std::function<std::optional<std::string>()> ChainlistFetcher;  ///< Optional custom chainlist fetcher (test injection point).
+} GeniusNodeConfig;
 
-extern DevConfig_st DEV_CONFIG;
+extern GeniusNodeConfig DEV_CONFIG;
 
 constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
 constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical blocks to scan for unprocessed burns (D-20)
@@ -117,7 +118,7 @@ namespace sgns
          * @return Shared node instance after asynchronous DB init is scheduled, or nullptr
          *         on account-restore or initialization failure (D-04).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config, AccountSource source );
+        static std::shared_ptr<GeniusNode> New( const GeniusNodeConfig &dev_config, AccountSource source );
 
         /**
          * @brief Writes a minimal network_config.json for test/example setup (MIG-02).
@@ -740,7 +741,7 @@ namespace sgns
         NodeType node_type_ =
             NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger node_logger_; ///< Main node logger.
-        DevConfig_st dev_config_;  ///< Runtime node configuration.
+        GeniusNodeConfig dev_config_;  ///< Runtime node configuration.
         bool         catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
         bool         catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
@@ -781,7 +782,7 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] source Account-creation source variant.
          */
-        GeniusNode( const DevConfig_st &dev_config, AccountSource source );
+        GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
