@@ -410,22 +410,43 @@ namespace sgns::test::anvil
             spdlog::warn( "anvil_fixture: balanceOf returned empty output" );
             return false;
         }
-        // Trim whitespace and check for non-zero digit presence.
-        bool has_nonzero = false;
-        for ( char c : balance_out )
+        // Parse the output as an unsigned integer. cast call ... (uint256) returns
+        // a plain decimal integer (possibly with surrounding whitespace). A byte-
+        // scan for '1'..'9' would accept error text containing a stray digit (e.g.
+        // "Error: ... code -32000") as a valid non-zero balance; std::stoull
+        // rejects non-numeric input instead.
+        std::string trimmed = balance_out;
+        while ( !trimmed.empty() && std::isspace( static_cast<unsigned char>( trimmed.front() ) ) )
         {
-            if ( c >= '1' && c <= '9' )
-            {
-                has_nonzero = true;
-                break;
-            }
+            trimmed.erase( trimmed.begin() );
         }
-        if ( !has_nonzero )
+        while ( !trimmed.empty() && std::isspace( static_cast<unsigned char>( trimmed.back() ) ) )
         {
-            spdlog::warn( "anvil_fixture: account #0 GNUS balance still zero after funding: {}", balance_out );
+            trimmed.pop_back();
+        }
+        uint64_t balance = 0u;
+        bool     parsed  = false;
+        try
+        {
+            size_t consumed = 0u;
+            balance = static_cast<uint64_t>( std::stoull( trimmed, &consumed, 10 ) );
+            parsed = ( consumed == trimmed.size() );
+        }
+        catch ( ... )
+        {
+            parsed = false;
+        }
+        if ( !parsed )
+        {
+            spdlog::warn( "anvil_fixture: balanceOf returned non-numeric output: {}", trimmed );
             return false;
         }
-        spdlog::info( "anvil_fixture: account #0 funded, balanceOf={}", balance_out );
+        if ( balance == 0u )
+        {
+            spdlog::warn( "anvil_fixture: account #0 GNUS balance still zero after funding: {}", trimmed );
+            return false;
+        }
+        spdlog::info( "anvil_fixture: account #0 funded, balanceOf={}", trimmed );
         return true;
     }
 
