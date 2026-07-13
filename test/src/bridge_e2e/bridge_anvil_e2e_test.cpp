@@ -159,7 +159,7 @@ namespace
     /**
      * @brief Writes a per-node bridge_chains_config.json (sepolia-only subset).
      *
-     * Scoping @c catchup_chains_ to ethereum-sepolia ensures PerformStartupCatchupScan
+     * Scoping @c catchup_chains_ to ethereum-sepolia ensures the BridgeCatchupWatcher
      * only queries the local Anvil fork (the one chain that actually exists on the
      * fork) and doesn't attempt RPC queries against mainnet, BSC, Polygon, or Base
      * chains that have no endpoints primed on the fork.
@@ -311,12 +311,25 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
 
     spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
 
-    // Create full node [0] first — it builds the genesis block.
-    s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
+    // Create all nodes upfront so their addresses are available before the
+    // genesis block is created. Processor nodes [1..kNodeCount-1] are Light
+    // nodes — their bootstraps wait for the genesis block via PubSub, which
+    // won't exist until the full node creates it.
+    spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
+    for ( unsigned int i = 0u; i < kNodeCount; ++i )
+    {
+        s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ kAnvilAccountHexKeys[i] } );
+    }
 
-    // Trigger StoreGenesisRegistry on the full node's address.
+    // Register all node addresses as genesis validators so the Phase 6
+    // slot-based consensus quorum can be met (slot_public_min_group_ = 2
+    // requires ≥2 distinct validators per PUBLIC hash group).
     sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-    spdlog::info( "bridge_anvil: authorized full node address = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses(
+        { s_nodes[1]->GetAddress(), s_nodes[2]->GetAddress() } );
+    spdlog::info( "bridge_anvil: authorized full node = {}, +{} additional genesis validators",
+                  s_nodes[0]->GetAddress().substr( 0, 16 ),
+                  kNodeCount - 1u );
 
     // Wait for full node READY (genesis + account-creation blocks).
     ASSERT_WAIT_FOR_CONDITION(
@@ -325,13 +338,9 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         "full node [0] READY",
         nullptr );
 
-    spdlog::info( "bridge_anvil: full node [0] READY, creating {} processor nodes", kNodeCount - 1u );
+    spdlog::info( "bridge_anvil: full node [0] READY, bootstrapping PubSub mesh for {} processor nodes",
+                  kNodeCount - 1u );
 
-    // Create processor nodes [1..kNodeCount-1] and bootstrap PubSub mesh.
-    for ( unsigned int i = 1u; i < kNodeCount; ++i )
-    {
-        s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ kAnvilAccountHexKeys[i] } );
-    }
     for ( unsigned int i = 1u; i < kNodeCount; ++i )
     {
         std::vector<std::string> peers;
@@ -367,13 +376,23 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
 
     // D-11: configure RPC endpoints pointing at the LOCAL Anvil instance on ALL nodes.
     {
-        sgns::WeightedRpcEndpoint ep;
-        ep.url                     = s_anvil.RpcUrl();
-        ep.consensus_weight        = 100;
-        ep.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
-        ep.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
+        // Register the same Anvil endpoint in all 3 slots (1 DIRECT + 2 PUBLIC)
+        // so the Phase 6 slot-based consensus quorum can be met with a single
+        // validator. Slot 0 requires consensus_weight ≥ 50 (DIRECT_API);
+        // slots 1 and 2 require consensus_weight < 50 (PUBLIC).
+        sgns::WeightedRpcEndpoint ep_direct;
+        ep_direct.url                     = s_anvil.RpcUrl();
+        ep_direct.consensus_weight        = 100;
+        ep_direct.bridge_contract_address = sgns::test::anvil::kSepoliaBridgeContractLower;
+        ep_direct.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
 
-        std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep };
+        sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
+        ep_public1.consensus_weight = 0;
+
+        sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
+        ep_public2.consensus_weight = 0;
+
+        std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {
             s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
@@ -467,7 +486,10 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
-    // First mint should succeed.
+    // First mint should succeed — capture balance BEFORE the mint so the
+    // delta check compares against the pre-mint value (not the post-mint
+    // value, which has already increased).
+    const uint64_t balance_before_first = s_nodes[0]->GetBalance( dest_addr );
     EXPECT_OUTCOME_TRUE( first_result,
                          s_nodes[0]->MintTokens( kMintAmount,
                                                 tx_hash,
@@ -477,8 +499,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
                                                 kReplayTimeout ) );
     spdlog::info( "bridge_anvil: replay-test first mint submitted" );
 
-    const uint64_t balance_before = s_nodes[0]->GetBalance( dest_addr );
-    EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before; },
+    EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_first; },
                                kReplayTimeout,
                                "First Anvil mint balance increase",
                                nullptr );
