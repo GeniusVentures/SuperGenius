@@ -181,8 +181,11 @@ namespace sgns::evmwatcher
                 }
                 else
                 {
-                    // First poll: scan from configured start_block (genesis by default per D-19/D-20)
-                    from_block = config_.start_block;
+                    // First poll: floor = max(config start_block, contract creation block).
+                    // When creation_block is known (populated at build/deploy via
+                    // find_contract_creation_blocks), scanning skips pre-deployment blocks.
+                    // When 0 (unknown), falls back to config_.start_block as before.
+                    from_block = std::max( config_.start_block, chain_entry.creation_block );
                 }
             }
 
@@ -191,7 +194,7 @@ namespace sgns::evmwatcher
                 continue; // Nothing new to scan
             }
 
-            uint64_t to_block = current_block;  // mutable — backward scan decrements the cursor
+            const uint64_t to_block = current_block;
 
             // ── Build v1 EventFilter (reused across chunks) ──────────────
             eth::EventFilter filter_v1;
@@ -265,12 +268,11 @@ namespace sgns::evmwatcher
                 }
             };
 
-            // ── Chunked scan backward from current block ────────────────
-            // eth_getLogs with topic filter returns only matching events;
-            // block range determines scope, not cost.  Scanning backward
-            // discovers recent burns first; max_chunks caps the scan depth
-            // when a full genesis sweep is unnecessary.
-            const uint64_t saved_to_block          = to_block;
+            // ── Forward chunked scan from from_block → current_block ──────
+            // eth_getLogs with topic filter returns only matching events.
+            // Scanning forward (chronological order) ensures burns are minted
+            // in nonce/timestamp sequence.  max_chunks caps per-poll depth
+            // (0 = unlimited — production scans all the way to current).
             constexpr uint64_t kChunkRequestIdBase = 1;
             uint64_t           chunk_request_id    = kChunkRequestIdBase;
             uint64_t           chunks_done         = 0;
@@ -280,22 +282,20 @@ namespace sgns::evmwatcher
 
             while ( from_block <= to_block && chunks_done < max_chunks )
             {
-                const uint64_t chunk_from = ( to_block >= config_.max_blocks_per_query )
-                                            ? ( to_block - config_.max_blocks_per_query + 1 )
-                                            : from_block;
+                const uint64_t chunk_to = std::min( from_block + config_.max_blocks_per_query - 1, to_block );
 
                 logger->info( "CatchUpScan: scanning chain {} chunk {}-{} (current={})",
                               chain_entry.chain_name,
-                              chunk_from,
-                              to_block,
+                              from_block,
+                              chunk_to,
                               current_block );
 
                 bool chunk_ok = false;
 
                 // ── v1 query per chunk ───────────────────────────────────
                 auto v1_request  = eth::rpc::make_get_logs_request( filter_v1,
-                                                                     chunk_from,
-                                                                     to_block,
+                                                                     from_block,
+                                                                     chunk_to,
                                                                      chunk_request_id++ );
                 auto v1_response = transport->call( v1_request );
 
@@ -325,8 +325,8 @@ namespace sgns::evmwatcher
                 if ( has_v2_topic0 )
                 {
                     auto v2_request  = eth::rpc::make_get_logs_request( filter_v2,
-                                                                         chunk_from,
-                                                                         to_block,
+                                                                         from_block,
+                                                                         chunk_to,
                                                                          chunk_request_id++ );
                     auto v2_response = transport->call( v2_request );
 
@@ -356,19 +356,19 @@ namespace sgns::evmwatcher
                 if ( !chunk_ok )
                 {
                     logger->debug( "CatchUpScan: chunk {}-{} for chain {} yielded no parseable logs",
-                                   chunk_from,
-                                   to_block,
+                                   from_block,
+                                   chunk_to,
                                    chain_entry.chain_name );
                 }
 
-                to_block = chunk_from - 1;
+                from_block = chunk_to + 1;
                 ++chunks_done;
             }
 
             // ── Update per-chain last block ──────────────────────────────
             {
                 std::lock_guard lock( mutex_ );
-                last_block_per_chain_[chain_entry.chain_id] = saved_to_block + 1;
+                last_block_per_chain_[chain_entry.chain_id] = to_block + 1;
             }
         }
 
