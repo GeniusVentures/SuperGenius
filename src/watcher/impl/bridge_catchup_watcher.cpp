@@ -109,10 +109,18 @@ namespace sgns::evmwatcher
                 continue;
             }
 
-            // RPC transport with 10-second timeout
-            eth::rpc::RpcHttpTransportOptions opts;
-            opts.timeout = std::chrono::seconds( 10 );
-            eth::rpc::RpcHttpTransport transport( *rpc_url, opts );
+            // RPC transport — factory-injected when set, otherwise default RpcHttpTransport
+            std::unique_ptr<eth::rpc::JsonRpcTransport> transport;
+            if ( config_.transport_factory )
+            {
+                transport = config_.transport_factory( *rpc_url );
+            }
+            else
+            {
+                eth::rpc::RpcHttpTransportOptions opts;
+                opts.timeout = std::chrono::seconds( 10 );
+                transport = std::make_unique<eth::rpc::RpcHttpTransport>( *rpc_url, opts );
+            }
 
             ++chains_scanned;
 
@@ -141,7 +149,7 @@ namespace sgns::evmwatcher
             constexpr uint64_t kBlockNumberRequestId = 99;
             auto               block_number_req      = eth::rpc::make_get_block_by_number_request(
                 eth::rpc::RpcBlockTag::kLatest, kBlockNumberRequestId );
-            auto               block_number_resp     = transport.call( block_number_req );
+            auto               block_number_resp     = transport->call( block_number_req );
             uint64_t           current_block         = 0;
 
             if ( block_number_resp.has_value() )
@@ -279,7 +287,7 @@ namespace sgns::evmwatcher
                                                                      from_block,
                                                                      chunk_to,
                                                                      chunk_request_id++ );
-                auto v1_response = transport.call( v1_request );
+                auto v1_response = transport->call( v1_request );
 
                 if ( !v1_response.has_value() )
                 {
@@ -310,7 +318,7 @@ namespace sgns::evmwatcher
                                                                          from_block,
                                                                          chunk_to,
                                                                          chunk_request_id++ );
-                    auto v2_response = transport.call( v2_request );
+                    auto v2_response = transport->call( v2_request );
 
                     if ( !v2_response.has_value() )
                     {
