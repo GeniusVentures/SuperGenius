@@ -1,6 +1,6 @@
 #include "GeniusTransaction.hpp"
 
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 
 namespace sgns
 {
@@ -37,8 +37,7 @@ namespace sgns
         dag_st.clear_signature();
         dag_st.clear_data_hash();
 
-        auto hasher_ = std::make_shared<crypto::HasherImpl>();
-        auto hash    = hasher_->blake2b_256( SerializeByteVector() );
+        auto hash = crypto::blake2b_256( SerializeByteVector() );
 
         dag_st.set_data_hash( hash.toReadableString() );
         dag_st.set_signature( std::move( signature ) );
@@ -52,8 +51,7 @@ namespace sgns
         dag_copy.clear_signature();
         dag_copy.clear_data_hash();
 
-        auto hasher_         = std::make_shared<crypto::HasherImpl>();
-        auto calculated_hash = hasher_->blake2b_256( SerializeByteVector( dag_copy ) );
+        auto calculated_hash = crypto::blake2b_256( SerializeByteVector( dag_copy ) );
 
         return hash == calculated_hash.toReadableString();
     }

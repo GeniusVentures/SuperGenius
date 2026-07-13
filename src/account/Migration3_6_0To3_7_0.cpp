@@ -7,7 +7,6 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "base/sgns_version.hpp"
 #include "blockchain/Blockchain.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 #include "storage/database_error.hpp"
 
 #include <algorithm>
@@ -288,7 +287,6 @@ namespace sgns
                 transaction_manager_ = TransactionManager::New( db_3_7_0_,
                                                                 ioContext_,
                                                                 account_,
-                                                                std::make_shared<crypto::HasherImpl>(),
                                                                 blockchain_,
                                                                 is_full_node_ );
             }

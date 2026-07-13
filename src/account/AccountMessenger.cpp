@@ -12,7 +12,7 @@
 #include <type_traits>
 #include "AccountMessenger.hpp"
 #include "base/sgns_version.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "primitives/cid/cid.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, AccountMessenger::Error, e )
@@ -1023,8 +1023,7 @@ namespace sgns
         uint64_t        random_value = gen();
 
         std::string              to_hash = address_ + std::to_string( random_value );
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
+        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1139,8 +1138,7 @@ namespace sgns
         uint64_t        random_value = gen();
 
         std::string              to_hash = address_ + std::to_string( random_value );
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
+        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );
@@ -1266,8 +1264,7 @@ namespace sgns
         uint64_t        random_value = gen();
 
         std::string              to_hash = address_ + std::to_string( random_value );
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( to_hash.data(), to_hash.size() );
+        auto hash = sgns::crypto::sha2_256( to_hash.data(), to_hash.size() );
 
         uint64_t req_id = 0;
         std::memcpy( &req_id, hash.data(), sizeof( req_id ) );

@@ -640,7 +640,6 @@ namespace sgns
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
-                                                                std::make_shared<crypto::HasherImpl>(),
                                                                 blockchain_,
                                                                 is_full_node_,
                                                                 subnet_id_ );

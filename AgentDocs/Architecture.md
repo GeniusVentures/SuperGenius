@@ -66,7 +66,7 @@ SuperGenius/
 │   ├── blockchain/             # BlockTree, BlockStorage, BlockHeaderRepository
 │   ├── coinprices/             # CoinGecko price retriever
 │   ├── crdt/                   # CRDT datastore, GlobalDB, PubSub broadcaster
-│   ├── crypto/                 # ED25519, SR25519, Secp256k1, BIP39, VRF, Hasher
+│   ├── crypto/                 # ED25519, SR25519, Secp256k1, BIP39, VRF, hash helpers
 │   ├── local_secure_storage/   # Platform-specific encrypted key storage
 │   ├── macro/                  # Utility macros
 │   ├── outcome/                # outcome::result<T> adapter
@@ -497,8 +497,7 @@ TransferProofProto { BaseProofData proof_data; TransferProofPublicInputs public_
 | `VRFProviderImpl` | class | Concrete VRF (Ristretto-VRF). |
 | `VRFOutput` | struct | VRF output bytes + proof bytes. |
 | `VRFVerifyOutput` | struct | VRF verification result + output. |
-| `Hasher` | interface | Multi-algorithm hash (blake2b-256/512, keccak, sha2, twox). |
-| `HasherImpl` | class | Concrete hasher. |
+| Hash helpers | free functions | Multi-algorithm hashing (blake2b, keccak, sha2, twox). |
 | `CryptoStore` | interface | Key store: list, generate, get keypairs by key type. |
 | `CryptoStoreImpl` | class | Concrete in-memory + file-backed key store. |
 | `Bip39Provider` | interface | BIP39 mnemonic generation and seed derivation. |

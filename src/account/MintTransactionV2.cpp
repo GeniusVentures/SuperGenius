@@ -6,7 +6,6 @@
 #include "account/MintTransactionV2.hpp"
 
 #include "base/blob.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {

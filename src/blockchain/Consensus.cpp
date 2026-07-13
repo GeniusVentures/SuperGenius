@@ -16,7 +16,7 @@
 
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 
@@ -527,8 +527,7 @@ namespace sgns
             return AggregatorRole::NotInRegistry;
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
+        auto hash = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
         uint64_t                 base_index = 0;
         for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
         {
@@ -2586,8 +2585,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( serialized.data(), serialized.size() );
+        auto hash = sgns::crypto::sha2_256( serialized.data(), serialized.size() );
         ConsensusManagerLogger()->debug( "{}: success", __func__ );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
@@ -2602,8 +2600,7 @@ namespace sgns
             {
                 return outcome::failure( std::errc::invalid_argument );
             }
-            sgns::crypto::HasherImpl hasher;
-            auto                     hash = hasher.sha2_256( payload.data(), payload.size() );
+            auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
             return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
         }
 
@@ -2653,8 +2650,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( subject_type.data(), subject_type.size() );
+        auto hash = sgns::crypto::sha2_256( subject_type.data(), subject_type.size() );
         return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
     }
 
@@ -2853,8 +2849,7 @@ namespace sgns
             return {};
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
         auto                     proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
         ConsensusManagerLogger()->debug( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
         return proposal_id;

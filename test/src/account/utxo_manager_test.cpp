@@ -6,7 +6,7 @@
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "testutil/storage/base_rocksdb_test.hpp"
 
 using namespace sgns;
@@ -16,7 +16,6 @@ using namespace sgns::base;
 static constexpr std::string_view PRIV_KEY = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 static const Hash256              DUMMY_HASH{};
 static const TokenID              TOKEN_1 = TokenID::FromBytes( { 0x01 } );
-static crypto::HasherImpl         HASHER;
 
 std::vector<GeniusUTXO> BalanceUTXOs()
 {
@@ -40,12 +39,12 @@ public:
             std::string( PRIV_KEY ),
             []( const std::vector<uint8_t> &data )
             {
-                auto hashed = HASHER.sha2_256( data );
+                auto hashed = crypto::sha2_256( data );
                 return std::vector( hashed.begin(), hashed.end() );
             },
             []( const std::string &_, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
             {
-                auto hashed = HASHER.sha2_256( data );
+                auto hashed = crypto::sha2_256( data );
                 return signature == std::vector( hashed.begin(), hashed.end() );
             } );
 
@@ -159,7 +158,7 @@ TEST_F( UTXOManagerTest, RefreshAllUTXOsRemovesAll )
 
 TEST_F( UTXOManagerTest, VerifyParameters )
 {
-    ASSERT_TRUE( utxo_manager->SetUTXOs( { GeniusUTXO( HASHER.sha2_256( {} ), 0, 420, TOKEN_1 ) } ).has_value() );
+    ASSERT_TRUE( utxo_manager->SetUTXOs( { GeniusUTXO( crypto::sha2_256( {} ), 0, 420, TOKEN_1 ) } ).has_value() );
     auto tx = utxo_manager->CreateTxParameter( 69, "foobar", TOKEN_1 );
     EXPECT_TRUE( tx.has_value() );
     EXPECT_TRUE( utxo_manager->VerifyParameters( tx.value() ) );
@@ -195,8 +194,8 @@ TEST_F( UTXOManagerTest, MerkleRootDeterministicAcrossInsertionOrder )
 {
     const std::array<uint8_t, 1> seed_a{ 0xA1 };
     const std::array<uint8_t, 1> seed_b{ 0xB2 };
-    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
-    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
+    const auto                   hash_a = crypto::sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = crypto::sha2_256( gsl::span<const uint8_t>( seed_b ) );
 
     std::vector<GeniusUTXO> ordered_a{
         GeniusUTXO( hash_a, 0, 100, TOKEN_1 ),
@@ -221,8 +220,8 @@ TEST_F( UTXOManagerTest, MerkleRootChangesWhenUTXOSetChanges )
 {
     const std::array<uint8_t, 1> seed_a{ 0xC3 };
     const std::array<uint8_t, 1> seed_b{ 0xD4 };
-    const auto                   hash_a = HASHER.sha2_256( gsl::span<const uint8_t>( seed_a ) );
-    const auto                   hash_b = HASHER.sha2_256( gsl::span<const uint8_t>( seed_b ) );
+    const auto                   hash_a = crypto::sha2_256( gsl::span<const uint8_t>( seed_a ) );
+    const auto                   hash_b = crypto::sha2_256( gsl::span<const uint8_t>( seed_b ) );
 
     ASSERT_TRUE( utxo_manager
                      ->SetUTXOs( {
@@ -246,8 +245,8 @@ TEST_F( UTXOManagerTest, CheckpointRoundtrip )
 {
     const std::array<uint8_t, 1> seed_tx{ 0x11 };
     const std::array<uint8_t, 1> seed_registry{ 0x22 };
-    const auto                   tx_hash       = HASHER.sha2_256( gsl::span<const uint8_t>( seed_tx ) );
-    const auto                   registry_hash = HASHER.sha2_256( gsl::span<const uint8_t>( seed_registry ) );
+    const auto                   tx_hash       = crypto::sha2_256( gsl::span<const uint8_t>( seed_tx ) );
+    const auto                   registry_hash = crypto::sha2_256( gsl::span<const uint8_t>( seed_registry ) );
 
     ASSERT_TRUE( utxo_manager->SetUTXOs( { GeniusUTXO( tx_hash, 0, 123, TOKEN_1 ) } ).has_value() );
 

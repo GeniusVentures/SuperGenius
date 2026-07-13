@@ -28,6 +28,7 @@
 #include "account/proto/SGTransaction.pb.h"
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"
+#include "crypto/hasher.hpp"
 
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
@@ -107,7 +108,6 @@ namespace sgns
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
                                                                  std::shared_ptr<GeniusAccount>           account,
-                                                                 std::shared_ptr<crypto::Hasher>          hasher,
                                                                  std::shared_ptr<Blockchain>              blockchain,
                                                                  bool                                     full_node,
                                                                  uint16_t                                 subnet_id,
@@ -117,7 +117,6 @@ namespace sgns
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
                                                                                      std::move( account ),
-                                                                                     std::move( hasher ),
                                                                                      std::move( blockchain ),
                                                                                      full_node,
                                                                                      subnet_id,
@@ -251,7 +250,6 @@ namespace sgns
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
-                                            std::shared_ptr<crypto::Hasher>          hasher,
                                             std::shared_ptr<Blockchain>              blockchain,
                                             bool                                     full_node,
                                             uint16_t                                 subnet_id,
@@ -260,7 +258,6 @@ namespace sgns
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
-        hasher_m( std::move( hasher ) ),
         blockchain_( std::move( blockchain ) ),
         full_node_m( full_node ),
         subnet_id_( subnet_id ),
@@ -784,7 +781,7 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        auto              hash_data = hasher_m->blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
+        auto              hash_data = crypto::blake2b_256( std::vector<uint8_t>{ job_id.begin(), job_id.end() } );
         const std::string lock_id   = "0x" + hash_data.toReadableString();
 
         BOOST_OUTCOME_TRY(
@@ -3874,7 +3871,7 @@ namespace sgns
 
         const uint64_t registry_epoch = validator_registry->GetRegistryEpoch();
         const auto     registry_cid   = validator_registry->GetRegistryCid();
-        auto           registry_hash  = hasher_m->sha2_256( registry_cid.data(), registry_cid.size() );
+        auto           registry_hash  = crypto::sha2_256( registry_cid.data(), registry_cid.size() );
 
         if ( auto checkpoint_res = account_m->GetUTXOManager().CreateCheckpoint( registry_epoch,
                                                                                  tx_hash_bin.value(),
