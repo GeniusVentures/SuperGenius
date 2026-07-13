@@ -156,33 +156,6 @@ namespace
         return BytesToHex( decoded );
     }
 
-    /**
-     * @brief Writes a per-node bridge_chains_config.json (sepolia-only subset).
-     *
-     * Scoping @c catchup_chains_ to ethereum-sepolia ensures the BridgeCatchupWatcher
-     * only queries the local Anvil fork (the one chain that actually exists on the
-     * fork) and doesn't attempt RPC queries against mainnet, BSC, Polygon, or Base
-     * chains that have no endpoints primed on the fork.
-     *
-     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
-     */
-    void WriteBridgeChainsConfig( const std::string &baseWritePath )
-    {
-        constexpr const char *kBridgeChainsConfigContent = R"JSON({
-    "ethereum-sepolia": {
-        "chain_id": 11155111,
-        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
-    }
-}
-)JSON";
-        constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
-        std::filesystem::create_directories( baseWritePath );
-        const std::string kConfigPath = baseWritePath + kBridgeChainsConfigFilename;
-        std::ofstream     out( kConfigPath, std::ios::binary | std::ios::trunc );
-        out << kBridgeChainsConfigContent;
-        out.close();
-    }
-
 } // namespace
 
 // =============================================================================
@@ -212,6 +185,12 @@ protected:
 
     static sgns::test::anvil::AnvilProcess s_anvil;
 
+    /** @brief Anvil fork block captured during SetUpTestSuite. */
+    static inline uint64_t s_fork_block = 0ull;
+
+    /** @brief Blocks to scan before the fork — injected as creation_block. */
+    static inline constexpr uint64_t kBackfillWindow = 3000ull;
+
     /** @brief Small test mint amount in base units. */
     static inline constexpr uint64_t kMintAmount = 1u;
 
@@ -236,6 +215,18 @@ protected:
     };
 
     /**
+     * @brief Writes a per-node bridge_chains_config.json with creation_block injected.
+     *
+     * Uses s_fork_block - kBackfillWindow as creation_block so the node-owned
+     * BridgeCatchupWatcher doesn't scan from genesis (forward scan would query
+     * millions of blocks). Scoped to ethereum-sepolia so only the local Anvil fork
+     * is queried.
+     *
+     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
+     */
+    static void WriteBridgeChainsConfig( const std::string &base_write_path );
+
+    /**
      * @brief Starts Anvil, funds account #0, and bootstraps the kNodeCount-node cluster.
      */
     static void SetUpTestSuite();
@@ -253,6 +244,38 @@ std::array<GeniusNodeConfig, BridgeAnvilE2ETest::kNodeCount>            BridgeAn
     { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2", {} },
 } };
 sgns::test::anvil::AnvilProcess BridgeAnvilE2ETest::s_anvil;
+
+void BridgeAnvilE2ETest::WriteBridgeChainsConfig( const std::string &base_write_path )
+{
+    constexpr const char *kBridgeChainsConfigTemplate = R"JSON({
+    "ethereum-sepolia": {
+        "chain_id": 11155111,
+        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        "creation_block": __CREATION_BLOCK__
+    }
+}
+)JSON";
+    constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
+    std::filesystem::create_directories( base_write_path );
+
+    const uint64_t creation_block = ( s_fork_block > kBackfillWindow )
+                                    ? ( s_fork_block - kBackfillWindow )
+                                    : 0ull;
+
+    std::string config_json( kBridgeChainsConfigTemplate );
+    const std::string placeholder( "__CREATION_BLOCK__" );
+    const auto        pos = config_json.find( placeholder );
+    if ( pos != std::string::npos )
+    {
+        config_json.replace( pos, placeholder.size(), std::to_string( creation_block ) );
+    }
+
+    const std::string config_path = base_write_path + kBridgeChainsConfigFilename;
+    std::ofstream     out( config_path, std::ios::binary | std::ios::trunc );
+    out << config_json;
+    out.close();
+    spdlog::info( "bridge_anvil: wrote {} (creation_block={})", config_path, creation_block );
+}
 
 void BridgeAnvilE2ETest::SetUpTestSuite()
 {
@@ -282,6 +305,20 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         s_anvil.Stop();
         GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
                      << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
+    }
+
+    // Capture the Anvil fork block so creation_block in the per-node config
+    // avoids scanning from genesis (forward scan would otherwise query millions
+    // of blocks, hitting rate limits and timing out).
+    {
+        int          exit_code  = 0;
+        const std::string fork_block_str = sgns::test::anvil::RunShellCapture(
+            "cast block-number --rpc-url " + s_anvil.RpcUrl(), exit_code );
+        ASSERT_EQ( exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
+        ASSERT_FALSE( fork_block_str.empty() ) << "cast block-number returned empty output";
+        s_fork_block = std::stoull( fork_block_str );
+        ASSERT_GT( s_fork_block, 0ull ) << "Anvil fork block must be non-zero";
+        spdlog::info( "bridge_anvil: fork block = {}", s_fork_block );
     }
 
     // Per-node BaseWritePath from binary location (Phase 4 pattern).
