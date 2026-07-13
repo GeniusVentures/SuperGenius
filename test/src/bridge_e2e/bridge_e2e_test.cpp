@@ -14,8 +14,6 @@
 #include <memory>
 #include <string>
 #include <thread>
-#include <chrono>
-#include "testutil/wait_condition.hpp"
 
 #include <boost/dll.hpp>
 #include <spdlog/spdlog.h>
