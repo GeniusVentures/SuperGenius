@@ -13,10 +13,9 @@
  *           Verifies GetLastProcessedBlock advances past s_fork_block and the exact
  *           set of kNumCatchupBurns local cast-send burns is discovered (D-22).
  *   Test C (TwoPhaseScanBridgesGap): TWO STANDALONE BridgeCatchupWatcher instances.
- *           Phase 1 (start_block=s_fork_block-kGapBridgingScanWindow) discovers any
- *           pre-fork Sepolia-origin burns in one 10K-block chunk; Phase 2
- *           (start_block=s_fork_block-5) discovers local burns; GetLastProcessedBlock
- *           bridges the gap. Public startWatching()/stopWatching() API (D-22).
+ *           Phase 1 forward-scans 3 chunks × 1000 blocks before the fork for
+ *           Sepolia-origin burns; Phase 2 (start_block=s_fork_block-5) discovers
+ *           local burns. Public startWatching()/stopWatching() API (D-22).
  *
  * The fixture seeds N=kNumCatchupBurns bridgeOut() burn transactions against the local
  * Anvil fork BEFORE any node starts, then bootstraps a 3-node cluster whose per-node
@@ -195,13 +194,17 @@ protected:
     static inline constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
 
     /** @brief Content of the per-node bridge_chains_config.json (sepolia-only subset). */
-    static inline constexpr const char *kBridgeChainsConfigContent = R"JSON({
+    static inline constexpr const char *kBridgeChainsConfigTemplate = R"JSON({
     "ethereum-sepolia": {
         "chain_id": 11155111,
-        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70"
+        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        "creation_block": __CREATION_BLOCK__
     }
 }
 )JSON";
+
+    /** @brief Blocks to scan before the fork (3 chunks × 1000) — injected as creation_block. */
+    static inline constexpr uint64_t kCatchupBackfillWindow = 3000ull;
 
     /** @brief Timeout for the auto-mint path after node READY (scan runs after CRDT sync). */
     static inline constexpr std::chrono::milliseconds kCatchupMintTimeout{ 30000 };
@@ -263,10 +266,26 @@ void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base
 {
     std::filesystem::create_directories( base_write_path );
     const std::string config_path = base_write_path + kBridgeChainsConfigFilename;
-    std::ofstream     out( config_path, std::ios::binary | std::ios::trunc );
-    out << kBridgeChainsConfigContent;
+
+    // Compute creation_block = max(0, s_fork_block - backfill_window) so the
+    // node-owned watcher (Test A) doesn't scan from genesis.  0 is safe here
+    // — s_fork_block is always > kCatchupBackfillWindow for Sepolia.
+    const uint64_t creation_block = ( s_fork_block > kCatchupBackfillWindow )
+                                    ? ( s_fork_block - kCatchupBackfillWindow )
+                                    : 0ull;
+
+    std::string config_json( kBridgeChainsConfigTemplate );
+    const std::string placeholder( "__CREATION_BLOCK__" );
+    const auto        pos = config_json.find( placeholder );
+    if ( pos != std::string::npos )
+    {
+        config_json.replace( pos, placeholder.size(), std::to_string( creation_block ) );
+    }
+
+    std::ofstream out( config_path, std::ios::binary | std::ios::trunc );
+    out << config_json;
     out.close();
-    spdlog::info( "catchup_e2e: wrote {}", config_path );
+    spdlog::info( "catchup_e2e: wrote {} (creation_block={})", config_path, creation_block );
 }
 
 void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
@@ -559,10 +578,11 @@ TEST_F( BridgeAnvilCatchupE2ETest, PostForkScanMintsLocalBurns )
 /**
  * @brief D-26 Test C + D-22: two standalone watchers bridge the two-phase scan gap.
  *
- * Phase 1 scans backward from current block in 3 chunks × 1000 blocks (max_chunks=3);
- * Phase 2 (start_block=s_fork_block-5) discovers the local burns. Verifies both
- * phases independently discover their respective burns. Both watchers use the
- * public startWatching()/stopWatching() API. Makes ZERO manual MintTokens() calls.
+ * Phase 1 forward-scans the 3,000 blocks before the Anvil fork (3 chunks × 1000)
+ * for Sepolia-origin burns; Phase 2 (start_block=s_fork_block-5) discovers the
+ * local burns. Verifies both phases independently discover their respective burns.
+ * Both watchers use the public startWatching()/stopWatching() API.
+ * Makes ZERO manual MintTokens() calls.
  */
 TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
 {
@@ -570,12 +590,15 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
 
     const uint64_t phase2_start = ( s_fork_block >= 5ull ) ? ( s_fork_block - 5ull ) : 0ull;
 
-    // ── PHASE 1: backward scan, 3 chunks × 1000 blocks from current ──
+    // ── PHASE 1: forward scan, 3 chunks × 1000 = 3000 blocks before fork ──
+    constexpr uint64_t kPhase1ScanWindow = kStandaloneMaxChunks * kStandaloneMaxBlocksPerQuery;
     std::atomic<uint64_t> phase1_burn_count{ 0ull };
 
     sgns::evmwatcher::BridgeCatchupWatcher::Config cfg_phase1;
     cfg_phase1.poll_interval        = kStandalonePollInterval;
-    cfg_phase1.start_block          = 0ull;
+    cfg_phase1.start_block          = ( s_fork_block > kPhase1ScanWindow )
+                                      ? ( s_fork_block - kPhase1ScanWindow )
+                                      : 0ull;
     cfg_phase1.max_blocks_per_query = kStandaloneMaxBlocksPerQuery;
     cfg_phase1.max_chunks           = kStandaloneMaxChunks;
 
@@ -593,7 +616,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     ASSERT_WAIT_FOR_CONDITION(
         [&]() { return watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > 0ull; },
         kCatchupMintTimeout,
-        "Test C Phase 1: backward scan must advance last block",
+        "Test C Phase 1: forward scan must advance last block",
         nullptr );
     watcher_phase1.stopWatching();
     const uint64_t phase1_last_block = watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric );
