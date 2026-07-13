@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: GeniusNode Construction Refactor
 status: executing
-last_updated: "2026-07-13T18:11:16.700Z"
-last_activity: 2026-07-13 -- Phase 04.1 planning complete
+last_updated: "2026-07-13T18:42:21.963Z"
+last_activity: 2026-07-13
 progress:
   total_phases: 19
-  completed_phases: 14
+  completed_phases: 15
   total_plans: 40
-  completed_plans: 40
-  percent: 74
+  completed_plans: 41
+  percent: 79
 ---
 
 # State: SuperGenius — GeniusNode Construction Refactor
@@ -23,14 +23,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Constructing a `GeniusNode` must be a single, self-documenting call driven by config files.
-**Current focus:** Milestone complete
+**Current focus:** Phase 04.1 — anvil-local-bridge-e2e-test-use-tokencontracts-gnus-ai-env-t
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
-Plan: —
-Status: Ready to execute
-Last activity: 2026-07-13 -- Phase 04.1 planning complete
+Phase: 04.1 (anvil-local-bridge-e2e-test-use-tokencontracts-gnus-ai-env-t) — EXECUTING
+Plan: 2 of 3
+Status: Completed 04.1-03-PLAN.md (catchup watcher RPC strategy fix)
+Last activity: 2026-07-13 -- Completed 04.1-03-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -46,6 +46,7 @@ Last activity: 2026-07-13 -- Phase 04.1 planning complete
 - `is_full_node_` stays a derived bool at the GeniusNode boundary; NodeType enum NOT propagated downstream this milestone
 - Single `New(dev_config, AccountSource)` with `std::variant`; no compat shim; all 18 call sites migrated
 - Account creation moves INTO the constructor (after `LoadSgnsConfig`) to resolve init-order chicken-and-egg
+- Phase 04.1 Plan 03: D-19/D-20 swapped scan_depth (10000) -> start_block (0=genesis) in BridgeCatchupWatcher::Config; D-23 added exponential-backoff retry to RpcHttpTransport::call(); D-03 corrected Sepolia fallback URL to sepolia.drpc.org
 
 ## Notes
 
