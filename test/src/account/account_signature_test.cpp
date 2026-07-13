@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <boost/filesystem/operations.hpp>
+#include <nil/crypto3/algebra/marshalling.hpp>
+#include <nil/crypto3/hash/algorithm/hash.hpp>
+#include <nil/crypto3/pubkey/algorithm/sign.hpp>
+#include <nil/crypto3/pubkey/algorithm/verify.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -10,6 +14,43 @@ namespace
     using namespace sgns;
 
     constexpr char PRIVATE_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+
+    std::string_view AsStringView( const std::vector<uint8_t> &signature )
+    {
+        return { reinterpret_cast<const char *>( signature.data() ), signature.size() };
+    }
+
+    std::vector<uint8_t> SignWithCrypto3( const ethereum::EthereumKeyGenerator &key,
+                                          const std::vector<uint8_t>           &data )
+    {
+        const std::array<uint8_t, 32> hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        const ethereum::signature_type signature = nil::crypto3::sign( hash, key.get_private_key() );
+
+        std::vector<uint8_t> bytes( 64 );
+        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+            std::vector<uint8_t>::iterator>( std::get<0>( signature ), bytes.begin(), bytes.begin() + 32 );
+        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
+            std::vector<uint8_t>::iterator>( std::get<1>( signature ), bytes.begin() + 32, bytes.end() );
+        return bytes;
+    }
+
+    bool VerifyWithCrypto3( const std::string          &address,
+                            const std::vector<uint8_t> &signature,
+                            const std::vector<uint8_t> &data )
+    {
+        auto [r_ok, r] = nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
+            signature.begin(), signature.begin() + 32 );
+        auto [s_ok, s] = nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
+            signature.begin() + 32, signature.end() );
+        if ( !r_ok || !s_ok )
+        {
+            return false;
+        }
+
+        const std::array<uint8_t, 32> hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        return nil::crypto3::verify(
+            hash, ethereum::signature_type( r, s ), ethereum::EthereumKeyGenerator::BuildPublicKey( address ) );
+    }
 
     class GeniusAccountSignatureTest : public ::testing::Test
     {
@@ -42,14 +83,30 @@ TEST_F( GeniusAccountSignatureTest, VerifiesExistingSignatureFormat )
 
     ASSERT_TRUE( GeniusAccount::VerifySignature(
         account->GetAddress(),
-        std::string_view( reinterpret_cast<const char *>( signature.data() ), signature.size() ),
+        AsStringView( signature ),
         message ) );
 
     signature.front() ^= 1;
     EXPECT_FALSE( GeniusAccount::VerifySignature(
         account->GetAddress(),
-        std::string_view( reinterpret_cast<const char *>( signature.data() ), signature.size() ),
+        AsStringView( signature ),
         message ) );
     EXPECT_FALSE( GeniusAccount::VerifySignature( account->GetAddress(), "short", message ) );
     EXPECT_FALSE( GeniusAccount::VerifySignature( "not a public key", std::string( 64, '\0' ), message ) );
+}
+
+TEST_F( GeniusAccountSignatureTest, Crypto3AndLibsecp256k1AreCompatible )
+{
+    const std::vector<uint8_t> message = { 'c', 'o', 'm', 'p', 'a', 't', 'i', 'b', 'i', 'l', 'i', 't', 'y' };
+
+    const ethereum::EthereumKeyGenerator crypto3_key( PRIVATE_KEY );
+    const auto                            crypto3_signature = SignWithCrypto3( crypto3_key, message );
+    EXPECT_TRUE( GeniusAccount::VerifySignature(
+        crypto3_key.GetEntirePubValue(), AsStringView( crypto3_signature ), message ) );
+
+    const auto account = GeniusAccount::NewFromPrivateKey( TokenID::FromBytes( { 0x00 } ), PRIVATE_KEY, path_ );
+    ASSERT_NE( account, nullptr );
+    const auto libsecp256k1_signature = account->Sign( message );
+    ASSERT_EQ( libsecp256k1_signature.size(), 64 );
+    EXPECT_TRUE( VerifyWithCrypto3( account->GetAddress(), libsecp256k1_signature, message ) );
 }
