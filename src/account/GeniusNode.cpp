@@ -2960,7 +2960,6 @@ namespace sgns
         {
             evmwatcher::BridgeCatchupWatcher::Config catchup_config;
             catchup_config.poll_interval = std::chrono::seconds( 15 );
-            catchup_config.scan_depth    = kBridgeCatchupScanDepth;
 
             auto chains_provider = [weak_self = weak_from_this()]() -> std::vector<ChainContractPair>
             {

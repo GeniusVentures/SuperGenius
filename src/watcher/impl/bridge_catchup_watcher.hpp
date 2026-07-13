@@ -56,7 +56,7 @@ namespace sgns::evmwatcher
         struct Config
         {
             std::chrono::seconds poll_interval{ 15 };          ///< Interval between polling cycles.
-            uint64_t             scan_depth          = 10000;  ///< Max historical blocks to scan on first poll.
+            uint64_t             start_block         = 0;      ///< First block to scan on the initial poll (0 = genesis). Test-injected to the Anvil fork block (D-20).
             uint64_t             max_blocks_per_query = 1000;  ///< Max block range per eth_getLogs call.
         };
 
@@ -91,7 +91,7 @@ namespace sgns::evmwatcher
 
         /**
          * @brief      Constructs a BridgeCatchupWatcher.
-         * @param[in]  config           Polling and scan-depth configuration.
+         * @param[in]  config           Polling and start-block configuration.
          * @param[in]  message_callback Callback for raw messages (MessagingWatcher base).
          * @param[in]  chains_provider  Returns the current chain list to scan.
          * @param[in]  rpc_resolver     Resolves a chain-id string to an RPC URL.
@@ -119,7 +119,7 @@ namespace sgns::evmwatcher
     private:
         void poll_once();
 
-        Config            config_;           ///< Polling and scan-depth configuration.
+        Config            config_;           ///< Polling and start-block configuration.
         ChainsProvider    chains_provider_;  ///< Returns the current chain list.
         RpcUrlResolver    rpc_resolver_;     ///< Resolves chain-id → RPC URL.
         BurnProcessor     burn_processor_;   ///< Called for each discovered burn log.

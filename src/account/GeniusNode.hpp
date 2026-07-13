@@ -69,7 +69,6 @@ typedef struct DevConfig
 extern GeniusNodeConfig DEV_CONFIG;
 
 constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
-constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical blocks to scan for unprocessed burns (D-20)
 
 #define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
 #define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
