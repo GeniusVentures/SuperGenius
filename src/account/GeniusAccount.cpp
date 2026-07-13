@@ -5,6 +5,8 @@
 
 #include "GeniusAccount.hpp"
 
+#include <secp256k1.h>
+
 #include <fmt/std.h>
 #include <fmt/ranges.h>
 #include <TrustWalletCore/TWCoinType.h>
@@ -14,6 +16,7 @@
 #include <WalletCore/Hash.h>
 #include <WalletCore/PrivateKey.h>
 #include <charconv>
+#include <cstdlib>
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <algorithm>
 #include <ostream>
@@ -54,6 +57,19 @@ namespace
 
     /// Global factory override (null = use default SecureStorageImpl)
     GeniusAccount::SecureStorageFactory g_storage_factory;
+
+    const secp256k1_context *GetSecp256k1Context()
+    {
+        using Context = std::unique_ptr<secp256k1_context, decltype( &secp256k1_context_destroy )>;
+        static const Context context( secp256k1_context_create( SECP256K1_CONTEXT_NONE ),
+                                      &secp256k1_context_destroy );
+        if ( context == nullptr )
+        {
+            genius_account_logger()->critical( "Could not create the secp256k1 context" );
+            std::abort();
+        }
+        return context.get();
+    }
 
     outcome::result<std::shared_ptr<JSONBackend>> CreateSecureStorage( std::string_view public_key_hex )
     {
@@ -775,63 +791,86 @@ namespace sgns
                                          std::string_view            sig,
                                          const std::vector<uint8_t> &data )
     {
-        bool ret = false;
-
-        do
+        if ( sig.size() != SIGNATURE_EXP_SIZE )
         {
-            if ( sig.size() != SIGNATURE_EXP_SIZE )
-            {
-                genius_account_logger()->error( "Incorrect signature size {}, expected ",
-                                                sig.size(),
-                                                SIGNATURE_EXP_SIZE );
-                break;
-            }
-            std::vector<uint8_t> vec_sig( sig.cbegin(), sig.cend() );
+            genius_account_logger()->error( "Incorrect signature size {}, expected {}",
+                                            sig.size(),
+                                            SIGNATURE_EXP_SIZE );
+            return false;
+        }
 
-            std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        auto public_key_bytes = base::unhex( address );
+        if ( public_key_bytes.has_error() || public_key_bytes.value().size() != PUBLIC_KEY_HEX_LENGTH / 2 )
+        {
+            return false;
+        }
 
-            auto [r_success, r] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin(),
-                    vec_sig.cbegin() + 32 );
+        const auto *context = GetSecp256k1Context();
 
-            if ( !r_success )
-            {
-                break;
-            }
-            auto [s_success, s] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin() + 32,
-                    vec_sig.cbegin() + 64 );
+        std::array<uint8_t, 65> uncompressed_public_key{};
+        uncompressed_public_key.front() = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
+        std::copy( public_key_bytes.value().begin(),
+                   public_key_bytes.value().end(),
+                   uncompressed_public_key.begin() + 1 );
 
-            if ( !s_success )
-            {
-                break;
-            }
-            ethereum::signature_type sig( r, s );
-            auto                     eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( address );
-            ret                                 = nil::crypto3::verify( hashed, sig, eth_pubkey );
-        } while ( 0 );
+        secp256k1_pubkey public_key;
+        if ( secp256k1_ec_pubkey_parse( context,
+                                        &public_key,
+                                        uncompressed_public_key.data(),
+                                        uncompressed_public_key.size() ) == 0 )
+        {
+            return false;
+        }
 
-        return ret;
+        // Genius signatures store each scalar least-significant byte first; libsecp256k1 uses big endian.
+        std::array<uint8_t, SIGNATURE_EXP_SIZE> compact_signature{};
+        std::reverse_copy( sig.begin(), sig.begin() + 32, compact_signature.begin() );
+        std::reverse_copy( sig.begin() + 32, sig.end(), compact_signature.begin() + 32 );
+
+        secp256k1_ecdsa_signature signature;
+        if ( secp256k1_ecdsa_signature_parse_compact( context, &signature, compact_signature.data() ) == 0 )
+        {
+            return false;
+        }
+        secp256k1_ecdsa_signature_normalize( context, &signature, &signature );
+
+        // Keep the historical SHA256(SHA256(data)) signing protocol used by Crypto3's EMSA1 wrapper.
+        const std::array<uint8_t, 32> first_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        const std::array<uint8_t, 32> message_hash =
+            nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
+
+        return secp256k1_ecdsa_verify( context, &signature, message_hash.data(), &public_key ) == 1;
     }
 
     std::vector<uint8_t> GeniusAccount::Sign( const std::vector<uint8_t> &data ) const
     {
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        const auto *context = GetSecp256k1Context();
 
-        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_keypair_->get_private_key() );
-        std::vector<std::uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
-
+        std::array<uint8_t, 32> secret_key{};
+        const auto              private_key = eth_keypair_->get_private_key();
         nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
-                                                  signed_vector.begin(),
-                                                  signed_vector.begin() + 32 );
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<1>( signature ),
-                                                  signed_vector.begin() + 32,
-                                                  signed_vector.end() );
+            std::array<uint8_t, 32>::iterator>( private_key.private_key_data(), secret_key.begin(), secret_key.end() );
+        std::reverse( secret_key.begin(), secret_key.end() );
 
+        // Keep the historical SHA256(SHA256(data)) signing protocol used by Crypto3's EMSA1 wrapper.
+        const std::array<uint8_t, 32> first_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
+        const std::array<uint8_t, 32> message_hash =
+            nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
+
+        secp256k1_ecdsa_signature signature;
+        if ( secp256k1_ecdsa_sign(
+                 context, &signature, message_hash.data(), secret_key.data(), nullptr, nullptr ) == 0 )
+        {
+            genius_account_logger()->error( "Could not sign data with the account key" );
+            return {};
+        }
+
+        std::array<uint8_t, SIGNATURE_EXP_SIZE> compact_signature{};
+        secp256k1_ecdsa_signature_serialize_compact( context, compact_signature.data(), &signature );
+
+        std::vector<uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
+        std::reverse_copy( compact_signature.begin(), compact_signature.begin() + 32, signed_vector.begin() );
+        std::reverse_copy( compact_signature.begin() + 32, compact_signature.end(), signed_vector.begin() + 32 );
         return signed_vector;
     }
 

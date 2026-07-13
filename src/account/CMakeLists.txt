@@ -33,6 +33,7 @@ target_link_libraries(sgns_genius_account
     ${USER_ENV_LIBRARY}
     wallet_core_rs
     protobuf::libprotobuf
+    libsecp256k1::secp256k1
     ${WIN_CRYPT_LIBRARY}
     TrezorCrypto
 )

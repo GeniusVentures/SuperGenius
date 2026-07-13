@@ -58,6 +58,15 @@ else()
     )
 endif()
 
+addtest(account_signature_test
+    account_signature_test.cpp
+)
+
+target_link_libraries(account_signature_test
+    sgns_genius_account
+    json_secure_storage
+)
+
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
 )
