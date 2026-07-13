@@ -13,10 +13,10 @@
  *           Verifies GetLastProcessedBlock advances past s_fork_block and the exact
  *           set of kNumCatchupBurns local cast-send burns is discovered (D-22).
  *   Test C (TwoPhaseScanBridgesGap): TWO STANDALONE BridgeCatchupWatcher instances.
- *           Phase 1 (start_block=0) discovers Sepolia-origin burns; Phase 2
+ *           Phase 1 (start_block=s_fork_block-kGapBridgingScanWindow) discovers any
+ *           pre-fork Sepolia-origin burns in one 10K-block chunk; Phase 2
  *           (start_block=s_fork_block-5) discovers local burns; GetLastProcessedBlock
- *           bridges the gap. No friend class — watchers use the public
- *           startWatching()/stopWatching() API (D-22).
+ *           bridges the gap. Public startWatching()/stopWatching() API (D-22).
  *
  * The fixture seeds N=kNumCatchupBurns bridgeOut() burn transactions against the local
  * Anvil fork BEFORE any node starts, then bootstraps a 3-node cluster whose per-node
@@ -71,6 +71,9 @@ namespace
 
     /** @brief Standalone-watcher max block range per eth_getLogs call. */
     inline constexpr uint64_t kStandaloneMaxBlocksPerQuery = 1000ull;
+
+    /** @brief Max backward chunks per poll for gap-bridging tests (D-26 — recent blocks first). */
+    inline constexpr uint64_t kStandaloneMaxChunks = 3ull;
 
     /**
      * @brief Builds a ChainsProvider lambda returning one sepolia entry (D-26 standalone watchers).
@@ -556,10 +559,9 @@ TEST_F( BridgeAnvilCatchupE2ETest, PostForkScanMintsLocalBurns )
 /**
  * @brief D-26 Test C + D-22: two standalone watchers bridge the two-phase scan gap.
  *
- * Phase 1 (start_block=0) discovers any Sepolia-origin burns; Phase 2
- * (start_block=s_fork_block-5) discovers the local burns. Verifies both phases
- * independently discover their respective burns and GetLastProcessedBlock bridges
- * the gap (Phase 1 last block <= Phase 2 start_block). Both watchers use the
+ * Phase 1 scans backward from current block in 3 chunks × 1000 blocks (max_chunks=3);
+ * Phase 2 (start_block=s_fork_block-5) discovers the local burns. Verifies both
+ * phases independently discover their respective burns. Both watchers use the
  * public startWatching()/stopWatching() API. Makes ZERO manual MintTokens() calls.
  */
 TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
@@ -568,13 +570,14 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
 
     const uint64_t phase2_start = ( s_fork_block >= 5ull ) ? ( s_fork_block - 5ull ) : 0ull;
 
-    // ── PHASE 1: standalone watcher scanning from genesis (start_block=0) ────────
+    // ── PHASE 1: backward scan, 3 chunks × 1000 blocks from current ──
     std::atomic<uint64_t> phase1_burn_count{ 0ull };
 
     sgns::evmwatcher::BridgeCatchupWatcher::Config cfg_phase1;
     cfg_phase1.poll_interval        = kStandalonePollInterval;
     cfg_phase1.start_block          = 0ull;
     cfg_phase1.max_blocks_per_query = kStandaloneMaxBlocksPerQuery;
+    cfg_phase1.max_chunks           = kStandaloneMaxChunks;
 
     const std::string anvil_url_phase1 = s_anvil.RpcUrl();
     auto              chains_provider_p1 = MakeStandaloneChainsProvider();
@@ -590,7 +593,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     ASSERT_WAIT_FOR_CONDITION(
         [&]() { return watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric ) > 0ull; },
         kCatchupMintTimeout,
-        "Test C Phase 1: GetLastProcessedBlock must advance past genesis",
+        "Test C Phase 1: backward scan must advance last block",
         nullptr );
     watcher_phase1.stopWatching();
     const uint64_t phase1_last_block = watcher_phase1.GetLastProcessedBlock( kSepoliaChainIdNumeric );
