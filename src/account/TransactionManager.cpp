@@ -577,6 +577,12 @@ namespace sgns
             chainid = "public";
         }
 
+        // Strip "0x" hex prefix if present — Hash256::fromReadableString expects raw hex.
+        if ( transaction_hash.size() >= 2 && transaction_hash[0] == '0' && transaction_hash[1] == 'x' )
+        {
+            transaction_hash = transaction_hash.substr( 2 );
+        }
+
         // UTXO reservation check — prevent duplicate mint creation for the same burn
         // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
         base::Hash256 burn_tx_hash;

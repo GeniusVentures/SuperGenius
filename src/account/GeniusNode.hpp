@@ -63,8 +63,7 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-    std::function<std::optional<std::string>()>
-        ChainlistFetcher; ///< Optional custom chainlist fetcher (test injection point).
+    std::function<std::optional<std::string>()> ChainlistFetcher = nullptr;  ///< Optional custom chainlist fetcher (test injection point).
 } GeniusNodeConfig;
 
 extern GeniusNodeConfig DEV_CONFIG;
@@ -78,6 +77,11 @@ constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical bloc
 namespace sgns
 {
     class MigrationManager;
+
+namespace evmwatcher
+{
+    class BridgeCatchupWatcher;
+}
 
     /**
      * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
@@ -165,8 +169,7 @@ namespace sgns
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
-            INITIALIZING_RPC_CATCH_UP, ///< RPC catch-up service is being initialized.
-            READY,                     ///< Node is ready for external operations.
+            READY, ///< Node is ready for external operations.
         };
 
         /**
@@ -748,15 +751,18 @@ namespace sgns
         bool             mirror_results_           = false; ///< Whether to mirror processing results from other nodes.
         int              result_retention_hours_   = 168;   ///< Hours to retain results before GC (0 = keep forever).
         int              result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
-        bool             catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
-        bool             catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
+
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
+        mutable std::mutex catchup_mutex_;             ///< Serializes catchup_chains_ between OnRpcEndpointsReady (io_ pool) and watcher (own thread).
+
         /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex catchup_mutex_;
         std::shared_ptr<ChainRpcEndpointProvider>
             rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
+        std::shared_ptr<evmwatcher::BridgeCatchupWatcher>
+            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns (replaces PerformStartupCatchupScan).
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
@@ -923,19 +929,6 @@ namespace sgns
          * @param[in] chains  Chain/contract pairs discovered during initialization.
          */
         void OnRpcEndpointsReady( std::vector<ChainContractPair> chains ) override;
-
-        /**
-         * @brief Scans historical blocks for unprocessed bridge burn events after CRDT sync.
-         *
-         * Called once after TransactionManager reaches READY state (D-20). Probes RPC
-         * endpoints for each chain with bridge_contract_address, constructs eth_getLogs
-         * queries filtered to BridgeSourceBurned topic0, and inserts any missing burns
-         * via MintFunds() with UTXOType::UTXO_BRIDGE.
-         *
-         * Best-effort: failures on one chain do not block others.
-         * Scan depth capped at kBridgeCatchupScanDepth blocks (currently 10,000).
-         */
-        void PerformStartupCatchupScan();
 
         /**
          * @brief Shuts down node services: cancels health-check timer, unsubscribes disconnect events,

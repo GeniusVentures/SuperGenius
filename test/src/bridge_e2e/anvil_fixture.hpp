@@ -488,6 +488,17 @@ namespace sgns::test::anvil
         {
             trimmed.pop_back();
         }
+        // Strip cast call hex suffix: "2000000000000000000 [2e18]" → "2000000000000000000"
+        auto bracket_pos = trimmed.find( '[' );
+        if ( bracket_pos != std::string::npos )
+        {
+            trimmed.resize( bracket_pos );
+            // Clean up space before the bracket
+            while ( !trimmed.empty() && std::isspace( static_cast<unsigned char>( trimmed.back() ) ) )
+            {
+                trimmed.pop_back();
+            }
+        }
         uint64_t balance = 0u;
         bool     parsed  = false;
         try

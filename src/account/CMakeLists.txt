@@ -115,6 +115,7 @@ set(GENIUS_NODE_LIBS
     ProcessingBase
     evmrelay
     migration
+    evm_watcher_service
     sgns_genius_account
 )
 

@@ -125,6 +125,21 @@ namespace sgns
         static const std::string &GetAuthorizedFullNodeAddress();
 
         /**
+         * @brief Registers additional validator addresses to include in the genesis registry.
+         *
+         * Must be called before the genesis block is created. The authorized full-node
+         * address is always the first entry; these addresses are appended.
+         * @param addresses Additional validator public addresses.
+         */
+        static void SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses );
+
+        /**
+         * @brief Returns additional genesis validator addresses previously set.
+         * @return Vector of additional genesis validator public addresses.
+         */
+        static const std::vector<std::string> &GetAdditionalGenesisValidatorAddresses();
+
+        /**
          * @brief Returns the stored CID of the selected genesis block.
          * @return Genesis CID on success, otherwise an error.
          */
@@ -528,6 +543,12 @@ namespace sgns
          * @return Reference to static storage string.
          */
         static std::string &AuthorizedFullNodeAddressStorage();
+
+        /**
+         * @brief Returns mutable process-wide storage for additional genesis validator addresses.
+         * @return Reference to static storage vector.
+         */
+        static std::vector<std::string> &AdditionalGenesisValidatorAddressesStorage();
 
         std::shared_ptr<ValidatorRegistry> validator_registry_; ///< Validator registry component.
 

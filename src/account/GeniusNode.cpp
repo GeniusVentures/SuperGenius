@@ -41,6 +41,7 @@
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
@@ -93,8 +94,6 @@ namespace
                 return "INITIALIZING_BLOCKCHAIN";
             case State::INITIALIZING_TRANSACTIONS:
                 return "INITIALIZING_TRANSACTIONS";
-            case State::INITIALIZING_RPC_CATCH_UP:
-                return "INITIALIZING_RPC_CATCH_UP";
             case State::READY:
                 return "READY";
         }
@@ -729,6 +728,51 @@ namespace sgns
                 // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
                 transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
 
+                // Phase 6 (D-01..D-10): Wire slot-hash populator bridging
+                // PublicChainInputValidator -> ConsensusManager::CreateVote, so
+                // each signed vote commits to its RPC endpoint slot hashes.
+                // Single-chain resolution: use the first configured chain id.
+                if ( blockchain_ )
+                {
+                    blockchain_->SetSlotHashPopulator(
+                        [this]( sgns::ConsensusVote &vote )
+                        {
+                            if ( !transaction_manager_ )
+                            {
+                                return;
+                            }
+                            auto &validator = transaction_manager_->GetPublicChainInputValidator();
+                            const auto chain_id = validator.GetFirstConfiguredChainId();
+                            if ( !chain_id.has_value() )
+                            {
+                                node_logger_->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                                return;
+                            }
+                            const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
+                            const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
+                            const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+                            if ( !slot0.empty() )
+                            {
+                                vote.set_slot_0_hash( slot0.data(), slot0.size() );
+                            }
+                            if ( !slot1.empty() )
+                            {
+                                vote.set_slot_1_hash( slot1.data(), slot1.size() );
+                            }
+                            if ( !slot2.empty() )
+                            {
+                                vote.set_slot_2_hash( slot2.data(), slot2.size() );
+                            }
+#ifndef NDEBUG
+                            node_logger_->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
+                                                 chain_id.value(),
+                                                 !slot0.empty(),
+                                                 !slot1.empty(),
+                                                 !slot2.empty() );
+#endif
+                        } );
+                }
+
                 // Initialize shared EthWatchService for EVM event detection
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
 
@@ -885,47 +929,7 @@ namespace sgns
                 {
                     StartProcessing();
                 }
-                StateTransition( NodeState::INITIALIZING_RPC_CATCH_UP );
-                break;
-            }
-
-            case NodeState::INITIALIZING_RPC_CATCH_UP:
-            {
-                bool dispatch_scan = false;
-                bool scan_running  = false;
-                {
-                    std::lock_guard lock( catchup_mutex_ );
-                    if ( !catchup_scan_done_ && !catchup_scan_in_progress_ && !catchup_chains_.empty() &&
-                         transaction_manager_ && transaction_manager_->GetState() == TransactionManager::State::READY )
-                    {
-                        catchup_scan_in_progress_ = true;
-                        dispatch_scan             = true;
-                    }
-                    else if ( catchup_scan_in_progress_ )
-                    {
-                        scan_running = true;
-                    }
-                }
-
-                if ( scan_running )
-                {
-                    break;
-                }
-
-                if ( !dispatch_scan )
-                {
-                    StateTransition( NodeState::READY );
-                    break;
-                }
-
-                boost::asio::post( *io_,
-                                   [weak_self = weak_from_this()]
-                                   {
-                                       if ( auto strong = weak_self.lock() )
-                                       {
-                                           strong->PerformStartupCatchupScan();
-                                       }
-                                   } );
+                StateTransition( NodeState::READY );
                 break;
             }
 
@@ -1590,6 +1594,12 @@ namespace sgns
         ++bridge_init_generation_;
         rpc_endpoint_provider_.reset();
 
+        if ( catchup_watcher_ )
+        {
+            catchup_watcher_->stopWatching();
+            catchup_watcher_.reset();
+        }
+
         if ( transaction_manager_ )
         {
             transaction_manager_->Stop();
@@ -1623,6 +1633,13 @@ namespace sgns
         }
 
         node_logger_->info( "GeniusNode shutdown start" );
+
+        // Stop the catch-up watcher before tearing down account-bound services
+        if ( catchup_watcher_ )
+        {
+            catchup_watcher_->stopWatching();
+            catchup_watcher_.reset();
+        }
 
         // Cancel bootstrap health check timer
         if ( health_check_handle_ )
@@ -2270,9 +2287,6 @@ namespace sgns
             case NodeState::INITIALIZING_PROCESSING:
                 return { 0.945f, "Initializing processing modules" };
 
-            case NodeState::INITIALIZING_RPC_CATCH_UP:
-                return { 0.975f, "Checking RPC catch-up scan" };
-
             case NodeState::READY:
                 return { 1.0f, "Ready" };
         }
@@ -2902,22 +2916,10 @@ namespace sgns
 
     void GeniusNode::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
     {
-        bool catchup_available = false;
-        {
-            std::lock_guard lock( catchup_mutex_ );
-            catchup_chains_   = std::move( chains );
-            catchup_available = !catchup_scan_done_ && !catchup_scan_in_progress_ && !catchup_chains_.empty();
-            node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up scan",
-                                catchup_chains_.size() );
-        }
-
-        const auto current_state = state_.load();
-        if ( catchup_available &&
-             ( current_state == NodeState::INITIALIZING_RPC_CATCH_UP || current_state == NodeState::READY ) )
-        {
-            node_logger_->info( "GeniusNode: chains arrived — entering RPC catch-up state" );
-            StateTransition( NodeState::INITIALIZING_RPC_CATCH_UP );
-        }
+        std::lock_guard lock( catchup_mutex_ );
+        catchup_chains_ = std::move( chains );
+        node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up watcher",
+                            catchup_chains_.size() );
     }
 
     void GeniusNode::InitializeAndStartBridge()
@@ -2949,6 +2951,109 @@ namespace sgns
         if ( bridge_relayer_ )
         {
             rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
+        }
+
+        // 3a. Create and start the catch-up polling watcher (replaces the old
+        //     INITIALIZING_RPC_CATCH_UP state machine + PerformStartupCatchupScan).
+        //     The watcher owns its own thread and polls eth_getLogs independently
+        //     of the node lifecycle — no state machine coupling.
+        {
+            evmwatcher::BridgeCatchupWatcher::Config catchup_config;
+            catchup_config.poll_interval = std::chrono::seconds( 15 );
+            catchup_config.scan_depth    = kBridgeCatchupScanDepth;
+
+            auto chains_provider = [weak_self = weak_from_this()]() -> std::vector<ChainContractPair>
+            {
+                auto strong = weak_self.lock();
+                if ( !strong )
+                {
+                    return {};
+                }
+                std::lock_guard lock( strong->catchup_mutex_ );
+                return strong->catchup_chains_;
+            };
+
+            auto rpc_resolver = [weak_self = weak_from_this()]( const std::string &chain_id_str
+                                                                ) -> std::optional<std::string>
+            {
+                auto strong = weak_self.lock();
+                if ( !strong || !strong->transaction_manager_ )
+                {
+                    return std::nullopt;
+                }
+                auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
+                return validator.GetFirstRpcUrl( chain_id_str );
+            };
+
+            auto burn_processor = [weak_self = weak_from_this()](
+                                       const std::vector<eth::abi::AbiValue> &decoded_values,
+                                       const std::string                     &tx_hash_hex,
+                                       const std::string                     &chain_id_str ) -> bool
+            {
+                auto strong = weak_self.lock();
+                if ( !strong || !strong->account_ )
+                {
+                    return false;
+                }
+
+                // Parse the ABI-decoded values into a BurnEventParams
+                auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
+                if ( !burn )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
+                                                 tx_hash_hex );
+                    return false;
+                }
+
+                // UTXO state checks (same guards as the old scan)
+                base::Hash256 burn_tx_hash;
+                if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
+                {
+                    return false;
+                }
+
+                auto &utxo_mgr = strong->account_->GetUTXOManager();
+                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
+                                                 tx_hash_hex );
+                    return false;
+                }
+                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
+                                                 tx_hash_hex );
+                    return false;
+                }
+
+                try
+                {
+                    auto result = strong->MintTokens( burn.value().amount,
+                                                      tx_hash_hex,
+                                                      chain_id_str,
+                                                      burn.value().token_id,
+                                                      burn.value().destination );
+                    return result.has_value();
+                }
+                catch ( const std::exception &e )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
+                                                 tx_hash_hex,
+                                                 e.what() );
+                    return false;
+                }
+            };
+
+            catchup_watcher_ = std::make_shared<evmwatcher::BridgeCatchupWatcher>(
+                catchup_config,
+                nullptr, // no raw message callback needed
+                std::move( chains_provider ),
+                std::move( rpc_resolver ),
+                std::move( burn_processor ) );
+
+            catchup_watcher_->startWatching();
+            node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
+                                catchup_config.poll_interval.count() );
         }
 
         // 4. Post Initialize() to io_context — non-blocking. Capture a
@@ -2993,322 +3098,6 @@ namespace sgns
                                auto &validator = tx_mgr->GetPublicChainInputValidator();
                                provider->Initialize( config_path, validator, is_cancelled );
                            } );
-    }
-
-    void GeniusNode::PerformStartupCatchupScan()
-    {
-        node_logger_->info( "CatchUpScan: starting historical burn scan (D-20)" );
-
-        auto finish_catchup = [this]
-        {
-            {
-                std::lock_guard lock( catchup_mutex_ );
-                catchup_scan_in_progress_ = false;
-                catchup_scan_done_        = true;
-            }
-            if ( state_.load() == NodeState::INITIALIZING_RPC_CATCH_UP )
-            {
-                StateTransition( NodeState::READY );
-            }
-        };
-
-        if ( !transaction_manager_ )
-        {
-            node_logger_->warn( "CatchUpScan: transaction_manager_ not available — skipping" );
-            finish_catchup();
-            return;
-        }
-
-        // D-11/D-12: catch-up scan queries BOTH v1 (BridgeSourceBurned) and v2
-        // (BridgeOutInitiated) topic0 hashes.  EventFilter topics are
-        // single-value-per-position (no OR-array support in serialization), so
-        // two separate eth_getLogs calls are made per chain and the results are
-        // merged with tx_hash deduplication.
-        const std::string event_sig( kBridgeSourceBurnedSig );
-        auto              topic0_hash = eth::abi::event_signature_hash( event_sig );
-        std::string       topic0_hex  = rlp::base::parse::hex_bytes( topic0_hash.data(), topic0_hash.size() );
-
-        // Bridge V2: bytes32 sgnsDestination + bool destinationYOdd (parity bit).
-        const std::string event_sig_v2( kBridgeOutInitiatedSig );
-        auto              topic0_hash_v2 = eth::abi::event_signature_hash( event_sig_v2 );
-        std::string       topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
-
-        // D-20: Cap scan depth — default 10,000 blocks
-        const uint64_t scan_depth = kBridgeCatchupScanDepth;
-
-        size_t total_backfilled = 0;
-        size_t total_skipped    = 0;
-        size_t chains_scanned   = 0;
-
-        // Iterate chains discovered via OnRpcEndpointsReady observer callback (D-02, D-03)
-        // Uses catchup_chains_ populated by the observer — no hardcoded maps.
-        // Snapshot under catchup_mutex_ so a concurrent OnRpcEndpointsReady write
-        // cannot invalidate the iteration (read side of the scan-guard race).
-        auto &validator = transaction_manager_->GetPublicChainInputValidator();
-
-        std::vector<ChainContractPair> chains_snapshot;
-        {
-            std::lock_guard lock( catchup_mutex_ );
-            chains_snapshot = catchup_chains_;
-        }
-
-        for ( const auto &chain_entry : chains_snapshot )
-        {
-            auto rpc_url = validator.GetFirstRpcUrl( std::to_string( chain_entry.chain_id ) );
-            if ( !rpc_url.has_value() )
-            {
-                node_logger_->debug( "CatchUpScan: no RPC endpoint for chain {} (id={}) — skipping",
-                                     chain_entry.chain_name,
-                                     chain_entry.chain_id );
-                continue;
-            }
-
-            const std::string &contract_addr_str = chain_entry.contract_address;
-
-            // RPC transport with 10-second timeout per T-05-13
-            eth::rpc::RpcHttpTransportOptions opts;
-            opts.timeout = std::chrono::seconds( 10 );
-            eth::rpc::RpcHttpTransport transport( *rpc_url, opts );
-
-            ++chains_scanned;
-
-            // Parse contract address (eth::Address = rlp::Address = array<uint8_t, 20>)
-            rlp::Address contract_addr{};
-            if ( !rlp::base::parse::hex_array( contract_addr_str, contract_addr ) )
-            {
-                node_logger_->warn( "CatchUpScan: invalid bridge address {} for chain {}",
-                                    contract_addr_str,
-                                    chain_entry.chain_name );
-                continue;
-            }
-
-            // Parse topic0 hex to Hash256 for EventFilter
-            rlp::Hash256 topic0_hash256{};
-            if ( !rlp::base::parse::hex_array( topic0_hex, topic0_hash256 ) )
-            {
-                node_logger_->warn( "CatchUpScan: invalid topic0 {} for chain {}", topic0_hex, chain_entry.chain_name );
-                continue;
-            }
-
-            // Build EventFilter for eth_getLogs (v1 topic0)
-            eth::EventFilter filter;
-            filter.addresses.push_back( contract_addr );
-            filter.topics.push_back( topic0_hash256 );
-
-            // D-20: Query current block number to compute scan start
-            // Scan from (current_block - scan_depth) to latest
-            constexpr uint64_t kBlockNumberRequestId = 99;
-            auto               block_number_req      = eth::rpc::make_json_rpc_request( "eth_blockNumber",
-                                                                                        boost::json::array{},
-                                                                                        kBlockNumberRequestId );
-            auto               block_number_resp     = transport.call( block_number_req );
-            uint64_t           current_block         = 0;
-
-            if ( block_number_resp.has_value() )
-            {
-                auto parsed_block = eth::rpc::parse_block_number_response( *block_number_resp );
-                if ( parsed_block.has_value() )
-                {
-                    current_block = *parsed_block;
-                }
-            }
-
-            if ( current_block == 0 )
-            {
-                node_logger_->warn( "CatchUpScan: failed to query block number for chain {} — skipping",
-                                    chain_entry.chain_name );
-                continue;
-            }
-
-            // from_block: cap at scan_depth blocks from latest (D-20)
-            // to_block: 0 = "latest"
-            const uint64_t from_block = current_block > scan_depth ? current_block - scan_depth : 0;
-
-            node_logger_->debug( "CatchUpScan: scanning chain {} from block {} to latest (current={}, depth={})",
-                                 chain_entry.chain_name,
-                                 from_block,
-                                 current_block,
-                                 scan_depth );
-
-            // D-12: Shared tx_hash deduplication set across v1 and v2 query
-            // results. A burn appearing in both queries (e.g. contract-version
-            // overlap) is processed only once.
-            std::set<std::string> seen_tx_hashes;
-
-            // Helper: process one batch of logs (v1 or v2) through the dedup +
-            // UTXO-check + decode_log + ParseBurnEventValues + MintTokens pipeline.
-            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 )
-            {
-                // Insert burn UTXO as READY with UTXO_BRIDGE type (D-20)
-                // MintFunds will later transition it to RESERVED → CONSUMED
-                auto &utxo_mgr = account_->GetUTXOManager();
-
-                for ( const auto &rpc_log : rpc_logs )
-                {
-                    std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
-                                                                           rpc_log.tx_hash.size() );
-
-                    // Deduplicate across v1 and v2 query results (D-12).
-                    if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
-                    {
-                        ++total_skipped;
-                        node_logger_->debug( "CatchUpScan: burn tx {} already seen this scan — skipping", tx_hash_hex );
-                        continue;
-                    }
-
-                    // Parse tx_hash_hex to Hash256 for UTXO query
-                    base::Hash256 burn_tx_hash;
-                    if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
-                    {
-                        ++total_skipped;
-                        continue;
-                    }
-
-                    // D-20: Check UTXO set (not in-memory TransactionManager state)
-                    // Check if burn outpoint (tx_hash, output_idx=0) is already consumed or reserved
-                    if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
-                    {
-                        ++total_skipped;
-                        node_logger_->debug( "CatchUpScan: burn tx {} already CONSUMED — skipping", tx_hash_hex );
-                        continue;
-                    }
-                    if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
-                    {
-                        ++total_skipped;
-                        node_logger_->debug( "CatchUpScan: burn tx {} already RESERVED — skipping", tx_hash_hex );
-                        continue;
-                    }
-
-                    // Decode the full log entry (indexed + non-indexed params) so
-                    // the value indices match OnWatchEvent / ParseBurnEventValues.
-                    static const std::string kEventSigV1( kBridgeSourceBurnedSig );
-                    static const std::string kEventSigV2( kBridgeOutInitiatedSig );
-                    const std::string       &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
-
-                    const auto all_params = eth::cli::event_registry().params_for( event_sig );
-                    auto       decoded    = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
-                    if ( !decoded.has_value() )
-                    {
-                        ++total_skipped;
-                        node_logger_->warn( "CatchUpScan: failed to decode log for tx {} — skipping", tx_hash_hex );
-                        continue;
-                    }
-
-                    auto burn = BridgeRelayer::ParseBurnEventValues( decoded.value() );
-                    if ( !burn )
-                    {
-                        ++total_skipped;
-                        node_logger_->warn( "CatchUpScan: failed to parse burn event for tx {} — skipping",
-                                            tx_hash_hex );
-                        continue;
-                    }
-
-                    try
-                    {
-                        auto result = MintTokens( burn.value().amount,
-                                                  tx_hash_hex,
-                                                  std::to_string( chain_entry.chain_id ),
-                                                  burn.value().token_id,
-                                                  burn.value().destination );
-
-                        if ( result.has_value() )
-                        {
-                            ++total_backfilled;
-                            node_logger_->info( "CatchUpScan: backfilled historical burn {} on chain {}",
-                                                tx_hash_hex,
-                                                chain_entry.chain_name );
-                        }
-                        else
-                        {
-                            node_logger_->debug( "CatchUpScan: MintTokens returned no value for tx {} — "
-                                                 "likely already processed",
-                                                 tx_hash_hex );
-                            ++total_skipped;
-                        }
-                    }
-                    catch ( const std::exception &e )
-                    {
-                        node_logger_->debug( "CatchUpScan: MintTokens threw for tx {}: {} — skipping",
-                                             tx_hash_hex,
-                                             e.what() );
-                        ++total_skipped;
-                    }
-                }
-            };
-
-            // ── v1 query (BridgeSourceBurned) ───────────────────────────────
-            auto v1_request  = eth::rpc::make_get_logs_request( filter, from_block, 0, 1 );
-            auto v1_response = transport.call( v1_request );
-
-            if ( !v1_response.has_value() )
-            {
-                // T-05-13: RPC timeout or failure — log and continue (best-effort).
-                // A failed v1 query does not block the v2 query or other chains.
-                node_logger_->warn( "CatchUpScan: v1 RPC call failed for chain {} (timeout/refused)",
-                                    chain_entry.chain_name );
-            }
-            else
-            {
-                auto v1_logs = eth::rpc::parse_get_logs_response( *v1_response );
-                if ( !v1_logs.has_value() )
-                {
-                    node_logger_->warn( "CatchUpScan: failed to parse v1 getLogs response for chain {}",
-                                        chain_entry.chain_name );
-                }
-                else
-                {
-                    process_logs( v1_logs.value(), /*is_v2=*/false );
-                }
-            }
-
-            // ── v2 query (BridgeOutInitiated) ───────────────────────────────
-            // Same contract address + block range, v2 topic0 hash (D-12).
-            rlp::Hash256 topic0_hash256_v2{};
-            if ( !rlp::base::parse::hex_array( topic0_hex_v2, topic0_hash256_v2 ) )
-            {
-                node_logger_->warn( "CatchUpScan: invalid v2 topic0 {} for chain {}",
-                                    topic0_hex_v2,
-                                    chain_entry.chain_name );
-            }
-            else
-            {
-                eth::EventFilter filter_v2;
-                filter_v2.addresses.push_back( contract_addr );
-                filter_v2.topics.push_back( topic0_hash256_v2 );
-
-                // Unique request id so v2 does not collide with v1 (id=1) or
-                // blockNumber (id=99).
-                constexpr uint64_t kV2LogsRequestId = 2;
-                auto v2_request  = eth::rpc::make_get_logs_request( filter_v2, from_block, 0, kV2LogsRequestId );
-                auto v2_response = transport.call( v2_request );
-
-                if ( !v2_response.has_value() )
-                {
-                    node_logger_->warn( "CatchUpScan: v2 RPC call failed for chain {} (timeout/refused)",
-                                        chain_entry.chain_name );
-                }
-                else
-                {
-                    auto v2_logs = eth::rpc::parse_get_logs_response( *v2_response );
-                    if ( !v2_logs.has_value() )
-                    {
-                        node_logger_->warn( "CatchUpScan: failed to parse v2 getLogs response for chain {}",
-                                            chain_entry.chain_name );
-                    }
-                    else
-                    {
-                        process_logs( v2_logs.value(), /*is_v2=*/true );
-                    }
-                }
-            }
-        }
-
-        node_logger_->info( "CatchUpScan: scanned {} chains — {} historical burns backfilled, "
-                            "{} skipped (already processed)",
-                            chains_scanned,
-                            total_backfilled,
-                            total_skipped );
-        finish_catchup();
     }
 
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
