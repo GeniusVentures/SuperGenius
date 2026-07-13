@@ -1,23 +1,69 @@
 #!/usr/bin/env python3
 """
-find_contract_creation_blocks.py — Binary-search eth_getCode to find bridge
-contract deployment blocks, updating bridge_chains_config.json in-place.
+find_contract_creation_blocks.py — Verify bridge contract addresses against the
+GeniusDiamond deployment manifest and discover creation blocks via eth_getCode
+binary search.
 
-Usage (one --rpc per chain):
-  python3 scripts/find_contract_creation_blocks.py src/account/bridge_chains_config.json \
-      --rpc "ethereum-sepolia=${RPC_SEPOLIA}"
+Workflow:
+  1. Download deployments.json from GeniusDiamond GitHub releases (latest).
+  2. Cross-reference DiamondAddress + chainId with bridge_chains_config.json.
+     - Mismatched addresses → warning (config may be stale).
+     - Missing GNUSBridge facet → warning (bridge not deployed on that chain).
+  3. For each chain with creation_block = 0, binary-search eth_getCode
+     using the RPC URL from --rpc to find the exact deployment block.
+  4. Write creation_block back to bridge_chains_config.json.
 
-The script only queries chains that have creation_block = 0 (unknown).
-Chains with a non-zero creation_block are skipped — rerun after deleting
-the field to force rediscovery.
+When the deployment manifest adds block_number fields, step 3 becomes a
+no-op and creation blocks are sourced directly from the manifest.
+
+Usage:
+  # All chains with RPC URLs:
+  python3 scripts/find_contract_creation_blocks.py src/account/bridge_chains_config.json \\
+      --rpc "ethereum-sepolia=$RPC_SEPOLIA" --rpc "base-sepolia=$RPC_BASE_SEPOLIA" ...
+
+  # Skip manifest fetch (offline / CI):
+  python3 scripts/find_contract_creation_blocks.py src/account/bridge_chains_config.json \\
+      --rpc "ethereum-sepolia=$RPC_SEPOLIA" --no-manifest
+
+  # Force rediscovery:
+  python3 scripts/find_contract_creation_blocks.py src/account/bridge_chains_config.json \\
+      --rpc "ethereum-sepolia=$RPC_SEPOLIA" --force
 """
 import json
 import sys
 import time
-from urllib import request
-from urllib.error import URLError
 from argparse import ArgumentParser
 from typing import Optional
+from urllib import request
+from urllib.error import URLError
+
+# ── Chain name mapping: deployments.json key → bridge_chains_config.json key ──
+DEPLOYMENT_TO_CONFIG_CHAIN: dict[str, str] = {
+    "mainnet":        "ethereum-mainnet",
+    "sepolia":        "ethereum-sepolia",
+    "bsc":            "bnb-smart-chain",
+    "bsc_testnet":    "bnb-smart-chain-testnet",
+    "polygon":        "polygon-mainnet",
+    "polygon_amoy":   "polygon-amoy",
+    "base":           "base-mainnet",
+    "base_sepolia":   "base-sepolia",
+}
+
+DEPLOYMENTS_URL = (
+    "https://github.com/GeniusVentures/GeniusDiamond/releases/latest/"
+    "download/deployments.json"
+)
+
+
+def fetch_deployments() -> Optional[dict]:
+    """Download and parse the GeniusDiamond deployment manifest."""
+    try:
+        req = request.Request(DEPLOYMENTS_URL)
+        with request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read())
+    except (URLError, OSError, json.JSONDecodeError) as exc:
+        print(f"Failed to fetch deployments.json: {exc}", file=sys.stderr)
+        return None
 
 
 def rpc_call(rpc_url: str, method: str, params: list) -> Optional[dict]:
@@ -87,8 +133,6 @@ def binary_search_creation(rpc_url: str, contract_addr: str,
         code = eth_get_code(rpc_url, contract_addr, mid)
         iterations += 1
         if code is None:
-            # Historical state unavailable — search range may include
-            # blocks before the RPC provider's archive boundary.
             print(f"  RPC unavailable at block {mid} (iteration {iterations}) — "
                   "historical state may be pruned", file=sys.stderr)
             return None
@@ -96,7 +140,6 @@ def binary_search_creation(rpc_url: str, contract_addr: str,
             low = mid + 1
         else:
             high = mid
-        # Rate-limit: small delay between calls
         if iterations % 5 == 0:
             time.sleep(0.2)
 
@@ -109,19 +152,69 @@ def binary_search_creation(rpc_url: str, contract_addr: str,
     return low
 
 
+def cross_reference_manifest(config: dict, deployments: dict) -> int:
+    """
+    Cross-reference bridge_chains_config.json entries against the deployment
+    manifest.  Returns the number of warnings emitted.
+    """
+    warnings = 0
+
+    # Build lookup: config_chain_name → deployment_entry
+    # Start from deployments keys, map through DEPLOYMENT_TO_CONFIG_CHAIN
+    for depl_key, depl_entry in deployments.items():
+        if not isinstance(depl_entry, dict):
+            continue
+        config_key = DEPLOYMENT_TO_CONFIG_CHAIN.get(depl_key)
+        if config_key is None:
+            continue  # e.g. "mumbai" — not in our config
+        if config_key not in config:
+            print(f"  Note: deployment chain '{depl_key}' maps to '{config_key}' "
+                  "which is not in bridge_chains_config.json")
+            continue
+
+        cfg = config[config_key]
+        depl_addr = depl_entry.get("DiamondAddress", "").lower()
+        cfg_addr = cfg.get("bridge_contract_address", "").lower()
+
+        if depl_addr != cfg_addr:
+            print(f"  WARNING: {config_key}: config address {cfg_addr} differs "
+                  f"from deployed DiamondAddress {depl_addr}", file=sys.stderr)
+            warnings += 1
+
+        # Check for GNUSBridge facet
+        facets = depl_entry.get("FacetDeployedInfo", {})
+        has_bridge = "GNUSBridge" in facets or "PolyGNUSBridge" in facets
+        if not has_bridge:
+            print(f"  WARNING: {config_key}: no GNUSBridge/PolyGNUSBridge facet "
+                  "in deployment manifest — bridge may not be active",
+                  file=sys.stderr)
+            warnings += 1
+
+        # Check for block_number in any facet (future — skip binary search)
+        if any("block_number" in f for f in facets.values()):
+            print(f"  {config_key}: manifest includes block_number — "
+                  "binary search not needed for this chain")
+
+    return warnings
+
+
 def main() -> None:
     parser = ArgumentParser(
-        description="Find bridge contract creation blocks via eth_getCode binary search")
+        description="Verify bridge contracts against GeniusDiamond manifest "
+                    "and discover creation blocks via eth_getCode binary search.")
     parser.add_argument("config", help="Path to bridge_chains_config.json")
     parser.add_argument(
         "--rpc", action="append", default=[],
         help="RPC URL for a chain (format: chain_name=URL), repeatable")
     parser.add_argument(
+        "--no-manifest", action="store_true",
+        help="Skip downloading deployments.json (offline/CI mode)")
+    parser.add_argument(
         "--force", action="store_true",
         help="Rediscover creation_block even for chains that already have one")
     args = parser.parse_args()
 
-    # Parse RPC mapping from --rpc arguments
+    # ── Parse RPC mapping ──────────────────────────────────────────────────
     rpc_map: dict[str, str] = {}
     for entry in args.rpc:
         if "=" not in entry:
@@ -131,17 +224,30 @@ def main() -> None:
         name, url = entry.split("=", 1)
         rpc_map[name] = url
 
-    if not rpc_map:
-        print("No --rpc entries provided. Nothing to do.", file=sys.stderr)
-        print("Example: python3 scripts/find_contract_creation_blocks.py "
-              'src/account/bridge_chains_config.json --rpc "ethereum-sepolia=$RPC_SEPOLIA"',
-              file=sys.stderr)
-        sys.exit(0)
-
-    # Read config
+    # ── Read config ────────────────────────────────────────────────────────
     with open(args.config, "r") as f:
         config = json.load(f)
 
+    # ── Fetch + cross-reference deployment manifest ────────────────────────
+    if not args.no_manifest:
+        print(f"Fetching deployments.json from {DEPLOYMENTS_URL} ...")
+        deployments = fetch_deployments()
+        if deployments is not None:
+            print(f"  Found {len(deployments)} chain(s) in manifest")
+            cross_reference_manifest(config, deployments)
+        else:
+            print("  Skipping manifest cross-reference (fetch failed)")
+    else:
+        print("Skipping manifest fetch (--no-manifest)")
+
+    if not rpc_map:
+        print("\nNo --rpc entries provided.  Nothing to resolve.\n"
+              "  Example: --rpc \"ethereum-sepolia=$RPC_SEPOLIA\"",
+              file=sys.stderr)
+        sys.exit(0)
+
+    # ── Discover creation blocks ───────────────────────────────────────────
+    print()
     updated = 0
     errors = 0
 
@@ -180,13 +286,12 @@ def main() -> None:
             print(f"  -> FAILED to find creation block", file=sys.stderr)
             errors += 1
 
+    # ── Write back ─────────────────────────────────────────────────────────
     if updated > 0:
         with open(args.config, "w") as f:
             json.dump(config, f, indent=4)
             f.write("\n")
         print(f"\nUpdated {updated} chain(s) in {args.config}")
-    else:
-        print("\nNo updates made.")
 
     if errors > 0:
         print(f"{errors} error(s) encountered", file=sys.stderr)
