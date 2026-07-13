@@ -116,6 +116,7 @@ set(GENIUS_NODE_LIBS
     blockchain_genesis
     ProcessingBase
     evmrelay
+    evm_watcher_service
     sgns_genius_account
 )
 

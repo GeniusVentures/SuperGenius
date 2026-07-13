@@ -272,7 +272,7 @@ namespace
                 { cb( outcome::failure( std::errc::not_supported ) ); } );
             EXPECT_TRUE( registry );
 
-            auto store_result = registry->StoreGenesisRegistry( kValidatorId, DummySignature );
+            auto store_result = registry->StoreGenesisRegistry( std::vector<std::string>{ kValidatorId }, DummySignature );
             EXPECT_FALSE( store_result.has_error() );
 
             ASSERT_WAIT_FOR_CONDITION(

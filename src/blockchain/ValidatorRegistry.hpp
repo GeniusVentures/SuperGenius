@@ -223,17 +223,17 @@ namespace sgns
 
         /**
          * @brief Creates an in-memory genesis registry snapshot.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @return Genesis registry snapshot.
          */
-        Registry CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        Registry CreateGenesisRegistry( const std::vector<std::string> &genesis_validator_ids ) const;
         /**
          * @brief Persists a signed genesis registry update.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @param[in] sign Signing callback used for registry-update signatures.
          * @return outcome::success on success, otherwise an error.
          */
-        outcome::result<void> StoreGenesisRegistry( const std::string &genesis_validator_id,
+        outcome::result<void> StoreGenesisRegistry( const std::vector<std::string> &genesis_validator_ids,
                                                     std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         /**
          * @brief Loads the currently active registry.

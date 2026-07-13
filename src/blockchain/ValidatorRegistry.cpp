@@ -512,19 +512,22 @@ namespace sgns
     }
 
     ValidatorRegistry::Registry ValidatorRegistry::CreateGenesisRegistry(
-        const std::string &genesis_validator_id ) const
+        const std::vector<std::string> &genesis_validator_ids ) const
     {
-        logger_->trace( "{}: entry genesis_id={}", __func__, genesis_validator_id.substr( 0, 8 ) );
+        logger_->trace( "{}: entry count={}", __func__, genesis_validator_ids.size() );
         Registry registry;
         registry.set_epoch( 0 );
-        auto *entry = registry.add_validators();
-        entry->set_validator_id( genesis_validator_id );
-        entry->set_role( Role::GENESIS );
-        entry->set_status( Status::ACTIVE );
-        entry->set_weight( ComputeWeight( entry->role() ) );
-        entry->set_penalty_score( 0 );
-        entry->set_missed_epochs( 0 );
-        logger_->debug( "{}: registry created with weight={}", __func__, entry->weight() );
+        for ( const auto &id : genesis_validator_ids )
+        {
+            auto *entry = registry.add_validators();
+            entry->set_validator_id( id );
+            entry->set_role( Role::GENESIS );
+            entry->set_status( Status::ACTIVE );
+            entry->set_weight( ComputeWeight( entry->role() ) );
+            entry->set_penalty_score( 0 );
+            entry->set_missed_epochs( 0 );
+            logger_->debug( "{}: registered genesis validator id={} weight={}", __func__, id.substr( 0, 8 ), entry->weight() );
+        }
         return registry;
     }
 
@@ -584,10 +587,10 @@ namespace sgns
     }
 
     outcome::result<void> ValidatorRegistry::StoreGenesisRegistry(
-        const std::string                                          &genesis_validator_id,
+        const std::vector<std::string>                              &genesis_validator_ids,
         std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign )
     {
-        logger_->trace( "{}: entry genesis_id={}", __func__, genesis_validator_id.substr( 0, 8 ) );
+        logger_->trace( "{}: entry count={}", __func__, genesis_validator_ids.size() );
         {
             std::shared_lock lock( cache_mutex_ );
             if ( cache_initialized_ && cached_registry_ && !cached_registry_->validators().empty() )
@@ -605,7 +608,7 @@ namespace sgns
 
         logger_->debug( "{}: creating genesis registry", __func__ );
         RegistryUpdate update;
-        *update.mutable_registry() = CreateGenesisRegistry( genesis_validator_id );
+        *update.mutable_registry() = CreateGenesisRegistry( genesis_validator_ids );
         update.clear_prev_registry_hash();
 
         auto signing_bytes = ComputeUpdateSigningBytes( update );
@@ -616,7 +619,7 @@ namespace sgns
         }
 
         SignatureEntry signature_entry;
-        signature_entry.set_validator_id( genesis_validator_id );
+        signature_entry.set_validator_id( genesis_validator_ids.front() );
         auto signature = sign( signing_bytes.value() );
         signature_entry.set_signature( signature.data(), signature.size() );
         *update.add_signatures() = signature_entry;

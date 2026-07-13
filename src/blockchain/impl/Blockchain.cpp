@@ -64,6 +64,12 @@ namespace sgns
         return address;
     }
 
+    std::vector<std::string> &Blockchain::AdditionalGenesisValidatorAddressesStorage()
+    {
+        static std::vector<std::string> addresses;
+        return addresses;
+    }
+
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                  std::shared_ptr<GeniusAccount>             account,
                                                  std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
@@ -511,6 +517,17 @@ namespace sgns
         return AuthorizedFullNodeAddressStorage();
     }
 
+    void Blockchain::SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses )
+    {
+        auto &storage = AdditionalGenesisValidatorAddressesStorage();
+        storage       = addresses;
+    }
+
+    const std::vector<std::string> &Blockchain::GetAdditionalGenesisValidatorAddresses()
+    {
+        return AdditionalGenesisValidatorAddressesStorage();
+    }
+
     outcome::result<void> Blockchain::Start()
     {
         if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
@@ -688,7 +705,10 @@ namespace sgns
             return outcome::success();
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
@@ -1076,7 +1096,10 @@ namespace sgns
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
