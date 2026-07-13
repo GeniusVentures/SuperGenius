@@ -42,9 +42,9 @@ namespace sgns::evmwatcher
     void BridgeCatchupWatcher::startWatching()
     {
         auto logger = rlp::base::createLogger( "bridge_catchup_watcher" );
-        logger->info( "BridgeCatchupWatcher starting: poll_interval={}s, scan_depth={}",
+        logger->info( "BridgeCatchupWatcher starting: poll_interval={}s, start_block={}",
                       config_.poll_interval.count(),
-                      config_.scan_depth );
+                      config_.start_block );
         watcher::MessagingWatcher::startWatching();
     }
 
@@ -172,10 +172,8 @@ namespace sgns::evmwatcher
                 }
                 else
                 {
-                    // First poll: scan depth from latest
-                    from_block = ( current_block > config_.scan_depth )
-                                     ? ( current_block - config_.scan_depth )
-                                     : 0ULL;
+                    // First poll: scan from configured start_block (genesis by default per D-19/D-20)
+                    from_block = config_.start_block;
                 }
             }
 
