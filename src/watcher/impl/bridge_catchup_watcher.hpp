@@ -28,11 +28,17 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+namespace eth::rpc
+{
+    class JsonRpcTransport;
+}
 
 namespace sgns::evmwatcher
 {
@@ -58,6 +64,12 @@ namespace sgns::evmwatcher
             std::chrono::seconds poll_interval{ 15 };          ///< Interval between polling cycles.
             uint64_t             start_block         = 0;      ///< First block to scan on the initial poll (0 = genesis). Test-injected to the Anvil fork block (D-20).
             uint64_t             max_blocks_per_query = 1000;  ///< Max block range per eth_getLogs call.
+
+            /// Optional factory for RPC transport.  When set, poll_once() calls this
+            /// instead of constructing a default RpcHttpTransport.  Used by tests to
+            /// inject mock / fake transports without needing friend-class access.
+            using TransportFactory = std::function<std::unique_ptr<eth::rpc::JsonRpcTransport>( const std::string &url )>;
+            TransportFactory transport_factory;  ///< null = use default RpcHttpTransport.
         };
 
         /**
