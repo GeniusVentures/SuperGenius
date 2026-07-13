@@ -355,10 +355,16 @@ namespace sgns::evmwatcher
 
                 if ( !chunk_ok )
                 {
-                    logger->debug( "CatchUpScan: chunk {}-{} for chain {} yielded no parseable logs",
-                                   from_block,
-                                   chunk_to,
-                                   chain_entry.chain_name );
+                    // Both v1 and v2 (if present) failed for this chunk — RPC
+                    // error or unparseable response. Do NOT advance from_block;
+                    // leave the cursor at this chunk's start so it is retried on
+                    // the next poll (CR-02). Advancing past a failed chunk would
+                    // silently drop any burns it contained.
+                    logger->warn( "CatchUpScan: chunk {}-{} for chain {} failed — will retry on next poll",
+                                  from_block,
+                                  chunk_to,
+                                  chain_entry.chain_name );
+                    break;
                 }
 
                 from_block = chunk_to + 1;
