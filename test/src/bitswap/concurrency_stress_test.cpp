@@ -123,7 +123,7 @@ TEST_F( BitswapStressTest, CacheDirRaceAmplification )
 {
     std::atomic<bool> running{ true };
     std::atomic<int>  errors{ 0 };
-    int                iterations = 0;
+    std::atomic<int>  iterations{ 0 };
 
     std::thread setter(
         [this, &running, &errors, &iterations]()
@@ -136,8 +136,8 @@ TEST_F( BitswapStressTest, CacheDirRaceAmplification )
                     bitswap_->setCacheDir(
                         ( ++i % 2 == 0 ) ? "/tmp/stress_cd_a"
                                           : "/tmp/stress_cd_b" );
-                    ++iterations;
-                    if ( iterations >= 1000 )
+                    int current = iterations.fetch_add( 1, std::memory_order_relaxed ) + 1;
+                    if ( current >= 1000 )
                     {
                         break;
                     }
@@ -152,7 +152,8 @@ TEST_F( BitswapStressTest, CacheDirRaceAmplification )
     std::thread reader(
         [this, &running, &errors, &iterations]()
         {
-            while ( running.load( std::memory_order_acquire ) && iterations < 1000 )
+            while ( running.load( std::memory_order_acquire )
+                    && iterations.load( std::memory_order_acquire ) < 1000 )
             {
                 try
                 {
