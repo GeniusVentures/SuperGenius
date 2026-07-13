@@ -153,16 +153,21 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
     DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# ── find_contract_creation_blocks — one-shot utility target ─────────────
-# Binary-searches eth_getCode to populate creation_block in bridge_chains_config.json.
-# RPC URLs are passed via environment variables (one --rpc per chain).
-# Example:
+# ── find_contract_creation_blocks — optional one-shot utility ────────────
+# Downloads the GeniusDiamond deployment manifest, cross-references diamond
+# addresses, and binary-searches eth_getCode for creation blocks.
+# NOT part of the default build — invoke explicitly when deployments change:
+#
 #   RPC_SEPOLIA=https://... cmake --build build --target find_contract_creation_blocks
+#
+# Pass --no-manifest to skip the manifest fetch (offline/CI):
+#   cmake --build build --target find_contract_creation_blocks -- \
+#       RPC_SEPOLIA=https://... NO_MANIFEST=1
 add_custom_target(find_contract_creation_blocks
     COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/find_contract_creation_blocks.py
         ${CMAKE_SOURCE_DIR}/src/account/bridge_chains_config.json
         --rpc "ethereum-sepolia=$ENV{RPC_SEPOLIA}"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMENT "Finding bridge contract creation blocks via eth_getCode binary search"
+    COMMENT "Cross-referencing GeniusDiamond manifest + discovering creation blocks"
     VERBATIM
 )
