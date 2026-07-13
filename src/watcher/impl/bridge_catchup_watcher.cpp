@@ -366,9 +366,15 @@ namespace sgns::evmwatcher
             }
 
             // ── Update per-chain last block ──────────────────────────────
+            // Only advance the cursor to the last successfully-scanned block.
+            // If the loop completed (from_block > to_block), from_block already
+            // equals to_block + 1. If the loop was capped by max_chunks,
+            // from_block points at the next unscanned chunk's start
+            // (last scanned chunk_to + 1) — do NOT skip to current_block + 1,
+            // or unscanned burns would be permanently lost (CR-01).
             {
                 std::lock_guard lock( mutex_ );
-                last_block_per_chain_[chain_entry.chain_id] = to_block + 1;
+                last_block_per_chain_[chain_entry.chain_id] = from_block;
             }
         }
 
