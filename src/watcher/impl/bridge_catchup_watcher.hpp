@@ -62,8 +62,9 @@ namespace sgns::evmwatcher
         struct Config
         {
             std::chrono::seconds poll_interval{ 15 };          ///< Interval between polling cycles.
-            uint64_t             start_block         = 0;      ///< First block to scan on the initial poll (0 = genesis). Test-injected to the Anvil fork block (D-20).
-            uint64_t             max_blocks_per_query = 1000;  ///< Max block range per eth_getLogs call.
+            uint64_t             start_block          = 0;  ///< Earliest block to scan (0 = genesis). Test-injected (D-20).
+            uint64_t             max_blocks_per_query = 10000; ///< Max block range per eth_getLogs call (matches provider limit).
+            uint64_t             max_chunks           = 0;  ///< Max backward chunks per poll (0 = unlimited). Tests use 3.
 
             /// Optional factory for RPC transport.  When set, poll_once() calls this
             /// instead of constructing a default RpcHttpTransport.  Used by tests to

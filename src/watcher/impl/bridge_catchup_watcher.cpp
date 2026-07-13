@@ -21,6 +21,7 @@
 #include <boost/thread.hpp>
 
 #include <algorithm>
+#include <limits>
 #include <set>
 
 namespace sgns::evmwatcher
@@ -190,7 +191,7 @@ namespace sgns::evmwatcher
                 continue; // Nothing new to scan
             }
 
-            const uint64_t to_block = current_block;
+            uint64_t to_block = current_block;  // mutable — backward scan decrements the cursor
 
             // ── Build v1 EventFilter (reused across chunks) ──────────────
             eth::EventFilter filter_v1;
@@ -264,28 +265,37 @@ namespace sgns::evmwatcher
                 }
             };
 
-            // ── Chunked scan: query in windows ≤ max_blocks_per_query ────
-            // Always advance past each chunk regardless of RPC outcome.
-            // Pre-fork blocks that the upstream RPC rejects are skipped
-            // (they have no burns anyway); the scan converges forward.
+            // ── Chunked scan backward from current block ────────────────
+            // eth_getLogs with topic filter returns only matching events;
+            // block range determines scope, not cost.  Scanning backward
+            // discovers recent burns first; max_chunks caps the scan depth
+            // when a full genesis sweep is unnecessary.
+            const uint64_t saved_to_block          = to_block;
             constexpr uint64_t kChunkRequestIdBase = 1;
             uint64_t           chunk_request_id    = kChunkRequestIdBase;
-            while ( from_block <= to_block )
+            uint64_t           chunks_done         = 0;
+            const uint64_t     max_chunks          = ( config_.max_chunks > 0 )
+                                                      ? config_.max_chunks
+                                                      : std::numeric_limits<uint64_t>::max();
+
+            while ( from_block <= to_block && chunks_done < max_chunks )
             {
-                const uint64_t chunk_to = std::min( from_block + config_.max_blocks_per_query - 1, to_block );
+                const uint64_t chunk_from = ( to_block >= config_.max_blocks_per_query )
+                                            ? ( to_block - config_.max_blocks_per_query + 1 )
+                                            : from_block;
 
                 logger->info( "CatchUpScan: scanning chain {} chunk {}-{} (current={})",
                               chain_entry.chain_name,
-                              from_block,
-                              chunk_to,
+                              chunk_from,
+                              to_block,
                               current_block );
 
                 bool chunk_ok = false;
 
                 // ── v1 query per chunk ───────────────────────────────────
                 auto v1_request  = eth::rpc::make_get_logs_request( filter_v1,
-                                                                     from_block,
-                                                                     chunk_to,
+                                                                     chunk_from,
+                                                                     to_block,
                                                                      chunk_request_id++ );
                 auto v1_response = transport->call( v1_request );
 
@@ -315,8 +325,8 @@ namespace sgns::evmwatcher
                 if ( has_v2_topic0 )
                 {
                     auto v2_request  = eth::rpc::make_get_logs_request( filter_v2,
-                                                                         from_block,
-                                                                         chunk_to,
+                                                                         chunk_from,
+                                                                         to_block,
                                                                          chunk_request_id++ );
                     auto v2_response = transport->call( v2_request );
 
@@ -346,18 +356,19 @@ namespace sgns::evmwatcher
                 if ( !chunk_ok )
                 {
                     logger->debug( "CatchUpScan: chunk {}-{} for chain {} yielded no parseable logs",
-                                   from_block,
-                                   chunk_to,
+                                   chunk_from,
+                                   to_block,
                                    chain_entry.chain_name );
                 }
 
-                from_block = chunk_to + 1;
+                to_block = chunk_from - 1;
+                ++chunks_done;
             }
 
             // ── Update per-chain last block ──────────────────────────────
             {
                 std::lock_guard lock( mutex_ );
-                last_block_per_chain_[chain_entry.chain_id] = to_block + 1;
+                last_block_per_chain_[chain_entry.chain_id] = saved_to_block + 1;
             }
         }
 
