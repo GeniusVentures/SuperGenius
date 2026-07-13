@@ -13,7 +13,7 @@
 #include "account/GeniusAccount.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include <gsl/span>
 #include "outcome/outcome.hpp"
 
@@ -105,8 +105,7 @@ namespace sgns
             return outcome::failure( signing_bytes.error() );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 

@@ -109,14 +109,18 @@ namespace sgns
          *            raw validator pointers / notifies freed observers.
          * @return True when at least one chain entry was accepted (had chain_id + bridge_contract_address).
          */
-        using CancelChecker = std::function<bool()>;
+        using CancelChecker    = std::function<bool()>;
+        using ObserverCallback = std::function<void( std::vector<ChainContractPair> )>;
 
-        bool Initialize( const std::filesystem::path    &bridge_chains_config_path,
-                         PublicChainInputValidator       &validator,
-                         CancelChecker                   is_cancelled = {} );
+        bool Initialize( const std::filesystem::path &bridge_chains_config_path,
+                         PublicChainInputValidator   &validator,
+                         CancelChecker                is_cancelled = {} );
+
+        void AddObserverCallback( ObserverCallback observer );
 
     private:
         std::vector<IBridgeInitObserver *> observers_;
+        std::vector<ObserverCallback>      observer_callbacks_;
         ChainlistFetcher                   chainlist_fetcher_;
     };
 } // namespace sgns

@@ -27,7 +27,6 @@
 #include "account/PublicChainInputValidator.hpp"
 #include "base/logger.hpp"
 #include "base/buffer.hpp"
-#include "crypto/hasher.hpp"
 
 #include "blockchain/Blockchain.hpp"
 #include "processing/proto/SGProcessing.pb.h"
@@ -85,7 +84,6 @@ namespace sgns
          * @param[in] processing_db Database of the CRDT
          * @param[in] ctx The io context used to run its inner methods
          * @param[in] account Genius account to be used
-         * @param[in] hasher Hasher to be used
          * @param[in] full_node Parameter to indicate if the account is a full node
          * @param[in] timestamp_tolerance Time to analyze a transaction with the same nonce/key
          * @param[in] mutability_window Window of time where a transaction can be modified
@@ -98,7 +96,6 @@ namespace sgns
             std::shared_ptr<crdt::GlobalDB>          processing_db,
             std::shared_ptr<boost::asio::io_context> ctx,
             std::shared_ptr<GeniusAccount>           account,
-            std::shared_ptr<crypto::Hasher>          hasher,
             std::shared_ptr<Blockchain>              blockchain,
             bool                                     full_node           = false,
             uint16_t                                 subnet_id           = 0,
@@ -312,7 +309,6 @@ namespace sgns
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<crypto::Hasher>          hasher,
                             std::shared_ptr<Blockchain>              blockchain,
                             bool                                     full_node,
                             std::chrono::milliseconds                timestamp_tolerance,
@@ -321,7 +317,6 @@ namespace sgns
         TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                             std::shared_ptr<boost::asio::io_context> ctx,
                             std::shared_ptr<GeniusAccount>           account,
-                            std::shared_ptr<crypto::Hasher>          hasher,
                             std::shared_ptr<Blockchain>              blockchain,
                             bool                                     full_node,
                             uint16_t                                 subnet_id,
@@ -483,7 +478,6 @@ namespace sgns
 
         std::shared_ptr<boost::asio::io_context> ctx_m;
         std::shared_ptr<GeniusAccount>           account_m;
-        std::shared_ptr<crypto::Hasher>          hasher_m;
         std::shared_ptr<Blockchain>              blockchain_;
         bool                                     full_node_m;
         uint16_t                                 subnet_id_ = 0;    ///< Subnet ID from config (reserved).

@@ -540,11 +540,14 @@ namespace sgns::processing
         // Set timer to wait for other peers' responses
         m_nodeCreationTimer.expires_from_now( m_nodeCreationTimeout );
         m_nodeCreationTimer.async_wait(
-            [instance = shared_from_this()]( const boost::system::error_code &error )
+            [instance = weak_from_this()]( const boost::system::error_code &error )
             {
                 if ( !error )
                 { // Only proceed if not canceled
-                    instance->HandleNodeCreationTimeout();
+                    if ( auto self = instance.lock() )
+                    {
+                        self->HandleNodeCreationTimeout();
+                    }
                 }
             } );
     }

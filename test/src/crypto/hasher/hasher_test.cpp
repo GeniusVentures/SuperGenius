@@ -1,22 +1,16 @@
 #include <gtest/gtest.h>
 
 #include "base/blob.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "testutil/literals.hpp"
 
 using sgns::base::Buffer;
 
 /**
- * Hasher fixture
+ * Hash helper fixture
  */
 class HasherFixture : public testing::Test {
  public:
-  ~HasherFixture() override = default;
-
-  HasherFixture() {
-    hasher = std::make_shared<sgns::crypto::HasherImpl>();
-  }
-
   /**
    * useful function for convenience
    */
@@ -33,17 +27,15 @@ class HasherFixture : public testing::Test {
     return out;
   }
 
- protected:
-  std::shared_ptr<sgns::crypto::Hasher> hasher;
 };
 
 /**
  * @given pre-known source value
- * @when Hasher::twox_64 method is applied
+ * @when crypto::twox_64 is applied
  * @then expected result obtained
  */
 TEST_F(HasherFixture, twox_64) {
-  auto hash = hasher->twox_64(Buffer().put("foo"));
+  auto hash = sgns::crypto::twox_64(Buffer().put("foo"));
 
   // match is output obtained from substrate
   sgns::base::Blob<8> match;
@@ -61,11 +53,11 @@ TEST_F(HasherFixture, twox_64) {
 
 // /**
 //  * @given some common source value
-//  * @when Hasher::twox_128 method is applied
+//  * @when crypto::twox_128 is applied
 //  * @then expected result obtained
 //  */
 TEST_F(HasherFixture, twox_128) {
-  auto hash = hasher->twox_128(Buffer{"414243444546"_unhex});
+  auto hash = sgns::crypto::twox_128(Buffer{"414243444546"_unhex});
   std::vector<uint8_t> match = {
       184, 65, 176, 250, 243, 129, 181, 3, 77, 82, 63, 150, 129, 221, 191, 251};
   ASSERT_EQ(blob2buffer<16>(hash).toVector(), match);
@@ -73,13 +65,13 @@ TEST_F(HasherFixture, twox_128) {
 
 // /**
 //  * @given some common source value
-//  * @when Hasher::twox_256 method is applied
+//  * @when crypto::twox_256 is applied
 //  * @then expected result obtained
 //  */
 TEST_F(HasherFixture, twox_256) {
   // some value
   auto v = Buffer{0x41, 0x42, 0x43, 0x44, 0x45, 0x46};
-  auto hash = hasher->twox_256(v);
+  auto hash = sgns::crypto::twox_256(v);
   std::vector<uint8_t> match = {184, 65,  176, 250, 243, 129, 181, 3,
                                 77,  82,  63,  150, 129, 221, 191, 251,
                                 33,  226, 149, 136, 6,   232, 81,  118,
@@ -89,11 +81,11 @@ TEST_F(HasherFixture, twox_256) {
 
 /**
  * @given some common source value
- * @when Hasher::sha2_256 method is applied
+ * @when crypto::sha2_256 is applied
  * @then expected result obtained
  */
 TEST_F(HasherFixture, sha2_256) {
-  auto hash = hasher->sha2_256(string2buffer(
+  auto hash = sgns::crypto::sha2_256(string2buffer(
       "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"));
   std::string_view match =
       "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1";
@@ -102,7 +94,7 @@ TEST_F(HasherFixture, sha2_256) {
 
 /**
  * @given some common source value
- * @when Hasher::blake2_256 method is applied
+ * @when crypto::blake2b_256 is applied
  * @then expected result obtained
  */
 TEST_F(HasherFixture, blake2_256) {
@@ -110,19 +102,19 @@ TEST_F(HasherFixture, blake2_256) {
   std::vector<uint8_t> match =
       "ba67336efd6a3df3a70eeb757860763036785c182ff4cf587541a0068d09f5b2"_unhex;
 
-  auto hash = hasher->blake2b_256(buffer);
+  auto hash = sgns::crypto::blake2b_256(buffer);
   ASSERT_EQ(blob2buffer<32>(hash).toVector(), match);
 }
 
 /**
  * @given some common source value
- * @when Hasher::blake2_128 method is applied
+ * @when crypto::blake2b_128 is applied
  * @then expected result obtained
  */
 TEST_F(HasherFixture, blake2_128) {
   Buffer buffer{"6920616d2064617461"_unhex};
   std::vector<uint8_t> match = "de944c5c12e55ee9a07cf5bf4b674995"_unhex;
 
-  auto hash = hasher->blake2b_128(buffer);
+  auto hash = sgns::crypto::blake2b_128(buffer);
   ASSERT_EQ(blob2buffer<16>(hash).toVector(), match);
 }

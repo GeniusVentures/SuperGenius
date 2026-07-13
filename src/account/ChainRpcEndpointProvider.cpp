@@ -32,16 +32,21 @@ namespace sgns
         observers_.push_back( &observer );
     }
 
-    bool ChainRpcEndpointProvider::Initialize( const std::filesystem::path    &bridge_chains_config_path,
-                                               PublicChainInputValidator       &validator,
-                                               CancelChecker                   is_cancelled )
+    void ChainRpcEndpointProvider::AddObserverCallback( ObserverCallback observer )
+    {
+        observer_callbacks_.push_back( std::move( observer ) );
+    }
+
+    bool ChainRpcEndpointProvider::Initialize( const std::filesystem::path &bridge_chains_config_path,
+                                               PublicChainInputValidator   &validator,
+                                               CancelChecker                is_cancelled )
     {
         auto logger = base::createLogger( "ChainRpcEndpointProvider" );
 
         static constexpr uint8_t kPublicEndpointWeight = 25;
 
-        std::vector<ChainContractPair>             discovered_chains;
-        std::vector<uint64_t>                      configured_chain_ids;
+        std::vector<ChainContractPair> discovered_chains;
+        std::vector<uint64_t>          configured_chain_ids;
 
         // ── Compute accepted topic0 hashes: BOTH v1 (BridgeSourceBurned) and
         //    v2 (BridgeOutInitiated). The relayer and catch-up scan mint from
@@ -59,13 +64,11 @@ namespace sgns
             std::ifstream file( bridge_chains_config_path, std::ios::binary );
             if ( !file.is_open() )
             {
-                logger->warn( "ChainRpcEndpointProvider: cannot open {}",
-                              bridge_chains_config_path.string() );
+                logger->warn( "ChainRpcEndpointProvider: cannot open {}", bridge_chains_config_path.string() );
                 return false;
             }
 
-            std::string json_text( ( std::istreambuf_iterator<char>( file ) ),
-                                   std::istreambuf_iterator<char>() );
+            std::string json_text{ std::istreambuf_iterator<char>( file ), std::istreambuf_iterator<char>() };
             file.close();
 
             if ( json_text.empty() )
@@ -116,18 +119,26 @@ namespace sgns
 
                 configured_chain_ids.push_back( chain_id );
 
-                discovered_chains.push_back(
-                    { std::string( key ), std::move( contract_addr ), chain_id } );
+                discovered_chains.push_back( { std::string( key ), std::move( contract_addr ), chain_id } );
 
                 logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} topic0_v1={} topic0_v2={}",
-                              std::string( key ), chain_id, contract_addr, topic0_hex_v1, topic0_hex_v2 );
+                              std::string( key ),
+                              chain_id,
+                              contract_addr,
+                              topic0_hex_v1,
+                              topic0_hex_v2 );
             }
         }
         catch ( const std::exception &e )
         {
             // T-05.1-01: malformed JSON — graceful degradation
-            logger->warn( "ChainRpcEndpointProvider: failed to parse bridge_chains_config.json: {}",
-                          e.what() );
+            logger->warn( "ChainRpcEndpointProvider: failed to parse bridge_chains_config.json: {}", e.what() );
+            return false;
+        }
+
+        if ( discovered_chains.empty() )
+        {
+            logger->warn( "ChainRpcEndpointProvider: no bridge-configured chains found" );
             return false;
         }
 
@@ -138,12 +149,14 @@ namespace sgns
         // dependency on the startup path — on failure no endpoints are wired
         // (validation/backfill fail closed; relayer watch still registers).
         auto fetcher = chainlist_fetcher_ ? chainlist_fetcher_
-                                          : ChainlistFetcher{ []( ) -> std::optional<std::string> {
-                                                eth::rpc::RpcHttpTransportOptions opts;
-                                                opts.timeout = std::chrono::seconds( 15 );
-                                                return eth::rpc::RpcHttpTransport::HttpsGet(
-                                                    "https://chainid.network/chains.json", opts );
-                                            } };
+                                          : ChainlistFetcher{ []() -> std::optional<std::string>
+                                                              {
+                                                                  eth::rpc::RpcHttpTransportOptions opts;
+                                                                  opts.timeout = std::chrono::seconds( 15 );
+                                                                  return eth::rpc::RpcHttpTransport::HttpsGet(
+                                                                      "https://chainid.network/chains.json",
+                                                                      opts );
+                                                              } };
 
         std::unordered_map<uint64_t, std::vector<std::string>> rpc_urls_by_chain;
         if ( auto chainlist_text = fetcher() )
@@ -151,15 +164,16 @@ namespace sgns
             auto parsed_endpoints = eth::rpc::load_chainlist_from_json_text( *chainlist_text );
             if ( parsed_endpoints.has_value() )
             {
-                auto filtered = eth::rpc::filter_to_configured_chains(
-                    std::move( parsed_endpoints.value() ), configured_chain_ids );
+                auto filtered = eth::rpc::filter_to_configured_chains( std::move( parsed_endpoints.value() ),
+                                                                       configured_chain_ids );
                 for ( auto &ep : filtered )
                 {
                     rpc_urls_by_chain[ep.chain_id].push_back( std::move( ep.url_template ) );
                 }
                 logger->info( "ChainRpcEndpointProvider: chainlist fetch yielded {} endpoint(s) "
                               "across {} configured chain(s)",
-                              filtered.size(), configured_chain_ids.size() );
+                              filtered.size(),
+                              configured_chain_ids.size() );
             }
             else
             {
@@ -225,7 +239,8 @@ namespace sgns
             const auto fetched = endpoints.size();
             validator.AddRpcEndpoints( std::to_string( chain_id ), std::move( endpoints ) );
             logger->info( "ChainRpcEndpointProvider: merged {} fetched endpoint(s) for chain_id={}",
-                          fetched, chain_id );
+                          fetched,
+                          chain_id );
         }
 
         // ── Return value pinned to accepted chains ───────────────────────
@@ -242,8 +257,12 @@ namespace sgns
             {
                 observer->OnRpcEndpointsReady( discovered_chains );
             }
+            for ( const auto &observer : observer_callbacks_ )
+            {
+                observer( discovered_chains );
+            }
         }
 
         return any_wired;
     }
-} // namespace sgns
+}

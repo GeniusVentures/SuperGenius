@@ -1,7 +1,5 @@
 #include "Linux.hpp"
 
-#include "crypto/hasher/hasher_impl.hpp"
-
 #include <iostream>
 
 #include <glib.h>
