@@ -156,10 +156,10 @@ Plans:
 
 **Depends on:** Phase 04.1, Phase 5
 **Status:** Planned
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 04.2-01-PLAN.md — Live-Sepolia RLPx E2E: 3 nodes each run EthWatchService in production RLPx mode (kDiscoverFirst), BridgeRelayer auto-mints streamed burns (10 burns at 1-2s cadence), all-3-nodes mint verification
+- [x] 04.2-01-PLAN.md — Live-Sepolia RLPx E2E: 3 nodes each run EthWatchService in production RLPx mode (kDiscoverFirst), BridgeRelayer auto-mints streamed burns (10 burns at 1-2s cadence), all-3-nodes mint verification
 
 ---
 

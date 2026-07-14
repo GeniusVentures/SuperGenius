@@ -2,37 +2,23 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: GeniusNode Construction Refactor
-status: "Phase 04.1 shipped — PR #335 (targeting develop)"
-last_updated: "2026-07-14T04:19:14.208Z"
-last_activity: 2026-07-13
+current_phase: 04.2
+status: verifying
+last_updated: "2026-07-14T13:45:45.647Z"
+last_activity: 2026-07-14
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
-milestone_name: Bridge Integration
-current_phase: 04.1
-status: ready_to_plan
-last_updated: "2026-07-03T18:46:22.644Z"
-progress:
-  total_phases: 13
-  completed_phases: 11
-  total_plans: 31
-  completed_plans: 33
-  percent: 85
-  total_phases: 19
-  completed_phases: 15
-  total_plans: 40
-  completed_plans: 41
-  percent: 79
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 12
+  completed_plans: 13
+  percent: 89
 ---
 
 # State: SuperGenius — GeniusNode Construction Refactor
 
 **Last updated:** 2026-07-02
 **Milestone:** v1.0 — GeniusNode Construction Refactor
-**Current Phase:** 6
+**Current Phase:** 04.2
 **Current Phase:** 04.1
 
 ## Project Reference
@@ -40,14 +26,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Constructing a `GeniusNode` must be a single, self-documenting call driven by config files.
-**Current focus:** Phase 04.1 — anvil-local-bridge-e2e-test-use-tokencontracts-gnus-ai-env-t
+**Current focus:** Phase 04.2 — p2p-rlpx-burn-event-gossip
 
 ## Current Position
 
-Phase: 04.1 (anvil-local-bridge-e2e-test-use-tokencontracts-gnus-ai-env-t) — EXECUTING
-Plan: 2 of 3
-Status: Phase 04.1 shipped — PR #335 (targeting develop)
-Last activity: 2026-07-13
+Phase: 04.2 (p2p-rlpx-burn-event-gossip) — EXECUTING
+Plan: 1 of 1
+Status: Phase complete — ready for verification
+Last activity: 2026-07-14
 
 ## Roadmap Snapshot
 
@@ -74,6 +60,7 @@ Last activity: 2026-07-13
 ## Operator Next Steps
 
 - Start the next milestone with /gsd-new-milestone
+
 ### Architecture
 
 - `BridgeConsensusAdapter` deleted — bridge flow now operates on mint nonce subjects directly
