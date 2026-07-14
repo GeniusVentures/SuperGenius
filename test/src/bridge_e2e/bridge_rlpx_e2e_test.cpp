@@ -324,7 +324,7 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     GeniusNode::WriteSgnsConfig( gGeniusNodeConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
     node_main = GeniusNode::New( gGeniusNodeConfig, sgns::FromPrivateKey{ s_eth_private_key } );
 
-    // Replace sleep_for(1000ms) with polling: wait for node to leave CREATING state.
+    // Wait for node to leave CREATING state (polling, no thread sleep).
     {
         constexpr std::chrono::milliseconds kPostCreateTimeout{ 3000 };
         sgns::test::assertWaitForCondition(
@@ -360,7 +360,7 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
     node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
-    // Wait for processor nodes to sync and reach READY (no sleep_for)
+    // Wait for processor nodes to sync and reach READY (polling only, no thread sleep)
     {
         auto sync_deadline = std::chrono::steady_clock::now() + kBlockchainInitTimeout;
         bool synced         = false;
@@ -616,7 +616,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
 
     for ( uint64_t i = 0; i < burn_count; ++i )
     {
-        // Cadence delay: enforce 1-2s floor without sleep_for.
+        // Cadence delay: enforce 1-2s floor via deadline polling (no thread sleep).
         // Use a deadline-based lambda polled by assertWaitForCondition.
         {
             const auto delay = std::chrono::milliseconds( 1000 + static_cast<int>( ( i * 137 ) % 1000 ) );
