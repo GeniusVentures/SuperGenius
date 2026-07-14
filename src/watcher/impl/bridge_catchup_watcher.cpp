@@ -68,6 +68,10 @@ namespace sgns::evmwatcher
         while ( running.load() )
         {
             poll_once();
+            if ( !running.load() )
+            {
+                break;
+            }
             boost::this_thread::sleep_for( boost::chrono::seconds( config_.poll_interval.count() ) );
         }
     }
@@ -75,6 +79,12 @@ namespace sgns::evmwatcher
     void BridgeCatchupWatcher::poll_once()
     {
         auto logger = rlp::base::createLogger( "bridge_catchup_watcher" );
+        auto stop_requested = [this]() { return !running.load(); };
+
+        if ( stop_requested() )
+        {
+            return;
+        }
 
         // ── Compute topic0 hashes (v1 + v2) ──────────────────────────────
         static const std::string kEventSigV1( kBridgeSourceBurnedSig );
@@ -88,7 +98,7 @@ namespace sgns::evmwatcher
 
         // ── Snapshot current chains ──────────────────────────────────────
         const std::vector<ChainContractPair> chains = chains_provider_();
-        if ( chains.empty() )
+        if ( stop_requested() || chains.empty() )
         {
             return;
         }
@@ -99,9 +109,18 @@ namespace sgns::evmwatcher
 
         for ( const auto &chain_entry : chains )
         {
+            if ( stop_requested() )
+            {
+                break;
+            }
+
             const std::string chain_id_str = std::to_string( chain_entry.chain_id );
 
             auto rpc_url = rpc_resolver_( chain_id_str );
+            if ( stop_requested() )
+            {
+                break;
+            }
             if ( !rpc_url.has_value() )
             {
                 logger->debug( "CatchUpScan: no RPC endpoint for chain {} (id={}) — skipping",
@@ -121,6 +140,11 @@ namespace sgns::evmwatcher
                 eth::rpc::RpcHttpTransportOptions opts;
                 opts.timeout = std::chrono::seconds( 10 );
                 transport = std::make_unique<eth::rpc::RpcHttpTransport>( *rpc_url, opts );
+            }
+
+            if ( stop_requested() )
+            {
+                break;
             }
 
             ++chains_scanned;
@@ -152,6 +176,11 @@ namespace sgns::evmwatcher
                 eth::rpc::RpcBlockTag::kLatest, kBlockNumberRequestId );
             auto               block_number_resp     = transport->call( block_number_req );
             uint64_t           current_block         = 0;
+
+            if ( stop_requested() )
+            {
+                break;
+            }
 
             if ( block_number_resp.has_value() )
             {
@@ -213,10 +242,15 @@ namespace sgns::evmwatcher
             std::set<std::string> seen_tx_hashes;
 
             // ── Helper: process one batch of logs ─────────────────────────
-            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 )
+            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) -> bool
             {
                 for ( const auto &rpc_log : rpc_logs )
                 {
+                    if ( stop_requested() )
+                    {
+                        return false;
+                    }
+
                     std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
                                                                            rpc_log.tx_hash.size() );
 
@@ -266,6 +300,7 @@ namespace sgns::evmwatcher
                         ++total_skipped;
                     }
                 }
+                return true;
             };
 
             // ── Forward chunked scan from from_block → current_block ──────
@@ -282,6 +317,11 @@ namespace sgns::evmwatcher
 
             while ( from_block <= to_block && chunks_done < max_chunks )
             {
+                if ( stop_requested() )
+                {
+                    break;
+                }
+
                 const uint64_t chunk_to = std::min( from_block + config_.max_blocks_per_query - 1, to_block );
 
                 logger->info( "CatchUpScan: scanning chain {} chunk {}-{} (current={})",
@@ -291,6 +331,7 @@ namespace sgns::evmwatcher
                               current_block );
 
                 bool chunk_ok = false;
+                bool chunk_cancelled = false;
 
                 // ── v1 query per chunk ───────────────────────────────────
                 auto v1_request  = eth::rpc::make_get_logs_request( filter_v1,
@@ -298,6 +339,12 @@ namespace sgns::evmwatcher
                                                                      chunk_to,
                                                                      chunk_request_id++ );
                 auto v1_response = transport->call( v1_request );
+
+                if ( stop_requested() )
+                {
+                    chunk_cancelled = true;
+                    break;
+                }
 
                 if ( !v1_response.has_value() )
                 {
@@ -316,19 +363,42 @@ namespace sgns::evmwatcher
                     }
                     else
                     {
-                        chunk_ok = true;
-                        process_logs( v1_logs.value(), /*is_v2=*/false );
+                        if ( process_logs( v1_logs.value(), /*is_v2=*/false ) )
+                        {
+                            chunk_ok = true;
+                        }
+                        else
+                        {
+                            chunk_cancelled = true;
+                        }
                     }
+                }
+
+                if ( chunk_cancelled )
+                {
+                    break;
                 }
 
                 // ── v2 query per chunk ───────────────────────────────────
                 if ( has_v2_topic0 )
                 {
+                    if ( stop_requested() )
+                    {
+                        chunk_cancelled = true;
+                        break;
+                    }
+
                     auto v2_request  = eth::rpc::make_get_logs_request( filter_v2,
                                                                          from_block,
                                                                          chunk_to,
                                                                          chunk_request_id++ );
                     auto v2_response = transport->call( v2_request );
+
+                    if ( stop_requested() )
+                    {
+                        chunk_cancelled = true;
+                        break;
+                    }
 
                     if ( !v2_response.has_value() )
                     {
@@ -347,10 +417,21 @@ namespace sgns::evmwatcher
                         }
                         else
                         {
-                            chunk_ok = true;
-                            process_logs( v2_logs.value(), /*is_v2=*/true );
+                            if ( process_logs( v2_logs.value(), /*is_v2=*/true ) )
+                            {
+                                chunk_ok = true;
+                            }
+                            else
+                            {
+                                chunk_cancelled = true;
+                            }
                         }
                     }
+                }
+
+                if ( chunk_cancelled )
+                {
+                    break;
                 }
 
                 if ( !chunk_ok )
@@ -369,6 +450,11 @@ namespace sgns::evmwatcher
 
                 from_block = chunk_to + 1;
                 ++chunks_done;
+
+                if ( stop_requested() )
+                {
+                    break;
+                }
             }
 
             // ── Update per-chain last block ──────────────────────────────

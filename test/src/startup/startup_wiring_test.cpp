@@ -9,12 +9,15 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -27,6 +30,8 @@
 #include "account/TokenID.hpp"
 #include "base/parse_utility.hpp"
 #include "eth/abi_decoder.hpp"
+#include "eth/rpc_receipt_source.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
 
 namespace fs = std::filesystem;
 
@@ -63,6 +68,50 @@ void RemoveTempFile( const fs::path &path )
 {
     std::error_code ec;
     fs::remove( path, ec );
+}
+
+struct CatchupStopProbe
+{
+    std::atomic<size_t> block_number_calls{ 0 };
+    std::atomic<size_t> get_logs_calls{ 0 };
+};
+
+class SlowEmptyLogsTransport final : public eth::rpc::JsonRpcTransport
+{
+public:
+    explicit SlowEmptyLogsTransport( std::shared_ptr<CatchupStopProbe> probe ) : probe_( std::move( probe ) ) {}
+
+    std::optional<std::string> call( const boost::json::object &request ) override
+    {
+        const auto method = boost::json::value_to<std::string>( request.at( "method" ) );
+
+        if ( method == "eth_getBlockByNumber" )
+        {
+            probe_->block_number_calls.fetch_add( 1 );
+            return R"({"result":{"number":"0x100"}})";
+        }
+
+        if ( method == "eth_getLogs" )
+        {
+            probe_->get_logs_calls.fetch_add( 1 );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            return R"({"result":[]})";
+        }
+
+        return std::nullopt;
+    }
+
+private:
+    std::shared_ptr<CatchupStopProbe> probe_;
+};
+
+void WaitForGetLogsCall( const std::shared_ptr<CatchupStopProbe> &probe )
+{
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+    while ( probe->get_logs_calls.load() == 0 && std::chrono::steady_clock::now() < deadline )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
 }
 
 // ─── Tests: Event Signature Hash ────────────────────────────────────────────
@@ -659,6 +708,61 @@ TEST( StartupWiringTest, CatchupWatcherPollsWhenChainsAvailable )
         EXPECT_TRUE( model.PollWouldScan() )
             << "Watcher must continue polling after first scan";
     }
+}
+
+TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
+{
+    auto probe = std::make_shared<CatchupStopProbe>();
+
+    sgns::evmwatcher::BridgeCatchupWatcher::Config cfg;
+    cfg.poll_interval        = std::chrono::seconds( 1 );
+    cfg.start_block          = 10;
+    cfg.max_blocks_per_query = 1;
+    cfg.transport_factory    = [probe]( const std::string & )
+    {
+        return std::make_unique<SlowEmptyLogsTransport>( probe );
+    };
+
+    constexpr uint64_t kChainId = 12345;
+    auto chains_provider = [kChainId]()
+    {
+        return std::vector<ChainContractPair>{
+            { "test-chain", "0x0000000000000000000000000000000000000001", kChainId, 0 }
+        };
+    };
+    auto rpc_resolver = []( const std::string & ) -> std::optional<std::string>
+    {
+        return "test://rpc";
+    };
+    auto burn_processor = []( const std::vector<eth::abi::AbiValue> &,
+                              const std::string &,
+                              const std::string & )
+    {
+        return true;
+    };
+
+    sgns::evmwatcher::BridgeCatchupWatcher watcher(
+        cfg,
+        []( const std::string & ) {},
+        chains_provider,
+        rpc_resolver,
+        burn_processor );
+
+    watcher.startWatching();
+    WaitForGetLogsCall( probe );
+    const bool entered_get_logs = probe->get_logs_calls.load() > 0;
+
+    const auto stop_start = std::chrono::steady_clock::now();
+    watcher.stopWatching();
+    const auto stop_elapsed = std::chrono::steady_clock::now() - stop_start;
+
+    ASSERT_TRUE( entered_get_logs ) << "watcher did not enter eth_getLogs";
+
+    EXPECT_LT( std::chrono::duration_cast<std::chrono::milliseconds>( stop_elapsed ).count(), 500 )
+        << "stopWatching should not wait for the unbounded catchup chunk loop or the next poll sleep";
+
+    EXPECT_EQ( watcher.GetLastProcessedBlock( kChainId ), cfg.start_block )
+        << "A chunk cancelled after only part of its RPC work must be retried later";
 }
 
 // ─── Tests: Catchup Watcher chains snapshot thread safety ──
