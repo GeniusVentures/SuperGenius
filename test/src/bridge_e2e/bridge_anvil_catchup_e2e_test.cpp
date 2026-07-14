@@ -505,15 +505,18 @@ TEST_F( BridgeAnvilCatchupE2ETest, FullScanFromGenesisNoErrors )
                   s_fork_block );
 
     // The auto-mint path is the ONLY way the balance can increase in this test.
-    // Wait for the production watcher's scan to reflect any discovered burns.
+    // Assert the scan actually discovered and minted the pre-node burns: the
+    // balance must increase by at least kNumCatchupBurns * kMintAmount. A bare
+    // >= initial_balance check is trivially true (balance never decreases from
+    // a scan) and provides zero coverage (WR-01).
     EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance; },
+        [&]() { return node_main->GetBalance( dest_addr ) >= initial_balance + kNumCatchupBurns * kMintAmount; },
         kCatchupMintTimeout,
-        "Catch-up scan completed without reducing recipient balance",
+        "Catch-up scan must mint all pre-node burns",
         nullptr );
 
-    EXPECT_GE( node_main->GetBalance( dest_addr ), initial_balance )
-        << "Full-genesis scan must not reduce the recipient balance";
+    EXPECT_GE( node_main->GetBalance( dest_addr ), initial_balance + kNumCatchupBurns * kMintAmount )
+        << "Full-genesis scan must mint all pre-node burns without reducing the recipient balance";
 
     spdlog::info( "catchup_e2e Test A: full-genesis scan completed; fork_block={}, balance={} "
                   "(delta may be >= 0; Sepolia-origin burns are bonus)",
