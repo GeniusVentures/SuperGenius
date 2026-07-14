@@ -434,11 +434,11 @@ namespace sgns
         [[nodiscard]] std::vector<std::vector<uint8_t>> GetOutTransactions() const;
 
         /**
-         * @brief Returns serialized transactions filtered by optional status.
+         * @brief Counts known transactions filtered by optional status.
          * @param[in] tx_status Optional transaction status filter.
-         * @return Transaction byte vectors, or an empty vector when transactions are not ready.
+         * @return Number of matching transactions, or zero when transactions are not ready.
          */
-        [[nodiscard]] const std::vector<std::vector<uint8_t>> GetTransactions(
+        [[nodiscard]] size_t CountTransactions(
             std::optional<TransactionManager::TransactionStatus> tx_status = std::nullopt ) const;
 
         /**
@@ -639,10 +639,10 @@ namespace sgns
                                                                           std::chrono::milliseconds timeout );
 
         /**
-         * @brief Waits for an escrow release transaction tied to an escrow hold.
+         * @brief Waits until an escrow hold output is consumed.
          * @param[in] originalEscrowId Hash of the original escrow hold transaction.
          * @param[in] timeout Maximum time to wait.
-         * @return Escrow release transaction status, or INVALID when transactions are not ready.
+         * @return CONFIRMED when consumed, or INVALID when transactions are not ready or the wait times out.
          */
         TransactionManager::TransactionStatus WaitForEscrowRelease( const std::string        &originalEscrowId,
                                                                     std::chrono::milliseconds timeout );
@@ -703,13 +703,6 @@ namespace sgns
          * @param[in] proof Serialized proof bytes associated with @p tx.
          */
         void SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof );
-
-        /**
-         * @brief Configures transaction filtering time windows for tests.
-         * @param[in] timeframe_limit_ms Timestamp tolerance in milliseconds.
-         * @param[in] mutability_window_ms Mutability window in milliseconds.
-         */
-        void ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms );
 
         std::string                    write_base_path_; ///< Base path for node databases, logs, and account storage.
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.

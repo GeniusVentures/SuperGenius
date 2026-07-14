@@ -184,9 +184,9 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                            "",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     std::this_thread::sleep_for( std::chrono::milliseconds( 10000 ) );
-    int transcount_main  = node_main->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
-    int transcount_node1 = node_proc1->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
-    int transcount_node2 = node_proc2->GetTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED ).size();
+    int transcount_main  = node_main->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    int transcount_node1 = node_proc1->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
+    int transcount_node2 = node_proc2->CountTransactions( sgns::TransactionManager::TransactionStatus::CONFIRMED );
     std::cout << "Count 1" << transcount_main << std::endl;
     //std::cout << "Count 2" << transcount_node1 << std::endl;
     std::cout << "Count 3" << transcount_node2 << std::endl;

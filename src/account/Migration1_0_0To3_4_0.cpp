@@ -127,7 +127,7 @@ namespace sgns
                 continue;
             }
             std::string transaction_key   = keyOpt.value();
-            auto        maybe_transaction = TransactionManager::FetchTransaction( db_1_0_0_, transaction_key );
+            auto        maybe_transaction = TransactionManager::FetchTransaction( *db_1_0_0_, transaction_key );
             if ( !maybe_transaction.has_value() )
             {
                 logger_->error( "Can't fetch transaction for key {}", transaction_key );

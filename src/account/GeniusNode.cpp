@@ -2527,15 +2527,15 @@ namespace sgns
         return manager_result.value()->GetOutTransactions();
     }
 
-    const std::vector<std::vector<uint8_t>> GeniusNode::GetTransactions(
+    size_t GeniusNode::CountTransactions(
         std::optional<TransactionManager::TransactionStatus> tx_status ) const
     {
         auto manager_result = GetTransactionManager();
         if ( !manager_result.has_value() )
         {
-            return {};
+            return 0;
         }
-        return manager_result.value()->GetTransactions( tx_status );
+        return manager_result.value()->CountTransactions( tx_status );
     }
 
     std::string GeniusNode::GetAddress() const
@@ -2626,19 +2626,6 @@ namespace sgns
         {
             node_logger_->error( "{}: Transactions not ready", __func__ );
         }
-    }
-
-    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms )
-    {
-        auto manager_result = GetTransactionManager();
-        if ( !manager_result.has_value() )
-        {
-            node_logger_->error( "{}: Transactions not ready", __func__ );
-            return;
-        }
-        auto manager = manager_result.value();
-        manager->SetTimeFrameToleranceMs( timeframe_limit_ms );
-        manager->SetMutabilityWindowMs( mutability_window_ms );
     }
 
     void GeniusNode::RotateLogFiles( const std::string &base_path )
@@ -3153,13 +3140,7 @@ namespace sgns
             node_logger_->error( "{}: Transactions not ready", __func__ );
             return TransactionManager::TransactionStatus::INVALID;
         }
-        auto manager = manager_result.value();
-        auto retval  = manager->GetOutgoingStatusByTxId( txId );
-        if ( retval == TransactionManager::TransactionStatus::INVALID )
-        {
-            retval = manager->GetIncomingStatusByTxId( txId );
-        }
-        return retval;
+        return manager_result.value()->GetTransactionStatusByTxId( txId );
     }
 
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )

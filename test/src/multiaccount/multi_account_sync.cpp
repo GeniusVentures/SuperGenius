@@ -74,7 +74,6 @@ protected:
         int                     id = nodeCounter.fetch_add( 1 );
 
         // is_processor is now read from sgns_config.json, written below.
-
         auto binaryPath = boost::dll::program_location().parent_path();
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
@@ -109,8 +108,10 @@ protected:
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor );
-        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                           isFullNode ? "Full" : "Light",
+                                           /*is_processor=*/isProcessor );
+        auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
@@ -314,11 +315,9 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_start );
 
     // Get initial transaction counts
-    auto tx_count_node1_start = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_start = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_full_start  = node_full->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    auto tx_count_node1_start = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_start = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_full_start  = node_full->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
                   tx_count_node1_start,
@@ -432,10 +431,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_final );
 
     // Get final transaction counts
-    auto tx_count_node1_final = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_final = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
+    auto tx_count_node1_final = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_final = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Final tx counts - Node1: {}, Node2: {}", tx_count_node1_final, tx_count_node2_final );
 

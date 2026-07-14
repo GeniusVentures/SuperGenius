@@ -30,7 +30,7 @@ namespace sgns
         std::shared_ptr<boost::asio::io_context>                        ioContext,
         std::shared_ptr<ipfs_pubsub::GossipPubSub>                      pubSub,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::Network>            graphsync,
-        std::shared_ptr<libp2p::basic::Scheduler>                    scheduler,
+        std::shared_ptr<libp2p::basic::Scheduler>                       scheduler,
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator,
         std::string                                                     writeBasePath,
         std::string                                                     base58key,
@@ -297,7 +297,7 @@ namespace sgns
                     continue;
                 }
                 std::string transaction_key   = keyOpt.value();
-                auto        maybe_transaction = TransactionManager::FetchTransaction( db_3_4_0_, transaction_key );
+                auto        maybe_transaction = TransactionManager::FetchTransaction( *db_3_4_0_, transaction_key );
                 if ( !maybe_transaction.has_value() )
                 {
                     logger_->error( "Can't fetch transaction for key {}", transaction_key );
