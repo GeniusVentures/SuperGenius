@@ -159,13 +159,6 @@ protected:
             }
         }
     }
-
-    void TearDown() override
-    {
-        // Cleanup is automatic when shared_ptrs go out of scope
-        // On Windows, give time for file handles to be released before next test
-        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    }
 };
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )

@@ -65,11 +65,8 @@ protected:
 
     void SetUp() override
     {
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            {
-                return std::make_shared<MemorySecureStorage>( identifier );
-            } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
         SetEligibilityCheckEnabled( true );
     }
 
@@ -126,10 +123,11 @@ protected:
         // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, base_port, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, is_full_node ? "Full" : "Light", /*is_processor=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                           is_full_node ? "Full" : "Light",
+                                           /*is_processor=*/false );
 
         auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
-        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
         return instance;
     }
 
@@ -155,11 +153,9 @@ protected:
         uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, unique_port, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false );
-        auto     instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
+        auto instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
-        std::cout << "Full node created" << std::endl;
         return instance;
     }
 };

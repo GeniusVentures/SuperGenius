@@ -89,10 +89,11 @@ protected:
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
-        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                           isFullNode ? "Full" : "Light",
+                                           /*is_processor=*/false );
+        auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         return node;
     }
 
@@ -155,7 +156,6 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
 
     // Allow time for attempted connections
     std::cout << "Waiting to verify nodes cannot sync without authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
 
     // Verify that nodes are NOT in READY state due to missing authorization
     std::cout << "Verifying nodes cannot reach READY state without authorization..." << std::endl;
@@ -215,10 +215,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Connecting nodes..." << std::endl;
 
     //node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-
-    // Allow time for connections to establish and genesis block to be created/propagated
-    std::cout << "Waiting for genesis block creation and propagation..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
 
     // Wait for all nodes to reach READY state
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
@@ -370,10 +366,6 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     node_regular_1->GetPubSub()->AddPeers(
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-
-    // Allow time for attempted connections and genesis block operations
-    std::cout << "Waiting to verify nodes cannot sync with wrong authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
 
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;

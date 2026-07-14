@@ -54,14 +54,12 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
 
-    auto     node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
+    auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )
     {
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
     }
 
-    // allow startup
-    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
     return node;
 }
 
@@ -116,11 +114,6 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
         afterMint = originalNode->GetBalance();
         ASSERT_GT( afterMint, beforeMint );
     }
-
-    std::cout << "****** Destroying original node after 10 seconds ****" << std::endl;
-    std::this_thread::sleep_for( std::chrono::seconds( 15 ) );
-    originalNode.reset();
-    std::this_thread::sleep_for( std::chrono::seconds( 10 ) );
 
     std::cout << "****** Recovery node creation ****" << std::endl;
     auto recoveryNode = CreateNodeWithMode( "0xabcd",

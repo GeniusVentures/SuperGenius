@@ -37,12 +37,13 @@ TEST( GeniusNode, InitializationProgress )
 
     auto last_percentage = 0.0F;
 
-    std::chrono::milliseconds elapsed;
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 60000 ),
-        "Node did not reach READY state within timeout",
-        &elapsed );
+    while ( std::chrono::steady_clock::now() < end && node->GetState() != GeniusNode::NodeState::READY )
+    {
+        auto percentage = node->GetInitializationStatus().first;
+        ASSERT_GE( percentage, last_percentage );
+        last_percentage = percentage;
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    }
 
     ASSERT_EQ( node->GetInitializationStatus().first, 1.0 );
 }
