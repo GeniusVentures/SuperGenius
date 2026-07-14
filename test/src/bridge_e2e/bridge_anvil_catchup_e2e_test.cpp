@@ -673,9 +673,15 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
     EXPECT_GE( phase2_last_block, phase2_start )
         << "Test C Phase 2: must advance last_block_per_chain_ past its own start_block";
 
-    // LIVENESS GATE (WARNING #4 fix): gate on node READY liveness for the production
-    // watcher's second-poll window to prove no double-mint occurred at the node level.
-    // PRIMARY assertion is node liveness — NOT a trivially-true timer.
+    // Capture the balance BEFORE the production watcher's second-poll window so
+    // the stability assertion is meaningful — a double-mint would occur DURING
+    // the poll window, not between two back-to-back reads (WR-02).
+    const std::string dest_addr      = node_main->GetAddress();
+    const uint64_t    balance_before = node_main->GetBalance( dest_addr );
+
+    // LIVENESS GATE: gate on node READY liveness for the production watcher's
+    // second-poll window to prove no double-mint occurred at the node level.
+    // The poll window elapses BETWEEN balance_before and balance_after reads.
     EXPECT_WAIT_FOR_CONDITION(
         [&] { return node_main->GetState() == GeniusNode::NodeState::READY; },
         kCatchupPollIntervalGate,
@@ -684,9 +690,7 @@ TEST_F( BridgeAnvilCatchupE2ETest, TwoPhaseScanBridgesGap )
 
     // Balance stability: production watcher must not double-mint on its second poll
     // because last_block_per_chain_ bridged the gap.
-    const std::string dest_addr     = node_main->GetAddress();
-    const uint64_t    balance_before = node_main->GetBalance( dest_addr );
-    const uint64_t    balance_after  = node_main->GetBalance( dest_addr );
+    const uint64_t balance_after = node_main->GetBalance( dest_addr );
     EXPECT_EQ( balance_after, balance_before )
         << "Test C: production watcher must not double-mint on its second poll — last_block_per_chain_ bridged the gap";
 
