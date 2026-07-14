@@ -665,6 +665,12 @@ namespace evmwatcher
         TransactionManager::State GetTransactionManagerState() const;
 
         /**
+         * @brief Returns the transaction manager when initialized.
+         * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
+         */
+        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+
+        /**
          * @brief Configures RPC endpoints for a specific EVM chain on the public-chain input validator.
          *
          * Allows callers (including E2E tests) to register RPC endpoints for chains
@@ -941,11 +947,6 @@ namespace evmwatcher
          */
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account );
 
-        /**
-         * @brief Returns the transaction manager when initialized.
-         * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
-         */
-        outcome::result<std::shared_ptr<TransactionManager>>      GetTransactionManager() const;
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
             sgns::base::Buffer value );
