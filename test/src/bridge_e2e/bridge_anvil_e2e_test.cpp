@@ -556,16 +556,17 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     bool replay_rejected = second_result.has_error();
     if ( !replay_rejected )
     {
-        // The dedup cache failed to reject the replay synchronously. Give any
-        // erroneously-accepted duplicate time to settle, then assert the balance
-        // did not increase above the pre-replay baseline — this is the actual
-        // dedup guarantee under test.
-        EXPECT_WAIT_FOR_CONDITION(
-            [&]() { return s_nodes[0]->GetBalance( dest_addr ) == balance_before_replay; },
-            kReplayTimeout,
-            "Balance must not increase from a replayed Anvil burn tx hash",
-            nullptr );
-        spdlog::info( "bridge_anvil: second mint returned OK but balance unchanged" );
+        // The dedup cache failed to reject the replay synchronously. Poll for
+        // the duplicate mint to settle (balance increase) within kReplayTimeout.
+        // If it does NOT settle (waitForCondition returns false), the dedup
+        // held — pass. If it DOES settle, the duplicate was erroneously
+        // accepted — fail (WR-04: the previous == check was trivially true).
+        const bool duplicate_settled = sgns::waitForCondition(
+            [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_replay; },
+            kReplayTimeout );
+        EXPECT_FALSE( duplicate_settled )
+            << "Balance must not increase from a replayed Anvil burn tx hash";
+        spdlog::info( "bridge_anvil: second mint returned OK; duplicate_settled={}", duplicate_settled );
     }
     else
     {
