@@ -58,6 +58,10 @@ namespace sgns::evmwatcher
         while ( running.load() )
         {
             poll_once();
+            if ( !running.load() )
+            {
+                break;
+            }
             boost::this_thread::sleep_for( boost::chrono::seconds( config_.poll_interval.count() ) );
         }
     }
