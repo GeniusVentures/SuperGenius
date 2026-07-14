@@ -561,7 +561,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
         // If it does NOT settle (waitForCondition returns false), the dedup
         // held — pass. If it DOES settle, the duplicate was erroneously
         // accepted — fail (WR-04: the previous == check was trivially true).
-        const bool duplicate_settled = sgns::waitForCondition(
+        const bool duplicate_settled = waitForCondition(
             [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_replay; },
             kReplayTimeout );
         EXPECT_FALSE( duplicate_settled )
