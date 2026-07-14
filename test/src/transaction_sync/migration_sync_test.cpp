@@ -166,16 +166,17 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
-    test::assertWaitForCondition( [full_node]
-                                  { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 100000 ),
-                                  "Full node not synced" );
+
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
     node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
+
+    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 100000 ),
+                                  "Full node not synced" );
     test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 100000 ),
                                   readiness_message );

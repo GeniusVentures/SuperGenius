@@ -71,28 +71,23 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
     const std::string fullKey   = "1111111111111111111111111111111111111111111111111111111111111111";
     const std::string sharedKey = "2222222222222222222222222222222222222222222222222222222222222222";
 
-    std::cout << "****** Full node creation ****" << std::endl;
-    auto fullNode = CreateNodeWithMode( "0xffff",
-                                        "1.0",
-                                        TokenID::FromBytes( { 0x01 } ),
-                                        true,
-                                        "fnt_full_node",
-                                        fullKey );
-
-    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "fullnode not synced" );
-
-    std::cout << "****** Original node creation ****" << std::endl;
+    auto fullNode     = CreateNodeWithMode( "0xffff",
+                                            "1.0",
+                                            TokenID::FromBytes( { 0x01 } ),
+                                            true,
+                                            "fnt_full_node",
+                                            fullKey );
     auto originalNode = CreateNodeWithMode( "0xabcd",
                                             "1.0",
                                             TokenID::FromBytes( { 0x00 } ),
                                             false,
                                             "fnt_original",
                                             sharedKey );
-
     originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
+    test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 50000 ),
+                                  "fullnode not synced" );
     test::assertWaitForCondition( [&]() { return originalNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "Recovery node initial balance not updated in time" );

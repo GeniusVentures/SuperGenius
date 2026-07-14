@@ -34,12 +34,9 @@ public:
         {
         }
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
         boost::filesystem::create_directories( path );
         sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/40069, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/', /*node_type=*/"Full", /*is_processor=*/true );
-
 
         // Inject in-memory secure storage to avoid OS keychain prompts during tests
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>

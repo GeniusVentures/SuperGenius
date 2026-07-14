@@ -68,11 +68,6 @@ protected:
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
-        sgns::test::assertWaitForCondition( [&]
-                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node_proc1 not ready" );
-
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
@@ -90,6 +85,11 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
+
+        sgns::test::assertWaitForCondition( [&]
+                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                            std::chrono::milliseconds( 50000 ),
+                                            "node_proc1 not ready" );
         sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
                                             std::chrono::milliseconds( 50000 ),
                                             "node_main not ready" );
