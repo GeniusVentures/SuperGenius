@@ -196,30 +196,6 @@ def binary_search_creation(rpc_url: str, contract_addr: str,
 
 # ── Manifest cross-reference ────────────────────────────────────────────────
 
-def build_facet_map(deployments: dict) -> dict[str, dict]:
-    """
-    Build a mapping: config_chain_name → {address, tx_hash} for the bridge facet.
-    Prefers GNUSBridge, falls back to PolyGNUSBridge.
-    """
-    facet_map: dict[str, dict] = {}
-    for depl_key, depl_entry in deployments.items():
-        if not isinstance(depl_entry, dict):
-            continue
-        config_key = DEPLOYMENT_TO_CONFIG_CHAIN.get(depl_key)
-        if config_key is None:
-            continue
-        facets = depl_entry.get("FacetDeployedInfo", {})
-        for name in BRIDGE_FACET_NAMES:
-            if name in facets:
-                info = facets[name]
-                facet_map[config_key] = {
-                    "address": info["address"],
-                    "tx_hash": info.get("tx_hash", ""),
-                }
-                break
-    return facet_map
-
-
 def cross_reference_manifest(config: dict, deployments: dict) -> tuple[int, dict[str, dict]]:
     """
     Cross-reference bridge_chains_config.json against the deployment manifest.
