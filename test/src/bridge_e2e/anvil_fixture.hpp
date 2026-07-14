@@ -100,6 +100,12 @@ namespace sgns::test::anvil
     /** @brief Poll interval for Anvil readiness checks. */
     inline constexpr unsigned int kAnvilPollIntervalMs = 100u;
 
+    /** @brief Line-buffer size (bytes) for RunShellCapture's fgets loop. */
+    inline constexpr unsigned int kShellLineBufferSize = 1024u;
+
+    /** @brief 1 GNUS expressed in base units (1e18) — funding amount passed to `cast send`. */
+    inline constexpr uint64_t kOneGnusInBaseUnits = 1000000000000000000ull;
+
     // =========================================================================
     // Reused Phase 4 popen/_popen wrapper — copied verbatim as static inline.
     // The original lives in an anonymous namespace in bridge_e2e_test.cpp; the
@@ -150,7 +156,7 @@ namespace sgns::test::anvil
             exit_code = -1;
             return output;
         }
-        char line_buf[1024] = {};
+        char line_buf[kShellLineBufferSize] = {};
         while ( std::fgets( line_buf, sizeof( line_buf ), pipe ) )
         {
             output += line_buf;
@@ -441,7 +447,7 @@ namespace sgns::test::anvil
         // Step 2: ERC-20 transfer(address,uint256) of 1 GNUS (1e18) to account #0.
         std::string transfer_cmd = std::string( "cast send " ) + kSepoliaBridgeContractLower +
                                    " \"transfer(address,uint256)\" " + kAnvilAccount0Address +
-                                   " 1000000000000000000 --from " + kGnusHolderSepolia +
+                                   " " + std::to_string( kOneGnusInBaseUnits ) + " --from " + kGnusHolderSepolia +
                                    " --unlocked --rpc-url " + anvil_rpc_url + " --json 2>&1";
         int transfer_rc = -1;
         RunShellCapture( transfer_cmd, transfer_rc );
