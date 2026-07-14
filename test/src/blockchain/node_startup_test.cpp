@@ -59,10 +59,8 @@ protected:
     static void SetUpTestSuite()
     {
         // Inject in-memory secure storage to avoid OS keychain prompts during tests.
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage> {
-                return std::make_shared<MemorySecureStorage>( identifier );
-            } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
 
     // Create a node with a deterministic key derived from self_address. PubSub is
@@ -83,26 +81,27 @@ protected:
 
         GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
-        // is_processor is read from sgns_config.json; this test uses non-processor nodes.
-        std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
-
-        std::hash<std::string> hasher;
-        size_t                 address_hash = hasher( self_address );
-        std::mt19937           rng( static_cast<uint32_t>( address_hash ) );
+        std::hash<std::string>          hasher;
+        size_t                          address_hash = hasher( self_address );
+        std::mt19937                    rng( static_cast<uint32_t>( address_hash ) );
         std::uniform_int_distribution<> dist( 0, kHexAlphabetSize - 1 );
-        std::string            key;
+        std::string                     key;
         key.reserve( kPrivateKeyHexLength );
-        std::generate_n( std::back_inserter( key ), kPrivateKeyHexLength, [&]() {
-            static constexpr std::string_view hexChars = "0123456789abcdef";
-            return hexChars[dist( rng )];
-        } );
+        std::generate_n( std::back_inserter( key ),
+                         kPrivateKeyHexLength,
+                         [&]()
+                         {
+                             static constexpr std::string_view hexChars = "0123456789abcdef";
+                             return hexChars[dist( rng )];
+                         } );
 
         uint16_t uniquePort = static_cast<uint16_t>( kBasePort + id );
-        return GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/uniquePort, /*auto_dht=*/false );
+        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                     /*node_type=*/isFullNode ? "Full" : "Light",
+                                     /*is_processor=*/false );
+        return GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } );
     }
 
     void SetUp() override
@@ -131,8 +130,7 @@ protected:
 // creates its account-creation block directly.
 TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
 {
-    std::cout << "=== Starting Genesis Creator Ready Before Account-Creation Pubsub Timeout Test ==="
-              << std::endl;
+    std::cout << "=== Starting Genesis Creator Ready Before Account-Creation Pubsub Timeout Test ===" << std::endl;
 
     // Must stay below TIMEOUT_ACC_CREATION_BLOCK_MS (8000ms) to detect the
     // PubSub-timeout stall. Measured genesis-creator READY is ~1.2s (genesis +
@@ -149,11 +147,10 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
 
     std::chrono::milliseconds ready_elapsed_ms;
-    test::assertWaitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( kReadyPollTimeoutMs ),
-        "genesis creator never reached READY",
-        &ready_elapsed_ms );
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                  "genesis creator never reached READY",
+                                  &ready_elapsed_ms );
 
     std::cout << "Genesis creator reached READY in " << ready_elapsed_ms.count() << "ms" << std::endl;
 
@@ -163,9 +160,7 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
         << "The genesis creator should create its own account-creation block directly "
         << "instead of waiting on a PubSub response that never arrives (no peers).";
 
-    std::cout
-        << "=== Genesis Creator Ready Before Account-Creation Pubsub Timeout Test Completed ==="
-        << std::endl;
+    std::cout << "=== Genesis Creator Ready Before Account-Creation Pubsub Timeout Test Completed ===" << std::endl;
 }
 
 // ---------------------------------------------------------------------------
@@ -180,27 +175,18 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
     std::cout << "=== Starting Regular Node Ready Quickly After Genesis Ready Test ===" << std::endl;
 
     // Bring the genesis full node to READY first.
-    auto genesisNode = CreateNode( "genesis_node_startup",
-                                   "0xcafe",
-                                   "1.0",
-                                   TokenID::FromBytes( { 0x00 } ),
-                                   true );
+    auto genesisNode = CreateNode( "genesis_node_startup", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), true );
     Blockchain::SetAuthorizedFullNodeAddress( genesisNode->GetAddress() );
 
     std::chrono::milliseconds genesis_ready_ms;
-    test::assertWaitForCondition(
-        [&]() { return genesisNode->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( kReadyPollTimeoutMs ),
-        "genesis node never reached READY",
-        &genesis_ready_ms );
+    test::assertWaitForCondition( [&]() { return genesisNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                  "genesis node never reached READY",
+                                  &genesis_ready_ms );
     std::cout << "Genesis node reached READY in " << genesis_ready_ms.count() << "ms" << std::endl;
 
     // Create a regular node and connect it to the genesis node.
-    auto regularNode = CreateNode( "regular_node_startup",
-                                   "0xcafe",
-                                   "1.0",
-                                   TokenID::FromBytes( { 0x00 } ),
-                                   false );
+    auto regularNode = CreateNode( "regular_node_startup", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), false );
     // GetInterfaceAddress() returns the full multiaddr WITH peer ID (required for
     // AddPeers to dial). GetLocalAddress() omits the peer ID, so the dial never
     // completes and the regular node can't reach the genesis node — the cause of
@@ -212,13 +198,12 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
     constexpr int kRegularReadyBudgetMs = 10000;
 
     std::chrono::milliseconds regular_ready_ms;
-    test::assertWaitForCondition(
-        [&]() { return regularNode->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( kReadyPollTimeoutMs ),
-        "regular node never reached READY after the genesis node was ready",
-        &regular_ready_ms );
-    std::cout << "Regular node reached READY in " << regular_ready_ms.count()
-              << "ms (after genesis was ready)" << std::endl;
+    test::assertWaitForCondition( [&]() { return regularNode->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                  "regular node never reached READY after the genesis node was ready",
+                                  &regular_ready_ms );
+    std::cout << "Regular node reached READY in " << regular_ready_ms.count() << "ms (after genesis was ready)"
+              << std::endl;
 
     ASSERT_LT( regular_ready_ms.count(), kRegularReadyBudgetMs )
         << "Regular node READY took " << regular_ready_ms.count()
