@@ -1,10 +1,12 @@
 #ifndef MESSAGING_WATCHER_HPP
 #define MESSAGING_WATCHER_HPP
 
-#include <functional>
-#include <string>
 #include <boost/thread.hpp>
 #include <rapidjson/document.h>
+
+#include <atomic>
+#include <functional>
+#include <string>
 
 namespace sgns::watcher {
 
@@ -31,7 +33,7 @@ namespace sgns::watcher {
         // Constructor that takes a callback to initialize messageCallback
         explicit MessagingWatcher(MessageCallback callback);
 
-        bool running;
+        std::atomic_bool running;
         mutable std::mutex running_mutex;
         boost::thread watcherThread;
 
