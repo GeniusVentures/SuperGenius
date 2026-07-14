@@ -37,8 +37,8 @@
 #include "testutil/outcome.hpp"
 #include "testutil/wait_condition.hpp"
 
-#include "test/src/bridge_e2e/anvil_fixture.hpp"
-#include "../../../evmrelay/examples/chain_config.hpp"
+#include "anvil_fixture.hpp"
+#include "chain_config.hpp"
 
 /**
  * @brief Decodes a base64-encoded string to raw bytes.
