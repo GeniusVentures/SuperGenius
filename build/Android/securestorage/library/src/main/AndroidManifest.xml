@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- No permissions required for KeyStore access -->
+
+    <!-- Background processing permissions (merge into consumer via manifest merger) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <service
+            android:name="ai.gnus.sdk.GeniusForegroundService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <provider
+            android:name="ai.gnus.sdk.GeniusSDKInitProvider"
+            android:authorities="${applicationId}.genius-sdk-init"
+            android:exported="false"
+            android:initOrder="99" />
+    </application>
 </manifest>

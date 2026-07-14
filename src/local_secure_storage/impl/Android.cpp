@@ -10,6 +10,14 @@
 
 #include "outcome/outcome.hpp"
 
+// Forward-declare InitGeniusSDKAndroid (defined in GeniusSDK/src/GeniusSDKAndroid.cpp,
+// compiled into the same .so). Avoids including GeniusSDKAndroid.hpp to prevent
+// circular dependency (GeniusSDK depends on SuperGenius, not vice versa).
+namespace sgns
+{
+    void InitGeniusSDKAndroid( JavaVM *vm );
+}
+
 #define LOG_TAG "AndroidSecureStorage"
 #define LOGI( ... ) __android_log_print( ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__ )
 #define LOGE( ... ) __android_log_print( ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__ )
@@ -114,6 +122,9 @@ extern "C" JNIEXPORT jint JNICALL JNI_OnLoad( JavaVM *vm, void *_reserved )
     LOGI( "SuperGenius SDK initializing" );
 
     g_jvm = vm;
+
+    // Initialize GeniusSDK Android background bridge
+    sgns::InitGeniusSDKAndroid( vm );
 
     JNIEnv *env = nullptr;
     if ( vm->GetEnv( reinterpret_cast<void **>( &env ), JNI_VERSION_1_6 ) != JNI_OK )
