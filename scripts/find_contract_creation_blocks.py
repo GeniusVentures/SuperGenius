@@ -371,6 +371,24 @@ def main() -> None:
             f.write("\n")
         print(f"\nUpdated {updated} chain(s) in {args.config}")
 
+    # Post-run summary: flag chains where creation_block is still 0, since the
+    # BridgeCatchupWatcher falls back to config_.start_block (possibly genesis)
+    # for those, which can cause a multi-million-block scan (WR-08).
+    zero_block_chains = []
+    for chain_name, chain_data in config.items():
+        if chain_name.startswith("_"):
+            continue
+        if not isinstance(chain_data, dict):
+            continue
+        if chain_data.get("creation_block", 0) == 0:
+            zero_block_chains.append(chain_name)
+    if zero_block_chains:
+        print("\nSummary:", file=sys.stderr)
+        for name in zero_block_chains:
+            print(f"  WARNING: {name} has creation_block = 0 — "
+                  "watcher will scan from config start_block (possibly genesis)",
+                  file=sys.stderr)
+
     if errors > 0:
         print(f"\n{errors} error(s) encountered", file=sys.stderr)
         sys.exit(1)
