@@ -7,6 +7,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::ipfs_bitswap;
 
@@ -36,11 +37,12 @@ TEST_F( PublishConcurrencyTest, PublishFileCallbackOnIoContext )
             callbackFired.store( true, std::memory_order_release );
         } );
 
-    std::chrono::milliseconds publishTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return callbackFired.load(); },
-                               std::chrono::milliseconds( 5000 ),
-                               "PublishFile callback did not fire",
-                               &publishTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&callbackFired]() { return callbackFired.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "PublishFile callback was not invoked within timeout",
+        &elapsed );
 
     std::filesystem::remove( tmpPath );
     EXPECT_TRUE( callbackFired.load() );
@@ -69,11 +71,12 @@ TEST_F( PublishConcurrencyTest, PublishDirectoryCallbackOnIoContext )
             callbackFired.store( true, std::memory_order_release );
         } );
 
-    std::chrono::milliseconds publishTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return callbackFired.load(); },
-                               std::chrono::milliseconds( 5000 ),
-                               "PublishDirectory callback did not fire",
-                               &publishTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&callbackFired]() { return callbackFired.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "PublishDirectory callback was not invoked within timeout",
+        &elapsed );
 
     std::filesystem::remove_all( tmpDir );
     EXPECT_TRUE( callbackFired.load() );

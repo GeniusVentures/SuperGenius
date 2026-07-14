@@ -5,6 +5,7 @@
 #include <atomic>
 #include <vector>
 #include <chrono>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::ipfs_bitswap;
 
@@ -37,11 +38,12 @@ TEST_F( CallbackReentrancyTest, ReenterDuringCallback )
             }
         } );
 
-    std::chrono::milliseconds publishTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
-                               std::chrono::milliseconds( 5000 ),
-                               "PublishData callback did not fire",
-                               &publishTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -103,11 +105,12 @@ TEST_F( CallbackReentrancyTest, NestedRequestFromCallback )
             }
         } );
 
-    std::chrono::milliseconds publishTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
-                               std::chrono::milliseconds( 5000 ),
-                               "PublishData callback did not fire",
-                               &publishTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 4; ++t )
@@ -174,11 +177,12 @@ TEST_F( CallbackReentrancyTest, ConcurrentCallbacksNoDeadlock )
             }
         } );
 
-    std::chrono::milliseconds publishTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return stored.load(); },
-                               std::chrono::milliseconds( 5000 ),
-                               "PublishData callback did not fire",
-                               &publishTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&stored]() { return stored.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Block was not stored by Bitswap within timeout",
+        &elapsed );
 
     std::vector<std::thread> threads;
     for ( int t = 0; t < 8; ++t )

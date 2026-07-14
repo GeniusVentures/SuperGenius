@@ -175,11 +175,13 @@ TEST_F( ValidateResultDataTest, RejectsFileScheme )
     auto result = makeResult( "VALIDATE_9A_FAIL", "file:///tmp/output.raw" );
     accessor->CompleteSubTask( "VALIDATE_9A_FAIL", result );
 
-    std::chrono::milliseconds settleTime;
-    ASSERT_WAIT_FOR_CONDITION( [&]() { return errorOccurred.load(); },
-                               std::chrono::milliseconds( 2000 ),
-                               "Expected error callback for file:// scheme",
-                               &settleTime );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return errorOccurred.load(); },
+        std::chrono::milliseconds( 500 ),
+        "file:// scheme should have been rejected by validation",
+        &elapsed );
+
     EXPECT_TRUE( errorOccurred.load() ) << "file:// scheme should be rejected by 9a";
 }
 
