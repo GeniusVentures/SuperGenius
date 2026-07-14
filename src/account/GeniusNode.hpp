@@ -32,7 +32,7 @@
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
