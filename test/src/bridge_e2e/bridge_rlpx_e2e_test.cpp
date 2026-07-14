@@ -482,7 +482,7 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     // --- RLPx settle wait ---
     {
         constexpr std::chrono::milliseconds kSettleTimeout{ kRlpxSettleSeconds * 1000 };
-        bool settled = sgns::test::waitForCondition(
+        bool settled = waitForCondition(
             [&]() { return rlpx_service_main->aggregate_connection_stats().remote_status_accepted >= 1; },
             std::chrono::milliseconds( settle_secs * 1000 ) );
 
@@ -699,7 +699,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         // Poll node_main
         {
             uint64_t current = 0;
-            bool     ok      = sgns::test::waitForCondition(
+            bool     ok      = waitForCondition(
                 [&]()
                 {
                     current = node_main->GetBalance( dest_addr_main );
@@ -725,7 +725,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         // Poll node_proc1
         {
             uint64_t current = 0;
-            bool     ok      = sgns::test::waitForCondition(
+            bool     ok      = waitForCondition(
                 [&]()
                 {
                     current = node_proc1->GetBalance( dest_addr_proc1 );
@@ -751,7 +751,7 @@ TEST_F( BridgeRlpxE2ETest, RlpxBurnStreamAutoMints )
         // Poll node_proc2
         {
             uint64_t current = 0;
-            bool     ok      = sgns::test::waitForCondition(
+            bool     ok      = waitForCondition(
                 [&]()
                 {
                     current = node_proc2->GetBalance( dest_addr_proc2 );
