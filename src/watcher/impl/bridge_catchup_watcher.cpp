@@ -65,7 +65,7 @@ namespace sgns::evmwatcher
 
     void BridgeCatchupWatcher::watch()
     {
-        while ( running )
+        while ( running.load() )
         {
             poll_once();
             boost::this_thread::sleep_for( boost::chrono::seconds( config_.poll_interval.count() ) );
