@@ -422,6 +422,17 @@ namespace sgns::test::anvil
      */
     static inline bool FundAccount0WithGnus( const std::string &anvil_rpc_url )
     {
+        // Defensive: anvil_rpc_url is interpolated into shell commands below.
+        // Reject anything outside the strict http(s)://[host]:[port] shape so a
+        // future caller passing a URL with shell metacharacters cannot inject
+        // commands (WR-03 — same guard as SendBridgeOutBurn).
+        if ( !IsValidAnvilRpcUrl( anvil_rpc_url ) )
+        {
+            spdlog::error( "FundAccount0WithGnus: rejected anvil_rpc_url with disallowed characters: {}",
+                           anvil_rpc_url );
+            return false;
+        }
+
         // Step 1: impersonate the Sepolia GNUS holder.
         std::string impersonate_cmd = std::string( "cast rpc anvil_impersonateAccount " ) + kGnusHolderSepolia +
                                       " --rpc-url " + anvil_rpc_url + " 2>&1";
