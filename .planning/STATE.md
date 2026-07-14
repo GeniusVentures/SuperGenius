@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: GeniusNode Construction Refactor
-status: executing
-last_updated: "2026-07-13T18:42:21.963Z"
+status: "Phase 04.1 shipped — PR #337"
+last_updated: "2026-07-14T03:58:44.340Z"
 last_activity: 2026-07-13
 progress:
   total_phases: 19
@@ -29,8 +29,8 @@ See: .planning/PROJECT.md (updated 2026-07-02)
 
 Phase: 04.1 (anvil-local-bridge-e2e-test-use-tokencontracts-gnus-ai-env-t) — EXECUTING
 Plan: 2 of 3
-Status: Completed 04.1-03-PLAN.md (catchup watcher RPC strategy fix)
-Last activity: 2026-07-13 -- Completed 04.1-03-PLAN.md
+Status: Phase 04.1 shipped — PR #337
+Last activity: 2026-07-13
 
 ## Roadmap Snapshot
 
