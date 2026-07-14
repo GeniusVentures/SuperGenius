@@ -6,28 +6,28 @@
  *
  * Header-only helper that manages a local Anvil subprocess forking Sepolia
  * state, plus the Anvil-default-key constants and GNUS funding utilities.
- * No OS preprocessor guards are introduced here beyond the reused
- * OpenCommandPipe/CloseCommandPipe wrapper (mirrors the Phase 4 test-side
- * popen/_popen pattern). Everything lives in namespace @ref sgns::test::anvil.
+ * Subprocess lifecycle is cross-platform via boost::process (fork/exec on
+ * POSIX, CreateProcess on Windows) — the AnvilProcess path uses no OS
+ * preprocessor guards. The reused OpenCommandPipe/CloseCommandPipe wrapper
+ * (mirrors the Phase 4 test-side popen/_popen pattern) is the only guarded
+ * site. Everything lives in namespace @ref sgns::test::anvil.
  */
 
 #ifndef SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 #define SUPERGENIUS_TEST_BRIDGE_E2E_ANVIL_FIXTURE_HPP
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <csignal>
 #include <cstdint>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <chrono>
+#include <memory>
 #include <string>
 #include <utility>
 
 #include <spdlog/spdlog.h>
+#include <boost/process.hpp>
 
 #include "base/util.hpp"
 #include <base/parse_utility.hpp>         // rlp::base::parse::hex_bytes
@@ -99,12 +99,6 @@ namespace sgns::test::anvil
 
     /** @brief Poll interval for Anvil readiness checks. */
     inline constexpr unsigned int kAnvilPollIntervalMs = 100u;
-
-    /** @brief Grace period (ms) to wait for the Anvil child to exit after SIGTERM before SIGKILL. */
-    inline constexpr unsigned int kStopGracePeriodMs = 5000u;
-
-    /** @brief Poll interval (ms) for waitpid(WNOHANG) while waiting for the Anvil child to exit. */
-    inline constexpr unsigned int kStopPollIntervalMs = 50u;
 
     // =========================================================================
     // Reused Phase 4 popen/_popen wrapper — copied verbatim as static inline.
@@ -540,14 +534,19 @@ namespace sgns::test::anvil
     // AnvilProcess — subprocess lifecycle + readiness polling (D-01, D-04, D-15)
     // =========================================================================
 
+    /** @brief Alias for boost::process — cross-platform subprocess API (POSIX fork/exec, Windows CreateProcess). */
+    namespace bp = boost::process;
+
     /**
      * @brief RAII manager for a local Anvil subprocess forking Sepolia state.
      *
-     * Start() forks+execs `anvil --fork-url <fork_url> --port <port> --mnemonic <mnemonic>`.
-     * WaitForReady() polls eth_blockNumber via `cast block-number` using
-     * sgns::waitForCondition (no sleep_for in test code). Stop() SIGTERMs and
-     * reaps the child. The destructor calls Stop() if still started, so a
-     * test crash still cleans up the Anvil process.
+     * Start() spawns `anvil --fork-url <fork_url> --port <port> --mnemonic <mnemonic>`
+     * via boost::process (fork/exec on POSIX, CreateProcess on Windows) with
+     * stdin/stdout/stderr redirected to null. WaitForReady() polls eth_blockNumber
+     * via `cast block-number` using sgns::waitForCondition (no sleep_for in test
+     * code). Stop() force-terminates and reaps the child (SIGKILL /
+     * TerminateProcess) within a bounded grace window so a misbehaving Anvil
+     * cannot hang teardown. The destructor calls Stop() if still started.
      */
     class AnvilProcess
     {
@@ -578,7 +577,7 @@ namespace sgns::test::anvil
          * @brief Starts the Anvil subprocess forking Sepolia state (D-01).
          * @param[in] fork_url       Sepolia RPC URL passed to `--fork-url`.
          * @param[in] preferred_port  TCP port for Anvil's JSON-RPC server (default kAnvilStartPort).
-         * @return true if fork()+execlp() succeeded; false on fork or exec failure.
+         * @return true if the Anvil child spawned successfully; false if `anvil` is not on PATH or spawn failed.
          */
         bool Start( const std::string &fork_url, unsigned int preferred_port = kAnvilStartPort )
         {
@@ -591,38 +590,32 @@ namespace sgns::test::anvil
             rpc_url_  = "http://127.0.0.1:" + std::to_string( port_ );
             port_str_ = std::to_string( port_ );
 
-            pid_t pid = fork();
-            if ( pid < 0 )
+            // boost::process resolves `anvil` via PATH (POSIX) / %PATH% (Windows),
+            // spawns it cross-platform, and redirects the child's std streams to
+            // null. search_path returns an empty path when the binary is missing,
+            // and the bp::child constructor then throws system_error — caught here
+            // and reported, unlike the old execlp() path which silently _exit(127)'d.
+            try
             {
-                spdlog::error( "anvil_fixture: fork() failed" );
+                anvil_child_ = std::make_unique<bp::child>(
+                    bp::search_path( "anvil" ),
+                    "--fork-url",
+                    fork_url,
+                    "--port",
+                    port_str_,
+                    "--mnemonic",
+                    kAnvilMnemonic,
+                    bp::std_in < bp::null,
+                    bp::std_out > bp::null,
+                    bp::std_err > bp::null );
+            }
+            catch ( const std::system_error &e )
+            {
+                spdlog::error( "anvil_fixture: failed to spawn anvil on PATH: {}", e.what() );
                 return false;
             }
-            if ( pid == 0 )
-            {
-                // Child: redirect stdin/stdout/stderr to /dev/null.
-                FILE *devnull = std::fopen( "/dev/null", "r" );
-                if ( devnull )
-                {
-                    std::freopen( "/dev/null", "r", stdin );
-                    std::freopen( "/dev/null", "w", stdout );
-                    std::freopen( "/dev/null", "w", stderr );
-                }
-                execlp( "anvil",
-                        "anvil",
-                        "--fork-url",
-                        fork_url.c_str(),
-                        "--port",
-                        port_str_.c_str(),
-                        "--mnemonic",
-                        kAnvilMnemonic,
-                        static_cast<char *>( nullptr ) );
-                // execlp only returns on failure.
-                _exit( 127 );
-            }
-            // Parent
-            anvil_pid_ = pid;
-            started_   = true;
-            spdlog::info( "anvil_fixture: started anvil pid={} port={} fork_url={}", anvil_pid_, port_, fork_url );
+            started_ = true;
+            spdlog::info( "anvil_fixture: started anvil port={} fork_url={}", port_, fork_url );
             return true;
         }
 
@@ -676,38 +669,22 @@ namespace sgns::test::anvil
         }
 
         /**
-         * @brief Stops the Anvil subprocess via SIGTERM with SIGKILL escalation (RAII safety net).
+         * @brief Stops the Anvil subprocess via forceful termination + reap (RAII safety net).
          *
-         * Sends SIGTERM, then polls waitpid(WNOHANG) for a bounded grace period
-         * (kStopGracePeriodMs). If the child has not exited by then (e.g. stuck RPC
-         * or hung fork), escalates to SIGKILL and a final blocking waitpid so a
-         * misbehaving Anvil cannot hang test-suite teardown via the destructor.
+         * boost::process::child::terminate() sends SIGKILL on POSIX / TerminateProcess
+         * on Windows — uncatchable, so the child is guaranteed to exit and the subsequent
+         * blocking wait() reaps it without being able to hang. All overloads take
+         * std::error_code so Stop() cannot throw out of the destructor.
          */
         void Stop()
         {
-            if ( anvil_pid_ > 0 )
+            if ( anvil_child_ )
             {
-                kill( anvil_pid_, SIGTERM );
-                int  status      = 0;
-                bool reaped      = waitForCondition(
-                    [this, &status]()
-                    {
-                        pid_t wp = waitpid( anvil_pid_, &status, WNOHANG );
-                        return wp == anvil_pid_;
-                    },
-                    std::chrono::milliseconds( kStopGracePeriodMs ),
-                    nullptr,
-                    std::chrono::milliseconds( kStopPollIntervalMs ) );
-                if ( !reaped )
-                {
-                    spdlog::warn( "anvil_fixture: anvil pid={} did not exit within {}ms after SIGTERM — escalating to SIGKILL",
-                                  anvil_pid_,
-                                  kStopGracePeriodMs );
-                    kill( anvil_pid_, SIGKILL );
-                    waitpid( anvil_pid_, &status, 0 );
-                }
-                spdlog::info( "anvil_fixture: stopped anvil pid={} status={}", anvil_pid_, status );
-                anvil_pid_ = -1;
+                std::error_code ec;
+                anvil_child_->terminate( ec ); // SIGKILL / TerminateProcess
+                anvil_child_->wait( ec );      // reap — bounded, SIGKILL is fatal
+                spdlog::info( "anvil_fixture: stopped anvil exit_code={}", anvil_child_->exit_code() );
+                anvil_child_.reset();
             }
             started_ = false;
         }
@@ -731,11 +708,11 @@ namespace sgns::test::anvil
         }
 
     private:
-        pid_t         anvil_pid_ = -1;   ///< Anvil child PID, or -1 when not running.
-        unsigned int  port_      = 0u;   ///< Anvil TCP port.
-        std::string   rpc_url_;          ///< "http://127.0.0.1:<port>".
-        std::string   port_str_;         ///< String form of port_ (lifetime anchor for execlp).
-        bool          started_   = false; ///< Whether Start() has succeeded.
+        std::unique_ptr<bp::child> anvil_child_;        ///< boost::process child handle, null when not running.
+        unsigned int               port_      = 0u;      ///< Anvil TCP port.
+        std::string                rpc_url_;             ///< "http://127.0.0.1:<port>".
+        std::string                port_str_;            ///< String form of port_ (passed to bp::child args).
+        bool                       started_   = false;   ///< Whether Start() has succeeded.
     };
 
 } // namespace sgns::test::anvil
