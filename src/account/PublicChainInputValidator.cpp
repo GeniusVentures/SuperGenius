@@ -13,7 +13,7 @@
 
 #include <base/parse_utility.hpp>
 #include <base/rlp-logger.hpp>
-#include <crypto/hasher/hasher_impl.hpp>
+#include <crypto/hasher.hpp>
 #include <eth/json_rpc.hpp>
 #include <eth/rpc_http_transport.hpp>
 

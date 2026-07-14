@@ -10,7 +10,7 @@
 #include "crypto/bip39/impl/bip39_provider_impl.hpp"
 #include "crypto/crypto_store/crypto_store_impl.hpp"
 #include "crypto/ed25519/ed25519_provider_impl.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "crypto/pbkdf2/impl/pbkdf2_provider_impl.hpp"
 #include "crypto/random_generator/boost_generator.hpp"
 #include "crypto/secp256k1/secp256k1_provider_impl.hpp"
@@ -69,7 +69,6 @@ class RuntimeTest : public ::testing::Test {
         std::make_shared<sgns::crypto::ED25519ProviderImpl>();
     auto secp256k1_provider =
         std::make_shared<sgns::crypto::Secp256k1ProviderImpl>();
-    auto hasher = std::make_shared<sgns::crypto::HasherImpl>();
     auto pbkdf2_provider =
         std::make_shared<sgns::crypto::Pbkdf2ProviderImpl>();
     auto bip39_provider =
@@ -89,7 +88,6 @@ class RuntimeTest : public ::testing::Test {
             sr25519_provider,
             ed25519_provider,
             secp256k1_provider,
-            hasher,
             crypto_store,
             bip39_provider,
             [this](
