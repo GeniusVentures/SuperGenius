@@ -1,6 +1,7 @@
 add_subdirectory(account)
 add_subdirectory(account_creation)
 add_subdirectory(base)
+add_subdirectory(bitswap)
 add_subdirectory(mock)
 add_subdirectory(bridge_e2e)
 add_subdirectory(startup)

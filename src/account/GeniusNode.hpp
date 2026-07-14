@@ -46,6 +46,12 @@
 #include <libp2p/event/bus.hpp>
 #include <libp2p/network/connection_manager.hpp>
 
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap
+{
+    class Bitswap;
+}
+
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
  */
@@ -710,11 +716,13 @@ namespace sgns
     private:
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
-                                                   io_work_guard_;       ///< Keeps @ref io_ alive.
-        std::shared_ptr<crdt::GlobalDB>            tx_globaldb_;         ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>            job_globaldb_;        ///< Reserved job CRDT DB handle.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_;              ///< PubSub networking service.
-        std::shared_ptr<TransactionManager>        transaction_manager_; ///< Transaction service.
+                                                     io_work_guard_;     ///< Keeps @ref io_ alive.
+        std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
+        std::shared_ptr<crdt::GlobalDB>              job_globaldb_;      ///< Reserved job CRDT DB handle.
+        std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
+        std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
+        std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
@@ -733,6 +741,10 @@ namespace sgns
             NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger node_logger_; ///< Main node logger.
         DevConfig_st dev_config_;  ///< Runtime node configuration.
+        std::string  ipfs_cache_dir_           = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool         mirror_results_           = false; ///< Whether to mirror processing results from other nodes.
+        int          result_retention_hours_   = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int          result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
         bool         catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
         bool         catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
@@ -761,6 +773,8 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
+        std::shared_ptr<boost::asio::steady_timer> gc_timer_;   ///< Periodic GC timer for result cache cleanup.
+
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
          *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
@@ -786,6 +800,16 @@ namespace sgns
          *        safe values (DEV net, empty bootstrap, is_processor=true).
          */
         void LoadSgnsConfig();
+
+        /**
+         * @brief Starts periodic garbage collection of expired processing results from disk cache.
+         */
+        void StartResultGC();
+
+        /**
+         * @brief Runs one GC pass: evicts expired result files and enforces space cap.
+         */
+        void RunResultGC();
 
         /**
          * @brief Initializes application and dependency loggers.

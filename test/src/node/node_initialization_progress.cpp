@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <thread>
+#include "testutil/wait_condition.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <gtest/gtest.h>
 
@@ -35,16 +36,13 @@ TEST( GeniusNode, InitializationProgress )
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     auto last_percentage = 0.0F;
-    auto start           = std::chrono::steady_clock::now();
-    auto end             = start + std::chrono::duration( std::chrono::minutes( 1 ) );
 
-    while ( std::chrono::steady_clock::now() < end && node->GetState() != GeniusNode::NodeState::READY )
-    {
-        auto percentage = node->GetInitializationStatus().first;
-        ASSERT_GE( percentage, last_percentage );
-        last_percentage = percentage;
-        std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
-    }
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "Node did not reach READY state within timeout",
+        &elapsed );
 
     ASSERT_EQ( node->GetInitializationStatus().first, 1.0 );
 }

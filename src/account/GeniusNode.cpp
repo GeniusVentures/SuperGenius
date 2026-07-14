@@ -13,6 +13,7 @@
 #include <cctype>
 #include <filesystem>
 #include <set>
+#include <string_view>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
@@ -55,6 +56,9 @@
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
 #include <Generators.hpp>
+#include <bitswap.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
+#include "FileManager.hpp"
 
 namespace
 {
@@ -394,6 +398,26 @@ namespace sgns
             node_logger_->info( "sgns_config.json: setting authorized_full_node" );
             Blockchain::SetAuthorizedFullNodeAddress( addr );
         }
+        if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
+        {
+            ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();
+            node_logger_->info( "sgns_config.json: ipfs_cache_dir={}", ipfs_cache_dir_ );
+        }
+        if ( config_json.HasMember( "mirror_results" ) && config_json["mirror_results"].IsBool() )
+        {
+            mirror_results_ = config_json["mirror_results"].GetBool();
+            node_logger_->info( "sgns_config.json: mirror_results={}", mirror_results_ );
+        }
+        if ( config_json.HasMember( "result_retention_hours" ) && config_json["result_retention_hours"].IsInt() )
+        {
+            result_retention_hours_ = config_json["result_retention_hours"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_hours={}", result_retention_hours_ );
+        }
+        if ( config_json.HasMember( "result_retention_max_mb" ) && config_json["result_retention_max_mb"].IsInt() )
+        {
+            result_retention_max_mb_ = config_json["result_retention_max_mb"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_max_mb={}", result_retention_max_mb_ );
+        }
     }
 
     void GeniusNode::LoadCrdtConfig()
@@ -723,6 +747,94 @@ namespace sgns
                     payout_address );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+                // Set up result mirroring for full/archive nodes
+                if ( mirror_results_ && bitswap_ )
+                {
+                    auto weak_self = weak_from_this();
+                    processing_service_->setMirrorResultCallback(
+                        [weak_self]( const std::string &ipfs_results_data_id )
+                        {
+                            auto strong = weak_self.lock();
+                            if ( !strong )
+                            {
+                                return;
+                            }
+
+                            auto bitswap = strong->bitswap_;
+                            if ( !bitswap )
+                            {
+                                return;
+                            }
+
+                            static constexpr std::string_view kIpfsUriScheme = "ipfs://";
+
+                            // Parse newline-separated CIDs and fetch any we don't already have
+                            std::istringstream stream( ipfs_results_data_id );
+                            std::string        line;
+                            while ( std::getline( stream, line ) )
+                            {
+                                if ( line.empty() )
+                                {
+                                    continue;
+                                }
+                                // Strip "ipfs://" prefix if present
+                                std::string cidStr = line;
+                                if ( cidStr.compare( 0,
+                                                     kIpfsUriScheme.size(),
+                                                     kIpfsUriScheme.data(),
+                                                     kIpfsUriScheme.size() ) == 0 )
+                                {
+                                    cidStr = cidStr.substr( kIpfsUriScheme.size() );
+                                }
+                                auto cid = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                                if ( !cid )
+                                {
+                                    continue;
+                                }
+                                if ( bitswap->HasBlock( cid.value() ) )
+                                {
+                                    continue; // Already have it
+                                }
+                                strong->node_logger_->info( "Mirroring result data for CID: {}", cidStr );
+                                bitswap->RequestContent(
+                                    cid.value(),
+                                    [weak_self, cidStr](
+                                        libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
+                                    {
+                                        auto strong = weak_self.lock();
+                                        if ( !strong )
+                                        {
+                                            return;
+                                        }
+
+                                        if ( content )
+                                        {
+                                            strong->node_logger_->info(
+                                                "Successfully mirrored result data: {} ({} files)",
+                                                cidStr,
+                                                content.value().files.size() );
+                                        }
+                                        else
+                                        {
+                                            strong->node_logger_->warn( "Failed to mirror result data for CID {}: {}",
+                                                                        cidStr,
+                                                                        content.error().message() );
+                                        }
+                                    } );
+                            }
+                        } );
+                }
+
+                // Wire bitswap to processing service for data availability checks
+                if ( bitswap_ )
+                {
+                    processing_service_->setBitswap( bitswap_ );
+                }
+
+                // Start periodic result cache GC
+                StartResultGC();
+
                 if ( isprocessor_ )
                 {
                     StartProcessing();
@@ -1210,6 +1322,19 @@ namespace sgns
 
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water  = low_water;
+
+            // Initialize Bitswap for IPFS content-addressed data exchange
+            bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
+            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>(
+                *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+            bitswap_->initialize();
+            if ( !ipfs_cache_dir_.empty() )
+            {
+                auto fullCachePath = write_base_path_ + "/" + ipfs_cache_dir_;
+                bitswap_->setCacheDir( fullCachePath );
+            }
+            FileManager::GetInstance().InitializeSingletons();
+            FileManager::GetInstance().setBitswap( bitswap_ );
 
             graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
 
@@ -2541,9 +2666,10 @@ namespace sgns
     std::string GeniusNode::GetAddress() const
     {
         std::string address = "UNVAILABLE";
-        if ( account_ )
+        auto        account = account_;
+        if ( account )
         {
-            address = account_->GetAddress();
+            address = account->GetAddress();
         }
         return address;
     }
@@ -3186,6 +3312,148 @@ namespace sgns
     const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
     {
         return Blockchain::GetAuthorizedFullNodeAddress();
+    }
+
+    // ── Result Cache GC ──
+
+    void GeniusNode::StartResultGC()
+    {
+        if ( result_retention_hours_ == 0 )
+        {
+            node_logger_->info( "Result retention disabled (retention_hours=0), skipping GC" );
+            return;
+        }
+
+        auto intervalHours = std::max( 1, result_retention_hours_ / 10 );
+        node_logger_->info( "Starting result GC timer: every {} hour(s), retention {} hours, max {} MB",
+                           intervalHours,
+                           result_retention_hours_,
+                           result_retention_max_mb_ );
+
+        gc_timer_ = std::make_shared<boost::asio::steady_timer>( *io_ );
+        std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+
+        auto schedule = [this, weakSelf, intervalHours]()
+        {
+            gc_timer_->expires_from_now( std::chrono::hours( intervalHours ) );
+            gc_timer_->async_wait( [weakSelf]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunResultGC();
+                }
+            } );
+        };
+
+        schedule();
+        // Run one initial pass after a short delay
+        gc_timer_->cancel();
+        gc_timer_->expires_from_now( std::chrono::seconds( 30 ) );
+        gc_timer_->async_wait( [weakSelf, schedule]( const boost::system::error_code &ec )
+        {
+            if ( ec )
+            {
+                return;
+            }
+            if ( auto self = weakSelf.lock() )
+            {
+                self->RunResultGC();
+                schedule();
+            }
+        } );
+    }
+
+    void GeniusNode::RunResultGC()
+    {
+        if ( result_retention_hours_ == 0 || !bitswap_ )
+        {
+            return;
+        }
+
+        auto resultsDir = write_base_path_ + "/" + ipfs_cache_dir_ + "/results";
+        std::error_code ec;
+        if ( !std::filesystem::exists( resultsDir, ec ) )
+        {
+            return;
+        }
+
+        size_t deletedCount = 0;
+        uintmax_t deletedBytes = 0;
+
+        // Collect all result files sorted by age (oldest first)
+        struct FileEntry
+        {
+            std::string                      path;
+            std::filesystem::file_time_type  mtime;
+        };
+        std::vector<FileEntry> files;
+        for ( const auto &entry : std::filesystem::recursive_directory_iterator( resultsDir, ec ) )
+        {
+            if ( ec || !entry.is_regular_file() )
+            {
+                continue;
+            }
+            FileEntry fe;
+            fe.path  = entry.path().string();
+            fe.mtime = entry.last_write_time();
+            files.push_back( fe );
+        }
+
+        std::sort( files.begin(), files.end(),
+                   []( const auto &a, const auto &b ) { return a.mtime < b.mtime; } );
+
+        // Compute cutoff using the clock backing file_time_type
+        using FT = std::filesystem::file_time_type;
+        auto now    = FT::clock::now();
+        auto cutoff = now - std::chrono::hours( result_retention_hours_ );
+
+        uintmax_t totalBytes = 0;
+        for ( const auto &f : files )
+        {
+            totalBytes += std::filesystem::file_size( f.path, ec );
+        }
+
+        // Evict expired files
+        for ( auto it = files.begin(); it != files.end() && totalBytes > 0; ++it )
+        {
+            const auto &path  = it->path;
+            const auto &mtime = it->mtime;
+            bool expired = mtime < cutoff;
+            bool overCap = ( result_retention_max_mb_ > 0 ) &&
+                           ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+            if ( !expired && !overCap )
+            {
+                break;
+            }
+
+            auto fileSize = std::filesystem::file_size( path, ec );
+            std::filesystem::remove( path, ec );
+            if ( !ec )
+            {
+                auto cidStr = std::filesystem::path( path ).filename().string();
+                auto cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                if ( cid )
+                {
+                    bitswap_->unpersistBlock( cid.value() );
+                }
+                deletedCount++;
+                deletedBytes += fileSize;
+                totalBytes -= fileSize;
+            }
+        }
+
+        if ( deletedCount > 0 )
+        {
+            node_logger_->info( "GC: removed {} result files ({} bytes), {} files remaining ({} bytes)",
+                               deletedCount,
+                               deletedBytes,
+                               files.size() - deletedCount,
+                               totalBytes );
+        }
     }
 
     // ── Bootstrap Fullnode Reconnection ──

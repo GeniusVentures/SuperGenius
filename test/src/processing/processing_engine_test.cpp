@@ -13,6 +13,8 @@
 
 #include <functional>
 #include <thread>
+#include <chrono>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::processing;
 
@@ -221,7 +223,12 @@ TEST_F(ProcessingEngineTest, SubTaskProcessing)
     std::thread contextThread([&context]() { context.run(); });
     engine->StartQueueProcessing(subTaskQueueAccessor);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&processingCore]() { return processingCore->m_processedSubTasks.size() == 2; },
+        std::chrono::milliseconds( 5000 ),
+        "Queue processing did not complete within timeout",
+        &elapsed );
 
     context.stop();
     contextThread.join();
@@ -274,7 +281,13 @@ TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     engine2->StartQueueProcessing(subTaskQueueAccessor2);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&processingCore]() { return processingCore->m_initialHashes.size() == 2; },
+        std::chrono::milliseconds( 3000 ),
+        "Both engines did not complete processing within timeout",
+        &elapsed );
 
     context.stop();
     contextThread.join();
