@@ -21,6 +21,8 @@
 
 #include <bitswap.hpp>
 
+#include "testutil/wait_condition.hpp"
+
 #include <gtest/gtest.h>
 
 namespace sgns::ipfs_bitswap
