@@ -92,7 +92,7 @@ protected:
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
         auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
-        // NewFromPrivateKey starts PubSub synchronously in the constructor
+        // New starts PubSub synchronously in the constructor
         // (InitNetwork -> pubs.wait()) and kicks off async DB/blockchain init.
         // Callers wait for READY via waitForCondition, so no fixed sleep is
         // needed here (and a sleep would obscure startup-timing measurements).
