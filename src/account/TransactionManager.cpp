@@ -2306,7 +2306,8 @@ namespace sgns
         const bool regular_node_retry_is_on_cooldown = !full_node_m &&
                                                        last_nonce_request_time_ !=
                                                            std::chrono::steady_clock::time_point{} &&
-                                                       now < last_nonce_request_time_ + std::chrono::milliseconds( NONCE_REQUEST_TIMEOUT_MS );
+                                                       now < last_nonce_request_time_ +
+                                                                 std::chrono::milliseconds( NONCE_REQUEST_TIMEOUT_MS );
         if ( regular_node_retry_is_on_cooldown )
         {
             return false;
@@ -3920,21 +3921,24 @@ namespace sgns
             const auto previous_hash = tx.GetPreviousHash();
             if ( previous_hash.empty() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous hash tx={}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   tx.GetHash() );
+                m_logger->error( "{}: Missing previous hash tx={}", __func__, tx.GetHash() );
                 return { ConsensusManager::ValidationResult::Reject() };
+            }
+            if ( tx.GetSrcAddress() == account_m->GetAddress() )
+            {
+                const auto expected_previous_hash = GetOutgoingPreviousHash( tx.GetNonce() );
+                if ( !expected_previous_hash.empty() && previous_hash != expected_previous_hash )
+                {
+                    m_logger->error( "{}: Previous hash does not match local account head tx={}",
+                                     __func__,
+                                     tx.GetHash() );
+                    return { ConsensusManager::ValidationResult::Reject() };
+                }
             }
             auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
             if ( previous_cert_result.has_error() )
             {
-                TransactionManagerLogger()->error( "[{} - full: {}] {}: Missing previous certificate for hash {}",
-                                                   account_m->GetAddress().substr( 0, 8 ),
-                                                   full_node_m,
-                                                   __func__,
-                                                   previous_hash );
+                m_logger->error( "{}: Missing previous certificate for hash {}", __func__, previous_hash );
                 return { ConsensusManager::ValidationResult::Pending(
                     { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
             }
@@ -3957,11 +3961,7 @@ namespace sgns
         auto nonce_result = account_m->GetPeerNonce( tx.GetSrcAddress() );
         if ( nonce_result.has_error() )
         {
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: No confirmed nonce for address {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetSrcAddress() );
+            m_logger->debug( "{}: No confirmed nonce for address {}", __func__, tx.GetSrcAddress() );
             return { ConsensusManager::ValidationResult::Approve() };
         }
 
@@ -3970,27 +3970,22 @@ namespace sgns
 
         if ( tx_nonce <= confirmed_nonce )
         {
-            TransactionManagerLogger()->error( "[{} - full: {}] {}: Nonce too low tx={} nonce={} confirmed={}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx.GetHash(),
-                                               tx_nonce,
-                                               confirmed_nonce );
+            m_logger->error( "{}: Nonce too low tx={} nonce={} confirmed={}",
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce );
             return { ConsensusManager::ValidationResult::Reject() };
         }
 
         if ( tx_nonce > confirmed_nonce + nonce_window_m )
         {
-            TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: Nonce too high tx={} nonce={} confirmed={} window={}",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m,
-                __func__,
-                tx.GetHash(),
-                tx_nonce,
-                confirmed_nonce,
-                nonce_window_m );
+            m_logger->error( "{}: Nonce too high tx={} nonce={} confirmed={} window={}",
+                             __func__,
+                             tx.GetHash(),
+                             tx_nonce,
+                             confirmed_nonce,
+                             nonce_window_m );
             return { ConsensusManager::ValidationResult::Reject() };
         }
 
@@ -4001,33 +3996,23 @@ namespace sgns
                 auto tracked = GetTrackedTxByNonceAndAddress( n, tx.GetSrcAddress() );
                 if ( !tracked.has_value() )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Missing intermediate nonce {} for address {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        n,
-                        tx.GetSrcAddress() );
+                    m_logger->error( "{}: Missing intermediate nonce {} for address {}",
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
                 if ( tracked->status == TransactionStatus::FAILED )
                 {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Intermediate nonce {} invalid for address {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        n,
-                        tx.GetSrcAddress() );
+                    m_logger->error( "{}: Intermediate nonce {} invalid for address {}",
+                                     __func__,
+                                     n,
+                                     tx.GetSrcAddress() );
                     return { ConsensusManager::ValidationResult::Reject() };
                 }
             }
         }
-        TransactionManagerLogger()->debug( "[{} - full: {}] {}: Replay protection ok tx={}",
-                                           account_m->GetAddress().substr( 0, 8 ),
-                                           full_node_m,
-                                           __func__,
-                                           tx.GetHash() );
+        m_logger->debug( "{}: Replay protection ok tx={}", __func__, tx.GetHash() );
         return { ConsensusManager::ValidationResult::Approve() };
     }
 
