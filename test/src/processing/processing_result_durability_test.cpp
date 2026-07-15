@@ -89,14 +89,12 @@ public:
         std::vector<std::string> bootstrap_nodes;
         for ( size_t i = 0; i < 2; ++i )
         {
-            int  port = 40001 + i;
             auto node = std::make_shared<GossipPubSub>( config );
 
-            Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
             for ( auto &bn : bootstrap_nodes )
                 Color::PrintInfo( "  with bootstrap node: ", bn );
 
-            s_pubsub_futures.push_back( node->Start( port, bootstrap_nodes ) );
+            s_pubsub_futures.push_back( node->Start( 0, bootstrap_nodes ) );
 
             std::chrono::milliseconds nodeStartTime;
             ASSERT_WAIT_FOR_CONDITION(

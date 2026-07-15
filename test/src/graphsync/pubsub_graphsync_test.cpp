@@ -107,9 +107,9 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     auto io_context = std::make_shared<boost::asio::io_context>();
 
     auto pubs1        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    auto start1Future = pubs1->Start( 40001, {} );
+    auto start1Future = pubs1->Start( 0, {} );
     auto pubs2        = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>();
-    auto start2Future = pubs2->Start( 40002, {} );
+    auto start2Future = pubs2->Start( 0, {} );
 
     std::chrono::milliseconds resultTime;
     assertWaitForCondition(
