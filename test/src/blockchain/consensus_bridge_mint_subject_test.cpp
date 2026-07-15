@@ -53,16 +53,31 @@ namespace
         return out;
     }
 
-    // Phase 6 bridge-mint discriminator (D-02/D-06): a proposal whose NonceSubject
-    // embeds a kMintV2 transaction WITH a non-empty chain_id is a bridge mint.
-    TEST( ConsensusBridgeMintSubjectTest, MintV2WithNonEmptyChainIdIsBridgeMint )
+    // Phase 6 bridge-mint discriminator (D-02/D-06): numeric public-chain IDs
+    // use bridge slot quorum.
+    TEST( ConsensusBridgeMintSubjectTest, MintV2WithNumericChainIdIsBridgeMint )
+    {
+        const auto proposal = MakeProposalWithTx( MakeMintV2Tx( "11155111" ) );
+        EXPECT_TRUE( ConsensusManager::IsBridgeMintSubject( proposal ) );
+    }
+
+    // The explicit public-chain sentinel also uses bridge slot quorum.
+    TEST( ConsensusBridgeMintSubjectTest, MintV2WithPublicChainSentinelIsBridgeMint )
     {
         const auto proposal = MakeProposalWithTx( MakeMintV2Tx( "public" ) );
         EXPECT_TRUE( ConsensusManager::IsBridgeMintSubject( proposal ) );
     }
 
+    // A local/test validator chain ID must not be treated as a bridge mint,
+    // otherwise tests using TestMintInputValidator timeout on RPC slot quorum.
+    TEST( ConsensusBridgeMintSubjectTest, MintV2WithTestChainIdIsNotBridgeMint )
+    {
+        const auto proposal = MakeProposalWithTx( MakeMintV2Tx( "test" ) );
+        EXPECT_FALSE( ConsensusManager::IsBridgeMintSubject( proposal ) );
+    }
+
     // A MintV2 with an EMPTY chain_id is NOT a bridge mint -- it is a native
-    // mint and uses single-pool quorum (mirror TransactionManager::GetValidationChainId).
+    // mint and uses single-pool quorum.
     TEST( ConsensusBridgeMintSubjectTest, MintV2WithEmptyChainIdIsNotBridgeMint )
     {
         const auto proposal = MakeProposalWithTx( MakeMintV2Tx( "" ) );

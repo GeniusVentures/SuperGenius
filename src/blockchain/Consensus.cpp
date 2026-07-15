@@ -22,6 +22,23 @@
 
 namespace sgns
 {
+    namespace
+    {
+        bool IsPublicChainMintChainId( const std::string &chain_id )
+        {
+            if ( chain_id.empty() )
+            {
+                return false;
+            }
+            if ( chain_id == "public" )
+            {
+                return true;
+            }
+            return std::all_of( chain_id.begin(),
+                                chain_id.end(),
+                                []( unsigned char c ) { return c >= '0' && c <= '9'; } );
+        }
+    } // namespace
 
     base::Logger ConsensusManagerLogger()
     {
@@ -1317,8 +1334,9 @@ namespace sgns
     {
         // Fail-closed (RESEARCH Pattern 2): any decode failure returns false so
         // the single-pool IsQuorum path applies. Only a successfully-decoded
-        // NonceSubject carrying a kMintV2 with non-empty chain_id is a bridge
-        // mint (mirror TransactionManager::GetValidationChainId).
+        // NonceSubject carrying a kMintV2 with public-chain metadata is a
+        // bridge mint. Test/local chains can still use a registered
+        // IInputValidator without being forced through RPC slot quorum.
         const auto nonce_payload = DecodeNonceSubject( proposal.subject() );
         if ( nonce_payload.has_error() )
         {
@@ -1330,8 +1348,7 @@ namespace sgns
             return false;
         }
         const auto &mint = transaction.mint_v2();
-        // proto3 bytes field: empty chain_id == native mint (not bridge).
-        return !mint.chain_id().empty();
+        return IsPublicChainMintChainId( mint.chain_id() );
     }
 
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::EvaluateQuorum(

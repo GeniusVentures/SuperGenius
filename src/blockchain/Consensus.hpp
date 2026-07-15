@@ -395,9 +395,9 @@ namespace sgns
          * @brief Phase 6 (D-06): classifies a proposal's subject as a bridge mint.
          *
          * A bridge mint is a NonceSubject whose embedded transaction case is
-         * kMintV2 AND whose chain_id is non-empty (mirror
-         * TransactionManager::GetValidationChainId). Any decode failure returns
-         * false (fail-closed: single-pool quorum applies).
+         * kMintV2 and whose chain_id is public-chain metadata (`public` or a
+         * numeric chain id). Local/test chain ids use single-pool quorum. Any
+         * decode failure returns false (fail-closed: single-pool quorum applies).
          *
          * @param[in] proposal Proposal whose subject is inspected.
          * @return `true` when the subject is a bridge mint; `false` otherwise.
