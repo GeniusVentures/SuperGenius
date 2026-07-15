@@ -23,6 +23,7 @@
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
 #include "ProcessingTransaction.hpp"
+#include "RegistrationTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -559,6 +560,22 @@ namespace sgns
         EnqueueTransaction( std::make_pair( transfer_transaction, std::nullopt ) );
 
         return transfer_transaction->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata,
+        uint64_t                            sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( main_address ), sequence, std::move( metadata ), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
     }
 
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
@@ -1406,6 +1423,7 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "registration", &RegistrationTransaction::DeSerializeByteVector );
             return true;
         }();
         (void) registered;
@@ -1460,6 +1478,13 @@ namespace sgns
                 std::string bytes;
                 embedded.escrow_release().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRegistration:
+            {
+                std::string bytes;
+                embedded.registration().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "registration" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::TRANSACTION_NOT_SET:

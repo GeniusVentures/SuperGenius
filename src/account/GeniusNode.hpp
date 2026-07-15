@@ -511,6 +511,17 @@ namespace sgns
         outcome::result<std::string> TransferFunds( uint64_t amount, const std::string &destination, TokenID token_id );
 
         /**
+         * @brief Registers a child wallet under a main wallet address.
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @param[in] sequence      Registration sequence number.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata,
+                                                    uint64_t                             sequence );
+
+        /**
          * @brief Transfers funds to the configured developer address.
          * @param[in] amount Amount to transfer in token base units.
          * @param[in] token_id Token identifier to transfer.

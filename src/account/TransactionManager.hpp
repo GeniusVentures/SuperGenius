@@ -123,6 +123,17 @@ namespace sgns
         outcome::result<std::string> TransferFunds( uint64_t amount, std::string destination, TokenID token_id );
 
         /**
+         * @brief Creates and enqueues a child-wallet registration transaction.
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
+         * @param[in] sequence      Registration sequence number (caller-supplied per D-42).
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( std::string                          main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata,
+                                                    uint64_t                             sequence );
+
+        /**
          * @brief Creates and enqueues a mint transaction.
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.

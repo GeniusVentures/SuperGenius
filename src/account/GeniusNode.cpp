@@ -2282,6 +2282,21 @@ namespace sgns
         return tx_id;
     }
 
+    outcome::result<std::string> GeniusNode::RegisterChild( const std::string                   &main_address,
+                                                            SGTransaction::RegistrationMetadata  metadata,
+                                                            uint64_t                             sequence )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->RegisterChild( main_address, metadata, sequence ) );
+        node_logger_->debug( "{}: registration transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
     outcome::result<std::string> GeniusNode::PayDev( uint64_t amount, TokenID token_id )
     {
         return TransferFunds( amount, dev_config_.Addr, token_id );
