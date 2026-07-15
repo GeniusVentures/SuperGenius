@@ -36,7 +36,7 @@ TEST( GeniusNode, InitializationProgress )
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     auto last_percentage = 0.0F;
-
+    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(50);
     while ( std::chrono::steady_clock::now() < end && node->GetState() != GeniusNode::NodeState::READY )
     {
         auto percentage = node->GetInitializationStatus().first;

@@ -332,8 +332,7 @@ void BridgeE2ETest::SetUpTestSuite()
                    node_proc2->GetState() == GeniusNode::NodeState::READY;
         },
         kBlockchainInitTimeout,
-        "Processor nodes did not sync to READY within timeout",
-        &elapsed );
+        "Processor nodes did not sync to READY within timeout" );
 
     spdlog::info( "bridge_e2e: all processor nodes synced and READY" );
 
