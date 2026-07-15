@@ -1008,6 +1008,8 @@ namespace sgns
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
         auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::trace );
+        auto loggerBitswap          = ConfigureLogger( "Bitswap", logdir, spdlog::level::err );
+
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -1067,6 +1069,7 @@ namespace sgns
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
         auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::err );
+        auto loggerBitswap          = ConfigureLogger( "Bitswap", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
