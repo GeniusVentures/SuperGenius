@@ -45,8 +45,7 @@ namespace sgns
     public:
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC        = "SuperGNUSNode.TestNet.FullNode";
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
-        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS =
-            5000; ///< Unified timeout for all nonce requests (10 seconds)
+        static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
 
         /**
          * @brief State of the Transaction Manager
@@ -166,9 +165,9 @@ namespace sgns
                                                                             const std::string &dev_addr,
                                                                             uint64_t           peers_cut,
                                                                             const std::string &job_id );
-        outcome::result<std::string>                            PayEscrow( const std::string                       &escrow_path,
-                                                                           const SGProcessing::TaskResult          &task_result,
-                                                                           std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
+        outcome::result<std::string> PayEscrow( const std::string                       &escrow_path,
+                                                const SGProcessing::TaskResult          &task_result,
+                                                std::shared_ptr<crdt::AtomicTransaction> crdt_transaction );
 
         // Wait for an incoming transaction to be processed with a timeout
         TransactionStatus WaitForTransactionIncoming( const std::string        &txId,
@@ -538,10 +537,12 @@ namespace sgns
         std::atomic<bool>                     listening_topics_started_{ false };
         std::atomic<bool>                     core_started_{ false };
 
-        std::mutex                            missing_tx_mutex_;
-        std::unordered_set<std::string>       missing_tx_hashes_;
-        std::chrono::steady_clock::time_point last_init_tx_request_time_{};
-        static constexpr uint64_t             k_init_tx_request_cooldown_ms = 5000;
+        std::mutex                      missing_tx_mutex_;
+        std::unordered_set<std::string> missing_tx_hashes_;
+
+        std::chrono::steady_clock::time_point         last_init_tx_request_time_{};
+        mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
+        static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
 
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";

@@ -395,7 +395,7 @@ namespace sgns
         auto now                  = std::chrono::steady_clock::now();
         auto time_since_last_loop = std::chrono::duration_cast<std::chrono::milliseconds>( now - last_loop_time_ )
                                         .count();
-        last_loop_time_ = now;
+        last_loop_time_           = now;
 
         std::vector<std::string>                            elements_to_delete;
         std::vector<crdt::CRDTCallbackManager::NewDataPair> elements_to_process;
@@ -2273,14 +2273,14 @@ namespace sgns
 
         auto now = std::chrono::steady_clock::now();
         if ( last_init_tx_request_time_ != std::chrono::steady_clock::time_point{} &&
-             now - last_init_tx_request_time_ < std::chrono::milliseconds( k_init_tx_request_cooldown_ms ) )
+             now - last_init_tx_request_time_ < k_init_tx_request_cooldown_ms )
         {
             m_logger->debug( "Skipping tx requests (init cooldown)" );
             return;
         }
         last_init_tx_request_time_ = now;
 
-        const auto request_timeout = std::chrono::milliseconds( k_init_tx_request_cooldown_ms );
+        const auto request_timeout = k_init_tx_request_cooldown_ms;
         for ( const auto &tx_hash : missing_tx_hashes_copy )
         {
             m_logger->debug( "Requesting transaction with hash {} (this: {})",
@@ -2301,6 +2301,17 @@ namespace sgns
     bool TransactionManager::CheckNonce() const
     {
         m_logger->debug( "Checking if my local confirmed nonce is in sync with the network" );
+
+        const auto now                               = std::chrono::steady_clock::now();
+        const bool regular_node_retry_is_on_cooldown = !full_node_m &&
+                                                       last_nonce_request_time_ !=
+                                                           std::chrono::steady_clock::time_point{} &&
+                                                       now < last_nonce_request_time_ + std::chrono::milliseconds( NONCE_REQUEST_TIMEOUT_MS );
+        if ( regular_node_retry_is_on_cooldown )
+        {
+            return false;
+        }
+        last_nonce_request_time_ = now;
 
         auto nonce_from_network_result = account_m->FetchNetworkNonce( NONCE_REQUEST_TIMEOUT_MS );
         if ( nonce_from_network_result.has_error() )
