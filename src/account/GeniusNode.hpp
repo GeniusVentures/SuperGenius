@@ -758,7 +758,6 @@ namespace evmwatcher
         int              result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
 
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
-        mutable std::mutex catchup_mutex_;             ///< Serializes catchup_chains_ between OnRpcEndpointsReady (io_ pool) and watcher (own thread).
 
         /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
