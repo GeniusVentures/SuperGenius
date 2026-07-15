@@ -76,6 +76,7 @@ message EmbeddedTransaction {
     SGTransaction.MigrationTx migration = 5;
     SGTransaction.EscrowTx escrow = 6;
     SGTransaction.EscrowReleaseTx escrow_release = 7;
+    SGTransaction.RegistrationTx registration = 8;
   }
 }
 

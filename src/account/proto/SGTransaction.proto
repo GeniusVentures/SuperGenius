@@ -134,3 +134,19 @@ message EscrowReleaseTx
   string escrow_source = 5; 
   string original_escrow_hash = 6; 
 }
+
+message RegistrationMetadata
+{
+    string game_id = 1;
+    string publisher_id = 2;
+    bytes dev_wallet = 3;
+    uint64 peers_cut = 4;
+}
+
+message RegistrationTx
+{
+    DAGStruct dag_struct = 1;
+    bytes main_address = 2;
+    uint64 sequence = 3;
+    RegistrationMetadata metadata = 4;
+}
