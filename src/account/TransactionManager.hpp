@@ -597,6 +597,18 @@ namespace sgns
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
 
         /**
+         * @brief CRDT element filter for incoming child-wallet registrations.
+         *
+         * Phase 4: minimal gates a-c per D-44.
+         * Gates: (a) deserialization failure, (b) invalid child signature,
+         * (c) malformed main_address (not 128 hex chars).
+         * Phase 5 adds: (d) sequence monotonicity check.
+         *
+         * @return nullopt to accept, or a vector of tombstone elements to reject.
+         */
+        std::optional<std::vector<crdt::pb::Element>> FilterRegistration( const crdt::pb::Element &element );
+
+        /**
          * @brief Decides whether @p new_tx should replace @p existing_tx.
          *
          * Rejects replacement when the hashes are identical or when the existing

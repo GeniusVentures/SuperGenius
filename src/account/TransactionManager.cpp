@@ -219,6 +219,19 @@ namespace sgns
                     return std::nullopt;
                 } );
 
+            // Register the reg/ element filter for child-wallet registrations
+            bool crdt_reg_filter_initialized = instance->globaldb_m->RegisterElementFilter(
+                "^/?" + blockchain_base + "reg/[^/]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                    const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        return strong->FilterRegistration( element );
+                    }
+                    return std::nullopt;
+                } );
+
             (void) instance->globaldb_m->RegisterNewElementCallback(
                 "^/?" + blockchain_base + "tx/[^/]+",
                 [weak_ptr( std::weak_ptr<TransactionManager>(
@@ -1198,7 +1211,16 @@ namespace sgns
                     boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
             }
 
-            auto                   transaction_path = GetTransactionPath( *transaction );
+            std::string transaction_path;
+            if ( transaction->GetType() == "registration" )
+            {
+                auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( transaction );
+                transaction_path = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            }
+            else
+            {
+                transaction_path = GetTransactionPath( *transaction );
+            }
             crdt::HierarchicalKey  tx_key( transaction_path );
             crdt::GlobalDB::Buffer data_transaction;
 
@@ -2742,6 +2764,58 @@ namespace sgns
             maybe_tombstones = additional_elements_to_delete;
         }
 
+        return maybe_tombstones;
+    }
+
+    std::optional<std::vector<crdt::pb::Element>> TransactionManager::FilterRegistration(
+        const crdt::pb::Element &element )
+    {
+        std::optional<std::vector<crdt::pb::Element>> maybe_tombstones;
+        bool                                          should_delete = true;
+        do
+        {
+            // Gate (a): deserialization failure
+            auto maybe_new_tx = DeSerializeTransaction( element.value() );
+            if ( maybe_new_tx.has_error() )
+            {
+                m_logger->error( "Failed to deserialize registration {}", element.key() );
+                break;
+            }
+            auto new_tx = maybe_new_tx.value();
+            if ( new_tx->GetType() != "registration" )
+            {
+                break;
+            }
+            auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( new_tx );
+            if ( !reg_tx )
+            {
+                break;
+            }
+
+            // Gate (b): invalid child signature
+            if ( !CheckTransactionAuthorization( *reg_tx ) )
+            {
+                m_logger->error( "Invalid signature on registration {}", element.key() );
+                break;
+            }
+
+            // Gate (c): malformed main_address (not 128 hex chars)
+            if ( reg_tx->GetMainAddress().size() != 128 )
+            {
+                m_logger->error( "Malformed main_address in registration {}", element.key() );
+                break;
+            }
+
+            // Phase 5 adds: (d) sequence monotonicity check
+
+            should_delete = false;
+        } while ( 0 );
+
+        if ( should_delete )
+        {
+            // No cascade-delete — reg/ has no paired namespace (D-13)
+            maybe_tombstones = std::vector<crdt::pb::Element>{};
+        }
         return maybe_tombstones;
     }
 
