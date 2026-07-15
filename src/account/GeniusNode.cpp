@@ -349,6 +349,15 @@ namespace sgns
             isprocessor_ = true;
             node_logger_->info( "sgns_config.json: is_processor not set, defaulting to true" );
         }
+        if ( config_json.HasMember( "rpc_catchup" ) && config_json["rpc_catchup"].IsBool() )
+        {
+            rpc_catchup_ = config_json["rpc_catchup"].GetBool();
+        }
+        else
+        {
+            rpc_catchup_ = true;
+        }
+        node_logger_->info( "sgns_config.json: rpc_catchup={}", rpc_catchup_ );
         // node_type read (CFG-02 / CONTEXT D-02). Sets node_type_ ONLY — does NOT touch
         // is_full_node_ (the AccountSource ctor derives it; the retained old ctor keeps its param).
         if ( config_json.HasMember( "node_type" ) && config_json["node_type"].IsString() )
@@ -2959,6 +2968,7 @@ namespace sgns
         //     INITIALIZING_RPC_CATCH_UP state machine + PerformStartupCatchupScan).
         //     The watcher owns its own thread and polls eth_getLogs independently
         //     of the node lifecycle — no state machine coupling.
+        if ( rpc_catchup_ )
         {
             evmwatcher::BridgeCatchupWatcher::Config catchup_config;
             catchup_config.poll_interval = std::chrono::seconds( 15 );
@@ -3055,6 +3065,10 @@ namespace sgns
             catchup_watcher_->startWatching();
             node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
                                 catchup_config.poll_interval.count() );
+        }
+        else
+        {
+            node_logger_->info( "InitializeAndStartBridge: catchup watcher disabled (rpc_catchup_=false)" );
         }
 
         // 4. Post Initialize() to io_context — non-blocking. Capture a

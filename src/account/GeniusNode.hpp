@@ -63,7 +63,8 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-    std::function<std::optional<std::string>()> ChainlistFetcher = nullptr;  ///< Optional custom chainlist fetcher (test injection point).
+    std::function<std::optional<std::string>()> ChainlistFetcher =
+        nullptr; ///< Optional custom chainlist fetcher (test injection point).
 } GeniusNodeConfig;
 
 extern GeniusNodeConfig DEV_CONFIG;
@@ -77,10 +78,10 @@ namespace sgns
 {
     class MigrationManager;
 
-namespace evmwatcher
-{
-    class BridgeCatchupWatcher;
-}
+    namespace evmwatcher
+    {
+        class BridgeCatchupWatcher;
+    }
 
     /**
      * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
@@ -168,7 +169,7 @@ namespace evmwatcher
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
-            READY, ///< Node is ready for external operations.
+            READY,                     ///< Node is ready for external operations.
         };
 
         /**
@@ -750,12 +751,12 @@ namespace evmwatcher
         bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
         NodeType node_type_ =
             NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
-        base::Logger     node_logger_;                             ///< Main node logger.
-        GeniusNodeConfig dev_config_;                              ///< Runtime node configuration.
-        std::string      ipfs_cache_dir_           = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
-        bool             mirror_results_           = false; ///< Whether to mirror processing results from other nodes.
-        int              result_retention_hours_   = 168;   ///< Hours to retain results before GC (0 = keep forever).
-        int              result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
+        base::Logger     node_logger_;                            ///< Main node logger.
+        GeniusNodeConfig dev_config_;                             ///< Runtime node configuration.
+        std::string      ipfs_cache_dir_          = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool             mirror_results_          = false; ///< Whether to mirror processing results from other nodes.
+        int              result_retention_hours_  = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int              result_retention_max_mb_ = 0;     ///< Max MB for result cache (0 = no space cap).
 
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
 
@@ -776,6 +777,8 @@ namespace evmwatcher
         std::string           processing_channel_topic_;     ///< Processing task channel topic.
         std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
         uint16_t              subnet_id_ = 0;                ///< Subnet ID from sgns_config.json (reserved).
+        /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
+        bool rpc_catchup_ = true;
 
         std::vector<std::string>                 bootstrap_peers_;
         std::vector<std::string>                 bootstrap_fullnodes_;
@@ -786,7 +789,7 @@ namespace evmwatcher
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
-        std::shared_ptr<boost::asio::steady_timer> gc_timer_;   ///< Periodic GC timer for result cache cleanup.
+        std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
