@@ -209,9 +209,9 @@ protected:
     /** @brief Anvil deterministic account private keys (hex, no 0x prefix) — public test values.
      *         Each index gets a distinct key so every node occupies a separate validator slot. */
     static inline constexpr const char *kAnvilAccountHexKeys[] = {
-        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",  // Account #0
-        "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",  // Account #1
-        "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",  // Account #2
+        "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // Account #0
+        "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // Account #1
+        "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", // Account #2
     };
 
     /**
@@ -239,11 +239,11 @@ protected:
 
 std::array<std::shared_ptr<GeniusNode>, BridgeAnvilE2ETest::kNodeCount> BridgeAnvilE2ETest::s_nodes;
 std::array<GeniusNodeConfig, BridgeAnvilE2ETest::kNodeCount>            BridgeAnvilE2ETest::s_configs = { {
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node0", {} },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1", {} },
-    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2", {} },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node0" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" },
+    { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" },
 } };
-sgns::test::anvil::AnvilProcess BridgeAnvilE2ETest::s_anvil;
+sgns::test::anvil::AnvilProcess                                         BridgeAnvilE2ETest::s_anvil;
 
 void BridgeAnvilE2ETest::WriteBridgeChainsConfig( const std::string &base_write_path )
 {
@@ -258,11 +258,9 @@ void BridgeAnvilE2ETest::WriteBridgeChainsConfig( const std::string &base_write_
     constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
     std::filesystem::create_directories( base_write_path );
 
-    const uint64_t creation_block = ( s_fork_block > kBackfillWindow )
-                                    ? ( s_fork_block - kBackfillWindow )
-                                    : 0ull;
+    const uint64_t creation_block = ( s_fork_block > kBackfillWindow ) ? ( s_fork_block - kBackfillWindow ) : 0ull;
 
-    std::string config_json( kBridgeChainsConfigTemplate );
+    std::string       config_json( kBridgeChainsConfigTemplate );
     const std::string placeholder( "__CREATION_BLOCK__" );
     const auto        pos = config_json.find( placeholder );
     if ( pos != std::string::npos )
@@ -303,17 +301,18 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     if ( !sgns::test::anvil::FundAccount0WithGnus( s_anvil.RpcUrl() ) )
     {
         s_anvil.Stop();
-        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of "
-                     << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
+        GTEST_SKIP() << "Could not fund Anvil account #0 via impersonation of " << sgns::test::anvil::kGnusHolderSepolia
+                     << " — skipping";
     }
 
     // Capture the Anvil fork block so creation_block in the per-node config
     // avoids scanning from genesis (forward scan would otherwise query millions
     // of blocks, hitting rate limits and timing out).
     {
-        int          exit_code  = 0;
+        int               exit_code      = 0;
         const std::string fork_block_str = sgns::test::anvil::RunShellCapture(
-            "cast block-number --rpc-url " + s_anvil.RpcUrl(), exit_code );
+            "cast block-number --rpc-url " + s_anvil.RpcUrl(),
+            exit_code );
         ASSERT_EQ( exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
         ASSERT_FALSE( fork_block_str.empty() ) << "cast block-number returned empty output";
         s_fork_block = std::stoull( fork_block_str );
@@ -328,23 +327,20 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         s_configs[i].BaseWritePath = binary_path + "/node" + std::to_string( i ) + "/";
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
         sgns::GeniusNode::WriteNetworkConfig( s_configs[i].BaseWritePath, kBasePort + i, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath, ( i == 0u ) ? "Full" : "Light", /*is_processor=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( s_configs[i].BaseWritePath,
+                                           ( i == 0u ) ? "Full" : "Light",
+                                           /*is_processor=*/false );
     }
 
     // Inject a chainlist fetcher that returns only the Anvil RPC endpoint, so
     // ChainRpcEndpointProvider::Initialize() queries the local fork instead of
     // doing a network fetch of chainid.network/chains.json.
+    const std::string kAnvilRpcUrl      = s_anvil.RpcUrl();
+    auto              chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string>
     {
-        const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
-        auto fetcher = [kAnvilRpcUrl]() -> std::optional<std::string> {
-            return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) +
-                   kAnvilRpcUrl + R"("],"status":"active"}])";
-        };
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
-        {
-            s_configs[i].ChainlistFetcher = fetcher;
-        }
-    }
+        return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) + kAnvilRpcUrl +
+               R"("],"status":"active"}])";
+    };
 
     spdlog::info( "bridge_anvil: creating {}-node cluster against local Anvil", kNodeCount );
 
@@ -356,24 +352,23 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
         s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ kAnvilAccountHexKeys[i] } );
+        s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
     }
 
     // Register all node addresses as genesis validators so the Phase 6
     // slot-based consensus quorum can be met (slot_public_min_group_ = 2
     // requires ≥2 distinct validators per PUBLIC hash group).
     sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses(
-        { s_nodes[1]->GetAddress(), s_nodes[2]->GetAddress() } );
+    sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( { s_nodes[1]->GetAddress(), s_nodes[2]->GetAddress() } );
     spdlog::info( "bridge_anvil: authorized full node = {}, +{} additional genesis validators",
                   s_nodes[0]->GetAddress().substr( 0, 16 ),
                   kNodeCount - 1u );
 
     // Wait for full node READY (genesis + account-creation blocks).
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
-        kNodeReadyTimeout,
-        "full node [0] READY",
-        nullptr );
+    ASSERT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
+                               kNodeReadyTimeout,
+                               "full node [0] READY",
+                               nullptr );
 
     spdlog::info( "bridge_anvil: full node [0] READY, bootstrapping PubSub mesh for {} processor nodes",
                   kNodeCount - 1u );
@@ -424,10 +419,10 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
         ep_direct.accepted_topic0_hashes  = { sgns::test::anvil::BridgeEventTopic0() };
 
         sgns::WeightedRpcEndpoint ep_public1 = ep_direct;
-        ep_public1.consensus_weight = 0;
+        ep_public1.consensus_weight          = 0;
 
         sgns::WeightedRpcEndpoint ep_public2 = ep_direct;
-        ep_public2.consensus_weight = 0;
+        ep_public2.consensus_weight          = 0;
 
         std::vector<sgns::WeightedRpcEndpoint> anvil_eps{ ep_direct, ep_public1, ep_public2 };
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
@@ -475,8 +470,9 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
 
     // Send a real bridgeOut() burn targeting the LOCAL Anvil RPC (D-14 Path A).
     spdlog::info( "bridge_anvil: sending burn transaction to local Anvil" );
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), kMintAmount, s_nodes[0]->GetAddress() );
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                      kMintAmount,
+                                                                      s_nodes[0]->GetAddress() );
     spdlog::info( "bridge_anvil: burn tx hash = {}", tx_hash );
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
 
@@ -484,11 +480,11 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
     spdlog::info( "bridge_anvil: triggering MintTokens on s_nodes[0]" );
     EXPECT_OUTCOME_TRUE( mint_result,
                          s_nodes[0]->MintTokens( kMintAmount,
-                                                tx_hash,
-                                                sgns::test::anvil::kSepoliaChainId,
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                dest_addr,
-                                                kMintTimeout ) );
+                                                 tx_hash,
+                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 dest_addr,
+                                                 kMintTimeout ) );
     spdlog::info( "bridge_anvil: MintTokens completed" );
 
     // D-17a: assert minted UTXO appears in recipient balance.
@@ -518,8 +514,9 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     const std::string dest_addr = s_nodes[0]->GetAddress();
 
     // Send a fresh bridgeOut() burn tx to local Anvil.
-    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn(
-        s_anvil.RpcUrl(), kMintAmount, s_nodes[0]->GetAddress() );
+    const std::string tx_hash = sgns::test::anvil::SendBridgeOutBurn( s_anvil.RpcUrl(),
+                                                                      kMintAmount,
+                                                                      s_nodes[0]->GetAddress() );
     ASSERT_FALSE( tx_hash.empty() ) << "bridgeOut burn-seeding failed (cast send rejected the call)";
     spdlog::info( "bridge_anvil: replay-test burn tx hash = {}", tx_hash );
 
@@ -529,11 +526,11 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     const uint64_t balance_before_first = s_nodes[0]->GetBalance( dest_addr );
     EXPECT_OUTCOME_TRUE( first_result,
                          s_nodes[0]->MintTokens( kMintAmount,
-                                                tx_hash,
-                                                sgns::test::anvil::kSepoliaChainId,
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                dest_addr,
-                                                kReplayTimeout ) );
+                                                 tx_hash,
+                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 dest_addr,
+                                                 kReplayTimeout ) );
     spdlog::info( "bridge_anvil: replay-test first mint submitted" );
 
     EXPECT_WAIT_FOR_CONDITION( [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_first; },
@@ -547,11 +544,11 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
 
     // Second mint with the SAME tx hash must be rejected by the dedup cache.
     auto second_result = s_nodes[0]->MintTokens( kMintAmount,
-                                                tx_hash,
-                                                sgns::test::anvil::kSepoliaChainId,
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                dest_addr,
-                                                kReplayTimeout );
+                                                 tx_hash,
+                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::TokenID::FromBytes( { 0x00 } ),
+                                                 dest_addr,
+                                                 kReplayTimeout );
 
     bool replay_rejected = second_result.has_error();
     if ( !replay_rejected )
@@ -564,8 +561,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
         const bool duplicate_settled = waitForCondition(
             [&]() { return s_nodes[0]->GetBalance( dest_addr ) > balance_before_replay; },
             kReplayTimeout );
-        EXPECT_FALSE( duplicate_settled )
-            << "Balance must not increase from a replayed Anvil burn tx hash";
+        EXPECT_FALSE( duplicate_settled ) << "Balance must not increase from a replayed Anvil burn tx hash";
         spdlog::info( "bridge_anvil: second mint returned OK; duplicate_settled={}", duplicate_settled );
     }
     else

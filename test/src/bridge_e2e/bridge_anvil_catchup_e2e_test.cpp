@@ -266,9 +266,9 @@ std::vector<std::string>        BridgeAnvilCatchupE2ETest::s_pre_node_burn_hashe
 uint64_t                        BridgeAnvilCatchupE2ETest::s_fork_block = 0ull;
 
 std::array<GeniusNodeConfig, BridgeAnvilCatchupE2ETest::kNodeCount> BridgeAnvilCatchupE2ETest::s_configs = { {
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node1", {} },
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node2", {} },
-    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node3", {} },
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node1" },
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node2" },
+    { BridgeAnvilCatchupE2ETest::kDevPayoutAddr, BridgeAnvilCatchupE2ETest::kDevCutFraction, BridgeAnvilCatchupE2ETest::kDevTokenValue, sgns::TokenID::FromBytes( { 0x00 } ), "./catchup_node3"},
 } };
 
 void BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig( const std::string &base_write_path )
@@ -378,19 +378,13 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
         WriteBridgeChainsConfig( s_configs[i].BaseWritePath );
     }
 
-    // Inject a chainlist fetcher returning only the Anvil RPC endpoint, so the
+    // Chainlist fetcher returning only the Anvil RPC endpoint, so the
     // catch-up scan queries the local fork instead of chainid.network.
-    {
-        const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
-        auto fetcher = [kAnvilRpcUrl]() -> std::optional<std::string> {
-            return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) +
-                   kAnvilRpcUrl + R"("],"status":"active"}])";
-        };
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
-        {
-            s_configs[i].ChainlistFetcher = fetcher;
-        }
-    }
+    const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
+    auto chainlist_fetcher = [kAnvilRpcUrl]() -> std::optional<std::string> {
+        return std::string( R"([{"name":"ethereum-sepolia","chainId":11155111,"rpc":[")" ) +
+               kAnvilRpcUrl + R"("],"status":"active"}])";
+    };
 
     // Create ALL three nodes FIRST (matching Plan 04.1-01 pattern) so
     // SetAdditionalGenesisValidatorAddresses has every address before the
@@ -403,14 +397,17 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
     sgns::GeniusNode::WriteNetworkConfig( s_configs[0].BaseWritePath, kPorts[0], /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[0].BaseWritePath, kWNodeType[0], /*is_processor=*/false );
     node_main = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ kAnvilAccountHexKeys[0] } );
+    node_main->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[1].BaseWritePath, kPorts[1], /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[1].BaseWritePath, kWNodeType[1], /*is_processor=*/false );
     node_proc1 = GeniusNode::New( s_configs[1], sgns::FromPrivateKey{ kAnvilAccountHexKeys[1] } );
+    node_proc1->SetChainlistFetcher( chainlist_fetcher );
 
     sgns::GeniusNode::WriteNetworkConfig( s_configs[2].BaseWritePath, kPorts[2], /*auto_dht=*/true );
     sgns::GeniusNode::WriteSgnsConfig( s_configs[2].BaseWritePath, kWNodeType[2], /*is_processor=*/false );
     node_proc2 = GeniusNode::New( s_configs[2], sgns::FromPrivateKey{ kAnvilAccountHexKeys[2] } );
+    node_proc2->SetChainlistFetcher( chainlist_fetcher );
 
     // Register all node addresses as genesis validators IMMEDIATELY after node
     // creation so the ValidatorRegistry bootstraps the genesis registry before

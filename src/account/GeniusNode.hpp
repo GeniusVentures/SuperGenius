@@ -63,8 +63,6 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-    std::function<std::optional<std::string>()> ChainlistFetcher =
-        nullptr; ///< Optional custom chainlist fetcher (test injection point).
 } GeniusNodeConfig;
 
 extern GeniusNodeConfig DEV_CONFIG;
@@ -686,6 +684,12 @@ namespace sgns
         void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
         /**
+         * @brief Injects a custom chainlist fetcher for RPC endpoint discovery (test injection point).
+         * @param[in] fetcher Callable returning the chainlist JSON string, or std::nullopt on failure.
+         */
+        void SetChainlistFetcher( std::function<std::optional<std::string>()> fetcher );
+
+        /**
          * @brief Returns a tracked transaction status by transaction hash.
          * @param[in] txId Transaction hash to look up.
          * @return Outgoing status when present, then incoming status, or INVALID when unknown/not ready.
@@ -770,6 +774,8 @@ namespace sgns
             rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
         std::shared_ptr<evmwatcher::BridgeCatchupWatcher>
             catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns (replaces PerformStartupCatchupScan).
+        std::function<std::optional<std::string>()>
+            chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /

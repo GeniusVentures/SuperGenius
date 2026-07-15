@@ -2876,6 +2876,11 @@ namespace sgns
         }
     }
 
+    void GeniusNode::SetChainlistFetcher( std::function<std::optional<std::string>()> fetcher )
+    {
+        chainlist_fetcher_ = std::move( fetcher );
+    }
+
     void GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
     {
         if ( !transaction_manager_ )
@@ -2946,10 +2951,10 @@ namespace sgns
         // 2. Construct provider
         rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
 
-        // 2a. Inject custom chainlist fetcher if provided (test injection point via GeniusNodeConfig.ChainlistFetcher)
-        if ( dev_config_.ChainlistFetcher )
+        // 2a. Inject custom chainlist fetcher if provided (test injection point via SetChainlistFetcher)
+        if ( chainlist_fetcher_ )
         {
-            rpc_endpoint_provider_->SetChainlistFetcher( dev_config_.ChainlistFetcher );
+            rpc_endpoint_provider_->SetChainlistFetcher( chainlist_fetcher_ );
         }
 
         // 3. Subscribe observers BEFORE post (D-03 ordering)
