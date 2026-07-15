@@ -463,16 +463,16 @@ namespace sgns
         }
 
         auto cid_string = registry_put.value().toString();
-        if ( cid_string.has_value() )
-        {
-            logger_->info( "{}: stored genesis registry CID {}", __func__, cid_string.value() );
-        }
-        else
+        if ( !cid_string.has_value() )
         {
             logger_->error( "{}: registry stored but CID missing", __func__ );
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        logger_->info( "{}: success", __func__ );
+        // Make local creation authoritative before returning instead of depending on CRDT callback timing.
+        RegistryUpdateReceived( { registry_key.GetKey(), std::move( update_buffer ) }, cid_string.value() );
+
+        logger_->info( "{}: stored and initialized genesis registry CID {}", __func__, cid_string.value() );
         return outcome::success();
     }
 
