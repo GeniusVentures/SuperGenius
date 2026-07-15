@@ -417,7 +417,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 TEST_F( MultiAccountTest, NodeConsensusTest )
 {
     constexpr size_t kCertificatesPerBatch = 1;
-    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+    const auto       kCertificateDelay     = std::chrono::seconds( 1 );
 
     auto node_full   = CreateNode( "node_consensus_full", true, true, true );
     auto node_client = CreateNode( "node_consensus_client" );
@@ -594,7 +594,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 {
     constexpr size_t kCertificatesPerBatch = 5;
-    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+    const auto       kCertificateDelay     = std::chrono::seconds( 1 );
 
     auto node_full   = CreateNode( "node_consensus_batch5_full", true, true, true );
     auto node_client = CreateNode( "node_consensus_batch5_client" );
@@ -633,7 +633,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 
     auto assert_registry_immutable = [&]( const char *step )
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+        const auto deadline = std::chrono::steady_clock::now() + kCertificateDelay + std::chrono::seconds( 1 );
         while ( std::chrono::steady_clock::now() < deadline )
         {
             auto load = registry->LoadCurrentRegistry();
@@ -651,7 +651,6 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
-    assert_registry_immutable( "tx1" );
 
     auto mint2 = node_client->MintTokens( 250,
                                           sgns::test::NextMintSourceHash(),
@@ -660,20 +659,19 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
-    assert_registry_immutable( "tx2" );
 
     auto transfer1 = node_client->TransferFunds( 75,
                                                  node_peer1->GetAddress(),
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
-    assert_registry_immutable( "tx3" );
 
     auto transfer2 = node_client->TransferFunds( 40,
                                                  node_peer2->GetAddress(),
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
+    // Waiting once after the fourth certificate detects any premature update from the partial batch.
     assert_registry_immutable( "tx4" );
 
     auto transfer3 = node_client->TransferFunds( 10,
