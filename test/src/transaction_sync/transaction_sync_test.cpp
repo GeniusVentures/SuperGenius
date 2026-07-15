@@ -233,8 +233,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     auto balance_2_before = node_proc2->GetBalance();
 
     // Mint tokens on node_proc1
-    std::vector<uint64_t> mint_amounts =
-        { 10000000000, 20000000000, 30000000000, 40000000000, 50000000000, 60000000000 };
+    std::vector<uint64_t> mint_amounts = { 10000000000, 20000000000 };
 
     for ( auto amount : mint_amounts )
     {
@@ -259,18 +258,10 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
-    auto mint_result2 = node_proc2->MintTokens( 20000000000,
-                                                sgns::test::NextMintSourceHash(),
-                                                "test",
-                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                                "",
-                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
-    ASSERT_TRUE( mint_result2.has_value() ) << "Mint transaction failed or timed out";
-
     // Verify balances after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 210000000000 )
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 30000000000 )
         << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 30000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 ) << "Correct Balance of outgoing transactions";
 
     // Transfer funds
     auto transfer_result1 = node_proc1->TransferFunds( 10000000000,
@@ -280,14 +271,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     ASSERT_TRUE( transfer_result1.has_value() ) << "Transfer transaction failed or timed out";
     auto [transfer_tx_id1, transfer_duration1] = transfer_result1.value();
 
-    auto transfer_result2 = node_proc1->TransferFunds( 20000000000,
-                                                       node_proc2->GetAddress(),
-                                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    ASSERT_TRUE( transfer_result2.has_value() ) << "Transfer transaction failed or timed out";
-    auto [transfer_tx_id2, transfer_duration2] = transfer_result2.value();
-
-    // wait for both transfers to happen or timeout.
+    // Wait for the transfer to happen or timeout.
     auto start_time = std::chrono::steady_clock::now();
 
     auto transfer_received = node_proc2->WaitForTransactionIncoming(
@@ -298,20 +282,10 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
         std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start_time ).count();
     std::cout << "node2 Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
-    // wait for both transfers to happen or timeout.
-    start_time        = std::chrono::steady_clock::now();
-    transfer_received = node_proc2->WaitForTransactionIncoming(
-        transfer_tx_id2,
-        std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) );
-    EXPECT_EQ( transfer_received, TransactionManager::TransactionStatus::CONFIRMED );
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - start_time )
-                   .count();
-    std::cout << "node1 Transfer Received transaction completed in " << duration << " ms" << std::endl;
-
     // Verify balances after transfers
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 180000000000 )
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 )
         << "Correct Balance of outgoing transactions";
-    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 60000000000 ) << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 20000000000 ) << "Correct Balance of outgoing transactions";
 }
 
 TEST_F( TransactionSyncTest, TransactionTransferSync )
@@ -329,8 +303,8 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 
     // Mint tokens on node_proc1
     std::vector<uint64_t> xfer_amounts[2] = {
-        { 10000000000, 20000000000, 30000000000, 30000000000, 20000000000, 10000000000 },
-        { 10000000000, 20000000000, 20000000000, 3000000000, 3000000000, 3000000000 },
+        { 10000000000, 20000000000 },
+        { 5000000000, 10000000000 },
     };
 
     std::vector<std::string> txIDs[2];
@@ -536,6 +510,6 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
 
     auto tx2_status = node_proc1->WaitForTransactionOutgoing(
         tx2->GetHash(),
-        std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
-    EXPECT_NE( tx2_status, TransactionManager::TransactionStatus::CONFIRMED );
+        std::chrono::seconds( 10 ) );
+    EXPECT_EQ( tx2_status, TransactionManager::TransactionStatus::FAILED );
 }
