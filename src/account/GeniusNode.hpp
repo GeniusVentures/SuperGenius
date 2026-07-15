@@ -147,11 +147,13 @@ namespace sgns
          * @param[in] base_path Directory whose sgns_config.json will be (over)written.
          * @param[in] node_type Role string — validated case-insensitively (Full/Light/Archive); any other value returns Error::INVALID_NODE_TYPE.
          * @param[in] is_processor Whether processing services run (key "is_processor").
+         * @param[in] rpc_catchup Whether the bridge catchup scan watcher starts at bridge init (key "rpc_catchup"). Defaults true; pass false for tests that do not exercise bridge/RPC/catchup paths.
          * @return Error::INVALID_NODE_TYPE on an unrecognized node_type; failure on I/O error; success otherwise.
          */
         static outcome::result<void> WriteSgnsConfig( const std::string &base_path,
                                                       const std::string &node_type,
-                                                      bool               is_processor );
+                                                      bool               is_processor,
+                                                      bool               rpc_catchup = true );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.

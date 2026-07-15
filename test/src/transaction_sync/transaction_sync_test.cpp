@@ -80,13 +80,13 @@ namespace sgns
             // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
             std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false, /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
             full_node = sgns::GeniusNode::New(
                 DEV_CONFIG3,

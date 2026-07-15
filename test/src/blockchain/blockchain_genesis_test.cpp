@@ -89,7 +89,7 @@ protected:
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
         auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         // New starts PubSub synchronously in the constructor

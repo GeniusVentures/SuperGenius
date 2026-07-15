@@ -100,7 +100,7 @@ protected:
         GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/uniquePort, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                      /*node_type=*/isFullNode ? "Full" : "Light",
-                                     /*is_processor=*/false );
+                                     /*is_processor=*/false, /*rpc_catchup=*/false );
         return GeniusNode::New( devConfig, sgns::FromPrivateKey{ key.c_str() } );
     }
 

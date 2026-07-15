@@ -69,7 +69,7 @@ namespace
                          } );
 
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
         if ( setAsAuthorized )

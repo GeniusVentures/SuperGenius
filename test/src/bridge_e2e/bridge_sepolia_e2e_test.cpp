@@ -106,15 +106,6 @@ namespace
         return BytesToHex( decoded );
     }
 
-    void WriteSgnsConfig( const std::string &baseWritePath )
-    {
-        constexpr const char *kSgnsConfigContent  = R"({"is_processor": false})";
-        constexpr const char *kSgnsConfigFilename = "sgns_config.json";
-        std::filesystem::create_directories( baseWritePath );
-        std::ofstream out( baseWritePath + kSgnsConfigFilename, std::ios::binary | std::ios::trunc );
-        out << kSgnsConfigContent;
-    }
-
 } // namespace
 
 // =============================================================================

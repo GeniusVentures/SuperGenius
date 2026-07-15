@@ -52,7 +52,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
     GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
     auto     node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )

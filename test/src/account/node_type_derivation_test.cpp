@@ -53,7 +53,7 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
     UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_derivation" );
     const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -71,7 +71,7 @@ TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
     UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_failure" );
     const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ "not-a-valid-hex-key" } );
     EXPECT_EQ( node, nullptr );

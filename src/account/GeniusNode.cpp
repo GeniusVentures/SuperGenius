@@ -205,7 +205,8 @@ namespace sgns
 
     outcome::result<void> GeniusNode::WriteSgnsConfig( const std::string &base_path,
                                                        const std::string &node_type,
-                                                       bool               is_processor )
+                                                       bool               is_processor,
+                                                       bool               rpc_catchup )
     {
         if ( !NodeTypeFromString( node_type ) ) // case-insensitive validation (Phase-2 D-02)
         {
@@ -218,7 +219,8 @@ namespace sgns
         {
             return Error::DATABASE_WRITE_ERROR;
         }
-        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" ) << " }";
+        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" )
+            << ", \"rpc_catchup\": " << ( rpc_catchup ? "true" : "false" ) << " }";
         return outcome::success();
     }
 
