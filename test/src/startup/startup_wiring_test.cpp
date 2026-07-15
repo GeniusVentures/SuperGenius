@@ -724,7 +724,7 @@ TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
     };
 
     constexpr uint64_t kChainId = 12345;
-    auto chains_provider = [kChainId]()
+    auto chains_provider = []()
     {
         return std::vector<ChainContractPair>{
             { "test-chain", "0x0000000000000000000000000000000000000001", kChainId, 0 }
