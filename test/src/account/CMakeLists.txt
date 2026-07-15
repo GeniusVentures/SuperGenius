@@ -94,6 +94,7 @@ addtest(registration_transaction_test
 target_link_libraries(registration_transaction_test
     genius_node_test
     json_secure_storage
+    base_crdt_test
 )
 
 if(MSVC)
