@@ -28,6 +28,7 @@
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
+#include "testutil/wait_condition.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -39,9 +40,9 @@
 namespace
 {
     template <typename Predicate>
-    bool waitForCondition( Predicate                 pred,
-                           std::chrono::milliseconds timeout,
-                           std::chrono::milliseconds pollInterval = std::chrono::milliseconds( 100 ) )
+    bool pollUntilCondition( Predicate                 pred,
+                            std::chrono::milliseconds timeout,
+                            std::chrono::milliseconds pollInterval = std::chrono::milliseconds( 100 ) )
     {
         const auto start = std::chrono::steady_clock::now();
         while ( std::chrono::steady_clock::now() - start < timeout )
@@ -241,15 +242,16 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    EXPECT_WAIT_FOR_CONDITION(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Replication to replica nodes did not complete in time",
+        nullptr );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -285,15 +287,16 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    EXPECT_WAIT_FOR_CONDITION(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Replication to replica nodes did not complete in time",
+        nullptr );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -345,15 +348,16 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     const auto commitResB = txB->Commit( { "test" } );
     ASSERT_TRUE( commitResB.has_value() );
 
-    const bool replicated = waitForCondition(
+    EXPECT_WAIT_FOR_CONDITION(
         [&]() -> bool
         {
             const auto resA = testNodes->getNodes()[2].db->Get( keyA );
             const auto resB = testNodes->getNodes()[2].db->Get( keyB );
             return resA.has_value() && resB.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Replication of keys A and B to node 3 did not complete in time",
+        nullptr );
     {
         const auto resA = testNodes->getNodes()[2].db->Get( keyA );
         const auto resB = testNodes->getNodes()[2].db->Get( keyB );
@@ -424,15 +428,16 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
     const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    EXPECT_WAIT_FOR_CONDITION(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Replication to replica nodes did not complete in time",
+        nullptr );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -464,15 +469,16 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
     const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    EXPECT_WAIT_FOR_CONDITION(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Replication to replica nodes did not complete in time",
+        nullptr );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -510,17 +516,19 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    bool node0Received = waitForCondition( [&]() -> bool
-                                           { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
-                                           WAIT_TIMEOUT );
-    EXPECT_TRUE( node0Received );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]() -> bool { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+        WAIT_TIMEOUT,
+        "Node 0 did not receive the topic message in time",
+        nullptr );
 
-    bool node1Received = waitForCondition( [&]() -> bool
-                                           { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
-                                           WAIT_TIMEOUT );
-    EXPECT_TRUE( node1Received );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]() -> bool { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+        WAIT_TIMEOUT,
+        "Node 1 did not receive the topic message in time",
+        nullptr );
 
-    bool node2Received = waitForCondition( [&]() -> bool
+    bool node2Received = pollUntilCondition( [&]() -> bool
                                            { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
                                            WAIT_TIMEOUT );
     EXPECT_FALSE( node2Received );
@@ -552,17 +560,19 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    bool node1Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
-                                             WAIT_TIMEOUT );
-    EXPECT_TRUE( node1Replicated );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]() -> bool { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+        WAIT_TIMEOUT,
+        "Node 1 did not replicate the broadcast message in time",
+        nullptr );
 
-    bool node2Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
-                                             WAIT_TIMEOUT );
-    EXPECT_TRUE( node2Replicated );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&]() -> bool { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+        WAIT_TIMEOUT,
+        "Node 2 did not replicate the broadcast message in time",
+        nullptr );
 
-    bool node3Replicated = waitForCondition( [&]() -> bool
+    bool node3Replicated = pollUntilCondition( [&]() -> bool
                                              { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
                                              WAIT_TIMEOUT );
     EXPECT_FALSE( node3Replicated );

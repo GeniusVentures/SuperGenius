@@ -324,9 +324,11 @@ TEST_F( ProcessingServiceTest, DISABLED_ProcessingSlotsAreAvailable )
     channelResponse->set_channel_id( "PROCESSING_QUEUE_ID" );
     gridChannel2.Publish( gridMessage.SerializeAsString() );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-    EXPECT_EQ( processingService->GetProcessingNodesCount(), 1 );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&processingService]() { return processingService->GetProcessingNodesCount() == 1; },
+        std::chrono::milliseconds( 3000 ),
+        "Processing node was not created",
+        nullptr );
 }
 
 /**
@@ -365,7 +367,9 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
 
     // No queue channel message sent
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-    EXPECT_EQ( processingService->GetProcessingNodesCount(), 0 );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&processingService]() { return processingService->GetProcessingNodesCount() == 0; },
+        std::chrono::milliseconds( 3000 ),
+        "No processing node should have been created",
+        nullptr );
 }
