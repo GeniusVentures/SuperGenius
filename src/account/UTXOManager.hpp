@@ -51,9 +51,9 @@ namespace sgns
          */
         enum class UTXOState : uint8_t
         {
-            UTXO_READY = 0,        ///< UTXO is unspent and available for use
-            UTXO_CONSUMED = 1,     ///< UTXO has been consumed by a transaction and is no longer available
-            UTXO_RESERVED = 2      ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
+            UTXO_READY    = 0, ///< UTXO is unspent and available for use
+            UTXO_CONSUMED = 1, ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_RESERVED = 2  ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
         };
 
         /**
@@ -191,6 +191,17 @@ namespace sgns
         outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
                                             const std::string                &address,
                                             UTXOType                          type = UTXOType::UTXO_NORMAL );
+
+        /**
+         * @brief Restores previously consumed inputs when their consuming transaction is reverted.
+         * @param[in] infos Inputs whose outpoints should become spendable again.
+         * @param[in] address Expected owner of the consumed inputs.
+         * @param[in] type Expected UTXO type.
+         * @return Success when every input was consumed by this owner and was restored.
+         */
+        outcome::result<void> RestoreConsumedUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                                    const std::string                &address,
+                                                    UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Consume UTXOs from the default owner address tracked by this manager.
@@ -373,7 +384,7 @@ namespace sgns
 
         /**
          * @brief       Stores the current UTXO state for the manager's default address to persistent storage.
-         * @param[in]   address The address to store UTXOs for    
+         * @param[in]   address The address to store UTXOs for
          */
         outcome::result<void> StoreUTXOs( const std::string &address );
 

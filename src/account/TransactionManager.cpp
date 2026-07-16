@@ -79,6 +79,12 @@ namespace sgns
             return true;
         }
 
+        std::string TransferInputOwner( const TransferTransaction &transaction )
+        {
+            return utxo_address::IsEscrowLockAddress( transaction.GetUncleHash() ) ? transaction.GetUncleHash()
+                                                                                   : transaction.GetSrcAddress();
+        }
+
         base::Logger TransactionManagerLogger()
         {
             // Always call base::createLogger to get the current logger
@@ -1723,12 +1729,8 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        auto input_owner = transfer_tx->GetSrcAddress();
-        if ( utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
-        {
-            input_owner = transfer_tx->GetUncleHash();
-        }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(),
+                                                                     TransferInputOwner( *transfer_tx ) ) );
         return outcome::success();
     }
 
@@ -1822,18 +1824,8 @@ namespace sgns
             m_logger->debug( "Notify {} of deletion of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
-        m_logger->debug( "Re-parsing inputs to be added as UTXOs" );
-        for ( const auto &input : transfer_tx->GetInputInfos() )
-        {
-            m_logger->debug( "Fetching transaction {} ", input.txid_hash_.toReadableString() );
-            auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-            if ( tx )
-            {
-                m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
-                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-            }
-        }
-        account_m->GetUTXOManager().RollbackUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetHash() );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().RestoreConsumedUTXOs( transfer_tx->GetInputInfos(),
+                                                                             TransferInputOwner( *transfer_tx ) ) );
 
         return outcome::success();
     }
@@ -1897,16 +1889,8 @@ namespace sgns
         if ( auto params = escrow_tx->GetUTXOParameters(); !params.second.empty() )
         {
             BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *escrow_tx ) );
-            for ( auto &input : params.first )
-            {
-                auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-                if ( tx )
-                {
-                    m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
-                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-                }
-            }
-            account_m->GetUTXOManager().RollbackUTXOs( params.first, escrow_tx->GetHash() );
+            BOOST_OUTCOME_TRY(
+                account_m->GetUTXOManager().RestoreConsumedUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
         }
 
         return outcome::success();
@@ -2254,6 +2238,10 @@ namespace sgns
             if ( CheckNonce() )
             {
                 ChangeState( State::READY );
+            }
+            else
+            {
+                RequestRelevantHeads();
             }
             return;
         }
