@@ -21,6 +21,32 @@ Milestone summary: `.planning/MILESTONES.md`
 
 </details>
 
+### Phase 8: Burn/mint datapath robustness: multi-node mint-race e2e test (one burn observed concurrently by all nodes' watchers, exactly-once mint across cluster, extends bridge_e2e Anvil fixture), fault injection (node kill mid-mint, degraded/disagreeing RPC endpoints via WeightedRpcEndpoint quorum), and libFuzzer harnesses for BridgeRelayer::ParseBurnEventValues and bridge config/transaction deserializers
+
+**Goal:** Prove the burn->mint datapath is robust under true multi-node concurrency and adversarial
+conditions: 11 nodes' watchers independently discover the same burn(s) with exactly-once mint
+guaranteed, fault injection (node kill, RPC disagreement, pubsub partition) does not break that
+guarantee, and the parsing/deserialization layer withstands fuzzed adversarial input.
+**Requirements**: D-01..D-16 (CONTEXT.md decisions — no formal REQ-IDs mapped for this phase)
+**Depends on:** Phase 7
+**Plans:** 4 plans
+
+**Wave 1** (independent foundations):
+
+Plans:
+- [ ] 08-01-PLAN.md — 11-node bridge_race fixture + single-burn and batch race tests (D-01..D-07, D-15, D-16)
+- [ ] 08-02-PLAN.md — libFuzzer+ASan build tier (addfuzztarget(), SGNS_FUZZING) + 3 fuzz harnesses + seed corpus (D-12, D-13, D-14)
+
+**Wave 2** (depends on 08-01's fixture/CMakeLists.txt):
+
+Plans:
+- [ ] 08-03-PLAN.md — Mock RPC per-slot divergence helper + RPC-disagreement fault test (D-08, D-09)
+
+**Wave 3** (depends on 08-01 + 08-03's shared CMakeLists.txt):
+
+Plans:
+- [ ] 08-04-PLAN.md — Node-kill mid-mint + pubsub partition/heal fault tests (D-10, D-11)
+
 ## Backlog
 
 (Items deferred to future milestones — see `.planning/milestones/v1.0-REQUIREMENTS.md` v2 section: PROP-01 NodeType propagation, PROP-02 Archive/Full behavior split, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
