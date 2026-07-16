@@ -134,6 +134,19 @@ namespace sgns
                                                     uint64_t                             sequence );
 
         /**
+         * @brief Creates and enqueues a child-wallet registration transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1
+         * (or 1 if no prior registration exists).
+         *
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata (game_id, publisher_id, dev_wallet, peers_cut).
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( std::string                          main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata );
+
+        /**
          * @brief Creates and enqueues a mint transaction.
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.

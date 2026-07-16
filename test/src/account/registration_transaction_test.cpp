@@ -622,3 +622,124 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsHigherSequence 
     EXPECT_FALSE( result.has_value() )
         << "RegistrationTx with sequence=5 > stored=4 should be accepted";
 }
+
+// ---------------------------------------------------------------------------
+// RegisterChildAutoDeriveSequence — 2-arg overload auto-derives from CRDT
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveFirstRegistration )
+{
+    // Start TM and wait for READY (needed for RegisterChild)
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_address( 128, 'a' );
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "auto_derive_test" );
+
+    // 2-arg call — should auto-derive sequence=1 (first registration)
+    auto result = tm_->RegisterChild( main_address, metadata );
+    ASSERT_TRUE( result.has_value() );
+    std::string tx_hash = result.value();
+    EXPECT_FALSE( tx_hash.empty() );
+
+    // Verify the transaction has sequence=1
+    auto tx = RegistrationE2ETestAccess::GetTransactionByHash( *tm_, tx_hash );
+    ASSERT_NE( tx, nullptr );
+    auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
+    ASSERT_NE( reg_tx, nullptr );
+    EXPECT_EQ( reg_tx->GetSequence(), 1 );
+}
+
+TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromStored )
+{
+    // Start TM and wait for READY
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_address( 128, 'b' );
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "auto_derive_test" );
+
+    // First: register with explicit sequence=5 using 3-arg overload
+    auto result1 = tm_->RegisterChild( main_address, metadata, 5 );
+    ASSERT_TRUE( result1.has_value() );
+
+    // Poll for SENDING to ensure CRDT is committed
+    {
+        auto tstart = std::chrono::steady_clock::now();
+        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
+        while ( tm_->GetTransactionStatusByTxId( result1.value() ) != TransactionManager::TransactionStatus::SENDING )
+        {
+            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
+                break;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        }
+    }
+
+    // Second: 2-arg call — should auto-derive sequence=6 (stored=5 + 1)
+    auto result2 = tm_->RegisterChild( main_address, metadata );
+    ASSERT_TRUE( result2.has_value() );
+
+    auto tx = RegistrationE2ETestAccess::GetTransactionByHash( *tm_, result2.value() );
+    ASSERT_NE( tx, nullptr );
+    auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
+    ASSERT_NE( reg_tx, nullptr );
+    EXPECT_EQ( reg_tx->GetSequence(), 6 );
+}
+
+TEST_F( RegistrationTransactionE2ETest, RegisterChildPreservesCallerSequence )
+{
+    // Start TM and wait for READY
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_address( 128, 'c' );
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "preserve_seq_test" );
+
+    // 3-arg call with explicit sequence
+    auto result = tm_->RegisterChild( main_address, metadata, 5 );
+    ASSERT_TRUE( result.has_value() );
+
+    auto tx = RegistrationE2ETestAccess::GetTransactionByHash( *tm_, result.value() );
+    ASSERT_NE( tx, nullptr );
+    auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
+    ASSERT_NE( reg_tx, nullptr );
+    EXPECT_EQ( reg_tx->GetSequence(), 5 );
+}

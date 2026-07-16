@@ -522,6 +522,20 @@ namespace sgns
                                                     uint64_t                             sequence );
 
         /**
+         * @brief Registers this node as a child of main_address with auto-derived sequence.
+         *
+         * Reads the existing reg/ CRDT record for this node and increments the
+         * sequence automatically. Caller-supplied sequence variant is available
+         * for tests and replay scenarios.
+         *
+         * @param[in] main_address Main wallet public address (128-hex).
+         * @param[in] metadata      Optional registration metadata.
+         * @return Registration transaction hash on success.
+         */
+        outcome::result<std::string> RegisterChild( const std::string                   &main_address,
+                                                    SGTransaction::RegistrationMetadata  metadata );
+
+        /**
          * @brief Transfers funds to the configured developer address.
          * @param[in] amount Amount to transfer in token base units.
          * @param[in] token_id Token identifier to transfer.
