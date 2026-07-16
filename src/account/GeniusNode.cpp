@@ -111,11 +111,17 @@ namespace
             lower.push_back( static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) ) );
         }
         if ( lower == "full" )
+        {
             return sgns::GeniusNode::NodeType::Full;
+        }
         if ( lower == "light" )
+        {
             return sgns::GeniusNode::NodeType::Light;
+        }
         if ( lower == "archive" )
+        {
             return sgns::GeniusNode::NodeType::Archive;
+        }
         return std::nullopt;
     }
 }
@@ -189,8 +195,8 @@ namespace sgns
     }
 
     outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
-                                                          uint16_t            port_seed,
-                                                          bool                auto_dht )
+                                                          uint16_t           port_seed,
+                                                          bool               auto_dht )
     {
         std::error_code ec;
         std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
@@ -261,7 +267,8 @@ namespace sgns
 
         // Create the account with is_full_node_ already known (the hinge fix).
         account_ = std::visit(
-            [this]( auto &&src ) -> std::shared_ptr<GeniusAccount> {
+            [this]( auto &&src ) -> std::shared_ptr<GeniusAccount>
+            {
                 using T = std::decay_t<decltype( src )>;
                 if constexpr ( std::is_same_v<T, NewAccount> )
                 {
@@ -285,9 +292,7 @@ namespace sgns
                 {
                     // FromPublicKey carries a public_address; GeniusAccount::NewFromPublicKey
                     // takes no base_path and consumes an address-like string_view.
-                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID,
-                                                            src.public_address,
-                                                            is_full_node_ );
+                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID, src.public_address, is_full_node_ );
                 }
             },
             source );
@@ -369,9 +374,9 @@ namespace sgns
             {
                 node_type_ = *parsed;
                 node_logger_->info( "sgns_config.json: node_type={}",
-                                    *parsed == sgns::GeniusNode::NodeType::Full    ? "Full"
+                                    *parsed == sgns::GeniusNode::NodeType::Full      ? "Full"
                                     : *parsed == sgns::GeniusNode::NodeType::Archive ? "Archive"
-                                                                                    : "Light" );
+                                                                                     : "Light" );
             }
             else
             {
@@ -671,57 +676,17 @@ namespace sgns
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
+                if ( !blockchain_ )
+                {
+                    node_logger_->error( "Blockchain not initialized, cannot initialize transactions" );
+                    return;
+                }
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
                                                                 blockchain_,
                                                                 is_full_node_,
                                                                 subnet_id_ );
-                // Phase 6 (D-01): wire the slot-hash populator so CreateVote fills
-                // slot_0/1/2_hash before signing. When no endpoints are configured,
-                // GetSlotHash returns empty vectors and all slots abstain (D-05).
-                if ( blockchain_ )
-                {
-                    std::weak_ptr<TransactionManager> weak_tm = transaction_manager_;
-                    blockchain_->SetSlotHashPopulator(
-                        [weak_tm]( sgns::ConsensusVote &vote )
-                        {
-                            auto tm = weak_tm.lock();
-                            if ( !tm )
-                            {
-                                return;
-                            }
-                            const auto &validator = tm->GetPublicChainInputValidator();
-                            const auto  chain_id  = validator.GetFirstConfiguredChainId();
-                            if ( !chain_id.has_value() )
-                            {
-                                return;
-                            }
-                            for ( size_t slot = 0; slot < 3; ++slot )
-                            {
-                                auto hash = validator.GetSlotHash( slot, *chain_id );
-                                if ( !hash.empty() )
-                                {
-                                    std::string hash_str(
-                                        reinterpret_cast<const char *>( hash.data() ),
-                                        hash.size() );
-                                    switch ( slot )
-                                    {
-                                        case 0:
-                                            vote.set_slot_0_hash( hash_str );
-                                            break;
-                                        case 1:
-                                            vote.set_slot_1_hash( hash_str );
-                                            break;
-                                        case 2:
-                                            vote.set_slot_2_hash( hash_str );
-                                            break;
-                                    }
-                                }
-                            }
-                        } );
-                }
-
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -742,46 +707,43 @@ namespace sgns
                 // PublicChainInputValidator -> ConsensusManager::CreateVote, so
                 // each signed vote commits to its RPC endpoint slot hashes.
                 // Single-chain resolution: use the first configured chain id.
-                if ( blockchain_ )
-                {
-                    blockchain_->SetSlotHashPopulator(
-                        [this]( sgns::ConsensusVote &vote )
+
+                blockchain_->SetSlotHashPopulator(
+                    [this]( sgns::ConsensusVote &vote )
+                    {
+                        if ( !transaction_manager_ )
                         {
-                            if ( !transaction_manager_ )
-                            {
-                                return;
-                            }
-                            auto &validator = transaction_manager_->GetPublicChainInputValidator();
-                            const auto chain_id = validator.GetFirstConfiguredChainId();
-                            if ( !chain_id.has_value() )
-                            {
-                                node_logger_->debug( "SlotHashPopulator: no configured chain; abstaining" );
-                                return;
-                            }
-                            const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
-                            const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
-                            const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
-                            if ( !slot0.empty() )
-                            {
-                                vote.set_slot_0_hash( slot0.data(), slot0.size() );
-                            }
-                            if ( !slot1.empty() )
-                            {
-                                vote.set_slot_1_hash( slot1.data(), slot1.size() );
-                            }
-                            if ( !slot2.empty() )
-                            {
-                                vote.set_slot_2_hash( slot2.data(), slot2.size() );
-                            }
-#ifndef NDEBUG
-                            node_logger_->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
-                                                 chain_id.value(),
-                                                 !slot0.empty(),
-                                                 !slot1.empty(),
-                                                 !slot2.empty() );
-#endif
-                        } );
-                }
+                            return;
+                        }
+                        auto      &validator = transaction_manager_->GetPublicChainInputValidator();
+                        const auto chain_id  = validator.GetFirstConfiguredChainId();
+                        if ( !chain_id.has_value() )
+                        {
+                            node_logger_->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                            return;
+                        }
+                        const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
+                        const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
+                        const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+                        if ( !slot0.empty() )
+                        {
+                            vote.set_slot_0_hash( slot0.data(), slot0.size() );
+                        }
+                        if ( !slot1.empty() )
+                        {
+                            vote.set_slot_1_hash( slot1.data(), slot1.size() );
+                        }
+                        if ( !slot2.empty() )
+                        {
+                            vote.set_slot_2_hash( slot2.data(), slot2.size() );
+                        }
+
+                        node_logger_->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
+                                             chain_id.value(),
+                                             !slot0.empty(),
+                                             !slot1.empty(),
+                                             !slot2.empty() );
+                    } );
 
                 // Initialize shared EthWatchService for EVM event detection
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
@@ -899,8 +861,8 @@ namespace sgns
                                 strong->node_logger_->info( "Mirroring result data for CID: {}", cidStr );
                                 bitswap->RequestContent(
                                     cid.value(),
-                                    [weak_self, cidStr](
-                                        libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
+                                    [weak_self,
+                                     cidStr]( libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
                                     {
                                         auto strong = weak_self.lock();
                                         if ( !strong )
@@ -1198,7 +1160,8 @@ namespace sgns
                     }
                     else
                     {
-                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}", port_seed );
+                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
+                                            port_seed );
                     }
                 }
 
@@ -1214,7 +1177,8 @@ namespace sgns
                     }
                     else
                     {
-                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}", autodht_ );
+                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}",
+                                            autodht_ );
                     }
                 }
 
@@ -1338,7 +1302,7 @@ namespace sgns
 
             gnus_network_full_path_ = std::string( GNUS_NETWORK_PATH ) + version::GetNetAndVersionAppendix() +
                                       base58key_;
-            auto pubsubKeyPath      = gnus_network_full_path_ + "/pubs_processor";
+            auto pubsubKeyPath = gnus_network_full_path_ + "/pubs_processor";
 
             //Set a pubsub config, use no signing because we can verify with proof and dag structure
             libp2p::protocol::gossip::Config config;
@@ -1388,8 +1352,7 @@ namespace sgns
 
             // Initialize Bitswap for IPFS content-addressed data exchange
             bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
-            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>(
-                *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
             bitswap_->initialize();
             if ( !ipfs_cache_dir_.empty() )
             {
@@ -1606,12 +1569,6 @@ namespace sgns
         // late Initialize() cannot notify a freed relayer.
         ++bridge_init_generation_;
         rpc_endpoint_provider_.reset();
-
-        if ( catchup_watcher_ )
-        {
-            catchup_watcher_->stopWatching();
-            catchup_watcher_.reset();
-        }
 
         if ( transaction_manager_ )
         {
@@ -2725,8 +2682,7 @@ namespace sgns
         return manager_result.value()->GetOutTransactions();
     }
 
-    size_t GeniusNode::CountTransactions(
-        std::optional<TransactionManager::TransactionStatus> tx_status ) const
+    size_t GeniusNode::CountTransactions( std::optional<TransactionManager::TransactionStatus> tx_status ) const
     {
         auto manager_result = GetTransactionManager();
         if ( !manager_result.has_value() )
@@ -2991,8 +2947,8 @@ namespace sgns
                 return strong->catchup_chains_;
             };
 
-            auto rpc_resolver = [weak_self = weak_from_this()]( const std::string &chain_id_str
-                                                                ) -> std::optional<std::string>
+            auto rpc_resolver =
+                [weak_self = weak_from_this()]( const std::string &chain_id_str ) -> std::optional<std::string>
             {
                 auto strong = weak_self.lock();
                 if ( !strong || !strong->transaction_manager_ )
@@ -3003,17 +2959,10 @@ namespace sgns
                 return validator.GetFirstRpcUrl( chain_id_str );
             };
 
-            auto burn_processor = [weak_self = weak_from_this()](
-                                       const std::vector<eth::abi::AbiValue> &decoded_values,
-                                       const std::string                     &tx_hash_hex,
-                                       const std::string                     &chain_id_str ) -> bool
+            auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
+                                                                  const std::string                     &tx_hash_hex,
+                                                                  const std::string &chain_id_str ) -> bool
             {
-                auto strong = weak_self.lock();
-                if ( !strong || !strong->account_ )
-                {
-                    return false;
-                }
-
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
@@ -3030,6 +2979,11 @@ namespace sgns
                     return false;
                 }
 
+                auto strong = weak_self.lock();
+                if ( !strong || !strong->account_ )
+                {
+                    return false;
+                }
                 auto &utxo_mgr = strong->account_->GetUTXOManager();
                 if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
                 {
@@ -3190,17 +3144,36 @@ namespace sgns
 
         auto intervalHours = std::max( 1, result_retention_hours_ / 10 );
         node_logger_->info( "Starting result GC timer: every {} hour(s), retention {} hours, max {} MB",
-                           intervalHours,
-                           result_retention_hours_,
-                           result_retention_max_mb_ );
+                            intervalHours,
+                            result_retention_hours_,
+                            result_retention_max_mb_ );
 
-        gc_timer_ = std::make_shared<boost::asio::steady_timer>( *io_ );
+        gc_timer_                          = std::make_shared<boost::asio::steady_timer>( *io_ );
         std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
 
         auto schedule = [this, weakSelf, intervalHours]()
         {
             gc_timer_->expires_from_now( std::chrono::hours( intervalHours ) );
-            gc_timer_->async_wait( [weakSelf]( const boost::system::error_code &ec )
+            gc_timer_->async_wait(
+                [weakSelf]( const boost::system::error_code &ec )
+                {
+                    if ( ec )
+                    {
+                        return;
+                    }
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->RunResultGC();
+                    }
+                } );
+        };
+
+        schedule();
+        // Run one initial pass after a short delay
+        gc_timer_->cancel();
+        gc_timer_->expires_from_now( std::chrono::seconds( 30 ) );
+        gc_timer_->async_wait(
+            [weakSelf, schedule]( const boost::system::error_code &ec )
             {
                 if ( ec )
                 {
@@ -3209,26 +3182,9 @@ namespace sgns
                 if ( auto self = weakSelf.lock() )
                 {
                     self->RunResultGC();
+                    schedule();
                 }
             } );
-        };
-
-        schedule();
-        // Run one initial pass after a short delay
-        gc_timer_->cancel();
-        gc_timer_->expires_from_now( std::chrono::seconds( 30 ) );
-        gc_timer_->async_wait( [weakSelf, schedule]( const boost::system::error_code &ec )
-        {
-            if ( ec )
-            {
-                return;
-            }
-            if ( auto self = weakSelf.lock() )
-            {
-                self->RunResultGC();
-                schedule();
-            }
-        } );
     }
 
     void GeniusNode::RunResultGC()
@@ -3238,22 +3194,23 @@ namespace sgns
             return;
         }
 
-        auto resultsDir = write_base_path_ + "/" + ipfs_cache_dir_ + "/results";
+        auto            resultsDir = write_base_path_ + "/" + ipfs_cache_dir_ + "/results";
         std::error_code ec;
         if ( !std::filesystem::exists( resultsDir, ec ) )
         {
             return;
         }
 
-        size_t deletedCount = 0;
+        size_t    deletedCount = 0;
         uintmax_t deletedBytes = 0;
 
         // Collect all result files sorted by age (oldest first)
         struct FileEntry
         {
-            std::string                      path;
-            std::filesystem::file_time_type  mtime;
+            std::string                     path;
+            std::filesystem::file_time_type mtime;
         };
+
         std::vector<FileEntry> files;
         for ( const auto &entry : std::filesystem::recursive_directory_iterator( resultsDir, ec ) )
         {
@@ -3267,11 +3224,10 @@ namespace sgns
             files.push_back( fe );
         }
 
-        std::sort( files.begin(), files.end(),
-                   []( const auto &a, const auto &b ) { return a.mtime < b.mtime; } );
+        std::sort( files.begin(), files.end(), []( const auto &a, const auto &b ) { return a.mtime < b.mtime; } );
 
         // Compute cutoff using the clock backing file_time_type
-        using FT = std::filesystem::file_time_type;
+        using FT    = std::filesystem::file_time_type;
         auto now    = FT::clock::now();
         auto cutoff = now - std::chrono::hours( result_retention_hours_ );
 
@@ -3284,10 +3240,10 @@ namespace sgns
         // Evict expired files
         for ( auto it = files.begin(); it != files.end() && totalBytes > 0; ++it )
         {
-            const auto &path  = it->path;
-            const auto &mtime = it->mtime;
-            bool expired = mtime < cutoff;
-            bool overCap = ( result_retention_max_mb_ > 0 ) &&
+            const auto &path    = it->path;
+            const auto &mtime   = it->mtime;
+            bool        expired = mtime < cutoff;
+            bool        overCap = ( result_retention_max_mb_ > 0 ) &&
                            ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
             if ( !expired && !overCap )
             {
@@ -3306,17 +3262,17 @@ namespace sgns
                 }
                 deletedCount++;
                 deletedBytes += fileSize;
-                totalBytes -= fileSize;
+                totalBytes   -= fileSize;
             }
         }
 
         if ( deletedCount > 0 )
         {
             node_logger_->info( "GC: removed {} result files ({} bytes), {} files remaining ({} bytes)",
-                               deletedCount,
-                               deletedBytes,
-                               files.size() - deletedCount,
-                               totalBytes );
+                                deletedCount,
+                                deletedBytes,
+                                files.size() - deletedCount,
+                                totalBytes );
         }
     }
 
