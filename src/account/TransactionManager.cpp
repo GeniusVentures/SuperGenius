@@ -591,6 +591,39 @@ namespace sgns
         return tx->GetHash();
     }
 
+    outcome::result<std::string> TransactionManager::RegisterChild(
+        std::string                         main_address,
+        SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        // Auto-derive sequence: read reg/{child_addr} from CRDT, use stored + 1 (or 1 if none)
+        uint64_t    sequence = 1;
+        std::string reg_key  = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( existing_data.has_value() )
+        {
+            auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+            if ( !maybe_existing.has_error() )
+            {
+                auto existing = maybe_existing.value();
+                if ( existing->GetType() == "registration" )
+                {
+                    auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing );
+                    if ( existing_reg )
+                    {
+                        sequence = existing_reg->GetSequence() + 1;
+                    }
+                }
+            }
+        }
+
+        return RegisterChild( std::move( main_address ), std::move( metadata ), sequence );
+    }
+
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
