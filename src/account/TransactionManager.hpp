@@ -694,6 +694,15 @@ namespace sgns
         void NewElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
 
         /**
+         * @brief CRDT new-element callback for the reg/ namespace.
+         *
+         * Deserializes the incoming RegistrationTx and, when main_address matches
+         * the local account, calls AddListenTopic(child_addr) to follow the child
+         * wallet's pubsub channel (D-49).
+         */
+        void RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid );
+
+        /**
          * @brief CRDT deleted-element callback. Pushes the key onto
          *        deleted_data_queue_ and wakes the tick loop.
          */

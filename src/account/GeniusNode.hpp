@@ -536,6 +536,17 @@ namespace sgns
                                                     SGTransaction::RegistrationMetadata  metadata );
 
         /**
+         * @brief Enumerates child registrations naming a specific main wallet.
+         *
+         * Scans the reg/ CRDT namespace and returns entries whose main_address matches.
+         *
+         * @param[in] main_address Main wallet public address (128-hex) to query for.
+         * @return Vector of RegistrationDiscoveryEntry on success.
+         */
+        outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            const std::string &main_address );
+
+        /**
          * @brief Transfers funds to the configured developer address.
          * @param[in] amount Amount to transfer in token base units.
          * @param[in] token_id Token identifier to transfer.
