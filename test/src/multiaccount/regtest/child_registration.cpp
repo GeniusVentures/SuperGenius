@@ -192,3 +192,59 @@ protected:
 std::shared_ptr<sgns::GeniusNode> ChildRegistrationIntegrationTest::genesis_node_;
 std::shared_ptr<sgns::GeniusNode> ChildRegistrationIntegrationTest::main_node_;
 std::shared_ptr<sgns::GeniusNode> ChildRegistrationIntegrationTest::child_node_;
+
+// ---------------------------------------------------------------------------
+// TEST-02: ChildRegistersWithMain — child node B submits a RegistrationTx
+//           naming main node A, receiving a valid transaction hash.
+// ---------------------------------------------------------------------------
+TEST_F( ChildRegistrationIntegrationTest, ChildRegistersWithMain )
+{
+    std::string main_address = main_node_->GetAddress();
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "test_02_register" );
+
+    auto result = child_node_->RegisterChild( main_address, metadata, 1 );
+    ASSERT_TRUE( result.has_value() ) << "RegisterChild returned error";
+    std::string tx_hash = result.value();
+    EXPECT_FALSE( tx_hash.empty() ) << "Transaction hash should not be empty";
+    EXPECT_EQ( tx_hash.size(), 64U ) << "Transaction hash should be 64 hex chars (SHA-256)";
+}
+
+// ---------------------------------------------------------------------------
+// TEST-03: MainDiscoversChild — after CRDT/pubsub propagation, main node A
+//           discovers child node B's registration with correct addresses and sequence.
+// ---------------------------------------------------------------------------
+TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
+{
+    std::string main_address = main_node_->GetAddress();
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "test_03_discovery" );
+
+    // Use a different sequence (2) to avoid collision with TEST-02's CRDT state per D-52
+    auto result = child_node_->RegisterChild( main_address, metadata, 2 );
+    ASSERT_TRUE( result.has_value() ) << "RegisterChild returned error";
+
+    std::string child_address = child_node_->GetAddress();
+
+    // Poll for discovery — CRDT/pubsub propagation takes time
+    sgns::test::assertWaitForCondition(
+        [&]() -> bool
+        {
+            auto entries_result = main_node_->GetRegistrationsForMain( main_address );
+            if ( !entries_result.has_value() ) return false;
+            auto &entries = entries_result.value();
+            if ( entries.size() != 1 ) return false;
+            return entries[0].child_addr == child_address
+                && entries[0].main_addr == main_address
+                && entries[0].sequence == 2;
+        },
+        std::chrono::milliseconds( 60000 ),
+        "Main node did not discover child registration" );
+
+    // Verify discovery entry fields
+    ASSERT_OUTCOME_SUCCESS( auto entries, main_node_->GetRegistrationsForMain( main_address ) );
+    ASSERT_EQ( entries.size(), 1U );
+    EXPECT_EQ( entries[0].child_addr, child_address );
+    EXPECT_EQ( entries[0].main_addr, main_address );
+    EXPECT_EQ( entries[0].sequence, 2U );
+}
