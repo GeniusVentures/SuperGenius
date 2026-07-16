@@ -4942,6 +4942,56 @@ namespace sgns
         auto result = DeSerializeTransaction( existing_data_result.value() );
         return !result.has_error();
     }
+
+    outcome::result<std::vector<RegistrationDiscoveryEntry>> TransactionManager::GetRegistrationsForMain(
+        const std::string &main_address )
+    {
+        std::vector<RegistrationDiscoveryEntry> results;
+        for ( auto network_id : GetMonitoredNetworkIDs() )
+        {
+            const std::string query_path = GetBlockChainBase( network_id ) + "reg";
+            auto reg_list = globaldb_m->QueryKeyValues( query_path );
+            if ( reg_list.has_error() )
+            {
+                m_logger->error( "Unable to query registrations on {}", query_path );
+                continue;
+            }
+
+            for ( const auto &[key, value] : reg_list.value() )
+            {
+                auto maybe_tx = DeSerializeTransaction( value );
+                if ( maybe_tx.has_error() )
+                {
+                    m_logger->trace( "Failed to deserialize reg/ value, skipping" );
+                    continue;
+                }
+                auto tx = maybe_tx.value();
+                if ( tx->GetType() != "registration" )
+                {
+                    continue;
+                }
+                auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
+                if ( !reg_tx )
+                {
+                    continue;
+                }
+                if ( reg_tx->GetMainAddress() != main_address )
+                {
+                    m_logger->trace( "Skipping registration for different main: {}",
+                                     reg_tx->GetMainAddress().substr( 0, 16 ) );
+                    continue;
+                }
+
+                RegistrationDiscoveryEntry entry;
+                entry.child_addr = reg_tx->GetSrcAddress();
+                entry.main_addr  = reg_tx->GetMainAddress();
+                entry.sequence   = reg_tx->GetSequence();
+                entry.metadata   = reg_tx->GetMetadata();
+                results.push_back( std::move( entry ) );
+            }
+        }
+        return results;
+    }
 }
 
 fmt::format_context::iterator fmt::formatter<sgns::TransactionManager::State>::format(
