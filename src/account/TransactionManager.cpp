@@ -22,7 +22,6 @@
 #include "MigrationInputValidator.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
-#include "ProcessingTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -1402,7 +1401,6 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "transfer", &TransferTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "mint-v2", &MintTransactionV2::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
-            GeniusTransaction::RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
@@ -1432,13 +1430,6 @@ namespace sgns
                 std::string bytes;
                 embedded.mint().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "mint" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
-            case EmbeddedTransaction::kProcessing:
-            {
-                std::string bytes;
-                embedded.processing().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "process" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kMigration:
