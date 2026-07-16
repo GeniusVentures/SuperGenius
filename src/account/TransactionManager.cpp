@@ -2806,7 +2806,36 @@ namespace sgns
                 break;
             }
 
-            // Phase 5 adds: (d) sequence monotonicity check
+            // Gate (d): sequence monotonicity — reject zero sequences and
+            // non-monotonic (incoming <= stored) sequences per D-46.
+            if ( reg_tx->GetSequence() == 0 )
+            {
+                m_logger->error( "Zero sequence in registration {}", element.key() );
+                break;
+            }
+            std::string reg_key = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
+            auto existing_data = globaldb_m->Get( reg_key );
+            if ( existing_data.has_value() )
+            {
+                auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+                if ( !maybe_existing_tx.has_error() )
+                {
+                    auto existing_tx = maybe_existing_tx.value();
+                    if ( existing_tx->GetType() == "registration" )
+                    {
+                        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing_tx );
+                        if ( existing_reg && reg_tx->GetSequence() <= existing_reg->GetSequence() )
+                        {
+                            m_logger->error(
+                                "Non-monotonic sequence in registration {}: incoming={}, stored={}",
+                                element.key(),
+                                reg_tx->GetSequence(),
+                                existing_reg->GetSequence() );
+                            break;
+                        }
+                    }
+                }
+            }
 
             should_delete = false;
         } while ( 0 );

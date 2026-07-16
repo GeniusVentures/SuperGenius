@@ -603,7 +603,7 @@ namespace sgns
          * Phase 4: minimal gates a-c per D-44.
          * Gates: (a) deserialization failure, (b) invalid child signature,
          * (c) malformed main_address (not 128 hex chars).
-         * Phase 5 adds: (d) sequence monotonicity check.
+         * Phase 5 adds: (d) sequence monotonicity check — reads existing reg/{child_addr} via CRDT Get, rejects non-monotonic or zero sequences.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
