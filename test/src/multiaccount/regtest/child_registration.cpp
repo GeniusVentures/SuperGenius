@@ -89,7 +89,7 @@ namespace sgns
         static outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager(
             const std::shared_ptr<GeniusNode> &node )
         {
-            if ( !node ) return outcome::failure( Error::UNSPECIFIED );
+            if ( !node ) return outcome::failure( GeniusNode::Error::TRANSACTIONS_NOT_READY );
             return node->GetTransactionManager();
         }
     };
@@ -262,7 +262,7 @@ TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
         "Main node did not discover child registration" );
 
     // Verify discovery entry fields
-    ASSERT_OUTCOME_SUCCESS( auto entries, main_node_->GetRegistrationsForMain( main_address ) );
+    ASSERT_OUTCOME_SUCCESS( entries, main_node_->GetRegistrationsForMain( main_address ) );
     ASSERT_EQ( entries.size(), 1U );
     EXPECT_EQ( entries[0].child_addr, child_address );
     EXPECT_EQ( entries[0].main_addr, main_address );
@@ -407,7 +407,7 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
     // -----------------------------------------------------------------------
     // End-to-end assertion: none of the rejected registrations appear in discovery
     // -----------------------------------------------------------------------
-    ASSERT_OUTCOME_SUCCESS( auto entries, main_node_->GetRegistrationsForMain( main_address ) );
+    ASSERT_OUTCOME_SUCCESS( entries, main_node_->GetRegistrationsForMain( main_address ) );
     for ( const auto &entry : entries )
     {
         if ( entry.child_addr == child_address )
