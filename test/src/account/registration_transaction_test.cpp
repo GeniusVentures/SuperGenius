@@ -10,6 +10,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <cassert>
 #include <chrono>
+#include <optional>
 #include <string>
 #include <thread>
 
@@ -215,21 +216,34 @@ namespace
             tm_ = TransactionManager::New(
                 db_, io_, account_,
                 blockchain_,
-                false,  // full_node
-                0,      // subnet_id
+                true,  // full_node — enables isolated boot in CheckNonce() when FetchNetworkNonce fails
+                0,     // subnet_id
                 kTimestampTolerance,
                 kMutabilityWindow );
             assert( tm_ != nullptr );
+
+            // Run the io_context on a worker thread so TickOnce() (self-reposting) drives the
+            // TransactionManager state machine through INITIALIZING → READY.
+            work_guard_.emplace( boost::asio::make_work_guard( *io_ ) );
+            io_thread_  = std::thread( [this]() { io_->run(); } );
         }
 
         void TearDown() override
         {
+            if ( tm_ )
+                tm_->Stop();
+            work_guard_.reset();
+            if ( io_thread_.joinable() )
+                io_thread_.join();
             GeniusAccount::SetSecureStorageFactory( nullptr );
         }
 
         std::shared_ptr<GeniusAccount>      account_;
         std::shared_ptr<Blockchain>         blockchain_;
         std::shared_ptr<TransactionManager> tm_;
+
+        std::optional<boost::asio::executor_work_guard<boost::asio::io_context::executor_type>> work_guard_;
+        std::thread io_thread_;
     };
 
 } // namespace
@@ -240,11 +254,14 @@ namespace
 TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
 {
     // Start the TransactionManager and poll for READY state.
+    // TickOnce() (self-reposting on the io_context worker thread) drives the state machine
+    // through INITIALIZING → InitTransactions → READY. CheckNonce() blocks ~5s on network
+    // nonce fetch, so allow generous timeout.
     tm_->Start();
 
     TransactionManager::State state = tm_->GetState();
     auto                      start = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 10 );
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
 
     while ( state != TransactionManager::State::READY )
     {
@@ -256,13 +273,9 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
         state = tm_->GetState();
     }
 
-    if ( state != TransactionManager::State::READY )
-    {
-        // TM did not reach READY in time — test the factory/signing components instead.
-        // This is expected in isolated test environments without network connectivity.
-        GTEST_SKIP() << "TransactionManager did not reach READY state within "
-                     << kReadyTimeout.count() << "s; skipping full E2E path test";
-    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY state within "
+        << kReadyTimeout.count() << "s";
 
     // Registration data
     std::string                        main_address( 128, 'a' ); // 128-hex main pubkey
@@ -279,9 +292,23 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     auto tx = RegistrationE2ETestAccess::GetTransactionByHash( *tm_, tx_hash );
     ASSERT_NE( tx, nullptr );
 
-    // Verify status is SENDING
-    auto status = tm_->GetTransactionStatusByTxId( tx_hash );
-    EXPECT_EQ( status, TransactionManager::TransactionStatus::SENDING );
+    // Verify status is SENDING (processed asynchronously by TickOnce READY branch — poll briefly)
+    {
+        auto           status = tm_->GetTransactionStatusByTxId( tx_hash );
+        auto           tstart = std::chrono::steady_clock::now();
+        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
+
+        while ( status != TransactionManager::TransactionStatus::SENDING )
+        {
+            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
+            {
+                break;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            status = tm_->GetTransactionStatusByTxId( tx_hash );
+        }
+        EXPECT_EQ( status, TransactionManager::TransactionStatus::SENDING );
+    }
 
     // Downcast to RegistrationTransaction
     auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
@@ -294,7 +321,8 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     EXPECT_EQ( reg_tx->GetMetadata().game_id(), "e2e_test_game" );
 
     // Verify DAG struct fields
-    EXPECT_GT( reg_tx->GetNonce(), 0ULL );
+    // Nonce starts at 0 for a fresh account with no prior transactions.
+    EXPECT_EQ( reg_tx->GetNonce(), 0ULL );
     EXPECT_FALSE( reg_tx->GetSrcAddress().empty() );
     EXPECT_EQ( reg_tx->GetSrcAddress(), account_->GetAddress() );
 }
