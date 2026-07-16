@@ -248,3 +248,144 @@ TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
     EXPECT_EQ( entries[0].main_addr, main_address );
     EXPECT_EQ( entries[0].sequence, 2U );
 }
+
+// ---------------------------------------------------------------------------
+// TEST-04: InvalidRegistrationRejected — invalid registrations (tampered
+//           signature, malformed main_address, non-monotonic sequence) are
+//           rejected by FilterRegistration and never appear in discovery.
+// ---------------------------------------------------------------------------
+TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
+{
+    // --- Get TransactionManager from main node for filter injection ---
+    auto tm_result = main_node_->GetTransactionManager();
+    ASSERT_TRUE( tm_result.has_value() ) << "Could not get TransactionManager from main node";
+    auto &tm = *tm_result.value();
+
+    std::string main_address = main_node_->GetAddress();
+    std::string child_address = child_node_->GetAddress();
+    std::string reg_key = "/bc/0/reg/" + child_address;
+
+    // Helper to build a DAG struct for the child
+    auto makeDAG = [&]()
+    {
+        SGTransaction::DAGStruct dag;
+        dag.set_type( "registration" );
+        dag.set_source_addr( child_address );
+        dag.set_nonce( 0 );
+        return dag;
+    };
+
+    // -----------------------------------------------------------------------
+    // Sub-case A: Tampered child signature → FilterRegistration returns tombstone
+    // -----------------------------------------------------------------------
+    {
+        SGTransaction::RegistrationMetadata metadata;
+        metadata.set_game_id( "neg_sig" );
+
+        auto tx = RegistrationTransaction::New( main_address, 3, metadata, makeDAG() );
+        tx.MakeSignature( *child_node_->account_ );
+
+        auto serialized = tx.SerializeByteVector();
+        // Tamper: flip a byte in the serialized data to invalidate the signature
+        if ( serialized.size() > 10 )
+        {
+            serialized[serialized.size() - 5] ^= 0xFF;
+        }
+
+        crdt::pb::Element element;
+        element.set_key( reg_key );
+        element.set_value( std::string( serialized.begin(), serialized.end() ) );
+
+        auto filter_result = RegTestAccess::FilterRegistration( tm, element );
+        EXPECT_TRUE( filter_result.has_value() )
+            << "Tampered signature registration should produce tombstone";
+    }
+
+    // -----------------------------------------------------------------------
+    // Sub-case B: Malformed main_address (not 128 hex chars) → tombstone
+    // -----------------------------------------------------------------------
+    {
+        SGTransaction::RegistrationMetadata metadata;
+        metadata.set_game_id( "neg_addr" );
+
+        // main_address is only 64 chars — not a valid 128-hex public key
+        std::string bad_main_address( 64, 'b' );
+
+        auto tx = RegistrationTransaction::New( bad_main_address, 4, metadata, makeDAG() );
+        tx.MakeSignature( *child_node_->account_ );
+
+        auto serialized = tx.SerializeByteVector();
+
+        crdt::pb::Element element;
+        element.set_key( reg_key );
+        element.set_value( std::string( serialized.begin(), serialized.end() ) );
+
+        auto filter_result = RegTestAccess::FilterRegistration( tm, element );
+        EXPECT_TRUE( filter_result.has_value() )
+            << "Malformed main_address registration should produce tombstone";
+    }
+
+    // -----------------------------------------------------------------------
+    // Sub-case C: Non-monotonic sequence (replay) → tombstone
+    //
+    // Strategy: submit a registration through the pipeline to establish CRDT
+    // state with a known sequence, then inject a lower-sequence element into
+    // the filter and assert rejection per gate (d).
+    // -----------------------------------------------------------------------
+    {
+        // Step 1: Submit a registration through the pipeline with sequence=50
+        SGTransaction::RegistrationMetadata meta_high;
+        meta_high.set_game_id( "neg_seq_high" );
+        auto reg_result = child_node_->RegisterChild( main_address, meta_high, 50 );
+        ASSERT_TRUE( reg_result.has_value() ) << "Baseline registration (seq=50) should succeed";
+
+        // Step 2: Poll for the registration to reach the main node's CRDT
+        //         via pubsub propagation (up to 30s)
+        sgns::test::assertWaitForCondition(
+            [&]() -> bool
+            {
+                auto entries_result = main_node_->GetRegistrationsForMain( main_address );
+                if ( !entries_result.has_value() ) return false;
+                for ( const auto &entry : entries_result.value() )
+                {
+                    if ( entry.child_addr == child_address && entry.sequence == 50 )
+                        return true;
+                }
+                return false;
+            },
+            std::chrono::milliseconds( 30000 ),
+            "Main node did not receive baseline registration (seq=50)" );
+
+        // Step 3: Inject a CRDT element with sequence=49 (lower than stored 50)
+        SGTransaction::RegistrationMetadata meta_low;
+        meta_low.set_game_id( "neg_seq_low" );
+
+        auto tx_low = RegistrationTransaction::New( main_address, 49, meta_low, makeDAG() );
+        tx_low.MakeSignature( *child_node_->account_ );
+
+        auto serialized_low = tx_low.SerializeByteVector();
+
+        crdt::pb::Element element;
+        element.set_key( reg_key );
+        element.set_value( std::string( serialized_low.begin(), serialized_low.end() ) );
+
+        auto filter_result = RegTestAccess::FilterRegistration( tm, element );
+        EXPECT_TRUE( filter_result.has_value() )
+            << "Non-monotonic sequence (49 <= stored 50) registration should produce tombstone";
+    }
+
+    // -----------------------------------------------------------------------
+    // End-to-end assertion: none of the rejected registrations appear in discovery
+    // -----------------------------------------------------------------------
+    ASSERT_OUTCOME_SUCCESS( auto entries, main_node_->GetRegistrationsForMain( main_address ) );
+    for ( const auto &entry : entries )
+    {
+        if ( entry.child_addr == child_address )
+        {
+            // Entries from this negative test use game_ids starting with "neg_"
+            EXPECT_NE( entry.metadata.game_id(), "neg_sig" );
+            EXPECT_NE( entry.metadata.game_id(), "neg_addr" );
+            EXPECT_NE( entry.metadata.game_id(), "neg_seq_low" );
+        }
+    }
+}
