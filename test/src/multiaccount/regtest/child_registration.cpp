@@ -44,10 +44,10 @@
 #include "account/TransactionManager.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
-#include "crdt/proto/crdt.pb.h"
+#include "crdt/proto/delta.pb.h"
 #include "FileManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
-#include "SGTransaction.pb.h"
+#include "account/proto/SGTransaction.pb.h"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/TestMintInputValidator.hpp"
@@ -71,8 +71,6 @@ namespace sgns
             return tm.FilterRegistration( element );
         }
     };
-} // namespace sgns
-
 /**
  * @brief Multi-node integration test fixture for child-wallet registration.
  *
@@ -399,3 +397,5 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
         }
     }
 }
+
+} // namespace sgns

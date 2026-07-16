@@ -6,6 +6,7 @@ target_include_directories(child_registration_test PRIVATE ${AsyncIOManager_INCL
 
 target_link_libraries(child_registration_test
     genius_node_test
+    base_crdt_test
     json_secure_storage
 )
 
