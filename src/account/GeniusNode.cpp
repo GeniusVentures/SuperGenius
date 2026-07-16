@@ -2311,6 +2311,23 @@ namespace sgns
         return tx_id;
     }
 
+    outcome::result<std::vector<RegistrationDiscoveryEntry>> GeniusNode::GetRegistrationsForMain(
+        const std::string &main_address )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto entries, manager->GetRegistrationsForMain( main_address ) );
+        node_logger_->debug( "{}: found {} registrations for main {}",
+                             __func__,
+                             entries.size(),
+                             main_address.substr( 0, 16 ) );
+        return entries;
+    }
+
     outcome::result<std::string> GeniusNode::PayDev( uint64_t amount, TokenID token_id )
     {
         return TransferFunds( amount, dev_config_.Addr, token_id );

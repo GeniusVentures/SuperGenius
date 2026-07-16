@@ -242,6 +242,16 @@ namespace sgns
                         strong->NewElementCallback( std::move( new_data ), cid );
                     }
                 } );
+            (void) instance->globaldb_m->RegisterNewElementCallback(
+                "^/?" + blockchain_base + "reg/[^/]+",
+                [weak_ptr( std::weak_ptr<TransactionManager>(
+                    instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->RegElementCallback( std::move( new_data ), cid );
+                    }
+                } );
             (void) instance->globaldb_m->RegisterDeletedElementCallback(
                 "^/?" + blockchain_base + "tx/[^/]+",
                 [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( std::string        deleted_key,
@@ -302,11 +312,14 @@ namespace sgns
                 std::string       blockchain_base = GetBlockChainBase( network_id );
                 const std::string tx_pattern      = "^/?" + blockchain_base + "tx/[^/]+";
                 const std::string proof_pattern   = "^/?" + blockchain_base + "proof/[^/]+";
+                const std::string reg_pattern     = "^/?" + blockchain_base + "reg/[^/]+";
 
                 globaldb_m->UnregisterNewElementCallback( tx_pattern );
                 globaldb_m->UnregisterDeletedElementCallback( tx_pattern );
                 globaldb_m->UnregisterElementFilter( tx_pattern );
                 globaldb_m->UnregisterElementFilter( proof_pattern );
+                globaldb_m->UnregisterNewElementCallback( reg_pattern );
+                globaldb_m->UnregisterElementFilter( reg_pattern );
             }
         }
         account_m->ClearGetTransactionCIDMethod();
@@ -3227,6 +3240,30 @@ namespace sgns
         cv_.notify_one();
 
         m_logger->debug( "CRDT new data queued, {} - (queue size: {})", key, queue_size );
+    }
+
+    void TransactionManager::RegElementCallback( crdt::CRDTCallbackManager::NewDataPair new_data, std::string cid )
+    {
+        // Deserialize the element value to check main_address
+        auto maybe_tx = DeSerializeTransaction( new_data.second );
+        if ( maybe_tx.has_error() || maybe_tx.value()->GetType() != "registration" )
+        {
+            return;
+        }
+        auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_tx.value() );
+        if ( !reg_tx )
+        {
+            return;
+        }
+
+        // D-49: if this registration names the local node as main, follow the child
+        if ( reg_tx->GetMainAddress() == account_m->GetAddress() )
+        {
+            m_logger->info( "Discovered new child registration: child={}, main={}, following child channel",
+                            reg_tx->GetSrcAddress().substr( 0, 16 ),
+                            reg_tx->GetMainAddress().substr( 0, 16 ) );
+            globaldb_m->AddListenTopic( reg_tx->GetSrcAddress() );
+        }
     }
 
     void TransactionManager::DeleteElementCallback( std::string deleted_key )
