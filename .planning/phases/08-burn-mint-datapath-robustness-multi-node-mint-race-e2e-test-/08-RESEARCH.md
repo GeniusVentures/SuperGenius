@@ -387,9 +387,9 @@ replaced.
 
 **If this table is empty:** N/A — see above.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Programmatic validator key generation approach**
+1. **Programmatic validator key generation approach** (RESOLVED — see 08-01-PLAN.md Task 1)
    - What we know: Existing suites use a hardcoded `static constexpr const char*[]` array of Anvil
      deterministic private keys (currently 3 entries). `EthereumKeyGenerator` exists and is used
      for deriving SGNS destination addresses from a private key, not for generating new keys.
@@ -403,7 +403,12 @@ replaced.
      intent while staying within already-proven Anvil funding patterns. Confirm with user/planner
      if true runtime keygen is required.
 
-2. **PeerId extraction for partition test target selection**
+2. **PeerId extraction for partition test target selection** (RESOLVED for planning purposes —
+   carried forward as a tracked execution-time investigation in 08-04-PLAN.md Task 2, which begins
+   with a small investigation spike before writing partition assertions; if no dedicated accessor
+   is found, the documented fallback is parsing the PeerId suffix out of
+   `GetPubSub()->GetLocalAddress()`'s multiaddress string, e.g. the trailing `/p2p/<peer_id>`
+   component)
    - What we know: `GossipPubSub::GetHost()` returns `libp2p::Host`; `disconnect(peer::PeerId)` is
      the right call.
    - What's unclear: The exact accessor to get a *remote* node's `PeerId` from the local node's
@@ -412,7 +417,10 @@ replaced.
    - Recommendation: First implementation task for the partition test should spend a small
      investigation spike locating this exact API before writing assertions.
 
-3. **CI cadence / build matrix impact of `-DSGNS_FUZZING=ON`**
+3. **CI cadence / build matrix impact of `-DSGNS_FUZZING=ON`** (RESOLVED — see 08-02-PLAN.md
+   Task 1, which adds a `NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang"` guard emitting a clear
+   `message(STATUS ...)` warning when the fuzzing tier is requested on a non-Clang toolchain,
+   ensuring MSVC/GCC CI is never silently broken)
    - What we know: D-13/D-14 specify the flag must not affect MSVC/normal CI, and smoke runs are
      ~60s per fuzzer per PR.
    - What's unclear: Whether the project's existing CI (GitHub Actions or similar — not
