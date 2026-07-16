@@ -494,3 +494,131 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsTamperedSignatu
     EXPECT_TRUE( result.has_value() )
         << "RegistrationTx with tampered signature should be tombstoned";
 }
+
+// ---------------------------------------------------------------------------
+// Gate (d): FilterRegistrationRejectsZeroSequence
+// sequence == 0 is always rejected as a well-formed check
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsZeroSequence )
+{
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata;
+    std::string main_address( 128, 'z' ); // 128-hex
+
+    auto tx = RegistrationTransaction::New( main_address, 0, metadata, dag );
+    tx.MakeSignature( *account_ );
+
+    auto serialized = tx.SerializeByteVector();
+
+    crdt::pb::Element element;
+    element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    element.set_value( std::string( serialized.begin(), serialized.end() ) );
+
+    auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );
+
+    // Zero sequence should always be rejected (tombstone)
+    EXPECT_TRUE( result.has_value() )
+        << "RegistrationTx with sequence=0 should be tombstoned";
+}
+
+// ---------------------------------------------------------------------------
+// Gate (d): FilterRegistrationRejectsNonMonotonicSequence
+// Pre-populate CRDT with sequence=4, then test sequence=3 → tombstone
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsNonMonotonicSequence )
+{
+    // Build a RegistrationTx with sequence=4 to pre-populate CRDT
+    SGTransaction::DAGStruct dag4;
+    dag4.set_type( "registration" );
+    dag4.set_source_addr( account_->GetAddress() );
+    dag4.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata4;
+    std::string main_address( 128, 'm' );
+
+    auto existing_tx = RegistrationTransaction::New( main_address, 4, metadata4, dag4 );
+    existing_tx.MakeSignature( *account_ );
+
+    // Write directly to GlobalDB at the reg/ key
+    std::string reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    auto serialized_existing = existing_tx.SerializeByteVector();
+    base::Buffer existing_buffer( std::vector<uint8_t>( serialized_existing.begin(), serialized_existing.end() ) );
+    crdt::HierarchicalKey hk( reg_key );
+    auto put_result = db_->Put( hk, existing_buffer, {} );
+    ASSERT_TRUE( put_result.has_value() ) << "Pre-population Put should succeed";
+
+    // Now create a new element with sequence=3 (lower than stored 4)
+    SGTransaction::DAGStruct dag3;
+    dag3.set_type( "registration" );
+    dag3.set_source_addr( account_->GetAddress() );
+    dag3.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata3;
+    auto new_tx = RegistrationTransaction::New( main_address, 3, metadata3, dag3 );
+    new_tx.MakeSignature( *account_ );
+
+    auto serialized_new = new_tx.SerializeByteVector();
+
+    crdt::pb::Element element;
+    element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    element.set_value( std::string( serialized_new.begin(), serialized_new.end() ) );
+
+    auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );
+
+    // Non-monotonic sequence should be rejected (tombstone)
+    EXPECT_TRUE( result.has_value() )
+        << "RegistrationTx with sequence=3 <= stored=4 should be tombstoned";
+}
+
+// ---------------------------------------------------------------------------
+// Gate (d): FilterRegistrationAcceptsHigherSequence
+// Pre-populate CRDT with sequence=4, then test sequence=5 → accepted
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, FilterRegistrationAcceptsHigherSequence )
+{
+    // Build a RegistrationTx with sequence=4 to pre-populate CRDT
+    SGTransaction::DAGStruct dag4;
+    dag4.set_type( "registration" );
+    dag4.set_source_addr( account_->GetAddress() );
+    dag4.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata4;
+    std::string main_address( 128, 'h' );
+
+    auto existing_tx = RegistrationTransaction::New( main_address, 4, metadata4, dag4 );
+    existing_tx.MakeSignature( *account_ );
+
+    // Write directly to GlobalDB at the reg/ key
+    std::string reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    auto serialized_existing = existing_tx.SerializeByteVector();
+    base::Buffer existing_buffer( std::vector<uint8_t>( serialized_existing.begin(), serialized_existing.end() ) );
+    crdt::HierarchicalKey hk( reg_key );
+    auto put_result = db_->Put( hk, existing_buffer, {} );
+    ASSERT_TRUE( put_result.has_value() ) << "Pre-population Put should succeed";
+
+    // Now create a new element with sequence=5 (higher than stored 4)
+    SGTransaction::DAGStruct dag5;
+    dag5.set_type( "registration" );
+    dag5.set_source_addr( account_->GetAddress() );
+    dag5.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata5;
+    auto new_tx = RegistrationTransaction::New( main_address, 5, metadata5, dag5 );
+    new_tx.MakeSignature( *account_ );
+
+    auto serialized_new = new_tx.SerializeByteVector();
+
+    crdt::pb::Element element;
+    element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    element.set_value( std::string( serialized_new.begin(), serialized_new.end() ) );
+
+    auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );
+
+    // Higher sequence should be accepted (nullopt)
+    EXPECT_FALSE( result.has_value() )
+        << "RegistrationTx with sequence=5 > stored=4 should be accepted";
+}
