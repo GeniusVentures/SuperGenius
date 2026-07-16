@@ -2967,8 +2967,8 @@ namespace sgns
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
-                                                 tx_hash_hex );
+                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
+                                               tx_hash_hex );
                     return false;
                 }
 
@@ -2976,6 +2976,8 @@ namespace sgns
                 base::Hash256 burn_tx_hash;
                 if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
                 {
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — skipping",
+                                               tx_hash_hex );
                     return false;
                 }
 
