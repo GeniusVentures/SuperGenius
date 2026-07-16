@@ -2188,7 +2188,8 @@ namespace sgns
                         }
                     }
 
-                    if ( !processed )
+                    // Incomplete history for another account must not prevent this account from starting.
+                    if ( !processed && address == account_m->GetAddress() )
                     {
                         std::lock_guard missing_lock( missing_tx_mutex_ );
                         missing_tx_hashes_.insert( tx_hash );
@@ -2245,9 +2246,6 @@ namespace sgns
             }
             return;
         }
-        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
-        return;
-
         m_logger->info( "Missing {} transactions during init", missing_count );
 
         auto now = std::chrono::steady_clock::now();
