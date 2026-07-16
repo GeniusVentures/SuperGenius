@@ -71,6 +71,28 @@ namespace sgns
             return tm.FilterRegistration( element );
         }
     };
+
+    /**
+     * @brief Friend accessor for GeniusNode protected members, used by
+     *        the integration test to sign transactions with the child node's
+     *        account and access the transaction manager.
+     */
+    class ChildRegTestAccess
+    {
+    public:
+        static std::shared_ptr<GeniusAccount> GetAccount(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->account_ : nullptr;
+        }
+
+        static outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( !node ) return outcome::failure( Error::UNSPECIFIED );
+            return node->GetTransactionManager();
+        }
+    };
 /**
  * @brief Multi-node integration test fixture for child-wallet registration.
  *
@@ -255,7 +277,7 @@ TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
 TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
 {
     // --- Get TransactionManager from main node for filter injection ---
-    auto tm_result = main_node_->GetTransactionManager();
+    auto tm_result = ChildRegTestAccess::GetTransactionManager( main_node_ );
     ASSERT_TRUE( tm_result.has_value() ) << "Could not get TransactionManager from main node";
     auto &tm = *tm_result.value();
 
@@ -281,7 +303,7 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
         metadata.set_game_id( "neg_sig" );
 
         auto tx = RegistrationTransaction::New( main_address, 3, metadata, makeDAG() );
-        tx.MakeSignature( *child_node_->account_ );
+        tx.MakeSignature( *ChildRegTestAccess::GetAccount( child_node_ ) );
 
         auto serialized = tx.SerializeByteVector();
 
@@ -320,7 +342,7 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
         std::string bad_main_address( 64, 'b' );
 
         auto tx = RegistrationTransaction::New( bad_main_address, 4, metadata, makeDAG() );
-        tx.MakeSignature( *child_node_->account_ );
+        tx.MakeSignature( *ChildRegTestAccess::GetAccount( child_node_ ) );
 
         auto serialized = tx.SerializeByteVector();
 
@@ -369,7 +391,7 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
         meta_low.set_game_id( "neg_seq_low" );
 
         auto tx_low = RegistrationTransaction::New( main_address, 49, meta_low, makeDAG() );
-        tx_low.MakeSignature( *child_node_->account_ );
+        tx_low.MakeSignature( *ChildRegTestAccess::GetAccount( child_node_ ) );
 
         auto serialized_low = tx_low.SerializeByteVector();
 
