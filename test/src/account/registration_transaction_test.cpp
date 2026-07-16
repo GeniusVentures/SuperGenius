@@ -177,6 +177,13 @@ namespace sgns
         {
             return tm.FilterRegistration( element );
         }
+
+        static outcome::result<std::vector<RegistrationDiscoveryEntry>> GetRegistrationsForMain(
+            TransactionManager &tm,
+            const std::string  &main_address )
+        {
+            return tm.GetRegistrationsForMain( main_address );
+        }
     };
 } // namespace sgns
 
@@ -742,4 +749,120 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildPreservesCallerSequence )
     auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
     ASSERT_NE( reg_tx, nullptr );
     EXPECT_EQ( reg_tx->GetSequence(), 5 );
+}
+
+// ---------------------------------------------------------------------------
+// GetRegistrationsForMain — discovery read path tests (Phase 05-02 Task 1)
+// ---------------------------------------------------------------------------
+
+TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsEmptyForNoChildren )
+{
+    // Start TM and wait for READY
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_address( 128, 'd' );
+    auto result = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_TRUE( result.value().empty() )
+        << "Expected empty vector when no children registered to this main";
+}
+
+TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsMatchingEntries )
+{
+    // Start TM and wait for READY
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_address( 128, 'e' );
+    SGTransaction::RegistrationMetadata metadata1;
+    metadata1.set_game_id( "discovery_test_1" );
+    SGTransaction::RegistrationMetadata metadata2;
+    metadata2.set_game_id( "discovery_test_2" );
+
+    // Register two children under the same main
+    auto result1 = tm_->RegisterChild( main_address, metadata1, 1 );
+    ASSERT_TRUE( result1.has_value() );
+    auto result2 = tm_->RegisterChild( main_address, metadata2, 2 );
+    ASSERT_TRUE( result2.has_value() );
+
+    // Allow time for CRDT processing
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
+    ASSERT_TRUE( entries.has_value() );
+    EXPECT_GE( entries.value().size(), 1 )
+        << "Expected at least one registration entry for this main";
+    // Verify each entry has the correct main_addr
+    for ( const auto &entry : entries.value() )
+    {
+        EXPECT_EQ( entry.main_addr, main_address );
+        EXPECT_FALSE( entry.child_addr.empty() );
+    }
+}
+
+TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainFiltersByMainAddress )
+{
+    // Start TM and wait for READY
+    tm_->Start();
+
+    TransactionManager::State state = tm_->GetState();
+    auto start = std::chrono::steady_clock::now();
+    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    std::string main_a( 128, 'f' );
+    std::string main_b( 128, 'g' );
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "filter_test" );
+
+    // Register a child under main_a
+    auto result = tm_->RegisterChild( main_a, metadata, 1 );
+    ASSERT_TRUE( result.has_value() );
+
+    // Allow time for CRDT processing
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    // Query main_a — should find the registration
+    auto entries_a = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
+    ASSERT_TRUE( entries_a.has_value() );
+    EXPECT_GE( entries_a.value().size(), 1 );
+
+    // Query main_b — should be empty (no child registered to it)
+    auto entries_b = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_b );
+    ASSERT_TRUE( entries_b.has_value() );
+    EXPECT_TRUE( entries_b.value().empty() )
+        << "Expected empty vector for main_b — no child registered to it";
 }
