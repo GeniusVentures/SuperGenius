@@ -44,6 +44,11 @@ minimal test seams. Three deliverables:
   `PublicChainInputValidator::SetTransportFactory()`. Requirements (from folded todo): stateful,
   per-endpoint configurable receipts/tx statuses/addresses, behavioral variance
   (success/error/timeout), multi-chain support.
+  **NOTE (verify first):** STATE.md records that Phase 5 already implemented a Mock RPC Transport
+  (drop-in `RpcHttpTransport` replacement, per-node `mock_rpc_config.json`, stateful ordered
+  responses keyed by tx_hash, 6 failure modes: success, timeout, connection_refused, bad_json,
+  wrong_status, wrong_logs). Researcher MUST locate it and Phase 8 should EXTEND it (per-endpoint
+  disagreement scenarios across the 3 quorum slots) rather than build a new one.
 - **D-10:** Node kill = destroy the `GeniusNode` object (`node.reset()`) at a chosen point — same
   lifecycle as fixture TearDown. Process-level SIGKILL crash testing is out of scope.
 - **D-11:** Partition induced by disconnecting/reconnecting peers at the pubsub/libp2p layer to
