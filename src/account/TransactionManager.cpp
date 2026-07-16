@@ -1248,6 +1248,11 @@ namespace sgns
             if ( transaction->GetType() == "registration" )
             {
                 auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( transaction );
+                if ( !reg_tx )
+                {
+                    m_logger->error( "SendTransactionItem: dynamic_pointer_cast<RegistrationTransaction> returned null" );
+                    return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+                }
                 transaction_path = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
             }
             else
@@ -1259,7 +1264,13 @@ namespace sgns
 
             m_logger->debug( "Recording the transaction on {}", tx_key.GetKey() );
 
-            data_transaction.put( transaction->SerializeByteVector() );
+            auto serializedBytes = transaction->SerializeByteVector();
+            if ( serializedBytes.empty() )
+            {
+                m_logger->error( "SendTransactionItem: SerializeByteVector returned empty for transaction {}", transaction->GetHash() );
+                return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::invalid_argument ) );
+            }
+            data_transaction.put( serializedBytes );
             BOOST_OUTCOME_TRY( crdt_transaction->Put( std::move( tx_key ), std::move( data_transaction ) ) );
 
             if ( maybe_proof )
