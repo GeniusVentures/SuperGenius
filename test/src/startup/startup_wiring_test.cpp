@@ -723,7 +723,7 @@ TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
         return std::make_unique<SlowEmptyLogsTransport>( probe );
     };
 
-    constexpr uint64_t kChainId = 12345;
+    static constexpr uint64_t kChainId = 12345;
     auto chains_provider = []()
     {
         return std::vector<ChainContractPair>{
