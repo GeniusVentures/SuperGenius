@@ -316,6 +316,7 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class RegistrationE2ETestAccess;
+        friend class RegTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
