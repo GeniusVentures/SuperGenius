@@ -2,17 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: GeniusNode Construction Refactor
-current_phase: 04.2
-status: ready_to_plan
-last_updated: 2026-07-14T16:31:22.333Z
+current_phase: 05
+status: planning
+last_updated: "2026-07-16T20:52:54.868Z"
 last_activity: 2026-07-14
 progress:
   total_phases: 9
   completed_phases: 8
   total_plans: 12
-  completed_plans: 42
+  completed_plans: 13
   percent: 89
-stopped_at: Phase 04.2 complete (1/1) — ready to discuss Phase 05
 ---
 
 # State: SuperGenius — GeniusNode Construction Refactor
@@ -78,6 +77,7 @@ Last activity: 2026-07-14
 - Phase 7 added: Deferred Validation and Pending Proposal Lifecycle; renumbered from duplicate Track B Phase 4 to global Phase 7
 - Phase 05.2 inserted after Phase 05.1: Smart contract updated to 32-byte X-only compressed SG public key (bytes32). Event renamed BridgeOutInitiated. C++ side: decode X-only → decompress to full X+Y → match GetAddress(). Versioned catch-up scan. (URGENT)
 - Phase 04.1 inserted after Phase 4: Anvil local bridge E2E: use TokenContracts .env for Anvil instance, private key bridge tx, scan. Fallback: direct Sepolia test. (URGENT)
+- Phase 8 added: Burn/mint datapath robustness — multi-node mint-race e2e test (exactly-once mint across cluster, extends bridge_e2e Anvil fixture), fault injection (node kill mid-mint, disagreeing RPC endpoints via WeightedRpcEndpoint quorum), libFuzzer harnesses for ParseBurnEventValues and bridge deserializers
 
 ## Phase 5 Progress
 
