@@ -483,17 +483,27 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsTamperedSignatu
     auto tx = RegistrationTransaction::New( main_address, 1, metadata, dag );
     tx.MakeSignature( *account_ );
 
-    // Serialize and tamper
+    // Serialize and tamper the DAG signature at proto level (deterministic)
     auto serialized = tx.SerializeByteVector();
-    if ( serialized.size() > 10 )
-    {
-        serialized[serialized.size() - 5] ^= 0xFF;
-    }
 
-    // Construct CRDT element
+    SGTransaction::RegistrationTx tx_struct;
+    ASSERT_TRUE( tx_struct.ParseFromArray( serialized.data(), serialized.size() ) )
+        << "Should parse valid serialized RegistrationTx";
+
+    auto *dag_mutable = tx_struct.mutable_dag_struct();
+    std::string sig = dag_mutable->signature();
+    ASSERT_FALSE( sig.empty() ) << "Signature should be non-empty after signing";
+    sig[sig.size() - 1] ^= 0xFF;
+    dag_mutable->set_signature( sig );
+
+    size_t size = tx_struct.ByteSizeLong();
+    std::vector<uint8_t> tampered_bytes( size );
+    ASSERT_TRUE( tx_struct.SerializeToArray( tampered_bytes.data(), tampered_bytes.size() ) );
+
+    // Construct CRDT element with tampered bytes
     crdt::pb::Element element;
     element.set_key( "/bc/999/reg/" + account_->GetAddress() );
-    element.set_value( std::string( serialized.begin(), serialized.end() ) );
+    element.set_value( std::string( tampered_bytes.begin(), tampered_bytes.end() ) );
 
     // Call FilterRegistration via accessor — should reject with tombstone
     auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );

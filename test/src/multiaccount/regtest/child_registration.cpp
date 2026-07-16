@@ -286,15 +286,25 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
         tx.MakeSignature( *child_node_->account_ );
 
         auto serialized = tx.SerializeByteVector();
-        // Tamper: flip a byte in the serialized data to invalidate the signature
-        if ( serialized.size() > 10 )
-        {
-            serialized[serialized.size() - 5] ^= 0xFF;
-        }
+
+        // Tamper the DAG signature at proto level (deterministic — always lands in sig field)
+        SGTransaction::RegistrationTx tx_struct;
+        ASSERT_TRUE( tx_struct.ParseFromArray( serialized.data(), serialized.size() ) )
+            << "Should parse valid serialized RegistrationTx";
+
+        auto *dag_mutable = tx_struct.mutable_dag_struct();
+        std::string sig = dag_mutable->signature();
+        ASSERT_FALSE( sig.empty() ) << "Signature should be non-empty after signing";
+        sig[sig.size() - 1] ^= 0xFF;
+        dag_mutable->set_signature( sig );
+
+        size_t size = tx_struct.ByteSizeLong();
+        std::vector<uint8_t> tampered_bytes( size );
+        ASSERT_TRUE( tx_struct.SerializeToArray( tampered_bytes.data(), tampered_bytes.size() ) );
 
         crdt::pb::Element element;
         element.set_key( reg_key );
-        element.set_value( std::string( serialized.begin(), serialized.end() ) );
+        element.set_value( std::string( tampered_bytes.begin(), tampered_bytes.end() ) );
 
         auto filter_result = RegTestAccess::FilterRegistration( tm, element );
         EXPECT_TRUE( filter_result.has_value() )
