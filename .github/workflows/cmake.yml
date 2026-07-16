@@ -705,9 +705,9 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
-          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}
+          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}
+            ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}-
 
       - name: Run tests (Windows)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
@@ -734,4 +734,4 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: SuperGenius/${{ env.BUILD_DIRECTORY }}/Testing/Temporary/CTestCostData.txt
-          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}
+          key: ctest-cost-${{ matrix.target }}-${{ matrix.build-type }}-${{ matrix.abi }}-${{ github.run_id }}-${{ github.run_attempt }}
