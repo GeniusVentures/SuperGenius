@@ -420,4 +420,38 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
     }
 }
 
+// ---------------------------------------------------------------------------
+// TEST-05: MainQueriesChildBalance — child node B mints tokens using its own
+//           DevConfig token; after CRDT sync converges, main node A reads the
+//           child's balance via GetChildBalance without any direct child query.
+// ---------------------------------------------------------------------------
+TEST_F( ChildRegistrationIntegrationTest, MainQueriesChildBalance )
+{
+    std::string      child_address = child_node_->GetAddress();
+    sgns::TokenID     child_token  = child_node_->GetTokenID();
+    constexpr uint64_t kMintAmount = 500;
+
+    auto mint_result = child_node_->MintTokens( kMintAmount,
+                                                 sgns::test::NextMintSourceHash(),
+                                                 "test_05_balance",
+                                                 child_token,
+                                                 "",
+                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on child_node_";
+
+    // D-65: poll child's own view first to confirm mint landed, then poll main's
+    // synced view until the CRDT propagation converges (avoids flakiness).
+    sgns::test::assertWaitForCondition(
+        [&]() { return child_node_->GetBalance( child_token ) > 0; },
+        std::chrono::milliseconds( 60000 ),
+        "child_node_ balance did not become non-zero after mint" );
+
+    sgns::test::assertWaitForCondition(
+        [&]() { return main_node_->GetChildBalance( child_address, child_token ) > 0; },
+        std::chrono::milliseconds( 60000 ),
+        "main_node_ did not observe child balance after CRDT sync" );
+
+    EXPECT_EQ( main_node_->GetChildBalance( child_address, child_token ), kMintAmount );
+}
+
 } // namespace sgns
