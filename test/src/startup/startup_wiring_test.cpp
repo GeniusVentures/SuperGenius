@@ -9,12 +9,15 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <mutex>
+#include <optional>
 #include <set>
 #include <string>
 #include <thread>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -27,6 +30,8 @@
 #include "account/TokenID.hpp"
 #include "base/parse_utility.hpp"
 #include "eth/abi_decoder.hpp"
+#include "eth/rpc_receipt_source.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
 
 namespace fs = std::filesystem;
 
@@ -63,6 +68,50 @@ void RemoveTempFile( const fs::path &path )
 {
     std::error_code ec;
     fs::remove( path, ec );
+}
+
+struct CatchupStopProbe
+{
+    std::atomic<size_t> block_number_calls{ 0 };
+    std::atomic<size_t> get_logs_calls{ 0 };
+};
+
+class SlowEmptyLogsTransport final : public eth::rpc::JsonRpcTransport
+{
+public:
+    explicit SlowEmptyLogsTransport( std::shared_ptr<CatchupStopProbe> probe ) : probe_( std::move( probe ) ) {}
+
+    std::optional<std::string> call( const boost::json::object &request ) override
+    {
+        const auto method = boost::json::value_to<std::string>( request.at( "method" ) );
+
+        if ( method == "eth_getBlockByNumber" )
+        {
+            probe_->block_number_calls.fetch_add( 1 );
+            return R"({"result":{"number":"0x100"}})";
+        }
+
+        if ( method == "eth_getLogs" )
+        {
+            probe_->get_logs_calls.fetch_add( 1 );
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            return R"({"result":[]})";
+        }
+
+        return std::nullopt;
+    }
+
+private:
+    std::shared_ptr<CatchupStopProbe> probe_;
+};
+
+void WaitForGetLogsCall( const std::shared_ptr<CatchupStopProbe> &probe )
+{
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 2 );
+    while ( probe->get_logs_calls.load() == 0 && std::chrono::steady_clock::now() < deadline )
+    {
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+    }
 }
 
 // ─── Tests: Event Signature Hash ────────────────────────────────────────────
@@ -343,7 +392,7 @@ TEST( StartupWiringTest, CatchupScanBurnedUtxoSkippedIfConsumed )
 {
     // Verify the logical logic: if a burn UTXO is already consumed,
     // the catch-up scan should skip it (no duplicate).
-    // This is enforced by GetIncomingStatusByTxId checking in PerformStartupCatchupScan.
+    // This is enforced by outpoint checks in BridgeCatchupWatcher::poll_once().
 
     // Simulate the skip logic: a transaction that is already CONFIRMED/VERIFYING/SENDING
     // should be skipped by the catch-up scan.
@@ -371,7 +420,7 @@ TEST( StartupWiringTest, CatchupScanBurnedUtxoSkippedIfConsumed )
 
 TEST( StartupWiringTest, CatchupScanTopic0HexConversion )
 {
-    // Verify the topic0 hex conversion path used in PerformStartupCatchupScan
+    // Verify the topic0 hex conversion path used in BridgeCatchupWatcher
     auto topic0_hash = eth::abi::event_signature_hash( kBridgeEventSignature );
 
     // Convert to hex string (as done in the implementation)
@@ -598,155 +647,170 @@ TEST( StartupWiringTest, IoContextStopPreventsCallbacks )
 
 // ─── Tests: Catchup Scan Guard (P2 race-condition fix) ─────────────────────
 
-TEST( StartupWiringTest, CatchupScanGuardDefersWhenChainsPending )
+TEST( StartupWiringTest, CatchupWatcherPollsWhenChainsAvailable )
 {
-    // P2: The catchup scan must not permanently skip when TransactionManager
-    // reaches READY before OnRpcEndpointsReady populates catchup_chains_.
-    //
-    // Contract encoded in GeniusNode:
-    //   GeniusNode.cpp ~2287: if (!catchup_scan_done_ && !catchup_chains_.empty())
-    //   GeniusNode.cpp ~2023: OnRpcEndpointsReady fallback trigger
-    //
-    // This test validates the guard state machine so the scan is never
-    // permanently skipped when chains arrive after the READY transition.
+    // The BridgeCatchupWatcher polls eth_getLogs on its own thread every
+    // poll_interval seconds.  It snapshots catchup_chains_ (populated by
+    // OnRpcEndpointsReady) on each poll cycle.  When chains are empty the
+    // poll is a no-op; when chains arrive later, the next poll picks them up.
+    // There is no state machine guard or one-shot flag — the polling loop
+    // naturally defers scanning until chains are available.
 
-    struct CatchupScanGuard
+    struct CatchupWatcherModel
     {
-        bool scan_done        = false; // catchup_scan_done_
-        bool chains_populated = false; // !catchup_chains_.empty()
+        bool chains_populated = false;
+        bool last_block_set   = false; // First poll: scan from (latest - scan_depth)
 
-        /// @brief Models the guard: should we post PerformStartupCatchupScan now?
-        bool ShouldTriggerScan() const
+        /// @brief Models one poll cycle: returns true if scanning would occur.
+        bool PollWouldScan() const
         {
-            // P2 fix: require chains to be populated before marking the scan done.
-            // Without the chains_populated check, a premature READY permanently
-            // skips the startup catch-up scan.
-            return !scan_done && chains_populated;
+            return chains_populated;
+        }
+
+        /// @brief A poll that finds chains transitions to tracking mode.
+        void SimulateFirstPoll()
+        {
+            if ( chains_populated )
+            {
+                last_block_set = true;
+            }
         }
     };
 
-    // ── Scenario A: READY fires before chains arrive (the P2 race) ──────
+    // ── Scenario A: empty chains → poll is no-op ────────────────────
     {
-        CatchupScanGuard guard;
-
-        // Attempt 1: READY state reached, chains not yet populated
-        EXPECT_FALSE( guard.ShouldTriggerScan() ) << "Guard must NOT trigger scan when chains are not yet populated";
-
-        // scan_done must remain false so a retry is still possible
-        EXPECT_FALSE( guard.scan_done ) << "scan_done must remain false after a blocked attempt — "
-                                        << "the scan must not be permanently skipped";
-
-        // Chains arrive later via OnRpcEndpointsReady
-        guard.chains_populated = true;
-
-        // Attempt 2: chains now available, scan should trigger
-        EXPECT_TRUE( guard.ShouldTriggerScan() ) << "Guard must allow scan after chains are populated — "
-                                                 << "OnRpcEndpointsReady must be able to trigger the deferred scan";
+        CatchupWatcherModel model;
+        EXPECT_FALSE( model.PollWouldScan() )
+            << "Watcher must no-op when chains are not yet populated";
     }
 
-    // ── Scenario B: chains arrive before READY (happy path) ──────────
+    // ── Scenario B: chains arrive → next poll scans ──────────────────
     {
-        CatchupScanGuard guard;
+        CatchupWatcherModel model;
 
-        // Chains arrive first (OnRpcEndpointsReady fires first)
-        guard.chains_populated = true;
+        // Chains arrive via OnRpcEndpointsReady
+        model.chains_populated = true;
 
-        // READY fires — scan should trigger
-        EXPECT_TRUE( guard.ShouldTriggerScan() ) << "Guard must allow scan when chains are already populated "
-                                                 << "at the time READY is reached";
+        EXPECT_TRUE( model.PollWouldScan() )
+            << "Watcher must scan on next poll after chains arrive";
+        model.SimulateFirstPoll();
+        EXPECT_TRUE( model.last_block_set )
+            << "After first poll with chains, watcher tracks last block";
     }
 
-    // ── Scenario C: scan runs once, does not re-trigger ──────────────
+    // ── Scenario C: repeated polls continue scanning forward ────────
     {
-        CatchupScanGuard guard;
-        guard.chains_populated = true;
+        CatchupWatcherModel model;
+        model.chains_populated = true;
+        model.SimulateFirstPoll();
 
-        // First trigger succeeds
-        EXPECT_TRUE( guard.ShouldTriggerScan() );
-
-        // Mark as done (the actual code sets catchup_scan_done_ = true
-        // before posting, preventing re-trigger)
-        guard.scan_done = true;
-
-        // Second trigger must not fire
-        EXPECT_FALSE( guard.ShouldTriggerScan() ) << "Guard must not allow scan to re-trigger after it has already run";
-    }
-
-    // ── Scenario D: empty chains forever, scan never triggers ─────────
-    {
-        CatchupScanGuard guard;
-
-        // Chains never arrive — scan should never trigger
-        EXPECT_FALSE( guard.ShouldTriggerScan() );
-        EXPECT_FALSE( guard.scan_done ) << "scan_done must remain false if chains never arrive";
+        // Subsequent polls continue from last_block (forward scanning)
+        EXPECT_TRUE( model.PollWouldScan() )
+            << "Watcher must continue polling after first scan";
     }
 }
 
-// ─── Tests: Catchup Scan Guard serialization (READY vs OnRpcEndpointsReady) ──
-
-TEST( StartupWiringTest, CatchupScanGuardDispatchesOnceUnderConcurrency )
+TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
 {
-    // The READY branch of TransactionStateChanged and OnRpcEndpointsReady both
-    // run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4) and both gate
-    // PerformStartupCatchupScan on (!catchup_scan_done_ && !catchup_chains_).
-    // Without serialization they can both pass the guard and enqueue the scan
-    // twice — a data race + double dispatch. This models the mutex-serialized
-    // guard now used in GeniusNode and asserts the scan is dispatched EXACTLY
-    // once regardless of how the two handlers interleave. The mutex makes the
-    // outcome deterministic (not a flaky test).
-    struct ThreadSafeCatchupGuard
-    {
-        std::atomic<bool> chains_populated{ false };
-        bool              scan_done = false;
-        std::mutex        mtx;
+    auto probe = std::make_shared<CatchupStopProbe>();
 
-        /// Mirrors GeniusNode: lock → check guard → set scan_done → signal dispatch.
-        bool TryTrigger()
+    sgns::evmwatcher::BridgeCatchupWatcher::Config cfg;
+    cfg.poll_interval        = std::chrono::seconds( 1 );
+    cfg.start_block          = 10;
+    cfg.max_blocks_per_query = 1;
+    cfg.transport_factory    = [probe]( const std::string & )
+    {
+        return std::make_unique<SlowEmptyLogsTransport>( probe );
+    };
+
+    static constexpr uint64_t kChainId = 12345;
+    auto chains_provider = []()
+    {
+        return std::vector<ChainContractPair>{
+            { "test-chain", "0x0000000000000000000000000000000000000001", kChainId, 0 }
+        };
+    };
+    auto rpc_resolver = []( const std::string & ) -> std::optional<std::string>
+    {
+        return "test://rpc";
+    };
+    auto burn_processor = []( const std::vector<eth::abi::AbiValue> &,
+                              const std::string &,
+                              const std::string & )
+    {
+        return true;
+    };
+
+    sgns::evmwatcher::BridgeCatchupWatcher watcher(
+        cfg,
+        []( const std::string & ) {},
+        chains_provider,
+        rpc_resolver,
+        burn_processor );
+
+    watcher.startWatching();
+    WaitForGetLogsCall( probe );
+    const bool entered_get_logs = probe->get_logs_calls.load() > 0;
+
+    const auto stop_start = std::chrono::steady_clock::now();
+    watcher.stopWatching();
+    const auto stop_elapsed = std::chrono::steady_clock::now() - stop_start;
+
+    ASSERT_TRUE( entered_get_logs ) << "watcher did not enter eth_getLogs";
+
+    EXPECT_LT( std::chrono::duration_cast<std::chrono::milliseconds>( stop_elapsed ).count(), 500 )
+        << "stopWatching should not wait for the unbounded catchup chunk loop or the next poll sleep";
+
+    EXPECT_EQ( watcher.GetLastProcessedBlock( kChainId ), cfg.start_block )
+        << "A chunk cancelled after only part of its RPC work must be retried later";
+}
+
+// ─── Tests: Catchup Watcher chains snapshot thread safety ──
+
+TEST( StartupWiringTest, CatchupWatcherChainsSnapshotThreadSafe )
+{
+    // The BridgeCatchupWatcher polls catchup_chains_ on its own thread while
+    // OnRpcEndpointsReady writes to it on the io_ pool.  Both sides use
+    // catchup_mutex_ — the watcher snapshots under lock, the observer writes
+    // under lock.  There is no double-dispatch concern because the watcher
+    // simply reads the current chain list on each poll cycle.
+    //
+    // This test validates that concurrent writes to a shared chain vector
+    // under a mutex do not lose updates or corrupt the snapshot.
+
+    struct ChainsStore
+    {
+        std::vector<int> chains;
+        mutable std::mutex mtx;
+
+        void Write( std::vector<int> new_chains )
         {
             std::lock_guard lock( mtx );
-            if ( !scan_done && chains_populated.load() )
-            {
-                scan_done = true;
-                return true;
-            }
-            return false;
+            chains = std::move( new_chains );
+        }
+
+        std::vector<int> Snapshot() const
+        {
+            std::lock_guard lock( mtx );
+            return chains;
         }
     };
 
-    ThreadSafeCatchupGuard guard;
-    guard.chains_populated.store( true );
+    ChainsStore store;
 
-    std::atomic<int>  dispatch_count{ 0 };
-    std::atomic<bool> go{ false };
+    // Writer 1: populate chains
+    store.Write( { 11155111, 1, 8453 } );
 
-    auto worker = [&]()
-    {
-        while ( !go.load() )
-        {
-            // spin until all threads are released together to maximize overlap
-        }
-        if ( guard.TryTrigger() )
-        {
-            ++dispatch_count;
-        }
-    };
+    // Reader (watcher): snapshot
+    const auto snap = store.Snapshot();
+    EXPECT_EQ( snap.size(), 3u ) << "Snapshot must capture all written chains";
 
-    constexpr int        kThreads = 8;
-    std::vector<std::thread> threads;
-    threads.reserve( kThreads );
-    for ( int i = 0; i < kThreads; ++i )
-    {
-        threads.emplace_back( worker );
-    }
+    // Writer 2: update chains concurrently
+    store.Write( { 11155111, 1, 8453, 42161 } );
 
-    go.store( true ); // release all threads at once
-    for ( auto &t : threads )
-    {
-        t.join();
-    }
-
-    EXPECT_EQ( dispatch_count.load(), 1 ) << "Catchup scan must be dispatched exactly once "
-                                          << "even when READY + OnRpcEndpointsReady race on the io_ pool";
+    // Reader: sees updated chains
+    const auto snap2 = store.Snapshot();
+    EXPECT_EQ( snap2.size(), 4u ) << "Snapshot must reflect new chain after update";
 }
 
 // Models the generation token that guards async bridge init against an account

@@ -76,7 +76,7 @@ protected:
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
 
-        DevConfig_st devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
+        GeniusNodeConfig devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
 
         std::filesystem::remove_all( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
@@ -108,7 +108,7 @@ protected:
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                            isFullNode ? "Full" : "Light",
-                                           /*is_processor=*/isProcessor );
+                                           /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {

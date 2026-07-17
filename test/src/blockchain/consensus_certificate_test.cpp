@@ -116,7 +116,7 @@ namespace
             { cb( outcome::failure( std::errc::not_supported ) ); } );
         EXPECT_TRUE( registry );
 
-        auto store_result = registry->StoreGenesisRegistry( account->GetAddress(),
+        auto store_result = registry->StoreGenesisRegistry( std::vector<std::string>{ account->GetAddress() },
                                                             [account]( std::vector<uint8_t> payload )
                                                             { return account->Sign( std::move( payload ) ); } );
         EXPECT_FALSE( store_result.has_error() );

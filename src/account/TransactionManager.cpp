@@ -577,6 +577,12 @@ namespace sgns
             chainid = "public";
         }
 
+        // Strip "0x" hex prefix if present — Hash256::fromReadableString expects raw hex.
+        if ( transaction_hash.size() >= 2 && transaction_hash[0] == '0' && transaction_hash[1] == 'x' )
+        {
+            transaction_hash = transaction_hash.substr( 2 );
+        }
+
         // UTXO reservation check — prevent duplicate mint creation for the same burn
         // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
         base::Hash256 burn_tx_hash;
@@ -2152,23 +2158,7 @@ namespace sgns
             }
         }
 
-        std::unordered_set<std::string> network_hashes;
-        bool                            has_network_utxos = false;
-
-        m_logger->debug( "Requesting UTXOs from network during init" );
-        auto network_utxos = account_m->RequestUTXOs( 8000, account_m->GetAddress() );
-        if ( network_utxos.has_value() && !network_utxos.value().empty() )
-        {
-            network_hashes    = network_utxos.value();
-            has_network_utxos = true;
-            m_logger->debug( "Received {} UTXOs from network", network_hashes.size() );
-        }
-        else
-        {
-            m_logger->debug( "No UTXO response received from network during init" );
-        }
-
-        if ( !has_local_utxos && !has_network_utxos )
+        if ( !has_local_utxos )
         {
             m_logger->info( "No local or network UTXOs found, querying transactions to mount UTXOs" );
             QueryTransactions();
@@ -2222,30 +2212,6 @@ namespace sgns
             }
         }
 
-        if ( has_network_utxos )
-        {
-            for ( const auto &tx_hash : network_hashes )
-            {
-                bool processed = false;
-                for ( auto network_id : monitored_networks )
-                {
-                    auto tx_path        = GetTransactionPath( network_id, tx_hash );
-                    auto process_result = FetchAndProcessTransaction( tx_path );
-                    if ( !process_result.has_error() )
-                    {
-                        m_logger->debug( "Processed transaction in {}", tx_path );
-                        processed = true;
-                        break;
-                    }
-                }
-
-                if ( !processed )
-                {
-                    std::lock_guard missing_lock( missing_tx_mutex_ );
-                    missing_tx_hashes_.insert( tx_hash );
-                }
-            }
-        }
     }
 
     void TransactionManager::InitTransactions()
@@ -2300,7 +2266,22 @@ namespace sgns
 
     bool TransactionManager::CheckNonce() const
     {
-        m_logger->debug( "Checking if my local confirmed nonce is in sync with the network" );
+        // Genesis-creating full node — no peers, no prior UTXOs, nonce is trivially zero.
+        // The PubSub broadcast would just time out (pre-consensus legacy path).
+        if ( full_node_m &&
+             account_m->GetAddress() == Blockchain::GetAuthorizedFullNodeAddress() )
+        {
+            TransactionManagerLogger()->debug(
+                "[{} - full: {}] Genesis full node — skipping network nonce check",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m );
+            return true;
+        }
+
+        TransactionManagerLogger()->debug(
+            "[{} - full: {}] Checking if my local confirmed nonce is in sync with the network",
+            account_m->GetAddress().substr( 0, 8 ),
+            full_node_m );
 
         const auto now                               = std::chrono::steady_clock::now();
         const bool regular_node_retry_is_on_cooldown = !full_node_m &&

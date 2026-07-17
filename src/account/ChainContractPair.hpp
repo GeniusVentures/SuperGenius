@@ -24,7 +24,8 @@ namespace sgns
     {
         std::string chain_name;
         std::string contract_address;
-        uint64_t    chain_id = 0;
+        uint64_t    chain_id       = 0;
+        uint64_t    creation_block = 0;  ///< Block at which the bridge contract was deployed (0 = unknown).
     };
 } // namespace sgns
 

@@ -117,9 +117,17 @@ namespace sgns
                 // never match, failing witness validation for valid receipts.
                 contract_addr = rlp::base::parse::ascii_lower( std::move( contract_addr ) );
 
+                // Optional creation_block (0 = unknown — discover at build/deploy time)
+                uint64_t creation_block = 0ull;
+                auto     creation_it    = chain_obj.find( "creation_block" );
+                if ( creation_it != chain_obj.end() )
+                {
+                    creation_block = boost::json::value_to<uint64_t>( creation_it->value() );
+                }
+
                 configured_chain_ids.push_back( chain_id );
 
-                discovered_chains.push_back( { std::string( key ), std::move( contract_addr ), chain_id } );
+                discovered_chains.push_back( { std::string( key ), std::move( contract_addr ), chain_id, creation_block } );
 
                 logger->info( "ChainRpcEndpointProvider: chain {} (id={}) bridge={} topic0_v1={} topic0_v2={}",
                               std::string( key ),

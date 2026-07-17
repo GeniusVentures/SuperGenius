@@ -341,7 +341,7 @@ TEST_F( BitswapStressTest, FullSystemStress )
     for ( int t = 0; t < 12; ++t )
     {
         threads.emplace_back(
-            [this, t, &running, &errors]()
+            [this, t, &errors]()
             {
                 std::vector<uint8_t> testData = {
                     static_cast<uint8_t>( t ), 0x10, 0x20, 0x30, 0x40 };
