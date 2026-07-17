@@ -129,7 +129,8 @@ namespace sgns
          * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
          * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
          * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
-         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file (deterministic minimal config).
+         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
+         *         tests and examples do not depend on the host LAN.
          */
         static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
                                                          uint16_t           port_seed,
@@ -736,7 +737,7 @@ namespace sgns
         std::shared_ptr<soralog::LoggingSystem>               logging_system_;      ///< libp2p logging system.
         bool                                                  autodht_;     ///< Whether DHT discovery is enabled.
         bool                                                  isprocessor_; ///< Whether processing service should run.
-        bool                                                  is_full_node_ = false; ///< Whether this node runs in full-node mode.
+        bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
         NodeType node_type_ =
             NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
         base::Logger node_logger_; ///< Main node logger.
@@ -773,7 +774,7 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
-        std::shared_ptr<boost::asio::steady_timer> gc_timer_;   ///< Periodic GC timer for result cache cleanup.
+        std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1009,8 +1010,8 @@ namespace sgns
         static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
+        std::thread                               upnp_thread;        ///< Background UPnP refresh thread.
+        std::atomic<bool>                         stop_upnp{ false }; ///< UPnP thread stop flag.
         std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.

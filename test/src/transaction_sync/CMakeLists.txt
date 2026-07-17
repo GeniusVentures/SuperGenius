@@ -21,6 +21,29 @@ else()
     )
 endif()
 
+addtest(genius_node_bootstrap_reconnect_test
+    genius_node_bootstrap_reconnect_test.cpp
+)
+
+target_include_directories(genius_node_bootstrap_reconnect_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
+target_link_libraries(genius_node_bootstrap_reconnect_test
+    genius_node_test
+    json_secure_storage
+)
+
+if(WIN32)
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 addtest(migration_sync_test
     migration_sync_test.cpp
 )
