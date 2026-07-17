@@ -2447,6 +2447,16 @@ namespace sgns
         return account_->GetUTXOManager().GetBalance( token_id, address );
     }
 
+    uint64_t GeniusNode::GetChildBalance( const std::string &child_address, const TokenID token_id )
+    {
+        return account_->GetUTXOManager().GetBalance( token_id, child_address );
+    }
+
+    uint64_t GeniusNode::GetChildBalance( const std::string &child_address )
+    {
+        return account_->GetUTXOManager().GetBalance( child_address );
+    }
+
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC = __func__;

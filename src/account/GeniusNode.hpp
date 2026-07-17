@@ -428,6 +428,30 @@ namespace sgns
         uint64_t GetBalance( TokenID token_id, const std::string &address );
 
         /**
+         * @brief Returns a child wallet's balance for a specific token, read from
+         *        the locally-synced CRDT UTXO view. Thin alias over GetBalance
+         *        targeting @p child_address — no registration check is performed.
+         * @param[in] child_address Address of the child wallet to query.
+         * @param[in] token_id Token identifier to filter by (the child's own DevConfig
+         *            token, not necessarily this node's dev_config_.TokenID).
+         * @return Local UTXO balance for @p child_address and @p token_id.
+         * @note A return value of 0 is ambiguous — it may mean the address genuinely
+         *       has no balance, or that CRDT sync has not yet propagated the child's
+         *       UTXOs to this node. No sync-status distinction is provided.
+         */
+        uint64_t GetChildBalance( const std::string &child_address, TokenID token_id );
+
+        /**
+         * @brief Returns a child wallet's total balance across all tokens, read from
+         *        the locally-synced CRDT UTXO view.
+         * @param[in] child_address Address of the child wallet to query.
+         * @return Total local UTXO balance (GNUS base units) for @p child_address,
+         *         summed across all tokens.
+         * @note Same 0-ambiguity caveat as the token-filtered overload applies.
+         */
+        uint64_t GetChildBalance( const std::string &child_address );
+
+        /**
          * @brief Returns serialized incoming transactions known to the transaction manager.
          * @return Incoming transaction byte vectors, or an empty vector when transactions are not ready.
          */
