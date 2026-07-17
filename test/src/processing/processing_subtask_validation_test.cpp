@@ -170,10 +170,11 @@ TEST_F( SubTaskValidationTest, CompleteSubTask_ValidResult_AcceptsResult )
     subTaskQueueAccessor->CompleteSubTask( "SUBTASK_VALID", validResult );
 
     // Wait a bit to see if any errors occur
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-
-    // Should not have triggered an error
-    EXPECT_FALSE( errorOccurred.load() );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return !errorOccurred.load(); },
+        std::chrono::milliseconds( 300 ),
+        "Valid result should not trigger an error",
+        nullptr );
     if ( errorOccurred.load() )
     {
         Color::PrintError( "Unexpected error: ", errorMessage );

@@ -333,20 +333,201 @@ namespace sgns
         return is_quorum;
     }
 
-    ValidatorRegistry::Registry ValidatorRegistry::CreateGenesisRegistry(
-        const std::string &genesis_validator_id ) const
+    ValidatorRegistry::SlotQuorumResult ValidatorRegistry::EvaluateSlotQuorum(
+        const std::vector<sgns::ConsensusVote> &votes,
+        const Registry                        &registry ) const
     {
-        logger_->trace( "{}: entry genesis_id={}", __func__, genesis_validator_id.substr( 0, 8 ) );
+        return EvaluateSlotQuorumStatic( votes, registry, weight_config_ );
+    }
+
+    // REQ-DETERM-01: this function reads ONLY `votes` and `registry` (plus the
+    // caller-supplied weight_config). No clocks, no local node state, no network.
+    // All peers with identical inputs compute an identical result. Integer math
+    // throughout -- no floating point -- to guarantee cross-platform determinism.
+    ValidatorRegistry::SlotQuorumResult ValidatorRegistry::EvaluateSlotQuorumStatic(
+        const std::vector<sgns::ConsensusVote> &votes,
+        const Registry                        &registry,
+        const WeightConfig                    &weight_config )
+    {
+        ValidatorRegistryLogger()->trace( "{}: entry votes={}", __func__, votes.size() );
+
+        // Step 1: collect qualifying approve voters. One vote per validator
+        // (dedup by voter_id, keep first). Voter must be ACTIVE in the registry.
+        struct QualifyingVoter
+        {
+            std::string voter_id;
+            uint64_t    weight;
+            std::string slot_0_hash;
+            std::string slot_1_hash;
+            std::string slot_2_hash;
+        };
+        std::vector<QualifyingVoter>    voters;
+        std::unordered_set<std::string> seen_voters;
+
+        for ( const auto &vote : votes )
+        {
+            if ( !vote.approve() )
+            {
+                // Non-approve votes are skipped entirely (D-05 fail-closed):
+                // they do NOT count toward total_voting_reputation.
+                continue;
+            }
+            if ( !seen_voters.insert( vote.voter_id() ).second )
+            {
+                // Duplicate voter -- keep first only.
+                continue;
+            }
+            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
+            if ( !validator || validator->status() != Status::ACTIVE )
+            {
+                continue;
+            }
+            QualifyingVoter v;
+            v.voter_id     = vote.voter_id();
+            v.weight       = validator->weight();
+            v.slot_0_hash  = vote.slot_0_hash();
+            v.slot_1_hash  = vote.slot_1_hash();
+            v.slot_2_hash  = vote.slot_2_hash();
+            voters.push_back( std::move( v ) );
+        }
+
+        SlotQuorumResult result;
+
+        // Step 2: total_voting_reputation = sum(weight) over qualifying voters.
+        for ( const auto &v : voters )
+        {
+            result.total_voting_reputation += v.weight;
+        }
+
+        // Step 3: threshold = ceil(total * quorum_num / quorum_den) using the
+        // same ceil-division idiom as QuorumThreshold.
+        if ( result.total_voting_reputation > 0 && weight_config.slot_quorum_denominator_ > 0 )
+        {
+            const uint64_t numerator = result.total_voting_reputation * weight_config.slot_quorum_numerator_;
+            result.threshold         = ( numerator + weight_config.slot_quorum_denominator_ - 1 )
+                               / weight_config.slot_quorum_denominator_;
+        }
+
+        uint64_t slot0_contribution = 0;
+        uint64_t slot1_contribution = 0;
+        uint64_t slot2_contribution = 0;
+
+        // Step 4 (D-02): slot 0 -- each voter with non-empty slot_0_hash
+        // contributes weight * direct_num / direct_den. Multiply before divide.
+        if ( weight_config.slot_direct_denominator_ > 0 )
+        {
+            for ( const auto &v : voters )
+            {
+                if ( !v.slot_0_hash.empty() )
+                {
+                    slot0_contribution += ( v.weight * weight_config.slot_direct_numerator_ )
+                                          / weight_config.slot_direct_denominator_;
+                }
+            }
+        }
+
+        // Step 5 (D-03): slots 1 and 2 -- group voters by slot_N_hash, keep only
+        // groups with >= slot_public_min_group_ distinct validators, sum their
+        // weight, multiply by public_num / public_den.
+        auto compute_public_slot = [&]( const size_t slot_index ) -> uint64_t {
+            if ( weight_config.slot_public_denominator_ == 0 )
+            {
+                return 0;
+            }
+            // group: hash -> set of distinct voter_ids in that hash group.
+            std::unordered_map<std::string, std::unordered_set<std::string>> groups;
+            for ( const auto &v : voters )
+            {
+                const std::string &hash = ( slot_index == 1 ) ? v.slot_1_hash : v.slot_2_hash;
+                if ( hash.empty() )
+                {
+                    continue;
+                }
+                groups[hash].insert( v.voter_id );
+            }
+            uint64_t contribution = 0;
+            for ( const auto &kv : groups )
+            {
+                if ( kv.second.size() >= weight_config.slot_public_min_group_ )
+                {
+                    // Sum the weight of voters in this qualifying group.
+                    uint64_t group_weight = 0;
+                    for ( const auto &v : voters )
+                    {
+                        const std::string &hash = ( slot_index == 1 ) ? v.slot_1_hash : v.slot_2_hash;
+                        if ( hash == kv.first )
+                        {
+                            group_weight += v.weight;
+                        }
+                    }
+                    contribution += ( group_weight * weight_config.slot_public_numerator_ )
+                                    / weight_config.slot_public_denominator_;
+                }
+                // Solo / sub-min groups contribute zero (D-03).
+            }
+            return contribution;
+        };
+
+        slot1_contribution = compute_public_slot( 1 );
+        slot2_contribution = compute_public_slot( 2 );
+
+        result.qualified_sum = slot0_contribution + slot1_contribution + slot2_contribution;
+
+        // Step 6 (D-06): certificate iff qualified_sum STRICTLY exceeds threshold.
+        result.has_quorum = result.qualified_sum > result.threshold;
+
+        ValidatorRegistryLogger()->debug(
+            "{}: slot0={} slot1={} slot2={} qualified_sum={} total_voting_rep={} threshold={} has_quorum={}",
+            __func__,
+            slot0_contribution,
+            slot1_contribution,
+            slot2_contribution,
+            result.qualified_sum,
+            result.total_voting_reputation,
+            result.threshold,
+            result.has_quorum );
+
+        return result;
+    }
+
+    // D-08: REGULAR -> FULL promotion decision (REQ-DETERM-01). Pure function of
+    // (entry, weight_config): every peer with identical inputs computes an
+    // identical promotion decision. ApplyVoteEffects delegates here after the
+    // approve-branch weight clamp so the just-clamped weight and just-updated
+    // penalty_score are considered.
+    bool ValidatorRegistry::EvaluateRegularPromotionStatic(
+        const ValidatorEntry &entry,
+        const WeightConfig   &weight_config )
+    {
+        // GENESIS is never demoted to FULL; SHARDED is not promoted by this rule;
+        // an already-FULL entry is not re-promoted (idempotent).
+        if ( entry.role() != Role::REGULAR )
+        {
+            return false;
+        }
+        // Weight must reach the promotion threshold AND penalty must be strictly
+        // below the threshold (a penalized node must earn back reputation).
+        return entry.weight() >= weight_config.full_promotion_weight_
+            && entry.penalty_score() < weight_config.penalty_threshold_;
+    }
+
+    ValidatorRegistry::Registry ValidatorRegistry::CreateGenesisRegistry(
+        const std::vector<std::string> &genesis_validator_ids ) const
+    {
+        logger_->trace( "{}: entry count={}", __func__, genesis_validator_ids.size() );
         Registry registry;
         registry.set_epoch( 0 );
-        auto *entry = registry.add_validators();
-        entry->set_validator_id( genesis_validator_id );
-        entry->set_role( Role::GENESIS );
-        entry->set_status( Status::ACTIVE );
-        entry->set_weight( ComputeWeight( entry->role() ) );
-        entry->set_penalty_score( 0 );
-        entry->set_missed_epochs( 0 );
-        logger_->debug( "{}: registry created with weight={}", __func__, entry->weight() );
+        for ( const auto &id : genesis_validator_ids )
+        {
+            auto *entry = registry.add_validators();
+            entry->set_validator_id( id );
+            entry->set_role( Role::GENESIS );
+            entry->set_status( Status::ACTIVE );
+            entry->set_weight( ComputeWeight( entry->role() ) );
+            entry->set_penalty_score( 0 );
+            entry->set_missed_epochs( 0 );
+            logger_->debug( "{}: registered genesis validator id={} weight={}", __func__, id.substr( 0, 8 ), entry->weight() );
+        }
         return registry;
     }
 
@@ -406,10 +587,10 @@ namespace sgns
     }
 
     outcome::result<void> ValidatorRegistry::StoreGenesisRegistry(
-        const std::string                                          &genesis_validator_id,
+        const std::vector<std::string>                              &genesis_validator_ids,
         std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign )
     {
-        logger_->trace( "{}: entry genesis_id={}", __func__, genesis_validator_id.substr( 0, 8 ) );
+        logger_->trace( "{}: entry count={}", __func__, genesis_validator_ids.size() );
         {
             std::shared_lock lock( cache_mutex_ );
             if ( cache_initialized_ && cached_registry_ && !cached_registry_->validators().empty() )
@@ -427,7 +608,7 @@ namespace sgns
 
         logger_->debug( "{}: creating genesis registry", __func__ );
         RegistryUpdate update;
-        *update.mutable_registry() = CreateGenesisRegistry( genesis_validator_id );
+        *update.mutable_registry() = CreateGenesisRegistry( genesis_validator_ids );
         update.clear_prev_registry_hash();
 
         auto signing_bytes = ComputeUpdateSigningBytes( update );
@@ -438,7 +619,7 @@ namespace sgns
         }
 
         SignatureEntry signature_entry;
-        signature_entry.set_validator_id( genesis_validator_id );
+        signature_entry.set_validator_id( genesis_validator_ids.front() );
         auto signature = sign( signing_bytes.value() );
         signature_entry.set_signature( signature.data(), signature.size() );
         *update.add_signatures() = signature_entry;
@@ -1737,6 +1918,7 @@ namespace sgns
             const uint64_t old_weight  = entry.weight();
             const uint32_t old_penalty = penalty;
             const auto     old_status  = entry.status();
+            const auto     old_role    = entry.role();
             entry.set_missed_epochs( 0 );
 
             if ( approve )
@@ -1771,6 +1953,16 @@ namespace sgns
                         }
                         const uint64_t clamped = std::min( entry.weight() + increment, role_cap );
                         entry.set_weight( clamped );
+                    }
+
+                    // D-08: REGULAR -> FULL promotion. Promoted FULL nodes accumulate
+                    // weight up to full_max_weight_, which flows into EvaluateSlotQuorum
+                    // via validator.weight() with no tally-side special case. The
+                    // promotion operates on the just-clamped weight and just-updated
+                    // penalty_score; it only changes the role, never the weight.
+                    if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
+                    {
+                        entry.set_role( Role::FULL );
                     }
                 }
                 else if ( penalty == 0 )
@@ -1815,6 +2007,16 @@ namespace sgns
                             entry.penalty_score(),
                             static_cast<int>( old_status ),
                             static_cast<int>( entry.status() ) );
+            // D-08: surface the REGULAR -> FULL promotion only when the role
+            // actually changed, so the common no-promotion path stays quiet.
+            if ( entry.role() != old_role )
+            {
+                logger_->debug( "{}: role promotion id={} role {}->{}",
+                                __func__,
+                                entry.validator_id().substr( 0, 8 ),
+                                static_cast<int>( old_role ),
+                                static_cast<int>( entry.role() ) );
+            }
         }
     }
 

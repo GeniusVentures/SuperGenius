@@ -83,6 +83,38 @@ namespace sgns
             uint32_t inactivity_decrement_            = 1;   ///< Weight decrement for inactive validators.
             uint64_t total_weight_cap_multiplier_     = 4; ///< Multiplier controlling global weight-cap normalization.
             uint64_t certificate_timestamp_window_ms_ = 300000; ///< Allowed timestamp drift for certificates.
+            // Phase 6 slot-based RPC-hash voting (D-02/D-03/D-06). Integer ratios
+            // keep the tally deterministic across peers (no floating point).
+            uint64_t slot_direct_numerator_   = 1; ///< Slot 0 (DIRECT_API) weight numerator.   0.50 = 1/2 (D-02).
+            uint64_t slot_direct_denominator_ = 2; ///< Slot 0 (DIRECT_API) weight denominator. 0.50 = 1/2 (D-02).
+            uint64_t slot_public_numerator_   = 1; ///< Slots 1-2 (PUBLIC) weight numerator.    0.25 = 1/4 (D-03).
+            uint64_t slot_public_denominator_ = 4; ///< Slots 1-2 (PUBLIC) weight denominator.  0.25 = 1/4 (D-03).
+            uint64_t slot_quorum_numerator_   = 3; ///< Cumulative quorum threshold numerator.  0.75 = 3/4 (D-06).
+            uint64_t slot_quorum_denominator_ = 4; ///< Cumulative quorum threshold denominator.0.75 = 3/4 (D-06).
+            uint64_t slot_public_min_group_   = 2; ///< D-03: minimum distinct validators per PUBLIC hash group.
+            // D-08: REGULAR -> FULL promotion threshold. A REGULAR validator whose
+            // accumulated weight (via ApplyVoteEffects approve increments) reaches
+            // this value AND whose penalty_score is below penalty_threshold_ is
+            // promoted to Role::FULL. The promoted node's weight then accumulates
+            // up to full_max_weight_, flowing into EvaluateSlotQuorum via
+            // validator.weight() with no tally-side special case. Equal to regular_max_weight_ so the approve-branch clamp
+			// does not prevent reaching the threshold.
+            uint64_t full_promotion_weight_ = 100; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
+        };
+
+        /**
+         * @brief Result of the Phase 6 cumulative slot-quorum tally (D-06).
+         *
+         * Deterministic across peers: computed ONLY from the vote vector and a
+         * registry snapshot (REQ-DETERM-01). No clocks, no local config, no node
+         * state is consulted.
+         */
+        struct SlotQuorumResult
+        {
+            uint64_t qualified_sum           = 0; ///< Sum of slot-weighted contributions (D-06).
+            uint64_t total_voting_reputation = 0; ///< Sum of weight of ALL approve voters.
+            uint64_t threshold               = 0; ///< ceil(total * slot_quorum_numerator_ / slot_quorum_denominator_).
+            bool     has_quorum              = false; ///< qualified_sum > threshold (STRICT, D-06).
         };
 
         /**
@@ -135,18 +167,73 @@ namespace sgns
         bool IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
         /**
+         * @brief Phase 6 cumulative slot-quorum tally for bridge-mint subjects (D-06).
+         *
+         * Reads ONLY the supplied votes and registry snapshot (REQ-DETERM-01).
+         * Slot 0: each distinct approver with a non-empty slot_0_hash contributes
+         * weight * slot_direct_numerator_ / slot_direct_denominator_ (D-02).
+         * Slots 1-2: votes are grouped by slot_N_hash; only groups with at least
+         * slot_public_min_group_ distinct validators contribute
+         * sum(weight) * slot_public_numerator_ / slot_public_denominator_ (D-03).
+         * Solo hashes contribute zero. Abstainers (all slot hashes empty) still
+         * count toward total_voting_reputation but zero toward qualified_sum (D-05).
+         * has_quorum = (qualified_sum > threshold) -- STRICT (D-06).
+         *
+         * @param[in] votes     Consensus votes (only approve votes are counted).
+         * @param[in] registry  Registry snapshot used to resolve voter weights.
+         * @return Slot tally result.
+         */
+        SlotQuorumResult EvaluateSlotQuorum( const std::vector<sgns::ConsensusVote> &votes,
+                                             const Registry                        &registry ) const;
+
+        /**
+         * @brief Pure (stateless) slot-quorum tally for deterministic unit testing.
+         *
+         * Identical arithmetic to EvaluateSlotQuorum, but takes the WeightConfig
+         * explicitly so it can be exercised without a GlobalDB-backed
+         * ValidatorRegistry instance. The member function delegates here.
+         *
+         * @param[in] votes         Consensus votes (only approve votes counted).
+         * @param[in] registry      Registry snapshot used to resolve voter weights.
+         * @param[in] weight_config Slot ratio configuration.
+         * @return Slot tally result.
+         */
+        static SlotQuorumResult EvaluateSlotQuorumStatic( const std::vector<sgns::ConsensusVote> &votes,
+                                                          const Registry                        &registry,
+                                                          const WeightConfig                    &weight_config );
+
+        /**
+         * @brief Pure (stateless) REGULAR -> FULL promotion decision (D-08).
+         *
+         * Returns true iff the entry is currently Role::REGULAR, its accumulated
+         * weight has reached @ref full_promotion_weight_, AND its penalty_score is
+         * strictly below @ref penalty_threshold_. GENESIS, SHARDED, and already-FULL
+         * entries never qualify (no GENESIS demotion, idempotent on FULL). Extracted
+         * as a pure static helper so the promotion decision is unit-testable without
+         * a GlobalDB-backed ValidatorRegistry instance -- ApplyVoteEffects delegates
+         * here. The function reads ONLY its inputs (REQ-DETERM-01), so every peer
+         * mutates the entry identically.
+         *
+         * @param[in] entry         Validator entry under consideration.
+         * @param[in] weight_config Weight policy supplying thresholds.
+         * @return true if the entry should be promoted from REGULAR to FULL.
+         */
+        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
+                                                    const WeightConfig   &weight_config );
+
+        /**
          * @brief Creates an in-memory genesis registry snapshot.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @return Genesis registry snapshot.
          */
-        Registry CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        Registry CreateGenesisRegistry( const std::vector<std::string> &genesis_validator_ids ) const;
         /**
          * @brief Persists a signed genesis registry update.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @param[in] sign Signing callback used for registry-update signatures.
          * @return outcome::success on success, otherwise an error.
          */
-        outcome::result<void> StoreGenesisRegistry( const std::string &genesis_validator_id,
+        outcome::result<void> StoreGenesisRegistry( const std::vector<std::string> &genesis_validator_ids,
                                                     std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         /**
          * @brief Loads the currently active registry.

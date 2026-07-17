@@ -11,3 +11,5 @@ target_link_libraries(watcher_service
     Boost::thread
     Boost::chrono
 )
+
+supergenius_install(watcher_service)

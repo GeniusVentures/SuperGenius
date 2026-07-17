@@ -17,7 +17,7 @@ namespace
     constexpr const char *TEST_PRIVATE_KEY =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
-    DevConfig_st MakeDevConfig( const boost::filesystem::path &base )
+    GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
         return { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
@@ -55,7 +55,7 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
     auto base = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -78,7 +78,7 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     auto base = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
     sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/49999, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );

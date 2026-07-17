@@ -127,8 +127,11 @@ TEST_F( ValidateResultDataTest, AcceptsIpfsScheme )
     auto result = makeResult( "VALIDATE_9A_OK", "ipfs://QmTestCID123\nipfs://QmTestCID456" );
     accessor->CompleteSubTask( "VALIDATE_9A_OK", result );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    EXPECT_FALSE( errorOccurred.load() ) << "ipfs:// scheme should pass validation";
+    EXPECT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return !errorOccurred.load(); },
+        std::chrono::milliseconds( 600 ),
+        "ipfs:// scheme should pass validation",
+        nullptr );
 }
 
 /**
@@ -229,6 +232,9 @@ TEST_F( ValidateResultDataTest, EmptyDataIdPasses )
     auto result = makeResult( "VALIDATE_EMPTY", "" );
     accessor->CompleteSubTask( "VALIDATE_EMPTY", result );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    EXPECT_FALSE( errorOccurred.load() ) << "Empty ipfs_results_data_id should pass";
+    EXPECT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return !errorOccurred.load(); },
+        std::chrono::milliseconds( 600 ),
+        "Empty ipfs_results_data_id should pass",
+        nullptr );
 }

@@ -7,6 +7,7 @@
 #include <ipfs_pubsub/gossip_pubsub_topic.hpp>
 
 #include "base/logger.hpp"
+#include "testutil/wait_condition.hpp"
 
 
 namespace
@@ -72,11 +73,14 @@ namespace
         sgns::ipfs_pubsub::GossipPubSubTopic resultChannel2( pubs2, "CountTest" );
         resultChannel2.Subscribe( []( boost::optional<const sgns::ipfs_pubsub::GossipPubSub::Message &> message ) {},true );
         //resultChannel2.Publish();
-        std::this_thread::sleep_for( std::chrono::milliseconds( 3000 ) );
         //std::string test = "CountTest";
         std::cout << "Count Of peers: " << resultChannel.getPeerCount() << std::endl;
         std::cout << "Count Of peers: " << resultChannel2.getPeerCount() << std::endl;
-        ASSERT_EQ( resultChannel.getPeerCount(), resultChannel2.getPeerCount() );
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]() { return resultChannel.getPeerCount() == resultChannel2.getPeerCount(); },
+            std::chrono::milliseconds( 9000 ),
+            "Peer counts did not converge within timeout",
+            nullptr );
         ASSERT_EQ( resultChannel.getAllPeers().size(), resultChannel2.getAllPeers().size() );
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );

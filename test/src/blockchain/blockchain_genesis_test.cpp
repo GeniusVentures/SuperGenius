@@ -60,7 +60,7 @@ protected:
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
@@ -89,10 +89,13 @@ protected:
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
         auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        // New starts PubSub synchronously in the constructor
+        // (InitNetwork -> pubs.wait()) and kicks off async DB/blockchain init.
+        // Callers wait for READY via waitForCondition, so no fixed sleep is
+        // needed here (and a sleep would obscure startup-timing measurements).
         return node;
     }
 
@@ -153,9 +156,12 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
-    // Allow time for attempted connections
+    // Without authorization, nodes must NOT reach READY. Bounded-wait (via
+    // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync without authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
+    (void)waitForCondition(
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::milliseconds( 5000 ) );
 
     // Verify that nodes are NOT in READY state due to missing authorization
     std::cout << "Verifying nodes cannot reach READY state without authorization..." << std::endl;
@@ -216,11 +222,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
 
     //node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
-    // Allow time for connections to establish and genesis block to be created/propagated
-    std::cout << "Waiting for genesis block creation and propagation..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
-
-    // Wait for all nodes to reach READY state
+    // Wait for nodes to reach READY state. Genesis creation/propagation is
+    // covered by the READY poll below (no fixed sleep needed).
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
@@ -371,9 +374,12 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
-    // Allow time for attempted connections and genesis block operations
+    // With wrong authorization, nodes must NOT reach READY. Bounded-wait (via
+    // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync with wrong authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
+    (void)waitForCondition(
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::milliseconds( 8000 ) );
 
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
