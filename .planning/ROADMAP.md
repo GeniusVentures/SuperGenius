@@ -29,7 +29,7 @@ guaranteed, fault injection (node kill, RPC disagreement, pubsub partition) does
 guarantee, and the parsing/deserialization layer withstands fuzzed adversarial input.
 **Requirements**: D-01..D-16 (CONTEXT.md decisions — no formal REQ-IDs mapped for this phase)
 **Depends on:** Phase 7
-**Plans:** 2/4 plans executed
+**Plans:** 3/4 plans executed
 
 **Wave 1** (independent foundations):
 
@@ -40,7 +40,7 @@ Plans:
 **Wave 2** (depends on 08-01's fixture/CMakeLists.txt):
 
 Plans:
-- [ ] 08-03-PLAN.md — Mock RPC per-slot divergence helper + RPC-disagreement fault test (D-08, D-09)
+- [x] 08-03-PLAN.md — Mock RPC per-slot divergence helper + RPC-disagreement fault test (D-08, D-09)
 
 **Wave 3** (depends on 08-01 + 08-03's shared CMakeLists.txt):
 
