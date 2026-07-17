@@ -431,9 +431,13 @@ TEST_F( ChildRegistrationIntegrationTest, MainQueriesChildBalance )
     sgns::TokenID     child_token  = child_node_->GetTokenID();
     constexpr uint64_t kMintAmount = 500;
 
+    // Note: chainid must match a registered test-only IInputValidator (see
+    // testutil/TestMintInputValidator.hpp, which registers "test") — using an
+    // unregistered chainid falls back to the public-chain validator, which
+    // requires real RPC burn verification and rejects the mint immediately.
     auto mint_result = child_node_->MintTokens( kMintAmount,
                                                  sgns::test::NextMintSourceHash(),
-                                                 "test_05_balance",
+                                                 "test",
                                                  child_token,
                                                  "",
                                                  std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
