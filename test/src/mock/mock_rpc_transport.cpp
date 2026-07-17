@@ -283,4 +283,16 @@ std::vector<MockEndpointConfig> LoadMockConfig(const std::filesystem::path &conf
     return result;
 }
 
+std::array<MockEndpointConfig, 3> BuildDivergentSlotConfigs(
+    MockBehavior direct_behavior,
+    MockBehavior public1_behavior,
+    MockBehavior public2_behavior)
+{
+    return {
+        MockEndpointConfig{"mock://direct", direct_behavior, {}},
+        MockEndpointConfig{"mock://public1", public1_behavior, {}},
+        MockEndpointConfig{"mock://public2", public2_behavior, {}},
+    };
+}
+
 } // namespace sgns::test
