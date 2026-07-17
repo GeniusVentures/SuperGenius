@@ -29,13 +29,13 @@ guaranteed, fault injection (node kill, RPC disagreement, pubsub partition) does
 guarantee, and the parsing/deserialization layer withstands fuzzed adversarial input.
 **Requirements**: D-01..D-16 (CONTEXT.md decisions — no formal REQ-IDs mapped for this phase)
 **Depends on:** Phase 7
-**Plans:** 4 plans
+**Plans:** 2/4 plans executed
 
 **Wave 1** (independent foundations):
 
 Plans:
-- [ ] 08-01-PLAN.md — 11-node bridge_race fixture + single-burn and batch race tests (D-01..D-07, D-15, D-16)
-- [ ] 08-02-PLAN.md — libFuzzer+ASan build tier (addfuzztarget(), SGNS_FUZZING) + 3 fuzz harnesses + seed corpus (D-12, D-13, D-14)
+- [x] 08-01-PLAN.md — 11-node bridge_race fixture + single-burn and batch race tests (D-01..D-07, D-15, D-16)
+- [x] 08-02-PLAN.md — libFuzzer+ASan build tier (addfuzztarget(), SGNS_FUZZING) + 3 fuzz harnesses + seed corpus (D-12, D-13, D-14)
 
 **Wave 2** (depends on 08-01's fixture/CMakeLists.txt):
 

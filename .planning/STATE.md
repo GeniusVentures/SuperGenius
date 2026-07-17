@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: GeniusNode Construction Refactor
-current_phase: 05
+current_phase: 08
 status: executing
-last_updated: "2026-07-16T21:37:59.637Z"
-last_activity: 2026-07-16 -- Phase 8 planning complete
+last_updated: "2026-07-17T12:50:57.216Z"
+last_activity: 2026-07-17 -- Phase 08 execution started
 progress:
   total_phases: 9
   completed_phases: 8
@@ -18,7 +18,7 @@ progress:
 
 **Last updated:** 2026-07-02
 **Milestone:** v1.0 — GeniusNode Construction Refactor
-**Current Phase:** 05
+**Current Phase:** 08
 **Current Phase:** 04.1
 
 ## Project Reference
@@ -26,14 +26,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-02)
 
 **Core value:** Constructing a `GeniusNode` must be a single, self-documenting call driven by config files.
-**Current focus:** Phase 05 — on node startup after it has got all the crdt data especiall
+**Current focus:** Phase 08 — Burn/mint datapath robustness
 
 ## Current Position
 
-Phase: 04.2 (p2p-rlpx-burn-event-gossip) — EXECUTING
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-16 -- Phase 8 planning complete
+Phase: 08 (Burn/mint datapath robustness) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 08
+Last activity: 2026-07-17 -- Phase 08 execution started
 
 ## Roadmap Snapshot
 
