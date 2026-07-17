@@ -39,6 +39,16 @@ function(addtest_part test_name)
     )
 endfunction()
 
+function(addfuzztarget target_name)
+    add_executable(${target_name} ${ARGN})
+    target_compile_options(${target_name} PRIVATE -fsanitize=fuzzer,address -g -O1)
+    target_link_options(${target_name} PRIVATE -fsanitize=fuzzer,address)
+    set_target_properties(${target_name} PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/fuzz_bin
+    )
+    disable_clang_tidy(${target_name})
+endfunction()
+
 function(compile_proto_to_cpp PB_H PB_CC PB_REL_PATH PROTO)
     get_target_property(Protobuf_INCLUDE_DIR protobuf::libprotobuf INTERFACE_INCLUDE_DIRECTORIES)
     get_target_property(Protobuf_PROTOC_EXECUTABLE protobuf::protoc IMPORTED_LOCATION)
