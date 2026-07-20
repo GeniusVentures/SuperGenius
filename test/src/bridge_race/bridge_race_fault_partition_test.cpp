@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <array>
+#include <thread>
 
 TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
 {
@@ -97,12 +98,13 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
                   BridgeRaceE2ETest::kNodeCount );
 
     // Allow a bounded interval for each sub-group's watcher poll to fire independently
-    // before healing the partition.
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
-        kPrePartitionHealWindow,
-        "Full node must remain READY during the pre-heal partition window",
-        nullptr );
+    // before healing the partition. This must actually elapse the window (not wait on an
+    // already-true condition, which would return immediately and heal the partition
+    // before either sub-group's watcher has a chance to poll) so the two sub-groups can
+    // genuinely diverge before the heal + reconciliation is exercised.
+    std::this_thread::sleep_for( kPrePartitionHealWindow );
+    ASSERT_EQ( s_nodes[0]->GetState(), GeniusNode::NodeState::READY )
+        << "Full node must remain READY during the pre-heal partition window";
 
     // Heal: reconnect every previously-disconnected cross-group pair via AddPeers().
     for ( unsigned int a : kGroupA )

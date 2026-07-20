@@ -14,6 +14,7 @@
 #include "bridge_race_fixture.hpp"
 
 #include <algorithm>
+#include <thread>
 
 TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
 {
@@ -71,13 +72,13 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
 
     const uint64_t balance_before_stability_window = s_nodes[0]->GetBalance( dest_addr );
 
-    // Stability/double-mint check: node 0 must remain READY (liveness) across one
-    // additional watcher poll window before re-reading balances.
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
-        BridgeRaceE2ETest::kRaceStabilityWindow,
-        "node 0 must remain READY across the stability window (liveness + no double-mint)",
-        nullptr );
+    // Stability/double-mint check: actually elapse one additional watcher poll window
+    // (not a wait-for-already-true-condition, which would return immediately) so a
+    // delayed double-mint on the next poll cycle has time to manifest before the final
+    // exact-balance assertions below.
+    std::this_thread::sleep_for( BridgeRaceE2ETest::kRaceStabilityWindow );
+    ASSERT_EQ( s_nodes[0]->GetState(), GeniusNode::NodeState::READY )
+        << "node 0 must remain READY across the stability window (liveness check)";
 
     // Every node's final balance must equal EXACTLY initial + kMintAmount (not >=) —
     // this is the double-mint guard (D-02).

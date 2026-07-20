@@ -16,6 +16,7 @@
 #include "bridge_race_fixture.hpp"
 
 #include <algorithm>
+#include <thread>
 
 namespace
 {
@@ -108,13 +109,13 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
         "All 11 nodes must independently mint each of the batch burns exactly once",
         nullptr );
 
-    // Stability/double-mint check: node 0 must remain READY across one additional
-    // watcher poll window before re-reading balances.
-    EXPECT_WAIT_FOR_CONDITION(
-        [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
-        BridgeRaceE2ETest::kRaceStabilityWindow,
-        "node 0 must remain READY across the stability window (liveness + no double-mint)",
-        nullptr );
+    // Stability/double-mint check: actually elapse one additional watcher poll window
+    // (not a wait-for-already-true-condition, which would return immediately) so a
+    // delayed double-mint on the next poll cycle has time to manifest before the final
+    // exact-balance assertions below.
+    std::this_thread::sleep_for( BridgeRaceE2ETest::kRaceStabilityWindow );
+    ASSERT_EQ( s_nodes[0]->GetState(), GeniusNode::NodeState::READY )
+        << "node 0 must remain READY across the stability window (liveness check)";
 
     // Each burned destination's final balance must equal EXACTLY initial + kMintAmount
     // on every node (no double-mint, no cross-burn interference inflating the amount).
