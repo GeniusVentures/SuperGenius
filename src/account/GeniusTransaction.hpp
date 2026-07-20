@@ -262,6 +262,15 @@ namespace sgns
         bool CheckSignature() const;
 
         /**
+         * @brief       Verifies the transaction signature against an arbitrary caller-supplied address,
+         *              rather than the transaction's own declared source address. @ref CheckSignature
+         *              delegates to this with `dag_st.source_addr()`.
+         * @param[in]   address The address whose public key the signature should be verified against.
+         * @return      true if the signature is valid for the given address, false otherwise.
+         */
+        bool CheckSignatureAgainst( const std::string &address ) const;
+
+        /**
          * @brief       Legacy method to verify the transaction signature using the DAG metadata. This method may be used for backward compatibility with older transaction formats.
          * @return      true if the signature is valid and the hash matches, false otherwise.
          */
