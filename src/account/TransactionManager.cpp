@@ -3994,6 +3994,15 @@ namespace sgns
                                                tx->GetHash() );
             return ConsensusManager::ValidationResult::Reject();
         }
+        if ( !CheckParentChildAuthority( *tx ) )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Parent-child authority check failed tx={}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx->GetHash() );
+            return ConsensusManager::ValidationResult::Reject();
+        }
         if ( !CheckTransactionTimestamp( *tx ) )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Timestamp check failed tx={}",
@@ -4081,6 +4090,40 @@ namespace sgns
             }
         }
         m_logger->error( "{}: Authorization failed tx={}", __func__, tx.GetHash() );
+        return false;
+    }
+
+    bool TransactionManager::CheckParentChildAuthority( const GeniusTransaction &tx ) const
+    {
+        m_logger->debug( "{}: Checking parent-child authority tx={}", __func__, tx.GetHash() );
+        if ( tx.GetType() != "transfer" )
+        {
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+        auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+        if ( !certified_main.has_value() )
+        {
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+        if ( tx.CheckSignature() )
+        {
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+        auto params = tx.GetUTXOParametersOpt();
+        if ( !params.has_value() || params->second.empty() )
+        {
+            m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+            return false;
+        }
+        if ( params->second.front().dest_address == *certified_main )
+        {
+            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+            return true;
+        }
+        m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
         return false;
     }
 

@@ -733,6 +733,7 @@ namespace sgns
             const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionAuthorization( const GeniusTransaction &tx ) const;
+        bool                   CheckParentChildAuthority( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionTimestamp( const GeniusTransaction &tx ) const;
         bool                   CheckTransactionReplayProtection( const GeniusTransaction &tx ) const;
         ReplayProtectionResult EvaluateTransactionReplayProtection( const GeniusTransaction &tx ) const;
