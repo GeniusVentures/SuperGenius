@@ -2137,6 +2137,10 @@ namespace sgns
             }
             return;
         }
+
+        // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
+        return;
+
         m_logger->info( "Missing {} transactions during init", missing_count );
 
         auto now = std::chrono::steady_clock::now();
