@@ -4071,6 +4071,15 @@ namespace sgns
             m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
             return true;
         }
+        if ( tx.GetType() == "transfer" )
+        {
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( certified_main.has_value() && tx.CheckSignatureAgainst( *certified_main ) )
+            {
+                m_logger->debug( "{}: Authorization ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+        }
         m_logger->error( "{}: Authorization failed tx={}", __func__, tx.GetHash() );
         return false;
     }
