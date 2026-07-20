@@ -791,11 +791,9 @@ namespace sgns
         const auto escrow_amount = escrow_tx->GetAmount();
 
         // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
-        // taken at escrow creation. Eventually settable via multisig CRDT config.
-        constexpr uint64_t kBurnBasisPoints  = 100;   // 1%
-        constexpr uint64_t kBasisPointsTotal = 10000;
-        const auto          burn_amount      = ( escrow_amount * kBurnBasisPoints ) / kBasisPointsTotal;
-        const auto          available        = escrow_amount - burn_amount;
+        // taken at escrow creation.
+        const auto burn_amount = ( escrow_amount * BURN_BASIS_POINTS ) / BASIS_POINTS_TOTAL;
+        const auto available   = escrow_amount - burn_amount;
 
         BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
 

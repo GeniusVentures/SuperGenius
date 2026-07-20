@@ -47,6 +47,11 @@ namespace sgns
         static constexpr std::string_view GNUS_FULL_NODES_TOPIC_LEGACY = "SuperGNUSNode.TestNet.FullNode.963";
         static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
 
+        /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
+        /// Eventually settable via multisig CRDT config; hardcoded default until then.
+        static constexpr uint64_t BURN_BASIS_POINTS  = 100; // 1%
+        static constexpr uint64_t BASIS_POINTS_TOTAL = 10000;
+
         /**
          * @brief State of the Transaction Manager
          */

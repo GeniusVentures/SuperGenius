@@ -528,7 +528,10 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     ASSERT_EQ( bal_main_init - cost, node_main->GetBalance() );
     ASSERT_EQ( tok_main_init - cost, node_main->GetBalance( sgns::TokenID::FromBytes( { 0x00 } ) ) );
 
-    uint64_t expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+    uint64_t burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
+    uint64_t available   = cost - burn_amount;
+
+    uint64_t expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
 
     assertWaitForCondition(
         [&]()
@@ -544,7 +547,8 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
                node_proc1->GetBalance( sgns::TokenID::FromBytes( { 0x01 } ) ) +
                    node_proc2->GetBalance( sgns::TokenID::FromBytes( { 0x02 } ) ) );
 
-    uint64_t dev_payment = cost - 2 * expected_peer_gain;
+    uint64_t dev_payment = available - 2 * expected_peer_gain;
     ASSERT_EQ( bal_main_init + bal_p1_init + bal_p2_init,
-               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment );
+               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + dev_payment +
+                   burn_amount );
 }

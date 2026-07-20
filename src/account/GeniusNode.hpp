@@ -338,6 +338,24 @@ namespace sgns
         uint64_t GetProcessCost( std::shared_ptr<sgns::sgprocessing::ProcessingManager> &procmgr );
 
         /**
+         * @brief Basis points of an escrow payout burned to the zero address during release.
+         * @return Burn fraction in basis points (1/10000ths), e.g. 100 == 1%.
+         */
+        static constexpr uint64_t GetBurnBasisPoints()
+        {
+            return TransactionManager::BURN_BASIS_POINTS;
+        }
+
+        /**
+         * @brief Total basis points denominator used with @ref GetBurnBasisPoints.
+         * @return Basis points total (10000).
+         */
+        static constexpr uint64_t GetBasisPointsTotal()
+        {
+            return TransactionManager::BASIS_POINTS_TOTAL;
+        }
+
+        /**
          * @brief Retrieves the current GNUS market price from the configured pricing service.
          * @return Current GNUS price in USD, or Error::NO_PRICE when unavailable.
          */
