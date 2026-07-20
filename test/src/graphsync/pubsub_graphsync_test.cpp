@@ -83,7 +83,9 @@ protected:
         loggerDataStore->set_level( spdlog::level::err );
     }
 
-    static void TearDownTestSuite() {}
+    static void TearDownTestSuite()
+    {
+    }
 };
 
 // Static member initialization
@@ -219,7 +221,6 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     gdb5->Start();
     gdb6->Start();
     pubs1->AddPeers( { pubs2->GetInterfaceAddress() } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
     std::thread io_thread = std::thread( [io_context]() { io_context->run(); } );
     //Dummy Transaction Data
     auto                         transaction = gdb1->BeginTransaction();

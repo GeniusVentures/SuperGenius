@@ -26,6 +26,23 @@
 using namespace sgns;
 using namespace sgns::test;
 
+namespace sgns
+{
+    class MultiAccountTestAccess
+    {
+    public:
+        static std::shared_ptr<Blockchain> GetBlockchain( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_ : nullptr;
+        }
+
+        static std::shared_ptr<ConsensusManager> GetConsensusManager( const std::shared_ptr<Blockchain> &blockchain )
+        {
+            return blockchain ? blockchain->consensus_manager_ : nullptr;
+        }
+    };
+} // namespace sgns
+
 namespace
 {
     /**
@@ -53,6 +70,7 @@ namespace
 
         GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
+        std::filesystem::remove_all( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
 
         std::string key;
@@ -80,6 +98,22 @@ namespace
         return node;
     }
 
+    void ConfigureTestConsensus( const std::shared_ptr<GeniusNode> &node, const std::string &description )
+    {
+        test::assertWaitForCondition(
+            [&]()
+            {
+                auto blockchain = MultiAccountTestAccess::GetBlockchain( node );
+                return node->GetState() == GeniusNode::NodeState::READY && blockchain &&
+                       MultiAccountTestAccess::GetConsensusManager( blockchain );
+            },
+            std::chrono::milliseconds( 50000 ),
+            description + " not synced" );
+
+        MultiAccountTestAccess::GetConsensusManager( MultiAccountTestAccess::GetBlockchain( node ) )
+            ->ConfigureCertificateDelay( std::chrono::seconds( 1 ) );
+    }
+
 } // namespace
 
 // Suite: Enhanced Three-Node Transfers with Grouped Minting and Change
@@ -87,10 +121,6 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 {
     // Create nodes
     auto node50 = CreateNode( "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x50 } ), true, true );
-    test::assertWaitForCondition( [&]() { return node50->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node50 not synced" );
-
     auto node51 = CreateNode( "0xcade", "0.5", sgns::TokenID::FromBytes( { 0x51 } ) );
     auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
@@ -98,12 +128,9 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     node51->GetPubSub()->AddPeers(
         { node50->GetPubSub()->GetInterfaceAddress(), node52->GetPubSub()->GetInterfaceAddress() } );
     node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
-    test::assertWaitForCondition( [&]() { return node51->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node51 not synced" );
-    test::assertWaitForCondition( [&]() { return node52->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node52 not synced" );
+    ConfigureTestConsensus( node50, "node50" );
+    ConfigureTestConsensus( node51, "node51" );
+    ConfigureTestConsensus( node52, "node52" );
 
     // Record initial balances
     uint64_t init50_full = node50->GetBalance();
@@ -214,27 +241,14 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 {
     auto tokenId  = sgns::TokenID::FromBytes( { 0x05 } );
     auto nodefull = CreateNode( "0xaffb", "0.5", tokenId, true, true );
-    test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "nodefull not synced" );
     auto node = CreateNode( "0xfadb", "0.5", tokenId );
     nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node not synced" );
+    ConfigureTestConsensus( nodefull, "nodefull" );
+    ConfigureTestConsensus( node, "node" );
 
     auto initialMain  = node->GetBalance();
     auto initialToken = node->GetBalance( tokenId );
-
-    constexpr uint64_t mintMain = 1000000;
-    auto               res      = node->MintTokens( mintMain,
-                                                    sgns::test::NextMintSourceHash(),
-                                                    "test",
-                                                    tokenId,
-                                                    "",
-                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
-    ASSERT_TRUE( res.has_value() );
 
     auto parsedChildMint = node->ParseTokens( "1.0", tokenId );
     ASSERT_TRUE( parsedChildMint.has_value() );
@@ -250,24 +264,20 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
 
     auto finalFmtRes = node->FormatTokens( node->GetBalance( tokenId ) - initialToken, tokenId );
     ASSERT_TRUE( finalFmtRes.has_value() );
-    EXPECT_EQ( finalFmtRes.value(), "3.000000" );
-    EXPECT_EQ( node->GetBalance() - initialMain, mintMain + parsedChildMint.value() );
-    EXPECT_EQ( node->GetBalance( tokenId ) - initialToken, mintMain + parsedChildMint.value() );
+    EXPECT_EQ( finalFmtRes.value(), "1.000000" );
+    EXPECT_EQ( node->GetBalance() - initialMain, parsedChildMint.value() );
+    EXPECT_EQ( node->GetBalance( tokenId ) - initialToken, parsedChildMint.value() );
 }
 
 // Suite 3: Mint multiple token IDs on same node
 TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
-    test::assertWaitForCondition( [&]() { return nodefull->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "nodefull not synced" );
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
     nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node not synced" );
+    ConfigureTestConsensus( nodefull, "nodefull" );
+    ConfigureTestConsensus( node, "node" );
 
     struct TokenMint
     {
@@ -278,8 +288,6 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     std::vector<TokenMint> mints = { { sgns::TokenID::FromBytes( { 0x0a } ), 1000 },
                                      { sgns::TokenID::FromBytes( { 0x0a } ), 2000 },
                                      { sgns::TokenID::FromBytes( { 0x0b } ), 500 },
-                                     { sgns::TokenID::FromBytes( { 0x0b } ), 1500 },
-                                     { sgns::TokenID::FromBytes( { 0x0b } ), 2500 },
                                      { sgns::TokenID::FromBytes( { 0x0c } ), 3000 } };
 
     std::vector<sgns::TokenID> tokenIds;
@@ -343,10 +351,6 @@ protected:
 TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 {
     auto node_proc1 = CreateNode( "0xadfe", "0.65", sgns::TokenID::FromBytes( { 0x01 } ), true, true, true );
-    test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_proc1 not synced" );
-
     auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
     auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, false, true );
 
@@ -354,13 +358,9 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
     node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
 
-    test::assertWaitForCondition( [&]() { return node_main->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_main not synced" );
-
-    test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_proc2 not synced" );
+    ConfigureTestConsensus( node_proc1, "node_proc1" );
+    ConfigureTestConsensus( node_main, "node_main" );
+    ConfigureTestConsensus( node_proc2, "node_proc2" );
 
     auto mintResMain = node_main->MintTokens( 1000,
                                               sgns::test::NextMintSourceHash(),

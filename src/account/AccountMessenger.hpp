@@ -302,6 +302,7 @@ namespace sgns
         outcome::result<std::unordered_set<std::string>> PerformUTXORequest( uint64_t           timeout_ms,
                                                                              const std::string &address,
                                                                              uint64_t           silent_time_ms );
+        bool HasRequestPeers() const;
 
         /**
          * @brief       Private constructor of the Account Messenger 
