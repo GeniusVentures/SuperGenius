@@ -58,23 +58,23 @@ Output: Refactored GeniusNode API (3 factory overloads), SgnsConfig struct, Node
 
 <interfaces>
 <!-- Current factory signatures (src/account/GeniusNode.hpp lines 90-127): -->
-static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config,
+static std::shared_ptr<GeniusNode> New( const DevConfig &dev_config,
                                         bool autodht = true,
                                         uint16_t base_port = 40001,
                                         bool is_full_node = false );
-static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config,
+static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig &dev_config,
                                                       const char *eth_private_key,
                                                       bool autodht = true,
                                                       uint16_t base_port = 40001,
                                                       bool is_full_node = false );
-static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config,
+static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig &dev_config,
                                                     const std::string &mnemonic,
                                                     bool autodht = true,
                                                     uint16_t base_port = 40001,
                                                     bool is_full_node = false );
 
 <!-- Current private constructor (lines 720-724): -->
-GeniusNode( const DevConfig_st &dev_config,
+GeniusNode( const DevConfig &dev_config,
             std::shared_ptr<GeniusAccount> account,
             bool autodht,
             uint16_t base_port,
@@ -107,7 +107,7 @@ GeniusNode( const DevConfig_st &dev_config,
     - The three public factories (New, NewFromPrivateKey, NewFromMnemonic) each gain an optional trailing SgnsConfig parameter defaulting to std::nullopt. When the caller does not supply one, the factory invokes GeniusNode::LoadSgnsConfig(dev_config.BaseWritePath) itself before constructing the node — preserving current behavior for NodeExample.cpp and any caller that does not pass an explicit config.
   </behavior>
   <action>
-Define `struct SgnsConfig` in the `sgns` namespace in GeniusNode.hpp (near the DevConfig_st typedef, lines 49-59). Use aggregate-style members with defaults:
+Define `struct SgnsConfig` in the `sgns` namespace in GeniusNode.hpp (near the DevConfig typedef, lines 49-59). Use aggregate-style members with defaults:
 
   - `bool isProcessor = true;`
   - `uint16_t netId = 144;`          // matches current default logged in LoadSgnsConfig

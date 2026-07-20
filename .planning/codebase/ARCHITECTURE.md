@@ -267,7 +267,7 @@ Concern separation between `evmrelay/` (Ethereum protocol library) and `src/watc
 ## Architectural Constraints
 
 - **Threading:** All I/O runs on `Boost.Asio io_context` instances. `RpcThreadPool` drives JSON-RPC with configurable thread count. `MessagingWatcher` runs dedicated `boost::thread` per watcher. CRDT and pubsub operations are async via IPFS internal Asio contexts. The `AppStateManager` lifecycle runs on the main thread; all subsystems post work to Asio contexts. Long-latency operations (disk I/O, network) use coroutines (`boost::asio::awaitable<T>`).
-- **Global state:** `CComponentFactory` is a `CSingleton` (Meyers singleton) serving as the global DI registry. `DevConfig_st gGeniusNodeConfig` is an extern global in `src/account/GeniusNode.hpp`. `CSingleton<T>` template provides global-instance accessor in `src/singleton/Singleton.hpp`.
+- **Global state:** `CComponentFactory` is a `CSingleton` (Meyers singleton) serving as the global DI registry. `DevConfig gGeniusNodeConfig` is an extern global in `src/account/GeniusNode.hpp`. `CSingleton<T>` template provides global-instance accessor in `src/singleton/Singleton.hpp`.
 - **Circular imports:** Not extensively detected, but forward declarations are used extensively (e.g., `class Blockchain;` in `src/crdt/crdt_datastore.hpp`, `class ValidatorRegistry;` in `src/blockchain/Blockchain.hpp`).
 - **Shared ownership:** `std::shared_ptr` used pervasively for all major service objects (not `std::unique_ptr` despite code style guidance); objects extend `std::enable_shared_from_this` for safe `shared_ptr` access from member functions.
 - **C++17 only:** No C++20 features allowed (e.g., no `boost::coroutines`, no designated initializers `{.field = value}`). Target MSVC, GCC, Clang compatibility.

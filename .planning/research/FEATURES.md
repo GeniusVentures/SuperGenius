@@ -37,7 +37,7 @@
 | Propagating `NodeType` enum into `TransactionManager`/`UTXOManager`/`MigrationManager`/`GeniusAccount` | 60+ refs in `TransactionManager` alone; separate larger milestone. `is_full_node_` stays a derived bool at the GeniusNode boundary this round. |
 | Distinct `Archive` vs `Full` runtime behavior | Both → `is_full_node_=true` today. Vocabulary introduced now, behavior later. |
 | Schema validation framework / JSON schema for config files | Out of scope; `HasMember + IsXxx` guards suffice. |
-| Changing `DevConfig_st` plumbing | Only the `GeniusNode` construction surface changes. |
+| Changing `DevConfig` plumbing | Only the `GeniusNode` construction surface changes. |
 | Migrating `pubsub_port` from string to numeric | Out of scope; only adding new keys. |
 | Additional node roles (Validator/Bootstrap/Watcher) | Not introduced; Full/Light/Archive only. |
 | On-disk config schema versioning / migration tooling | Defaults cover backward compat; no version field. |

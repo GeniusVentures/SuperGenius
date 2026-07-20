@@ -342,7 +342,7 @@ A three-phase protocol change to make SuperGenius consensus truly decentralized.
 
 **Wave 1**
 
-- [x] 03-01-PLAN.md — Size Enforcement + Timestamp Tolerance + Metrics: pre-publish 64KB gate at SendTransactionItem, configurable DevConfig_st timestamp tolerance, atomic metrics counters + lifecycle logging + destructor flush (SIZE-01, TS-01, METRICS-01)
+- [x] 03-01-PLAN.md — Size Enforcement + Timestamp Tolerance + Metrics: pre-publish 64KB gate at SendTransactionItem, configurable DevConfig timestamp tolerance, atomic metrics counters + lifecycle logging + destructor flush (SIZE-01, TS-01, METRICS-01)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 

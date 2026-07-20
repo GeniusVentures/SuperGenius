@@ -24,6 +24,7 @@
 #include <random>
 #include <ctime>
 #include <tuple>
+#include <unordered_map>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
@@ -46,16 +47,57 @@ namespace sgns
     class MultiAccountTestAccess
     {
     public:
-        static std::shared_ptr<Blockchain> GetBlockchain( const std::shared_ptr<GeniusNode> &node )
+        static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )
         {
-            return node ? node->blockchain_ : nullptr;
+            return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
         }
 
-        static std::shared_ptr<ConsensusManager> GetConsensusManager( const std::shared_ptr<Blockchain> &blockchain )
+        static bool ConfigureConsensus( const std::shared_ptr<GeniusNode> &node,
+                                        size_t                             certificates_per_batch,
+                                        std::chrono::milliseconds          certificate_delay )
         {
-            return blockchain ? blockchain->consensus_manager_ : nullptr;
+            if ( !node || !node->blockchain_ || !node->blockchain_->consensus_manager_ )
+            {
+                return false;
+            }
+
+            auto registry = node->blockchain_->GetValidatorRegistry();
+            if ( !registry )
+            {
+                return false;
+            }
+
+            registry->SetCertificatesPerBatch( certificates_per_batch );
+            node->blockchain_->consensus_manager_->ConfigureCertificateDelay( certificate_delay );
+            return true;
+        }
+
+        static bool RemoveRegistryPersistence( const std::shared_ptr<GeniusNode> &node,
+                                               std::vector<uint8_t>               registry_block_key )
+        {
+            if ( !node || !node->tx_globaldb_ )
+            {
+                return false;
+            }
+
+            auto datastore = node->tx_globaldb_->GetDataStore();
+            if ( !datastore )
+            {
+                return false;
+            }
+
+            base::Buffer registry_cid_key;
+            registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
+            if ( datastore->remove( registry_cid_key ).has_error() )
+            {
+                return false;
+            }
+
+            const base::Buffer block_key( std::move( registry_block_key ) );
+            return datastore->remove( block_key ).has_value() && !datastore->contains( block_key );
         }
     };
+
 } // namespace sgns
 
 class MultiAccountTest : public ::testing::Test
@@ -66,23 +108,36 @@ protected:
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
                                                   bool               isFullNode          = false,
                                                   bool               isProcessor         = false,
-                                                  bool               isGenesisAuthorized = false )
+                                                  bool               isGenesisAuthorized = false,
+                                                  std::string        existingBasePath    = {} )
     {
         static std::atomic<int> nodeCounter{ 0 };
-        int                     id = nodeCounter.fetch_add( 1 );
-
-        // is_processor is now read from sgns_config.json, written below.
-        auto binaryPath = boost::dll::program_location().parent_path();
-        auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
-        auto outPathStr = outPath.generic_string() + '/';
+        const bool              reuseStorage = !existingBasePath.empty();
+        uint16_t                portSeed     = 0;
+        std::string             outPathStr   = std::move( existingBasePath );
+        if ( outPathStr.empty() )
+        {
+            const auto id         = nodeCounter.fetch_add( 1 );
+            const auto binaryPath = boost::dll::program_location().parent_path();
+            const auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
+            outPathStr            = outPath.generic_string() + '/';
+            portSeed              = static_cast<uint16_t>( 40041 + id );
+        }
+        else if ( outPathStr.back() != '/' )
+        {
+            outPathStr.push_back( '/' );
+        }
 
         GeniusNodeConfig devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
 
-        std::filesystem::remove_all( devConfig.BaseWritePath );
-        std::filesystem::create_directories( devConfig.BaseWritePath );
+        if ( !reuseStorage )
         {
-            std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
-            bridgeConfigFile << "{}";
+            std::filesystem::remove_all( devConfig.BaseWritePath );
+            std::filesystem::create_directories( devConfig.BaseWritePath );
+            {
+                std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
+                bridgeConfigFile << "{}";
+            }
         }
 
         // Generate deterministic key from self_address
@@ -104,18 +159,27 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                           isFullNode ? "Full" : "Light",
-                                           /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
+        if ( !reuseStorage )
+        {
+            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, portSeed, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                               isFullNode ? "Full" : "Light",
+                                               /*is_processor=*/isProcessor,
+                                               /*rpc_catchup=*/false );
+        }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
+        node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
         return node;
+    }
+
+    const std::string &GetBaseWritePath( const std::shared_ptr<GeniusNode> &node ) const
+    {
+        return node_base_paths_.at( node.get() );
     }
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
@@ -132,21 +196,14 @@ protected:
         sgns::test::assertWaitForCondition(
             [&]()
             {
-                auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
-                return blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
-                       node->GetState() == GeniusNode::NodeState::READY;
+                return node->GetState() == GeniusNode::NodeState::READY &&
+                       sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
             },
             std::chrono::milliseconds( 50000 ),
             "node blockchain not ready for consensus configuration" );
 
-        auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
-        auto registry   = blockchain ? blockchain->GetValidatorRegistry() : nullptr;
-        ASSERT_TRUE( registry );
-        registry->SetCertificatesPerBatch( certificates_per_batch );
-
-        auto consensus_manager = sgns::MultiAccountTestAccess::GetConsensusManager( blockchain );
-        ASSERT_TRUE( consensus_manager );
-        consensus_manager->ConfigureCertificateDelay( certificate_delay );
+        ASSERT_TRUE(
+            sgns::MultiAccountTestAccess::ConfigureConsensus( node, certificates_per_batch, certificate_delay ) );
     }
 
     void SetUp() override
@@ -188,7 +245,93 @@ protected:
             }
         }
     }
+
+    std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
 };
+
+class ValidatorRegistryTest : public MultiAccountTest
+{
+};
+
+TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
+{
+    auto node_full   = CreateNode( "registry_cid_full", true, true, true );
+    auto node_client = CreateNode( "registry_cid_client" );
+    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_full );
+    WaitForReady( node_client );
+
+    auto full_registry   = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
+    auto client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
+    ASSERT_TRUE( full_registry );
+    ASSERT_TRUE( client_registry );
+
+    ConfigureConsensus( node_full, 1, std::chrono::milliseconds( 100 ) );
+    ConfigureConsensus( node_client, 1, std::chrono::milliseconds( 100 ) );
+
+    auto registry_before = full_registry->LoadCurrentRegistry();
+    ASSERT_TRUE( registry_before.has_value() );
+    const auto initial_epoch = registry_before.value().epoch();
+
+    auto mint_result = node_client->MintTokens( 100,
+                                                sgns::test::NextMintSourceHash(),
+                                                "test",
+                                                TokenID::FromBytes( { 0x00 } ),
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto full_state   = full_registry->LoadCurrentRegistry();
+            auto client_state = client_registry->LoadCurrentRegistry();
+            return full_state.has_value() && client_state.has_value() && full_state.value().epoch() > initial_epoch &&
+                   client_state.value().epoch() == full_state.value().epoch() &&
+                   client_registry->GetRegistryCid() == full_registry->GetRegistryCid();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "client did not receive the updated validator registry" );
+
+    const auto registry_cid = full_registry->GetRegistryCid();
+    auto       parsed_cid   = CID::fromString( registry_cid );
+    ASSERT_TRUE( parsed_cid.has_value() );
+    auto cid_bytes = parsed_cid.value().toBytes();
+    ASSERT_TRUE( cid_bytes.has_value() );
+
+    const auto client_base_path = GetBaseWritePath( node_client );
+    ASSERT_TRUE(
+        sgns::MultiAccountTestAccess::RemoveRegistryPersistence( node_client, std::move( cid_bytes.value() ) ) );
+
+    const auto client_port  = node_client->GetPubsubPort();
+    const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
+    {
+        std::ofstream network_config( client_base_path + "network_config.json" );
+        ASSERT_TRUE( network_config.good() );
+        network_config << "{ \"port_seed\": " << client_port
+                       << ", \"auto_dht\": false, \"upnp_enabled\": false, \"bootstrap_addresses\": [\"" << full_address
+                       << "\"] }";
+    }
+
+    client_registry.reset();
+    node_client.reset();
+
+    node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
+    ASSERT_TRUE( node_client );
+    WaitForReady( node_client );
+
+    client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
+    ASSERT_TRUE( client_registry );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto loaded = client_registry->LoadRegistryByCid( registry_cid );
+            return loaded.has_value();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "missing validator registry block was not fetched from the full node" );
+}
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
@@ -435,9 +578,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         ConfigureConsensus( node, kCertificatesPerBatch, kCertificateDelay );
     }
 
-    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
-    ASSERT_TRUE( full_blockchain );
-    auto registry = full_blockchain->GetValidatorRegistry();
+    auto registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
     ASSERT_TRUE( registry );
 
     fmt::println( "Nodes created. Registry loaded" );
@@ -508,9 +649,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto wait_client_registry_caught_up = [&]()
     {
-        auto client_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_client );
-        ASSERT_TRUE( client_blockchain );
-        auto client_registry = client_blockchain->GetValidatorRegistry();
+        auto client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
         ASSERT_TRUE( client_registry );
 
         sgns::test::assertWaitForCondition(
@@ -612,9 +751,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
         ConfigureConsensus( node, kCertificatesPerBatch, kCertificateDelay );
     }
 
-    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
-    ASSERT_TRUE( full_blockchain );
-    auto registry = full_blockchain->GetValidatorRegistry();
+    auto registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
     ASSERT_TRUE( registry );
 
     sgns::test::assertWaitForCondition(

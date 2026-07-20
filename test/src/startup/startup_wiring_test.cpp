@@ -56,7 +56,7 @@ fs::path BundledChainsConfigPath()
 /// @brief Write a temporary bridge_chains_config.json for testing.
 fs::path WriteTempChainsConfig( const std::string &json_content )
 {
-    auto          tmp_path = fs::temp_directory_path() / "test_bridge_chains_config.json";
+    auto          tmp_path = fs::temp_directory_path() / "startup_wiring_bridge_chains_config.json";
     std::ofstream out( tmp_path, std::ios::binary | std::ios::trunc );
     out << json_content;
     out.close();

@@ -22,7 +22,6 @@
 #include "MigrationInputValidator.hpp"
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
-#include "ProcessingTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -78,6 +77,12 @@ namespace sgns
                                       dst_infos[i].dest_address );
             }
             return true;
+        }
+
+        std::string TransferInputOwner( const TransferTransaction &transaction )
+        {
+            return utxo_address::IsEscrowLockAddress( transaction.GetUncleHash() ) ? transaction.GetUncleHash()
+                                                                                   : transaction.GetSrcAddress();
         }
 
         base::Logger TransactionManagerLogger()
@@ -892,82 +897,7 @@ namespace sgns
         std::string              chain_hash;
         const auto               nonce         = account_m->ReserveNextNonce();
         auto                     timestamp     = std::chrono::system_clock::now();
-        const auto               previous_hash = [&]() -> std::string
-        {
-            if ( nonce == 0 )
-            {
-                return "";
-            }
-
-            const auto previous_nonce = nonce - 1;
-            {
-                std::shared_lock tx_lock( tx_mutex_m );
-                for ( const auto &[_, tracked] : tx_processed_m )
-                {
-                    if ( tracked.tx && tracked.tx->GetSrcAddress() == account_m->GetAddress() &&
-                         tracked.cached_nonce == previous_nonce && tracked.status != TransactionStatus::FAILED &&
-                         tracked.status != TransactionStatus::INVALID )
-                    {
-                        return tracked.tx->GetHash();
-                    }
-                }
-            }
-
-            auto persisted_hash_result = account_m->GetLocalConfirmedTxHash( previous_nonce );
-            if ( persisted_hash_result.has_value() )
-            {
-                const auto &persisted_hash = persisted_hash_result.value();
-                if ( !persisted_hash.empty() && blockchain_->CheckCertificate( persisted_hash ) )
-                {
-                    m_logger->debug( "Recovered previous hash {} for nonce {} from persisted head",
-                                     persisted_hash,
-                                     nonce );
-                    return persisted_hash;
-                }
-            }
-
-            std::string selected_hash;
-            for ( auto network_id : GetMonitoredNetworkIDs() )
-            {
-                const std::string query_path = GetBlockChainBase( network_id ) + "tx";
-                auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
-                if ( !tx_list.has_value() )
-                {
-                    continue;
-                }
-
-                for ( const auto &[_, value] : tx_list.value() )
-                {
-                    auto tx_result = DeSerializeTransaction( value );
-                    if ( !tx_result.has_value() || !tx_result.value() )
-                    {
-                        continue;
-                    }
-
-                    const auto &candidate = tx_result.value();
-                    if ( candidate->GetSrcAddress() != account_m->GetAddress() ||
-                         candidate->GetNonce() != previous_nonce ||
-                         !blockchain_->CheckCertificate( candidate->GetHash() ) )
-                    {
-                        continue;
-                    }
-
-                    if ( selected_hash.empty() ||
-                         blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
-                    {
-                        selected_hash = candidate->GetHash();
-                    }
-                }
-            }
-
-            if ( !selected_hash.empty() )
-            {
-                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions",
-                                 selected_hash,
-                                 nonce );
-            }
-            return selected_hash;
-        }();
+        const auto               previous_hash = GetOutgoingPreviousHash( nonce );
 
         if ( other_chain_hash.has_value() )
         {
@@ -1419,7 +1349,6 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "transfer", &TransferTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "mint-v2", &MintTransactionV2::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "mint", &MintTransaction::DeSerializeByteVector );
-            GeniusTransaction::RegisterDeserializer( "process", &ProcessingTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "migration", &MigrationTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
@@ -1449,13 +1378,6 @@ namespace sgns
                 std::string bytes;
                 embedded.mint().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "mint" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
-            case EmbeddedTransaction::kProcessing:
-            {
-                std::string bytes;
-                embedded.processing().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "process" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::kMigration:
@@ -1749,12 +1671,8 @@ namespace sgns
             m_logger->trace( "UTXO to be updated {}", input.txid_hash_.toReadableString() );
             m_logger->trace( "UTXO output {}", input.output_idx_ );
         }
-        auto input_owner = transfer_tx->GetSrcAddress();
-        if ( utxo_address::IsEscrowLockAddress( transfer_tx->GetUncleHash() ) )
-        {
-            input_owner = transfer_tx->GetUncleHash();
-        }
-        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(), input_owner ) );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().ConsumeUTXOs( transfer_tx->GetInputInfos(),
+                                                                     TransferInputOwner( *transfer_tx ) ) );
         return outcome::success();
     }
 
@@ -1848,18 +1766,8 @@ namespace sgns
             m_logger->debug( "Notify {} of deletion of {} to it", dest_info.dest_address, dest_info.encrypted_amount );
         }
 
-        m_logger->debug( "Re-parsing inputs to be added as UTXOs" );
-        for ( const auto &input : transfer_tx->GetInputInfos() )
-        {
-            m_logger->debug( "Fetching transaction {} ", input.txid_hash_.toReadableString() );
-            auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-            if ( tx )
-            {
-                m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
-                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-            }
-        }
-        account_m->GetUTXOManager().RollbackUTXOs( transfer_tx->GetInputInfos(), transfer_tx->GetHash() );
+        BOOST_OUTCOME_TRY( account_m->GetUTXOManager().RestoreConsumedUTXOs( transfer_tx->GetInputInfos(),
+                                                                             TransferInputOwner( *transfer_tx ) ) );
 
         return outcome::success();
     }
@@ -1923,16 +1831,8 @@ namespace sgns
         if ( auto params = escrow_tx->GetUTXOParameters(); !params.second.empty() )
         {
             BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *escrow_tx ) );
-            for ( auto &input : params.first )
-            {
-                auto tx = GetTransactionByHashNoLock( input.txid_hash_.toReadableString() );
-                if ( tx )
-                {
-                    m_logger->debug( "Re-parsing {} transaction", tx->GetType() );
-                    BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
-                }
-            }
-            account_m->GetUTXOManager().RollbackUTXOs( params.first, escrow_tx->GetHash() );
+            BOOST_OUTCOME_TRY(
+                account_m->GetUTXOManager().RestoreConsumedUTXOs( params.first, escrow_tx->GetSrcAddress() ) );
         }
 
         return outcome::success();
@@ -2214,7 +2114,8 @@ namespace sgns
                         }
                     }
 
-                    if ( !processed )
+                    // Incomplete history for another account must not prevent this account from starting.
+                    if ( !processed && address == account_m->GetAddress() )
                     {
                         std::lock_guard missing_lock( missing_tx_mutex_ );
                         missing_tx_hashes_.insert( tx_hash );
@@ -2241,8 +2142,13 @@ namespace sgns
             {
                 ChangeState( State::READY );
             }
+            else
+            {
+                RequestRelevantHeads();
+            }
             return;
         }
+
         // TODO - Remove this once we remove the passive heads processing or we want transactions we are not subscribed here
         return;
 
@@ -2452,7 +2358,7 @@ namespace sgns
 
             for ( auto &nonce : nonces_to_check )
             {
-                for ( auto [key, tracked] : tx_processed_m )
+                for ( auto &[key, tracked] : tx_processed_m )
                 {
                     if ( !tracked.tx || tracked.tx->GetSrcAddress() != account_m->GetAddress() )
                     {

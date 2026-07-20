@@ -95,7 +95,7 @@ The test follows the established `processing_multi_test.cpp` pattern: 3 GeniusNo
 | `popen()` for cast send | `system()` | `popen()` allows reading stdout for tx hash parsing; `system()` returns only exit code |
 | Live Sepolia RPC | Mocked RPC transport | Mock would be CI-runnable but would not validate real bridge pipeline against testnet |
 | Direct ConsensusManager unit test for slot keys | E2E balance verification | ConsensusManager requires 6 constructor dependencies and can't be instantiated in isolation; E2E approach verifies the fix indirectly via node behavior |
-| strncpy for BaseWritePath | std::string assignment | DevConfig_st.BaseWritePath changed from char[] to std::string — strncpy is incompatible with current definition |
+| strncpy for BaseWritePath | std::string assignment | DevConfig.BaseWritePath changed from char[] to std::string — strncpy is incompatible with current definition |
 
 **Installation:**
 ```bash
@@ -194,7 +194,7 @@ test/src/CMakeLists.txt       # line 4: add_subdirectory(bridge_e2e)
 
 **Key implementation details:**
 - Static `shared_ptr<GeniusNode>` members (node_main, node_proc1, node_proc2)
-- Static `DevConfig_st` per node with separate `BaseWritePath`
+- Static `DevConfig` per node with separate `BaseWritePath`
 - `GeniusNode::New()` called with: DevConfig, private_key, autodht=false, isprocessor=false, base_port, is_full_node
 - `Boost::dll::program_location()` for binary-relative paths
 - `SetAuthorizedFullNodeAddress()` for genesis block creation
@@ -255,7 +255,7 @@ test/src/CMakeLists.txt       # line 4: add_subdirectory(bridge_e2e)
 **Example:** `TEST(BridgeE2ENegativeTest, InvalidReceiptLogsRejected)` — constructs mock `eth::codec::Receipt` and `eth::BridgeEventClaim` directly.
 
 ### Anti-Patterns to Avoid
-- **strncpy on std::string:** DevConfig_st.BaseWritePath is `std::string`, not `char[]`. Use direct assignment. The processing_multi_test.cpp uses strncpy because it predates the type change. [VERIFIED: codebase — SUMMARY 04-01]
+- **strncpy on std::string:** DevConfig.BaseWritePath is `std::string`, not `char[]`. Use direct assignment. The processing_multi_test.cpp uses strncpy because it predates the type change. [VERIFIED: codebase — SUMMARY 04-01]
 - **sleep_for instead of polling:** Don't use fixed sleeps for consensus confirmation. Use `ASSERT_WAIT_FOR_CONDITION`/`EXPECT_WAIT_FOR_CONDITION` which poll at 10ms intervals.
 - **Assuming ConsensusManager can be unit tested:** Cannot instantiate ConsensusManager in isolation (requires 6 constructor dependencies). Verify slot key behavior indirectly through node behavior. [VERIFIED: codebase — SUMMARY 04-03]
 - **Using system() instead of popen():** `system()` returns only exit code. `popen()` allows reading stdout to parse the transaction hash from cast's JSON output.
@@ -330,9 +330,9 @@ protected:
     static std::shared_ptr<GeniusNode> node_main;
     static std::shared_ptr<GeniusNode> node_proc1;
     static std::shared_ptr<GeniusNode> node_proc2;
-    static DevConfig_st gGeniusNodeConfig;
-    static DevConfig_st gGeniusNodeConfig2;
-    static DevConfig_st gGeniusNodeConfig3;
+    static DevConfig gGeniusNodeConfig;
+    static DevConfig gGeniusNodeConfig2;
+    static DevConfig gGeniusNodeConfig3;
     static std::string s_eth_private_key;
 
     static void SetUpTestSuite()
@@ -467,7 +467,7 @@ TEST(BridgeE2ENegativeTest, InvalidReceiptLogsRejected)
 
 | Old Approach | Current Approach | When Changed | Impact |
 |--------------|------------------|--------------|--------|
-| `strncpy` for DevConfig.BaseWritePath | Direct `std::string` assignment | 2026-05-31 (Plan 04-01) | DevConfig_st.BaseWritePath changed from `char[]` to `std::string` — strncpy is now incompatible |
+| `strncpy` for DevConfig.BaseWritePath | Direct `std::string` assignment | 2026-05-31 (Plan 04-01) | DevConfig.BaseWritePath changed from `char[]` to `std::string` — strncpy is now incompatible |
 | 5-arg GeniusNode::New (random key) | 6-arg GeniusNode::New (private key) | Always for E2E | E2E test needs deterministic keys from PRIVATE_KEY for Sepolia interaction |
 | Unit-testing ConsensusManager directly | Indirect E2E verification | 2026-05-31 (Plan 04-03) | ConsensusManager requires 6 ctor deps — can't be instantiated in unit tests |
 

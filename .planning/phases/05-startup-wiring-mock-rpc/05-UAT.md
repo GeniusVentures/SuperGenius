@@ -86,7 +86,7 @@ skipped: 0
       issue: "PerformStartupCatchupScan uses TransactionManager in-memory state instead of UTXOManager UTXO set"
   missing:
     - "Rewrite catch-up scan to use UTXOManager::GetUTXOs()/PutUTXO() instead of TransactionManager in-memory variables"
-    - "Honor DevConfig_st.bridge_catchup_scan_depth in eth_getLogs fromBlock calculation"
+    - "Honor DevConfig.bridge_catchup_scan_depth in eth_getLogs fromBlock calculation"
   debug_session: ""
 
 - truth: "InitializeRpcEndpoints() chains.json path is writable on all platforms (Android, macOS, Linux, Windows)"
@@ -99,7 +99,7 @@ skipped: 0
     - path: src/account/GeniusNode.cpp
       issue: "InitializeRpcEndpoints() uses boost::dll::program_location().parent_path() which is read-only on Android"
   missing:
-    - "Use DevConfig_st base_write_path (or GeniusNode-provided writable path) instead of binary directory for chains.json"
+    - "Use DevConfig base_write_path (or GeniusNode-provided writable path) instead of binary directory for chains.json"
   debug_session: ""
 
 - truth: "startup_wiring_test.cpp compiles without errors"

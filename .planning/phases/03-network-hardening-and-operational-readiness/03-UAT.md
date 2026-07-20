@@ -23,7 +23,7 @@ expected: In `SendTransactionItem`, after `SerializeByteVector()` and before `Cr
 result: pending
 
 ### 2. Configurable Timestamp Tolerance (TS-01)
-expected: `DevConfig_st` in GeniusNode.hpp has `timestamp_tolerance_ms` field (default 300000). Wired via `SetTimeFrameToleranceMs` during `GeniusNode::New()`. Existing `CheckTransactionTimestamp` reads the configurable value.
+expected: `DevConfig` in GeniusNode.hpp has `timestamp_tolerance_ms` field (default 300000). Wired via `SetTimeFrameToleranceMs` during `GeniusNode::New()`. Existing `CheckTransactionTimestamp` reads the configurable value.
 result: pending
 
 ### 3. Operational Metrics Counters (METRICS-01)

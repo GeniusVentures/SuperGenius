@@ -80,13 +80,22 @@ namespace sgns
             // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
             std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/false, /*rpc_catchup=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath,
+                                               /*node_type=*/"Full",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath,
+                                               /*node_type=*/"Light",
+                                               /*is_processor=*/false,
+                                               /*rpc_catchup=*/false );
 
             full_node = sgns::GeniusNode::New(
                 DEV_CONFIG3,
@@ -179,11 +188,11 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto balance_1_before = node_proc1->GetBalance();
     auto balance_2_before = node_proc2->GetBalance();
     auto mint_result      = node_proc1->MintTokens( 10000000000,
-                                               sgns::test::NextMintSourceHash(),
-                                               "test",
-                                               sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "",
-                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+                                                    sgns::test::NextMintSourceHash(),
+                                                    "test",
+                                                    sgns::TokenID::FromBytes( { 0x00 } ),
+                                                    "",
+                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
 
     auto [mint_tx_id, mint_duration] = mint_result.value();
@@ -259,8 +268,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     ASSERT_TRUE( mint_result1.has_value() ) << "Mint transaction failed or timed out";
 
     // Verify balances after minting
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 30000000000 )
-        << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 30000000000 ) << "Correct Balance of outgoing transactions";
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 10000000000 ) << "Correct Balance of outgoing transactions";
 
     // Transfer funds
@@ -283,8 +291,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     std::cout << "node2 Transfer Received transaction completed in " << duration << " ms" << std::endl;
 
     // Verify balances after transfers
-    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 )
-        << "Correct Balance of outgoing transactions";
+    EXPECT_EQ( node_proc1->GetBalance(), balance_1_before + 20000000000 ) << "Correct Balance of outgoing transactions";
     EXPECT_EQ( node_proc2->GetBalance(), balance_2_before + 20000000000 ) << "Correct Balance of outgoing transactions";
 }
 
@@ -432,10 +439,9 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
 
     std::cout << "Invalid tx failed" << std::endl;
 
-    test::assertWaitForCondition(
-        [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 50000 ),
-        "Node didn't recover from wrong transaction" );
+    test::assertWaitForCondition( [&]() { return node_proc1->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 50000 ),
+                                  "Node didn't recover from wrong transaction" );
 
     std::cout << "wait until its ready" << std::endl;
 
@@ -486,6 +492,9 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
         tx1_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( node_proc2->WaitForTransactionIncoming(
+                   tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+               TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
     auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(), tx1_id );
@@ -508,8 +517,46 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     }
     SendPair( *node_proc1, tx2, proof_vect2 );
 
-    auto tx2_status = node_proc1->WaitForTransactionOutgoing(
-        tx2->GetHash(),
-        std::chrono::seconds( 10 ) );
+    auto tx2_status = node_proc1->WaitForTransactionOutgoing( tx2->GetHash(), std::chrono::seconds( 10 ) );
     EXPECT_EQ( tx2_status, TransactionManager::TransactionStatus::FAILED );
+}
+
+TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
+{
+    constexpr uint64_t amount         = 100;
+    const auto         destination    = node_proc2->GetAddress();
+    const auto         balance_before = node_proc2->GetBalance();
+
+    // Keep node_proc2's datastore, but take the node offline while the CRDT head is published.
+    node_proc2.reset();
+
+    auto mint_result = node_proc1->MintTokens( amount,
+                                               sgns::test::NextMintSourceHash(),
+                                               "test",
+                                               TokenID::FromBytes( { 0x00 } ),
+                                               "",
+                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    auto transfer_result = node_proc1->TransferFunds( amount,
+                                                      destination,
+                                                      TokenID::FromBytes( { 0x00 } ),
+                                                      std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
+    ASSERT_TRUE( transfer_result.has_value() );
+    const auto &transaction_id = transfer_result.value().first;
+
+    node_proc2 = GeniusNode::New(
+        DEV_CONFIG2,
+        FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
+    ASSERT_TRUE( node_proc2 );
+    node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+
+    test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 50000 ),
+                                  "reconnected node did not finish recovery" );
+
+    EXPECT_EQ( node_proc2->WaitForTransactionIncoming( transaction_id,
+                                                       std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+               TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ( node_proc2->GetBalance(), balance_before + amount );
 }

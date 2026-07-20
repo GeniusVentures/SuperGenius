@@ -53,7 +53,7 @@ libraries requires the **full regression suite**.
 | Bridge-mint subject discrimination | API / Backend (ConsensusManager / TransactionManager) | — | `EmbeddedTransaction::kMintV2` + non-empty `chain_id` is the existing discriminator; reused, not reinvented. |
 | Reputation → Role::FULL promotion | API / Backend (ValidatorRegistry) | — | `ApplyVoteEffects` already mutates weight/penalty; promotion belongs there (D-08). |
 | RPC-result vote commitments | — | — | Deferred — out of scope v1 (CONTEXT.md Explicitly Out of Scope). Only endpoint URL hash (not response data hash). |
-| Cohort threshold configuration | Frontend Server / node config (DevConfig_st + WeightConfig) | — | New thresholds ride alongside the existing `WeightConfig` aggregate. |
+| Cohort threshold configuration | Frontend Server / node config (DevConfig + WeightConfig) | — | New thresholds ride alongside the existing `WeightConfig` aggregate. |
 
 ## Standard Stack
 

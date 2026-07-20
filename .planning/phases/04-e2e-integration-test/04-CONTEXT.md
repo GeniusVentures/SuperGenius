@@ -25,7 +25,7 @@ Demonstrate the full EVM bridge pipeline in a single test: EVM burn on Sepolia â
 
 ### Validator Topology
 - **D-07:** 3 nodes, 2-of-3 quorum. All three nodes are `GeniusNode` instances in the same process (same as `processing_multi_test.cpp`).
-- **D-08:** Each node gets its own `DevConfig_st` with a separate `BaseWritePath` (node1/, node2/, node3/). Nodes are bootstrapped via PubSub `AddPeers` in `SetUpTestSuite`.
+- **D-08:** Each node gets its own `DevConfig` with a separate `BaseWritePath` (node1/, node2/, node3/). Nodes are bootstrapped via PubSub `AddPeers` in `SetUpTestSuite`.
 
 ### Burn Trigger
 - **D-09:** The C++ test calls `system()` or `popen()` to invoke `cast send` on the Sepolia GNUS contract. The burn is an ERC-20 `transfer(address,uint256)` â€” the same pattern used in `send_test_transactions.sh`. The recipient is the sender's own address (self-transfer burn).
@@ -99,7 +99,7 @@ Demonstrate the full EVM bridge pipeline in a single test: EVM burn on Sepolia â
 
 ### Established Patterns
 - GTest fixture with `SetUpTestSuite`/`TearDownTestSuite` for multi-node tests
-- `DevConfig_st` per node with separate `BaseWritePath`
+- `DevConfig` per node with separate `BaseWritePath`
 - PubSub `AddPeers` for node bootstrapping
 - `ASSERT_WAIT_FOR_CONDITION` for async state polling
 - `EXPECT_OUTCOME_TRUE` for outcome::result assertions

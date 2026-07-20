@@ -42,7 +42,7 @@ TEST( GeniusNode, InitializationProgress )
         auto percentage = node->GetInitializationStatus().first;
         ASSERT_GE( percentage, last_percentage );
         last_percentage = percentage;
-        std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
     }
 
     ASSERT_EQ( node->GetInitializationStatus().first, 1.0 );

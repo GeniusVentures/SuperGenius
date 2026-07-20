@@ -134,7 +134,8 @@ namespace sgns
          * @param[in] base_path Directory whose network_config.json will be (over)written (dev_config.BaseWritePath).
          * @param[in] port_seed Numeric port seed (Phase-1 key "port_seed").
          * @param[in] auto_dht  Whether DHT discovery is enabled (key "auto_dht").
-         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file (deterministic minimal config).
+         * @return Failure on file I/O error; success otherwise. Truncates/rewrites the file and disables UPnP so
+         *         tests and examples do not depend on the host LAN.
          */
         static outcome::result<void> WriteNetworkConfig( const std::string &base_path,
                                                          uint16_t           port_seed,
@@ -1033,8 +1034,8 @@ namespace sgns
         static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
+        std::thread                               upnp_thread;        ///< Background UPnP refresh thread.
+        std::atomic<bool>                         stop_upnp{ false }; ///< UPnP thread stop flag.
         std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.
