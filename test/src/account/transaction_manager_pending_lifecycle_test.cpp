@@ -117,8 +117,8 @@ namespace
             manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
             assert( manager_ );
             manager_->RegisterTopicNames();
-            sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState(
-                *manager_, sgns::TransactionManager::State::READY );
+            sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
+                                                                             sgns::TransactionManager::State::READY );
         }
 
         std::shared_ptr<sgns::GeniusTransaction> FindOutgoingTransaction( const std::string &hash ) const
@@ -161,9 +161,9 @@ namespace
             registry_ = blockchain_->GetValidatorRegistry();
             assert( registry_ );
             assert( registry_
-                        ->StoreGenesisRegistry( account_->GetAddress(),
+                        ->StoreGenesisRegistry( { account_->GetAddress() },
                                                 [this]( std::vector<uint8_t> payload )
-                                                { return account_->Sign( payload  ); } )
+                                                { return account_->Sign( payload ); } )
                         .has_value() );
         }
 
@@ -178,12 +178,12 @@ namespace
                                                                        std::nullopt );
             ASSERT_TRUE( subject.has_value() );
 
-            auto proposal = sgns::ConsensusManager::CreateProposal(
-                subject.value(),
-                account_->GetAddress(),
-                registry_->GetRegistryCid(),
-                registry_->GetRegistryEpoch(),
-                [this]( std::vector<uint8_t> payload ) { return account_->Sign( payload  ); } );
+            auto proposal = sgns::ConsensusManager::CreateProposal( subject.value(),
+                                                                    account_->GetAddress(),
+                                                                    registry_->GetRegistryCid(),
+                                                                    registry_->GetRegistryEpoch(),
+                                                                    [this]( std::vector<uint8_t> payload )
+                                                                    { return account_->Sign( payload ); } );
             ASSERT_TRUE( proposal.has_value() );
 
             sgns::ConsensusManager::Vote vote;
@@ -304,9 +304,7 @@ TEST_F( TransactionManagerRecoveryTest, LocalNonceAheadChecksTrackedTransactions
     auto transaction = MakeTransaction();
     ASSERT_EQ( transaction->GetNonce(), 1U );
 
-    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
-                                                                 transaction,
-                                                                 db_->BeginTransaction() );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::CREATED );
 
@@ -378,8 +376,8 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     auto transfer_params = account_->GetUTXOManager().CreateTxParameter( 1, account_->GetAddress(), kTokenId );
     ASSERT_TRUE( transfer_params.has_value() );
     auto [transfer_inputs, transfer_outputs] = std::move( transfer_params.value() );
-    auto transfer = std::make_shared<sgns::TransferTransaction>( sgns::TransferTransaction::New(
-        std::move( transfer_inputs ), std::move( transfer_outputs ), dag ) );
+    auto transfer                            = std::make_shared<sgns::TransferTransaction>(
+        sgns::TransferTransaction::New( std::move( transfer_inputs ), std::move( transfer_outputs ), dag ) );
     transfer->MakeSignature( *account_ );
     StoreCertificate( transfer );
     StoreTransaction( transfer );
@@ -396,13 +394,17 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     EXPECT_FALSE( account_->GetUTXOManager().GetUnconsumedUTXO( transfer_outpoint.value(), 0 ).has_value() );
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 1U );
 
-    const std::string escrow_lock = "0x" + std::string( 64, '1' );
-    auto escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
+    const std::string escrow_lock   = "0x" + std::string( 64, '1' );
+    auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
     ASSERT_TRUE( escrow_params.has_value() );
     auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() );
     escrow_dag.set_uncle_hash( escrow_lock );
-    auto escrow = std::make_shared<sgns::EscrowTransaction>( sgns::EscrowTransaction::New(
-        std::move( escrow_params.value() ), 1, account_->GetAddress(), 0, std::move( escrow_dag ) ) );
+    auto escrow = std::make_shared<sgns::EscrowTransaction>(
+        sgns::EscrowTransaction::New( std::move( escrow_params.value() ),
+                                      1,
+                                      account_->GetAddress(),
+                                      0,
+                                      std::move( escrow_dag ) ) );
     escrow->MakeSignature( *account_ );
     StoreCertificate( escrow );
     StoreTransaction( escrow );

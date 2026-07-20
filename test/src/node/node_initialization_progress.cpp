@@ -29,7 +29,7 @@ TEST( GeniusNode, InitializationProgress )
 
     const auto base_write_path = path.generic_string() + '/';
     sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/40069, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
     auto node = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },
         sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );

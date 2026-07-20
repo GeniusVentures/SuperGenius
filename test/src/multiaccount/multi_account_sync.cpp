@@ -128,7 +128,7 @@ protected:
             outPathStr.push_back( '/' );
         }
 
-        DevConfig_st devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
+        GeniusNodeConfig devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
 
         if ( !reuseStorage )
         {
@@ -164,7 +164,8 @@ protected:
             sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, portSeed, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                                isFullNode ? "Full" : "Light",
-                                               /*is_processor=*/isProcessor );
+                                               /*is_processor=*/isProcessor,
+                                               /*rpc_catchup=*/false );
         }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )

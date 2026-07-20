@@ -20,8 +20,8 @@ using namespace sgns;
 /**
  * @brief Helper to create a GeniusNode with explicit full-node flag, custom folder, and fixed private key.
  * @param self_address Address for this node
- * @param tokenValue   TokenValueInGNUS to initialize DevConfig.
- * @param tokenId      TokenID to initialize DevConfig.
+ * @param tokenValue   TokenValueInGNUS to initialize GeniusGeniusNodeConfig.
+ * @param tokenId      TokenID to initialize GeniusGeniusNodeConfig.
  * @param isFullNode   Whether this node should run as a full node.
  * @param folderName   Subfolder name under the binary path for storage.
  * @param privKey      Hex string private key (64 chars) for deterministic identity.
@@ -39,7 +39,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
-    DevConfig_st devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
+    GeniusNodeConfig devConfig = { self_address, "1.0", tokenValue, tokenId, outPath };
 
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
@@ -52,7 +52,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     uint16_t port = static_cast<uint16_t>( 40001 + id );
     GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
-    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
+    GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );
     if ( isFullNode )

@@ -93,7 +93,7 @@ Each task was committed atomically:
 - `evmrelay/examples/chains_config.json` — Added bridge_contract_address to 8 deployed chain entries (D-03)
 - `src/account/ChainRpcEndpointProvider.hpp` — Added bridge_contract_addresses and bridge_event_topic0 maps to ChainRpcProviderConfig (D-05)
 - `src/account/ChainRpcEndpointProvider.cpp` — Initialize() sets bridge fields on WeightedRpcEndpoint (D-05)
-- `src/account/GeniusNode.hpp` — InitializeAndStartBridge() and PerformStartupCatchupScan() declarations, catchup_scan_done_ member, DevConfig_st.bridge_catchup_scan_depth
+- `src/account/GeniusNode.hpp` — InitializeAndStartBridge() and PerformStartupCatchupScan() declarations, catchup_scan_done_ member, DevConfig.bridge_catchup_scan_depth
 - `src/account/GeniusNode.cpp` — Async bridge wiring in INITIALIZING_TRANSACTIONS; rewritten InitializeRpcEndpoints(); catch-up scan implementation
 - `src/account/PublicChainInputValidator.hpp` — GetFirstRpcUrl() getter for catch-up scan RPC access
 
@@ -103,7 +103,7 @@ Each task was committed atomically:
 - chains_config.json parsed directly with boost::json for bridge_contract_address (D-02) — no need to modify chainlist_provider
 - Event topic0 computed via eth::abi::event_signature_hash("BridgeSourceBurned(address,uint256,uint256,uint256,uint256)") for eth_getLogs
 - Catch-up scan uses direct RpcHttpTransport with 10s timeout, best-effort across chains — one failure doesn't block others (T-05-13)
-- Scan depth capped at 10,000 blocks via DevConfig_st.bridge_catchup_scan_depth, default production-configurable
+- Scan depth capped at 10,000 blocks via DevConfig.bridge_catchup_scan_depth, default production-configurable
 - Already-processed burns detected via GetIncomingStatusByTxId(); missing burns inserted via MintFunds()
 
 ## Deviations from Plan

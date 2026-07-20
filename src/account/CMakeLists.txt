@@ -115,6 +115,7 @@ set(GENIUS_NODE_LIBS
     ProcessingBase
     evmrelay
     migration
+    evm_watcher_service
     sgns_genius_account
 )
 
@@ -154,4 +155,24 @@ configure_file(
 # Install the default config alongside the binary for production
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
     DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# ── find_contract_creation_blocks — optional one-shot utility ────────────
+# Downloads the GeniusDiamond deployment manifest, cross-references diamond
+# addresses, and binary-searches eth_getCode for creation blocks using
+# built-in public RPC endpoints (no API key needed).
+# NOT part of the default build — invoke explicitly when deployments change:
+#
+#   cmake --build build --target find_contract_creation_blocks
+#
+# To override a chain's RPC endpoint, run the script directly:
+#   python3 scripts/find_contract_creation_blocks.py \
+#       src/account/bridge_chains_config.json \
+#       --rpc ethereum-sepolia=https://my-node.com
+add_custom_target(find_contract_creation_blocks
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/find_contract_creation_blocks.py
+        ${CMAKE_SOURCE_DIR}/src/account/bridge_chains_config.json
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Cross-referencing GeniusDiamond manifest + discovering creation blocks"
+    VERBATIM
 )

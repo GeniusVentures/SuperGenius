@@ -32,6 +32,7 @@
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
+#include "crypto/hasher.hpp"
 #include "processing/impl/processing_core_impl.hpp"
 #include "processing/impl/processing_subtask_result_storage_impl.hpp"
 #include "processing/processing_service.hpp"
@@ -62,12 +63,11 @@ typedef struct DevConfig
     std::string   TokenValueInGNUS; ///< Conversion rate used for child-token.
     sgns::TokenID TokenID;          ///< Child token identifier configured for this node.
     std::string   BaseWritePath;    ///< Base directory for node databases, logs, and account storage.
-} DevConfig_st;
+} GeniusNodeConfig;
 
-extern DevConfig_st DEV_CONFIG;
+extern GeniusNodeConfig DEV_CONFIG;
 
 constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
-constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical blocks to scan for unprocessed burns (D-20)
 
 #define OUTGOING_TIMEOUT_MILLISECONDS 50000  // just communication time
 #define INCOMING_TIMEOUT_MILLISECONDS 150000 // communication + verify proof
@@ -75,6 +75,11 @@ constexpr uint64_t kBridgeCatchupScanDepth      = 10000;  // Max historical bloc
 namespace sgns
 {
     class MigrationManager;
+
+    namespace evmwatcher
+    {
+        class BridgeCatchupWatcher;
+    }
 
     /**
      * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
@@ -122,7 +127,7 @@ namespace sgns
          * @return Shared node instance after asynchronous DB init is scheduled, or nullptr
          *         on account-restore or initialization failure (D-04).
          */
-        static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config, AccountSource source );
+        static std::shared_ptr<GeniusNode> New( const GeniusNodeConfig &dev_config, AccountSource source );
 
         /**
          * @brief Writes a minimal network_config.json for test/example setup (MIG-02).
@@ -141,11 +146,13 @@ namespace sgns
          * @param[in] base_path Directory whose sgns_config.json will be (over)written.
          * @param[in] node_type Role string — validated case-insensitively (Full/Light/Archive); any other value returns Error::INVALID_NODE_TYPE.
          * @param[in] is_processor Whether processing services run (key "is_processor").
+         * @param[in] rpc_catchup Whether the bridge catchup scan watcher starts at bridge init (key "rpc_catchup"). Defaults true; pass false for tests that do not exercise bridge/RPC/catchup paths.
          * @return Error::INVALID_NODE_TYPE on an unrecognized node_type; failure on I/O error; success otherwise.
          */
         static outcome::result<void> WriteSgnsConfig( const std::string &base_path,
                                                       const std::string &node_type,
-                                                      bool               is_processor );
+                                                      bool               is_processor,
+                                                      bool               rpc_catchup = true );
 
         /**
          * @brief Stops node services, joins background threads, and releases processing callbacks.
@@ -163,7 +170,6 @@ namespace sgns
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
-            INITIALIZING_RPC_CATCH_UP, ///< RPC catch-up service is being initialized.
             READY,                     ///< Node is ready for external operations.
         };
 
@@ -661,6 +667,12 @@ namespace sgns
         TransactionManager::State GetTransactionManagerState() const;
 
         /**
+         * @brief Returns the transaction manager when initialized.
+         * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
+         */
+        outcome::result<std::shared_ptr<TransactionManager>> GetTransactionManager() const;
+
+        /**
          * @brief Configures RPC endpoints for a specific EVM chain on the public-chain input validator.
          *
          * Allows callers (including E2E tests) to register RPC endpoints for chains
@@ -671,6 +683,12 @@ namespace sgns
          * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
          */
         void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+
+        /**
+         * @brief Injects a custom chainlist fetcher for RPC endpoint discovery (test injection point).
+         * @param[in] fetcher Callable returning the chainlist JSON string, or std::nullopt on failure.
+         */
+        void SetChainlistFetcher( std::function<std::optional<std::string>()> fetcher );
 
         /**
          * @brief Returns a tracked transaction status by transaction hash.
@@ -739,22 +757,26 @@ namespace sgns
         bool                                                  isprocessor_; ///< Whether processing service should run.
         bool     is_full_node_ = false; ///< Whether this node runs in full-node mode.
         NodeType node_type_ =
-            NodeType::Light;       ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
-        base::Logger node_logger_; ///< Main node logger.
-        DevConfig_st dev_config_;  ///< Runtime node configuration.
-        std::string  ipfs_cache_dir_           = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
-        bool         mirror_results_           = false; ///< Whether to mirror processing results from other nodes.
-        int          result_retention_hours_   = 168;   ///< Hours to retain results before GC (0 = keep forever).
-        int          result_retention_max_mb_  = 0;     ///< Max MB for result cache (0 = no space cap).
-        bool         catchup_scan_done_        = false; ///< Guards single-shot startup catch-up scan (D-20).
-        bool         catchup_scan_in_progress_ = false; ///< True while the startup catch-up scan is running.
+            NodeType::Light; ///< Role from sgns_config.json (default Light; derived in the AccountSource ctor).
+        base::Logger     node_logger_;                            ///< Main node logger.
+        GeniusNodeConfig dev_config_;                             ///< Runtime node configuration.
+        std::string      ipfs_cache_dir_          = "ipfs_cache"; ///< Directory for IPFS block flat-file cache.
+        bool             mirror_results_          = false; ///< Whether to mirror processing results from other nodes.
+        int              result_retention_hours_  = 168;   ///< Hours to retain results before GC (0 = keep forever).
+        int              result_retention_max_mb_ = 0;     ///< Max MB for result cache (0 = no space cap).
+
         std::vector<ChainContractPair> catchup_chains_; ///< Populated by OnRpcEndpointsReady for catch-up scan (D-02).
+
         /// Serializes catchup_scan_done_, catchup_scan_in_progress_, and
         /// catchup_chains_ across the RPC catch-up state and OnRpcEndpointsReady,
         /// which both run on the multi-threaded io_ pool (DEFAULT_IO_THREADS = 4).
         mutable std::mutex catchup_mutex_;
         std::shared_ptr<ChainRpcEndpointProvider>
             rpc_endpoint_provider_; ///< Shared so the posted Initialize() job can hold it across an account switch.
+        std::shared_ptr<evmwatcher::BridgeCatchupWatcher>
+            catchup_watcher_; ///< Polling watcher that scans historical blocks for bridge burns (replaces PerformStartupCatchupScan).
+        std::function<std::optional<std::string>()>
+            chainlist_fetcher_; ///< Optional custom chainlist fetcher (test injection point via SetChainlistFetcher).
         /// Generation token for async bridge init. Incremented on account
         /// switch; the posted Initialize() job captures the value at post time
         /// and aborts if it is stale — so a reset transaction_manager_ /
@@ -764,6 +786,8 @@ namespace sgns
         std::string           processing_channel_topic_;     ///< Processing task channel topic.
         std::string           processing_grid_chanel_topic_; ///< Processing grid topic.
         uint16_t              subnet_id_ = 0;                ///< Subnet ID from sgns_config.json (reserved).
+        /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
+        bool rpc_catchup_ = true;
 
         std::vector<std::string>                 bootstrap_peers_;
         std::vector<std::string>                 bootstrap_fullnodes_;
@@ -788,7 +812,7 @@ namespace sgns
          * @param[in] dev_config Runtime configuration for paths, token settings, and payout data.
          * @param[in] source Account-creation source variant.
          */
-        GeniusNode( const DevConfig_st &dev_config, AccountSource source );
+        GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source );
 
         /**
          * @brief Initializes OpenSSL library state used by networking dependencies.
@@ -923,19 +947,6 @@ namespace sgns
         void OnRpcEndpointsReady( std::vector<ChainContractPair> chains ) override;
 
         /**
-         * @brief Scans historical blocks for unprocessed bridge burn events after CRDT sync.
-         *
-         * Called once after TransactionManager reaches READY state (D-20). Probes RPC
-         * endpoints for each chain with bridge_contract_address, constructs eth_getLogs
-         * queries filtered to BridgeSourceBurned topic0, and inserts any missing burns
-         * via MintFunds() with UTXOType::UTXO_BRIDGE.
-         *
-         * Best-effort: failures on one chain do not block others.
-         * Scan depth capped at kBridgeCatchupScanDepth blocks (currently 10,000).
-         */
-        void PerformStartupCatchupScan();
-
-        /**
          * @brief Shuts down node services: cancels health-check timer, unsubscribes disconnect events,
          *        and stops the transaction GlobalDB.
          */
@@ -947,11 +958,6 @@ namespace sgns
          */
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account );
 
-        /**
-         * @brief Returns the transaction manager when initialized.
-         * @return Shared transaction manager, or Error::TRANSACTIONS_NOT_READY.
-         */
-        outcome::result<std::shared_ptr<TransactionManager>>      GetTransactionManager() const;
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
             sgns::base::Buffer value );

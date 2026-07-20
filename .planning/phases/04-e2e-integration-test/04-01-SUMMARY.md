@@ -31,7 +31,7 @@ key-files:
     - test/src/CMakeLists.txt
 
 key-decisions:
-  - "BaseWritePath uses std::string assignment (not strncpy) to match current DevConfig_st definition"
+  - "BaseWritePath uses std::string assignment (not strncpy) to match current DevConfig definition"
   - "Uses PRIVATE_KEY env var for node keys since E2E test targets live Sepolia"
   - "Follows processing_multi_test fixture pattern: 3 nodes, PubSub AddPeers, StopProcessing on proc nodes"
 
@@ -75,7 +75,7 @@ Each task was committed atomically:
 - `test/src/CMakeLists.txt` - Added add_subdirectory(bridge_e2e) in alphabetical order
 
 ## Decisions Made
-- Used std::string assignment for BaseWritePath instead of strncpy — current DevConfig_st uses std::string, not char[]
+- Used std::string assignment for BaseWritePath instead of strncpy — current DevConfig uses std::string, not char[]
 - Used PRIVATE_KEY env var for node Ethereum keys since this is an E2E test against live Sepolia
 - Followed processing_multi_test pattern: node_main (non-processor), node_proc1/2 (processor), StopProcessing on proc nodes, PubSub AddPeers mesh
 
@@ -85,7 +85,7 @@ Each task was committed atomically:
 
 **1. [Rule 1 - Bug] BaseWritePath strncpy incompatible with std::string**
 - **Found during:** Task 1 (build verification)
-- **Issue:** Plan specified strncpy pattern from processing_multi_test.cpp, but current DevConfig_st.BaseWritePath is std::string, not char[]
+- **Issue:** Plan specified strncpy pattern from processing_multi_test.cpp, but current DevConfig.BaseWritePath is std::string, not char[]
 - **Fix:** Used direct std::string assignment instead of strncpy; removed null-termination lines
 - **Files modified:** test/src/bridge_e2e/bridge_e2e_test.cpp
 - **Verification:** Build passes cleanly with ninja -j4

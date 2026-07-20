@@ -218,9 +218,8 @@ TEST_F( ProcessingEngineTest, SubTaskProcessing )
     }
     subTaskQueueAccessor->AssignSubTasks( subTasks );
 
-<<<<<<< HEAD
-    std::thread contextThread([&context]() { context.run(); });
-    engine->StartQueueProcessing(subTaskQueueAccessor);
+    std::thread contextThread( [&context]() { context.run(); } );
+    engine->StartQueueProcessing( subTaskQueueAccessor );
 
     std::chrono::milliseconds elapsed;
     ASSERT_WAIT_FOR_CONDITION(
@@ -228,10 +227,6 @@ TEST_F( ProcessingEngineTest, SubTaskProcessing )
         std::chrono::milliseconds( 5000 ),
         "Queue processing did not complete within timeout",
         &elapsed );
-=======
-    std::thread contextThread( [&context]() { context.run(); } );
-    engine->StartQueueProcessing( subTaskQueueAccessor );
->>>>>>> 9e8dd10c (Removed sleep from tests)
 
     context.stop();
     contextThread.join();

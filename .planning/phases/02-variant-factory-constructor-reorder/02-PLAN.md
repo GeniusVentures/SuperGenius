@@ -75,7 +75,7 @@ In `src/account/GeniusNode.hpp`:
    };
    ```
 
-2. **Add the `AccountSource` variant + source structs** in the `sgns` namespace, BEFORE the `GeniusNode` class definition (so `New(dev_config, AccountSource)` and call-site `FromPrivateKey{...}` resolve cleanly). Place them after the `DevConfig_st` / forward-declaration area near the top of the namespace (~line 63, after `class MigrationManager;`):
+2. **Add the `AccountSource` variant + source structs** in the `sgns` namespace, BEFORE the `GeniusNode` class definition (so `New(dev_config, AccountSource)` and call-site `FromPrivateKey{...}` resolve cleanly). Place them after the `DevConfig` / forward-declaration area near the top of the namespace (~line 63, after `class MigrationManager;`):
    ```
    /**
     * @brief Account-creation source for GeniusNode::New(dev_config, AccountSource).
@@ -99,7 +99,7 @@ In `src/account/GeniusNode.hpp`:
     * @return Shared node instance after asynchronous DB init is scheduled, or nullptr on
     *         account-restore or initialization failure.
     */
-   static std::shared_ptr<GeniusNode> New( const DevConfig_st  &dev_config,
+   static std::shared_ptr<GeniusNode> New( const DevConfig  &dev_config,
                                            AccountSource        source );
    ```
    (This overloads `New` — the old `New(autodht, port_seed, is_full_node)` is retained. The overloads are unambiguous because arities/param-types differ: 2 args vs 4 args.)
@@ -111,7 +111,7 @@ In `src/account/GeniusNode.hpp`:
     *        resolves node_type_ -> is_full_node_ (the init-order hinge fix, INTF-03).
     *        Throws std::runtime_error on account-restore failure; New() catches -> nullptr.
     */
-   GeniusNode( const DevConfig_st &dev_config, AccountSource source );
+   GeniusNode( const DevConfig &dev_config, AccountSource source );
    ```
 
 5. **Add the `node_type_` member** next to `is_full_node_` (~line 676):
@@ -128,8 +128,8 @@ In `src/account/GeniusNode.hpp`:
 - `grep -n "enum class NodeType" src/account/GeniusNode.hpp` matches once (after `enum class Error`)
 - `grep -c "struct FromPrivateKey\|struct FromMnemonic\|struct FromPublicKey\|struct NewAccount" src/account/GeniusNode.hpp` returns 4
 - `grep -n "using AccountSource" src/account/GeniusNode.hpp` matches once
-- `grep -n "static std::shared_ptr<GeniusNode> New( const DevConfig_st  &dev_config," src/account/GeniusNode.hpp` matches the new 2-arg overload (in addition to the retained old 4-arg `New`)
-- `grep -n "GeniusNode( const DevConfig_st &dev_config, AccountSource source )" src/account/GeniusNode.hpp` matches once (new private ctor; the old `(dev_config, account, autodht, port_seed, is_full_node)` ctor declaration is still present)
+- `grep -n "static std::shared_ptr<GeniusNode> New( const DevConfig  &dev_config," src/account/GeniusNode.hpp` matches the new 2-arg overload (in addition to the retained old 4-arg `New`)
+- `grep -n "GeniusNode( const DevConfig &dev_config, AccountSource source )" src/account/GeniusNode.hpp` matches once (new private ctor; the old `(dev_config, account, autodht, port_seed, is_full_node)` ctor declaration is still present)
 - `grep -n "node_type_ = NodeType::Light" src/account/GeniusNode.hpp` matches once (member declaration)
 - `grep -c "IsFullNode() const noexcept\|GetNodeType() const noexcept" src/account/GeniusNode.hpp` returns 2
 - The retained old factories (`New(autodht, port_seed, is_full_node)`, `NewFromPrivateKey`, `NewFromMnemonic`) and old private ctor are STILL present (D-01 — unchanged)
@@ -251,7 +251,7 @@ In `src/account/GeniusNode.cpp`, ADD (do not modify the retained old ctor/factor
 
 2. **New public factory `New(dev_config, AccountSource source)`** — placed alongside the retained old factories:
    ```
-   std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )
+   std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig &dev_config, AccountSource source )
    {
        try
        {
@@ -268,12 +268,12 @@ In `src/account/GeniusNode.cpp`, ADD (do not modify the retained old ctor/factor
 </action>
 
 <acceptance_criteria>
-- `grep -n "GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source )" src/account/GeniusNode.cpp` matches once (the new ctor; the retained old ctor signature is still present)
+- `grep -n "GeniusNode::GeniusNode( const DevConfig &dev_config, AccountSource source )" src/account/GeniusNode.cpp` matches once (the new ctor; the retained old ctor signature is still present)
 - `grep -n "is_full_node_ = ( node_type_ != NodeType::Light )" src/account/GeniusNode.cpp` matches once (the derivation, inside the new ctor)
 - `grep -n "account_ = std::visit(" src/account/GeniusNode.cpp` matches once
 - `grep -c "std::is_same_v<T, NewAccount>\|std::is_same_v<T, FromPrivateKey>\|std::is_same_v<T, FromMnemonic>\|std::is_same_v<T, FromPublicKey>" src/account/GeniusNode.cpp` returns 4 (the visitor branches)
 - `grep -n 'throw std::runtime_error( "Account creation failed" )' src/account/GeniusNode.cpp` matches once (D-04 throw)
-- `grep -n "GeniusNode::New( const DevConfig_st &dev_config, AccountSource source )" src/account/GeniusNode.cpp` matches once (the new factory; retained old factories still present)
+- `grep -n "GeniusNode::New( const DevConfig &dev_config, AccountSource source )" src/account/GeniusNode.cpp` matches once (the new factory; retained old factories still present)
 - `grep -n "catch ( ... )" src/account/GeniusNode.cpp` matches at least once inside the new factory body, returning `nullptr`
 - The retained old factories (`New(dev_config, autodht, port_seed, is_full_node)` @132, `NewFromPrivateKey` @152, `NewFromMnemonic` @173) and old private ctor @200 are UNCHANGED — diff shows only additions, no removals
 - Full project builds (genius_node target) — run via the project's standard build command
