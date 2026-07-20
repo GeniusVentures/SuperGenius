@@ -40,6 +40,11 @@ namespace sgns
         {
             return blockchain ? blockchain->consensus_manager_ : nullptr;
         }
+
+        static void SetGNUSPrice( const std::shared_ptr<GeniusNode> &node, double price )
+        {
+            node->m_tokenPriceCache["genius-ai"] = { price, std::chrono::system_clock::now() };
+        }
     };
 } // namespace sgns
 
@@ -506,6 +511,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
        )";
     std::replace( bin_path.begin(), bin_path.end(), '\\', '/' );
     boost::replace_all( json_data, "[basepath]", bin_path );
+    MultiAccountTestAccess::SetGNUSPrice( node_main, 1.0 );
     auto procmgr       = sgns::sgprocessing::ProcessingManager::Create( json_data );
     auto cost          = node_main->GetProcessCost( procmgr.value() );
     auto bal_main_init = node_main->GetBalance();

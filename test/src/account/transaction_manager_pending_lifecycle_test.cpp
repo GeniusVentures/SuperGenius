@@ -59,16 +59,20 @@ namespace
     public:
         TransactionManagerRecoveryTest() : CRDTFixture( "transaction_manager_recovery_test" )
         {
+        }
+
+        void SetUp() override
+        {
             account_ = sgns::GeniusAccount::New( kTokenId, base_path / "account" );
-            assert( account_ );
-            assert( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
+            ASSERT_TRUE( account_ );
+            ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );
             (void) account_->ConfigureDatabaseDependencies( db_ );
 
             blockchain_ = sgns::Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
-            assert( blockchain_ );
+            ASSERT_TRUE( blockchain_ );
 
             manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
-            assert( manager_ );
+            ASSERT_TRUE( manager_ );
             manager_->RegisterTopicNames();
 
             account_->SetPeerConfirmedNonce( 0, account_->GetAddress() );
@@ -76,9 +80,12 @@ namespace
                                                                              sgns::TransactionManager::State::READY );
         }
 
-        ~TransactionManagerRecoveryTest() override
+        void TearDown() override
         {
-            manager_->Stop();
+            if ( manager_ )
+            {
+                manager_->Stop();
+            }
         }
 
     protected:
@@ -115,7 +122,7 @@ namespace
             manager_->Stop();
             manager_.reset();
             manager_ = sgns::TransactionManager::New( db_, io_, account_, blockchain_ );
-            assert( manager_ );
+            ASSERT_TRUE( manager_ );
             manager_->RegisterTopicNames();
             sgns::TransactionManagerPendingLifecycleTestAccess::ChangeState( *manager_,
                                                                              sgns::TransactionManager::State::READY );
@@ -140,9 +147,17 @@ namespace
             auto                         transaction = db_->BeginTransaction();
             sgns::crdt::GlobalDB::Buffer value;
             value.put( "committed" );
-            assert( transaction->Put( sgns::crdt::HierarchicalKey( "/recovery/already-committed" ), std::move( value ) )
-                        .has_value() );
-            assert( transaction->Commit( { "CRDT.Datastore.TEST.Channel" } ).has_value() );
+            if ( !transaction->Put( sgns::crdt::HierarchicalKey( "/recovery/already-committed" ),
+                                    std::move( value ) ) )
+            {
+                ADD_FAILURE() << "Failed to populate the committed CRDT transaction";
+                return nullptr;
+            }
+            if ( !transaction->Commit( { "CRDT.Datastore.TEST.Channel" } ) )
+            {
+                ADD_FAILURE() << "Failed to commit the CRDT transaction";
+                return nullptr;
+            }
             return transaction;
         }
 
@@ -155,19 +170,22 @@ namespace
 
     class TransactionManagerPreviousHashTest : public TransactionManagerRecoveryTest
     {
-    public:
-        TransactionManagerPreviousHashTest()
-        {
-            registry_ = blockchain_->GetValidatorRegistry();
-            assert( registry_ );
-            assert( registry_
-                        ->StoreGenesisRegistry( { account_->GetAddress() },
-                                                [this]( std::vector<uint8_t> payload )
-                                                { return account_->Sign( payload ); } )
-                        .has_value() );
-        }
-
     protected:
+        void SetUp() override
+        {
+            TransactionManagerRecoveryTest::SetUp();
+            if ( HasFatalFailure() )
+            {
+                return;
+            }
+            registry_ = blockchain_->GetValidatorRegistry();
+            ASSERT_TRUE( registry_ );
+            ASSERT_TRUE( registry_
+                             ->StoreGenesisRegistry( { account_->GetAddress() },
+                                                     [this]( std::vector<uint8_t> payload )
+                                                     { return account_->Sign( payload ); } )
+                             .has_value() );
+        }
         void StoreCertificate( const std::shared_ptr<sgns::GeniusTransaction> &transaction )
         {
             auto subject = sgns::ConsensusManager::CreateNonceSubject( account_->GetAddress(),
@@ -275,9 +293,10 @@ TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowin
 
     // Reusing a committed CRDT transaction makes Put() fail deterministically and
     // exercises the non-retryable send recovery path without altering production code.
-    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_,
-                                                                 failed_transaction,
-                                                                 MakeCommittedTransaction() );
+    auto committed_transaction = MakeCommittedTransaction();
+    ASSERT_TRUE( committed_transaction );
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue(
+        *manager_, failed_transaction, std::move( committed_transaction ) );
     sgns::TransactionManagerPendingLifecycleTestAccess::TickOnce( *manager_ );
 
     ASSERT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );

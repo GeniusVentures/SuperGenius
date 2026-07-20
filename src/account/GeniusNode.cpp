@@ -33,6 +33,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/network/route_helper.hpp>
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Coin.h>
 
@@ -3524,7 +3525,12 @@ namespace sgns
         node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
 
         auto weak_self = weak_from_this();
-        pubsub_->GetHost()->connect(
+        auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
+        auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
+        libp2p::network::RouteHelper::SourceAddresses source_addresses{
+            std::move( ipv4_source ), std::move( ipv6_source ), true, true };
+
+        pubsub_->GetHost()->getNetwork().getDialer().dial(
             *peer_info_ptr,
             [weak_self, peer_id]( auto result )
             {
@@ -3555,7 +3561,8 @@ namespace sgns
                     }
                 }
             },
-            std::chrono::seconds( 15 ) );
+            std::chrono::seconds( 15 ),
+            source_addresses );
     }
 
     std::string GeniusNode::MyTasksFilePath() const
