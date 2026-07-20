@@ -789,28 +789,36 @@ namespace sgns
         }
 
         const auto escrow_amount = escrow_tx->GetAmount();
-        BOOST_OUTCOME_TRY( auto escrow_amount_ptr, TokenAmount::New( escrow_amount ) );
+
+        // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
+        // taken at escrow creation. Eventually settable via multisig CRDT config.
+        constexpr uint64_t kBurnBasisPoints  = 100;   // 1%
+        constexpr uint64_t kBasisPointsTotal = 10000;
+        const auto          burn_amount      = ( escrow_amount * kBurnBasisPoints ) / kBasisPointsTotal;
+        const auto          available        = escrow_amount - burn_amount;
+
+        BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
 
         BOOST_OUTCOME_TRY( auto peers_cut_ptr, TokenAmount::New( escrow_tx->GetPeersCut() ) );
 
-        BOOST_OUTCOME_TRY( auto peer_total, escrow_amount_ptr->Multiply( *peers_cut_ptr ) );
+        BOOST_OUTCOME_TRY( auto peer_total, available_amount_ptr->Multiply( *peers_cut_ptr ) );
 
         const auto subtask_count   = static_cast<uint64_t>( subtask_results.size() );
         const auto peers_amount    = peer_total.Value() / subtask_count;
         const auto peer_total_paid = peers_amount * subtask_count;
         const auto escrow_token_id = escrow_params.second.front().token_id;
-        if ( peer_total_paid > escrow_amount )
+        if ( peer_total_paid > available )
         {
-            m_logger->error( "Escrow transaction {} cannot pay {} from amount {}",
+            m_logger->error( "Escrow transaction {} cannot pay {} from available amount {}",
                              escrow_tx->GetHash(),
                              peer_total_paid,
-                             escrow_amount );
+                             available );
             return std::errc::invalid_argument;
         }
-        const auto remainder = escrow_amount - peer_total_paid;
+        const auto remainder = available - peer_total_paid;
 
         std::vector<OutputDestInfo> payout_peers;
-        payout_peers.reserve( subtask_results.size() + 1 );
+        payout_peers.reserve( subtask_results.size() + 2 ); // +1 dev, +1 burn
 
         for ( const auto &subtask : subtask_results )
         {
@@ -819,6 +827,11 @@ namespace sgns
                                       subtask.node_address(),
                                       TokenID::FromBytes( subtask.token_id().data(), subtask.token_id().size() ) } );
         }
+
+        constexpr const char *kZeroAddress = "0x0000000000000000000000000000000000000000";
+        m_logger->debug( "Burning {} to zero address", burn_amount );
+        payout_peers.push_back( { burn_amount, kZeroAddress, escrow_token_id } );
+
         //TODO: see what do with token_id here
         m_logger->debug( "Sending to dev {}", remainder );
         payout_peers.push_back( { remainder, escrow_tx->GetDevAddress(), escrow_token_id } );
