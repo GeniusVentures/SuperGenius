@@ -149,4 +149,13 @@ message RegistrationTx
     bytes main_address = 2;
     uint64 sequence = 3;
     RegistrationMetadata metadata = 4;
+    bool detach_flag = 5;
+    uint64 supersedes_sequence = 6;
+}
+
+message RevokeTx
+{
+    DAGStruct dag_struct = 1;
+    bytes child_address = 2;
+    uint64 registration_sequence = 3;
 }
