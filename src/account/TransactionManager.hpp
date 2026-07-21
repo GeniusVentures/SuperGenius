@@ -160,6 +160,24 @@ namespace sgns
                                                     SGTransaction::RegistrationMetadata  metadata );
 
         /**
+         * @brief Creates and enqueues a transfer transaction recovering funds from a registered child
+         *        wallet back to this account's own address (D-60/D-62/CONS-02).
+         *
+         * Selects UTXOs owned by @p child_address (never this account's own UTXOs), builds a
+         * DAGStruct scoped to @p child_address (child's own nonce/previous-hash chain, not this
+         * account's), and signs both the whole-transaction and every per-input signature with this
+         * account's own key. Consensus accepts the resulting transaction because the CRDT
+         * registration record certifies the parent-child relationship (Blockchain::CheckCertifiedParent),
+         * not because this account possesses the child's private key.
+         *
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover.
+         * @param[in] token_id      Token being recovered.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
+
+        /**
          * @brief Creates and enqueues a mint transaction.
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.
@@ -367,6 +385,15 @@ namespace sgns
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<GeniusTransaction> & );
 
         SGTransaction::DAGStruct FillDAGStruct( std::optional<std::string> other_chain_hash = std::nullopt );
+
+        /**
+         * @brief Builds a DAGStruct scoped to an arbitrary source address rather than this account's
+         *        own address — used by RecoverFromChild (D-60) where the tx's declared src is a
+         *        registered child, not this account. Derives nonce from
+         *        account_m->GetPeerNonce(source_address) (never ReserveNextNonce, which is this
+         *        account's own private counter) and a previous-hash chain scoped to source_address.
+         */
+        SGTransaction::DAGStruct FillDAGStructForAddress( const std::string &source_address );
         std::string              GetOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetTrackedOutgoingPreviousHash( uint64_t nonce ) const;
         std::string              GetPersistedOutgoingPreviousHash( uint64_t nonce ) const;

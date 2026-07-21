@@ -588,6 +588,63 @@ namespace sgns
         return transfer_transaction->GetHash();
     }
 
+    outcome::result<std::string> TransactionManager::RecoverFromChild( std::string child_address,
+                                                                       uint64_t    amount,
+                                                                       TokenID     token_id )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::vector<InputUTXOInfo> inputs;
+        uint64_t                   selected_amount = 0;
+
+        for ( const auto &utxo : account_m->GetUTXOManager().GetUnconsumedUTXOs( child_address ) )
+        {
+            if ( !( utxo.GetTokenID() == token_id ) )
+            {
+                continue;
+            }
+
+            InputUTXOInfo input;
+            input.txid_hash_  = utxo.GetTxID();
+            input.output_idx_ = utxo.GetOutputIdx();
+            input.signature_  = account_m->Sign( input.SerializeForSigning() );
+
+            inputs.push_back( std::move( input ) );
+            selected_amount += utxo.GetAmount();
+
+            if ( selected_amount >= amount )
+            {
+                break;
+            }
+        }
+
+        if ( selected_amount < amount )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::vector<OutputDestInfo> outputs;
+        outputs.push_back( { amount, account_m->GetAddress(), token_id } );
+        if ( selected_amount > amount )
+        {
+            outputs.push_back( { selected_amount - amount, child_address, token_id } );
+        }
+
+        auto recover_transaction = std::make_shared<TransferTransaction>(
+            TransferTransaction::New( inputs, outputs, FillDAGStructForAddress( child_address ) ) );
+
+        recover_transaction->MakeSignature( *account_m );
+
+        account_m->GetUTXOManager().ReserveUTXOs( inputs, recover_transaction->GetHash() );
+
+        EnqueueTransaction( std::make_pair( recover_transaction, std::nullopt ) );
+
+        return recover_transaction->GetHash();
+    }
+
     outcome::result<std::string> TransactionManager::RegisterChild(
         std::string                         main_address,
         SGTransaction::RegistrationMetadata metadata,
@@ -1039,6 +1096,87 @@ namespace sgns
         dag.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
         dag.set_uncle_hash( chain_hash );
+
+        return dag;
+    }
+
+    SGTransaction::DAGStruct TransactionManager::FillDAGStructForAddress( const std::string &source_address )
+    {
+        SGTransaction::DAGStruct dag;
+        auto                     timestamp = std::chrono::system_clock::now();
+
+        auto           peer_nonce_result = account_m->GetPeerNonce( source_address );
+        const uint64_t nonce             = peer_nonce_result.has_value() ? ( peer_nonce_result.value() + 1 ) : 0;
+
+        const auto previous_hash = [&]() -> std::string
+        {
+            if ( nonce == 0 )
+            {
+                return "";
+            }
+
+            const auto previous_nonce = nonce - 1;
+            {
+                std::shared_lock tx_lock( tx_mutex_m );
+                for ( const auto &[_, tracked] : tx_processed_m )
+                {
+                    if ( tracked.tx && tracked.tx->GetSrcAddress() == source_address &&
+                         tracked.cached_nonce == previous_nonce && tracked.status != TransactionStatus::FAILED &&
+                         tracked.status != TransactionStatus::INVALID )
+                    {
+                        return tracked.tx->GetHash();
+                    }
+                }
+            }
+
+            std::string selected_hash;
+            for ( auto network_id : GetMonitoredNetworkIDs() )
+            {
+                const std::string query_path = GetBlockChainBase( network_id ) + "tx";
+                auto              tx_list    = globaldb_m->QueryKeyValues( query_path );
+                if ( !tx_list.has_value() )
+                {
+                    continue;
+                }
+
+                for ( const auto &[_, value] : tx_list.value() )
+                {
+                    auto tx_result = DeSerializeTransaction( value );
+                    if ( !tx_result.has_value() || !tx_result.value() )
+                    {
+                        continue;
+                    }
+
+                    const auto &candidate = tx_result.value();
+                    if ( candidate->GetSrcAddress() != source_address || candidate->GetNonce() != previous_nonce ||
+                         !blockchain_->CheckCertificate( candidate->GetHash() ) )
+                    {
+                        continue;
+                    }
+
+                    if ( selected_hash.empty() ||
+                         blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                    {
+                        selected_hash = candidate->GetHash();
+                    }
+                }
+            }
+
+            if ( !selected_hash.empty() )
+            {
+                m_logger->debug( "Recovered previous hash {} for nonce {} from persisted transactions (address {})",
+                                 selected_hash,
+                                 nonce,
+                                 source_address );
+            }
+            return selected_hash;
+        }();
+
+        dag.set_previous_hash( previous_hash );
+        dag.set_nonce( nonce );
+        dag.set_source_addr( source_address );
+        dag.set_timestamp(
+            std::chrono::duration_cast<std::chrono::milliseconds>( timestamp.time_since_epoch() ).count() );
 
         return dag;
     }
