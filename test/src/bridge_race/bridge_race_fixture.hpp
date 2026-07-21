@@ -24,6 +24,7 @@
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -101,6 +102,59 @@ protected:
 
     static inline sgns::test::anvil::AnvilProcess s_anvil{};
 
+    /** @brief Anvil fork block captured during SetUpTestSuite (D-22 pattern — before any burn). */
+    static inline uint64_t s_fork_block = 0ull;
+
+    /** @brief Per-node bridge config filename (must match ResolveBridgeChainsConfigPath priority 1). */
+    static inline constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
+
+    /** @brief Content of the per-node bridge_chains_config.json (sepolia-only subset). */
+    static inline constexpr const char *kBridgeChainsConfigTemplate = R"JSON({
+    "ethereum-sepolia": {
+        "chain_id": 11155111,
+        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        "creation_block": __CREATION_BLOCK__
+    }
+}
+)JSON";
+
+    /** @brief Blocks to scan before the fork — injected as creation_block (matches catchup suite). */
+    static inline constexpr uint64_t kBackfillWindow = 3000ull;
+
+    /**
+     * @brief Writes a per-node bridge_chains_config.json pointing BridgeCatchupWatcher at
+     *        the local Anvil fork (mirrors BridgeAnvilCatchupE2ETest::WriteBridgeChainsConfig).
+     *
+     * Without this file, a node's BridgeCatchupWatcher/BridgeRelayer fall back to their
+     * default production chain list (real mainnet/Sepolia/etc. RPC endpoints) — a burn
+     * seeded only on the local Anvil fork is then never observed by ANY node, and every
+     * race test times out waiting for a mint that never starts. This is the actual
+     * watcher-discovery wiring D-01 requires; ConfigureRpcEndpoint() alone only affects
+     * the separate PublicChainInputValidator verification-quorum path.
+     *
+     * @param[in] base_write_path  Per-node BaseWritePath (trailing slash expected).
+     */
+    static void WriteBridgeChainsConfig( const std::string &base_write_path )
+    {
+        std::filesystem::create_directories( base_write_path );
+        const std::string config_path = base_write_path + kBridgeChainsConfigFilename;
+
+        const uint64_t creation_block = ( s_fork_block > kBackfillWindow ) ? ( s_fork_block - kBackfillWindow ) : 0ull;
+
+        std::string        config_json( kBridgeChainsConfigTemplate );
+        const std::string  placeholder( "__CREATION_BLOCK__" );
+        const auto         pos = config_json.find( placeholder );
+        if ( pos != std::string::npos )
+        {
+            config_json.replace( pos, placeholder.size(), std::to_string( creation_block ) );
+        }
+
+        std::ofstream out( config_path, std::ios::binary | std::ios::trunc );
+        out << config_json;
+        out.close();
+        spdlog::info( "bridge_race: wrote {} (creation_block={})", config_path, creation_block );
+    }
+
     /**
      * @brief Deterministically derives a valid secp256k1 hex private key (no 0x prefix,
      *        64 hex chars) for the given node index (D-06 — programmatic, not a
@@ -155,15 +209,20 @@ protected:
     }
 
     /**
-     * @brief Derives the SGNS destination address for a Light-node index (D-07 — burns
+     * @brief Returns the SGNS destination address for a Light-node index (D-07 — burns
      *        must target Light-node addresses, not the Full node's own address).
+     *
+     * Must read the LIVE node's GetAddress() — a node's true SGNS address is NOT simply
+     * EthereumKeyGenerator(private_key). GeniusAccount::GenerateGeniusAddress() signs a
+     * predefined constant with the raw key and SHA-256s the signature to derive the
+     * actual key seed, so the address can only be obtained from a constructed GeniusNode.
+     *
      * @param[in] light_index  Light-node index (1-10).
-     * @return SGNS destination string derived from that Light node's identity key.
+     * @return SGNS destination string for that Light node's identity.
      */
     static std::string DeriveLightDestination( unsigned int light_index )
     {
-        ethereum::EthereumKeyGenerator key_gen( DeriveNodeKey( light_index ) );
-        return key_gen.GetEntirePubValue();
+        return s_nodes[light_index]->GetAddress();
     }
 
     /**
@@ -197,6 +256,20 @@ protected:
                          << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
         }
 
+        // Capture the Anvil fork block so creation_block in each node's
+        // bridge_chains_config.json avoids scanning from genesis (matches the catchup
+        // suite's D-22 pattern).
+        {
+            int               exit_code      = 0;
+            const std::string fork_block_str = sgns::test::anvil::RunShellCapture(
+                "cast block-number --rpc-url " + s_anvil.RpcUrl(), exit_code );
+            ASSERT_EQ( exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
+            ASSERT_FALSE( fork_block_str.empty() ) << "cast block-number returned empty output";
+            s_fork_block = std::stoull( fork_block_str );
+            ASSERT_GT( s_fork_block, 0ull ) << "Anvil fork block must be non-zero";
+            spdlog::info( "bridge_race: fork block = {}", s_fork_block );
+        }
+
         const std::string binary_path = boost::dll::program_location().parent_path().string();
 
         const std::string kAnvilRpcUrl = s_anvil.RpcUrl();
@@ -206,12 +279,27 @@ protected:
                    kAnvilRpcUrl + R"("],"status":"active"}])";
         };
 
-        // Create all 11 nodes FIRST (node 0 = Full, 1-10 = Light) so genesis validator
-        // registration has every address before the ValidatorRegistry initializes.
-        std::vector<std::string> light_addresses;
-        light_addresses.reserve( kNodeCount - 1u );
-
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
+        // Bootstrap order: create the 10 Light nodes FIRST and register their REAL
+        // addresses via SetAdditionalGenesisValidatorAddresses, THEN create the Full node
+        // LAST and register its REAL address via SetAuthorizedFullNodeAddress immediately
+        // afterward (no other node creation in between).
+        //
+        // Why: a node's true SGNS address is NOT simply EthereumKeyGenerator(private_key)
+        // — GeniusAccount::GenerateGeniusAddress() signs a predefined constant with the
+        // raw key and SHA-256s the signature to derive the actual key seed. Addresses can
+        // only be obtained from a LIVE GeniusNode's GetAddress(), not precomputed from the
+        // key alone. And Blockchain::New() — which bakes GetAuthorizedFullNodeAddress()/
+        // GetAdditionalGenesisValidatorAddresses() into the ValidatorRegistry's
+        // genesis_authority and additional-validator list — runs ASYNCHRONOUSLY per node
+        // (via the INITIALIZING_BLOCKCHAIN state transition, after DB migration), so
+        // registering addresses only after creating ALL 11 nodes races every node's async
+        // blockchain init against the registration call. This ordering removes the race
+        // for both statics: the light-address list is fully known and registered before
+        // the Full node (the only node that ever writes the genesis registry) is even
+        // constructed, and the Full node's own registration follows its creation with no
+        // intervening node-creation work — the same "single node, immediate registration"
+        // timing already proven safe by the existing 3-node bridge_anvil_e2e fixture.
+        auto write_node_config = [&]( unsigned int i, const char *node_type )
         {
             const std::string base_write_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
             s_configs[i].Addr             = kDevPayoutAddr;
@@ -220,29 +308,32 @@ protected:
             s_configs[i].TokenID          = sgns::TokenID::FromBytes( { 0x00 } );
             s_configs[i].BaseWritePath    = base_write_path;
 
-            const unsigned int port      = kNodePortBase + i;
-            const char        *node_type = ( i == 0u ) ? "Full" : "Light";
-
+            const unsigned int port = kNodePortBase + i;
             sgns::GeniusNode::WriteNetworkConfig( base_write_path, static_cast<uint16_t>( port ), /*auto_dht=*/true );
             sgns::GeniusNode::WriteSgnsConfig( base_write_path, node_type, /*is_processor=*/false );
+            WriteBridgeChainsConfig( base_write_path );
+        };
 
+        std::vector<std::string> light_addresses;
+        light_addresses.reserve( kNodeCount - 1u );
+        for ( unsigned int i = 1u; i < kNodeCount; ++i )
+        {
+            write_node_config( i, "Light" );
             s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ DeriveNodeKey( i ) } );
             ASSERT_NE( s_nodes[i], nullptr ) << "Failed to create node index " << i;
             s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
-
-            if ( i != 0u )
-            {
-                light_addresses.push_back( s_nodes[i]->GetAddress() );
-            }
+            light_addresses.push_back( s_nodes[i]->GetAddress() );
         }
 
-        // Register genesis validators IMMEDIATELY after node creation, BEFORE any burn
-        // seeding or RPC configuration (matches catchup-suite ordering).
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
         sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
-        spdlog::info( "bridge_race: authorized full node = {}, +{} additional genesis validators",
-                      s_nodes[0]->GetAddress().substr( 0, 16 ),
-                      light_addresses.size() );
+        spdlog::info( "bridge_race: registered {} additional genesis validators", light_addresses.size() );
+
+        write_node_config( 0u, "Full" );
+        s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ DeriveNodeKey( 0u ) } );
+        ASSERT_NE( s_nodes[0], nullptr ) << "Failed to create Full node";
+        s_nodes[0]->SetChainlistFetcher( chainlist_fetcher );
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
+        spdlog::info( "bridge_race: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
 
         // Star-topology PubSub mesh bootstrap: each Light node peers directly with the
         // Full node (sufficient for CRDT sync; a full 11x11 mesh is unnecessary).
