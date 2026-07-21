@@ -1432,3 +1432,124 @@ TEST_F( RegistrationTransactionE2ETest, ChildCannotClaimMainAsSourceRejected )
         << "A child cannot spend main's UTXOs even claiming src=main_addr — the whole-tx signature "
            "check must fail since the child never holds main's private key";
 }
+
+// ===================================================================
+// Phase 5 Plan 04 — Detach/Replace-Main adversarial + E2E tests
+// (LIFE-01/02/03/04, gate 3b fork detection, nonce-chain replay).
+// ===================================================================
+
+// ---------------------------------------------------------------------------
+// FilterRegistrationRejectsForkedSupersedesSequence — Gate 3b (D-38): a
+// lifecycle-change RegistrationTx whose supersedes_sequence no longer matches
+// the currently-stored sequence (a fork attempt) is rejected.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsForkedSupersedesSequence )
+{
+    // Pre-populate the CRDT with a base registration at sequence=1.
+    SGTransaction::DAGStruct dag1;
+    dag1.set_type( "registration" );
+    dag1.set_source_addr( account_->GetAddress() );
+    dag1.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata1;
+    std::string                        main_address( 128, 'f' );
+
+    auto base_tx = RegistrationTransaction::New( main_address, 1, metadata1, dag1 );
+    base_tx.MakeSignature( *account_ );
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    auto                    serialized_base = base_tx.SerializeByteVector();
+    base::Buffer            base_buffer( std::vector<uint8_t>( serialized_base.begin(), serialized_base.end() ) );
+    crdt::HierarchicalKey   hk( reg_key );
+    auto                    put_result = db_->Put( hk, base_buffer, {} );
+    ASSERT_TRUE( put_result.has_value() ) << "Pre-population Put should succeed";
+
+    // First lifecycle-change element: sequence=2, detach_flag=true, supersedes_sequence=1
+    // (matches the base's stored sequence) — should be accepted.
+    SGTransaction::DAGStruct dag2;
+    dag2.set_type( "registration" );
+    dag2.set_source_addr( account_->GetAddress() );
+    dag2.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata2;
+    std::string                        zero_address( 128, '0' );
+    auto first_change_tx = RegistrationTransaction::New( zero_address, 2, metadata2, dag2,
+                                                         /*detach_flag=*/true, /*supersedes_sequence=*/1 );
+    first_change_tx.MakeSignature( *account_ );
+
+    auto serialized_first = first_change_tx.SerializeByteVector();
+
+    crdt::pb::Element first_element;
+    first_element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    first_element.set_value( std::string( serialized_first.begin(), serialized_first.end() ) );
+
+    auto first_result = RegistrationE2ETestAccess::FilterRegistration( *tm_, first_element );
+    EXPECT_FALSE( first_result.has_value() )
+        << "First lifecycle-change element with a valid supersedes_sequence should be accepted";
+
+    // FilterRegistration only VALIDATES — it does not itself write the CRDT record in this
+    // direct-accessor-call test path. Re-Put the accepted element's own bytes at the same
+    // reg/ key so the stored sequence genuinely advances to 2, mirroring how the existing
+    // monotonic-sequence tests manually advance stored state between assertions.
+    base::Buffer first_buffer( std::vector<uint8_t>( serialized_first.begin(), serialized_first.end() ) );
+    auto         advance_result = db_->Put( hk, first_buffer, {} );
+    ASSERT_TRUE( advance_result.has_value() ) << "Advancing stored state Put should succeed";
+
+    // Second lifecycle-change element: sequence=3 (higher, so gate (d)'s monotonicity check
+    // passes on its own), but supersedes_sequence=1 — now STALE, since the stored sequence has
+    // moved to 2. This is the fork: a lifecycle-change tx claiming to supersede a sequence that
+    // has itself already been superseded.
+    SGTransaction::DAGStruct dag3;
+    dag3.set_type( "registration" );
+    dag3.set_source_addr( account_->GetAddress() );
+    dag3.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata3;
+    auto forked_tx = RegistrationTransaction::New( zero_address, 3, metadata3, dag3,
+                                                    /*detach_flag=*/true, /*supersedes_sequence=*/1 );
+    forked_tx.MakeSignature( *account_ );
+
+    auto serialized_forked = forked_tx.SerializeByteVector();
+
+    crdt::pb::Element forked_element;
+    forked_element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    forked_element.set_value( std::string( serialized_forked.begin(), serialized_forked.end() ) );
+
+    auto forked_result = RegistrationE2ETestAccess::FilterRegistration( *tm_, forked_element );
+    EXPECT_TRUE( forked_result.has_value() )
+        << "A lifecycle-change element with a stale supersedes_sequence (fork) should be tombstoned";
+}
+
+// ---------------------------------------------------------------------------
+// FilterRegistrationRejectsMissingSupersedesLink — Gate 3b (D-38): a
+// lifecycle-change RegistrationTx with no prior reg/ record at all is
+// rejected (the "!current" fork-detection branch, design doc §9.3).
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsMissingSupersedesLink )
+{
+    // No reg/ record is pre-populated for account_'s address in this test.
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( 0 );
+
+    SGTransaction::RegistrationMetadata metadata;
+    std::string                        zero_address( 128, '0' );
+
+    // Claims to supersede sequence=1, but no reg/ record exists at all for this address.
+    auto orphan_tx = RegistrationTransaction::New( zero_address, 1, metadata, dag,
+                                                    /*detach_flag=*/true, /*supersedes_sequence=*/1 );
+    orphan_tx.MakeSignature( *account_ );
+
+    auto serialized = orphan_tx.SerializeByteVector();
+
+    crdt::pb::Element element;
+    element.set_key( "/bc/999/reg/" + account_->GetAddress() );
+    element.set_value( std::string( serialized.begin(), serialized.end() ) );
+
+    auto result = RegistrationE2ETestAccess::FilterRegistration( *tm_, element );
+
+    EXPECT_TRUE( result.has_value() )
+        << "A lifecycle-change RegistrationTx with no prior reg/ record should be tombstoned (fork detected)";
+}
+
