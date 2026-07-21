@@ -3110,6 +3110,7 @@ namespace sgns
                 m_logger->error( "Zero sequence in registration {}", element.key() );
                 break;
             }
+            std::shared_ptr<RegistrationTransaction> existing_reg;
             std::string reg_key = GetBlockChainBase() + "reg/" + reg_tx->GetSrcAddress();
             auto existing_data = globaldb_m->Get( reg_key );
             if ( existing_data.has_value() )
@@ -3120,7 +3121,7 @@ namespace sgns
                     auto existing_tx = maybe_existing_tx.value();
                     if ( existing_tx->GetType() == "registration" )
                     {
-                        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing_tx );
+                        existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( existing_tx );
                         if ( existing_reg && reg_tx->GetSequence() <= existing_reg->GetSequence() )
                         {
                             m_logger->error(
@@ -3131,6 +3132,22 @@ namespace sgns
                             break;
                         }
                     }
+                }
+            }
+
+            // Gate 3b (e): supersedes_sequence fork-prevention (D-38) — a lifecycle-change
+            // RegistrationTx (Detach/Replace-Main) whose supersedes_sequence is non-zero must
+            // match the currently-stored record's sequence, or is rejected as a fork attempt.
+            if ( reg_tx->GetSupersedesSequence() != 0 )
+            {
+                if ( !existing_reg || reg_tx->GetSupersedesSequence() != existing_reg->GetSequence() )
+                {
+                    m_logger->error(
+                        "Forked supersedes_sequence in registration {}: incoming={}, stored={}",
+                        element.key(),
+                        reg_tx->GetSupersedesSequence(),
+                        existing_reg ? existing_reg->GetSequence() : 0 );
+                    break;
                 }
             }
 

@@ -709,6 +709,7 @@ namespace sgns
          * Gates: (a) deserialization failure, (b) invalid child signature,
          * (c) malformed main_address (not 128 hex chars).
          * Phase 5 adds: (d) sequence monotonicity check — reads existing reg/{child_addr} via CRDT Get, rejects non-monotonic or zero sequences.
+         * (e) supersedes_sequence fork-prevention gate (D-38) — rejects any lifecycle-change RegistrationTx whose supersedes_sequence does not match the currently-stored record's sequence.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
