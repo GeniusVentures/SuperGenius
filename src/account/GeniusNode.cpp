@@ -66,6 +66,11 @@ namespace
 {
     uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
     {
+        if ( base == 0 )
+        {
+            return 0;
+        }
+
         uint32_t seed_hash = 0;
         for ( char c : seed )
         {
@@ -144,7 +149,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
         case sgns::GeniusNode::Error::TOKEN_ID_MISMATCH:
             return "Informed Token ID doesn't match initialized ID";
         case sgns::GeniusNode::Error::PROCESS_COST_ERROR:
-            return "The calculated Processing cost was negative";
+            return "The processing cost could not be calculated";
         case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
             return "Processing information missing on JSON file";
         case sgns::GeniusNode::Error::INVALID_JSON:
@@ -1341,6 +1346,29 @@ namespace sgns
                 ret = false;
                 break;
             }
+            if ( pubsubport_ == 0 )
+            {
+                auto address = libp2p::multi::Multiaddress::create( pubsub_interface_address );
+                if ( address )
+                {
+                    auto assigned_port = address.value().getFirstValueForProtocol<uint16_t>(
+                        libp2p::multi::Protocol::Code::TCP,
+                        []( const std::string &value ) { return static_cast<uint16_t>( std::stoul( value ) ); } );
+                    if ( assigned_port )
+                    {
+                        pubsubport_ = assigned_port.value();
+                    }
+                }
+                if ( pubsubport_ == 0 )
+                {
+                    node_logger_->error( "PubSub did not report its OS-assigned TCP port: {}",
+                                         pubsub_interface_address );
+                    pubsub_->Stop();
+                    pubsub_.reset();
+                    ret = false;
+                    break;
+                }
+            }
             node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
 
             if ( upnp_enabled )
@@ -2114,7 +2142,7 @@ namespace sgns
         auto maybeGnusPrice = GetGNUSPrice();
         if ( !maybeGnusPrice )
         {
-            node_logger_->error( "GetGNUSPrice failed" );
+            node_logger_->error( "GetGNUSPrice failed: {}", maybeGnusPrice.error().message() );
             return 0;
         }
         double gnusPrice = maybeGnusPrice.value();

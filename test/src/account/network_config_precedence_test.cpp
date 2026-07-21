@@ -88,3 +88,21 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     // Impossible with the default port_seed (40001); only reachable via config port_seed=49999.
     EXPECT_GE( resolved, 49999u );
 }
+
+TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
+{
+    UseMemorySecureStorage();
+    auto       base       = MakeTempDir( "ncp_ephemeral_port" );
+    const auto dev_config = MakeDevConfig( base );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                       /*node_type=*/"Full",
+                                       /*is_processor=*/true,
+                                       /*rpc_catchup=*/false );
+
+    auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+    ASSERT_NE( node, nullptr );
+
+    EXPECT_GT( node->GetPubsubPort(), 0u );
+    EXPECT_EQ( node->GetPubSub()->GetInterfaceAddress().find( "/tcp/0/" ), std::string::npos );
+}

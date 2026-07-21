@@ -35,7 +35,7 @@ public:
         }
 
         boost::filesystem::create_directories( path );
-        sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/40069, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( path.generic_string() + '/', /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( path.generic_string() + '/',
                                            /*node_type=*/"Full",
                                            /*is_processor=*/true,
@@ -46,7 +46,7 @@ public:
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
         node_ = sgns::GeniusNode::New(
-            { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/' },
+            { "0xcafe", "0.65", "1.0", TOKEN_ID, path.generic_string() + '/', 1.0 },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
         assert( node_ != nullptr );
@@ -124,7 +124,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
     boost::filesystem::create_directories( path_receiver );
     sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/',
-                                          /*port_seed=*/40001,
+                                          /*port_seed=*/0,
                                           /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( path_receiver.generic_string() + '/',
                                        /*node_type=*/"Light",
@@ -132,7 +132,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                        /*rpc_catchup=*/false );
     boost::filesystem::create_directories( path_requester );
     sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/',
-                                          /*port_seed=*/40001,
+                                          /*port_seed=*/0,
                                           /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( path_requester.generic_string() + '/',
                                        /*node_type=*/"Light",
@@ -140,10 +140,10 @@ TEST_F( AccountManagement, SetPayoutAddress )
                                        /*rpc_catchup=*/false );
 
     auto node_receiver = sgns::GeniusNode::New(
-        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
+        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_receiver.generic_string() + '/', 1.0 },
         sgns::FromPrivateKey{ "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f" } );
     auto node_requester = sgns::GeniusNode::New(
-        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
+        { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/', 1.0 },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
 
     node_->GetPubSub()->AddPeers(
