@@ -299,6 +299,18 @@ protected:
         // constructed, and the Full node's own registration follows its creation with no
         // intervening node-creation work — the same "single node, immediate registration"
         // timing already proven safe by the existing 3-node bridge_anvil_e2e fixture.
+        // Proactively remove any stale per-node data directory left over from a PRIOR run
+        // that didn't exit cleanly (e.g. a crash/SEGFAULT skips TearDownTestSuite's own
+        // remove_all entirely). Without this, a fresh run can start against stale
+        // RocksDB/CRDT state from an old process, producing confusing, nondeterministic
+        // behavior that has nothing to do with the current run's actual logic.
+        for ( unsigned int i = 0u; i < kNodeCount; ++i )
+        {
+            const std::string stale_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
+            std::error_code   ec;
+            std::filesystem::remove_all( stale_path, ec );
+        }
+
         auto write_node_config = [&]( unsigned int i, const char *node_type )
         {
             const std::string base_write_path = binary_path + "/bridge_race_node" + std::to_string( i + 1u ) + "/";
