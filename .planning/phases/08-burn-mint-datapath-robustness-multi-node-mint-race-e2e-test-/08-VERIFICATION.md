@@ -171,3 +171,37 @@ This looks like an implementation gap rather than an intentional deviation — n
 
 _Verified: 2026-07-17_
 _Verifier: Claude (gsd-verifier)_
+
+## Post-Fix Update — 2026-07-21
+
+CR-01, CR-02, CR-03 (above) were fixed and rebuilt (commit `b14f0dc8`). Foundry was installed and
+the bridge_race suite was run against a real Anvil/Sepolia fork for the first time — this surfaced
+two further defects that static review/compile-only verification could not have caught, since the
+prior `SetUpTestSuite` never actually completed in any environment before now:
+
+1. **Genesis-authority address-derivation race (found and fixed, commit `87ae6c9f`):** the fixture's
+   address precomputation didn't replicate `GeniusAccount::GenerateGeniusAddress()`'s sign+SHA-256
+   transformation, so the address registered via `SetAuthorizedFullNodeAddress()` never matched any
+   real node — `Blockchain::EnsureValidatorRegistry()`'s address check always failed, and the
+   validator registry never initialized (`SetUpTestSuite` deadlocked at the 90s READY timeout for
+   every prior run). Fixed by creating Light nodes first (real addresses registered), Full node
+   last (registered immediately, no intervening node creation).
+
+2. **Missing `bridge_chains_config.json` watcher wiring (found and fixed, same commit):** the
+   fixture called `ConfigureRpcEndpoint()` (verification-quorum path) but never wrote the per-node
+   config that points `BridgeCatchupWatcher` at the local Anvil fork — watchers fell back to the
+   default production chain list and could never see a burn seeded only on the local fork. Fixed by
+   adding the missing config write (mirrors `BridgeAnvilCatchupE2ETest`'s established pattern).
+
+**Current status after both fixes:** `SetUpTestSuite` no longer deadlocks, and the watcher→mint
+pipeline genuinely works when reached — 2 of 11 nodes independently scanned the correct block
+range and minted the seeded burn. However, only 2 of 11 nodes reached the
+`InitializeAndStartBridge` lifecycle stage within the 90s window; the test still fails overall.
+Tracked as `.planning/todos/pending/bridge-race-only-2-of-11-nodes-start-bridge.md`
+(`resolves_phase: 08`) for a dedicated follow-up — likely a Light-node startup-latency/tuning gap
+specific to the 11-node topology, not yet root-caused.
+
+**Revised score:** genuinely unknown until the remaining gap is resolved and the suite passes
+end-to-end against live Anvil. The phase is closer to goal achievement than the original
+2026-07-17 pass (2 additional real bugs found and fixed via actual execution) but is **not yet
+complete** — `gaps_found` stands.
