@@ -34,7 +34,9 @@ namespace sgns
         static RegistrationTransaction New( std::string                    main_address,
                                             uint64_t                      sequence,
                                             SGTransaction::RegistrationMetadata metadata,
-                                            SGTransaction::DAGStruct      dag );
+                                            SGTransaction::DAGStruct      dag,
+                                            bool                          detach_flag = false,
+                                            uint64_t                      supersedes_sequence = 0 );
 
         /**
          * @brief      Default destructor.
@@ -82,6 +84,24 @@ namespace sgns
         }
 
         /**
+         * @brief      Returns whether this registration is a Detach (child clears main_address).
+         * @return     The detach_flag_ value.
+         */
+        bool GetDetachFlag() const
+        {
+            return detach_flag_;
+        }
+
+        /**
+         * @brief      Returns the sequence this lifecycle-change transaction supersedes.
+         * @return     The supersedes_sequence_ value.
+         */
+        uint64_t GetSupersedesSequence() const
+        {
+            return supersedes_sequence_;
+        }
+
+        /**
          * @brief      Returns the transaction-specific path for storage, derived from GetType().
          * @return     The transaction type string ("registration").
          */
@@ -107,11 +127,15 @@ namespace sgns
         RegistrationTransaction( std::string                          main_address,
                                  uint64_t                             sequence,
                                  SGTransaction::RegistrationMetadata  metadata,
-                                 SGTransaction::DAGStruct             dag );
+                                 SGTransaction::DAGStruct             dag,
+                                 bool                                 detach_flag,
+                                 uint64_t                             supersedes_sequence );
 
         std::string                         main_address_;  ///< 128-hex main wallet pubkey (stored as bytes in proto)
         uint64_t                            sequence_;      ///< Registration sequence
         SGTransaction::RegistrationMetadata metadata_;      ///< Optional metadata
+        bool                                detach_flag_;         ///< True for Detach (main_address cleared)
+        uint64_t                            supersedes_sequence_; ///< Sequence this lifecycle-change supersedes
 
         /**
          * @brief       Registers the deserializer for the "registration" transaction type.

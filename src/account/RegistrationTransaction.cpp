@@ -17,11 +17,15 @@ namespace sgns
     RegistrationTransaction::RegistrationTransaction( std::string                          main_address,
                                                       uint64_t                             sequence,
                                                       SGTransaction::RegistrationMetadata  metadata,
-                                                      SGTransaction::DAGStruct             dag ) :
+                                                      SGTransaction::DAGStruct             dag,
+                                                      bool                                 detach_flag,
+                                                      uint64_t                             supersedes_sequence ) :
         GeniusTransaction( "registration", SetDAGWithType( std::move( dag ), "registration" ) ),
         main_address_( std::move( main_address ) ),
         sequence_( sequence ),
-        metadata_( std::move( metadata ) )
+        metadata_( std::move( metadata ) ),
+        detach_flag_( detach_flag ),
+        supersedes_sequence_( supersedes_sequence )
     {
     }
 
@@ -31,9 +35,12 @@ namespace sgns
     RegistrationTransaction RegistrationTransaction::New( std::string                    main_address,
                                                           uint64_t                      sequence,
                                                           SGTransaction::RegistrationMetadata metadata,
-                                                          SGTransaction::DAGStruct      dag )
+                                                          SGTransaction::DAGStruct      dag,
+                                                          bool                          detach_flag,
+                                                          uint64_t                      supersedes_sequence )
     {
-        RegistrationTransaction instance( std::move( main_address ), sequence, std::move( metadata ), std::move( dag ) );
+        RegistrationTransaction instance( std::move( main_address ), sequence, std::move( metadata ), std::move( dag ),
+                                          detach_flag, supersedes_sequence );
         instance.FillHash();
         return instance;
     }
@@ -48,6 +55,8 @@ namespace sgns
         tx_struct.set_main_address( main_address_ );
         tx_struct.set_sequence( sequence_ );
         tx_struct.mutable_metadata()->CopyFrom( metadata_ );
+        tx_struct.set_detach_flag( detach_flag_ );
+        tx_struct.set_supersedes_sequence( supersedes_sequence_ );
 
         size_t               size = tx_struct.ByteSizeLong();
         std::vector<uint8_t> serialized_proto( size );
@@ -71,6 +80,8 @@ namespace sgns
         tx_struct.set_main_address( main_address_ );
         tx_struct.set_sequence( sequence_ );
         tx_struct.mutable_metadata()->CopyFrom( metadata_ );
+        tx_struct.set_detach_flag( detach_flag_ );
+        tx_struct.set_supersedes_sequence( supersedes_sequence_ );
 
         *embedded.mutable_registration() = tx_struct;
         return embedded;
@@ -93,7 +104,9 @@ namespace sgns
             RegistrationTransaction( tx_struct.main_address(),
                                      tx_struct.sequence(),
                                      tx_struct.metadata(),
-                                     tx_struct.dag_struct() ) );
+                                     tx_struct.dag_struct(),
+                                     tx_struct.detach_flag(),
+                                     tx_struct.supersedes_sequence() ) );
     }
 
     // ---------------------------------------------------------------------------
