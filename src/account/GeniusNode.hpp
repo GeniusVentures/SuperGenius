@@ -739,6 +739,7 @@ namespace sgns
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
+        friend class GeniusNodeTestAccess;
 
         /**
          * @brief Enqueues a transaction and its proof directly through the transaction manager.
@@ -875,7 +876,8 @@ namespace sgns
         /**
          * @brief Initializes PubSub, GraphSync networking, and optional DHT discovery.
          * @param[in] port_seed Deterministic per-address port seed used to derive the node
-         *            listening port when @c pubsub_port is not set. Fallback when the
+         *            listening port when @c pubsub_port is not set; zero requests an
+         *            OS-assigned ephemeral port. Fallback when the
          *            @c port_seed key is absent from @c network_config.json; overridable by
          *            that key when present (config wins, param is fallback).
          * @param[in] is_full_node Whether to use full-node connection limits.
@@ -887,7 +889,8 @@ namespace sgns
          *      priority when present and non-empty.
          *   2. Otherwise @c port_seed (the constructor param, or the @c port_seed key from
          *      @c network_config.json when present) derives the port via
-         *      @c GenerateRandomPort(port_seed, account_address).
+         *      @c GenerateRandomPort(port_seed, account_address), except zero which is
+         *      passed to the listener for OS assignment.
          */
         bool InitNetwork( uint16_t port_seed, bool is_full_node );
 

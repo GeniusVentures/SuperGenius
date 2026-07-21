@@ -19,6 +19,7 @@
 #include "account/TokenID.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/genius_node_test_access.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "testutil/wait_condition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -94,6 +95,7 @@ namespace
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
+        sgns::GeniusNodeTestAccess::CacheGnusPrice( node, 1.0 );
 
         if ( setAsAuthorized )
         {
