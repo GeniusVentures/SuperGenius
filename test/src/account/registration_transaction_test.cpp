@@ -1857,3 +1857,93 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
         << "A detached child should still be able to submit an ordinary transfer";
 }
 
+// ---------------------------------------------------------------------------
+// LifecycleChangeReplayRejectedByNonceChain — design doc §9.4/T-03-12: a
+// stale lifecycle-change RegistrationTx reusing an already-consumed nonce is
+// rejected by the nonce chain, independent of and in addition to
+// FilterRegistration's own sequence-monotonicity gate.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChain )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "replay_nonce_test" );
+
+    // Consumes nonce 0 — this is the transaction whose nonce the replayed tx below will reuse.
+    auto        register_result = tm_->RegisterChild( std::string( 128, 'n' ), metadata, 1 );
+    ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+    std::string register_hash = register_result.value();
+
+    // Poll for CONFIRMED — CheckTransactionReplayProtection's nonce-chain check reads
+    // account_m->GetPeerNonce(), which is only populated once a transaction is genuinely
+    // CONFIRMED (certified), not merely SENDING. This fixture's single-validator registry
+    // (established in the constructor, D-65/D-26) self-certifies real submitted transactions
+    // the same way CertifyChildRegistration's manual recipe does, just automatically via the
+    // normal SendTransactionItem -> proposal -> self-vote -> round-timer certification path.
+    {
+        auto           confirm_start   = std::chrono::steady_clock::now();
+        constexpr auto kConfirmTimeout = std::chrono::seconds( 30 );
+        auto           status          = tm_->GetTransactionStatusByTxId( register_hash );
+        while ( status != TransactionManager::TransactionStatus::CONFIRMED )
+        {
+            if ( std::chrono::steady_clock::now() - confirm_start > kConfirmTimeout )
+                break;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+            status = tm_->GetTransactionStatusByTxId( register_hash );
+        }
+        ASSERT_EQ( status, TransactionManager::TransactionStatus::CONFIRMED )
+            << "Initial registration should be CONFIRMED within timeout so account_'s own confirmed "
+               "nonce chain has genuinely advanced past nonce 0";
+    }
+
+    // Consumes nonce 1 — advances the nonce chain further, matching the plan's setup sequence.
+    auto detach_result = tm_->DetachChild( metadata );
+    ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
+    {
+        auto           tstart        = std::chrono::steady_clock::now();
+        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
+        auto           status         = tm_->GetTransactionStatusByTxId( detach_result.value() );
+        while ( status != TransactionManager::TransactionStatus::SENDING &&
+                status != TransactionManager::TransactionStatus::CONFIRMED )
+        {
+            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
+                break;
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+            status = tm_->GetTransactionStatusByTxId( detach_result.value() );
+        }
+    }
+
+    // Manually construct a "replayed" lifecycle-change RegistrationTransaction reusing nonce 0
+    // (the STALE, already-consumed nonce) — everything else about this tx is well-formed and
+    // would otherwise be a plausible Detach.
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( 0 );
+    dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch() )
+                            .count() );
+
+    SGTransaction::RegistrationMetadata replay_metadata;
+    auto stale_tx = RegistrationTransaction::New( std::string( 128, '0' ), 2, replay_metadata, dag,
+                                                  /*detach_flag=*/true, /*supersedes_sequence=*/1 );
+    stale_tx.MakeSignature( *account_ );
+
+    EXPECT_FALSE( tm_->CheckTransactionReplayProtection( stale_tx ) )
+        << "A lifecycle-change RegistrationTx reusing an already-consumed nonce must be rejected "
+           "by the nonce chain, independent of FilterRegistration's own sequence-monotonicity gate";
+}
