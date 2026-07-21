@@ -2360,6 +2360,98 @@ namespace sgns
         return tx_id;
     }
 
+    outcome::result<std::string> GeniusNode::DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                          uint64_t                            sequence,
+                                                          uint64_t                            supersedes_sequence )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->DetachChild( std::move( metadata ), sequence, supersedes_sequence ) );
+        node_logger_->debug( "{}: detach transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::string> GeniusNode::DetachChild( SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->DetachChild( std::move( metadata ) ) );
+        node_logger_->debug( "{}: detach transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                   &new_main_address,
+                                                          SGTransaction::RegistrationMetadata  metadata,
+                                                          uint64_t                             sequence,
+                                                          uint64_t                             supersedes_sequence )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                          manager->ReplaceMain( new_main_address, std::move( metadata ), sequence, supersedes_sequence ) );
+        node_logger_->debug( "{}: replace-main transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::string> GeniusNode::ReplaceMain( const std::string                   &new_main_address,
+                                                          SGTransaction::RegistrationMetadata  metadata )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->ReplaceMain( new_main_address, std::move( metadata ) ) );
+        node_logger_->debug( "{}: replace-main transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::string> GeniusNode::RevokeChild( const std::string &child_address )
+    {
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
+            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        }
+        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
+        BOOST_OUTCOME_TRY( auto tx_id, manager->RevokeChild( child_address ) );
+        node_logger_->debug( "{}: revoke transaction {} sent", __func__, tx_id );
+        return tx_id;
+    }
+
+    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::RevokeChild(
+        const std::string        &child_address,
+        std::chrono::milliseconds timeout )
+    {
+        BOOST_OUTCOME_TRY( auto &&tx_id, RevokeChild( child_address ) );
+
+        BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
+
+        auto [tx_status, duration] = finalized_result;
+
+        if ( tx_status != TransactionManager::TransactionStatus::CONFIRMED )
+        {
+            node_logger_->error( "{}: transaction {} failed after {} ms", __func__, tx_id, duration );
+            return outcome::failure( Error::TRANSACTION_FAILED );
+        }
+
+        node_logger_->debug( "{}: transaction {} sent in {} ms", __func__, tx_id, duration );
+        return std::make_pair( tx_id, duration );
+    }
+
     outcome::result<std::vector<RegistrationDiscoveryEntry>> GeniusNode::GetRegistrationsForMain(
         const std::string &main_address )
     {

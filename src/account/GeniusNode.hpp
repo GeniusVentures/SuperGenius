@@ -586,6 +586,62 @@ namespace sgns
                                                        TokenID            token_id );
 
         /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
+         * @param[in] new_main_address    New main wallet public address (128-hex).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata,
+                                                  uint64_t                             sequence,
+                                                  uint64_t                             supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         * @param[in] new_main_address New main wallet public address (128-hex).
+         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( const std::string                   &new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Revokes a registered child wallet and waits for the transaction to finalize (D-36).
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RevokeChild( const std::string        &child_address,
+                                                                       std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Revokes a registered child wallet, without waiting for finalization.
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RevokeChild( const std::string &child_address );
+
+        /**
          * @brief Enumerates child registrations naming a specific main wallet.
          *
          * Scans the reg/ CRDT namespace and returns entries whose main_address matches.
