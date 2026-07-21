@@ -1553,3 +1553,307 @@ TEST_F( RegistrationTransactionE2ETest, FilterRegistrationRejectsMissingSupersed
         << "A lifecycle-change RegistrationTx with no prior reg/ record should be tombstoned (fork detected)";
 }
 
+// ---------------------------------------------------------------------------
+// DetachChildEndToEnd — TransactionManager::DetachChild (D-35): the stored
+// reg/ record ends with detach_flag=true, main_address=128-char zero
+// sentinel, sequence=2 (1 from initial registration, 2 from Detach).
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "detach_e2e_test" );
+
+    auto register_result = tm_->RegisterChild( std::string( 128, 'r' ), metadata, 1 );
+    ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+
+    // Allow time for the initial registration's CRDT write to land before Detach's
+    // auto-derive overload reads it back.
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    auto detach_result = tm_->DetachChild( metadata );
+    ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    std::shared_ptr<RegistrationTransaction> stored_reg;
+    auto                                      poll_start   = std::chrono::steady_clock::now();
+    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                {
+                    stored_reg = candidate;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+
+    ASSERT_NE( stored_reg, nullptr ) << "Detached reg/ record should be visible within timeout";
+    EXPECT_EQ( stored_reg->GetMainAddress(), std::string( 128, '0' ) );
+    EXPECT_EQ( stored_reg->GetSequence(), 2 );
+    EXPECT_TRUE( stored_reg->GetDetachFlag() );
+}
+
+// ---------------------------------------------------------------------------
+// ReplaceMainEndToEnd — TransactionManager::ReplaceMain (D-37): the stored
+// reg/ record ends with the new main_address and detach_flag=false.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "replace_main_e2e_test" );
+
+    auto register_result = tm_->RegisterChild( std::string( 128, 's' ), metadata, 1 );
+    ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    std::string new_main_address( 128, 'u' );
+    auto        replace_result = tm_->ReplaceMain( new_main_address, metadata );
+    ASSERT_TRUE( replace_result.has_value() ) << "ReplaceMain should succeed against an existing registration";
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    std::shared_ptr<RegistrationTransaction> stored_reg;
+    auto                                      poll_start   = std::chrono::steady_clock::now();
+    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetMainAddress() == new_main_address )
+                {
+                    stored_reg = candidate;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+
+    ASSERT_NE( stored_reg, nullptr ) << "Replace-Main'd reg/ record should be visible within timeout";
+    EXPECT_EQ( stored_reg->GetMainAddress(), new_main_address );
+    EXPECT_FALSE( stored_reg->GetDetachFlag() );
+    EXPECT_EQ( stored_reg->GetSequence(), 2 );
+}
+
+// ---------------------------------------------------------------------------
+// ReRegistrationAfterDetachViaReplaceMain — D-39: a child can re-register at
+// any time after Detach via ReplaceMain, proven end-to-end through the real
+// gate 3b/sequence-monotonicity checks.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "reregister_e2e_test" );
+
+    auto register_result = tm_->RegisterChild( std::string( 128, 'v' ), metadata, 1 );
+    ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    auto detach_result = tm_->DetachChild( metadata );
+    ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    // Poll until the Detach's write is visible before attempting re-registration.
+    {
+        auto           poll_start   = std::chrono::steady_clock::now();
+        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+        bool           detached     = false;
+        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+        {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
+            {
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        detached = true;
+                        break;
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+        ASSERT_TRUE( detached ) << "Detach should be visible before re-registration is attempted";
+    }
+
+    std::string third_main_address( 128, 'w' );
+    auto        reregister_result = tm_->ReplaceMain( third_main_address, metadata );
+    ASSERT_TRUE( reregister_result.has_value() )
+        << "ReplaceMain should succeed as a re-registration after a prior Detach (D-39)";
+
+    std::shared_ptr<RegistrationTransaction> stored_reg;
+    auto                                      poll_start   = std::chrono::steady_clock::now();
+    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetMainAddress() == third_main_address )
+                {
+                    stored_reg = candidate;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+
+    ASSERT_NE( stored_reg, nullptr ) << "Re-registered reg/ record should be visible within timeout";
+    EXPECT_EQ( stored_reg->GetMainAddress(), third_main_address );
+    EXPECT_FALSE( stored_reg->GetDetachFlag() );
+    EXPECT_EQ( stored_reg->GetSequence(), 3 );
+}
+
+// ---------------------------------------------------------------------------
+// DetachPreservesChildUTXOsKeypairNonce — LIFE-04: Detach leaves the child's
+// address, UTXOs, and standalone transacting capability unaffected.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    MintMainFunds( 1000, "life04_migration" );
+
+    const std::string address_before = account_->GetAddress();
+    const uint64_t    balance_before = account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() );
+    ASSERT_GT( balance_before, 0ULL ) << "Account should have a non-zero, checkable balance before Detach";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "life04_test" );
+
+    auto register_result = tm_->RegisterChild( std::string( 128, 'l' ), metadata, 1 );
+    ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+
+    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+
+    auto detach_result = tm_->DetachChild( metadata );
+    ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    bool           detached     = false;
+    auto           poll_start   = std::chrono::steady_clock::now();
+    constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                {
+                    detached = true;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    ASSERT_TRUE( detached ) << "Detach should be visible within timeout";
+
+    // Address is unchanged — no keypair rotation API exists, confirmed by construction.
+    EXPECT_EQ( account_->GetAddress(), address_before );
+
+    // UTXO balance is unchanged across Detach — a lifecycle-change registration tx never
+    // touches UTXOs.
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ), balance_before );
+
+    // The detached child remains a fully functional, standalone-capable wallet (D-39): it can
+    // still submit an ordinary transfer after Detach.
+    constexpr uint64_t kSmallAmount    = 50;
+    auto               transfer_result = tm_->TransferFunds( kSmallAmount, std::string( 128, 'q' ), kTestTokenId );
+    EXPECT_TRUE( transfer_result.has_value() )
+        << "A detached child should still be able to submit an ordinary transfer";
+}
+
