@@ -462,7 +462,10 @@ Plans:
   1. Given a payload, the component produces canonical signing-bytes and verifies a valid signature against them using `ConsensusAuth`'s SHA-256/`VerifySignature` primitives, rejecting invalid/tampered signatures.
   2. Given a signer set and a required threshold (N-of-M, no hardcoded N), the component correctly reports quorum-met/quorum-not-met for varying valid-signature counts, including boundary cases (exactly N, N-1, all M).
   3. The component can be constructed, exercised, and unit-tested with no running node, no CRDT store, and no network dependency.
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 08-01-PLAN.md — MultiSig library (VerifyPayloadSignature + EvaluateQuorum) + CMake wiring + tests (MSIG-01, MSIG-02, MSIG-03)
 
 ### Phase 9: SecureCRDT Layer
 
@@ -512,7 +515,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 8. MultiSig Primitive | 0/TBD | Not started | - |
+| 8. MultiSig Primitive | 0/1 | Not started | - |
 | 9. SecureCRDT Layer | 0/TBD | Not started | - |
 | 10. TrustedPeerRegistry | 0/TBD | Not started | - |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
