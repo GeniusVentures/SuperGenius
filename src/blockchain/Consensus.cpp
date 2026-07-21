@@ -140,8 +140,7 @@ namespace sgns
 
     ConsensusManager::~ConsensusManager()
     {
-        stop_timer_.store( true );
-        timer_cv_.notify_all();
+        Close();
         ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
@@ -166,21 +165,14 @@ namespace sgns
             return;
         }
 
-        std::weak_ptr<ConsensusManager> weak_self = shared_from_this();
-        round_timer_                              = std::thread(
-            [weak_self]()
+        round_timer_ = std::thread(
+            [this]()
             {
                 constexpr auto min_interval = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
-                    auto self = weak_self.lock();
-                    if ( !self )
-                    {
-                        return;
-                    }
-
-                    std::unique_lock<std::mutex> lock( self->timer_mutex_ );
-                    auto                         interval = self->round_duration_ / 2;
+                    std::unique_lock<std::mutex> lock( timer_mutex_ );
+                    auto                         interval = round_duration_ / 2;
                     if ( interval.count() <= 0 )
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
@@ -189,33 +181,33 @@ namespace sgns
                     {
                         interval = min_interval;
                     }
-                    if ( self->certificates_pending_.load() )
+                    if ( certificates_pending_.load() )
                     {
                         // Work is pending: run on cadence, only interrupt for shutdown.
-                        self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } );
+                        timer_cv_.wait_for( lock, interval, [this]() { return stop_timer_.load(); } );
                     }
                     else
                     {
                         // No pending work: wait up to interval, but wake immediately when new work appears.
-                        self->timer_cv_.wait_for(
+                        timer_cv_.wait_for(
                             lock,
                             interval,
-                            [self]() { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
+                            [this]() { return stop_timer_.load() || certificates_pending_.load(); } );
                     }
-                    if ( self->stop_timer_.load() )
+                    if ( stop_timer_.load() )
                     {
                         return;
                     }
                     lock.unlock();
-                    if ( self->certificates_pending_.load() )
+                    if ( certificates_pending_.load() )
                     {
-                        self->ProcessCertificates();
-                        self->UpdateCertificatesPending();
+                        ProcessCertificates();
+                        UpdateCertificatesPending();
                     }
-                    self->ExpirePendingProposals();
-                    self->ProcessDuePendingRetries();
+                    ExpirePendingProposals();
+                    ProcessDuePendingRetries();
                     // Keep replaying unfinished certificate work while the node is running.
-                    self->RecoverPendingCertificateWork();
+                    RecoverPendingCertificateWork();
                 }
             } );
     }
