@@ -14,6 +14,7 @@ add_subdirectory(singleton)
 add_subdirectory(watcher)
 add_subdirectory(coinprices)
 add_subdirectory(proof)
+add_subdirectory(multisig)
 
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/"
