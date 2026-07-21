@@ -16,6 +16,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
+#include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::test;
@@ -66,17 +67,20 @@ protected:
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc1, 1.0 );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_main, 1.0 );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40060, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
+        sgns::GeniusNodeTestAccess::CacheGnusPrice( node_proc2, 1.0 );
 
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),

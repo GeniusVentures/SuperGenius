@@ -2165,9 +2165,16 @@ namespace sgns
         auto price = GetCoinprice( { "genius-ai" } );
         if ( !price )
         {
+            node_logger_->error( "GNUS price request failed: {}", price.error().message() );
+            return price.error();
+        }
+        auto price_it = price.value().find( "genius-ai" );
+        if ( price_it == price.value().end() || !std::isfinite( price_it->second ) || price_it->second <= 0.0 )
+        {
+            node_logger_->error( "GNUS price response did not contain a finite positive price" );
             return outcome::failure( Error::NO_PRICE );
         }
-        return price.value()["genius-ai"];
+        return price_it->second;
     }
 
     std::string GeniusNode::GetVersion()
