@@ -4353,35 +4353,119 @@ namespace sgns
     bool TransactionManager::CheckParentChildAuthority( const GeniusTransaction &tx ) const
     {
         m_logger->debug( "{}: Checking parent-child authority tx={}", __func__, tx.GetHash() );
-        if ( tx.GetType() != "transfer" )
+
+        if ( tx.GetType() == "transfer" )
         {
-            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
-            return true;
-        }
-        auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
-        if ( !certified_main.has_value() )
-        {
-            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
-            return true;
-        }
-        if ( tx.CheckSignature() )
-        {
-            m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
-            return true;
-        }
-        auto params = tx.GetUTXOParametersOpt();
-        if ( !params.has_value() || params->second.empty() )
-        {
+            auto certified_main = blockchain_->CheckCertifiedParent( tx.GetSrcAddress() );
+            if ( !certified_main.has_value() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            if ( tx.CheckSignature() )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
+            auto params = tx.GetUTXOParametersOpt();
+            if ( !params.has_value() || params->second.empty() )
+            {
+                m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
+                return false;
+            }
+            if ( params->second.front().dest_address == *certified_main )
+            {
+                m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+                return true;
+            }
             m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
             return false;
         }
-        if ( params->second.front().dest_address == *certified_main )
+
+        if ( tx.GetType() == "revoke" )
         {
+            // Note: CheckTransactionAuthorization already ran (ValidateTransactionForConsensus
+            // order) and verified main's signature over the whole RevokeTx via ordinary
+            // tx.CheckSignature() — main is the tx's own signer, so no additional
+            // signature re-verification is needed here.
+            auto revoke_tx = dynamic_cast<const RevokeTransaction *>( &tx );
+            if ( !revoke_tx )
+            {
+                m_logger->error( "{}: Parent-child authority failed — not a RevokeTransaction tx={}",
+                                  __func__,
+                                  tx.GetHash() );
+                return false;
+            }
+
+            std::string reg_key = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+            auto        existing_data = globaldb_m->Get( reg_key );
+            if ( !existing_data.has_value() )
+            {
+                m_logger->error( "{}: Parent-child authority failed — no reg/ record for child {} tx={}",
+                                  __func__,
+                                  revoke_tx->GetChildAddress(),
+                                  tx.GetHash() );
+                return false;
+            }
+
+            auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+            if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — reg/ record for child {} is missing or not a registration tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+
+            auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+            if ( !existing_reg )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — reg/ record for child {} did not cast to RegistrationTransaction tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+
+            if ( existing_reg->GetDetachFlag() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — child {} already detached/revoked tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+            if ( existing_reg->GetMainAddress() != tx.GetSrcAddress() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — signer is not the certified main for child {} tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    tx.GetHash() );
+                return false;
+            }
+            if ( revoke_tx->GetRegistrationSequence() != existing_reg->GetSequence() )
+            {
+                m_logger->error(
+                    "{}: Parent-child authority failed — sequence mismatch for child {}: revoke={}, stored={} tx={}",
+                    __func__,
+                    revoke_tx->GetChildAddress(),
+                    revoke_tx->GetRegistrationSequence(),
+                    existing_reg->GetSequence(),
+                    tx.GetHash() );
+                return false;
+            }
+
             m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
             return true;
         }
-        m_logger->error( "{}: Parent-child authority failed tx={}", __func__, tx.GetHash() );
-        return false;
+
+        m_logger->debug( "{}: Parent-child authority ok tx={}", __func__, tx.GetHash() );
+        return true;
     }
 
     bool TransactionManager::CheckTransactionTimestamp( const GeniusTransaction &tx ) const
