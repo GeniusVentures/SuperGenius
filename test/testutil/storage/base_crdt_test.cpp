@@ -77,8 +77,11 @@ namespace test
         db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
         db_->Start();
 
-        // Start GossipPubSub after Init
-        auto future = pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
+        // Start GossipPubSub after Init.
+        // Use a unique port per fixture to avoid Windows TIME_WAIT port
+        // exhaustion when fixtures are created / destroyed back-to-back.
+        const auto port = static_cast<int>( 40001 + fixture_id );
+        auto       future = pubs_->Start( port, { pubs_->GetLocalAddress() } );
         auto result = future.get();
         BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
     }
