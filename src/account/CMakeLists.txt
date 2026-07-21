@@ -62,6 +62,7 @@ set(GENIUS_NODE_SOURCES
     MigrationTransaction.cpp
     ProcessingTransaction.cpp
     RegistrationTransaction.cpp
+    RevokeTransaction.cpp
     EscrowTransaction.cpp
     GeniusInputValidator.cpp
     MigrationInputValidator.cpp
