@@ -2246,6 +2246,41 @@ namespace sgns
         }
     }
 
+    void ValidatorRegistry::RetryInitializationIfNeeded()
+    {
+        {
+            std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
+            if ( cache_initialized_ )
+            {
+                return;
+            }
+        }
+
+        logger_->debug( "{}: cache not yet initialized, retrying head-CID discovery", __func__ );
+
+        std::set<CID> heads_to_request;
+        auto          heads_result = db_->GetCRDTHeadList();
+        if ( heads_result.has_value() )
+        {
+            const auto &heads_map = heads_result.value().first;
+            auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
+            if ( it != heads_map.end() )
+            {
+                heads_to_request = it->second;
+            }
+        }
+
+        if ( !heads_to_request.empty() )
+        {
+            logger_->debug( "{}: retry found {} head(s) to request", __func__, heads_to_request.size() );
+            RequestHeadCids( heads_to_request );
+        }
+        else
+        {
+            logger_->debug( "{}: retry found no heads yet available", __func__ );
+        }
+    }
+
     void ValidatorRegistry::PersistLocalState( const std::string &cid ) const
     {
         logger_->trace( "{}: entry cid={}", __func__, cid );
