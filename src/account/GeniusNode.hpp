@@ -560,6 +560,32 @@ namespace sgns
                                                     SGTransaction::RegistrationMetadata  metadata );
 
         /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address and
+         *        waits for the transaction to finalize (D-60/D-62/CONS-02).
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @param[in] timeout       Maximum time to wait for finalization.
+         * @return Pair of transaction hash and elapsed milliseconds on success, or a transfer/finalization error.
+         */
+        outcome::result<std::pair<std::string, uint64_t>> RecoverFromChild( const std::string        &child_address,
+                                                                            uint64_t                  amount,
+                                                                            TokenID                   token_id,
+                                                                            std::chrono::milliseconds timeout );
+
+        /**
+         * @brief Recovers funds from a registered child wallet back to this node's own address,
+         *        without waiting for finalization.
+         * @param[in] child_address Registered child wallet address to recover funds from.
+         * @param[in] amount        Amount to recover in token base units.
+         * @param[in] token_id      Token identifier to recover.
+         * @return Transfer transaction hash on success, or a readiness, balance, or submission error.
+         */
+        outcome::result<std::string> RecoverFromChild( const std::string &child_address,
+                                                       uint64_t           amount,
+                                                       TokenID            token_id );
+
+        /**
          * @brief Enumerates child registrations naming a specific main wallet.
          *
          * Scans the reg/ CRDT namespace and returns entries whose main_address matches.
