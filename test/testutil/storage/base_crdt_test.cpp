@@ -4,6 +4,7 @@
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
+#include <thread>
 
 #include <boost/asio/io_context.hpp>
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -88,20 +89,47 @@ namespace test
 
     CRDTFixture::~CRDTFixture()
     {
-        if ( pubs_ )
-        {
-            pubs_->Stop();
-        }
-        db_.reset();
-        pubs_.reset();
-        io_.reset();
-
         try
         {
-            fs::remove_all( keypair_path_ );
-            fs::remove_all( db_path_ );
+            if ( pubs_ )
+            {
+                pubs_->Stop();
+            }
         }
-        catch ( const fs::filesystem_error &err )
+        catch ( const std::exception &err )
+        {
+            std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
+        }
+        db_.reset();
+        try
+        {
+            pubs_.reset();
+        }
+        catch ( const std::exception &err )
+        {
+            std::cerr << "GossipPubSub destructor exception: " << err.what() << std::endl;
+        }
+        io_.reset();
+
+        // Retry removal on Windows where file handles (e.g. RocksDB LOCK) may
+        // not be released immediately after database close.
+        auto RemoveWithRetry = []( const fs::path &p )
+        {
+            for ( int retry = 0; retry < 3; ++retry )
+            {
+                boost::system::error_code ec;
+                fs::remove_all( p, ec );
+                if ( !fs::exists( p ) )
+                    break;
+                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+            }
+        };
+        try
+        {
+            RemoveWithRetry( keypair_path_ );
+            RemoveWithRetry( db_path_ );
+        }
+        catch ( const std::exception &err )
         {
             std::cerr << err.what() << std::endl;
         }

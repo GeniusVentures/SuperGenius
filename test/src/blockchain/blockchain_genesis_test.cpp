@@ -104,11 +104,20 @@ protected:
 
     void SetUp() override
     {
-        // Clean up any previous test runs
+        // Clean up any previous test runs. Retry on Windows where file handles
+        // (e.g. RocksDB LOCK) may not be released immediately after node shutdown.
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         for ( int i = 0; i < 10; ++i )
         {
-            std::filesystem::remove_all( binaryPath + "/node_blockchain_genesis_" + std::to_string( i ) + "/" );
+            auto dir = binaryPath + "/node_blockchain_genesis_" + std::to_string( i ) + "/";
+            for ( int retry = 0; retry < 3; ++retry )
+            {
+                std::error_code ec;
+                std::filesystem::remove_all( dir, ec );
+                if ( !ec )
+                    break;
+                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+            }
         }
     }
 
@@ -156,8 +165,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     std::cout << "Connecting nodes..." << std::endl;
 
     node_regular_1->GetPubSub()->AddPeers(
-        { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+        { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     // Without authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.
@@ -204,7 +213,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
 
-    node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+    node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "Authorized address set on all nodes" << std::endl;
 
@@ -253,8 +262,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
 
     // Establish connectivity for gossiping blocks/transactions
     node_regular_1->GetPubSub()->AddPeers(
-        { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+        { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     auto token_id = sgns::TokenID::FromBytes( { 0x00 } );
 
@@ -355,8 +364,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     std::cout << "Connecting nodes..." << std::endl;
 
     node_regular_1->GetPubSub()->AddPeers(
-        { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
+        { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     // With wrong authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.

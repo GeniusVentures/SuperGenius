@@ -1,5 +1,7 @@
 #include "testutil/storage/base_fs_test.hpp"
 
+#include <thread>
+
 namespace test
 {
     FSFixture::FSFixture( fs::path path ) : base_path( std::move( path ) )
@@ -20,7 +22,14 @@ namespace test
     {
         if ( fs::exists( base_path ) )
         {
-            fs::remove_all( base_path );
+            for ( int retry = 0; retry < 3; ++retry )
+            {
+                boost::system::error_code ec;
+                fs::remove_all( base_path, ec );
+                if ( !fs::exists( base_path ) )
+                    break;
+                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+            }
         }
     }
 }
