@@ -1,0 +1,141 @@
+#include <gtest/gtest.h>
+
+#include <boost/filesystem/operations.hpp>
+
+#include "account/GeniusAccount.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "multisig/MultiSig.hpp"
+
+namespace
+{
+    using namespace sgns;
+
+    // Five distinct deterministic secp256k1 private keys used to build a 5-member signer set.
+    constexpr const char *PRIVATE_KEYS[] = {
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa",
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaab",
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaac",
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaad",
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaae",
+    };
+    // A sixth key, deliberately NOT in the signer set, used for the unauthorized-signer test.
+    constexpr char OUTSIDER_PRIVATE_KEY[] =
+        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaf";
+
+    std::string SignatureAsString( const std::vector<uint8_t> &signature )
+    {
+        return std::string( signature.begin(), signature.end() );
+    }
+
+    class MultiSigQuorumTest : public ::testing::Test
+    {
+    protected:
+        void SetUp() override
+        {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+            path_ = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+
+            for ( const char *key : PRIVATE_KEYS )
+            {
+                auto account = GeniusAccount::NewFromPrivateKey( TokenID::FromBytes( { 0x00 } ), key, path_ );
+                signers_.push_back( account );
+                signer_set_.push_back( account->GetAddress() );
+            }
+            outsider_ = GeniusAccount::NewFromPrivateKey(
+                TokenID::FromBytes( { 0x00 } ), OUTSIDER_PRIVATE_KEY, path_ );
+        }
+
+        void TearDown() override
+        {
+            GeniusAccount::SetSecureStorageFactory( nullptr );
+            boost::filesystem::remove_all( path_ );
+        }
+
+        boost::filesystem::path                            path_;
+        std::vector<std::shared_ptr<GeniusAccount>>        signers_;
+        std::vector<std::string>                           signer_set_;
+        std::shared_ptr<GeniusAccount>                     outsider_;
+        const std::vector<uint8_t>                         payload_ = { 'q', 'u', 'o', 'r', 'u', 'm' };
+    };
+} // namespace
+
+TEST_F( MultiSigQuorumTest, ExactlyThresholdOfFiveHasQuorum )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+    for ( size_t i = 0; i < 3; ++i )
+    {
+        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+    }
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    EXPECT_TRUE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 3u );
+}
+
+TEST_F( MultiSigQuorumTest, OneBelowThresholdNoQuorum )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+    for ( size_t i = 0; i < 2; ++i )
+    {
+        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+    }
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    EXPECT_FALSE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 2u );
+}
+
+TEST_F( MultiSigQuorumTest, AllFiveSignersHasQuorum )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+    for ( auto &signer : signers_ )
+    {
+        collected.emplace_back( signer->GetAddress(), SignatureAsString( signer->Sign( payload_ ) ) );
+    }
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    EXPECT_TRUE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 5u );
+}
+
+TEST_F( MultiSigQuorumTest, DuplicateSignerWithGarbageDoesNotFlipQuorum )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+    for ( size_t i = 0; i < 3; ++i )
+    {
+        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+    }
+    // Same signer as signers_[0], but with a garbage signature this time — dedup must
+    // run before verification so this never gets a chance to invalidate the earlier count.
+    collected.emplace_back( signers_[0]->GetAddress(), std::string( 64, '\0' ) );
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    EXPECT_TRUE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 3u );
+}
+
+TEST_F( MultiSigQuorumTest, UnauthorizedSignerNotCounted )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+    for ( size_t i = 0; i < 2; ++i )
+    {
+        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+    }
+    // Outsider signs validly, but is not in signer_set_ — must not count toward quorum.
+    collected.emplace_back( outsider_->GetAddress(), SignatureAsString( outsider_->Sign( payload_ ) ) );
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    EXPECT_FALSE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 2u );
+}
+
+TEST_F( MultiSigQuorumTest, ZeroThresholdWithEmptyCollectedHasQuorum )
+{
+    std::vector<std::pair<std::string, std::string>> collected;
+
+    auto result = multisig::EvaluateQuorum( signer_set_, 0, collected, payload_ );
+    EXPECT_TRUE( result.has_quorum );
+    EXPECT_EQ( result.valid_unique_count, 0u );
+}

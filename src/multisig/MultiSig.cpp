@@ -24,12 +24,29 @@ namespace sgns::multisig
                                  const std::vector<std::pair<std::string, std::string>> &collected_signatures,
                                  const std::vector<uint8_t>                             &payload )
     {
-        // NOTE: stub for Task 1 (VerifyPayloadSignature scope only); full dedup+verify
-        // loop implemented in Task 2.
-        (void)signer_set;
-        (void)threshold;
-        (void)collected_signatures;
-        (void)payload;
-        return QuorumResult{};
+        const std::unordered_set<std::string> signer_lookup( signer_set.begin(), signer_set.end() );
+        std::unordered_set<std::string>       valid_unique_signers;
+
+        for ( const auto &[address, signature] : collected_signatures )
+        {
+            if ( valid_unique_signers.count( address ) != 0 )
+            {
+                continue; // dedup-first: already counted this signer, skip before verification
+            }
+            if ( signer_lookup.count( address ) == 0 )
+            {
+                continue; // unauthorized signer
+            }
+            if ( !VerifyPayloadSignature( address, signature, payload ) )
+            {
+                continue; // invalid signature, skip silently
+            }
+            valid_unique_signers.insert( address );
+        }
+
+        QuorumResult result;
+        result.valid_unique_count = valid_unique_signers.size();
+        result.has_quorum         = valid_unique_signers.size() >= threshold;
+        return result;
     }
 } // namespace sgns::multisig
