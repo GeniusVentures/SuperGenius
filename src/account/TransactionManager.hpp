@@ -178,6 +178,75 @@ namespace sgns
         outcome::result<std::string> RecoverFromChild( std::string child_address, uint64_t amount, TokenID token_id );
 
         /**
+         * @brief Creates and enqueues a child-initiated Detach transaction (D-35).
+         *
+         * Clears the registration's main_address to a 128-character zero-sentinel and sets
+         * detach_flag=true, superseding the current registration record. Child-signed only.
+         *
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Detach supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                  uint64_t                            sequence,
+                                                  uint64_t                            supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Detach transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
+         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
+         *
+         * @param[in] metadata Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> DetachChild( SGTransaction::RegistrationMetadata metadata );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction (D-37).
+         *
+         * Sets main_address to the caller-supplied new main and detach_flag=false, superseding the
+         * current registration record. Handles both Registered->Registered replacement AND
+         * re-registration from Detached/Revoked. Child-signed only — no consent from the old main.
+         *
+         * @param[in] new_main_address    New main wallet public address (128-hex).
+         * @param[in] metadata            Registration metadata carried forward on the lifecycle-change tx.
+         * @param[in] sequence            New registration sequence number (caller-supplied).
+         * @param[in] supersedes_sequence Sequence of the reg/ record this Replace-Main supersedes.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata,
+                                                  uint64_t                             sequence,
+                                                  uint64_t                             supersedes_sequence );
+
+        /**
+         * @brief Creates and enqueues a child-initiated Replace-Main transaction with auto-derived sequence.
+         *
+         * Reads the existing reg/{child_addr} CRDT record and uses stored sequence + 1 as the new
+         * sequence and stored sequence as supersedes_sequence. Fails if no prior registration exists.
+         *
+         * @param[in] new_main_address New main wallet public address (128-hex).
+         * @param[in] metadata         Registration metadata carried forward on the lifecycle-change tx.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> ReplaceMain( std::string                          new_main_address,
+                                                  SGTransaction::RegistrationMetadata  metadata );
+
+        /**
+         * @brief Creates and enqueues a main-initiated Revoke transaction (D-36).
+         *
+         * Main-signed — this account is the tx's own source. Fails fast client-side if the target's
+         * reg/ record is absent or already detached, avoiding broadcast of a transaction
+         * CheckParentChildAuthority would reject anyway.
+         *
+         * @param[in] child_address Registered child wallet address being revoked.
+         * @return Transaction hash on success.
+         */
+        outcome::result<std::string> RevokeChild( std::string child_address );
+
+        /**
          * @brief Creates and enqueues a mint transaction.
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.

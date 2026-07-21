@@ -700,6 +700,145 @@ namespace sgns
         return RegisterChild( std::move( main_address ), std::move( metadata ), sequence );
     }
 
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        static const std::string kZeroAddress( 128, '0' );
+
+        auto tx = std::make_shared<RegistrationTransaction>( RegistrationTransaction::New( kZeroAddress,
+                                                                                            sequence,
+                                                                                            std::move( metadata ),
+                                                                                            FillDAGStruct(),
+                                                                                            /*detach_flag=*/true,
+                                                                                            supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::DetachChild( SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return DetachChild( std::move( metadata ), existing_reg->GetSequence() + 1, existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata,
+                                                                   uint64_t                            sequence,
+                                                                   uint64_t supersedes_sequence )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        auto tx = std::make_shared<RegistrationTransaction>(
+            RegistrationTransaction::New( std::move( new_main_address ),
+                                          sequence,
+                                          std::move( metadata ),
+                                          FillDAGStruct(),
+                                          /*detach_flag=*/false,
+                                          supersedes_sequence ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
+    outcome::result<std::string> TransactionManager::ReplaceMain( std::string                         new_main_address,
+                                                                   SGTransaction::RegistrationMetadata metadata )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + account_m->GetAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return ReplaceMain( std::move( new_main_address ),
+                            std::move( metadata ),
+                            existing_reg->GetSequence() + 1,
+                            existing_reg->GetSequence() );
+    }
+
+    outcome::result<std::string> TransactionManager::RevokeChild( std::string child_address )
+    {
+        if ( GetState() != State::READY )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+
+        std::string reg_key       = GetBlockChainBase() + "reg/" + child_address;
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto maybe_existing = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing.has_error() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing.value() );
+        if ( !existing_reg || existing_reg->GetDetachFlag() )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto tx = std::make_shared<RevokeTransaction>(
+            RevokeTransaction::New( child_address, existing_reg->GetSequence(), FillDAGStruct() ) );
+        tx->MakeSignature( *account_m );
+        EnqueueTransaction( std::make_pair( tx, std::nullopt ) );
+        return tx->GetHash();
+    }
+
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
