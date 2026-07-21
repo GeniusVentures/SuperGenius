@@ -37,7 +37,25 @@
 
 ### Traceability
 
-<!-- Filled by roadmapper -->
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| MSIG-01 | Phase 8 | Pending |
+| MSIG-02 | Phase 8 | Pending |
+| MSIG-03 | Phase 8 | Pending |
+| SCRDT-01 | Phase 9 | Pending |
+| SCRDT-02 | Phase 9 | Pending |
+| SCRDT-03 | Phase 9 | Pending |
+| SCRDT-04 | Phase 9 | Pending |
+| TPR-01 | Phase 10 | Pending |
+| TPR-02 | Phase 10 | Pending |
+| TPR-03 | Phase 10 | Pending |
+| BURN-01 | Phase 11 | Pending |
+| BURN-02 | Phase 11 | Pending |
+| BURN-03 | Phase 11 | Pending |
+| MIG-05 | Phase 12 | Pending |
+| MIG-06 | Phase 12 | Pending |
+
+Coverage: 15/15 v1.1 requirements mapped.
 
 ## Slot-Based Network Voting (Phase 6)
 
