@@ -24,6 +24,7 @@
 #include "EscrowTransaction.hpp"
 #include "ProcessingTransaction.hpp"
 #include "RegistrationTransaction.hpp"
+#include "RevokeTransaction.hpp"
 #include "UTXOMerkle.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
@@ -117,7 +118,9 @@ namespace sgns
               { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
             { "registration",
               { &TransactionManager::ParseRegistrationTransaction,
-                &TransactionManager::RevertRegistrationTransaction } } };
+                &TransactionManager::RevertRegistrationTransaction } },
+            { "revoke",
+              { &TransactionManager::ParseRevokeTransaction, &TransactionManager::RevertRevokeTransaction } } };
 
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
@@ -1644,6 +1647,7 @@ namespace sgns
             GeniusTransaction::RegisterDeserializer( "escrow-hold", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "escrow-release", &EscrowTransaction::DeSerializeByteVector );
             GeniusTransaction::RegisterDeserializer( "registration", &RegistrationTransaction::DeSerializeByteVector );
+            GeniusTransaction::RegisterDeserializer( "revoke", &RevokeTransaction::DeSerializeByteVector );
             return true;
         }();
         (void) registered;
@@ -1705,6 +1709,13 @@ namespace sgns
                 std::string bytes;
                 embedded.registration().SerializeToString( &bytes );
                 return GeniusTransaction::GetDeSerializers().at( "registration" )(
+                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            }
+            case EmbeddedTransaction::kRevoke:
+            {
+                std::string bytes;
+                embedded.revoke().SerializeToString( &bytes );
+                return GeniusTransaction::GetDeSerializers().at( "revoke" )(
                     std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
             }
             case EmbeddedTransaction::TRANSACTION_NOT_SET:
@@ -2181,6 +2192,76 @@ namespace sgns
         const std::shared_ptr<GeniusTransaction> & /*tx*/ )
     {
         // No-op — see ParseRegistrationTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx )
+    {
+        auto revoke_tx = std::dynamic_pointer_cast<RevokeTransaction>( tx );
+        if ( !revoke_tx )
+        {
+            m_logger->error( "ParseRevokeTransaction: dynamic_pointer_cast<RevokeTransaction> returned null" );
+            return std::errc::invalid_argument;
+        }
+
+        std::string reg_key = GetBlockChainBase() + "reg/" + revoke_tx->GetChildAddress();
+        auto        existing_data = globaldb_m->Get( reg_key );
+        if ( !existing_data.has_value() )
+        {
+            m_logger->warn( "ParseRevokeTransaction: no reg/ record found for child {} — nothing to update",
+                             revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto maybe_existing_tx = DeSerializeTransaction( existing_data.value() );
+        if ( maybe_existing_tx.has_error() || maybe_existing_tx.value()->GetType() != "registration" )
+        {
+            m_logger->warn(
+                "ParseRevokeTransaction: reg/ record for child {} is missing or not a registration — nothing to update",
+                revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        auto existing_reg = std::dynamic_pointer_cast<RegistrationTransaction>( maybe_existing_tx.value() );
+        if ( !existing_reg )
+        {
+            m_logger->warn( "ParseRevokeTransaction: reg/ record for child {} did not cast to RegistrationTransaction",
+                             revoke_tx->GetChildAddress() );
+            return outcome::success();
+        }
+
+        SGTransaction::DAGStruct updated_dag;
+        updated_dag.set_type( "registration" );
+        updated_dag.set_source_addr( revoke_tx->GetChildAddress() );
+
+        auto updated_reg = RegistrationTransaction::New( existing_reg->GetMainAddress(),
+                                                          existing_reg->GetSequence(),
+                                                          existing_reg->GetMetadata(),
+                                                          updated_dag,
+                                                          /*detach_flag=*/true,
+                                                          existing_reg->GetSupersedesSequence() );
+
+        auto put_result = globaldb_m->Put( crdt::HierarchicalKey( reg_key ),
+                                           base::Buffer( updated_reg.SerializeByteVector() ),
+                                           {} );
+        if ( put_result.has_error() )
+        {
+            m_logger->error( "ParseRevokeTransaction: failed to write updated reg/ record for child {}",
+                              revoke_tx->GetChildAddress() );
+            return put_result.error();
+        }
+
+        m_logger->info( "ParseRevokeTransaction: applied revoke — reg/{} detach_flag set to true",
+                         revoke_tx->GetChildAddress() );
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRevokeTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Reverting a Revoke
+        // would require snapshotting the prior reg/ state, which is not currently tracked; leaving
+        // the target Detached is the conservative, fail-safe default.
         return outcome::success();
     }
 

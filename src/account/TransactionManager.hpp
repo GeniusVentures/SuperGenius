@@ -640,6 +640,36 @@ namespace sgns
          * @return Always outcome::success() — no state to mutate.
          */
         outcome::result<void> RevertRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief Parser for "revoke" tx type — applies the RevokeTx's effect to the target
+         *        reg/{child_addr} record (Phase 5).
+         * @details Unlike ParseRegistrationTransaction, this is NOT a no-op. A RevokeTx is
+         *          stored/broadcast at tx/{hash} (SendTransactionItem's default path, since only
+         *          "registration" routes to reg/{src_addr}), so its effect on reg/{child_addr}
+         *          must be actively applied here once the transaction is confirmed. Reads the
+         *          existing reg/{child_addr} record, preserves main_address/sequence/metadata/
+         *          supersedes_sequence, and writes back a copy with detach_flag=true via a direct
+         *          local globaldb_m->Put — mirrors PutProducedUTXOs' established "derive a
+         *          side-effect locally, per-node, from an already-validated transaction" pattern.
+         *          This local write is never re-validated by this node's own FilterRegistration
+         *          (CrdtDatastore::GetDeltaFromNode only filters deltas received FROM peers, not
+         *          elements this node posts itself), which is safe because CheckParentChildAuthority's
+         *          "revoke" branch has already gated this RevokeTx during consensus validation before
+         *          ParseTransaction ever runs.
+         * @return outcome::success() once applied, or forwards a Put failure. Tolerates an absent
+         *         or already-registration-typed-mismatched reg/{child_addr} record (logs and returns
+         *         success) rather than failing the whole confirmed-transaction pipeline.
+         */
+        outcome::result<void> ParseRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op reverter for "revoke" tx type (Phase 5).
+         * @details Reverting a Revoke would require snapshotting the PRIOR reg/ state, which is
+         *          not currently tracked. Leaving a rolled-back Revoke's target in the
+         *          (already-applied) Detached state is a conservative, fail-safe default — the
+         *          child remains protected, not accidentally re-exposed to main's authority.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> RevertRevokeTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
