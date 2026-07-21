@@ -197,11 +197,37 @@ prior `SetUpTestSuite` never actually completed in any environment before now:
 pipeline genuinely works when reached — 2 of 11 nodes independently scanned the correct block
 range and minted the seeded burn. However, only 2 of 11 nodes reached the
 `InitializeAndStartBridge` lifecycle stage within the 90s window; the test still fails overall.
-Tracked as `.planning/todos/pending/bridge-race-only-2-of-11-nodes-start-bridge.md`
-(`resolves_phase: 08`) for a dedicated follow-up — likely a Light-node startup-latency/tuning gap
-specific to the 11-node topology, not yet root-caused.
+This was root-caused via a `/gsd:debug` session (see below).
 
-**Revised score:** genuinely unknown until the remaining gap is resolved and the suite passes
-end-to-end against live Anvil. The phase is closer to goal achievement than the original
-2026-07-17 pass (2 additional real bugs found and fixed via actual execution) but is **not yet
-complete** — `gaps_found` stands.
+## Post-Debug Update — 2026-07-21 (later same day)
+
+`/gsd:debug` session `2-of-11-nodes-start-bridge` (resolved, archived at
+`.planning/debug/resolved/2-of-11-nodes-start-bridge.md`) found and fixed the actual root cause:
+
+3. **`ValidatorRegistry` never retried genesis-registry discovery (fixed, commit `a133fced`):**
+   `ValidatorRegistry::InitializeCache()` attempts discovery exactly once, synchronously, at
+   construction. If the registry hasn't synced into a node's local CRDT store yet (the common case
+   for most nodes in an 11-node concurrent bootstrap), it silently gives up — no retry, no
+   `NotifyInitialized()` call. The only remaining path was a passive broadcast that isn't guaranteed
+   to reach every node. Added `RetryInitializationIfNeeded()`, wired into `Blockchain::Start()`'s
+   existing deferred-retry cadence (already firing every ~5-10s). **Verified: `InitializeAndStartBridge`
+   now fires for 11/11 nodes**, confirmed across two independent runs.
+
+4. **Stale per-node data directories surviving a crash (fixed, commit `fdfe98d5`):** while
+   independently re-verifying fix #3, the orchestrator's own rerun **segfaulted**. Root cause (spotted
+   by the user): `TearDownTestSuite`'s directory cleanup only runs on a clean exit; the earlier crash
+   skipped it, leaving stale RocksDB/CRDT state that the next run bootstrapped against. Added a
+   proactive `remove_all()` at the start of `SetUpTestSuite`. **Verified: no more segfault** — the
+   fixed run completed its full gtest assertion cycle cleanly.
+
+**Current status:** both the original startup-gap bug and the crash are resolved. A clean run now
+shows 33 mint attempts (up from 2-6) — most nodes are genuinely racing — but not all 11 complete
+within the 90s window, and teardown ran long enough to graze ctest's outer 180s limit. Tracked as
+`.planning/todos/pending/bridge-race-not-all-11-mint-within-window.md` (`resolves_phase: 08`) for a
+dedicated follow-up.
+
+**Revised score:** significant, confirmed progress (3 real bugs found and fixed via actual
+execution across this phase — genesis-authority race, missing watcher config, `ValidatorRegistry`
+retry gap — plus a crash fixed as a byproduct). Phase is **not yet complete** — one narrower,
+better-characterized timing gap remains. `gaps_found` stands, but the gap is now much smaller than
+at any prior checkpoint.
