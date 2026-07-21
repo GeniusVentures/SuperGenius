@@ -114,7 +114,10 @@ namespace sgns
             { "mint-v2", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "migration", { &TransactionManager::ParseMintTransaction, &TransactionManager::RevertMintTransaction } },
             { "escrow-hold",
-              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
+              { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } },
+            { "registration",
+              { &TransactionManager::ParseRegistrationTransaction,
+                &TransactionManager::RevertRegistrationTransaction } } };
 
     std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                                                  std::shared_ptr<boost::asio::io_context> ctx,
@@ -2160,6 +2163,24 @@ namespace sgns
             account_m->GetUTXOManager().RollbackUTXOs( params.first, escrow_tx->GetHash() );
         }
 
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::ParseRegistrationTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op by design — see declaration comment in TransactionManager.hpp. Registration
+        // transactions carry no UTXO parameters and are already fully handled (signature/
+        // sequence/monotonicity validation, CRDT persistence) by FilterRegistration/
+        // RegElementCallback. This entry exists solely to satisfy transaction_parsers'
+        // membership check in CheckTransactionWellFormed/ParseTransaction/RevertTransaction.
+        return outcome::success();
+    }
+
+    outcome::result<void> TransactionManager::RevertRegistrationTransaction(
+        const std::shared_ptr<GeniusTransaction> & /*tx*/ )
+    {
+        // No-op — see ParseRegistrationTransaction.
         return outcome::success();
     }
 

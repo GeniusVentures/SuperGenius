@@ -619,6 +619,27 @@ namespace sgns
         outcome::result<void> RevertTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> RevertEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op parser for "registration" tx type (Phase 3 Plan 04 fix).
+         * @details RegistrationTransaction carries no UTXO parameters — its CRDT
+         *          acceptance/validation is handled entirely by FilterRegistration/
+         *          RegElementCallback, independently of this post-confirmation dispatch table.
+         *          This entry exists solely so CheckTransactionWellFormed's
+         *          transaction_parsers.find(tx.GetType()) membership check recognizes
+         *          "registration" as a known type — without it, EVERY registration transaction
+         *          unconditionally fails ValidateTransactionForConsensus ("Unknown tx type"),
+         *          meaning Blockchain::CheckCertifiedParent's CheckCertificate(reg_tx->GetHash())
+         *          gate (D-26, added Plan 01) could never resolve true for any real registration
+         *          proposal submitted through the normal nonce-consensus pipeline. Discovered
+         *          while implementing Plan 04's CONS-02 certification test.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> ParseRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
+        /**
+         * @brief No-op reverter for "registration" tx type — see ParseRegistrationTransaction.
+         * @return Always outcome::success() — no state to mutate.
+         */
+        outcome::result<void> RevertRegistrationTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> PutProducedUTXOs( const GeniusTransaction &tx );
         outcome::result<void> DeleteProducedUTXOs( const GeniusTransaction &tx );
 
