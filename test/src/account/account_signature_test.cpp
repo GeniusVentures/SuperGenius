@@ -8,6 +8,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 
 namespace
 {
@@ -66,7 +67,7 @@ namespace
         void TearDown() override
         {
             GeniusAccount::SetSecureStorageFactory( nullptr );
-            boost::filesystem::remove_all( path_ );
+            test::removeAllWithRetry( path_.string() );
         }
 
         boost::filesystem::path path_;

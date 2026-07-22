@@ -13,6 +13,7 @@
 #include "account/GeniusNode.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace sgns
@@ -35,8 +36,8 @@ namespace sgns
             full_config_.BaseWritePath   = binary_path + "/bootstrap_reconnect_full/";
             client_config_.BaseWritePath = binary_path + "/bootstrap_reconnect_client/";
 
-            std::filesystem::remove_all( full_config_.BaseWritePath );
-            std::filesystem::remove_all( client_config_.BaseWritePath );
+            test::removeAllWithRetry( full_config_.BaseWritePath );
+            test::removeAllWithRetry( client_config_.BaseWritePath );
 
             ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 51000, false ).has_value() );
             ASSERT_TRUE( GeniusNode::WriteSgnsConfig( full_config_.BaseWritePath, "Full", false ).has_value() );
@@ -87,8 +88,6 @@ namespace sgns
         {
             client_node_.reset();
             full_node_.reset();
-            std::filesystem::remove_all( client_config_.BaseWritePath );
-            std::filesystem::remove_all( full_config_.BaseWritePath );
         }
 
         DevConfig                   full_config_   = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), {} };

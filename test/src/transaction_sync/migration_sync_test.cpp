@@ -1,6 +1,5 @@
 #include <filesystem>
 #include <fstream>
-#include <thread>
 #include <iostream>
 #include <cstring>
 #include <system_error>
@@ -17,6 +16,7 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
@@ -93,15 +93,7 @@ protected:
                 // Remove new database directories, preserving legacy (00) test data
                 if ( name.find( DB_PREFIX ) == std::string::npos )
                 {
-                    fs::remove_all( entry.path(), ec );
-                    // On Windows, file locks may not be immediately released
-                    // Retry removal if it fails
-                    if ( ec && fs::exists( entry.path() ) )
-                    {
-                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-                        ec.clear();
-                        fs::remove_all( entry.path() );
-                    }
+                    sgns::test::removeAllWithRetry( entry.path() );
                 }
             }
         }
@@ -138,7 +130,7 @@ protected:
         std::string     binaryPath = boost::dll::program_location().parent_path().string();
         std::string     outPath    = ( binaryPath + '/' ).append( FULL_NODE_SUBDIR ) + '_' + std::to_string( id ) + '/';
         std::error_code ec;
-        fs::remove_all( outPath, ec );
+        sgns::test::removeAllWithRetry( outPath, ec );
         fs::create_directories( outPath, ec );
 
         GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
@@ -194,7 +186,7 @@ TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
     const auto      unique_suffix = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() );
     const fs::path  db_path       = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
     std::error_code ec;
-    fs::remove_all( db_path, ec );
+    sgns::test::removeAllWithRetry( db_path, ec );
     fs::create_directories( db_path, ec );
     ASSERT_FALSE( ec ) << "Failed to create temp DB directory: " << ec.message();
 
@@ -211,7 +203,7 @@ TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
     ASSERT_TRUE( eligible.has_value() ) << eligible.error().message();
     EXPECT_FALSE( eligible.value() );
 
-    fs::remove_all( db_path, ec );
+    sgns::test::removeAllWithRetry( db_path, ec );
 }
 
 INSTANTIATE_TEST_SUITE_P(

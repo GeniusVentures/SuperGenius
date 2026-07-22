@@ -28,6 +28,7 @@
 #include <libp2p/log/logger.hpp>
 #include <libp2p/log/configurator.hpp>
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
@@ -99,12 +100,12 @@ TEST_F( PubsubGraphsyncTest, MultiGlobalDBTest )
     std::string basePath4  = binaryPath + "/pubsub_graphsync_add2";
     std::string basePath5  = binaryPath + "/pubsub_graphsync_add3";
     std::string basePath6  = binaryPath + "/pubsub_graphsync_add4";
-    std::filesystem::remove_all( basePath1 );
-    std::filesystem::remove_all( basePath2 );
-    std::filesystem::remove_all( basePath3 );
-    std::filesystem::remove_all( basePath4 );
-    std::filesystem::remove_all( basePath5 );
-    std::filesystem::remove_all( basePath6 );
+    sgns::test::removeAllWithRetry( basePath1 );
+    sgns::test::removeAllWithRetry( basePath2 );
+    sgns::test::removeAllWithRetry( basePath3 );
+    sgns::test::removeAllWithRetry( basePath4 );
+    sgns::test::removeAllWithRetry( basePath5 );
+    sgns::test::removeAllWithRetry( basePath6 );
 
     auto io_context = std::make_shared<boost::asio::io_context>();
 

@@ -11,6 +11,7 @@
 #include "account/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
@@ -28,7 +29,7 @@ public:
     {
         try
         {
-            boost::filesystem::remove_all( path );
+            test::removeAllWithRetry( path.string() );
         }
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {
@@ -113,8 +114,8 @@ TEST_F( AccountManagement, SetPayoutAddress )
 
     try
     {
-        boost::filesystem::remove_all( path_requester );
-        boost::filesystem::remove_all( path_receiver );
+        test::removeAllWithRetry( path_requester.string() );
+        test::removeAllWithRetry( path_receiver.string() );
     }
     catch ( ... )
     {

@@ -7,6 +7,7 @@
 #include <chrono>
 #include <filesystem>
 #include <fstream>
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns::ipfs_bitswap;
@@ -78,7 +79,7 @@ TEST_F( PublishConcurrencyTest, PublishDirectoryCallbackOnIoContext )
         "PublishDirectory callback was not invoked within timeout",
         &elapsed );
 
-    std::filesystem::remove_all( tmpDir );
+    sgns::test::removeAllWithRetry( tmpDir );
     EXPECT_TRUE( callbackFired.load() );
 }
 

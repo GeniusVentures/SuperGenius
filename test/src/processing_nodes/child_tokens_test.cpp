@@ -18,6 +18,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "blockchain/Blockchain.hpp"
@@ -75,7 +76,7 @@ namespace
 
         GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
-        std::filesystem::remove_all( devConfig.BaseWritePath );
+        removeAllWithRetry( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );
 
         std::string key;

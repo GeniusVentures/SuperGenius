@@ -32,6 +32,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp"
@@ -446,7 +447,7 @@ void BridgeAnvilE2ETest::TearDownTestSuite()
     s_anvil.Stop();
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
     }
 }
 

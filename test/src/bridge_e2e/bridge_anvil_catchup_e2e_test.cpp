@@ -52,6 +52,7 @@
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 
 #include "anvil_fixture.hpp"
 
@@ -486,7 +487,7 @@ void BridgeAnvilCatchupE2ETest::TearDownTestSuite()
     std::error_code ec;
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath, ec );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath, ec );
     }
 }
 

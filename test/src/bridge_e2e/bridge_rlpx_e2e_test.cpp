@@ -35,6 +35,7 @@
 #include "eth/eth_watch_service.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp"
@@ -549,9 +550,9 @@ void BridgeRlpxE2ETest::TearDownTestSuite()
     node_proc2.reset();
 
     // Remove test data directories (NOT the RLPx services — intentionally leaked per live-test pattern)
-    std::filesystem::remove_all( gGeniusNodeConfig.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig2.BaseWritePath );
-    std::filesystem::remove_all( gGeniusNodeConfig3.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig2.BaseWritePath );
+    sgns::test::removeAllWithRetry( gGeniusNodeConfig3.BaseWritePath );
 
     spdlog::info( "rlpx_e2e: teardown complete" );
 }

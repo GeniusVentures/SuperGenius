@@ -15,6 +15,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 
 namespace fs = boost::filesystem;
 
@@ -46,8 +47,8 @@ TEST( AccountCreationTest, CreationWithEthereumKey )
     const auto path2 = dir / "account2";
     try
     {
-        fs::remove_all( path1 );
-        fs::remove_all( path2 );
+        sgns::test::removeAllWithRetry( path1.string() );
+        sgns::test::removeAllWithRetry( path2.string() );
     }
     catch ( ... )
     {
@@ -80,7 +81,7 @@ TEST( AccountCreationTest, CreationWithMnemonic )
     const auto path = boost::dll::program_location().parent_path() / "mnemonic";
     try
     {
-        fs::remove_all( path );
+        sgns::test::removeAllWithRetry( path.string() );
     }
     catch ( ... )
     {
@@ -107,8 +108,8 @@ TEST( AccountCreationTest, CreationWithRandomMnemonicInAnEmptyDirectory )
 {
     try
     {
-        fs::remove_all( "./account1" );
-        fs::remove_all( "./account2" );
+        sgns::test::removeAllWithRetry( "./account1" );
+        sgns::test::removeAllWithRetry( "./account2" );
     }
     catch ( ... )
     {
@@ -126,8 +127,8 @@ TEST( AccountCreationTest, CreationWithRandomMnemonic )
 {
     try
     {
-        fs::remove_all( "./account1" );
-        fs::remove_all( "./account2" );
+        sgns::test::removeAllWithRetry( "./account1" );
+        sgns::test::removeAllWithRetry( "./account2" );
     }
     catch ( ... )
     {

@@ -15,6 +15,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/genius_node_test_access.hpp"
 #include "testutil/wait_condition.hpp"
@@ -48,7 +49,7 @@ protected:
 
         auto prepare_node_dir = []( const std::string &path )
         {
-            std::filesystem::remove_all( path );
+            removeAllWithRetry( path );
             std::filesystem::create_directories( path );
             std::ofstream bridge_config_file( path + "bridge_chains_config.json" );
             bridge_config_file << "{}";

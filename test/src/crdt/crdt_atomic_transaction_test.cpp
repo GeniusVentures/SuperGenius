@@ -10,6 +10,7 @@
 #include <atomic>
 #include <chrono>
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include "crdt_custom_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
 
@@ -35,7 +36,7 @@ namespace sgns::crdt
         {
             // Remove leftover database
             std::string databasePath = "supergenius_atomic_transaction_test";
-            fs::remove_all( databasePath );
+            test::removeAllWithRetry( databasePath );
 
             // Create new database
             rocksdb::Options options;

@@ -36,6 +36,7 @@
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -130,7 +131,7 @@ protected:
 
         if ( !reuseStorage )
         {
-            std::filesystem::remove_all( devConfig.BaseWritePath );
+            sgns::test::removeAllWithRetry( devConfig.BaseWritePath );
             std::filesystem::create_directories( devConfig.BaseWritePath );
             {
                 std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
@@ -209,29 +210,6 @@ protected:
         GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                                                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-        // Helper to remove directory with retry on Windows (file locks may not be immediately released)
-        auto removeWithRetry = []( const std::string &path )
-        {
-            std::error_code ec;
-            std::filesystem::remove_all( path, ec );
-
-            // On Windows, retry if removal fails due to file locks
-            if ( ec && std::filesystem::exists( path ) )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-                ec.clear();
-                std::filesystem::remove_all( path, ec );
-
-                // Final attempt after longer delay
-                if ( ec && std::filesystem::exists( path ) )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-                    ec.clear();
-                    std::filesystem::remove_all( path, ec );
-                }
-            }
-        };
-
         auto binaryPath = boost::dll::program_location().parent_path();
 
         // Clean up any previous test runs
@@ -239,7 +217,8 @@ protected:
         {
             if ( entry.is_directory() && entry.path().filename().string().find( FILE_PREFIX ) != std::string::npos )
             {
-                removeWithRetry( entry.path().string() );
+                std::error_code ec;
+                sgns::test::removeAllWithRetry( entry.path().string(), ec );
             }
         }
     }

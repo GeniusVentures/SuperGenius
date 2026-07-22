@@ -24,6 +24,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "proof/TransferProof.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -69,9 +70,9 @@ namespace sgns
 
             try
             {
-                std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
-                std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
-                std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG2.BaseWritePath );
+                test::removeAllWithRetry( DEV_CONFIG3.BaseWritePath );
             }
             catch ( ... )
             {

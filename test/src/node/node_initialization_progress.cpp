@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <gtest/gtest.h>
 
@@ -18,7 +19,7 @@ TEST( GeniusNode, InitializationProgress )
 
     try
     {
-        boost::filesystem::remove_all( path );
+        sgns::test::removeAllWithRetry( path.string() );
     }
     catch ( ... ) //NOLINT(bugprone-empty-catch)
     {

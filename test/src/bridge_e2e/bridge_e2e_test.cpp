@@ -32,6 +32,7 @@
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include <eth/bridge_event.hpp>
@@ -373,9 +374,9 @@ void BridgeE2ETest::TearDownTestSuite()
     node_proc2.reset();
 
     // Remove test data directories
-    std::filesystem::remove_all( DEV_CONFIG.BaseWritePath );
-    std::filesystem::remove_all( DEV_CONFIG2.BaseWritePath );
-    std::filesystem::remove_all( DEV_CONFIG3.BaseWritePath );
+    sgns::test::removeAllWithRetry( DEV_CONFIG.BaseWritePath );
+    sgns::test::removeAllWithRetry( DEV_CONFIG2.BaseWritePath );
+    sgns::test::removeAllWithRetry( DEV_CONFIG3.BaseWritePath );
 }
 
 /**

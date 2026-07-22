@@ -2,6 +2,7 @@
 #include "account/TokenID.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
@@ -24,7 +25,7 @@ namespace
         auto path = boost::dll::program_location().parent_path() / name;
         try
         {
-            boost::filesystem::remove_all( path );
+            test::removeAllWithRetry( path.string() );
         }
         catch ( ... ) //NOLINT(bugprone-empty-catch)
         {

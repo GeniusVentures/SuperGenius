@@ -11,6 +11,7 @@
 #include "account/TokenID.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -40,7 +41,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
 
     // All nodes in this test are non-processors.
     // is_processor is now read exclusively from sgns_config.json (defaults to true).
-    std::filesystem::remove_all( devConfig.BaseWritePath );
+    sgns::test::removeAllWithRetry( devConfig.BaseWritePath );
     std::filesystem::create_directories( devConfig.BaseWritePath );
     {
         std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
