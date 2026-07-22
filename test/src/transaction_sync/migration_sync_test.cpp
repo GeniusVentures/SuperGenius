@@ -56,7 +56,6 @@ protected:
     static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
     static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
     static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-    static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 
     void SetEligibilityCheckEnabled( bool enabled )
     {
@@ -111,8 +110,7 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string &binaryParent,
                                                                  const std::string &subdir,
                                                                  const char        *key_hex,
-                                                                 bool               is_full_node = false,
-                                                                 uint16_t           base_port    = 40001 )
+                                                                 bool               is_full_node = false )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
@@ -122,7 +120,7 @@ protected:
 
         // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, base_port, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
                                            is_full_node ? "Full" : "Light",
                                            /*is_processor=*/false,
@@ -151,8 +149,7 @@ protected:
 
         // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, unique_port, /*auto_dht=*/false );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                       /*node_type=*/"Full",
                                       /*is_processor=*/false,

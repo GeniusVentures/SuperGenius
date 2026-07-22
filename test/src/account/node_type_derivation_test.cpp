@@ -12,8 +12,7 @@ using namespace sgns;
 namespace
 {
     // Same private key across scenes -> same account address -> deterministic behavior.
-    constexpr const char *TEST_PRIVATE_KEY =
-        "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+    constexpr const char *TEST_PRIVATE_KEY = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
     GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
@@ -38,9 +37,8 @@ namespace
     // GeniusNode construction so account creation uses the test backend.
     void UseMemorySecureStorage()
     {
-        GeniusAccount::SetSecureStorageFactory(
-            []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
-            { return std::make_shared<MemorySecureStorage>( identifier ); } );
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
 } // namespace
 
@@ -51,9 +49,13 @@ namespace
 TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 {
     UseMemorySecureStorage();
-    auto         base       = MakeTempDir( "ntd_derivation" );
-    const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true, /*rpc_catchup=*/false );
+    auto       base       = MakeTempDir( "ntd_derivation" );
+    const auto dev_config = MakeDevConfig( base );
+    GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                 /*node_type=*/"full",
+                                 /*is_processor=*/true,
+                                 /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -69,9 +71,13 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
 {
     UseMemorySecureStorage();
-    auto         base       = MakeTempDir( "ntd_failure" );
-    const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
+    auto       base       = MakeTempDir( "ntd_failure" );
+    const auto dev_config = MakeDevConfig( base );
+    GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath,
+                                 /*node_type=*/"Light",
+                                 /*is_processor=*/true,
+                                 /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ "not-a-valid-hex-key" } );
     EXPECT_EQ( node, nullptr );

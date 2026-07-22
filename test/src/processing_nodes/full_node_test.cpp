@@ -2,7 +2,6 @@
 #include <boost/dll.hpp>
 #include <thread>
 #include <cstring>
-#include <atomic>
 #include <cstdio>
 #include <iostream>
 #include <filesystem>
@@ -34,8 +33,6 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
                                                        const std::string &folderName,
                                                        const std::string &privKey )
 {
-    static std::atomic<int> nodeCounter{ 0 };
-    int                     id         = nodeCounter.fetch_add( 1 );
     std::string             binaryPath = boost::dll::program_location().parent_path().string();
     std::string             outPath    = binaryPath + "/" + folderName + "/";
 
@@ -50,8 +47,7 @@ static std::shared_ptr<GeniusNode> CreateNodeWithMode( const std::string &self_a
         bridgeConfigFile << "{}";
     }
 
-    uint16_t port = static_cast<uint16_t>( 40001 + id );
-    GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, port, /*auto_dht=*/false );
+    GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
     auto node = GeniusNode::New( devConfig, FromPrivateKey{ privKey } );

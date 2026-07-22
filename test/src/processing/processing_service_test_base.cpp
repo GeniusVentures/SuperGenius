@@ -193,13 +193,12 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
     {
         auto pubsub_node = m_pubsub_nodes.emplace_back( std::make_shared<GossipPubSub>( config ) );
 
-        int port = 40001 + i;
-        Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
+        Color::PrintInfo( "Attempting to start PubSub node ", i, " on an OS-assigned port" );
         for (auto node : bootstrap_nodes) {
             Color::PrintInfo("  with bootstrap node: ", node);
         }
 
-        m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( port, bootstrap_nodes ) );
+        m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( 0, bootstrap_nodes ) );
 
         std::chrono::milliseconds nodeStartTime;
         ASSERT_WAIT_FOR_CONDITION(

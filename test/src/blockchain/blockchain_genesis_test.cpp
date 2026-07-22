@@ -36,6 +36,46 @@
 
 using namespace sgns;
 
+TEST( BlockchainGenesisConfigTest, AuthorizedAddressIsSafeDuringConcurrentStartupAccess )
+{
+    const auto        original = Blockchain::GetAuthorizedFullNodeAddress();
+    const std::string first( 128, 'a' );
+    const std::string second( 257, 'b' );
+    std::atomic_bool  ready{ false };
+    std::atomic_bool  done{ false };
+    bool              valid = true;
+
+    Blockchain::SetAuthorizedFullNodeAddress( first );
+    std::thread reader(
+        [&]()
+        {
+            ready.store( true );
+            while ( !done.load() )
+            {
+                const auto address = Blockchain::GetAuthorizedFullNodeAddress();
+                if ( address != first && address != second )
+                {
+                    valid = false;
+                    return;
+                }
+            }
+        } );
+
+    while ( !ready.load() )
+    {
+        std::this_thread::yield();
+    }
+    for ( int i = 0; i < 1000; ++i )
+    {
+        Blockchain::SetAuthorizedFullNodeAddress( i % 2 == 0 ? first : second );
+    }
+
+    done.store( true );
+    reader.join();
+    Blockchain::SetAuthorizedFullNodeAddress( original );
+    EXPECT_TRUE( valid );
+}
+
 class BlockchainGenesisTest : public ::testing::Test
 {
 protected:
@@ -87,8 +127,7 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                            isFullNode ? "Full" : "Light",
                                            /*is_processor=*/false,
@@ -115,7 +154,9 @@ protected:
                 std::error_code ec;
                 std::filesystem::remove_all( dir, ec );
                 if ( !ec )
+                {
                     break;
+                }
                 std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
             }
         }
@@ -171,9 +212,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     // Without authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync without authorization..." << std::endl;
-    (void)waitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 5000 ) );
+    (void) waitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                             std::chrono::milliseconds( 5000 ) );
 
     // Verify that nodes are NOT in READY state due to missing authorization
     std::cout << "Verifying nodes cannot reach READY state without authorization..." << std::endl;
@@ -370,9 +410,8 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     // With wrong authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync with wrong authorization..." << std::endl;
-    (void)waitForCondition(
-        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 8000 ) );
+    (void) waitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                             std::chrono::milliseconds( 8000 ) );
 
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
