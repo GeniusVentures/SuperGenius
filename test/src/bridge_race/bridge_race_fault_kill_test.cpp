@@ -2,7 +2,7 @@
  * @file       bridge_race_fault_kill_test.cpp
  * @brief      Phase 8 D-10: node-kill (object-lifecycle destruction) mid-mint fault test.
  * @date       2026-07-17
- * @author     Super Genius (info@gnus.ai)
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * Destroys one Light node's GeniusNode instance (s_nodes[kKilledNodeIndex].reset())
  * IMMEDIATELY after releasing all 11 nodes' RPC endpoints (D-03), before any
@@ -57,7 +57,8 @@ TEST_F( BridgeRaceE2ETest, NodeKillMidMintStillConverges )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
+            << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
     spdlog::info( "bridge_race fault_kill: released ConfigureRpcEndpoint on all {} nodes",
                   BridgeRaceE2ETest::kNodeCount );

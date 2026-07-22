@@ -3,7 +3,7 @@
  * @brief      Phase 8 D-04: 3-5 concurrently seeded burns each mint exactly once with no
  *             cross-burn interference.
  * @date       2026-07-16
- * @author     Super Genius (info@gnus.ai)
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * Seeds kBatchBurnCount (4, within D-04's 3-5 range) distinct burns to 4 distinct
  * Light-node destinations BEFORE any node's RPC endpoint is configured, then releases
@@ -79,7 +79,8 @@ TEST_F( BridgeRaceE2ETest, BatchBurnsNoInterference )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
+            << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
     spdlog::info( "bridge_race batch: released ConfigureRpcEndpoint on all {} nodes",
                   BridgeRaceE2ETest::kNodeCount );

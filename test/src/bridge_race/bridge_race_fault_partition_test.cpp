@@ -2,7 +2,7 @@
  * @file       bridge_race_fault_partition_test.cpp
  * @brief      Phase 8 D-11: pubsub partition + heal fault test.
  * @date       2026-07-17
- * @author     Super Genius (info@gnus.ai)
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * Splits the 11-node cluster into two pubsub/libp2p-layer groups by disconnecting all
  * cross-group peer links, seeds the burn and releases RPC endpoints WHILE partitioned
@@ -92,7 +92,8 @@ TEST_F( BridgeRaceE2ETest, PartitionThenHealConvergesExactlyOnce )
     // real Anvil RPC endpoint, only the pubsub/CRDT mesh is split).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
+            << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
     spdlog::info( "bridge_race fault_partition: released ConfigureRpcEndpoint on all {} nodes while partitioned",
                   BridgeRaceE2ETest::kNodeCount );

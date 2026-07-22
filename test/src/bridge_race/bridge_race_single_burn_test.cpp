@@ -2,7 +2,7 @@
  * @file       bridge_race_single_burn_test.cpp
  * @brief      Phase 8 D-01/D-02: single contested burn, exactly-once mint across 11 nodes.
  * @date       2026-07-16
- * @author     Super Genius (info@gnus.ai)
+ * @author     Henrique A Klein (hklein@gnus.ai)
  *
  * Seeds ONE burn to a Light-node destination BEFORE any node's RPC endpoint is
  * configured, then releases all 11 nodes' ConfigureRpcEndpoint calls back-to-back with
@@ -22,7 +22,7 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
     const uint64_t initial_balance = s_nodes[0]->GetBalance( dest_addr );
 
     spdlog::info( "bridge_race single_burn: dest={} initial_balance={}",
-                  dest_addr.substr( 0, 16 ),
+                  dest_addr.substr( 0, 8 ),
                   initial_balance );
 
     // Seed the single contested burn BEFORE any ConfigureRpcEndpoint call (D-03).
@@ -51,7 +51,8 @@ TEST_F( BridgeRaceE2ETest, SingleContestedBurnExactlyOnce )
     // the loop (D-03 — the race-window trigger).
     for ( unsigned int i = 0u; i < BridgeRaceE2ETest::kNodeCount; ++i )
     {
-        s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps );
+        ASSERT_TRUE( s_nodes[i]->ConfigureRpcEndpoint( sgns::test::anvil::kSepoliaChainId, anvil_eps ) )
+            << "Node " << i << " rejected RPC endpoint configuration after READY";
     }
     spdlog::info( "bridge_race single_burn: released ConfigureRpcEndpoint on all {} nodes",
                   BridgeRaceE2ETest::kNodeCount );
