@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <chrono>
+#include <mutex>
 #include <system_error>
 #include <unordered_set>
 #include "blockchain/Blockchain.hpp"
@@ -50,6 +51,12 @@ namespace sgns
 {
     namespace
     {
+        std::mutex &GenesisConfigMutex()
+        {
+            static std::mutex mutex;
+            return mutex;
+        }
+
         base::Logger blockchain_logger()
         {
             // Always call base::createLogger to get the current logger
@@ -505,6 +512,7 @@ namespace sgns
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
     {
         auto  logger  = base::createLogger( "Blockchain" );
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         auto &address = AuthorizedFullNodeAddressStorage();
         logger->info( "Setting authorized full node address from {} to {}",
                       address.substr( 0, 8 ),
@@ -512,19 +520,22 @@ namespace sgns
         address = pub_address;
     }
 
-    const std::string &Blockchain::GetAuthorizedFullNodeAddress()
+    std::string Blockchain::GetAuthorizedFullNodeAddress()
     {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         return AuthorizedFullNodeAddressStorage();
     }
 
     void Blockchain::SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses )
     {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         auto &storage = AdditionalGenesisValidatorAddressesStorage();
         storage       = addresses;
     }
 
-    const std::vector<std::string> &Blockchain::GetAdditionalGenesisValidatorAddresses()
+    std::vector<std::string> Blockchain::GetAdditionalGenesisValidatorAddresses()
     {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         return AdditionalGenesisValidatorAddressesStorage();
     }
 

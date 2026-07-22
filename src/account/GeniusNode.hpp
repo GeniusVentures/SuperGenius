@@ -725,7 +725,7 @@ namespace sgns
          * @brief Gets the current authorized full-node public address.
          * @return Public address authorized to create genesis blocks.
          */
-        const std::string &GetAuthorizedFullNodeAddress() const;
+        std::string GetAuthorizedFullNodeAddress() const;
 
         /**
          * @brief Returns the current GeniusNode lifecycle state.

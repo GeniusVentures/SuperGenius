@@ -1675,6 +1675,11 @@ namespace sgns
 
         ShutdownForDestruction();
 
+        // FileManager is process-global. Do not let it retain this node's Bitswap
+        // after the PubSub host and event bus that Bitswap references are destroyed.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        bitswap_.reset();
+
         if ( pubsub_ )
         {
             pubsub_->Stop();
@@ -3165,7 +3170,7 @@ namespace sgns
         }
     }
 
-    const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
+    std::string GeniusNode::GetAuthorizedFullNodeAddress() const
     {
         return Blockchain::GetAuthorizedFullNodeAddress();
     }

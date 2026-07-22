@@ -122,7 +122,7 @@ namespace sgns
          * @brief Get the current authorized full node public address
          * @return The authorized full node public address
          */
-        static const std::string &GetAuthorizedFullNodeAddress();
+        static std::string GetAuthorizedFullNodeAddress();
 
         /**
          * @brief Registers additional validator addresses to include in the genesis registry.
@@ -137,7 +137,7 @@ namespace sgns
          * @brief Returns additional genesis validator addresses previously set.
          * @return Vector of additional genesis validator public addresses.
          */
-        static const std::vector<std::string> &GetAdditionalGenesisValidatorAddresses();
+        static std::vector<std::string> GetAdditionalGenesisValidatorAddresses();
 
         /**
          * @brief Returns the stored CID of the selected genesis block.
