@@ -1,69 +1,65 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Multi-Signature Secure CRDT Storage
-current_phase: 11
-status: executing
-last_updated: "2026-07-24T18:58:19.372Z"
-last_activity: 2026-07-24 -- Phase 11 execution started
+milestone: v2.0
+milestone_name: Slot-Scoped Consensus Finality
+current_phase: 09
+status: planning
+last_updated: "2026-07-22T21:34:36.258Z"
+last_activity: 2026-07-22 — Phase 9 context gathered
 progress:
-  total_phases: 5
-  completed_phases: 3
-  total_plans: 7
-  completed_plans: 5
-  percent: 60
+  total_phases: 4
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
-# State: SuperGenius — Multi-Signature Secure CRDT Storage
+# State: SuperGenius — Slot-Scoped Consensus Finality
 
-**Last updated:** 2026-07-20
-**Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 11
+**Last updated:** 2026-07-22
+**Milestone:** v2.0 — Slot-Scoped Consensus Finality
+**Current Phase:** 09
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-07-20)
+See: `.planning/PROJECT.md` (updated 2026-07-22)
 
-**Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 11 — burnconfig-quorum-wiring
+**Core value:** At most one valid certificate may finalize a canonical consensus slot.
+**Current focus:** Phase 9 — Canonical Slot and Certificate Storage
 
 ## Current Position
 
-Phase: 11 (burnconfig-quorum-wiring) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 11
-Last activity: 2026-07-24 -- Phase 11 execution started
+Phase: 09 (Canonical Slot and Certificate Storage) — not started
+Plan: —
+Status: Phase 9 context gathered — ready to plan
+Last activity: 2026-07-22 — Phase 9 context gathered
 
 ## Roadmap Snapshot
 
 | Phase | Name | Status | Requirements |
 |-------|------|--------|--------------|
-| 8 | MultiSig Primitive | not started | MSIG-01, MSIG-02, MSIG-03 |
-| 9 | SecureCRDT Layer | blocked by 8 | SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04 |
-| 10 | TrustedPeerRegistry | blocked by 9 | TPR-01, TPR-02, TPR-03 |
-| 11 | BurnConfig Quorum Wiring | blocked by 10 | BURN-01, BURN-02, BURN-03 |
-| 12 | ValidatorRegistry Migration | blocked by 9 | MIG-05, MIG-06 |
+| 9 | Canonical Slot and Certificate Storage | ○ pending | SLOT-01..04, CERT-01..04, COMP-01..02 |
+| 10 | Durable Vote Lock and Finalization State Machine | ○ blocked by 9 | CERT-05..07, VOTE-01..07 |
+| 11 | Slot-Owned Bridge Burn Reservations | ○ blocked by 10 | BURN-01..05 |
+| 12 | Consensus Race and Compatibility Verification | ○ blocked by 9-11 | TEST-01..06 |
 
 ## Key Decisions
 
-- Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle — `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance
-- Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks); no new networking/RPC
-- `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) — matches `ValidatorRegistry`'s existing per-type style
-- `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set — different concerns (economic-parameter signers vs. consensus validators)
-- `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback — avoids a CRDT read on every `PayEscrow` call
+- Certificates continue signing exact proposals but are stored authoritatively by canonical slot.
+- Transaction-hash certificate lookup remains through a verified secondary index.
+- v2.0 is a clean state break; no legacy certificate migration or dual-read support.
+- Validators durably record one signature per slot before publishing it.
+- Candidate selection may change only before the validator's irreversible slot vote.
+- A valid certificate overrides local vote preference and finalizes the slot before proposal cleanup.
+- Bridge reservations are owned by the canonical burn slot, not an individual proposal.
 
 ## Notes
 
-- This milestone continues phase numbering from an undocumented prior body of work (`.planning/phases/01` through `07`, bridge-relayer/consensus-voting features). Phases 8-12 in this milestone are unrelated to those directories; do not reuse or renumber them.
-- Precedent to build from: `ValidatorRegistry` (`src/blockchain/ValidatorRegistry.hpp`) already does signature+quorum-gated CRDT updates; `ConsensusAuth.hpp` has the reusable signing-bytes/SHA-256/verify primitives.
-- Brownfield codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS).
-- Sequential dependency chain: 8 → 9 → {10 → 11, 12}. Phase 12 depends only on Phase 9 and could in principle run in parallel with 10/11, but is numbered last per the suggested delivery order.
+- The milestone is based on `bridge_race_single_burn_test` evidence in `src/account/log_bridge_race.txt`.
+- Existing planning artifacts were archived under `.planning/milestones/pre-v2.0-phases/`.
+- External research was skipped; requirements derive from the repository-level investigation.
+- Broader Phase 8 fault injection and fuzzing remain deferred future work.
 
 ## Operator Next Steps
 
-- Review `.planning/ROADMAP.md` (Milestone v1.1 section) and `.planning/REQUIREMENTS.md` traceability
-- Run `/gsd:plan-phase 8` to begin planning the MultiSig Primitive phase
-
-### v1.0 History
-
-v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
+- Run `$gsd-discuss-phase 9` after approval.
