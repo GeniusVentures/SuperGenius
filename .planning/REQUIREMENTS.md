@@ -73,47 +73,45 @@
 
 ## Traceability
 
-Roadmap phase mapping will be populated after roadmap approval.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | — | Pending |
-| SLOT-02 | — | Pending |
-| SLOT-03 | — | Pending |
-| SLOT-04 | — | Pending |
-| CERT-01 | — | Pending |
-| CERT-02 | — | Pending |
-| CERT-03 | — | Pending |
-| CERT-04 | — | Pending |
-| CERT-05 | — | Pending |
-| CERT-06 | — | Pending |
-| CERT-07 | — | Pending |
-| VOTE-01 | — | Pending |
-| VOTE-02 | — | Pending |
-| VOTE-03 | — | Pending |
-| VOTE-04 | — | Pending |
-| VOTE-05 | — | Pending |
-| VOTE-06 | — | Pending |
-| VOTE-07 | — | Pending |
-| BURN-01 | — | Pending |
-| BURN-02 | — | Pending |
-| BURN-03 | — | Pending |
-| BURN-04 | — | Pending |
-| BURN-05 | — | Pending |
-| COMP-01 | — | Pending |
-| COMP-02 | — | Pending |
-| TEST-01 | — | Pending |
-| TEST-02 | — | Pending |
-| TEST-03 | — | Pending |
-| TEST-04 | — | Pending |
-| TEST-05 | — | Pending |
-| TEST-06 | — | Pending |
+| SLOT-01 | Phase 9 | Pending |
+| SLOT-02 | Phase 9 | Pending |
+| SLOT-03 | Phase 9 | Pending |
+| SLOT-04 | Phase 9 | Pending |
+| CERT-01 | Phase 9 | Pending |
+| CERT-02 | Phase 9 | Pending |
+| CERT-03 | Phase 9 | Pending |
+| CERT-04 | Phase 9 | Pending |
+| CERT-05 | Phase 10 | Pending |
+| CERT-06 | Phase 10 | Pending |
+| CERT-07 | Phase 10 | Pending |
+| VOTE-01 | Phase 10 | Pending |
+| VOTE-02 | Phase 10 | Pending |
+| VOTE-03 | Phase 10 | Pending |
+| VOTE-04 | Phase 10 | Pending |
+| VOTE-05 | Phase 10 | Pending |
+| VOTE-06 | Phase 10 | Pending |
+| VOTE-07 | Phase 10 | Pending |
+| BURN-01 | Phase 11 | Pending |
+| BURN-02 | Phase 11 | Pending |
+| BURN-03 | Phase 11 | Pending |
+| BURN-04 | Phase 11 | Pending |
+| BURN-05 | Phase 11 | Pending |
+| COMP-01 | Phase 9 | Pending |
+| COMP-02 | Phase 9 | Pending |
+| TEST-01 | Phase 12 | Pending |
+| TEST-02 | Phase 12 | Pending |
+| TEST-03 | Phase 12 | Pending |
+| TEST-04 | Phase 12 | Pending |
+| TEST-05 | Phase 12 | Pending |
+| TEST-06 | Phase 12 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 — pending roadmap
+- Mapped to phases: 31
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-22*
-*Last updated: 2026-07-22 after initial definition*
+*Last updated: 2026-07-22 after roadmap creation*
