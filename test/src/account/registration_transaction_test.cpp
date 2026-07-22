@@ -17,6 +17,7 @@
 #include "account/GeniusAccount.hpp"
 #include "account/MigrationAllowList.hpp"
 #include "account/RegistrationTransaction.hpp"
+#include "account/RevokeTransaction.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "base/hexutil.hpp"
@@ -1946,4 +1947,209 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
     EXPECT_FALSE( tm_->CheckTransactionReplayProtection( stale_tx ) )
         << "A lifecycle-change RegistrationTx reusing an already-consumed nonce must be rejected "
            "by the nonce chain, independent of FilterRegistration's own sequence-monotonicity gate";
+}
+
+// ===================================================================
+// Phase 5 Plan 05 — Revoke adversarial + E2E test coverage (LIFE-01/02/04,
+// the main-initiated half of the lifecycle surface's adversarial coverage;
+// Plan 04 above covered the child-initiated Detach/Replace-Main half).
+// ===================================================================
+
+// ---------------------------------------------------------------------------
+// RevokeChildEndToEnd — TransactionManager::RevokeChild (D-36): a certified
+// child's registration is revoked by main; the resulting reg/ record ends
+// with detach_flag=true while main_address/sequence are preserved.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "revoke_e2e_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified before Revoke can be attempted";
+
+    auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
+    ASSERT_TRUE( revoke_result.has_value() ) << "RevokeChild should succeed against a certified child";
+
+    std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
+    crdt::HierarchicalKey hk( reg_key );
+
+    std::shared_ptr<RegistrationTransaction> stored_reg;
+    auto                                      poll_start   = std::chrono::steady_clock::now();
+    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                {
+                    stored_reg = candidate;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+
+    ASSERT_NE( stored_reg, nullptr ) << "Revoked reg/ record should be visible within timeout";
+    EXPECT_EQ( stored_reg->GetMainAddress(), account_->GetAddress() );
+    EXPECT_EQ( stored_reg->GetSequence(), 1 );
+    EXPECT_TRUE( stored_reg->GetDetachFlag() );
+}
+
+// ---------------------------------------------------------------------------
+// RevokeRejectedForNonMain — T-05-09: a RevokeTx signed by an address that is
+// NOT the certified main on record is rejected by CheckParentChildAuthority,
+// while ordinary signature verification (CheckTransactionAuthorization) still
+// passes — isolating the rejection to the parent-child authority gate.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForNonMain )
+{
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "revoke_nonmain_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified for the non-main rejection check to even apply";
+
+    // A third, unrelated identity — neither the certified main nor the child.
+    auto attacker = GeniusAccount::New( kTestTokenId, base_path / "revoke_attacker" );
+    ASSERT_NE( attacker, nullptr );
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "revoke" );
+    dag.set_source_addr( attacker->GetAddress() ); // NOT the certified main's address
+    dag.set_nonce( 0 );
+
+    auto tx = std::make_shared<RevokeTransaction>( RevokeTransaction::New( child_account_->GetAddress(), 1, dag ) );
+    tx->MakeSignature( *attacker ); // attacker validly signs as themselves — signature check passes
+
+    EXPECT_FALSE( tm_->CheckParentChildAuthority( *tx ) )
+        << "A RevokeTx signed by a non-main address must be rejected by CheckParentChildAuthority";
+    EXPECT_TRUE( tm_->CheckTransactionAuthorization( *tx ) )
+        << "The rejection above must be the parent-child authority gate, not a signature failure";
+}
+
+// ---------------------------------------------------------------------------
+// RevokeRejectedForAlreadyDetachedChild — a second RevokeTx targeting a reg/
+// record that is already detach_flag==true is rejected by
+// CheckParentChildAuthority.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "revoke_already_detached_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified before Revoke can be attempted";
+
+    auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
+    ASSERT_TRUE( revoke_result.has_value() ) << "First RevokeChild should succeed against a certified child";
+
+    std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
+    crdt::HierarchicalKey hk( reg_key );
+
+    bool     detached        = false;
+    uint64_t stored_sequence = 0;
+    {
+        auto           poll_start   = std::chrono::steady_clock::now();
+        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+        {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
+            {
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        detached        = true;
+                        stored_sequence = candidate->GetSequence();
+                        break;
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+    }
+    ASSERT_TRUE( detached ) << "First Revoke should be visible before the second Revoke is attempted";
+
+    // A SECOND RevokeTransaction targeting the SAME (now-detached) child, matching the
+    // now-stored sequence, signed by the real (formerly-certified) main.
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "revoke" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( 0 );
+
+    auto second_tx = std::make_shared<RevokeTransaction>(
+        RevokeTransaction::New( child_account_->GetAddress(), stored_sequence, dag ) );
+    second_tx->MakeSignature( *account_ );
+
+    EXPECT_FALSE( tm_->CheckParentChildAuthority( *second_tx ) )
+        << "A second RevokeTx against an already-detached/revoked child must be rejected by "
+           "CheckParentChildAuthority";
+}
+
+// ---------------------------------------------------------------------------
+// RevokeRejectedForSequenceMismatch — a RevokeTx whose registration_sequence
+// does not match the currently-stored reg/ record's sequence is rejected by
+// CheckParentChildAuthority specifically, not by CheckTransactionAuthorization.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForSequenceMismatch )
+{
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "revoke_seq_mismatch_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified for the sequence-mismatch rejection check to even apply";
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "revoke" );
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_nonce( 0 );
+
+    // Deliberately wrong registration_sequence (certified at 1, this claims 99).
+    auto tx = std::make_shared<RevokeTransaction>( RevokeTransaction::New( child_account_->GetAddress(), 99, dag ) );
+    tx->MakeSignature( *account_ );
+
+    EXPECT_FALSE( tm_->CheckParentChildAuthority( *tx ) )
+        << "A RevokeTx with a mismatched registration_sequence must be rejected by CheckParentChildAuthority";
+    EXPECT_TRUE( tm_->CheckTransactionAuthorization( *tx ) )
+        << "The rejection above must be the sequence-mismatch check, not a signature failure";
 }
