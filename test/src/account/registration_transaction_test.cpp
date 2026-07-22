@@ -364,17 +364,44 @@ namespace
             auto reg_tx = RegistrationTransaction::New( account_->GetAddress(), sequence, metadata, dag );
             reg_tx.MakeSignature( *child_account_ );
 
-            // Write directly into the CRDT at the same reg/{child_addr} key RegisterChild/
+            CertifySignedRegistrationTx( reg_tx, *child_account_ );
+
+            return reg_tx;
+        }
+
+        /**
+         * @brief Certifies an already-built, already-signed RegistrationTransaction — shared tail
+         *        extracted from CertifyChildRegistration (Phase 5 Plan 05) so a manually-built
+         *        lifecycle-change RegistrationTransaction (e.g. a post-Revoke re-registration,
+         *        which CertifyChildRegistration's own 2-arg signature can't express since it
+         *        never carries detach_flag/supersedes_sequence/a caller-chosen main_address) can
+         *        be certified through the exact same recipe, without duplicating the
+         *        CreateConsensusNonceSubject/manual-proposal/SubmitProposal/poll-CheckCertificate
+         *        logic a second time.
+         *
+         * Writes @p reg_tx directly into the CRDT at reg/{reg_tx.GetSrcAddress()}, then submits a
+         * manually-assembled consensus proposal signed by @p signer (per this fixture's
+         * registration convention, every RegistrationTx — initial or lifecycle-change — is always
+         * signed by the registering child itself, D-04/D-05/D-37, so @p signer is always
+         * child_account_ in practice; kept as a parameter rather than hard-coded so this helper's
+         * contract stays explicit about whose signature the proposal_id/signature fields need).
+         * Uses non-fatal EXPECT_* internally (void-returning function). Callers MUST immediately
+         * assert `blockchain_->CheckCertificate(reg_tx.GetHash())`.
+         * @param[in] reg_tx Already child-signed RegistrationTransaction to certify.
+         * @param[in] signer The identity that signed reg_tx — signs the consensus proposal too.
+         */
+        void CertifySignedRegistrationTx( const RegistrationTransaction &reg_tx, GeniusAccount &signer )
+        {
+            // Write directly into the CRDT at the same reg/{src_addr} key RegisterChild/
             // FilterRegistration already use.
-            std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" +
-                                              child_account_->GetAddress();
+            std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + reg_tx.GetSrcAddress();
             auto                   serialized = reg_tx.SerializeByteVector();
             base::Buffer           buffer( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
             crdt::HierarchicalKey  hk( reg_key );
             auto                   put_result = db_->Put( hk, buffer, {} );
-            EXPECT_TRUE( put_result.has_value() ) << "Child registration CRDT Put should succeed";
+            EXPECT_TRUE( put_result.has_value() ) << "Registration CRDT Put should succeed";
 
-            // Certify by manually assembling and CHILD-signing a consensus proposal, then
+            // Certify by manually assembling and SIGNER-signing a consensus proposal, then
             // submitting it through main's blockchain_ for automatic self-voting/certification.
             //
             // NOTE (deviation from the plan's literal wording — discovered during
@@ -391,17 +418,17 @@ namespace
             // implementation: "signature verification failed proposer_id=<child_addr>"); passing
             // main's address satisfies (2) but fails (1) ("Account mismatch" — also directly
             // observed). These two checks are only simultaneously satisfiable if the proposal is
-            // genuinely signed by the child's own key. The fix: build the Subject via the public
-            // static Blockchain::CreateConsensusNonceSubject, then assemble and sign the Proposal
-            // by hand (mirroring ConsensusManager::CreateProposal's exact field-population and
-            // ID-derivation sequence, which is private and not directly callable), signing with
-            // child_account_->Sign(...) so proposer_id genuinely matches the signing key. The
-            // automatic self-VOTE that follows (cast by main, the sole registered validator, via
-            // SubmitProposal's default self_vote=true) is unaffected by this — voting and
-            // proposing are independent signing operations, and main's vote alone reaches
-            // quorum in this single-validator registry regardless of who proposed.
+            // genuinely signed by the same identity that signed reg_tx. The fix: build the
+            // Subject via the public static Blockchain::CreateConsensusNonceSubject, then
+            // assemble and sign the Proposal by hand (mirroring ConsensusManager::CreateProposal's
+            // exact field-population and ID-derivation sequence, which is private and not
+            // directly callable), signing with signer.Sign(...) so proposer_id genuinely matches
+            // the signing key. The automatic self-VOTE that follows (cast by main, the sole
+            // registered validator, via SubmitProposal's default self_vote=true) is unaffected by
+            // this — voting and proposing are independent signing operations, and main's vote
+            // alone reaches quorum in this single-validator registry regardless of who proposed.
             auto embedded_tx    = reg_tx.SerializeToEmbeddedTransaction();
-            auto subject_result = Blockchain::CreateConsensusNonceSubject( child_account_->GetAddress(),
+            auto subject_result = Blockchain::CreateConsensusNonceSubject( reg_tx.GetSrcAddress(),
                                                                             reg_tx.GetNonce(),
                                                                             reg_tx.GetHash(),
                                                                             embedded_tx,
@@ -413,7 +440,7 @@ namespace
             {
                 ConsensusManager::Proposal proposal;
                 *proposal.mutable_subject() = subject_result.value();
-                proposal.set_proposer_id( child_account_->GetAddress() );
+                proposal.set_proposer_id( reg_tx.GetSrcAddress() );
                 proposal.set_registry_cid( blockchain_->GetValidatorRegistry()->GetRegistryCid() );
                 proposal.set_registry_epoch( blockchain_->GetValidatorRegistry()->GetRegistryEpoch() );
                 proposal.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -435,7 +462,7 @@ namespace
                 EXPECT_TRUE( signing_bytes.has_value() ) << "ProposalSigningBytes should succeed";
                 if ( signing_bytes.has_value() )
                 {
-                    auto signature = child_account_->Sign( signing_bytes.value() ); // CHILD signs — matches proposer_id
+                    auto signature = signer.Sign( signing_bytes.value() ); // matches proposer_id
                     proposal.set_signature( signature.data(), signature.size() );
                 }
 
@@ -454,9 +481,7 @@ namespace
                 std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
             }
             EXPECT_TRUE( blockchain_->CheckCertificate( reg_tx.GetHash() ) )
-                << "Child registration should be certified within " << kCertifyTimeout.count() << "s";
-
-            return reg_tx;
+                << "Registration should be certified within " << kCertifyTimeout.count() << "s";
         }
 
         std::shared_ptr<GeniusAccount>      account_;
@@ -2152,4 +2177,276 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForSequenceMismatch )
         << "A RevokeTx with a mismatched registration_sequence must be rejected by CheckParentChildAuthority";
     EXPECT_TRUE( tm_->CheckTransactionAuthorization( *tx ) )
         << "The rejection above must be the sequence-mismatch check, not a signature failure";
+}
+
+// ---------------------------------------------------------------------------
+// ReRegistrationAfterRevoke — D-39: a revoked child can re-register (to the
+// same or a different main) at a higher sequence. Re-registration is
+// CHILD-initiated (ReplaceMain/DetachChild are always child-signed, D-37);
+// since this fixture's child_account_ has no own TransactionManager (D-65),
+// re-registration is proven the same way CertifyChildRegistration proves
+// child-signed registration: manually build, child-sign, and certify a new
+// RegistrationTransaction via the shared CertifySignedRegistrationTx helper.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "rereg_after_revoke_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified before Revoke can be attempted";
+
+    auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
+    ASSERT_TRUE( revoke_result.has_value() ) << "RevokeChild should succeed against a certified child";
+
+    std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
+    crdt::HierarchicalKey hk( reg_key );
+
+    {
+        bool           detached     = false;
+        auto           poll_start   = std::chrono::steady_clock::now();
+        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+        {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
+            {
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        detached = true;
+                        break;
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+        ASSERT_TRUE( detached ) << "Revoke should be visible before re-registration is attempted";
+    }
+
+    std::string new_main_address( 128, 'p' );
+
+    SGTransaction::DAGStruct dag;
+    dag.set_type( "registration" );
+    dag.set_source_addr( child_account_->GetAddress() );
+    dag.set_nonce( 0 );
+    dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
+                            std::chrono::system_clock::now().time_since_epoch() )
+                            .count() );
+
+    SGTransaction::RegistrationMetadata rereg_metadata;
+    rereg_metadata.set_game_id( "rereg_after_revoke_test" );
+
+    auto rereg_tx = RegistrationTransaction::New( new_main_address, /*sequence=*/2, rereg_metadata, dag,
+                                                  /*detach_flag=*/false, /*supersedes_sequence=*/1 );
+    rereg_tx.MakeSignature( *child_account_ );
+
+    CertifySignedRegistrationTx( rereg_tx, *child_account_ );
+    ASSERT_TRUE( blockchain_->CheckCertificate( rereg_tx.GetHash() ) )
+        << "Re-registration should be certified before checking the stored reg/ record";
+
+    std::shared_ptr<RegistrationTransaction> stored_reg;
+    {
+        auto           poll_start   = std::chrono::steady_clock::now();
+        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+        {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
+            {
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetMainAddress() == new_main_address )
+                    {
+                        stored_reg = candidate;
+                        break;
+                    }
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+    }
+
+    ASSERT_NE( stored_reg, nullptr ) << "Re-registered reg/ record should be visible within timeout";
+    EXPECT_EQ( stored_reg->GetMainAddress(), new_main_address );
+    EXPECT_FALSE( stored_reg->GetDetachFlag() );
+    EXPECT_EQ( stored_reg->GetSequence(), 2 );
+}
+
+// ---------------------------------------------------------------------------
+// RevokePreservesChildUTXOsKeypairNonce — LIFE-04: Revoke leaves the child's
+// address and UTXOs unaffected, the revoked child remains a fully functional,
+// standalone-capable wallet, and the former main's delegated authority over
+// it is gone.
+// ---------------------------------------------------------------------------
+TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
+{
+    tm_->Start();
+
+    TransactionManager::State state         = tm_->GetState();
+    auto                      start         = std::chrono::steady_clock::now();
+    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
+    while ( state != TransactionManager::State::READY )
+    {
+        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
+            break;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        state = tm_->GetState();
+    }
+    ASSERT_EQ( state, TransactionManager::State::READY )
+        << "TransactionManager did not reach READY";
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_game_id( "revoke_life04_test" );
+    auto child_reg = CertifyChildRegistration( 1, metadata );
+    ASSERT_TRUE( blockchain_->CheckCertificate( child_reg.GetHash() ) )
+        << "Child registration must be certified before funding/Revoke";
+
+    MintMainFunds( 1000, "revoke_life04_migration" );
+
+    constexpr uint64_t kFundAmount = 500;
+    auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
+    ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
+
+    {
+        auto           fund_start   = std::chrono::steady_clock::now();
+        constexpr auto kFundTimeout = std::chrono::seconds( 10 );
+        while ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) < kFundAmount )
+        {
+            if ( std::chrono::steady_clock::now() - fund_start > kFundTimeout )
+            {
+                break;
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        }
+    }
+    const std::string address_before = child_account_->GetAddress();
+    const uint64_t    balance_before =
+        account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() );
+    ASSERT_GE( balance_before, kFundAmount ) << "Child's funded balance should be visible within timeout";
+
+    auto revoke_result = tm_->RevokeChild( child_account_->GetAddress() );
+    ASSERT_TRUE( revoke_result.has_value() ) << "RevokeChild should succeed against a certified child";
+
+    std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
+    crdt::HierarchicalKey hk( reg_key );
+
+    bool           detached     = false;
+    auto           poll_start   = std::chrono::steady_clock::now();
+    constexpr auto kPollTimeout = std::chrono::seconds( 10 );
+    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
+            {
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                {
+                    detached = true;
+                    break;
+                }
+            }
+        }
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
+    ASSERT_TRUE( detached ) << "Revoke should be visible within timeout";
+
+    // Address is unchanged — no keypair rotation API exists, confirmed by construction.
+    EXPECT_EQ( child_account_->GetAddress(), address_before );
+
+    // UTXO balance is unchanged across Revoke — RevokeTx never touches UTXOs.
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ), balance_before );
+
+    // The revoked child remains a fully functional, standalone-capable wallet (D-39): a
+    // child-self-signed transfer still passes both gates (mirroring
+    // ChildTransferToArbitraryAndMainUnaffected's exact construction).
+    std::vector<InputUTXOInfo> inputs;
+    for ( const auto &utxo : account_->GetUTXOManager().GetUnconsumedUTXOs( child_account_->GetAddress() ) )
+    {
+        if ( !( utxo.GetTokenID() == kTestTokenId ) )
+        {
+            continue;
+        }
+        InputUTXOInfo input;
+        input.txid_hash_  = utxo.GetTxID();
+        input.output_idx_ = utxo.GetOutputIdx();
+        input.signature_  = child_account_->Sign( input.SerializeForSigning() );
+        inputs.push_back( std::move( input ) );
+    }
+    ASSERT_FALSE( inputs.empty() ) << "Revoked child should still have at least one unconsumed UTXO";
+
+    SGTransaction::DAGStruct transfer_dag;
+    transfer_dag.set_type( "transfer" );
+    transfer_dag.set_source_addr( child_account_->GetAddress() );
+    transfer_dag.set_nonce( 0 );
+
+    std::vector<OutputDestInfo> outputs{ { 100, std::string( 128, 'y' ), kTestTokenId } };
+
+    auto self_tx = std::make_shared<TransferTransaction>( TransferTransaction::New( inputs, outputs, transfer_dag ) );
+    self_tx->MakeSignature( *child_account_ ); // the CHILD's own key — genuine self-signed spend
+
+    EXPECT_TRUE( tm_->CheckParentChildAuthority( *self_tx ) )
+        << "A revoked child's self-signed transfer must still be approved (revoke does not disable the "
+           "child's own key)";
+    EXPECT_TRUE( tm_->CheckTransactionAuthorization( *self_tx ) )
+        << "A revoked child's own-key signature must still verify";
+
+    // Negative invariant: the former main no longer has any delegated recovery authority over
+    // the revoked child. ParseRevokeTransaction (TransactionManager.cpp, Plan 02) rewrites the
+    // reg/ record's dag_struct from scratch when applying a Revoke — the rewritten record's own
+    // data_hash was never itself submitted as a nonce-consensus subject, so
+    // blockchain_->CheckCertifiedParent can no longer resolve a certificate for it. Confirm this
+    // explicitly first (this is the mechanism, not detach_flag directly, that gates post-revoke
+    // authority — CheckCertifiedParent's own CheckCertificate gate requires the CURRENT
+    // certified registration to be read):
+    auto post_revoke_certified_main = blockchain_->CheckCertifiedParent( child_account_->GetAddress() );
+    EXPECT_TRUE( !post_revoke_certified_main.has_value() || *post_revoke_certified_main != account_->GetAddress() )
+        << "CheckCertifiedParent should no longer resolve the revoked child to its former main";
+
+    // A manually-built, main-signed, delegated-recovery-shaped transaction (mirroring
+    // MainRecoveryWrongDestinationRejected's construction) targeting the revoked child. The
+    // authoritative rejection lives in CheckTransactionAuthorization: its D-60 certified-main
+    // delegation branch requires CheckCertifiedParent to resolve, which it no longer does once
+    // revoked — so a main-signed, child-sourced transaction is no longer accepted as a valid
+    // action at all (neither a genuine child-self-signed spend nor a still-certified delegated
+    // recovery).
+    SGTransaction::DAGStruct delegated_dag;
+    delegated_dag.set_type( "transfer" );
+    delegated_dag.set_source_addr( child_account_->GetAddress() );
+    delegated_dag.set_nonce( 0 );
+
+    std::vector<InputUTXOInfo>  delegated_inputs;
+    std::vector<OutputDestInfo> delegated_outputs{ { 100, account_->GetAddress(), kTestTokenId } };
+
+    auto delegated_tx = std::make_shared<TransferTransaction>(
+        TransferTransaction::New( delegated_inputs, delegated_outputs, delegated_dag ) );
+    delegated_tx->MakeSignature( *account_ ); // main signs — this is what makes it "delegated"
+
+    EXPECT_FALSE( tm_->CheckTransactionAuthorization( *delegated_tx ) )
+        << "A former main's delegated-recovery-shaped transaction against a revoked child must fail "
+           "CheckTransactionAuthorization once CheckCertifiedParent no longer resolves the child's "
+           "certified main";
 }
