@@ -103,8 +103,8 @@ protected:
 
     static inline sgns::test::anvil::AnvilProcess s_anvil{};
 
-    /** @brief Anvil fork block captured during SetUpTestSuite (D-22 pattern — before any burn). */
-    static inline uint64_t s_fork_block = 0ull;
+    /** @brief Anvil block captured after funding and before any test burn is submitted. */
+    static inline uint64_t s_pre_burn_block = 0ull;
 
     /** @brief Per-node bridge config filename (must match ResolveBridgeChainsConfigPath priority 1). */
     static inline constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
@@ -118,9 +118,6 @@ protected:
     }
 }
 )JSON";
-
-    /** @brief Blocks to scan before the fork — injected as creation_block (matches catchup suite). */
-    static inline constexpr uint64_t kBackfillWindow = 3000ull;
 
     /**
      * @brief Writes a per-node bridge_chains_config.json pointing BridgeCatchupWatcher at
@@ -140,7 +137,10 @@ protected:
         std::filesystem::create_directories( base_write_path );
         const std::string config_path = base_write_path + kBridgeChainsConfigFilename;
 
-        const uint64_t creation_block = ( s_fork_block > kBackfillWindow ) ? ( s_fork_block - kBackfillWindow ) : 0ull;
+        // Race tests must expose only burns created by the current test run. The
+        // scan floor is inclusive, so start one block after the pre-burn baseline.
+        // Unlike the dedicated catch-up suite, this must not import history.
+        const uint64_t creation_block = s_pre_burn_block + 1ull;
 
         std::string        config_json( kBridgeChainsConfigTemplate );
         const std::string  placeholder( "__CREATION_BLOCK__" );
@@ -257,18 +257,17 @@ protected:
                          << sgns::test::anvil::kGnusHolderSepolia << " — skipping";
         }
 
-        // Capture the Anvil fork block so creation_block in each node's
-        // bridge_chains_config.json avoids scanning from genesis (matches the catchup
-        // suite's D-22 pattern).
+        // Capture the clean pre-burn baseline. Race-test watchers start here so they
+        // see burns mined after setup without importing historical fork events.
         {
             int               exit_code      = 0;
-            const std::string fork_block_str = sgns::test::anvil::RunShellCapture(
+            const std::string pre_burn_block_str = sgns::test::anvil::RunShellCapture(
                 "cast block-number --rpc-url " + s_anvil.RpcUrl(), exit_code );
             ASSERT_EQ( exit_code, 0 ) << "Could not query Anvil fork block via cast block-number";
-            ASSERT_FALSE( fork_block_str.empty() ) << "cast block-number returned empty output";
-            s_fork_block = std::stoull( fork_block_str );
-            ASSERT_GT( s_fork_block, 0ull ) << "Anvil fork block must be non-zero";
-            spdlog::info( "bridge_race: fork block = {}", s_fork_block );
+            ASSERT_FALSE( pre_burn_block_str.empty() ) << "cast block-number returned empty output";
+            s_pre_burn_block = std::stoull( pre_burn_block_str );
+            ASSERT_GT( s_pre_burn_block, 0ull ) << "Anvil pre-burn block must be non-zero";
+            spdlog::info( "bridge_race: pre-burn baseline block = {}", s_pre_burn_block );
         }
 
         const std::string binary_path = boost::dll::program_location().parent_path().string();
