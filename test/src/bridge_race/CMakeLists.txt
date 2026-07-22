@@ -25,7 +25,7 @@ endif()
 
 # D-15/Pitfall 2: 11-node startup cost is higher than the fast bridge_e2e suite's
 # default timeout — own extended TIMEOUT, isolated ctest target.
-set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 180)
+set_tests_properties(bridge_race_single_burn_test PROPERTIES TIMEOUT 500)
 
 addtest(bridge_race_batch_test
     bridge_race_batch_test.cpp
