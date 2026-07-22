@@ -72,7 +72,6 @@ namespace
 
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
-        const auto  uniquePort = static_cast<uint16_t>( 41000 + id );
 
         GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
@@ -92,7 +91,7 @@ namespace
                              return HEX_CHARS[dist( rng )];
                          } );
 
-        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/isProcessor, /*rpc_catchup=*/false );
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         sgns::GeniusNodeTestAccess::CacheGnusPrice( node, 1.0 );

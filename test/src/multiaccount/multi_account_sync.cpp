@@ -113,7 +113,6 @@ protected:
     {
         static std::atomic<int> nodeCounter{ 0 };
         const bool              reuseStorage = !existingBasePath.empty();
-        uint16_t                portSeed     = 0;
         std::string             outPathStr   = std::move( existingBasePath );
         if ( outPathStr.empty() )
         {
@@ -121,7 +120,6 @@ protected:
             const auto binaryPath = boost::dll::program_location().parent_path();
             const auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
             outPathStr            = outPath.generic_string() + '/';
-            portSeed              = static_cast<uint16_t>( 40041 + id );
         }
         else if ( outPathStr.back() != '/' )
         {
@@ -161,7 +159,7 @@ protected:
 
         if ( !reuseStorage )
         {
-            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, portSeed, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                                isFullNode ? "Full" : "Light",
                                                /*is_processor=*/isProcessor,

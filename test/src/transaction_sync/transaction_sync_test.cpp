@@ -39,20 +39,20 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> full_node;
 
         static inline GeniusNodeConfig DEV_CONFIG  = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node10" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./node10" };
         static inline GeniusNodeConfig DEV_CONFIG2 = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node20" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./node20" };
         static inline GeniusNodeConfig DEV_CONFIG3 = { "0xcafe",
-                                                   "0.65",
-                                                   "1.0",
-                                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                                   "./node_full" };
+                                                       "0.65",
+                                                       "1.0",
+                                                       sgns::TokenID::FromBytes( { 0x00 } ),
+                                                       "./node_full" };
 
         static inline std::string binary_path = "";
 
@@ -79,19 +79,19 @@ namespace sgns
 
             // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
             std::filesystem::create_directories( DEV_CONFIG3.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath,
                                                /*node_type=*/"Full",
                                                /*is_processor=*/false,
                                                /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
                                                /*node_type=*/"Light",
                                                /*is_processor=*/false,
                                                /*rpc_catchup=*/false );
             std::filesystem::create_directories( DEV_CONFIG2.BaseWritePath );
-            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
             sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath,
                                                /*node_type=*/"Light",
                                                /*is_processor=*/false,
@@ -492,9 +492,9 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
         tx1_id,
         std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     EXPECT_EQ( tx1_status, TransactionManager::TransactionStatus::CONFIRMED );
-    EXPECT_EQ( node_proc2->WaitForTransactionIncoming(
-                   tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
-               TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_EQ(
+        node_proc2->WaitForTransactionIncoming( tx1_id, std::chrono::milliseconds( INCOMING_TIMEOUT_MILLISECONDS ) ),
+        TransactionManager::TransactionStatus::CONFIRMED );
 
     // Create a second transfer with an invalid previous hash
     auto tx_pair2 = CreateTransfer( *GetAccountFromNode( *node_proc1 ), 10000000000, node_proc2->GetAddress(), tx1_id );

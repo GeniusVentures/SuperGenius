@@ -41,9 +41,6 @@ namespace
     // Number of working directories swept clean in SetUp.
     constexpr int kNodeDirCleanupCount = 10;
 
-    // Port the first created node binds; each subsequent node adds 1.
-    constexpr uint16_t kBasePort = 40001;
-
     // Upper bound on how long a READY poll may wait before failing the test.
     constexpr int kReadyPollTimeoutMs = 30000;
 
@@ -96,9 +93,7 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( kBasePort + id );
-
-        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/uniquePort, /*auto_dht=*/false );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
         GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
                                      /*node_type=*/isFullNode ? "Full" : "Light",
                                      /*is_processor=*/false, /*rpc_catchup=*/false );
