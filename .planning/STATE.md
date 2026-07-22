@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: GeniusNode Construction Refactor
-current_phase: 08
-status: executing
-last_updated: "2026-07-17T12:50:57.216Z"
-last_activity: 2026-07-17 -- Phase 08 execution started
+milestone: v2.0
+milestone_name: Slot-Scoped Consensus Finality
+status: planning
+last_updated: "2026-07-22T15:24:16.562Z"
+last_activity: 2026-07-22
 progress:
-  total_phases: 9
-  completed_phases: 8
-  total_plans: 12
-  completed_plans: 13
-  percent: 89
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # State: SuperGenius — GeniusNode Construction Refactor
@@ -30,10 +29,10 @@ See: .planning/PROJECT.md (updated 2026-07-02)
 
 ## Current Position
 
-Phase: 08 (Burn/mint datapath robustness) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 08
-Last activity: 2026-07-17 -- Phase 08 execution started
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-07-22 — Milestone v2.0 started
 
 ## Roadmap Snapshot
 

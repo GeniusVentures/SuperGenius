@@ -2,13 +2,26 @@
 
 ## What This Is
 
-SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS). The primary entry point and orchestration facade is `GeniusNode` in `src/account/`.
+SuperGenius is a C++17 blockchain/crypto platform providing an account system (UTXO + DAG), consensus, a processing grid for distributed compute tasks, an EVM bridge, and a JSON-RPC + WebSocket API. It targets native node operators (full/light/archive) and ships cross-platform keystore support (Android NDK / iOS).
 
-This milestone is an **interface refactor of `GeniusNode`** — not new product capability. It cleans up the node construction API and moves runtime knobs into configuration files where they belong.
+The current milestone hardens consensus finality so competing transactions resolve through one canonical slot. Certificates continue to prove the exact winning proposal, while slot-scoped storage and validator vote locks ensure that the same account nonce or bridge burn cannot produce multiple valid certificates.
 
 ## Core Value
 
-**Constructing a `GeniusNode` must be a single, self-documenting call driven by config files** — no more overloaded factory methods carrying boolean network/role flags that are really config concerns. If this refactor lands clean and all 18 call sites compile and tests pass, the milestone succeeds.
+**At most one valid certificate may finalize a canonical consensus slot.** Transaction execution, CRDT delivery order, validator restarts, and competing proposers must not allow a second certificate for the same account nonce or bridge burn.
+
+## Current Milestone: v2.0 Slot-Scoped Consensus Finality
+
+**Goal:** Guarantee that only one certificate can finalize a canonical consensus slot while preserving transaction-hash retrieval and trusting a valid quorum certificate over local state.
+
+**Target features:**
+- Authoritative certificate storage and lookup by canonical slot ID
+- Transaction-hash-to-slot secondary index for existing certificate consumers
+- Restart-safe one-signature-per-validator-per-slot journal
+- Atomic slot finalization when a valid certificate is first observed
+- Best-proposal collection before an irreversible validator vote
+- Slot-owned bridge burn reservations that survive losing proposals and become consumed at finality
+- Regression coverage for the observed two-certificate race and its critical interleavings
 
 ## Requirements
 
@@ -31,17 +44,16 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 
 ### Active
 
-<!-- This milestone's scope. Hypotheses until shipped. — All v1 requirements VALIDATED (Phases 1-3). -->
+<!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [x] `autodht` and `base_port` are read from `network_config.json` (in `InitNetwork`), not passed as constructor/factory params
-- [x] `node_type` ("Full" / "Light" / "Archive") is read from `sgns_config.json` (in `LoadSgnsConfig`); a `NodeType` enum is introduced
-- [x] `GeniusNode::is_full_node_` becomes a **derived** bool (Full/Archive → true, Light → false), sourced from `node_type`; downstream consumers (`UTXOManager`, `TransactionManager`, `MigrationManager`, `GeniusAccount`) keep the existing bool, unchanged
-- [x] Three factories (`New`, `NewFromPrivateKey`, `NewFromMnemonic`) collapse into a single `New(dev_config, AccountSource)` where `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>`
-- [x] `FromPublicKey` (currently internal-only at `src/account/GeniusNode.cpp:1405`) is promoted to a public variant option (watch-only / read-only)
-- [x] All 18 call sites of `NewFromPrivateKey` (1 in `example/node_test/`, 17 across `test/src/{account,node,blockchain,transaction_sync,processing_multi,processing_nodes,multiaccount}/`) migrate to the new `New()` API
-- [x] Each migrated test writes its `autodht` / `base_port` / `node_type` into the appropriate config file (the `sgns_config.json` write pattern is already established in tests)
-- [x] Existing config files without the new keys keep working via sensible defaults (`autodht=true`, `base_port=40001`, `node_type=Light`)
-- [x] Full build passes and existing tests remain green after the refactor
+- [ ] A certificate remains cryptographically bound to its exact proposal but is finalized and stored under the proposal's canonical slot
+- [ ] Existing consumers can retrieve the winning certificate by transaction hash through a verified secondary index
+- [ ] A validator signs at most one proposal per canonical slot while its signature can still contribute to a valid certificate
+- [ ] Validator vote locks survive restart and transition atomically to finalized slot state when a valid certificate is observed
+- [ ] Competing proposals may replace the current best before voting; a validator never revotes after publishing its slot signature
+- [ ] Bridge burn reservations are owned by the canonical burn slot, survive losing proposals, and become consumed at certificate finality
+- [ ] Normal transactions retain address-plus-nonce slot behavior and certificate-chain validation
+- [ ] Automated tests reproduce the observed double-certificate race and prove exactly one certificate and one confirmed mint
 
 ### Out of Scope
 
@@ -53,35 +65,52 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
 - Rewriting `DevConfig` or the dev-config plumbing — only the `GeniusNode` construction surface changes
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
+- Broader Phase 8 fault injection for node kill, RPC disagreement, and pubsub partition — preserve as archived planning, but exclude from v2.0
+- Bridge parser/configuration fuzzing — preserve as archived planning, but exclude from v2.0
+- Changing certificate signatures to sign only a slot ID — certificates must continue binding the complete winning proposal
+- Treating transaction execution or CRDT callback order as the consensus safety boundary — finality must be established when the certificate is first validated
+- Allowing validators to retract or replace a published vote — published signatures are irreversible
+- Redesigning validator quorum weights or bridge RPC verification policy — retain current quorum and external-burn verification rules
 
 ## Context
 
-**Current State (v1.0 — shipped 2026-07-03):** The GeniusNode construction-refactor milestone is complete. `New(dev_config, AccountSource)` is the sole public factory; `auto_dht`/`port_seed`/`node_type` are config-driven; `is_full_node_` is derived from `NodeType` in a reordered ctor (init-order hinge fixed); all ~25 call sites migrated; old factories deleted. Full build + CTest green; no behavior change for default/pre-existing configs. GSD subagent runtime was broken this milestone — all plan/execute/verify ran inline via the workflow's documented fallbacks.
+**Current state:** v1.0 GeniusNode Construction Refactor shipped on 2026-07-03. Subsequent bridge work added canonical mint slots, bridge UTXO reservations, embedded transactions, public-chain witness verification, and the `bridge_race_single_burn_test`.
 
-**Next Milestone Goals:** TBD — run `/gsd-new-milestone`. Candidate work (deferred to v2, see `.planning/milestones/v1.0-REQUIREMENTS.md`): `NodeType` downstream propagation (PROP-01), distinct Archive-vs-Full runtime behavior (PROP-02), `pubsub_port` numeric cleanup (HARD-01), config schema versioning (HARD-02). Also consider restoring the GSD subagent runtime before the next milestone.
+**Observed safety failure:** In `log_bridge_race.txt`, transaction `7541b3e2...` and transaction `9a378fd9...` reference the same burn `771780cf...` and resolve to the same mint-v2 slot. Nine validators sign both proposals, allowing both to reach quorum and become confirmed.
 
-**Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
+**Root cause:** Certificates are signed for exact proposals and stored by nonce-subject transaction hash, while conflict exclusivity is transiently tracked by slot. `HandleCertificate()` clears the slot before CRDT certificate delivery confirms the transaction and consumes its bridge UTXO. Validators then see no slot state, no confirmed-input conflict, and a still-valid external burn, so they sign the second proposal.
 
-- `GeniusNode` is a god-class facade (`src/account/GeniusNode.cpp` is 2,831 lines) — see `.planning/codebase/CONCERNS.md`.
-- `network_config.json` is already parsed in `InitNetwork()` (`GeniusNode.cpp:768`): holds `pubsub_port`, `pubsub_bind_address`, `bootstrap_addresses`, `upnp_enabled`, `high_water`/`low_water`, reconnect config. Adding `autodht` + `base_port` is an incremental extension.
-- `sgns_config.json` is already parsed in `LoadSgnsConfig()` (`GeniusNode.cpp:251`): holds `is_processor`, `net_id`, `subnet_id`, `bootstrap_fullnodes`, `authorized_full_node`. Adding `node_type` is an incremental extension; tests already write this file.
-- `is_full_node` is overloaded: it gates connection watermarks (`400/200` vs `300/150`), UTXO address-filtering, the `GNUS_FULL_NODES_TOPIC` subscription, and several migration/account paths.
-- Coding conventions: C++17, `snake_case_` for private members, `std::shared_ptr` factory pattern, RapidJSON for config parsing, Doxygen `@param` docs on public API. See `.planning/codebase/CONVENTIONS.md`.
-- Tests use CTest; see `.planning/codebase/TESTING.md`.
+**Existing identities:**
+- Normal transaction slot: source address + nonce (`GeniusTransaction::GetSlotID()`)
+- Mint-v2 slot: chain, token, amount, destination, and burn hash (`MintTransactionV2::GetSlotID()`)
+- Current certificate key: nonce-subject transaction hash
+- Required bridge finality resource: canonical burn identity, independent of proposer address and nonce
 
-**External consumers:** none known beyond this repo's `example/` and `test/`. The factory is treated as an internal API; a breaking change with full call-site migration is acceptable.
+**Compatibility dependencies:** `TransactionManager` follows previous certificates by transaction hash, and `GeniusInputValidator` retrieves producer certificates by transaction hash. Slot-keyed authoritative storage therefore requires a verified transaction-hash-to-slot index rather than removal of transaction-hash lookup.
+
+**Brownfield:** A codebase map exists at `.planning/codebase/`. Primary integration points are `src/blockchain/Consensus.{hpp,cpp}`, `src/account/TransactionManager.cpp`, `src/account/GeniusTransaction.hpp`, `src/account/MintTransactionV2.cpp`, `src/account/UTXOManager.{hpp,cpp}`, and bridge race tests under `test/src/bridge_race/`.
 
 ## Constraints
 
-- **Tech stack**: C++17, CMake, RapidJSON, Boost, libp2p, git submodules — no new dependencies this milestone (use existing `std::variant` + RapidJSON).
-- **Compatibility**: deployed nodes have `network_config.json` / `sgns_config.json` **without** the new keys — they must keep working via defaults; no hard-fail on missing keys.
-- **Non-functional**: no behavior change for existing configurations — pure interface/config-location refactor. Tests stay green.
-- **Scope boundary**: the `NodeType` enum stops at the `GeniusNode` boundary this milestone (derived bool passed downstream).
+- **Protocol safety**: No validator may publish two signatures that can simultaneously contribute to certificates for the same canonical slot.
+- **Durability**: A validator vote lock must survive restart until a certificate finalizes the slot or the previous signature can no longer form a valid certificate.
+- **Atomicity**: Finalized-slot state must be established before proposal state or vote locks are cleared.
+- **Compatibility**: Transaction-hash certificate lookup remains available for nonce chaining and producer-UTXO verification.
+- **Certificate semantics**: A valid quorum certificate overrides a validator's local proposal preference, but a slot may have only one authoritative certificate.
+- **Bridge identity**: Burn uniqueness cannot depend on proposer address, nonce, amount, or destination supplied by a candidate when a canonical external burn identifier is available.
+- **Tech stack**: C++17 and existing persistence/CRDT facilities; no new dependency is required.
+- **Verification**: The observed interleaving must be covered deterministically, including restart and late-certificate cases.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
+| Store the authoritative certificate by canonical slot, with transaction hash as a secondary lookup index | Certificate finality must match the resource over which proposals compete while existing transaction-chain consumers still need hash retrieval | — Pending |
+| Enforce one published validator signature per slot | A 75% quorum can only remain safe if honest validators do not sign competing proposals in the same finality domain | — Pending |
+| Keep vote locks until certificate finality or cryptographic expiry, and persist them before publishing | In-memory or proposal-lifetime locks allow restart and timeout equivocation while old signatures remain usable | — Pending |
+| Finalize the slot in `HandleCertificate()` before clearing proposal state | This is the earliest valid-certificate observation and closes the gap before CRDT transaction application | — Pending |
+| Allow best-proposal replacement only before the validator's one irreversible vote | Published signatures cannot be retracted; a bounded collection window preserves deterministic candidate selection without double-signing | — Pending |
+| Make bridge reservations slot-owned rather than proposal-owned | Competing candidates share one burn resource; losing proposals must not unlock the eventual winner | — Pending |
 | `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
 | `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`). Factory params still exist (additive) — collapse deferred to Phase 2/3 |
 | Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor. Enum introduced at the boundary now, deep migration later | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
@@ -108,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-03 after Phase 3 completion (milestone v1 complete — all 3 phases shipped green)*
+*Last updated: 2026-07-22 after starting milestone v2.0 Slot-Scoped Consensus Finality*
