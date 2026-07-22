@@ -22,13 +22,13 @@
 #include <random>
 #include <string>
 #include <string_view>
-#include <thread>
 
 #include <boost/dll.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 using namespace sgns;
@@ -105,15 +105,9 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         for ( int i = 0; i < kNodeDirCleanupCount; ++i )
         {
-            auto dir = binaryPath + "/" + kNodeDirPrefix + std::to_string( i ) + "/";
-            for ( int retry = 0; retry < 3; ++retry )
-            {
-                std::error_code ec;
-                std::filesystem::remove_all( dir, ec );
-                if ( !std::filesystem::exists( dir ) )
-                    break;
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-            }
+            auto            dir = binaryPath + "/" + kNodeDirPrefix + std::to_string( i ) + "/";
+            std::error_code ec;
+            sgns::test::removeAllWithRetry( dir, ec );
         }
     }
 };

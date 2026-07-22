@@ -29,6 +29,7 @@
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
 #include "testutil/wait_condition.hpp"
+#include "testutil/remove_all.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -87,7 +88,7 @@ public:
             const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
             const std::string binaryPath = boost::dll::program_location().parent_path().string();
             const std::string basePath   = binaryPath + "/" + dbName + "_" + testName;
-            boost::filesystem::remove_all( basePath );
+            sgns::test::removeAllWithRetry( basePath );
             boost::filesystem::create_directories( basePath );
 
             sgns::crdt::KeyPairFileStorage keyStore( basePath + "/key" );

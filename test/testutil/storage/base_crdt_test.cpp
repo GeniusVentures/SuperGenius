@@ -4,7 +4,6 @@
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
-#include <thread>
 
 #include <boost/asio/io_context.hpp>
 #include "crdt/globaldb/keypair_file_storage.hpp"
@@ -20,6 +19,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include "testutil/remove_all.hpp"
 
 using boost::asio::io_context;
 using sgns::crdt::GlobalDB;
@@ -111,23 +111,10 @@ namespace test
         }
         io_.reset();
 
-        // Retry removal on Windows where file handles (e.g. RocksDB LOCK) may
-        // not be released immediately after database close.
-        auto RemoveWithRetry = []( const fs::path &p )
-        {
-            for ( int retry = 0; retry < 3; ++retry )
-            {
-                boost::system::error_code ec;
-                fs::remove_all( p, ec );
-                if ( !fs::exists( p ) )
-                    break;
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-            }
-        };
         try
         {
-            RemoveWithRetry( keypair_path_ );
-            RemoveWithRetry( db_path_ );
+            sgns::test::removeAllWithRetry( keypair_path_ );
+            sgns::test::removeAllWithRetry( db_path_ );
         }
         catch ( const std::exception &err )
         {

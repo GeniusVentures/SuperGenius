@@ -19,6 +19,7 @@
 #include "crdt/proto/bcast.pb.h"
 #include "crdt_mirror_broadcaster.hpp"
 #include "crdt_custom_dagsyncer.hpp"
+#include "testutil/remove_all.hpp"
 
 namespace sgns::crdt
 {
@@ -45,7 +46,7 @@ namespace sgns::crdt
 
         void SetUp() override
         {
-            fs::remove_all( databasePath );
+            test::removeAllWithRetry( databasePath );
             // Create new database
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
@@ -83,7 +84,7 @@ namespace sgns::crdt
                                     const std::shared_ptr<InMemoryDatastore> &ipfsDataStore )
         {
             // Create new database
-            fs::remove_all( base_path );
+            test::removeAllWithRetry( base_path );
             rocksdb::Options options;
             options.create_if_missing = true; // intentionally
             auto result               = rocksdb::create( base_path, options );

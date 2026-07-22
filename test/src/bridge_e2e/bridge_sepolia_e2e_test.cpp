@@ -29,6 +29,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 
 #include "testutil/outcome.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include "anvil_fixture.hpp" // CastAvailable, RunShellCapture, ParseTxHashFromCastJson, kSepoliaChainId
@@ -246,7 +247,7 @@ void BridgeSepoliaE2ETest::TearDownTestSuite()
     for ( auto &node : s_nodes ) { node.reset(); }
     for ( unsigned int i = 0u; i < kNodeCount; ++i )
     {
-        std::filesystem::remove_all( s_configs[i].BaseWritePath );
+        sgns::test::removeAllWithRetry( s_configs[i].BaseWritePath );
     }
 }
 

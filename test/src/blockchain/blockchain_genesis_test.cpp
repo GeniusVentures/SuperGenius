@@ -27,6 +27,7 @@
 #include "account/GeniusNode.hpp"
 #include "account/GeniusAccount.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/remove_all.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -148,17 +149,9 @@ protected:
         std::string binaryPath = boost::dll::program_location().parent_path().string();
         for ( int i = 0; i < 10; ++i )
         {
-            auto dir = binaryPath + "/node_blockchain_genesis_" + std::to_string( i ) + "/";
-            for ( int retry = 0; retry < 3; ++retry )
-            {
-                std::error_code ec;
-                std::filesystem::remove_all( dir, ec );
-                if ( !ec )
-                {
-                    break;
-                }
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-            }
+            auto            dir = binaryPath + "/node_blockchain_genesis_" + std::to_string( i ) + "/";
+            std::error_code ec;
+            sgns::test::removeAllWithRetry( dir, ec );
         }
     }
 
