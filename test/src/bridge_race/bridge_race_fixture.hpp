@@ -3,7 +3,7 @@
  * @brief      Phase 8 11-node (1 Full + 10 Light) mint-race e2e fixture, reused by all
  *             bridge_race test binaries.
  * @date       2026-07-16
- * @author     Super Genius (info@gnus.ai)
+ * @author     Henrique A. Klein (hklein@gnus.ai)
  *
  * SetUpTestSuite bootstraps an 11-node cluster (index 0 = Full node, indices 1-10 =
  * Light nodes) against a local Anvil fork of Sepolia, exactly like
@@ -21,6 +21,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <filesystem>
@@ -355,16 +356,23 @@ protected:
             s_nodes[i]->GetPubSub()->AddPeers( { full_node_pubsub_addr } );
         }
 
-        // Wait for the Full node to reach READY before proceeding. Each TEST_F body will
-        // separately wait for the Light nodes after seeding burns and calling
-        // ConfigureRpcEndpoint (D-03 — this fixture does not call ConfigureRpcEndpoint).
+        // All transaction managers must be READY before a TEST_F body attempts the
+        // deliberately back-to-back ConfigureRpcEndpoint calls. The burn is still seeded
+        // before endpoint configuration in each test, preserving the D-03 race trigger.
         ASSERT_WAIT_FOR_CONDITION(
-            [&]() { return s_nodes[0]->GetState() == GeniusNode::NodeState::READY; },
+            [&]()
+            {
+                return std::all_of(
+                    s_nodes.begin(),
+                    s_nodes.end(),
+                    []( const std::shared_ptr<GeniusNode> &node )
+                    { return node && node->GetState() == GeniusNode::NodeState::READY; } );
+            },
             kRaceNodeReadyTimeout,
-            "s_nodes[0] (Full node) READY",
+            "all 11 bridge-race nodes READY",
             nullptr );
 
-        spdlog::info( "bridge_race: {}-node cluster bootstrapped (RPC endpoints not yet configured)", kNodeCount );
+        spdlog::info( "bridge_race: all {} nodes READY (RPC endpoints not yet configured)", kNodeCount );
     }
 
     /**
