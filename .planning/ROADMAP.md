@@ -480,7 +480,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — ISignedCRDTData interface + SecureCrdtRegistry static registry + Wave-0 tests (SCRDT-01, SCRDT-02)
+- [x] 09-01-PLAN.md — ISignedCRDTData interface + SecureCrdtRegistry static registry + Wave-0 tests (SCRDT-01, SCRDT-02)
 - [ ] 09-02-PLAN.md — SecureCrdt wrapper (local-write gate + filter registration + read-path quorum re-derivation) + quorum-gate/propose-sign-quorum tests (SCRDT-03, SCRDT-04)
 
 ### Phase 10: TrustedPeerRegistry
@@ -520,7 +520,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
-| 9. SecureCRDT Layer | 0/2 | Not started | - |
+| 9. SecureCRDT Layer | 1/2 | In Progress|  |
 | 10. TrustedPeerRegistry | 0/TBD | Not started | - |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
