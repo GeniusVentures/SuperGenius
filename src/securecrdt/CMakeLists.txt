@@ -1,6 +1,9 @@
-add_library(securecrdt INTERFACE)
+add_library(securecrdt
+    SecureCrdt.cpp
+)
 target_link_libraries(securecrdt
-    INTERFACE
+    PUBLIC
+    crdt_globaldb
     multisig
 )
 supergenius_install(securecrdt)

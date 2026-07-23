@@ -115,6 +115,23 @@ namespace sgns::securecrdt
             return nullptr;
         }
 
+        /**
+         * @brief Returns a snapshot copy of every currently-registered entry.
+         *        Used by SecureCrdt::RegisterFilters to self-register a filter
+         *        callback for each registered base_key pattern at startup.
+         * @return Vector of registered entries (order unspecified).
+         */
+        static std::vector<SecureCrdtRegistryEntry> AllEntries()
+        {
+            std::vector<SecureCrdtRegistryEntry> entries;
+            entries.reserve( registry().size() );
+            for ( const auto &[pattern, entry] : registry() )
+            {
+                entries.push_back( entry );
+            }
+            return entries;
+        }
+
     private:
         static std::unordered_map<std::string, SecureCrdtRegistryEntry> &registry()
         {
