@@ -155,9 +155,9 @@ protected:
     static std::shared_ptr<GeniusNode> node_proc1;
     static std::shared_ptr<GeniusNode> node_proc2;
 
-    static DevConfig_st DEV_CONFIG;
-    static DevConfig_st DEV_CONFIG2;
-    static DevConfig_st DEV_CONFIG3;
+    static GeniusNodeConfig DEV_CONFIG;
+    static GeniusNodeConfig DEV_CONFIG2;
+    static GeniusNodeConfig DEV_CONFIG3;
 
     static std::string s_eth_private_key;
 
@@ -198,9 +198,9 @@ std::shared_ptr<GeniusNode> BridgeE2ETest::node_proc2 = nullptr;
 
 std::string BridgeE2ETest::s_eth_private_key;
 
-DevConfig_st BridgeE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
-DevConfig_st BridgeE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
-DevConfig_st BridgeE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG  = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node1" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG2 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node2" };
+GeniusNodeConfig BridgeE2ETest::DEV_CONFIG3 = { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./node3" };
 
 // --- Fixture implementation ---
 
@@ -296,7 +296,6 @@ void BridgeE2ETest::SetUpTestSuite()
     GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
     node_main = GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ s_eth_private_key } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
     // Set authorized address to match the full node — triggers StoreGenesisRegistry
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node_main->GetAddress() );
@@ -315,7 +314,6 @@ void BridgeE2ETest::SetUpTestSuite()
     GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40002, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
     node_proc1 = GeniusNode::New( DEV_CONFIG2, sgns::FromPrivateKey{ s_eth_private_key } );
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
     GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40003, /*auto_dht=*/false );
     GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
@@ -327,15 +325,14 @@ void BridgeE2ETest::SetUpTestSuite()
     node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY
-    std::chrono::milliseconds elapsed;
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() {
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
             return node_proc1->GetState() == GeniusNode::NodeState::READY &&
                    node_proc2->GetState() == GeniusNode::NodeState::READY;
         },
         kBlockchainInitTimeout,
-        "Processor nodes did not sync to READY within timeout",
-        &elapsed );
+        "Processor nodes did not sync to READY within timeout" );
 
     spdlog::info( "bridge_e2e: all processor nodes synced and READY" );
 
@@ -643,11 +640,11 @@ TEST_F( BridgeE2ETest, MissingEndpointsFailClosed )
     // Chain "999999" has no RPC endpoints configured — should fail closed
     constexpr std::chrono::milliseconds kFailClosedTimeout{ 5000 };
     auto                                result = node_main->MintTokens( kMintAmount,
-                                         burn_tx_hash,
-                                         "999999",
-                                         sgns::TokenID::FromBytes( { 0x00 } ),
-                                         node_main->GetAddress(),
-                                         kFailClosedTimeout );
+                                                                        burn_tx_hash,
+                                                                        "999999",
+                                                                        sgns::TokenID::FromBytes( { 0x00 } ),
+                                                                        node_main->GetAddress(),
+                                                                        kFailClosedTimeout );
 
     EXPECT_TRUE( result.has_error() )
         << "MintTokens for chain with no RPC endpoints should fail (fail-closed per Phase 3 D-03)";

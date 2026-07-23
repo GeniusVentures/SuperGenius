@@ -208,13 +208,14 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
         // Add some diagnostic logging for port binding
         int port = 40001 + i;
         Color::PrintInfo( "Attempting to start PubSub node ", i, " on port ", port );
-        for (auto node : bootstrap_nodes) {
-            Color::PrintInfo("  with bootstrap node: ", node);
+        for ( auto node : bootstrap_nodes )
+        {
+            Color::PrintInfo( "  with bootstrap node: ", node );
         }
-        
+
         // Start the node and wait for it to complete before getting its address
         m_pubsub_futures.emplace_back( m_pubsub_nodes[i]->Start( port, bootstrap_nodes ) );
-        
+
         // Wait for this node to start before using it as a bootstrap for the next
         std::chrono::milliseconds nodeStartTime;
         ASSERT_WAIT_FOR_CONDITION(
@@ -244,7 +245,7 @@ void ProcessingServiceTest::Initialize( uint64_t numNodes, size_t processingTime
             std::chrono::milliseconds( 5000 ),
             "PubSub node startup failed",
             &nodeStartTime );
-        
+
         // Now it's safe to get the interface address and use it as bootstrap
         if ( i == 0 )
         {
@@ -306,7 +307,7 @@ TEST_F( ProcessingServiceTest, DISABLED_ProcessingSlotsAreAvailable )
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-        processingCore);
+                                                                      processingCore );
 
     m_processing_services.push_back( processingService );
 
@@ -324,9 +325,11 @@ TEST_F( ProcessingServiceTest, DISABLED_ProcessingSlotsAreAvailable )
     channelResponse->set_channel_id( "PROCESSING_QUEUE_ID" );
     gridChannel2.Publish( gridMessage.SerializeAsString() );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-    EXPECT_EQ( processingService->GetProcessingNodesCount(), 1 );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&processingService]() { return processingService->GetProcessingNodesCount() == 1; },
+        std::chrono::milliseconds( 3000 ),
+        "Processing node was not created",
+        nullptr );
 }
 
 /**
@@ -349,7 +352,7 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
                                                                       1,
                                                                       enqueuer,
                                                                       std::make_shared<SubTaskResultStorageMock>(),
-        processingCore);
+                                                                      processingCore );
 
     // Track the ProcessingServiceImpl for proper cleanup
     m_processing_services.push_back( processingService );
@@ -365,7 +368,9 @@ TEST_F( ProcessingServiceTest, NoProcessingSlotsAvailable )
 
     // No queue channel message sent
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-
-    EXPECT_EQ( processingService->GetProcessingNodesCount(), 0 );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&processingService]() { return processingService->GetProcessingNodesCount() == 0; },
+        std::chrono::milliseconds( 3000 ),
+        "No processing node should have been created",
+        nullptr );
 }

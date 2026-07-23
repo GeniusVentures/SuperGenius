@@ -15,7 +15,7 @@ namespace
     constexpr const char *TEST_PRIVATE_KEY =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
-    DevConfig_st MakeDevConfig( const boost::filesystem::path &base )
+    GeniusNodeConfig MakeDevConfig( const boost::filesystem::path &base )
     {
         return { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base.generic_string() + '/' };
     }
@@ -53,7 +53,7 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
     UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_derivation" );
     const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
@@ -71,7 +71,7 @@ TEST( NodeTypeDerivation, NullptrOnAccountRestoreFailure )
     UseMemorySecureStorage();
     auto         base       = MakeTempDir( "ntd_failure" );
     const auto   dev_config = MakeDevConfig( base );
-    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true );
+    GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, FromPrivateKey{ "not-a-valid-hex-key" } );
     EXPECT_EQ( node, nullptr );

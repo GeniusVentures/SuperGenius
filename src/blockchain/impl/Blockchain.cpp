@@ -66,6 +66,12 @@ namespace sgns
         return address;
     }
 
+    std::vector<std::string> &Blockchain::AdditionalGenesisValidatorAddressesStorage()
+    {
+        static std::vector<std::string> addresses;
+        return addresses;
+    }
+
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                  std::shared_ptr<GeniusAccount>             account,
                                                  std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
@@ -155,6 +161,16 @@ namespace sgns
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
                         request_validator_registry( strong );
+                    }
+                    else if ( strong->start_deferred_.load() )
+                    {
+                        // Registry became ready after Start() deferred. Retry immediately
+                        // instead of waiting for GeniusNode's ScheduleBlockchainRetry timer
+                        // (default 5s), which would otherwise idle here until it fires.
+                        strong->logger_->info(
+                            "[{}] Validator registry ready — retrying deferred blockchain start",
+                            strong->account_->GetAddress().substr( 0, 8 ) );
+                        (void)strong->Start();
                     }
                 }
             } );
@@ -503,11 +519,23 @@ namespace sgns
         return AuthorizedFullNodeAddressStorage();
     }
 
+    void Blockchain::SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses )
+    {
+        auto &storage = AdditionalGenesisValidatorAddressesStorage();
+        storage       = addresses;
+    }
+
+    const std::vector<std::string> &Blockchain::GetAdditionalGenesisValidatorAddresses()
+    {
+        return AdditionalGenesisValidatorAddressesStorage();
+    }
+
     outcome::result<void> Blockchain::Start()
     {
         if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
              !validator_registry_initialized_.load() )
         {
+            start_deferred_.store( true );
             logger_->warn(
                 "[{}] Blockchain start deferred (created: {}, filters: {}, callbacks: {}, validator_registry: {})",
                 account_->GetAddress().substr( 0, 8 ),
@@ -517,6 +545,7 @@ namespace sgns
                 validator_registry_initialized_.load() );
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
+        start_deferred_.store( false );
 
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
@@ -608,6 +637,7 @@ namespace sgns
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
+
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
             return account_->RequestAccountCreation(
@@ -677,7 +707,10 @@ namespace sgns
             return outcome::success();
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
@@ -938,6 +971,33 @@ namespace sgns
         logger_->info( "[{}] Requesting account creation block via pubsub (async)",
                        account_->GetAddress().substr( 0, 8 ) );
 
+        // Genesis creator: it creates its own account-creation block, so issuing
+        // RequestAccountCreation(8000) only stalls startup ~8s waiting for a PubSub
+        // response that never arrives (no peers). Trigger the same fallback the
+        // timeout would have, immediately.
+        // This runs on a detached thread because GenesisReceivedCallback executes
+        // on the CRDT DAG worker thread, and CreateAccountCreationBlock -> db_->Put
+        // -> AddDAGNode -> WaitForJob would self-deadlock the single worker if
+        // called synchronously here.
+        if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
+        {
+            logger_->info( "[{}] Genesis creator - creating account creation block directly",
+                           account_->GetAddress().substr( 0, 8 ) );
+            std::thread(
+                [weakself = weak_from_this()]()
+                {
+                    if ( auto s = weakself.lock() )
+                    {
+                        // Empty/error result => no peer supplied a CID => fall back
+                        // to creating the account-creation block locally.
+                        (void)s->InformAccountCreationResponse(
+                            outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
+                    }
+                } )
+                .detach();
+            return outcome::success();
+        }
+
         auto result = account_->RequestAccountCreation(
             TIMEOUT_ACC_CREATION_BLOCK_MS,
             [weakself = weak_from_this()]( outcome::result<std::string> creation_cid_res )
@@ -1038,7 +1098,10 @@ namespace sgns
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
@@ -1679,6 +1742,18 @@ namespace sgns
     bool Blockchain::RegisterSubjectHandler( std::string_view subject_type, ConsensusManager::SubjectHandler handler )
     {
         return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::SetSlotHashPopulator( ConsensusManager::SlotHashPopulator populator )
+    {
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->SetSlotHashPopulator( std::move( populator ) );
+        }
+        else
+        {
+            logger_->warn( "SetSlotHashPopulator: consensus manager not initialized, populator discarded" );
+        }
     }
 
     void Blockchain::UnregisterSubjectHandler( std::string_view subject_type )

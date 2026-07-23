@@ -244,7 +244,7 @@ SuperGenius/
 - `build/apple.toolchain.cmake`: Apple cross-compilation toolchain
 - `src/base/sgnsv.h.in`: Version header template (auto-generated)
 - `cmake/config.cmake.in`: Config header template
-- `src/account/GeniusNode.hpp`: `DevConfig_st` runtime configuration struct
+- `src/account/GeniusNode.hpp`: `DevConfig` runtime configuration struct
 
 **Core Logic:**
 - `src/account/GeniusAccount.hpp`: Account CRDT chain management

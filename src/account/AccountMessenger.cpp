@@ -148,6 +148,13 @@ namespace sgns
             return outcome::success();
         }
 
+        if ( !HasRequestPeers() )
+        {
+            logger_->debug( "[{}] Head request deferred until a request-topic peer is available",
+                            address_.substr( 0, 8 ) );
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
+
         accountComm::HeadRequest req;
         req.set_requester_address( address_ );
         req.set_request_id( rd_() );
@@ -1017,6 +1024,11 @@ namespace sgns
         queue_cv_.notify_one();
     }
 
+    bool AccountMessenger::HasRequestPeers() const
+    {
+        return pubsub_->getPeerCount( requests_topic_ ) != 0;
+    }
+
     outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms )
     {
         std::mt19937_64 gen( rd_() );
@@ -1041,6 +1053,10 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( RequestNonce( req_id ) );
+        if ( !HasRequestPeers() )
+        {
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
+        }
 
         const auto start_time   = std::chrono::steady_clock::now();
         const auto full_timeout = std::chrono::milliseconds( timeout_ms );
@@ -1179,6 +1195,17 @@ namespace sgns
             block_first_response_time_.erase( req_id );
         }
 
+        const auto start_time   = std::chrono::steady_clock::now();
+        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
+        while ( !HasRequestPeers() )
+        {
+            if ( std::chrono::steady_clock::now() - start_time >= full_timeout )
+            {
+                return outcome::failure( Error::GENESIS_REQUEST_ERROR );
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+        }
+
         auto request_result = send_request( req_id );
         logger_->debug( "[{}] Requesting {} {} with req_id {} and timeout {}",
                         address_.substr( 0, 8 ),
@@ -1192,9 +1219,6 @@ namespace sgns
             logger_->error( "[{}] Failed to request {} {}", address_.substr( 0, 8 ), label, target );
             return request_result.error();
         }
-
-        const auto start_time   = std::chrono::steady_clock::now();
-        const auto full_timeout = std::chrono::milliseconds( timeout_ms );
         const auto silent_time  = std::chrono::milliseconds( 150 );
 
         bool first_seen = false;
@@ -1286,6 +1310,10 @@ namespace sgns
         {
             logger_->error( "[{}] Failed to request UTXOs for {}", address_.substr( 0, 8 ), address.substr( 0, 8 ) );
             return request_result.error();
+        }
+        if ( !HasRequestPeers() )
+        {
+            return outcome::failure( Error::NO_RESPONSE_RECEIVED );
         }
 
         const auto start_time   = std::chrono::steady_clock::now();

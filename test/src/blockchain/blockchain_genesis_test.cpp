@@ -60,7 +60,7 @@ protected:
         std::string fileStem   = std::filesystem::path( filePath ).stem().string();
         auto        outPath    = binaryPath + "/node_blockchain_genesis_" + std::to_string( id ) + "/";
 
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
+        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPath };
 
         std::filesystem::create_directories( devConfig.BaseWritePath );
         {
@@ -89,10 +89,16 @@ protected:
 
         uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
         sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, uniquePort, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath, isFullNode ? "Full" : "Light", /*is_processor=*/false );
-        auto     node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
+        sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                           isFullNode ? "Full" : "Light",
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/false );
+        auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        // New starts PubSub synchronously in the constructor
+        // (InitNetwork -> pubs.wait()) and kicks off async DB/blockchain init.
+        // Callers wait for READY via waitForCondition, so no fixed sleep is
+        // needed here (and a sleep would obscure startup-timing measurements).
         return node;
     }
 
@@ -153,9 +159,12 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
-    // Allow time for attempted connections
+    // Without authorization, nodes must NOT reach READY. Bounded-wait (via
+    // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync without authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
+    (void)waitForCondition(
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::milliseconds( 5000 ) );
 
     // Verify that nodes are NOT in READY state due to missing authorization
     std::cout << "Verifying nodes cannot reach READY state without authorization..." << std::endl;
@@ -184,10 +193,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
     std::cout << "Setting authorized full node address to: " << node_full->GetAddress() << std::endl;
 
-    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_full not ready" );
-
     // Create two regular nodes
     auto node_regular_1 = CreateNode( "regular_node_with_auth_1",
                                       "0xcafe",
@@ -196,16 +201,8 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
                                       false // not full node
     );
 
-    // auto node_regular_2 = CreateNode( "regular_node_with_auth_2",
-    //                                   "0xcafe",
-    //                                   "1.0",
-    //                                   sgns::TokenID::FromBytes( { 0x00 } ),
-    //                                   false // not full node
-    // );
-
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
-    //std::cout << "Regular node 2 address: " << node_regular_2->GetAddress() << std::endl;
 
     node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
@@ -214,19 +211,13 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     // Connect nodes to each other for pubsub communication
     std::cout << "Connecting nodes..." << std::endl;
 
-    //node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
-
-    // Allow time for connections to establish and genesis block to be created/propagated
-    std::cout << "Waiting for genesis block creation and propagation..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
-
-    // Wait for all nodes to reach READY state
+    // Wait for nodes to reach READY state. Genesis creation/propagation is
+    // covered by the READY poll below (no fixed sleep needed).
     std::cout << "Waiting for nodes to reach READY state..." << std::endl;
 
     test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "node_full not ready" );
-
     test::assertWaitForCondition( [&]() { return node_regular_1->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
                                   "node_regular_1 not ready" );
@@ -236,7 +227,6 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     // Verify that all nodes have the same authorized address configured
     ASSERT_EQ( node_full->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
     ASSERT_EQ( node_regular_1->GetAuthorizedFullNodeAddress(), node_full->GetAddress() );
-    //ASSERT_EQ( node_regular_2->GetAuthorizedFullNodeAddress(), authorized_address );
 
     std::cout << "=== With Authorization Can Sync Test Completed Successfully ===" << std::endl;
 }
@@ -248,16 +238,13 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
     // Create the full node first (this will be the genesis creator)
     auto node_full = CreateNode( "full_node_with_auth", "0xcafe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), true );
     Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
-    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 50000 ),
-                                  "node_full not ready" );
+
     // Create two regular nodes that will exchange transactions once synced
     auto node_regular_1 = CreateNode( "regular_node_tx_test_1",
                                       "0xcafe",
                                       "1.0",
                                       sgns::TokenID::FromBytes( { 0x00 } ),
                                       false );
-
     auto node_regular_2 = CreateNode( "regular_node_tx_test_2",
                                       "0xcafe",
                                       "1.0",
@@ -371,9 +358,12 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
         { node_full->GetPubSub()->GetLocalAddress(), node_regular_2->GetPubSub()->GetLocalAddress() } );
     node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetLocalAddress() } );
 
-    // Allow time for attempted connections and genesis block operations
+    // With wrong authorization, nodes must NOT reach READY. Bounded-wait (via
+    // waitForCondition) for sync that should not occur, then observe state.
     std::cout << "Waiting to verify nodes cannot sync with wrong authorization..." << std::endl;
-    std::this_thread::sleep_for( std::chrono::milliseconds( 8000 ) );
+    (void)waitForCondition(
+        [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::milliseconds( 8000 ) );
 
     // Verify that nodes cannot reach READY state due to wrong authorization
     std::cout << "Verifying nodes cannot reach READY state with wrong authorization..." << std::endl;
@@ -384,6 +374,5 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
 
     // The nodes should not be able to sync properly with wrong authorization
     // This test verifies that the blockchain sync is blocked when wrong authorization is set
-
     std::cout << "=== Wrong Authorization Cannot Sync Test Completed ===" << std::endl;
 }

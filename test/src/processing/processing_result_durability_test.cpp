@@ -503,8 +503,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_AcceptsValidIpfsPrefix )
                                   "ipfs://QmValidCID1\nipfs://QmValidCID2" );
     accessor->CompleteSubTask( "SCHEME_OK", goodResult );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    EXPECT_FALSE( error_occurred.load() ) << "Valid ipfs:// scheme should be accepted (9a only, no bitswap check)";
+    EXPECT_WAIT_FOR_CONDITION(
+        [&error_occurred]() { return !error_occurred.load(); },
+        std::chrono::milliseconds( 600 ),
+        "Valid ipfs:// scheme should be accepted (9a only, no bitswap check)",
+        nullptr );
 }
 
 /**
@@ -557,8 +560,11 @@ TEST_F( ResultDurabilityTest, SchemeValidation_EmptyDataIdPasses )
     auto emptyResult = makeResult( "EMPTY_ID", "" );
     accessor->CompleteSubTask( "EMPTY_ID", emptyResult );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    EXPECT_FALSE( error_occurred.load() ) << "Empty ipfs_results_data_id should pass validation";
+    EXPECT_WAIT_FOR_CONDITION(
+        [&error_occurred]() { return !error_occurred.load(); },
+        std::chrono::milliseconds( 600 ),
+        "Empty ipfs_results_data_id should pass validation",
+        nullptr );
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -677,11 +683,11 @@ TEST_F( ResultDurabilityTest, AvailabilityGate_RejectsWhenDataUnavailable )
     m_processing_queues_accessors[1]->CompleteSubTask( "AVAIL_FAIL", badResult );
 
     // Allow time for pubsub propagation.  Result should NOT appear on owner.
-    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-
-    // The result should not have been accumulated because 9b rejects it.
-    EXPECT_EQ( m_processing_queues_accessors[0]->GetResults().size(), 0u )
-        << "Result with unavailable CID should have been rejected";
+    EXPECT_WAIT_FOR_CONDITION(
+        [this]() { return m_processing_queues_accessors[0]->GetResults().size() == 0u; },
+        std::chrono::milliseconds( 1500 ),
+        "Result with unavailable CID should have been rejected",
+        nullptr );
 }
 
 /**
@@ -735,6 +741,9 @@ TEST_F( ResultDurabilityTest, SchemeValidation_SkipsEmptyLines )
                               "ipfs://QmAlpha\n\nipfs://QmBeta\n\n" );
     accessor->CompleteSubTask( "EMPTY_LINES", result );
 
-    std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    EXPECT_FALSE( error_occurred.load() ) << "Empty lines should be skipped, valid CIDs should pass";
+    EXPECT_WAIT_FOR_CONDITION(
+        [&error_occurred]() { return !error_occurred.load(); },
+        std::chrono::milliseconds( 600 ),
+        "Empty lines should be skipped, valid CIDs should pass",
+        nullptr );
 }

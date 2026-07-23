@@ -357,6 +357,30 @@ TEST_F( UTXOManagerTest, RollbackOnlyReleasesMatchingReservation )
     EXPECT_FALSE( utxo_manager->IsOutPointReserved( DUMMY_HASH, 0 ) );
 }
 
+TEST_F( UTXOManagerTest, RestoreConsumedUTXOsRejectsInvalidBatchAtomically )
+{
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 0, 100, TOKEN_1 ) ).value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( DUMMY_HASH, 1, 100, TOKEN_1 ) ).value() );
+
+    InputUTXOInfo consumed_input;
+    consumed_input.txid_hash_  = DUMMY_HASH;
+    consumed_input.output_idx_ = 0;
+    InputUTXOInfo ready_input;
+    ready_input.txid_hash_  = DUMMY_HASH;
+    ready_input.output_idx_ = 1;
+    ASSERT_TRUE( utxo_manager->ConsumeUTXOs( { consumed_input } ).value() );
+    ASSERT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
+
+    const auto restore_result =
+        utxo_manager->RestoreConsumedUTXOs( { consumed_input, ready_input }, std::string( PRIV_KEY ) );
+
+    ASSERT_TRUE( restore_result.has_error() );
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( DUMMY_HASH, 0 ) );
+    EXPECT_FALSE( utxo_manager->GetUnconsumedUTXO( DUMMY_HASH, 0 ).has_value() );
+    EXPECT_TRUE( utxo_manager->GetUnconsumedUTXO( DUMMY_HASH, 1 ).has_value() );
+    EXPECT_EQ( utxo_manager->GetBalance(), 100U );
+}
+
 TEST_F( UTXOManagerTest, WinningPeerConsumesLocallyOwnedReservedBridgeBurn )
 {
     const std::string local_detector = "peer-b";

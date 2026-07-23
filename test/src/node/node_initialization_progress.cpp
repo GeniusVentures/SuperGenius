@@ -29,20 +29,21 @@ TEST( GeniusNode, InitializationProgress )
 
     const auto base_write_path = path.generic_string() + '/';
     sgns::GeniusNode::WriteNetworkConfig( base_write_path, /*port_seed=*/40069, /*auto_dht=*/false );
-    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true );
+    sgns::GeniusNode::WriteSgnsConfig( base_write_path, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
     auto node = sgns::GeniusNode::New(
         { "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), base_write_path },
         sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     auto last_percentage = 0.0F;
-
-    std::chrono::milliseconds elapsed;
-    ASSERT_WAIT_FOR_CONDITION(
-        [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
-        std::chrono::milliseconds( 60000 ),
-        "Node did not reach READY state within timeout",
-        &elapsed );
+    auto end = std::chrono::steady_clock::now() + std::chrono::seconds(50);
+    while ( std::chrono::steady_clock::now() < end && node->GetState() != GeniusNode::NodeState::READY )
+    {
+        auto percentage = node->GetInitializationStatus().first;
+        ASSERT_GE( percentage, last_percentage );
+        last_percentage = percentage;
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    }
 
     ASSERT_EQ( node->GetInitializationStatus().first, 1.0 );
 }

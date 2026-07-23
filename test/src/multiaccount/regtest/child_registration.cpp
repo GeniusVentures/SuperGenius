@@ -167,7 +167,7 @@ protected:
         auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
         auto outPathStr = outPath.generic_string() + '/';
 
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
+        GeniusNodeConfig devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
 
         std::filesystem::remove_all( devConfig.BaseWritePath );
         std::filesystem::create_directories( devConfig.BaseWritePath );

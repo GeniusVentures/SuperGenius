@@ -435,7 +435,7 @@ config.chains_json_path = std::filesystem::current_path() / "chains.json";
 // With:
 config.chains_json_path = boost::dll::program_location().parent_path() / "chains_config.json";
 ```
-Also accept an override via `DevConfig_st` or environment variable `SGNS_CHAINS_CONFIG_PATH` for flexible deployment. Keep the existing `ChainRpcProviderConfig::chains_json_path` field — it already supports arbitrary paths.
+Also accept an override via `DevConfig` or environment variable `SGNS_CHAINS_CONFIG_PATH` for flexible deployment. Keep the existing `ChainRpcProviderConfig::chains_json_path` field — it already supports arbitrary paths.
 
 **Warning signs:** "chains.json not found at ..." log on production startup.
 
@@ -674,7 +674,7 @@ void GeniusNode::PerformStartupCatchupScan() {
 4. **Startup catch-up scan depth mechanism**
    - What we know: "grab last mint message by date, check contract via RPC for unprocessed burns" (D-20).
    - What's unclear: Whether to use `eth_getLogs` (efficient range query) or paginate `eth_getBlockByNumber` + `eth_getTransactionReceipt` (more compatible but slower).
-   - Recommendation: Use `eth_getLogs` with `BridgeSourceBurned` event topic0 — this is the standard EVM method for event scanning. Default depth: 10,000 blocks (~2 days on mainnet), configurable via `DevConfig_st.bridge_catchup_scan_depth`.
+   - Recommendation: Use `eth_getLogs` with `BridgeSourceBurned` event topic0 — this is the standard EVM method for event scanning. Default depth: 10,000 blocks (~2 days on mainnet), configurable via `DevConfig.bridge_catchup_scan_depth`.
 
 5. **RESERVED state interaction with existing reservation system**
    - What we know: `UTXOManager` has a `reserved_outpoints_` map and `ReserveUTXOs()`/`RollbackUTXOs()` methods. RESERVED is a persistent lifecycle state, not a temporary reservation.

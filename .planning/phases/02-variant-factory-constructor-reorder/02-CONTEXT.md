@@ -14,7 +14,7 @@ hinge from `research/ARCHITECTURE.md`). It introduces the `NodeType` enum + `Nod
 + the `node_type` config read, and derives `is_full_node_` from `node_type_`.
 
 **In scope (this phase):**
-- New public factory `New(const DevConfig_st &dev_config, AccountSource source)` as the canonical entry point
+- New public factory `New(const DevConfig &dev_config, AccountSource source)` as the canonical entry point
 - `AccountSource = std::variant<NewAccount, FromPrivateKey, FromMnemonic, FromPublicKey>` with the four owned-`std::string` struct shapes (D-03)
 - Private constructor signature changes to `(dev_config, AccountSource)`; account created via `std::visit` **after** `LoadSgnsConfig()` in the ctor body (D-04 / INTF-03)
 - `NodeType` enum co-located with `NodeState`/`Error` at `GeniusNode.hpp` (~line 129); `NodeTypeFromString()` case-insensitive parser (D-02)

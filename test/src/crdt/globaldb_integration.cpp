@@ -28,6 +28,7 @@
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
 #include "base/sgns_version.hpp"
+#include "testutil/wait_condition.hpp"
 
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <libp2p/log/configurator.hpp>
@@ -38,23 +39,6 @@
 
 namespace
 {
-    template <typename Predicate>
-    bool waitForCondition( Predicate                 pred,
-                           std::chrono::milliseconds timeout,
-                           std::chrono::milliseconds pollInterval = std::chrono::milliseconds( 100 ) )
-    {
-        const auto start = std::chrono::steady_clock::now();
-        while ( std::chrono::steady_clock::now() - start < timeout )
-        {
-            if ( pred() )
-            {
-                return true;
-            }
-            std::this_thread::sleep_for( pollInterval );
-        }
-        return false;
-    }
-
     std::string GetLoggingSystem( const std::string & )
     {
         return R"(
@@ -98,8 +82,6 @@ public:
             TestNode &operator=( TestNode && ) noexcept = default;
         };
 
-        static uint16_t currentPubsubPort;
-
         void addNode( const std::string &dbName )
         {
             const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
@@ -112,7 +94,8 @@ public:
             auto                           keyPair  = keyStore.GetKeyPair().value();
             auto                           pubsub   = std::make_shared<sgns::ipfs_pubsub::GossipPubSub>( keyPair );
             const std::string              listenIp = "0.0.0.0";
-            pubsub->Start( currentPubsubPort, {}, listenIp, {} );
+            const auto startError = pubsub->Start( 0, {}, listenIp, {} ).get();
+            ASSERT_FALSE( startError ) << "Could not start GlobalDB test node: " << startError.message();
 
             auto io        = std::make_shared<boost::asio::io_context>();
             auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
@@ -135,15 +118,13 @@ public:
             }
             auto db = std::move( globaldb_ret.value() );
 
-            ++currentPubsubPort;
-
             db->Start();
             std::thread t( [io]() { io->run(); } );
             TestNode    node{ basePath, io, pubsub, db, std::move( t ) };
             nodes_.push_back( std::move( node ) );
         }
 
-        void connectNodes( std::chrono::milliseconds delay = std::chrono::seconds( 1 ) )
+        void connectNodes()
         {
             for ( size_t i = 0; i < nodes_.size(); ++i )
             {
@@ -153,7 +134,23 @@ public:
                     nodes_[i].pubsub->AddPeers( { nodes_[j].pubsub->GetInterfaceAddress() } );
                 }
             }
-            std::this_thread::sleep_for( delay );
+
+            const auto expectedPeerCount = nodes_.empty() ? 0 : nodes_.size() - 1;
+            sgns::test::assertWaitForCondition(
+                [&]()
+                {
+                    for ( const auto &node : nodes_ )
+                    {
+                        if ( node.pubsub->GetHost()->getNetwork().getConnectionManager().getConnections().size() <
+                             expectedPeerCount )
+                        {
+                            return false;
+                        }
+                    }
+                    return true;
+                },
+                WAIT_TIMEOUT,
+                "GlobalDB test nodes did not connect" );
         }
 
         const std::vector<TestNode> &getNodes() const
@@ -214,8 +211,6 @@ public:
     }
 };
 
-uint16_t GlobalDBIntegrationTest::TestNodeCollection::currentPubsubPort = 50501;
-
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();
@@ -241,15 +236,15 @@ TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    sgns::test::assertWaitForCondition(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Value was not replicated to both peers" );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -285,15 +280,15 @@ TEST_F( GlobalDBIntegrationTest, ReplicationViaTopicBroadcastTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    sgns::test::assertWaitForCondition(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Topic value was not replicated to both peers" );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -345,15 +340,15 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     const auto commitResB = txB->Commit( { "test" } );
     ASSERT_TRUE( commitResB.has_value() );
 
-    const bool replicated = waitForCondition(
+    sgns::test::assertWaitForCondition(
         [&]() -> bool
         {
             const auto resA = testNodes->getNodes()[2].db->Get( keyA );
             const auto resB = testNodes->getNodes()[2].db->Get( keyB );
             return resA.has_value() && resB.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Values from both topics were not replicated" );
     {
         const auto resA = testNodes->getNodes()[2].db->Get( keyA );
         const auto resB = testNodes->getNodes()[2].db->Get( keyB );
@@ -424,15 +419,15 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithTopicBroadcastTest )
     const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    sgns::test::assertWaitForCondition(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Direct value was not replicated to both peers" );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -464,15 +459,15 @@ TEST_F( GlobalDBIntegrationTest, DirectPutWithoutTopicBroadcastTest )
     const auto putRes = testNodes->getNodes()[0].db->Put( key, value, { "topic" } );
     ASSERT_TRUE( putRes.has_value() );
 
-    const bool replicated = waitForCondition(
+    sgns::test::assertWaitForCondition(
         [&]() -> bool
         {
             const auto res2 = testNodes->getNodes()[1].db->Get( key );
             const auto res3 = testNodes->getNodes()[2].db->Get( key );
             return res2.has_value() && res3.has_value();
         },
-        WAIT_TIMEOUT );
-    EXPECT_TRUE( replicated );
+        WAIT_TIMEOUT,
+        "Direct value was not replicated to both peers" );
     {
         const auto res2 = testNodes->getNodes()[1].db->Get( key );
         const auto res3 = testNodes->getNodes()[2].db->Get( key );
@@ -510,19 +505,19 @@ TEST_F( GlobalDBIntegrationTest, NonSubscriberDoesNotReceiveTopicMessageTest )
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    bool node0Received = waitForCondition( [&]() -> bool
-                                           { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
-                                           WAIT_TIMEOUT );
-    EXPECT_TRUE( node0Received );
+    sgns::test::assertWaitForCondition( [&]() -> bool { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+                                        WAIT_TIMEOUT,
+                                        "Publishing node did not retain its value" );
 
-    bool node1Received = waitForCondition( [&]() -> bool
-                                           { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
-                                           WAIT_TIMEOUT );
-    EXPECT_TRUE( node1Received );
+    sgns::test::assertWaitForCondition( [&]() -> bool { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                        WAIT_TIMEOUT,
+                                        "Subscribed peer did not receive the value" );
 
-    bool node2Received = waitForCondition( [&]() -> bool
-                                           { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
-                                           WAIT_TIMEOUT );
+    const bool node2Received = ::waitForCondition( [&]() -> bool
+                                                   { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                                   WAIT_TIMEOUT,
+                                                   nullptr,
+                                                   std::chrono::milliseconds( 100 ) );
     EXPECT_FALSE( node2Received );
 }
 
@@ -552,18 +547,18 @@ TEST_F( GlobalDBIntegrationTest, UnconnectedNodeDoesNotReplicateBroadcastMessage
     const auto commitRes = tx->Commit( { "test" } );
     ASSERT_TRUE( commitRes.has_value() );
 
-    bool node1Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
-                                             WAIT_TIMEOUT );
-    EXPECT_TRUE( node1Replicated );
+    sgns::test::assertWaitForCondition( [&]() -> bool { return testNodes->getNodes()[0].db->Get( key ).has_value(); },
+                                        WAIT_TIMEOUT,
+                                        "Publishing node did not retain its value" );
 
-    bool node2Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
-                                             WAIT_TIMEOUT );
-    EXPECT_TRUE( node2Replicated );
+    sgns::test::assertWaitForCondition( [&]() -> bool { return testNodes->getNodes()[1].db->Get( key ).has_value(); },
+                                        WAIT_TIMEOUT,
+                                        "Connected peer did not receive the value" );
 
-    bool node3Replicated = waitForCondition( [&]() -> bool
-                                             { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
-                                             WAIT_TIMEOUT );
+    const bool node3Replicated = ::waitForCondition( [&]() -> bool
+                                                     { return testNodes->getNodes()[2].db->Get( key ).has_value(); },
+                                                     WAIT_TIMEOUT,
+                                                     nullptr,
+                                                     std::chrono::milliseconds( 100 ) );
     EXPECT_FALSE( node3Replicated );
 }

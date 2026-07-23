@@ -36,12 +36,12 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> node2 = nullptr;
 
         // Configuration for node instances
-        static inline DevConfig_st CONFIG1 = { "0xcafe",
+        static inline GeniusNodeConfig CONFIG1 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "./node_crash1" };
-        static inline DevConfig_st CONFIG2 = { "0xcafe",
+        static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
@@ -69,10 +69,10 @@ namespace sgns
             // is_processor is now read exclusively from sgns_config.json (defaults to true).
             std::filesystem::create_directories( CONFIG1.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( CONFIG1.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( CONFIG1.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG1.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
             std::filesystem::create_directories( CONFIG2.BaseWritePath );
             sgns::GeniusNode::WriteNetworkConfig( CONFIG2.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
             node1 = sgns::GeniusNode::New( CONFIG1,
                            sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );

@@ -27,9 +27,9 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> node_proc1;
     static std::shared_ptr<sgns::GeniusNode> node_proc2;
 
-    static DevConfig_st DEV_CONFIG;
-    static DevConfig_st DEV_CONFIG2;
-    static DevConfig_st DEV_CONFIG3;
+    static GeniusNodeConfig DEV_CONFIG;
+    static GeniusNodeConfig DEV_CONFIG2;
+    static GeniusNodeConfig DEV_CONFIG3;
 
     static std::string binary_path;
 
@@ -59,26 +59,21 @@ protected:
 
         // node_main: non-processor, light node. Config-driven construction (Phase 3).
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG2.BaseWritePath, /*port_seed=*/40054, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG2.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
         node_proc1 = sgns::GeniusNode::New(
             DEV_CONFIG2,
             sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
         sgns::Blockchain::SetAuthorizedFullNodeAddress( node_proc1->GetAddress() );
-
-        sgns::test::assertWaitForCondition( [&]
-                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
-                                            std::chrono::milliseconds( 50000 ),
-                                            "node_proc1 not ready" );
 
         node_main = sgns::GeniusNode::New(
             DEV_CONFIG,
             sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
 
         sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG3.BaseWritePath, /*port_seed=*/40060, /*auto_dht=*/false );
-        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG3.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
         node_proc2 = sgns::GeniusNode::New(
             DEV_CONFIG3,
             sgns::FromPrivateKey{ "fecabeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
@@ -90,6 +85,11 @@ protected:
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
         node_proc1->GetPubSub()->AddPeers( bootstrappers );
+
+        sgns::test::assertWaitForCondition( [&]
+                                            { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },
+                                            std::chrono::milliseconds( 50000 ),
+                                            "node_proc1 not ready" );
         sgns::test::assertWaitForCondition( [&] { return node_main->GetState() == sgns::GeniusNode::NodeState::READY; },
                                             std::chrono::milliseconds( 50000 ),
                                             "node_main not ready" );
@@ -117,17 +117,17 @@ std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_main  = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc1 = nullptr;
 std::shared_ptr<sgns::GeniusNode> ProcessingNodesTest::node_proc2 = nullptr;
 
-DevConfig_st ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG  = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node1" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG2 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "./node2" };
-DevConfig_st ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
+GeniusNodeConfig ProcessingNodesTest::DEV_CONFIG3 = { "0xcafe",
                                                   "0.65",
                                                   "1.0",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
@@ -523,11 +523,13 @@ TEST_F( ProcessingNodesTest, PostProcessing )
         std::chrono::milliseconds( 20000 ),
         "Main Balance not updated in time" );
     ASSERT_EQ( balance_main - cost, node_main->GetBalance() );
+    auto burn_amount = ( cost * sgns::GeniusNode::GetBurnBasisPoints() ) / sgns::GeniusNode::GetBasisPointsTotal();
+    auto available   = cost - burn_amount;
     assertWaitForCondition(
         [&]
         {
             auto result             = node_proc1->GetBalance() + node_proc2->GetBalance();
-            auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+            auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
             return result == balance_node1 + balance_node2 + 2 * expected_peer_gain;
         },
         std::chrono::milliseconds( 40000 ),
@@ -536,11 +538,12 @@ TEST_F( ProcessingNodesTest, PostProcessing )
     std::cout << "Balance node1 (After):  " << node_proc1->GetBalance() << std::endl;
     std::cout << "Balance node2 (After):  " << node_proc2->GetBalance() << std::endl;
     //TODO: convert DEV_CONFIG.Cut from string to fixed and use below
-    auto expected_peer_gain = ( ( cost * 65 ) / 100 ) / 2;
+    auto expected_peer_gain = ( ( available * 65 ) / 100 ) / 2;
     ASSERT_EQ( balance_node1 + balance_node2 + 2 * expected_peer_gain,
                node_proc1->GetBalance() + node_proc2->GetBalance() );
 
-    auto gameDeveloperPayment = cost - 2 * expected_peer_gain;
+    auto gameDeveloperPayment = available - 2 * expected_peer_gain;
     ASSERT_EQ( balance_main + balance_node1 + balance_node2,
-               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment );
+               node_main->GetBalance() + node_proc1->GetBalance() + node_proc2->GetBalance() + gameDeveloperPayment +
+                   burn_amount );
 }

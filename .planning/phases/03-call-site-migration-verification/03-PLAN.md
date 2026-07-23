@@ -48,24 +48,24 @@ the sole entry point afterward.
 Delete (header + implementation, matching pairs):
 
 1. **`GeniusNode.hpp`** — remove the Doxygen + declaration for:
-   - `static std::shared_ptr<GeniusNode> New( const DevConfig_st &dev_config, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );` (the OLD 4-arg overload — KEEP the Phase-2 2-arg `New(dev_config, AccountSource)`)
-   - `static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig_st &dev_config, const char *eth_private_key, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );`
-   - `static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig_st &dev_config, const std::string &mnemonic, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );`
-   - The OLD private ctor `GeniusNode( const DevConfig_st &dev_config, std::shared_ptr<GeniusAccount> account, bool autodht, uint16_t port_seed, bool is_full_node );` (KEEP the Phase-2 `GeniusNode(dev_config, AccountSource)` ctor)
+   - `static std::shared_ptr<GeniusNode> New( const DevConfig &dev_config, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );` (the OLD 4-arg overload — KEEP the Phase-2 2-arg `New(dev_config, AccountSource)`)
+   - `static std::shared_ptr<GeniusNode> NewFromPrivateKey( const DevConfig &dev_config, const char *eth_private_key, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );`
+   - `static std::shared_ptr<GeniusNode> NewFromMnemonic( const DevConfig &dev_config, const std::string &mnemonic, bool autodht = true, uint16_t port_seed = 40001, bool is_full_node = false );`
+   - The OLD private ctor `GeniusNode( const DevConfig &dev_config, std::shared_ptr<GeniusAccount> account, bool autodht, uint16_t port_seed, bool is_full_node );` (KEEP the Phase-2 `GeniusNode(dev_config, AccountSource)` ctor)
 
 2. **`GeniusNode.cpp`** — remove the matching definitions:
-   - `std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config, bool autodht, uint16_t port_seed, bool is_full_node )` { ... } (old 4-arg factory body)
+   - `std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig &dev_config, bool autodht, uint16_t port_seed, bool is_full_node )` { ... } (old 4-arg factory body)
    - `std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey(...)` { ... }
    - `std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic(...)` { ... }
-   - `GeniusNode::GeniusNode( const DevConfig_st &dev_config, std::shared_ptr<GeniusAccount> account, bool autodht, uint16_t port_seed, bool is_full_node )` { ... } (old private ctor body)
+   - `GeniusNode::GeniusNode( const DevConfig &dev_config, std::shared_ptr<GeniusAccount> account, bool autodht, uint16_t port_seed, bool is_full_node )` { ... } (old private ctor body)
 
    Leave the canonical `New(dev_config, AccountSource)`, the new `(dev_config, AccountSource)` ctor, the `WriteNetworkConfig`/`WriteSgnsConfig` helpers, and all Phase-1/2 work untouched.
 </action>
 
 <acceptance_criteria>
 - `grep -rn "NewFromPrivateKey\|NewFromMnemonic" src/account/GeniusNode.hpp src/account/GeniusNode.cpp` returns 0 (the old factories gone; `GeniusAccount::NewFromPrivateKey` in GeniusAccount.{hpp,cpp} is unaffected)
-- `grep -c "GeniusNode::New( const DevConfig_st &dev_config,$" src/account/GeniusNode.cpp` reflects only the canonical 2-arg factory (the old 4-arg body is gone)
-- `grep -c "GeniusNode::GeniusNode( const DevConfig_st &dev_config, AccountSource source )" src/account/GeniusNode.cpp` returns 1 (the new ctor survives)
+- `grep -c "GeniusNode::New( const DevConfig &dev_config,$" src/account/GeniusNode.cpp` reflects only the canonical 2-arg factory (the old 4-arg body is gone)
+- `grep -c "GeniusNode::GeniusNode( const DevConfig &dev_config, AccountSource source )" src/account/GeniusNode.cpp` returns 1 (the new ctor survives)
 - The old private ctor `(dev_config, std::shared_ptr<GeniusAccount> account, ...)` declaration + definition are gone
 - `genius_node` target compiles (no dangling references — Plan 02 removed all callers)
 </acceptance_criteria>
@@ -87,7 +87,7 @@ Run the milestone's closing verification:
 1. **MIG-04 stale-reference grep** — confirm no old-factory references remain anywhere in `src/`, `example/`, `test/`:
    ```bash
    grep -rn "GeniusNode::NewFromPrivateKey\|GeniusNode::NewFromMnemonic\|GeniusNode::New(" src/ example/ test/ \
-     | grep -v "GeniusNode::New( const DevConfig_st &dev_config, AccountSource" \
+     | grep -v "GeniusNode::New( const DevConfig &dev_config, AccountSource" \
      | grep -v "GeniusAccount::NewFromPrivateKey"
    ```
    (Excludes the canonical `New(dev_config, AccountSource)` declaration/definition and the unrelated `GeniusAccount::NewFromPrivateKey`.) Expected: **zero output**. Any hit is a missed migration or stale reference → fix before proceeding.

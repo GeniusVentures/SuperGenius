@@ -51,7 +51,7 @@ Collapse three overloaded `GeniusNode::New*` factories into a single `std::varia
 
 ## Anti-Features (explicitly out of scope)
 
-No compat shim · no downstream enum propagation (60+ TransactionManager refs) · no Archive-vs-Full behavior split · no schema validation framework · no `DevConfig_st` changes · no `pubsub_port` string→numeric cleanup · no new node roles.
+No compat shim · no downstream enum propagation (60+ TransactionManager refs) · no Archive-vs-Full behavior split · no schema validation framework · no `DevConfig` changes · no `pubsub_port` string→numeric cleanup · no new node roles.
 
 ## Feeds Into
 

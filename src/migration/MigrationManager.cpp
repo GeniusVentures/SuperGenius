@@ -120,7 +120,6 @@ namespace sgns
                 m_logger->debug( "Skipping migration step from {} to {}", step->FromVersion(), step->ToVersion() );
             }
             BOOST_OUTCOME_TRY( step->ShutDown() );
-            std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
         }
 
         const auto currentVersion = ( boost::format( "%d.%d.%d" ) % version::SuperGeniusVersionMajor() %

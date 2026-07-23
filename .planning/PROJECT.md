@@ -51,7 +51,7 @@ This milestone is an **interface refactor of `GeniusNode`** — not new product 
 - Distinct runtime behavior between `Archive` and `Full` — both map to `is_full_node_=true` for now; the `Archive` value exists for forward compatibility only
 - Any change to consensus, processing grid, EVM bridge, or API transport logic
 - New node roles beyond Full/Light/Archive (e.g. Validator/Bootstrap) — not introduced here
-- Rewriting `DevConfig_st` or the dev-config plumbing — only the `GeniusNode` construction surface changes
+- Rewriting `DevConfig` or the dev-config plumbing — only the `GeniusNode` construction surface changes
 - Migration tooling for old on-disk config files — defaults cover it; no schema-version migration
 
 ## Context
