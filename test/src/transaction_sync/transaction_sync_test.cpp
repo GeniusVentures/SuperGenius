@@ -43,17 +43,17 @@ namespace sgns
                                                        "0.65",
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       "./node10" };
+                                                       "./transaction_sync_node1" };
         static inline GeniusNodeConfig DEV_CONFIG2 = { "0xcafe",
                                                        "0.65",
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       "./node20" };
+                                                       "./transaction_sync_node2" };
         static inline GeniusNodeConfig DEV_CONFIG3 = { "0xcafe",
                                                        "0.65",
                                                        "1.0",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                                       "./node_full" };
+                                                       "./transaction_sync_full_node" };
 
         static inline std::string binary_path = "";
 
@@ -64,9 +64,9 @@ namespace sgns
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
             std::string binary_path   = boost::dll::program_location().parent_path().string();
-            DEV_CONFIG.BaseWritePath  = binary_path + "/node10/";
-            DEV_CONFIG2.BaseWritePath = binary_path + "/node20/";
-            DEV_CONFIG3.BaseWritePath = binary_path + "/node_full/";
+            DEV_CONFIG.BaseWritePath  = binary_path + "/transaction_sync_node1/";
+            DEV_CONFIG2.BaseWritePath = binary_path + "/transaction_sync_node2/";
+            DEV_CONFIG3.BaseWritePath = binary_path + "/transaction_sync_full_node/";
 
             try
             {

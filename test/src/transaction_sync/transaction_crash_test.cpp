@@ -15,6 +15,7 @@
 #include "account/GeniusNode.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
@@ -40,12 +41,12 @@ namespace sgns
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash1" };
+                                               "./transaction_crash_node1" };
         static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash2" };
+                                               "./transaction_crash_node2" };
 
         // Constants for iterations
         static constexpr int TOTAL_TRANSFERS        = 20;
@@ -62,8 +63,11 @@ namespace sgns
 
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
-            CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
-            CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
+            CONFIG1.BaseWritePath = ( binary_path + "/transaction_crash_node1/" );
+            CONFIG2.BaseWritePath = ( binary_path + "/transaction_crash_node2/" );
+
+            test::removeAllWithRetry( CONFIG1.BaseWritePath );
+            test::removeAllWithRetry( CONFIG2.BaseWritePath );
 
             // All nodes in this test are non-processors.
             // is_processor is now read exclusively from sgns_config.json (defaults to true).

@@ -1,6 +1,8 @@
 #include "testutil/storage/base_crdt_test.hpp"
 
+#include <atomic>
 #include <chrono>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
@@ -29,6 +31,8 @@ using sgns::ipfs_pubsub::GossipPubSubTopic;
 
 namespace
 {
+    std::atomic<uint64_t> fixture_counter{ 0 };
+
     const std::string logger_config( R"(
 # ----------------
 sinks:
@@ -44,20 +48,29 @@ groups:
       - name: Gossip
 # ----------------
   )" );
+
+    fs::path UniqueFixturePath( const fs::path &path )
+    {
+        const auto fixture_id = fixture_counter.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        return path.string() + "." + boost::dll::program_location().stem().string() + "." + std::to_string( fixture_id );
+    }
+
+    uint16_t AvailablePort()
+    {
+        boost::asio::io_context        io;
+        boost::asio::ip::tcp::acceptor acceptor( io, { boost::asio::ip::tcp::v4(), 0 } );
+        return acceptor.local_endpoint().port();
+    }
 }
 
 namespace test
 {
-    const std::string                       CRDTFixture::basePath = "CRDT.Datastore.TEST";
     std::shared_ptr<soralog::LoggingSystem> CRDTFixture::logging_system_;
-    std::atomic<uint64_t>                   CRDTFixture::fixture_counter_{ 0 };
 
-    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
+    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( UniqueFixturePath( path ) )
     {
-        const auto fixture_id = fixture_counter_.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        const auto suffix     = std::to_string( fixture_id );
-        keypair_path_         = basePath + "/unit_test_" + suffix;
-        db_path_              = basePath + ".unit_" + suffix;
+        keypair_path_ = ( base_path / "keypair" ).string();
+        db_path_      = ( base_path / "db" ).string();
 
         io_ = std::make_shared<io_context>();
 
@@ -78,11 +91,7 @@ namespace test
         db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
         db_->Start();
 
-        // Start GossipPubSub after Init.
-        // Use a unique port per fixture to avoid Windows TIME_WAIT port
-        // exhaustion when fixtures are created / destroyed back-to-back.
-        const auto port = static_cast<int>( 40001 + fixture_id );
-        auto       future = pubs_->Start( port, { pubs_->GetLocalAddress() } );
+        auto future = pubs_->Start( AvailablePort(), {} );
         auto result = future.get();
         BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
     }

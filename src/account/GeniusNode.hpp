@@ -889,8 +889,8 @@ namespace sgns
          *      priority when present and non-empty.
          *   2. Otherwise @c port_seed (the constructor param, or the @c port_seed key from
          *      @c network_config.json when present) derives the port via
-         *      @c GenerateRandomPort(port_seed, account_address), except zero which is
-         *      passed to the listener for OS assignment.
+         *      @c GenerateRandomPort(port_seed, account_address), except zero which first
+         *      resolves an OS-selected ephemeral port.
          */
         bool InitNetwork( uint16_t port_seed, bool is_full_node );
 

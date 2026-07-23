@@ -72,7 +72,7 @@ namespace
         int                     id = nodeCounter.fetch_add( 1 );
 
         std::string binaryPath = boost::dll::program_location().parent_path().string();
-        auto        outPath    = binaryPath + "/node_" + std::to_string( id ) + "/";
+        auto        outPath    = binaryPath + "/child_tokens_node_" + std::to_string( id ) + "/";
 
         GeniusNodeConfig devConfig = { self_address, "0.65", tokenValue, tokenId, outPath };
 
