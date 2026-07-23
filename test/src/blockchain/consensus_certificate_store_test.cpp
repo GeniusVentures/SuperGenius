@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <thread>
 
@@ -11,6 +12,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "testutil/outcome.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -32,6 +34,14 @@ namespace sgns
         static bool FilterDelta( const std::shared_ptr<ConsensusManager> &manager, const crdt::pb::Delta &delta )
         {
             return manager && manager->FilterCertificateDelta( delta );
+        }
+
+        static crdt::DeltaFilterResult FilterDeltaResult(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const crdt::pb::Delta                   &delta )
+        {
+            return manager ? manager->FilterCertificateDelta( delta )
+                           : crdt::DeltaFilterResult::Reject();
         }
     };
 } // namespace sgns
@@ -818,6 +828,125 @@ namespace sgns::test
         crdt::pb::Delta malformed_tombstone;
         malformed_tombstone.add_tombstones()->set_key( "/cert/v2/malformed" );
         EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, malformed_tombstone ) );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, RegistryDependencyStalledPairReturnsRetryDependency )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+
+        crdt::GlobalDB::Buffer dependency_payload;
+        dependency_payload.put( "not-a-registry" );
+        ASSERT_OUTCOME_SUCCESS(
+            missing_registry_root,
+            db_->Put( { "/dependency/not-registry" }, dependency_payload, {} ) );
+        const auto missing_registry_cid = missing_registry_root.toString().value();
+
+        ASSERT_OUTCOME_SUCCESS(
+            subject,
+            ConsensusManager::CreateNonceSubject(
+                account->GetAddress(),
+                7,
+                "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                EmbeddedTransaction{},
+                MakeCommitment(),
+                UTXOWitness{} ) );
+        ASSERT_OUTCOME_SUCCESS(
+            proposal,
+            ConsensusManager::CreateProposal(
+                subject,
+                account->GetAddress(),
+                missing_registry_cid,
+                registry->GetRegistryEpoch(),
+                [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } ) );
+        ASSERT_OUTCOME_SUCCESS(
+            vote,
+            manager->CreateVote(
+                proposal.proposal_id(),
+                account->GetAddress(),
+                true,
+                [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } ) );
+
+        ConsensusManager::Certificate certificate;
+        certificate.set_proposal_id( proposal.proposal_id() );
+        *certificate.mutable_proposal() = proposal;
+        *certificate.add_votes() = vote;
+        certificate.set_registry_cid( missing_registry_cid );
+        certificate.set_registry_epoch( registry->GetRegistryEpoch() );
+        certificate.set_total_weight( 50000 );
+        certificate.set_approved_weight( 50000 );
+        certificate.set_timestamp( vote.timestamp() );
+
+        auto delta  = MakeCertificatePairDelta( certificate );
+        auto result = ConsensusManagerTestAccess::FilterDeltaResult( manager, delta );
+        EXPECT_EQ( result.decision, crdt::DeltaFilterDecision::RetryDependency );
+        ASSERT_TRUE( result.dependency_cid.has_value() );
+        EXPECT_EQ( *result.dependency_cid, missing_registry_cid );
+
+        delta.mutable_elements( 0 )->mutable_value()->back() ^= 0x01;
+        auto invalid = ConsensusManagerTestAccess::FilterDeltaResult( manager, delta );
+        EXPECT_EQ( invalid.decision, crdt::DeltaFilterDecision::Reject );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, ExactIdCertificateTombstonesAreStrippedAndRestartSafe )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        ASSERT_OUTCOME_SUCCESS( certificate, MakeCertificate( manager, registry, account, account ) );
+        ASSERT_TRUE( manager->SubmitCertificate( certificate ).has_value() );
+
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate ).value();
+        const std::array<std::string, 2> protected_keys{
+            "/cert/v2/slot/" + slot,
+            "/cert/v2/tx/" + winner,
+        };
+
+        for ( std::size_t attack = 0; attack < protected_keys.size(); ++attack )
+        {
+            SCOPED_TRACE( protected_keys[attack] );
+            auto crdt_store = db_->GetCRDTDataStore();
+            ASSERT_TRUE( crdt_store );
+
+            const auto unrelated_key = "/unrelated/tombstone-" + std::to_string( attack );
+            crdt::GlobalDB::Buffer unrelated_value;
+            unrelated_value.put( "live" );
+            ASSERT_TRUE( db_->Put( { unrelated_key }, unrelated_value, {} ).has_value() );
+            ASSERT_OUTCOME_SUCCESS( unrelated_remove, crdt_store->CreateDeltaToRemove( unrelated_key ) );
+            ASSERT_OUTCOME_SUCCESS( certificate_remove,
+                                    crdt_store->CreateDeltaToRemove( protected_keys[attack] ) );
+            ASSERT_EQ( certificate_remove->tombstones_size(), 1 );
+            unrelated_remove->add_tombstones()->CopyFrom( certificate_remove->tombstones( 0 ) );
+
+            crdt::CRDTDataFilter runtime_filter( db_->GetWorkJournal() );
+            ASSERT_TRUE( runtime_filter.RegisterDeltaFilter(
+                "^/?cert/.*$",
+                [manager]( const crdt::pb::Delta &delta )
+                { return ConsensusManagerTestAccess::FilterDeltaResult( manager, delta ); } ) );
+            auto sanitized = runtime_filter.FilterDelta( *unrelated_remove );
+            EXPECT_EQ( sanitized.decision, crdt::DeltaFilterDecision::Reject );
+            ASSERT_EQ( sanitized.delta.tombstones_size(), 1 );
+            EXPECT_EQ( sanitized.delta.tombstones( 0 ).key(), unrelated_key );
+
+            ASSERT_TRUE(
+                crdt_store->Publish( std::make_shared<crdt::pb::Delta>( sanitized.delta ), {} ).has_value() );
+            EXPECT_TRUE( db_->Get( { unrelated_key } ).has_error() );
+            ASSERT_TRUE( manager->GetCertificateBySlotId( slot ).has_value() );
+            ASSERT_TRUE( manager->GetCertificateBySubjectHash( winner ).has_value() );
+
+            manager->Close();
+            manager.reset();
+            manager = MakeManager( registry, db_, pubs_, account );
+            ASSERT_TRUE( manager );
+            ASSERT_TRUE( manager->GetCertificateBySlotId( slot ).has_value() );
+            ASSERT_TRUE( manager->GetCertificateBySubjectHash( winner ).has_value() );
+        }
         manager->Close();
     }
 

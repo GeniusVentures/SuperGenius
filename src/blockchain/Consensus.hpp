@@ -809,7 +809,7 @@ namespace sgns
         /**
          * @brief Validates a complete incoming v2 certificate/index delta.
          */
-        bool FilterCertificateDelta( const crdt::pb::Delta &delta );
+        crdt::DeltaFilterResult FilterCertificateDelta( const crdt::pb::Delta &delta );
         /**
          * @brief Filters CRDT entries to certificate payloads.
          * @param[in] element CRDT element candidate.
