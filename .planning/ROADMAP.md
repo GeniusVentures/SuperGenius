@@ -23,7 +23,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Previous-nonce and producer-UTXO validation retrieve new-format certificates through `GetCertificateBySubjectHash()` without treating the transaction hash as the finality key.
 4. A node presented with legacy transaction-keyed certificate state fails startup with a clear v2.0 clean-state error.
 
-**Plans:** 4/9 plans complete
+**Plans:** 5/9 plans executed
 
 ### Phase 10: Durable Vote Lock and Finalization State Machine
 
