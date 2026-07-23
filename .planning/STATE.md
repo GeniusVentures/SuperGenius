@@ -4,19 +4,19 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-23T12:31:20.932Z"
-last_activity: 2026-07-23 -- Phase 09 planning complete
+last_updated: "2026-07-23T13:07:32.861Z"
+last_activity: 2026-07-23 -- Completed 09-01 canonical slot identity
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 25
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
 
-**Last updated:** 2026-07-22
+**Last updated:** 2026-07-23
 **Milestone:** v2.0 — Slot-Scoped Consensus Finality
 **Current Phase:** 09
 
@@ -29,10 +29,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 09 (Canonical Slot and Certificate Storage) — not started
-Plan: —
+Phase: 09 (Canonical Slot and Certificate Storage) — EXECUTING
+Plan: 2 of 4
 Status: Ready to execute
-Last activity: 2026-07-23 -- Phase 09 planning complete
+Last activity: 2026-07-23 -- Completed 09-01 canonical slot identity
 
 ## Roadmap Snapshot
 
@@ -52,6 +52,8 @@ Last activity: 2026-07-23 -- Phase 09 planning complete
 - Candidate selection may change only before the validator's irreversible slot vote.
 - A valid certificate overrides local vote preference and finalizes the slot before proposal cleanup.
 - Bridge reservations are owned by the canonical burn slot, not an individual proposal.
+- Canonical readable slot preimages are validated before SHA-256 produces the only operational slot ID.
+- Registered slot-handler failures are terminal; only unregistered subject types use hashed canonical subject identity.
 
 ## Notes
 
@@ -62,4 +64,10 @@ Last activity: 2026-07-23 -- Phase 09 planning complete
 
 ## Operator Next Steps
 
-- Run `$gsd-discuss-phase 9` after approval.
+- Execute `09-02-PLAN.md`.
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| 09 | 01 | 16 min | 2 tasks, 9 files |
