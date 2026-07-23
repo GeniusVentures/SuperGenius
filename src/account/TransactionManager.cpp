@@ -7,8 +7,10 @@
 #include "account/TransactionManager.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <utility>
 #include <thread>
+#include <string_view>
 #include <system_error>
 
 #include <boost/asio/post.hpp>
@@ -101,6 +103,30 @@ namespace sgns
         base::Logger MakeTransactionManagerLogger( const std::string &address, bool full_node )
         {
             return TransactionManagerLogger()->clone( TransactionManagerLoggerName( address, full_node ) );
+        }
+
+        bool IsCanonicalUnsignedDecimal( std::string_view value )
+        {
+            return !value.empty() && ( value == "0" || value.front() != '0' ) &&
+                   std::all_of(
+                       value.begin(),
+                       value.end(),
+                       []( unsigned char c )
+                       {
+                           return std::isdigit( c ) != 0;
+                       } );
+        }
+
+        bool IsCanonicalHash256Text( std::string_view value )
+        {
+            return value.size() == 64 &&
+                   std::all_of(
+                       value.begin(),
+                       value.end(),
+                       []( unsigned char c )
+                       {
+                           return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
+                       } );
         }
     }
 
@@ -673,38 +699,35 @@ namespace sgns
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        if ( chainid.empty() )
+
+        if ( !IsCanonicalUnsignedDecimal( chainid ) || !IsCanonicalHash256Text( transaction_hash ) )
         {
-            // Canonicalize default MintV2 source-chain metadata for newly created public-chain mints.
-            chainid = "public";
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        // Strip "0x" hex prefix if present — Hash256::fromReadableString expects raw hex.
-        if ( transaction_hash.size() >= 2 && transaction_hash[0] == '0' && transaction_hash[1] == 'x' )
+        auto source_hash = base::Hash256::fromReadableString( transaction_hash );
+        if ( source_hash.has_error() || source_hash.value() == base::Hash256{} ||
+             source_hash.value().toReadableString() != transaction_hash )
         {
-            transaction_hash = transaction_hash.substr( 2 );
+            return outcome::failure( std::errc::invalid_argument );
         }
+        const auto burn_tx_hash = source_hash.value();
 
         // UTXO reservation check — prevent duplicate mint creation for the same burn
         // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
-        base::Hash256 burn_tx_hash;
-        if ( auto parsed = base::Hash256::fromReadableString( transaction_hash ); parsed.has_value() )
+        auto &utxo_mgr = account_m->GetUTXOManager();
+        if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index )
+             || utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
         {
-            burn_tx_hash   = parsed.value();
-            auto &utxo_mgr = account_m->GetUTXOManager();
-            if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index )
-                 || utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
-            {
-                TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={} receipt_index={}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    chainid,
-                    transaction_hash,
-                    receipt_log_index );
-                return outcome::failure( std::errc::already_connected );
-            }
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={} receipt_index={}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                chainid,
+                transaction_hash,
+                receipt_log_index );
+            return outcome::failure( std::errc::already_connected );
         }
 
         // Persistence check — reject if this burn was already executed (survives restart)
@@ -732,33 +755,16 @@ namespace sgns
             }
         }
 
-        auto          source_hash = base::Hash256::fromReadableString( transaction_hash );
-        base::Hash256 source_input_hash;
-        if ( source_hash.has_error() )
-        {
-            m_logger->warn(
-                "{}: Source hash parse inconsistency for mint tx_ref={}, using empty input hash and uncle_hash fallback",
-                __func__,
-                transaction_hash );
-        }
-        else
-        {
-            source_input_hash = source_hash.value();
-        }
-
         // D-18/D-19: Insert burn UTXO, then reserve via ReserveUTXOs (sets RESERVED state)
-        if ( !source_hash.has_error() )
-        {
-            GeniusUTXO burn_utxo(
-                source_hash.value(), receipt_log_index, amount, tokenid, account_m->GetAddress() );
-            account_m->GetUTXOManager().PutUTXO( burn_utxo,
-                                                 account_m->GetAddress(),
-                                                 sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
-        }
+        GeniusUTXO burn_utxo(
+            burn_tx_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
+        account_m->GetUTXOManager().PutUTXO( burn_utxo,
+                                             account_m->GetAddress(),
+                                             sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
 
         std::vector<GeniusUTXO> source_utxos;
         source_utxos.emplace_back(
-            source_input_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
+            burn_tx_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
         // Reserve the burn UTXO — transitions READY → RESERVED (D-18)

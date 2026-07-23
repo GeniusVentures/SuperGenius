@@ -2,7 +2,8 @@
  * @file       transaction_manager_pending_lifecycle_test.cpp
  * @brief      CRDT-backed TransactionManager recovery integration tests.
  * @details    Covers send recovery, nonce reconciliation, previous-hash recovery,
- *             and transaction deletion without full GeniusNode startup.
+ *             transaction deletion, and noncanonical MintFunds identity rejection
+ *             without full GeniusNode startup.
  * @date       2026-06-16
  */
 
@@ -12,6 +13,7 @@
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/MintTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
@@ -22,7 +24,13 @@
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
+#include <algorithm>
+#include <cctype>
+#include <chrono>
+#include <memory>
+#include <optional>
 #include <string>
+#include <system_error>
 #include <vector>
 
 namespace sgns
@@ -58,8 +66,48 @@ namespace sgns
         {
             return manager.ChangeTransactionState( transaction, status );
         }
+
+        static void SetReady( TransactionManager &manager )
+        {
+            manager.state_m = TransactionManager::State::READY;
+        }
+
+        static outcome::result<std::string> MintFunds( TransactionManager &manager,
+                                                       uint64_t            amount,
+                                                       std::string         transaction_hash,
+                                                       std::string         chain_id,
+                                                       uint32_t            receipt_log_index,
+                                                       TokenID             token_id,
+                                                       std::string         destination )
+        {
+            return manager.MintFunds( amount,
+                                      std::move( transaction_hash ),
+                                      std::move( chain_id ),
+                                      receipt_log_index,
+                                      std::move( token_id ),
+                                      std::move( destination ) );
+        }
+
+        static size_t QueueSize( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            return manager.tx_queue_m.size();
+        }
+
+        static std::shared_ptr<MintTransactionV2> LastQueuedMint( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            if ( manager.tx_queue_m.empty() || manager.tx_queue_m.back().first.empty() )
+            {
+                return nullptr;
+            }
+            return std::dynamic_pointer_cast<MintTransactionV2>(
+                manager.tx_queue_m.back().first.back().first );
+        }
     };
 } // namespace sgns
+
+using namespace sgns;
 
 namespace
 {
@@ -296,6 +344,120 @@ namespace
     class TransactionDeletionRecoveryTest : public TransactionManagerPreviousHashTest
     {
     };
+
+    /**
+     * @brief CRDT-backed fixture dedicated to noncanonical MintFunds identity rejection.
+     * @details Avoids GeniusNode network startup and constructs GeniusAccount, Blockchain,
+     *          and TransactionManager directly using the certificate fallback fixture pattern.
+     */
+    class TransactionManagerPendingLifecycleTest : public test::CRDTFixture
+    {
+    public:
+        TransactionManagerPendingLifecycleTest()
+            : CRDTFixture( "transaction_manager_pending_lifecycle_test" )
+        {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                {
+                    return std::make_shared<MemorySecureStorage>( identifier );
+                } );
+            account_ = GeniusAccount::NewFromPrivateKey(
+                kTokenId,
+                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                base_path / "account",
+                false );
+            EXPECT_NE( account_, nullptr );
+            if ( !account_ )
+            {
+                return;
+            }
+
+            auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
+            EXPECT_TRUE( load_result.has_value() );
+
+            blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
+            EXPECT_NE( blockchain_, nullptr );
+            if ( !blockchain_ )
+            {
+                return;
+            }
+
+            manager_ = TransactionManager::New(
+                db_,
+                io_,
+                account_,
+                blockchain_,
+                false,
+                0,
+                std::chrono::milliseconds( 300000 ),
+                std::chrono::milliseconds( 600000 ) );
+            EXPECT_NE( manager_, nullptr );
+            if ( manager_ )
+            {
+                TransactionManagerPendingLifecycleTestAccess::SetReady( *manager_ );
+            }
+        }
+
+    protected:
+        static const TokenID kTokenId;
+        static constexpr uint32_t kReceiptIndex = 19;
+
+        bool ExecutedKeyAbsent( const std::string &chain_id,
+                                const std::string &transaction_hash ) const
+        {
+            crdt::GlobalDB::Buffer key;
+            key.put( TransactionManager::MakeBridgeExecutedKey(
+                chain_id, transaction_hash, kReceiptIndex ) );
+            return db_->GetDataStore()->get( key ).has_error();
+        }
+
+        void ExpectMintFundsInvalid( const std::string &chain_id,
+                                     const std::string &transaction_hash )
+        {
+            ASSERT_NE( manager_, nullptr );
+            const auto queue_before =
+                TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
+            const auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+                *manager_,
+                1000,
+                transaction_hash,
+                chain_id,
+                kReceiptIndex,
+                kTokenId,
+                account_->GetAddress() );
+
+            ASSERT_TRUE( result.has_error() );
+            EXPECT_EQ( result.error(), std::make_error_code( std::errc::invalid_argument ) );
+            EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+                       queue_before );
+            EXPECT_TRUE( ExecutedKeyAbsent( chain_id, transaction_hash ) );
+
+            const bool parseable_hash =
+                transaction_hash.size() == 64 &&
+                std::all_of(
+                    transaction_hash.begin(),
+                    transaction_hash.end(),
+                    []( unsigned char c )
+                    {
+                        return std::isxdigit( c ) != 0;
+                    } );
+            if ( parseable_hash )
+            {
+                auto parsed_hash = base::Hash256::fromReadableString( transaction_hash );
+                ASSERT_TRUE( parsed_hash.has_value() );
+                EXPECT_FALSE( account_->GetUTXOManager()
+                                  .GetOutPointState( parsed_hash.value(), kReceiptIndex )
+                                  .has_value() );
+            }
+        }
+
+        std::shared_ptr<GeniusAccount>      account_;
+        std::shared_ptr<Blockchain>         blockchain_;
+        std::shared_ptr<TransactionManager> manager_;
+    };
+
+    const TokenID TransactionManagerPendingLifecycleTest::kTokenId =
+        TokenID::FromBytes( { 0x00 } );
 } // namespace
 
 TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowingTransaction )
@@ -543,4 +705,57 @@ TEST( TransactionManagerPendingLifecycleContractTest, CertificateLookupErrorsSep
     EXPECT_NE( not_found, integrity );
     EXPECT_EQ( not_found.message(), "Certificate record not found" );
     EXPECT_EQ( integrity.message(), "Certificate store integrity error" );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsRejectsNoncanonicalChainBeforeMutation )
+{
+    const std::string valid_hash( 64, 'a' );
+    for ( const auto &chain_id : { "", "public", "01", "+1", "1 " } )
+    {
+        ExpectMintFundsInvalid( chain_id, valid_hash );
+    }
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsRejectsNoncanonicalBurnHashBeforeMutation )
+{
+    for ( const auto &transaction_hash : {
+              std::string{},
+              std::string( 64, '0' ),
+              "0x" + std::string( 64, 'a' ),
+              std::string( 64, 'A' ),
+              std::string( 63, 'a' ),
+              std::string( 64, 'g' ),
+          } )
+    {
+        ExpectMintFundsInvalid( "11155111", transaction_hash );
+    }
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreatesIndexedMint )
+{
+    ASSERT_NE( manager_, nullptr );
+    const std::string burn_hash( 64, 'a' );
+    const auto queue_before =
+        TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
+
+    auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+        *manager_,
+        1000,
+        burn_hash,
+        "11155111",
+        kReceiptIndex,
+        kTokenId,
+        account_->GetAddress() );
+
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_FALSE( result.value().empty() );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+               queue_before + 1 );
+
+    auto mint = TransactionManagerPendingLifecycleTestAccess::LastQueuedMint( *manager_ );
+    ASSERT_NE( mint, nullptr );
+    const auto inputs = mint->GetUTXOParameters().first;
+    ASSERT_EQ( inputs.size(), 1U );
+    EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
+    EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
 }
