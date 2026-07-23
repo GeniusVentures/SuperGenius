@@ -454,8 +454,19 @@ namespace sgns
             auto producer_cert_result = blockchain->GetCertificateBySubjectHash( input.txid_hash_.toReadableString() );
             if ( producer_cert_result.has_error() )
             {
-                logger->error( "ValidateWitness(Genius) missing producer certificate for input tx={}",
-                               PreviewValue( input.txid_hash_.toReadableString() ) );
+                if ( producer_cert_result.error() ==
+                     make_error_code( ConsensusManager::CertificateStoreError::NotFound ) )
+                {
+                    logger->error( "ValidateWitness(Genius) missing producer certificate for input tx={}",
+                                   PreviewValue( input.txid_hash_.toReadableString() ) );
+                }
+                else
+                {
+                    logger->critical(
+                        "ValidateWitness(Genius) certificate store corruption for producer tx={} error={}",
+                        PreviewValue( input.txid_hash_.toReadableString() ),
+                        producer_cert_result.error().message() );
+                }
                 return false;
             }
             const auto &producer_subject = producer_cert_result.value().proposal().subject();

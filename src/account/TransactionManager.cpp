@@ -4083,9 +4083,26 @@ namespace sgns
             auto previous_cert_result = blockchain_->GetCertificateBySubjectHash( previous_hash );
             if ( previous_cert_result.has_error() )
             {
-                m_logger->error( "{}: Missing previous certificate for hash {}", __func__, previous_hash );
-                return { ConsensusManager::ValidationResult::Pending(
-                    { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
+                if ( previous_cert_result.error() ==
+                     make_error_code( ConsensusManager::CertificateStoreError::NotFound ) )
+                {
+                    TransactionManagerLogger()->debug(
+                        "[{} - full: {}] {}: Previous certificate is pending for hash {}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        previous_hash );
+                    return { ConsensusManager::ValidationResult::Pending(
+                        { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
+                }
+                TransactionManagerLogger()->critical(
+                    "[{} - full: {}] {}: Certificate store corruption for previous hash {} error={}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    previous_hash,
+                    previous_cert_result.error().message() );
+                return { ConsensusManager::ValidationResult::Reject() };
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();
             auto        previous_nonce   = ConsensusManager::DecodeNonceSubject( previous_subject );

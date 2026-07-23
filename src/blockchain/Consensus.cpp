@@ -3368,72 +3368,51 @@ namespace sgns
         auto certificate_result = GetCertificateBySubjectHash( subject_hash );
         if ( certificate_result.has_error() )
         {
+            if ( certificate_result.error() != make_error_code( CertificateStoreError::NotFound ) )
+            {
+                ConsensusManagerLogger()->critical( "{}: certificate hash lookup failed closed hash={} error={}",
+                                                    __func__,
+                                                    subject_hash,
+                                                    certificate_result.error().message() );
+            }
             return false;
         }
-        auto certificate_check = ValidateCertificate( certificate_result.value() );
-        return certificate_check == Check::Approve;
+        return true;
     }
 
     bool ConsensusManager::CheckCertificateForSubject( const ConsensusManager::Subject &subject ) const
     {
-        auto current_hash = GetSubjectHash( subject );
-        if ( current_hash.has_error() )
+        auto slot_result = GetSlotKey( subject );
+        if ( slot_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: Failed to get the hash for the subject, error: {}",
+            ConsensusManagerLogger()->error( "{}: failed to derive canonical subject slot hash={} error={}",
                                              __func__,
-                                             current_hash.error().message() );
+                                             GetPrintableSubjectHash( subject ),
+                                             slot_result.error().message() );
             return false;
         }
-        auto certificate_result = GetCertificateBySubjectHash( current_hash.value() );
+
+        auto certificate_result = GetCertificateBySlotId( slot_result.value() );
         if ( certificate_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: Failed to get the certificate for the hash {}, error: {}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ),
-                                             certificate_result.error().message() );
+            if ( certificate_result.error() != make_error_code( CertificateStoreError::NotFound ) )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: authoritative slot lookup failed closed slot={} subject={} error={}",
+                    __func__,
+                    slot_result.value(),
+                    GetPrintableSubjectHash( subject ),
+                    certificate_result.error().message() );
+            }
             return false;
         }
-        auto &certificate                   = certificate_result.value();
-        auto  certificate_subject_id_result = ComputeSubjectId( certificate.proposal().subject() );
-        if ( certificate_subject_id_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed for hash {}: certificate subject id computation error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ),
-                                             certificate_subject_id_result.error().message() );
-            return false;
-        }
-        auto &certificate_subject_id = certificate_subject_id_result.value();
-        auto  subject_id_result      = ComputeSubjectId( subject );
-        if ( subject_id_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed for hash {}: subject id computation error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ),
-                                             subject_id_result.error().message() );
-            return false;
-        }
-        auto proposed_subject_id = subject_id_result.value();
-        bool equal               = proposed_subject_id == certificate_subject_id;
-        if ( !equal )
-        {
-            ConsensusManagerLogger()->debug( "{}: Match for subject and certificate (hash {}): MISMATCH",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return false;
-        }
-        auto certificate_check = ValidateCertificate( certificate );
-        if ( certificate_check != Check::Approve )
-        {
-            ConsensusManagerLogger()->error( "{}: certificate failed validation for hash {}",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return false;
-        }
-        ConsensusManagerLogger()->debug( "{}: Match for subject and certificate (hash {}): {}",
+
+        auto winner_hash = GetSubjectHash( certificate_result.value().proposal().subject() );
+        ConsensusManagerLogger()->debug( "{}: finalized slot={} candidate={} winner={}",
                                          __func__,
+                                         slot_result.value(),
                                          GetPrintableSubjectHash( subject ),
-                                         equal ? "Match" : "MISMATCH" );
+                                         winner_hash.has_value() ? winner_hash.value() : "<invalid>" );
         return true;
     }
 

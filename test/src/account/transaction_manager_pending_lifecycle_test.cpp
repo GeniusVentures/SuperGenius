@@ -532,3 +532,15 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
 
     EXPECT_EQ( account_->GetUTXOManager().GetBalance(), 0U );
 }
+
+TEST( TransactionManagerPendingLifecycleContractTest, CertificateLookupErrorsSeparatePendingFromCorruption )
+{
+    using Error = sgns::ConsensusManager::CertificateStoreError;
+
+    const auto not_found = make_error_code( Error::NotFound );
+    const auto integrity = make_error_code( Error::IntegrityError );
+
+    EXPECT_NE( not_found, integrity );
+    EXPECT_EQ( not_found.message(), "Certificate record not found" );
+    EXPECT_EQ( integrity.message(), "Certificate store integrity error" );
+}
