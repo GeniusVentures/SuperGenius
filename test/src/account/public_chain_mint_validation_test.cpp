@@ -20,6 +20,7 @@
 #include "account/MintTransactionV2.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "base/parse_utility.hpp"
+#include "blockchain/Consensus.hpp"
 
 class PublicChainInputValidatorTestAccess
 {
@@ -76,9 +77,10 @@ namespace
         return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
     }
 
-    std::string ReceiptJson( const std::vector<ReceiptLog> &logs )
+    std::string ReceiptJson( const std::vector<ReceiptLog> &logs,
+                             const std::string             &transaction_hash = kBurnHash )
     {
-        const std::string tx_hash = "0x" + kBurnHash;
+        const std::string tx_hash = "0x" + transaction_hash;
         const std::string block_hash = "0x" + std::string( 64, '1' );
 
         boost::json::object root;
@@ -135,7 +137,9 @@ namespace
                                                        uint64_t           token_id = kTokenId,
                                                        uint64_t           amount = kAmount,
                                                        std::string        chain_id = std::to_string( kChainId ),
-                                                       const std::string &destination = kDestination )
+                                                       const std::string &destination = kDestination,
+                                                       std::optional<sgns::base::Hash256> source_hash_override = std::nullopt,
+                                                       std::optional<std::string> uncle_hash_override = std::nullopt )
     {
         auto source_hash = sgns::base::Hash256::fromReadableString( kBurnHash );
         EXPECT_TRUE( source_hash.has_value() );
@@ -143,10 +147,10 @@ namespace
         SGTransaction::DAGStruct dag;
         dag.set_source_addr( kDestination );
         dag.set_nonce( 1 );
-        dag.set_uncle_hash( kBurnHash );
+        dag.set_uncle_hash( uncle_hash_override.value_or( kBurnHash ) );
 
         std::vector<sgns::InputUTXOInfo> inputs{
-            { source_hash.value(), receipt_index, {} },
+            { source_hash_override.value_or( source_hash.value() ), receipt_index, {} },
         };
         const auto token = sgns::TokenID::FromUint256(
             intx::uint256( token_id ), sgns::TokenID::Endianness::BIG );
@@ -241,4 +245,87 @@ TEST( PublicChainMintValidationTest, SameSlotDoesNotAuthorizeMalformedCandidate 
     EXPECT_EQ( valid->GetSlotID().value(), malformed->GetSlotID().value() );
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, valid, kBurnHash ) );
     EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, malformed, kBurnHash ) );
+}
+
+TEST( PublicChainMintValidationTest, RejectsInvalidSourceReferences )
+{
+    auto validator = ValidatorFor( ReceiptJson( { ValidBurn() } ) );
+    const auto mint = MakeMint( 0 );
+
+    const std::vector<std::string> invalid_sources{
+        "",
+        std::string( 64, '0' ),
+        "0x" + kBurnHash,
+        std::string( 64, 'A' ),
+        std::string( 64, 'g' ),
+    };
+    for ( const auto &source : invalid_sources )
+    {
+        SCOPED_TRACE( source );
+        EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source ) );
+    }
+}
+
+TEST( PublicChainMintValidationTest, RejectsInvalidSourceChainIds )
+{
+    auto validator = ValidatorFor( ReceiptJson( { ValidBurn() } ) );
+    for ( const std::string chain_id : { "", "public", "01", "+1", "1 " } )
+    {
+        SCOPED_TRACE( chain_id );
+        EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
+            validator, MakeMint( 0, kTokenId, kAmount, chain_id ), kBurnHash ) );
+    }
+}
+
+TEST( PublicChainMintValidationTest, RejectsSourceInputDisagreement )
+{
+    auto validator = ValidatorFor( ReceiptJson( { ValidBurn() } ) );
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0 ), std::string( 64, 'b' ) ) );
+}
+
+TEST( PublicChainMintValidationTest, RejectsReceiptHashMismatchWithValidLog )
+{
+    auto validator = ValidatorFor(
+        ReceiptJson( { ValidBurn() }, std::string( 64, 'b' ) ) );
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0 ), kBurnHash ) );
+}
+
+TEST( PublicChainMintValidationTest, ExplicitLocalChainIdsBypassRpc )
+{
+    sgns::PublicChainInputValidator validator;
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0, kTokenId, kAmount, "supergenius" ), "" ) );
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify(
+        validator,
+        MakeMint( 0, kTokenId, kAmount,
+                  std::string( sgns::GeniusTransaction::GENIUS_CHAIN_ID ) ),
+        "" ) );
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0, kTokenId, kAmount, "" ), "" ) );
+}
+
+TEST( PublicChainMintValidationTest, ZeroInputValidateWitnessRejectsWithoutRpc )
+{
+    sgns::PublicChainInputValidator validator;
+    const auto mint = MakeMint(
+        0, kTokenId, kAmount, std::to_string( kChainId ), kDestination,
+        sgns::base::Hash256{}, std::string{} );
+    const auto params = mint->GetUTXOParameters();
+
+    sgns::UTXOTransitionCommitment commitment;
+    commitment.add_consumed_outpoints();
+    commitment.add_produced_outputs();
+    const auto subject = sgns::ConsensusManager::CreateNonceSubject(
+        mint->GetSrcAddress(),
+        mint->GetNonce(),
+        mint->GetHash(),
+        mint->SerializeToEmbeddedTransaction(),
+        commitment,
+        std::nullopt );
+    ASSERT_TRUE( subject.has_value() );
+
+    EXPECT_FALSE( validator.ValidateWitness(
+        subject.value(), mint, params, nullptr ) );
 }
