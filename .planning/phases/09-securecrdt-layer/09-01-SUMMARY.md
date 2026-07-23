@@ -99,7 +99,17 @@ As a substitute verification, both new headers and both new test files were comp
 
 This confirms the header logic and test assertions are correct against the shipped interface, but does **not** confirm the `ctest -R securecrdt` invocation itself succeeds inside this repository's actual CMake/GoogleTest build — that remains to be confirmed the next time a full project build is run (e.g., by CI or a subsequent plan's build step). Flagging this explicitly per the plan's `<verify>` requirement (`cmake --build . --target securecrdt`, `ctest -R securecrdt`) so it is not silently assumed green.
 
-## Self-Check: PASSED
+## Build/Test Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`):
+
+- `cmake .` (reconfigure) picked up the new `add_subdirectory(securecrdt)` in both `src/CMakeLists.txt` and `test/src/CMakeLists.txt` cleanly.
+- `cmake --build . --target securecrdt_interface_test securecrdt_registry_test` — **succeeded**, both targets compile and link against the real project headers/GoogleTest/CMake build (no stand-ins).
+- `ctest -R securecrdt --output-on-failure` — **2/2 tests passed** (`securecrdt_interface_test`, `securecrdt_registry_test`).
+
+SCRDT-01 and SCRDT-02 are now fully proven by actual compiled/executed tests, not just the executor's standalone-shim verification.
+
+## Self-Check: PASSED (build+test verified by orchestrator follow-up)
 
 - FOUND: src/securecrdt/ISignedCRDTData.hpp
 - FOUND: src/securecrdt/SecureCrdtRegistry.hpp
