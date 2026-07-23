@@ -55,7 +55,7 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
     UseMemorySecureStorage();
     auto base = MakeTempDir( "ncp_autodht" );
     const auto dev_config = MakeDevConfig( base );
-    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/40001, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
@@ -70,15 +70,15 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 // resolved synchronously in InitNetwork; with no "pubsub_port" key, the else-branch runs
 // GenerateRandomPort(port_seed, address), which returns a value in [base, base+300]. So:
 //   - default port_seed (40001) resolves into [40001, 40301]
-//   - config port_seed=49999 resolves into [49999, 50299]
-// These ranges do not overlap, so a resolved port >= 49999 unambiguously proves port_seed is
-// config-driven at 49999. Single construction avoids second-port-bind flakiness.
+//   - config port_seed=20000 resolves into [20000, 20300]
+// These ranges do not overlap, so a resolved port in the latter range unambiguously proves
+// port_seed is config-driven at 20000. Single construction avoids second-port-bind flakiness.
 TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
 {
     UseMemorySecureStorage();
     auto base = MakeTempDir( "ncp_port_seed" );
     const auto dev_config = MakeDevConfig( base );
-    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/49999, /*auto_dht=*/false );
+    sgns::GeniusNode::WriteNetworkConfig( dev_config.BaseWritePath, /*port_seed=*/20000, /*auto_dht=*/false );
     sgns::GeniusNode::WriteSgnsConfig( dev_config.BaseWritePath, /*node_type=*/"Full", /*is_processor=*/true, /*rpc_catchup=*/false );
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
@@ -86,8 +86,8 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     const auto resolved = node->GetPubsubPort();
-    // Impossible with the default port_seed (40001); only reachable via config port_seed=49999.
-    EXPECT_GE( resolved, 49999u );
+    EXPECT_GE( resolved, 20000u );
+    EXPECT_LE( resolved, 20300u );
 }
 
 TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )

@@ -17,6 +17,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/atomic_transaction.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -63,6 +64,9 @@ namespace
 
         void SetUp() override
         {
+            sgns::GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+                { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
             account_ = sgns::GeniusAccount::New( kTokenId, base_path / "account" );
             ASSERT_TRUE( account_ );
             ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ).has_value() );

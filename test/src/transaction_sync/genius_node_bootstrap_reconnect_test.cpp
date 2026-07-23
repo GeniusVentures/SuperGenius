@@ -39,7 +39,7 @@ namespace sgns
             test::removeAllWithRetry( full_config_.BaseWritePath );
             test::removeAllWithRetry( client_config_.BaseWritePath );
 
-            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 51000, false ).has_value() );
+            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( full_config_.BaseWritePath, 0, false ).has_value() );
             ASSERT_TRUE( GeniusNode::WriteSgnsConfig( full_config_.BaseWritePath, "Full", false ).has_value() );
             {
                 std::ofstream config( full_config_.BaseWritePath + "bridge_chains_config.json" );
@@ -58,6 +58,13 @@ namespace sgns
 
             bootstrap_address_ = full_node_->GetPubSub()->GetInterfaceAddress();
             ASSERT_FALSE( bootstrap_address_.empty() );
+            ASSERT_NE( full_node_->GetPubsubPort(), 0u );
+            {
+                std::ofstream config( full_config_.BaseWritePath + "network_config.json" );
+                ASSERT_TRUE( config.good() );
+                config << "{ \"pubsub_port\": \"" << full_node_->GetPubsubPort()
+                       << "\", \"auto_dht\": false, \"upnp_enabled\": false }";
+            }
 
             std::filesystem::create_directories( client_config_.BaseWritePath );
             {
@@ -74,7 +81,7 @@ namespace sgns
             {
                 std::ofstream config( client_config_.BaseWritePath + "network_config.json" );
                 ASSERT_TRUE( config.good() );
-                config << "{ \"port_seed\": 51500, \"auto_dht\": false, \"upnp_enabled\": false, "
+                config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
                           "\"bootstrap_reconnect_base_delay_sec\": 1, \"bootstrap_reconnect_max_delay_sec\": 1, "
                           "\"bootstrap_health_check_interval_sec\": 1, "
                           "\"bootstrap_health_check_disconnected_interval_sec\": 1 }";

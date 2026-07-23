@@ -280,13 +280,12 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     ASSERT_TRUE(
         sgns::MultiAccountTestAccess::RemoveRegistryPersistence( node_client, std::move( cid_bytes.value() ) ) );
 
-    const auto client_port  = node_client->GetPubsubPort();
     const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
     {
         std::ofstream network_config( client_base_path + "network_config.json" );
         ASSERT_TRUE( network_config.good() );
-        network_config << "{ \"port_seed\": " << client_port
-                       << ", \"auto_dht\": false, \"upnp_enabled\": false, \"bootstrap_addresses\": [\"" << full_address
+        network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
+                          "\"bootstrap_addresses\": [\"" << full_address
                        << "\"] }";
     }
 
