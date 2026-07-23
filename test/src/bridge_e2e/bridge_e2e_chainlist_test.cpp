@@ -11,6 +11,8 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -18,7 +20,7 @@
 
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "account/BridgeEventTypes.hpp"
-#include "account/MintTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/chainlist_provider.hpp"
@@ -40,6 +42,12 @@ static constexpr const char *kSepoliaRpcUrls[] = {
 
 /// @brief Sepolia GNUS bridge contract address (checksummed).
 static constexpr const char *kSepoliaContract = "0x9af8050220d8c355ca3c6dc00a78b474cd3e3c70";
+static constexpr const char *kDestination =
+    "9817f8165b81f259d928ce2ddbfc9b02070b87ce9562a055acbbdcf97e66be79"
+    "b8d410fb8fd0479c195485a648b417fda808110efcfba45d65c4a32677da3a48";
+// bytes32 bridge payload stores the X coordinate in contract (little-endian) order.
+static constexpr const char *kDestinationX =
+    "9817f8165b81f259d928ce2ddbfc9b02070b87ce9562a055acbbdcf97e66be79";
 
 /// @brief Chainlist.org-format JSON (array) containing real Sepolia endpoints.
 static const std::string kChainlistJson = R"([
@@ -66,6 +74,48 @@ static std::string ComputeBridgeTopic0()
 {
     auto hash = eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) );
     return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
+}
+
+static std::string HexWord( uint64_t value )
+{
+    std::ostringstream out;
+    out << std::hex << std::setfill( '0' ) << std::setw( 64 ) << value;
+    return out.str();
+}
+
+static std::string BuildV2BurnData()
+{
+    return "0x" + HexWord( 0 )
+         + HexWord( 1 )
+         + HexWord( 11155111 )
+         + HexWord( 8453 )
+         + std::string( kDestinationX )
+         + HexWord( 0 );
+}
+
+static std::shared_ptr<MintTransactionV2> BuildValidMintV2( const std::string &source_ref )
+{
+    const std::string raw_hash =
+        source_ref.rfind( "0x", 0 ) == 0 ? source_ref.substr( 2 ) : source_ref;
+    auto source_hash = base::Hash256::fromReadableString( raw_hash );
+    EXPECT_TRUE( source_hash.has_value() );
+
+    SGTransaction::DAGStruct dag;
+    dag.set_source_addr( kDestination );
+    dag.set_nonce( 1 );
+    dag.set_uncle_hash( raw_hash );
+
+    std::vector<InputUTXOInfo> inputs{
+        { source_hash.value(), 0u, {} },
+    };
+    return std::make_shared<MintTransactionV2>(
+        MintTransactionV2::New( 1,
+                                "11155111",
+                                TokenID::FromUint256( intx::uint256( 0 ),
+                                                      TokenID::Endianness::BIG ),
+                                std::move( dag ),
+                                std::move( inputs ),
+                                kDestination ) );
 }
 
 /// @brief Write a temp bridge_chains_config.json (Phase 05.1 object-keyed format).
@@ -103,8 +153,11 @@ static std::string BuildValidReceiptJson( const std::string &tx_hash,
 
     boost::json::object log_entry;
     log_entry["address"]         = contract_addr;
-    log_entry["topics"]          = boost::json::array{ topic0 };
-    log_entry["data"]            = "0x";
+    log_entry["topics"]          = boost::json::array{
+        topic0,
+        "0x" + std::string( 24, '0' ) + std::string( 40, '1' ),
+    };
+    log_entry["data"]            = BuildV2BurnData();
     log_entry["blockNumber"]     = "0x100000";
     log_entry["blockHash"]       = "0x" + std::string( 64, '1' );
     log_entry["transactionHash"] = tx_hash;
@@ -292,9 +345,7 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
                 BuildValidReceiptJson( source_ref, kSepoliaContract, v2_topic0 ) );
         } );
 
-    SGTransaction::DAGStruct dag;
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+    auto mint = BuildValidMintV2( source_ref );
 
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "A v2 (BridgeOutInitiated) burn receipt must pass witness validation";
@@ -335,9 +386,7 @@ TEST( BridgeE2EChainlistTest, RuntimeFetchWiresEndpointsThatReachQuorum )
                 BuildValidReceiptJson( source_ref, kSepoliaContract, v2_topic0 ) );
         } );
 
-    SGTransaction::DAGStruct dag;
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+    auto mint = BuildValidMintV2( source_ref );
 
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "Runtime-fetched endpoints must reach the 75-weight quorum with no manual override";
@@ -474,9 +523,7 @@ TEST( BridgeE2EChainlistTest, V2ReceiptPassesPastStaleV1OnlyOperatorEndpoint )
                 BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
         } );
 
-    SGTransaction::DAGStruct dag;
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+    auto mint = BuildValidMintV2( source_ref );
 
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "A v2 receipt must reach quorum on v1+v2 endpoints, skipping the stale v1-only endpoint";
@@ -536,9 +583,7 @@ TEST( BridgeE2EChainlistTest, DuplicateUrlFetchedUpgradesExistingEndpointMetadat
                 BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
         } );
 
-    SGTransaction::DAGStruct dag;
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+    auto mint = BuildValidMintV2( source_ref );
 
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "The upgraded (v1+v2) high-weight endpoint must let a v2 receipt reach quorum";
@@ -594,9 +639,7 @@ TEST( BridgeE2EChainlistTest, FetchedTopicSetUpgradesAllExistingEndpointsNotOnly
                 BuildValidReceiptJson( source_ref, kSepoliaContract, v2 ) );
         } );
 
-    SGTransaction::DAGStruct dag;
-    auto mint = std::make_shared<MintTransaction>(
-        MintTransaction::New( 1, "11155111", TokenID::FromBytes( { 0x00 } ), dag ) );
+    auto mint = BuildValidMintV2( source_ref );
 
     EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify( validator, mint, source_ref ) )
         << "The fetched {v1,v2} set must upgrade the non-duplicate private endpoint so a "
