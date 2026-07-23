@@ -445,7 +445,7 @@ Plans:
 
 ### Phases
 
-- [ ] **Phase 8: MultiSig Primitive** - Standalone N-of-M signature/quorum component reusing `ConsensusAuth` primitives
+- [x] **Phase 8: MultiSig Primitive** - Standalone N-of-M signature/quorum component reusing `ConsensusAuth` primitives (completed 2026-07-23)
 - [ ] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow
 - [ ] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT
 - [ ] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager`
@@ -465,7 +465,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 08-01-PLAN.md — MultiSig library (VerifyPayloadSignature + EvaluateQuorum) + CMake wiring + tests (MSIG-01, MSIG-02, MSIG-03)
+- [x] 08-01-PLAN.md — MultiSig library (VerifyPayloadSignature + EvaluateQuorum) + CMake wiring + tests (MSIG-01, MSIG-02, MSIG-03)
 
 ### Phase 9: SecureCRDT Layer
 
@@ -515,7 +515,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
-| 8. MultiSig Primitive | 0/1 | Not started | - |
+| 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
 | 9. SecureCRDT Layer | 0/TBD | Not started | - |
 | 10. TrustedPeerRegistry | 0/TBD | Not started | - |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
