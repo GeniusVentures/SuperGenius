@@ -18,6 +18,7 @@
 #include <utility>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include <google/protobuf/message.h>
 
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
@@ -55,6 +56,55 @@ namespace sgns
                                 value.end(),
                                 []( unsigned char c )
                                 { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ); } );
+        }
+
+        bool HasUnknownFieldsRecursively( const google::protobuf::Message &message )
+        {
+            const auto *reflection = message.GetReflection();
+            const auto *descriptor = message.GetDescriptor();
+            if ( reflection == nullptr || descriptor == nullptr ||
+                 !reflection->GetUnknownFields( message ).empty() )
+            {
+                return true;
+            }
+
+            for ( int i = 0; i < descriptor->field_count(); ++i )
+            {
+                const auto *field = descriptor->field( i );
+                if ( field->cpp_type() != google::protobuf::FieldDescriptor::CPPTYPE_MESSAGE )
+                {
+                    continue;
+                }
+                if ( field->is_repeated() )
+                {
+                    const int count = reflection->FieldSize( message, field );
+                    for ( int index = 0; index < count; ++index )
+                    {
+                        if ( HasUnknownFieldsRecursively(
+                                 reflection->GetRepeatedMessage( message, field, index ) ) )
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else if ( reflection->HasField( message, field ) &&
+                          HasUnknownFieldsRecursively( reflection->GetMessage( message, field ) ) )
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool VoterIdBytewiseLess( const ConsensusManager::Vote &lhs, const ConsensusManager::Vote &rhs )
+        {
+            return std::lexicographical_compare(
+                lhs.voter_id().begin(),
+                lhs.voter_id().end(),
+                rhs.voter_id().begin(),
+                rhs.voter_id().end(),
+                []( char a, char b )
+                { return static_cast<unsigned char>( a ) < static_cast<unsigned char>( b ); } );
         }
 
         outcome::result<std::string> SerializeCertificateDeterministically(
@@ -1222,6 +1272,16 @@ namespace sgns
         }
 
         const auto &tally = tally_result.value();
+        if ( !tally.has_quorum || votes.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed: certificate requires at least one valid quorum vote",
+                                             __func__ );
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
+        }
+
+        std::vector<Vote> canonical_votes = votes;
+        std::sort( canonical_votes.begin(), canonical_votes.end(), VoterIdBytewiseLess );
+
         Certificate cert;
         cert.set_proposal_id( proposal.proposal_id() );
         cert.set_registry_cid( proposal.registry_cid() );
@@ -1229,28 +1289,33 @@ namespace sgns
         cert.set_total_weight( tally.total_weight );
         cert.set_approved_weight( tally.approved_weight );
         uint64_t max_vote_ts = 0;
-        for ( const auto &vote : votes )
+        for ( const auto &vote : canonical_votes )
         {
             max_vote_ts = std::max( vote.timestamp(), max_vote_ts );
         }
         if ( max_vote_ts == 0 )
         {
-            max_vote_ts = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::system_clock::now().time_since_epoch() )
-                              .count();
+            ConsensusManagerLogger()->error( "{}: failed: certificate votes have no timestamp", __func__ );
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
         }
         cert.set_timestamp( max_vote_ts );
-        for ( const auto &vote : votes )
+        for ( const auto &vote : canonical_votes )
         {
             *cert.add_votes() = vote;
         }
         *cert.mutable_proposal() = proposal;
 
+        auto normalized = NormalizeCertificate( cert );
+        if ( normalized.check != Check::Approve )
+        {
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
+        }
+
         ConsensusManagerLogger()->debug( "{}: Success creating certificate for hash {} proposal_id={}",
                                          __func__,
                                          GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ) );
-        return cert;
+        return std::move( normalized.certificate );
     }
 
     bool ConsensusManager::IsBridgeMintSubject( const Proposal &proposal )
@@ -1375,33 +1440,40 @@ namespace sgns
                                              vote.approve() );
             if ( vote.proposal_id() != proposal.proposal_id() )
             {
-                continue;
+                ConsensusManagerLogger()->error( "{}: failed: vote proposal mismatch voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
             if ( !seen.insert( vote.voter_id() ).second )
             {
-                continue;
+                ConsensusManagerLogger()->error( "{}: failed: duplicate vote voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
             const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
             if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
             {
-                ConsensusManagerLogger()->debug( "{}: processing vote for hash {}: voter_id={} approve={}",
+                ConsensusManagerLogger()->error( "{}: failed: voter is not an active registry validator voter_id={}",
                                                  __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 vote.voter_id().substr( 0, 8 ),
-                                                 vote.approve() );
-                continue;
+                                                 vote.voter_id() );
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
             auto signing_bytes = sgns::VoteSigningBytes( vote );
             if ( signing_bytes.has_error() )
             {
-                continue;
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
             if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
             {
-                continue;
+                ConsensusManagerLogger()->error( "{}: failed: invalid vote signature voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
             ConsensusManagerLogger()->debug( "{}: Valid voter signature for hash {}: voter_id={} approve={}",
@@ -1563,15 +1635,17 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
-        if ( ValidateCertificate( certificate ) != Check::Approve )
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check != Check::Approve )
         {
             ConsensusManagerLogger()->error( "{}: rejected invalid certificate proposal_id={}",
                                              __func__,
                                              certificate.proposal_id() );
             return outcome::failure( CertificateStoreError::InvalidCertificate );
         }
+        const auto &canonical = normalized.certificate;
 
-        auto slot_result = GetSlotKey( certificate.proposal() );
+        auto slot_result = GetSlotKey( canonical.proposal() );
         if ( slot_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
@@ -1580,7 +1654,7 @@ namespace sgns
             return outcome::failure( slot_result.error() );
         }
 
-        auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
+        auto subject_hash_result = GetSubjectHash( canonical.proposal().subject() );
         if ( subject_hash_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: subject hash {} error proposal_id={}",
@@ -1601,7 +1675,7 @@ namespace sgns
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
 
-        BOOST_OUTCOME_TRY( auto serialized, SerializeCertificateDeterministically( certificate ) );
+        const auto &serialized = normalized.deterministic_bytes;
 
         const auto slot_key_string = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
         const auto index_key_string = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
@@ -1620,14 +1694,14 @@ namespace sgns
                         "{}: integrity failure for replay slot={} proposal_id={} winner={}: index missing or mismatched",
                         __func__,
                         slot_id,
-                        certificate.proposal_id(),
+                        canonical.proposal_id(),
                         subject_hash );
                     return outcome::failure( CertificateStoreError::IntegrityError );
                 }
                 ConsensusManagerLogger()->debug( "{}: idempotent certificate replay slot={} proposal_id={}",
                                                  __func__,
                                                  slot_id,
-                                                 certificate.proposal_id() );
+                                                 canonical.proposal_id() );
                 return outcome::success();
             }
 
@@ -1639,7 +1713,7 @@ namespace sgns
                 __func__,
                 slot_id,
                 parsed ? existing_certificate.proposal_id() : "<invalid>",
-                certificate.proposal_id(),
+                canonical.proposal_id(),
                 parsed && GetSubjectHash( existing_certificate.proposal().subject() ).has_value()
                     ? GetSubjectHash( existing_certificate.proposal().subject() ).value()
                     : "<invalid>",
@@ -1653,7 +1727,7 @@ namespace sgns
                 "{}: certificate index conflict slot={} proposal_id={} winner={} existing_target={}",
                 __func__,
                 slot_id,
-                certificate.proposal_id(),
+                canonical.proposal_id(),
                 subject_hash,
                 std::string( existing_index.value().toString() ) );
             return outcome::failure( std::string( existing_index.value().toString() ) == slot_id
@@ -1681,7 +1755,7 @@ namespace sgns
         }
 
         ConsensusMessage message;
-        *message.mutable_certificate() = certificate;
+        *message.mutable_certificate() = canonical;
         auto result                    = Publish( message );
         if ( result.has_error() )
         {
@@ -1696,7 +1770,7 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          slot_id,
-                                         certificate.proposal_id().substr( 0, 8 ) );
+                                         canonical.proposal_id().substr( 0, 8 ) );
         return result;
     }
 
@@ -2035,7 +2109,7 @@ namespace sgns
 
         const crdt::pb::Element *slot_element  = nullptr;
         const crdt::pb::Element *index_element = nullptr;
-        std::size_t              v2_count      = 0;
+        std::size_t              v2_count = 0;
         for ( const auto &element : delta.elements() )
         {
             if ( !std::regex_match( element.key(), v2_regex ) )
@@ -2063,7 +2137,9 @@ namespace sgns
             }
             else
             {
-                ConsensusManagerLogger()->critical( "{}: malformed v2 certificate key={}", __func__, element.key() );
+                ConsensusManagerLogger()->critical( "{}: legacy or malformed certificate key={}",
+                                                    __func__,
+                                                    element.key() );
                 return false;
             }
         }
@@ -2071,7 +2147,7 @@ namespace sgns
         if ( v2_count != 2 || !slot_element || !index_element )
         {
             ConsensusManagerLogger()->critical(
-                "{}: rejected partial certificate delta elements={} has_slot={} has_index={}",
+                "{}: rejected partial v2 certificate delta elements={} has_slot={} has_index={}",
                 __func__,
                 v2_count,
                 slot_element != nullptr,
@@ -2080,14 +2156,23 @@ namespace sgns
         }
 
         Certificate certificate;
-        if ( !certificate.ParseFromString( slot_element->value() ) ||
-             ValidateCertificate( certificate ) != Check::Approve )
+        if ( !certificate.ParseFromString( slot_element->value() ) )
         {
             ConsensusManagerLogger()->critical( "{}: invalid certificate payload key={}",
                                                 __func__,
                                                 slot_element->key() );
             return false;
         }
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check != Check::Approve ||
+             normalized.deterministic_bytes != slot_element->value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: noncanonical certificate payload key={}",
+                                                __func__,
+                                                slot_element->key() );
+            return false;
+        }
+        certificate = std::move( normalized.certificate );
 
         auto slot_result = GetSlotKey( certificate.proposal() );
         auto hash_result = GetSubjectHash( certificate.proposal().subject() );
@@ -2159,17 +2244,22 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        if ( certificate.proposal_id().empty() )
-        {
-            ConsensusManagerLogger()->error( "{}: missing proposal_id, rejecting: {}", __func__, element.key() );
-            return std::vector<crdt::pb::Element>{};
-        }
-
-        if ( ValidateCertificate( certificate ) == Check::Reject )
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
             return std::vector<crdt::pb::Element>{};
         }
+        if ( normalized.check == Check::Stalled )
+        {
+            return std::nullopt;
+        }
+        if ( normalized.deterministic_bytes != element.value() )
+        {
+            ConsensusManagerLogger()->error( "{}: noncanonical bytes, rejecting: {}", __func__, element.key() );
+            return std::vector<crdt::pb::Element>{};
+        }
+        certificate = std::move( normalized.certificate );
 
         auto slot_result = GetSlotKey( certificate.proposal() );
         if ( slot_result.has_error() ||
@@ -2197,6 +2287,23 @@ namespace sgns
             return;
         }
 
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check == Check::Reject ||
+             ( normalized.check == Check::Approve &&
+               normalized.deterministic_bytes != std::string( value.toString() ) ) )
+        {
+            ConsensusManagerLogger()->error( "{}: rejecting noncanonical certificate payload key={}",
+                                             __func__,
+                                             key );
+            return;
+        }
+        if ( normalized.check == Check::Stalled )
+        {
+            certificate_work_journal_->MarkStalled( key );
+            return;
+        }
+        certificate = std::move( normalized.certificate );
+
         auto slot_result = GetSlotKey( certificate.proposal() );
         if ( slot_result.has_error() ||
              key != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
@@ -2217,26 +2324,9 @@ namespace sgns
             return;
         }
 
-        auto certificate_check = ValidateCertificate( certificate );
-        if ( certificate_check == Check::Reject )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
-            return;
-        }
-
-        if ( certificate_check == Check::Stalled )
-        {
-            ConsensusManagerLogger()->error(
-                "{}: Validation of the certificate pending for key {}, certificate handler not called ",
-                __func__,
-                key );
-            certificate_work_journal_->MarkStalled( key );
-            return;
-        }
-
         const auto &proposal            = certificate.proposal();
         const auto &proposal_id         = certificate.proposal_id();
-        const auto &subject_hash = subject_hash_result.value();
+        const auto &subject_hash         = subject_hash_result.value();
 
         auto registry_result = registry_->OnFinalizedCertificate( certificate );
         if ( registry_result.has_error() )
@@ -2290,17 +2380,20 @@ namespace sgns
         (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
     }
 
-    ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
+    ConsensusManager::CertificateNormalization ConsensusManager::NormalizeCertificate(
+        const Certificate &certificate ) const
     {
-        if ( certificate.proposal_id().empty() )
+        CertificateNormalization result;
+        if ( HasUnknownFieldsRecursively( certificate ) )
         {
-            ConsensusManagerLogger()->error( "{}: Certificate proposal ID missing ", __func__ );
-            return Check::Reject;
+            ConsensusManagerLogger()->error( "{}: rejected: certificate contains protobuf unknown fields",
+                                             __func__ );
+            return result;
         }
-        if ( !certificate.has_proposal() )
+        if ( certificate.proposal_id().empty() || !certificate.has_proposal() )
         {
-            ConsensusManagerLogger()->error( "{}: Certificate missing proposal ", __func__ );
-            return Check::Reject;
+            ConsensusManagerLogger()->error( "{}: rejected: certificate proposal is incomplete", __func__ );
+            return result;
         }
 
         const auto &proposal = certificate.proposal();
@@ -2310,7 +2403,7 @@ namespace sgns
                                              __func__,
                                              certificate.proposal_id(),
                                              proposal.proposal_id() );
-            return Check::Reject;
+            return result;
         }
         if ( proposal.registry_cid() != certificate.registry_cid() ||
              proposal.registry_epoch() != certificate.registry_epoch() )
@@ -2318,47 +2411,44 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
                                              __func__,
                                              certificate.proposal_id() );
-            return Check::Reject;
+            return result;
         }
+
         auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
         if ( registry_ret.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: stalled: registry load error={} for registry cid {} proposal_id={}",
                                              __func__,
                                              registry_ret.error().message(),
                                              certificate.registry_cid(),
                                              certificate.proposal_id() );
-            return Check::Stalled;
+            result.check = Check::Stalled;
+            return result;
         }
         auto &registry = registry_ret.value();
-        if ( !ValidateSubject( proposal.subject() ) )
+        if ( registry.epoch() != certificate.registry_epoch() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid subject proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: registry epoch mismatch proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id() );
-            return Check::Reject;
+                                             certificate.proposal_id() );
+            return result;
         }
-        if ( !CheckProposal( proposal ) )
+        if ( !ValidateSubject( proposal.subject() ) || !CheckProposal( proposal ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid proposal proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: rejected: invalid signed proposal proposal_id={}",
                                              __func__,
                                              proposal.proposal_id() );
-            return Check::Reject;
+            return result;
         }
 
         const auto computed_id = CreateProposalId( proposal );
-        if ( computed_id.empty() )
+        if ( computed_id.empty() || computed_id != certificate.proposal_id() )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: computed_id empty", __func__ );
-            return Check::Reject;
-        }
-        if ( computed_id != certificate.proposal_id() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: computed_id mismatch cert={} computed={}",
+            ConsensusManagerLogger()->error( "{}: rejected: computed proposal id mismatch cert={} computed={}",
                                              __func__,
                                              certificate.proposal_id(),
                                              computed_id );
-            return Check::Reject;
+            return result;
         }
 
         std::vector<Vote> votes;
@@ -2367,26 +2457,57 @@ namespace sgns
         {
             votes.push_back( vote );
         }
+        if ( votes.empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: certificate contains no votes proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return result;
+        }
+
         auto tally = TallyVotes( proposal, votes, registry, certificate.registry_cid() );
         if ( tally.has_error() || !tally.value().has_quorum )
         {
-            return Check::Reject;
-        }
-        if ( certificate.total_weight() != tally.value().total_weight ||
-             certificate.approved_weight() != tally.value().approved_weight )
-        {
-            ConsensusManagerLogger()->error(
-                "{}: rejected: certificate tally mismatch proposal_id={} expected={}/{} actual={}/{}",
-                __func__,
-                certificate.proposal_id(),
-                tally.value().approved_weight,
-                tally.value().total_weight,
-                certificate.approved_weight(),
-                certificate.total_weight() );
-            return Check::Reject;
+            return result;
         }
 
-        return Check::Approve;
+        std::sort( votes.begin(), votes.end(), VoterIdBytewiseLess );
+        uint64_t max_vote_timestamp = 0;
+        for ( const auto &vote : votes )
+        {
+            max_vote_timestamp = std::max( max_vote_timestamp, vote.timestamp() );
+        }
+        if ( max_vote_timestamp == 0 )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: certificate votes have no timestamp proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return result;
+        }
+
+        result.certificate = certificate;
+        result.certificate.clear_votes();
+        for ( const auto &vote : votes )
+        {
+            *result.certificate.add_votes() = vote;
+        }
+        result.certificate.set_total_weight( tally.value().total_weight );
+        result.certificate.set_approved_weight( tally.value().approved_weight );
+        result.certificate.set_timestamp( max_vote_timestamp );
+
+        auto bytes = SerializeCertificateDeterministically( result.certificate );
+        if ( bytes.has_error() )
+        {
+            return result;
+        }
+        result.deterministic_bytes = std::move( bytes.value() );
+        result.check               = Check::Approve;
+        return result;
+    }
+
+    ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
+    {
+        return NormalizeCertificate( certificate ).check;
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
@@ -3284,6 +3405,7 @@ namespace sgns
             return outcome::failure( CertificateStoreError::NotFound );
         }
         const auto &certificate_data = certificate_data_result.value();
+        const auto  stored_bytes     = std::string( certificate_data.toString() );
 
         Certificate certificate;
         if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
@@ -3292,6 +3414,16 @@ namespace sgns
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
 
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check != Check::Approve || normalized.deterministic_bytes != stored_bytes )
+        {
+            ConsensusManagerLogger()->critical( "{}: noncanonical authoritative certificate payload key={}",
+                                                __func__,
+                                                slot_key );
+            return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+        certificate = std::move( normalized.certificate );
+
         auto certificate_slot = GetSlotKey( certificate.proposal() );
         if ( certificate_slot.has_error() || certificate_slot.value() != slot_id )
         {
@@ -3299,13 +3431,6 @@ namespace sgns
                                                 __func__,
                                                 slot_key,
                                                 certificate_slot.has_value() ? certificate_slot.value() : "<invalid>" );
-            return outcome::failure( CertificateStoreError::IntegrityError );
-        }
-        if ( ValidateCertificate( certificate ) != Check::Approve )
-        {
-            ConsensusManagerLogger()->critical( "{}: invalid authoritative certificate payload key={}",
-                                                __func__,
-                                                slot_key );
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
         return certificate;

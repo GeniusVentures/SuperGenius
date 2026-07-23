@@ -613,7 +613,17 @@ namespace sgns
         static constexpr std::string_view CERT_TX_INDEX_KEY_PATTERN =
             "^/?cert/v2/tx/[0-9a-f]{64}$"; ///< Exact winning transaction index regex.
         static constexpr std::string_view CERT_V2_KEY_PATTERN =
-            "^/?cert/v2/(slot|tx)/.*$"; ///< Broad v2 routing regex used by pair validation.
+            "^/?cert/v2/(slot|tx)/.*$"; ///< Live v2 certificate pair routing regex.
+
+        /**
+         * @brief Result of strict certificate normalization.
+         */
+        struct CertificateNormalization
+        {
+            Check       check{ Check::Reject }; ///< Approve, Reject, or dependency Stalled.
+            Certificate certificate;            ///< Fully validated canonical certificate.
+            std::string deterministic_bytes;    ///< Deterministic serialization of `certificate`.
+        };
 
         /**
          * @brief Runtime state tracked for one proposal.
@@ -826,6 +836,13 @@ namespace sgns
          * @return Validation result enum.
          */
         ConsensusManager::Check ValidateCertificate( const Certificate &certificate ) const;
+        /**
+         * @brief Strictly validates and normalizes every certificate storage surface.
+         *
+         * Unknown fields and invalid votes are terminally rejected. Registry
+         * unavailability is the only condition returned as `Check::Stalled`.
+         */
+        CertificateNormalization NormalizeCertificate( const Certificate &certificate ) const;
         /**
          * @brief Computes deterministic proposal identifier.
          * @param[in] proposal Proposal to identify.
