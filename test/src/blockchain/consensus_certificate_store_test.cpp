@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <atomic>
 #include <thread>
+
+#include <google/protobuf/unknown_field_set.h>
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Consensus.hpp"
@@ -73,6 +76,8 @@ namespace sgns::test
             "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
         constexpr const char *kPrivateKey2 =
             "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+        constexpr const char *kPrivateKey3 =
+            "feedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 
         std::shared_ptr<GeniusAccount> MakeAccount( const std::string &path, const char *private_key = kPrivateKey )
         {
@@ -83,19 +88,30 @@ namespace sgns::test
                 false );
         }
 
-        std::shared_ptr<ValidatorRegistry> MakeRegistry( const std::shared_ptr<crdt::GlobalDB> &db,
-                                                         const std::shared_ptr<GeniusAccount>  &account )
+        std::shared_ptr<ValidatorRegistry> MakeRegistry(
+            const std::shared_ptr<crdt::GlobalDB>              &db,
+            const std::vector<std::shared_ptr<GeniusAccount>> &accounts )
         {
-            if ( !db || !account )
+            if ( !db || accounts.empty() || !accounts.front() )
             {
                 return nullptr;
+            }
+            std::vector<std::string> validator_ids;
+            validator_ids.reserve( accounts.size() );
+            for ( const auto &account : accounts )
+            {
+                if ( !account )
+                {
+                    return nullptr;
+                }
+                validator_ids.push_back( account->GetAddress() );
             }
             auto registry = ValidatorRegistry::New(
                 db,
                 1,
                 1,
                 ValidatorRegistry::WeightConfig{},
-                account->GetAddress(),
+                accounts.front()->GetAddress(),
                 []( const std::string &, std::function<void( outcome::result<std::string> )> callback )
                 { callback( outcome::failure( std::errc::not_supported ) ); } );
             if ( !registry )
@@ -103,8 +119,9 @@ namespace sgns::test
                 return nullptr;
             }
             auto stored = registry->StoreGenesisRegistry(
-                { account->GetAddress() },
-                [account]( std::vector<uint8_t> payload ) { return account->Sign( std::move( payload ) ); } );
+                validator_ids,
+                [account = accounts.front()]( std::vector<uint8_t> payload )
+                { return account->Sign( std::move( payload ) ); } );
             if ( stored.has_error() )
             {
                 return nullptr;
@@ -119,6 +136,12 @@ namespace sgns::test
                 std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
             }
             return nullptr;
+        }
+
+        std::shared_ptr<ValidatorRegistry> MakeRegistry( const std::shared_ptr<crdt::GlobalDB> &db,
+                                                         const std::shared_ptr<GeniusAccount>  &account )
+        {
+            return MakeRegistry( db, std::vector<std::shared_ptr<GeniusAccount>>{ account } );
         }
 
         std::shared_ptr<ConsensusManager> MakeManager( const std::shared_ptr<ValidatorRegistry> &registry,
@@ -187,6 +210,52 @@ namespace sgns::test
                     true,
                     [voter]( std::vector<uint8_t> payload ) { return voter->Sign( std::move( payload ) ); } ) );
             return manager->CreateCertificate( proposal, { vote } );
+        }
+
+        outcome::result<ConsensusManager::Certificate> MakeTwoVoteCertificate(
+            const std::shared_ptr<ConsensusManager> &manager,
+            const std::shared_ptr<ValidatorRegistry> &registry,
+            const std::shared_ptr<GeniusAccount> &first,
+            const std::shared_ptr<GeniusAccount> &second,
+            bool                                  reverse_input = false )
+        {
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    first->GetAddress(),
+                    7,
+                    "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                    EmbeddedTransaction{},
+                    MakeCommitment(),
+                    UTXOWitness{} ) );
+            BOOST_OUTCOME_TRY(
+                auto proposal,
+                ConsensusManager::CreateProposal(
+                    subject,
+                    first->GetAddress(),
+                    registry->GetRegistryCid(),
+                    registry->GetRegistryEpoch(),
+                    [first]( std::vector<uint8_t> payload ) { return first->Sign( std::move( payload ) ); } ) );
+            BOOST_OUTCOME_TRY(
+                auto first_vote,
+                manager->CreateVote(
+                    proposal.proposal_id(),
+                    first->GetAddress(),
+                    true,
+                    [first]( std::vector<uint8_t> payload ) { return first->Sign( std::move( payload ) ); } ) );
+            BOOST_OUTCOME_TRY(
+                auto second_vote,
+                manager->CreateVote(
+                    proposal.proposal_id(),
+                    second->GetAddress(),
+                    true,
+                    [second]( std::vector<uint8_t> payload ) { return second->Sign( std::move( payload ) ); } ) );
+            std::vector<ConsensusManager::Vote> votes{ first_vote, second_vote };
+            if ( reverse_input )
+            {
+                std::reverse( votes.begin(), votes.end() );
+            }
+            return manager->CreateCertificate( proposal, votes );
         }
 
         crdt::pb::Delta MakeCertificatePairDelta( const ConsensusManager::Certificate &certificate )
@@ -462,6 +531,196 @@ namespace sgns::test
         expect_rejected( "vote",
                          []( auto &cert ) { cert.mutable_votes( 0 )->set_approve( false ); } );
 
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, CanonicalTwoVoteReplayIsByteIdenticalAndIdempotent )
+    {
+        auto first    = MakeAccount( getPathString() );
+        auto second   = MakeAccount( getPathString(), kPrivateKey2 );
+        auto registry = MakeRegistry( db_, { first, second } );
+        auto manager  = MakeManager( registry, db_, pubs_, first );
+        ASSERT_TRUE( first && second && registry && manager );
+
+        auto certificate = MakeTwoVoteCertificate( manager, registry, first, second, true );
+        ASSERT_TRUE( certificate.has_value() );
+        ASSERT_EQ( certificate.value().votes_size(), 2 );
+        EXPECT_LT( certificate.value().votes( 0 ).voter_id(), certificate.value().votes( 1 ).voter_id() );
+        EXPECT_EQ( certificate.value().timestamp(),
+                   std::max( certificate.value().votes( 0 ).timestamp(),
+                             certificate.value().votes( 1 ).timestamp() ) );
+
+        std::vector<ConsensusManager::Vote> reverse_votes{ certificate.value().votes( 1 ),
+                                                           certificate.value().votes( 0 ) };
+        auto replay = manager->CreateCertificate( certificate.value().proposal(), reverse_votes );
+        ASSERT_TRUE( replay.has_value() );
+        EXPECT_EQ( replay.value().SerializeAsString(), certificate.value().SerializeAsString() );
+
+        auto unordered = certificate.value();
+        unordered.mutable_votes()->SwapElements( 0, 1 );
+        ASSERT_TRUE( manager->SubmitCertificate( unordered ).has_value() );
+        ASSERT_TRUE( manager->SubmitCertificate( certificate.value() ).has_value() );
+
+        auto slot   = ConsensusManagerTestAccess::Slot( certificate.value() ).value();
+        auto stored = manager->GetCertificateBySlotId( slot );
+        ASSERT_TRUE( stored.has_value() );
+        EXPECT_EQ( stored.value().SerializeAsString(), certificate.value().SerializeAsString() );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, UnknownFieldVariantsAreRejectedBeforeRemoteMerge )
+    {
+        auto first    = MakeAccount( getPathString() );
+        auto second   = MakeAccount( getPathString(), kPrivateKey2 );
+        auto registry = MakeRegistry( db_, { first, second } );
+        auto manager  = MakeManager( registry, db_, pubs_, first );
+        ASSERT_TRUE( first && second && registry && manager );
+        auto certificate = MakeTwoVoteCertificate( manager, registry, first, second );
+        ASSERT_TRUE( certificate.has_value() );
+
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate.value() ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate.value() ).value();
+        auto expect_rejected = [&]( ConsensusManager::Certificate mutated )
+        {
+            EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta(
+                manager,
+                MakeCertificatePairDelta( mutated ) ) );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/slot/" + slot } ).has_error() );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/tx/" + winner } ).has_error() );
+        };
+
+        auto top_level = certificate.value();
+        top_level.GetReflection()->MutableUnknownFields( &top_level )->AddVarint( 100, 1 );
+        expect_rejected( std::move( top_level ) );
+
+        auto nested = certificate.value();
+        nested.mutable_votes( 0 )
+            ->GetReflection()
+            ->MutableUnknownFields( nested.mutable_votes( 0 ) )
+            ->AddLengthDelimited( 101, "nested" );
+        expect_rejected( std::move( nested ) );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, RedundantFieldAndVoteOrderVariantsAreRejectedRemotely )
+    {
+        auto first    = MakeAccount( getPathString() );
+        auto second   = MakeAccount( getPathString(), kPrivateKey2 );
+        auto registry = MakeRegistry( db_, { first, second } );
+        auto manager  = MakeManager( registry, db_, pubs_, first );
+        ASSERT_TRUE( first && second && registry && manager );
+        auto certificate = MakeTwoVoteCertificate( manager, registry, first, second );
+        ASSERT_TRUE( certificate.has_value() );
+
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate.value() ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate.value() ).value();
+        auto expect_rejected = [&]( ConsensusManager::Certificate mutated )
+        {
+            EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta(
+                manager,
+                MakeCertificatePairDelta( mutated ) ) );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/slot/" + slot } ).has_error() );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/tx/" + winner } ).has_error() );
+        };
+
+        auto changed_timestamp = certificate.value();
+        changed_timestamp.set_timestamp( changed_timestamp.timestamp() + 1 );
+        expect_rejected( std::move( changed_timestamp ) );
+        auto changed_total = certificate.value();
+        changed_total.set_total_weight( changed_total.total_weight() + 1 );
+        expect_rejected( std::move( changed_total ) );
+        auto changed_approved = certificate.value();
+        changed_approved.set_approved_weight( changed_approved.approved_weight() + 1 );
+        expect_rejected( std::move( changed_approved ) );
+        auto reverse_order = certificate.value();
+        reverse_order.mutable_votes()->SwapElements( 0, 1 );
+        expect_rejected( std::move( reverse_order ) );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, DuplicateVoteAndInvalidVoteVariantsAreRejected )
+    {
+        auto first    = MakeAccount( getPathString() );
+        auto second   = MakeAccount( getPathString(), kPrivateKey2 );
+        auto outsider = MakeAccount( getPathString(), kPrivateKey3 );
+        auto registry = MakeRegistry( db_, { first, second } );
+        auto manager  = MakeManager( registry, db_, pubs_, first );
+        ASSERT_TRUE( first && second && outsider && registry && manager );
+        auto certificate = MakeTwoVoteCertificate( manager, registry, first, second );
+        ASSERT_TRUE( certificate.has_value() );
+
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate.value() ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate.value() ).value();
+        auto expect_rejected = [&]( ConsensusManager::Certificate mutated )
+        {
+            EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta(
+                manager,
+                MakeCertificatePairDelta( mutated ) ) );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/slot/" + slot } ).has_error() );
+            EXPECT_TRUE( db_->Get( { "/cert/v2/tx/" + winner } ).has_error() );
+        };
+
+        auto duplicate = certificate.value();
+        *duplicate.add_votes() = duplicate.votes( 0 );
+        expect_rejected( std::move( duplicate ) );
+
+        auto wrong_proposal = certificate.value();
+        wrong_proposal.mutable_votes( 0 )->set_proposal_id( std::string( 64, '0' ) );
+        expect_rejected( std::move( wrong_proposal ) );
+
+        auto bad_signature = certificate.value();
+        bad_signature.mutable_votes( 0 )->set_signature( "invalid" );
+        expect_rejected( std::move( bad_signature ) );
+
+        auto unknown_voter = certificate.value();
+        auto *unknown_vote = unknown_voter.add_votes();
+        unknown_vote->set_proposal_id( unknown_voter.proposal_id() );
+        unknown_vote->set_voter_id( outsider->GetAddress() );
+        unknown_vote->set_approve( true );
+        unknown_vote->set_timestamp( unknown_voter.timestamp() );
+        auto unknown_signing = ConsensusManager::VoteSigningBytes( *unknown_vote );
+        ASSERT_TRUE( unknown_signing.has_value() );
+        auto unknown_signature = outsider->Sign( unknown_signing.value() );
+        unknown_vote->set_signature( unknown_signature.data(), unknown_signature.size() );
+        expect_rejected( std::move( unknown_voter ) );
+
+        auto appended_invalid = certificate.value();
+        auto *invalid_vote = appended_invalid.add_votes();
+        invalid_vote->set_proposal_id( appended_invalid.proposal_id() );
+        invalid_vote->set_voter_id( outsider->GetAddress() );
+        invalid_vote->set_approve( true );
+        invalid_vote->set_timestamp( appended_invalid.timestamp() );
+        invalid_vote->set_signature( "invalid" );
+        expect_rejected( std::move( appended_invalid ) );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, InactiveVoteIsRejectedByStrictTally )
+    {
+        auto first    = MakeAccount( getPathString() );
+        auto second   = MakeAccount( getPathString(), kPrivateKey2 );
+        auto registry = MakeRegistry( db_, { first, second } );
+        auto manager  = MakeManager( registry, db_, pubs_, first );
+        ASSERT_TRUE( first && second && registry && manager );
+        auto certificate = MakeTwoVoteCertificate( manager, registry, first, second );
+        ASSERT_TRUE( certificate.has_value() );
+
+        auto registry_snapshot = registry->LoadRegistryByCid( registry->GetRegistryCid() );
+        ASSERT_TRUE( registry_snapshot.has_value() );
+        for ( auto &entry : *registry_snapshot.value().mutable_validators() )
+        {
+            if ( entry.validator_id() == second->GetAddress() )
+            {
+                entry.set_status( ValidatorRegistry::Status::SUSPENDED );
+            }
+        }
+        const std::vector<ConsensusManager::Vote> votes( certificate.value().votes().begin(),
+                                                         certificate.value().votes().end() );
+        auto tally = manager->TallyVotes( certificate.value().proposal(),
+                                          votes,
+                                          registry_snapshot.value(),
+                                          registry->GetRegistryCid() );
+        EXPECT_TRUE( tally.has_error() );
         manager->Close();
     }
 
