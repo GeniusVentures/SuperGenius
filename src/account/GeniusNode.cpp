@@ -2282,6 +2282,7 @@ namespace sgns
     outcome::result<std::string> GeniusNode::MintTokens( uint64_t           amount,
                                                          const std::string &transaction_hash,
                                                          const std::string &chainid,
+                                                         uint32_t           receipt_log_index,
                                                          TokenID            tokenid,
                                                          std::string        destination )
     {
@@ -2296,7 +2297,9 @@ namespace sgns
         }
 
         BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                           manager->MintFunds(
+                               amount, transaction_hash, chainid, receipt_log_index, tokenid, destination ) );
 
         node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
         return tx_id;
@@ -2305,12 +2308,18 @@ namespace sgns
     outcome::result<std::pair<std::string, uint64_t>> GeniusNode::MintTokens( uint64_t           amount,
                                                                               const std::string &transaction_hash,
                                                                               const std::string &chainid,
+                                                                              uint32_t           receipt_log_index,
                                                                               TokenID            tokenid,
                                                                               std::string        destination,
                                                                               std::chrono::milliseconds timeout )
     {
         BOOST_OUTCOME_TRY( auto tx_id,
-                           MintTokens( amount, transaction_hash, chainid, tokenid, std::move( destination ) ) );
+                           MintTokens( amount,
+                                       transaction_hash,
+                                       chainid,
+                                       receipt_log_index,
+                                       tokenid,
+                                       std::move( destination ) ) );
 
         BOOST_OUTCOME_TRY( auto finalized_result, WaitForFinalized( tx_id, timeout ) );
 
@@ -3099,7 +3108,6 @@ namespace sgns
                                                                   const std::string                     &chain_id_str,
                                                                   uint32_t                               receipt_log_index ) -> bool
             {
-                (void)receipt_log_index;
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
@@ -3124,13 +3132,13 @@ namespace sgns
                     return false;
                 }
                 auto &utxo_mgr = strong->account_->GetUTXOManager();
-                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
+                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
                 {
                     strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
                                                  tx_hash_hex );
                     return false;
                 }
-                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index ) )
                 {
                     strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
                                                  tx_hash_hex );
@@ -3142,6 +3150,7 @@ namespace sgns
                     auto result = strong->MintTokens( burn.value().amount,
                                                       tx_hash_hex,
                                                       chain_id_str,
+                                                      receipt_log_index,
                                                       burn.value().token_id,
                                                       burn.value().destination );
                     return result.has_value();

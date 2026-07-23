@@ -178,13 +178,13 @@ TEST_F( ProcessingNodesTest, DISABLED_ProcessNodesTransactionsCount )
                                         "Node proc 2 not synced" );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "test",
+                           "test", 0u,
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
     node_main->MintTokens( 50000000000,
                            sgns::test::NextMintSourceHash(),
-                           "test",
+                           "test", 0u,
                            sgns::TokenID::FromBytes( { 0x00 } ),
                            "",
                            std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );
@@ -494,7 +494,7 @@ TEST_F( ProcessingNodesTest, PostProcessing )
 
     auto mint_result = node_main->MintTokens( 50000000000,
                                               sgns::test::NextMintSourceHash(),
-                                              "test",
+                                              "test", 0u,
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",
                                               std::chrono::milliseconds( sgns::GeniusNode::TIMEOUT_MINT ) );

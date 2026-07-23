@@ -6,6 +6,7 @@
 #ifndef SGNS_BRIDGE_RELAYER_HPP
 #define SGNS_BRIDGE_RELAYER_HPP
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -101,6 +102,13 @@ namespace sgns
         std::weak_ptr<TransactionManager> tx_manager_; ///< Weak reference to TransactionManager for calling MintFunds
         std::shared_ptr<eth::EthWatchService> watch_service_; ///< Shared EthWatchService for event detection
         base::Logger                          logger_;        ///< Logger instance for logging within BridgeRelayer
+        std::function<outcome::result<std::string>( uint64_t,
+                                                    const std::string &,
+                                                    const std::string &,
+                                                    uint32_t,
+                                                    TokenID,
+                                                    const std::string & )>
+            mint_funds_override_; ///< Unit-test seam for recording mandatory mint identity arguments.
         /// @brief Per-chain watch IDs, keyed by chain name. Populated by Start().
         ///        .first is the v1 (BridgeSourceBurned) watch_id; .second is the
         ///        v2 (BridgeOutInitiated) watch_id. Both registered unconditionally

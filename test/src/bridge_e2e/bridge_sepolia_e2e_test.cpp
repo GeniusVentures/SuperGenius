@@ -294,7 +294,7 @@ TEST_F( BridgeSepoliaE2ETest, DISABLED_BurnToMintPipeline )
     EXPECT_OUTCOME_TRUE( mint_result,
                          s_nodes[0]->MintTokens( kMintAmount,
                                                  tx_hash,
-                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::test::anvil::kSepoliaChainId, 0u,
                                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                                  dest_addr,
                                                  kMintTimeout ) );
