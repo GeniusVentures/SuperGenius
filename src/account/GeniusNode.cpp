@@ -3229,8 +3229,10 @@ namespace sgns
 
             auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
                                                                   const std::string                     &tx_hash_hex,
-                                                                  const std::string &chain_id_str ) -> bool
+                                                                  const std::string                     &chain_id_str,
+                                                                  uint32_t                               receipt_log_index ) -> bool
             {
+                (void)receipt_log_index;
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )

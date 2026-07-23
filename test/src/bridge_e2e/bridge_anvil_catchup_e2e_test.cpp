@@ -117,11 +117,13 @@ namespace
     {
         return [&burn_count]( const std::vector<eth::abi::AbiValue> &decoded_values,
                               const std::string                       &tx_hash_hex,
-                              const std::string                       &chain_id_str ) -> bool
+                              const std::string                       &chain_id_str,
+                              uint32_t                                 receipt_log_index ) -> bool
         {
             (void)decoded_values;
             (void)tx_hash_hex;
             (void)chain_id_str;
+            (void)receipt_log_index;
             burn_count.fetch_add( 1ull, std::memory_order_relaxed );
             return true;
         };
