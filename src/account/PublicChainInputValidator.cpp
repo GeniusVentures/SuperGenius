@@ -16,8 +16,12 @@
 #include <crypto/hasher.hpp>
 #include <eth/json_rpc.hpp>
 #include <eth/rpc_http_transport.hpp>
+#include <eth/eth_watch_cli.hpp>
 
+#include "account/BridgeEventTypes.hpp"
+#include "account/BridgeRelayer.hpp"
 #include "account/GeniusTransaction.hpp"
+#include "account/MintTransactionV2.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
@@ -50,7 +54,7 @@ namespace sgns
                        params.first.size(), params.second.size() );
         // Public-chain claims are not validated against local UTXO ownership.
         // We still require input references and minted outputs to be explicit.
-        const bool valid = !params.first.empty() && !params.second.empty();
+        const bool valid = params.first.size() == 1 && params.second.size() == 1;
         if ( valid )
         {
             logger->info( "ValidateUTXOParameters(PublicChain) accepted inputs={} outputs={}",
@@ -58,7 +62,7 @@ namespace sgns
         }
         else
         {
-            logger->debug( "ValidateUTXOParameters(PublicChain) rejected empty params" );
+            logger->debug( "ValidateUTXOParameters(PublicChain) requires exactly one input and one output" );
         }
         return valid;
     }
@@ -334,6 +338,37 @@ namespace sgns
         }
 
         const auto &endpoints = chain_it->second;
+        const auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
+        if ( !mint_tx )
+        {
+            logger->error( "VerifyPublicChainSmartContract requires a mint-v2 transaction" );
+            return false;
+        }
+        const auto mint_params = mint_tx->GetUTXOParameters();
+        if ( mint_params.first.size() != 1 || mint_params.second.size() != 1 )
+        {
+            logger->error( "VerifyPublicChainSmartContract requires exactly one bridge input and output" );
+            return false;
+        }
+
+        uint64_t expected_chain_id = 0;
+        try
+        {
+            size_t parsed_chars = 0;
+            expected_chain_id = std::stoull( chain_id, &parsed_chars, 10 );
+            if ( parsed_chars != chain_id.size() )
+            {
+                return false;
+            }
+        }
+        catch ( const std::exception & )
+        {
+            logger->error( "VerifyPublicChainSmartContract invalid chain id {}", chain_id );
+            return false;
+        }
+
+        const auto &mint_input = mint_params.first.front();
+        const auto &mint_output = mint_params.second.front();
 
         static constexpr int32_t kRequiredConsensusWeight = 75;
         static constexpr auto    kTimeout                 = std::chrono::seconds( 10 );
@@ -391,48 +426,68 @@ namespace sgns
                 return false;
             }
 
-            // Defense-in-depth: verify receipt logs match expected bridge contract and event topic0.
-            // If bridge_contract_address is configured, at least one log must match.
-            if ( !ep.bridge_contract_address.empty() )
+            bool log_matched = false;
+            if ( ep.bridge_contract_address.empty()
+                 || mint_input.output_idx_ >= receipt->receipt.logs.size() )
             {
-                bool log_matched = false;
-                for ( const auto &log_entry : receipt->receipt.logs )
+                ++tried;
+                continue;
+            }
+
+            const auto &log_entry = receipt->receipt.logs[mint_input.output_idx_];
+            const std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
+            if ( log_addr_hex == ep.bridge_contract_address && !log_entry.topics.empty() )
+            {
+                const std::string log_topic0 =
+                    rlp::base::parse::hex_array_string( log_entry.topics.front() );
+                const bool accepted_topic =
+                    std::find( ep.accepted_topic0_hashes.begin(),
+                               ep.accepted_topic0_hashes.end(),
+                               log_topic0 ) != ep.accepted_topic0_hashes.end();
+
+                std::string event_signature;
+                if ( log_entry.topics.front() == eth::abi::event_signature_hash( std::string( kBridgeSourceBurnedSig ) ) )
                 {
-                    std::string log_addr_hex = rlp::base::parse::hex_array_string( log_entry.address );
-                    if ( log_addr_hex != ep.bridge_contract_address || log_entry.topics.empty() )
+                    event_signature = std::string( kBridgeSourceBurnedSig );
+                }
+                else if ( log_entry.topics.front()
+                          == eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) ) )
+                {
+                    event_signature = std::string( kBridgeOutInitiatedSig );
+                }
+
+                if ( accepted_topic && !event_signature.empty() )
+                {
+                    const auto params = eth::cli::event_registry().params_for( event_signature );
+                    const auto decoded = eth::abi::decode_log( log_entry, event_signature, params );
+                    if ( decoded.has_value() && decoded.value().size() > 3
+                         && std::holds_alternative<intx::uint256>( decoded.value()[3] ) )
                     {
-                        continue;
-                    }
-                    // Accept any of the configured topic0 hashes (v1 BridgeSourceBurned
-                    // or v2 BridgeOutInitiated) — both event versions can back a mint.
-                    const std::string log_topic0 =
-                        rlp::base::parse::hex_array_string( log_entry.topics.front() );
-                    if ( std::find( ep.accepted_topic0_hashes.begin(),
-                                    ep.accepted_topic0_hashes.end(),
-                                    log_topic0 ) != ep.accepted_topic0_hashes.end() )
-                    {
-                        log_matched = true;
-                        break;
+                        const auto burn = BridgeRelayer::ParseBurnEventValues( decoded.value() );
+                        const auto decoded_chain = std::get<intx::uint256>( decoded.value()[3] );
+                        if ( burn.has_value() )
+                        {
+                            const auto &burn_value = burn.value();
+                            log_matched = decoded_chain == intx::uint256( expected_chain_id )
+                                       && burn_value.token_id == mint_tx->GetTokenID()
+                                       && burn_value.amount == mint_tx->GetAmount()
+                                       && burn_value.amount == mint_output.encrypted_amount
+                                       && burn_value.token_id == mint_output.token_id
+                                       && burn_value.destination == mint_output.dest_address;
+                        }
                     }
                 }
-                if ( !log_matched )
-                {
-                    // Per-endpoint topic mismatch must NOT abort the whole
-                    // verification. After the private/public endpoint merge, an
-                    // operator's endpoint may carry only the legacy v1 topic0
-                    // while fetched endpoints carry {v1, v2}; a valid v2 receipt
-                    // legitimately mismatches the v1-only endpoint and must still
-                    // reach quorum on the v1+v2 endpoints. Treat the mismatch as
-                    // "this endpoint did not confirm" and continue.
-                    logger->debug( "VerifyPublicChainSmartContract topic mismatch bridge={} tx={} url={} "
-                                   "— endpoint covers {} topic0 hash(es); continuing quorum evaluation",
-                                   ep.bridge_contract_address,
-                                   PreviewValue( source_reference ),
-                                   ep.url,
-                                   ep.accepted_topic0_hashes.size() );
-                    ++tried;
-                    continue;
-                }
+            }
+
+            if ( !log_matched )
+            {
+                logger->debug( "VerifyPublicChainSmartContract indexed log mismatch bridge={} tx={} index={} url={}",
+                               ep.bridge_contract_address,
+                               PreviewValue( source_reference ),
+                               mint_input.output_idx_,
+                               ep.url );
+                ++tried;
+                continue;
             }
 
             success_weight += ep.consensus_weight;
