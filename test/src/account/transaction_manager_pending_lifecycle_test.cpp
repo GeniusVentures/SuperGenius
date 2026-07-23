@@ -1609,3 +1609,15 @@ TEST_F( TransactionManagerPendingLifecycleTest,
         blockchain_ ) );
     UseRealCertificateReader();
 }
+
+TEST( TransactionManagerPendingLifecycleContractTest, CertificateLookupErrorsSeparatePendingFromCorruption )
+{
+    using Error = sgns::ConsensusManager::CertificateStoreError;
+
+    const auto not_found = make_error_code( Error::NotFound );
+    const auto integrity = make_error_code( Error::IntegrityError );
+
+    EXPECT_NE( not_found, integrity );
+    EXPECT_EQ( not_found.message(), "Certificate record not found" );
+    EXPECT_EQ( integrity.message(), "Certificate store integrity error" );
+}
