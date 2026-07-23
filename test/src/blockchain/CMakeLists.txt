@@ -83,6 +83,16 @@ target_link_libraries(${CONSENSUS_PENDING_LIFECYCLE_TARGET}_test
     base_crdt_test
 )
 
+addtest(consensus_certificate_store_test
+    consensus_certificate_store_test.cpp
+)
+target_link_libraries(consensus_certificate_store_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 target_include_directories(blockchain_genesis_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(blockchain_genesis_test

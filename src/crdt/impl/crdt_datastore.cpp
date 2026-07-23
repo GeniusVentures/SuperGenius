@@ -1770,6 +1770,11 @@ namespace sgns::crdt
         return crdt_filter_.RegisterElementFilter( pattern, std::move( filter ) );
     }
 
+    bool CrdtDatastore::RegisterDeltaFilter( const std::string &pattern, CRDTDeltaFilterCallback filter )
+    {
+        return crdt_filter_.RegisterDeltaFilter( pattern, std::move( filter ) );
+    }
+
     bool CrdtDatastore::RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback )
     {
         return crdt_cb_manager_.RegisterNewDataCallback( pattern, std::move( callback ) );
@@ -1784,6 +1789,11 @@ namespace sgns::crdt
     void CrdtDatastore::UnregisterElementFilter( const std::string &pattern )
     {
         crdt_filter_.UnregisterElementFilter( pattern );
+    }
+
+    void CrdtDatastore::UnregisterDeltaFilter( const std::string &pattern )
+    {
+        crdt_filter_.UnregisterDeltaFilter( pattern );
     }
 
     void CrdtDatastore::UnregisterNewElementCallback( const std::string &pattern )

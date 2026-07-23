@@ -28,6 +28,7 @@ namespace sgns::crdt
          * @brief      Element filtering callback definition
          */
         using ElementFilterCallback = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
+        using DeltaFilterCallback   = std::function<bool( const pb::Delta & )>;
 
         struct FilterCallbackEntry
         {
@@ -37,6 +38,15 @@ namespace sgns::crdt
         };
 
         using FilterCallbackRegistry = std::vector<std::shared_ptr<const FilterCallbackEntry>>;
+
+        struct DeltaFilterCallbackEntry
+        {
+            std::string        pattern;
+            std::regex         regex;
+            DeltaFilterCallback filter;
+        };
+
+        using DeltaFilterCallbackRegistry = std::vector<std::shared_ptr<const DeltaFilterCallbackEntry>>;
 
         /**
          * @brief       Construct a new CRDTDataFilter object
@@ -59,6 +69,16 @@ namespace sgns::crdt
         bool RegisterElementFilter( const std::string &pattern, ElementFilterCallback filter );
 
         /**
+         * @brief Registers a filter that validates a complete incoming delta.
+         *
+         * The callback runs before element filters whenever at least one element
+         * matches pattern. Returning false removes every matching element from
+         * the delta, allowing a multi-key namespace to fail closed atomically
+         * while preserving unrelated elements.
+         */
+        bool RegisterDeltaFilter( const std::string &pattern, DeltaFilterCallback filter );
+
+        /**
          * @brief       Registers a tombstone filter callback
          * @param[in]   pattern The regex/pattern that the key of the tombstone has to match
          * @param[in]   filter The callback that is executed in case the pattern matches
@@ -71,6 +91,11 @@ namespace sgns::crdt
          * @param[in]   pattern The regex/pattern that the key of the element has to match
          */
         void UnregisterElementFilter( const std::string &pattern );
+
+        /**
+         * @brief Removes the delta filter registered for pattern.
+         */
+        void UnregisterDeltaFilter( const std::string &pattern );
 
         /**
          * @brief       Removes the registration of a tombstone filter that corresponds to a pattern
@@ -94,8 +119,10 @@ namespace sgns::crdt
         std::shared_ptr<CRDTWorkJournal> work_journal_;
         const bool                accept_by_default_;      ///< The default behavior for values not matching any filter
         mutable std::shared_mutex element_registry_mutex_; ///< Mutex for the element registry
+        mutable std::shared_mutex delta_registry_mutex_;   ///< Mutex for the delta registry
         std::shared_mutex         tombstone_registry_mutex_; ///< Mutex for the tombstone registry
         FilterCallbackRegistry    element_registry_;         ///< Element filter callback registry
+        DeltaFilterCallbackRegistry delta_registry_;          ///< Delta-aware filter callback registry
         FilterCallbackRegistry    tombstone_registry_;       ///< Tombstone filter callback registry
     };
 

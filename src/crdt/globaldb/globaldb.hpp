@@ -71,6 +71,7 @@ namespace sgns::crdt
         using DataPair = std::pair<HierarchicalKey, Buffer>;
         /// CRDT Filter callback type
         using GlobalDBFilterCallback         = CrdtDatastore::CRDTElementFilterCallback;
+        using GlobalDBDeltaFilterCallback    = CrdtDatastore::CRDTDeltaFilterCallback;
         using GlobalDBNewElementCallback     = CrdtDatastore::CRDTNewElementCallback;
         using GlobalDBDeletedElementCallback = CrdtDatastore::CRDTDeletedElementCallback;
 
@@ -167,6 +168,9 @@ namespace sgns::crdt
          */
         bool RegisterElementFilter( const std::string &pattern, GlobalDBFilterCallback filter );
 
+        /** Registers a complete-delta filter for matching element namespaces. */
+        bool RegisterDeltaFilter( const std::string &pattern, GlobalDBDeltaFilterCallback filter );
+
         /** Registers a callback for new elements matching a pattern.
          * @param pattern The pattern to match new elements against.
          * @param callback The callback to invoke for matching new elements.
@@ -185,6 +189,9 @@ namespace sgns::crdt
          * @param pattern The pattern to unregister the filter for.
          */
         void UnregisterElementFilter( const std::string &pattern );
+
+        /** Unregisters a complete-delta filter. */
+        void UnregisterDeltaFilter( const std::string &pattern );
 
         /**
          * @brief Unregisters the new element callback for a pattern.
