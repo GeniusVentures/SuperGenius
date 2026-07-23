@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "account/GeniusAccount.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -301,6 +302,64 @@ namespace sgns::test
 
         ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, LosingHashIsNotFoundButFullSubjectObservesFinalizedSlot )
+    {
+        ConsensusManager::RegisterSlotKeyHandler(
+            NONCE_SUBJECT_TYPE,
+            []( const ConsensusManager::Subject &subject ) -> outcome::result<std::string>
+            {
+                BOOST_OUTCOME_TRY( auto nonce, ConsensusManager::DecodeNonceSubject( subject ) );
+                BOOST_OUTCOME_TRY(
+                    auto preimage,
+                    GeniusTransaction::MakeNonceSlotPreimage( subject.account_id(), nonce.nonce() ) );
+                return GeniusTransaction::HashSlotPreimage( preimage );
+            } );
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        auto certificate = MakeCertificate( manager, registry, account );
+        ASSERT_TRUE( certificate.has_value() );
+        ASSERT_TRUE( manager->SubmitCertificate( certificate.value() ).has_value() );
+
+        constexpr std::string_view losing_hash =
+            "fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210";
+        auto losing_subject = ConsensusManager::CreateNonceSubject(
+            account->GetAddress(),
+            7,
+            std::string( losing_hash ),
+            EmbeddedTransaction{},
+            MakeCommitment(),
+            UTXOWitness{} );
+        ASSERT_TRUE( losing_subject.has_value() );
+
+        ExpectError( manager->GetCertificateBySubjectHash( std::string( losing_hash ) ),
+                     ConsensusManager::CertificateStoreError::NotFound );
+        EXPECT_TRUE( manager->CheckCertificateForSubject( losing_subject.value() ) );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, PreviousNonceAndProducerHashConsumersResolveWinner )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        auto certificate = MakeCertificate( manager, registry, account );
+        ASSERT_TRUE( certificate.has_value() );
+        ASSERT_TRUE( manager->SubmitCertificate( certificate.value() ).has_value() );
+        auto winner = ConsensusManagerTestAccess::Winner( certificate.value() );
+        ASSERT_TRUE( winner.has_value() );
+
+        auto previous_nonce_certificate = manager->GetCertificateBySubjectHash( winner.value() );
+        auto producer_certificate = manager->GetCertificateBySubjectHash( winner.value() );
+        ASSERT_TRUE( previous_nonce_certificate.has_value() );
+        ASSERT_TRUE( producer_certificate.has_value() );
+        EXPECT_EQ( previous_nonce_certificate.value().proposal_id(), certificate.value().proposal_id() );
+        EXPECT_EQ( producer_certificate.value().proposal_id(), certificate.value().proposal_id() );
         manager->Close();
     }
 } // namespace sgns::test
