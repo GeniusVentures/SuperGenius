@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-23T20:42:13.452Z"
+last_updated: "2026-07-23T20:53:54.430Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 9
-  completed_plans: 5
-  percent: 0
+  completed_plans: 6
+  percent: 67
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 5 of 9
+Plan: 6 of 9
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -77,6 +77,7 @@ Last activity: 2026-07-23
 | 09 | 03 | 36 min | 3 tasks, 10 files |
 | Phase 09 P04 | 18 min | 2 tasks | 9 files |
 | Phase 09 P05 | 14 min | 2 tasks | 6 files |
+| Phase 09 P06 | 9 min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -88,3 +89,6 @@ Last activity: 2026-07-23
 - [Phase 09]: External mint identities must be canonical unsigned-decimal chains plus nonzero 64-character lowercase hexadecimal burn hashes before mutation. — Slot aliases and invalid sources must fail before UTXO or queue state changes.
 - [Phase 09]: Only explicit supergenius and supergenius_chain identifiers bypass external receipt verification. — Empty or unknown chain metadata cannot classify a claim as local.
 - [Phase 09]: RPC receipts contribute weight only when their transaction hash exactly matches the requested burn hash. — A valid-looking receipt for another transaction cannot prove the mint input.
+- [Phase 09]: Catch-up publishes a chunk only after all enabled v1/v2 queries and receipt dependencies validate. — Partial publication would let a later failure expose burns while preserving a retry cursor.
+- [Phase 09]: Catch-up receipt caches are scoped to one poll attempt. — A transient null receipt must be fetched again when the failed chunk retries.
+- [Phase 09]: Receipt-local ordinals narrow through one uint64_t-to-uint32_t helper at the production boundary. — Direct UINT32_MAX coverage proves overflow handling without impractical receipt fixtures.
