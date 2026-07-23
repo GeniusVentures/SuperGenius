@@ -230,6 +230,44 @@ namespace sgns
         {
             manager->certificate_record_reader_ = std::move( reader );
         }
+
+        static void SetReady( TransactionManager &manager )
+        {
+            manager.state_m = TransactionManager::State::READY;
+        }
+
+        static outcome::result<std::string> MintFunds( TransactionManager &manager,
+                                                       uint64_t            amount,
+                                                       std::string         transaction_hash,
+                                                       std::string         chain_id,
+                                                       uint32_t            receipt_log_index,
+                                                       TokenID             token_id,
+                                                       std::string         destination )
+        {
+            return manager.MintFunds( amount,
+                                      std::move( transaction_hash ),
+                                      std::move( chain_id ),
+                                      receipt_log_index,
+                                      std::move( token_id ),
+                                      std::move( destination ) );
+        }
+
+        static size_t QueueSize( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            return manager.tx_queue_m.size();
+        }
+
+        static std::shared_ptr<MintTransactionV2> LastQueuedMint( TransactionManager &manager )
+        {
+            std::lock_guard lock( manager.mutex_m );
+            if ( manager.tx_queue_m.empty() || manager.tx_queue_m.back().first.empty() )
+            {
+                return nullptr;
+            }
+            return std::dynamic_pointer_cast<MintTransactionV2>(
+                manager.tx_queue_m.back().first.back().first );
+        }
     };
 } // namespace sgns
 
@@ -1620,4 +1658,57 @@ TEST( TransactionManagerPendingLifecycleContractTest, CertificateLookupErrorsSep
     EXPECT_NE( not_found, integrity );
     EXPECT_EQ( not_found.message(), "Certificate record not found" );
     EXPECT_EQ( integrity.message(), "Certificate store integrity error" );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsRejectsNoncanonicalChainBeforeMutation )
+{
+    const std::string valid_hash( 64, 'a' );
+    for ( const auto &chain_id : { "", "public", "01", "+1", "1 " } )
+    {
+        ExpectMintFundsInvalid( chain_id, valid_hash );
+    }
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsRejectsNoncanonicalBurnHashBeforeMutation )
+{
+    for ( const auto &transaction_hash : {
+              std::string{},
+              std::string( 64, '0' ),
+              "0x" + std::string( 64, 'a' ),
+              std::string( 64, 'A' ),
+              std::string( 63, 'a' ),
+              std::string( 64, 'g' ),
+          } )
+    {
+        ExpectMintFundsInvalid( "11155111", transaction_hash );
+    }
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreatesIndexedMint )
+{
+    ASSERT_NE( manager_, nullptr );
+    const std::string burn_hash( 64, 'a' );
+    const auto queue_before =
+        TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
+
+    auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+        *manager_,
+        1000,
+        burn_hash,
+        "11155111",
+        kReceiptIndex,
+        kTokenId,
+        account_->GetAddress() );
+
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_FALSE( result.value().empty() );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+               queue_before + 1 );
+
+    auto mint = TransactionManagerPendingLifecycleTestAccess::LastQueuedMint( *manager_ );
+    ASSERT_NE( mint, nullptr );
+    const auto inputs = mint->GetUTXOParameters().first;
+    ASSERT_EQ( inputs.size(), 1U );
+    EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
+    EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
 }
