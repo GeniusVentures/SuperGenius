@@ -21,6 +21,57 @@ namespace sgns::crdt
 {
     class CRDTWorkJournal;
 
+    enum class DeltaFilterDecision
+    {
+        Approve,
+        Reject,
+        RetryDependency
+    };
+
+    struct DeltaFilterResult
+    {
+        DeltaFilterDecision decision = DeltaFilterDecision::Approve;
+        std::optional<std::string> dependency_cid;
+
+        DeltaFilterResult() = default;
+        DeltaFilterResult( bool approved ) :
+            decision( approved ? DeltaFilterDecision::Approve : DeltaFilterDecision::Reject )
+        {
+        }
+        DeltaFilterResult( DeltaFilterDecision value, std::optional<std::string> dependency ) :
+            decision( value ),
+            dependency_cid( std::move( dependency ) )
+        {
+        }
+
+        explicit operator bool() const
+        {
+            return decision == DeltaFilterDecision::Approve;
+        }
+
+        static DeltaFilterResult Approve()
+        {
+            return {};
+        }
+
+        static DeltaFilterResult Reject()
+        {
+            return { DeltaFilterDecision::Reject, std::nullopt };
+        }
+
+        static DeltaFilterResult RetryDependency( std::string dependency )
+        {
+            return { DeltaFilterDecision::RetryDependency, std::move( dependency ) };
+        }
+    };
+
+    struct FilteredDeltaResult
+    {
+        pb::Delta           delta;
+        DeltaFilterDecision decision = DeltaFilterDecision::Approve;
+        std::optional<std::string> dependency_cid;
+    };
+
     class CRDTDataFilter
     {
     public:
@@ -28,7 +79,7 @@ namespace sgns::crdt
          * @brief      Element filtering callback definition
          */
         using ElementFilterCallback = std::function<std::optional<std::vector<pb::Element>>( const pb::Element & )>;
-        using DeltaFilterCallback   = std::function<bool( const pb::Delta & )>;
+        using DeltaFilterCallback   = std::function<DeltaFilterResult( const pb::Delta & )>;
 
         struct FilterCallbackEntry
         {
@@ -72,9 +123,8 @@ namespace sgns::crdt
          * @brief Registers a filter that validates a complete incoming delta.
          *
          * The callback runs before element filters whenever at least one element
-         * matches pattern. Returning false removes every matching element from
-         * the delta, allowing a multi-key namespace to fail closed atomically
-         * while preserving unrelated elements.
+         * or tombstone matches pattern. Reject removes every matching element
+         * and tombstone. RetryDependency returns the original delta unchanged.
          */
         bool RegisterDeltaFilter( const std::string &pattern, DeltaFilterCallback filter );
 
@@ -106,6 +156,14 @@ namespace sgns::crdt
         /**
          * @brief       Tries to filter the elements on delta according to stored filters
          * @param[in]   delta The delta to be filtered
+         */
+        FilteredDeltaResult FilterDelta( pb::Delta delta ) const;
+
+        /**
+         * @brief Legacy element-filter-only entry point.
+         *
+         * New external-node processing must use FilterDelta so namespace
+         * tombstones are guarded before merge.
          */
         void FilterElementsOnDelta( pb::Delta &delta ) const;
 

@@ -12,6 +12,7 @@
 #include <libp2p/multi/multihash.hpp>
 #include <ipfs_lite/ipfs/impl/in_memory_datastore.hpp>
 #include <queue>
+#include <array>
 #include <string>
 #include <thread>
 #include <atomic>
@@ -615,5 +616,210 @@ namespace sgns::crdt
         // Verify filter was called
         EXPECT_GE( filter_called_count, 1 );
         CloseAndResetCRDT( second_crdt, second_broadcaster );
+    }
+
+    TEST_F( CrdtDatastoreTest, DeltaFilterRejectRemovesMatchingElementsAndTombstones )
+    {
+        CRDTDataFilter filter( crdtDatastore_->GetWorkJournal() );
+        std::atomic<int> calls{ 0 };
+        ASSERT_TRUE( filter.RegisterDeltaFilter(
+            "^/?cert/.*$",
+            [&calls]( const pb::Delta & )
+            {
+                ++calls;
+                return DeltaFilterResult::Reject();
+            } ) );
+
+        Buffer unrelated_value;
+        unrelated_value.put( "live" );
+        ASSERT_TRUE( crdtDatastore_->PutKey( { "/unrelated/live" }, unrelated_value, { "topic" } ).has_value() );
+        ASSERT_TRUE( crdtDatastore_->HasKey( { "/unrelated/live" } ).value() );
+        ASSERT_OUTCOME_SUCCESS( removal, crdtDatastore_->CreateDeltaToRemove( "/unrelated/live" ) );
+
+        auto *matching_element = removal->add_elements();
+        matching_element->set_key( "/cert/v2/slot/" + std::string( 64, 'a' ) );
+        matching_element->set_value( "attack" );
+        auto *matching_tombstone = removal->add_tombstones();
+        matching_tombstone->set_key( "/cert/v2/tx/" + std::string( 64, 'b' ) );
+        matching_tombstone->set_id( "exact-certificate-id" );
+
+        auto result = filter.FilterDelta( *removal );
+        EXPECT_EQ( result.decision, DeltaFilterDecision::Reject );
+        EXPECT_EQ( calls.load(), 1 );
+        ASSERT_EQ( result.delta.elements_size(), 0 );
+        ASSERT_EQ( result.delta.tombstones_size(), 1 );
+        EXPECT_EQ( result.delta.tombstones( 0 ).key(), "/unrelated/live" );
+
+        ASSERT_TRUE(
+            crdtDatastore_->Publish( std::make_shared<Delta>( result.delta ), { "topic" } ).has_value() );
+        EXPECT_FALSE( crdtDatastore_->HasKey( { "/unrelated/live" } ).value() );
+    }
+
+    TEST_F( CrdtDatastoreTest, DeltaFilterRejectMatchesTombstoneOnlyDelta )
+    {
+        CRDTDataFilter filter( crdtDatastore_->GetWorkJournal() );
+        std::atomic<int> calls{ 0 };
+        ASSERT_TRUE( filter.RegisterDeltaFilter(
+            "^/?cert/.*$",
+            [&calls]( const pb::Delta & )
+            {
+                ++calls;
+                return DeltaFilterResult::Reject();
+            } ) );
+
+        Delta delta;
+        auto *tombstone = delta.add_tombstones();
+        tombstone->set_key( "/cert/v2/slot/" + std::string( 64, 'c' ) );
+        tombstone->set_id( "exact-id" );
+        auto result = filter.FilterDelta( std::move( delta ) );
+
+        EXPECT_EQ( calls.load(), 1 );
+        EXPECT_EQ( result.decision, DeltaFilterDecision::Reject );
+        EXPECT_TRUE( result.delta.tombstones().empty() );
+    }
+
+    TEST_F( CrdtDatastoreTest, DeltaFilterDependencyRetryRetainsAndEventuallyProcessesSource )
+    {
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "dependency", ipfsDataStore_ );
+        auto receiver = crdt_pair.first;
+        auto receiver_broadcaster = crdt_pair.second;
+
+        std::atomic<int64_t> fake_elapsed_ms{ 0 };
+        const auto base_now = std::chrono::steady_clock::now();
+        receiver->SetMonotonicClockForTesting(
+            [&] { return base_now + std::chrono::milliseconds( fake_elapsed_ms.load() ); } );
+
+        std::atomic<bool> dependency_ready{ false };
+        std::atomic<int>  filter_calls{ 0 };
+        std::atomic<int>  new_element_calls{ 0 };
+        auto dependency_seed = CreateTestDelta( "/dependency/id", "registry" );
+        ASSERT_OUTCOME_SUCCESS( dependency_root,
+                                crdtDatastore_->Publish( dependency_seed, { "topic" } ) );
+        std::string dependency_cid = dependency_root.toString().value();
+        ASSERT_TRUE( receiver->RegisterDeltaFilter(
+            "^/?retry/.*$",
+            [&]( const pb::Delta & )
+            {
+                ++filter_calls;
+                return dependency_ready.load()
+                           ? DeltaFilterResult::Approve()
+                           : DeltaFilterResult::RetryDependency( dependency_cid );
+            } ) );
+        ASSERT_TRUE( receiver->RegisterNewElementCallback(
+            "^/?retry/.*$",
+            [&]( CRDTCallbackManager::NewDataPair, const std::string & ) { ++new_element_calls; } ) );
+        receiver->Start();
+
+        broadcaster_->SetMirrorCounterPart( receiver_broadcaster );
+        receiver_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        auto delta = CreateTestDelta( "/retry/slot", "certificate" );
+        ASSERT_OUTCOME_SUCCESS( source_cid, crdtDatastore_->Publish( delta, { "topic" } ) );
+        dependency_cid = source_cid.toString().value();
+
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->GetParkedRootCount() == 1; },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "dependency root was not parked",
+                                   nullptr );
+        EXPECT_TRUE( receiver->IsCIDRetainedInCacheForTesting( source_cid ) );
+        ASSERT_OUTCOME_SUCCESS( status, receiver->GetTrackedJobStatusForTesting( source_cid ) );
+        EXPECT_EQ( status, CrdtDatastore::JobStatus::PENDING );
+        EXPECT_FALSE( receiver->HasKey( { "/retry/slot" } ).value() );
+        EXPECT_EQ( new_element_calls.load(), 0 );
+
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        EXPECT_EQ( filter_calls.load(), 1 );
+
+        dependency_ready = true;
+        fake_elapsed_ms = 1000;
+        receiver->WakeDependencyRetryWorkerForTesting();
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->HasKey( { "/retry/slot" } ).value(); },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "dependency retry did not merge",
+                                   nullptr );
+        EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
+        EXPECT_EQ( new_element_calls.load(), 1 );
+        EXPECT_EQ( filter_calls.load(), 2 );
+
+        fake_elapsed_ms = 3000;
+        receiver->WakeDependencyRetryWorkerForTesting();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        EXPECT_EQ( new_element_calls.load(), 1 );
+        CloseAndResetCRDT( receiver, receiver_broadcaster );
+    }
+
+    TEST_F( CrdtDatastoreTest, DeltaFilterDependencyAttemptLimitAndShutdownDrainParkedRoots )
+    {
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "attempt-limit", ipfsDataStore_ );
+        auto receiver = crdt_pair.first;
+        auto receiver_broadcaster = crdt_pair.second;
+
+        std::atomic<int64_t> fake_elapsed_ms{ 0 };
+        const auto base_now = std::chrono::steady_clock::now();
+        receiver->SetMonotonicClockForTesting(
+            [&] { return base_now + std::chrono::milliseconds( fake_elapsed_ms.load() ); } );
+
+        auto dependency_seed = CreateTestDelta( "/dependency/attempts", "registry" );
+        ASSERT_OUTCOME_SUCCESS( dependency_root,
+                                crdtDatastore_->Publish( dependency_seed, { "topic" } ) );
+        const auto dependency_cid = dependency_root.toString().value();
+        std::atomic<int> filter_calls{ 0 };
+        ASSERT_TRUE( receiver->RegisterDeltaFilter(
+            "^/?bounded/.*$",
+            [&]( const pb::Delta & )
+            {
+                ++filter_calls;
+                return DeltaFilterResult::RetryDependency( dependency_cid );
+            } ) );
+        receiver->Start();
+        broadcaster_->SetMirrorCounterPart( receiver_broadcaster );
+        receiver_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        ASSERT_OUTCOME_SUCCESS(
+            source_cid,
+            crdtDatastore_->Publish( CreateTestDelta( "/bounded/attempts", "certificate" ), { "topic" } ) );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->GetParkedRootCount() == 1; },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "attempt-limited root was not parked",
+                                   nullptr );
+
+        const std::array<int64_t, 7> retry_deadlines_ms{ 1000, 3000, 7000, 15000, 31000, 61000, 91000 };
+        for ( std::size_t retry = 0; retry < retry_deadlines_ms.size(); ++retry )
+        {
+            fake_elapsed_ms = retry_deadlines_ms[retry];
+            receiver->WakeDependencyRetryWorkerForTesting();
+            ASSERT_WAIT_FOR_CONDITION(
+                [&] { return filter_calls.load() >= static_cast<int>( retry + 2 ); },
+                std::chrono::milliseconds( 2000 ),
+                "dependency retry did not run at its deadline",
+                nullptr );
+        }
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->GetParkedRootCount() == 0; },
+                                   std::chrono::milliseconds( 2000 ),
+                                   "eighth stalled evaluation did not evict",
+                                   nullptr );
+        auto stats = receiver->GetDependencyRetryStatistics();
+        EXPECT_EQ( stats.dependency_roots_parked, 1 );
+        EXPECT_EQ( stats.dependency_retries, 7 );
+        EXPECT_EQ( stats.dependency_evicted_attempts, 1 );
+        EXPECT_TRUE( receiver->GetTrackedJobStatusForTesting( source_cid ).has_error() );
+
+        fake_elapsed_ms = 100000;
+        ASSERT_OUTCOME_SUCCESS(
+            shutdown_cid,
+            crdtDatastore_->Publish( CreateTestDelta( "/bounded/shutdown", "certificate" ), { "topic" } ) );
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->GetParkedRootCount() == 1; },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "shutdown root was not parked",
+                                   nullptr );
+        const auto callbacks_before_shutdown = filter_calls.load();
+        receiver->CancelAndCloseNow();
+        EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
+        EXPECT_TRUE( receiver->GetTrackedJobStatusForTesting( shutdown_cid ).has_error() );
+        fake_elapsed_ms = 200000;
+        receiver->WakeDependencyRetryWorkerForTesting();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        EXPECT_EQ( filter_calls.load(), callbacks_before_shutdown );
+        CloseAndResetCRDT( receiver, receiver_broadcaster );
     }
 }

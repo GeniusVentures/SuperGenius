@@ -9,6 +9,7 @@
 #include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 #include <thread>
 #include <utility>
+#include <array>
 #include <boost/format.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
@@ -138,15 +139,28 @@ namespace sgns::crdt
     bool CrdtDatastore::ShouldContinueWorkerThread( DagWorker &dagWorker )
     {
         std::unique_lock lk( dagWorkerMutex_ );
-        dagWorkerCv_.wait_for( lk,
-                               threadSleepTimeInMilliseconds_,
-                               [&]
-                               {
-                                   return closeStarted_ || !dagWorkerJobListThreadRunning_ ||
-                                          !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
-                                          !rootCIDJobList_.empty() ||
-                                          ( !activeRootCID_.has_value() && !pendingRootQueue_.empty() );
-                               } );
+        auto ready = [&]
+        {
+            RefreshRetryGateLocked( monotonicClock_() );
+            return closeStarted_ || !dagWorkerJobListThreadRunning_ ||
+                   !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
+                   !rootCIDJobList_.empty() ||
+                   ( !activeRootCID_.has_value() &&
+                     ( !pendingRootQueue_.empty() || retryFairnessGate_.has_value() ) );
+        };
+
+        if ( !ready() )
+        {
+            auto deadline = EarliestParkedDeadlineLocked();
+            if ( deadline )
+            {
+                dagWorkerCv_.wait_until( lk, *deadline, ready );
+            }
+            else
+            {
+                dagWorkerCv_.wait_for( lk, threadSleepTimeInMilliseconds_, ready );
+            }
+        }
 
         return !closeStarted_ && dagWorkerJobListThreadRunning_ && dagWorker.dagWorkerThreadRunning_;
     }
@@ -169,10 +183,16 @@ namespace sgns::crdt
         if ( process_res.has_failure() )
         {
             HandleJobProcessingFailure( job_to_process );
+            CleanupParkedRoot( job_to_process.root_node_->getCID(), "terminal failure" );
+        }
+        else if ( process_res.value().state == JobIterationResult::State::RetryDependency )
+        {
+            ParkJobForDependency( job_to_process, process_res.value().dependency_cid.value() );
         }
         else
         {
             HandleJobProcessingSuccess( job_to_process );
+            RemoveParkedRootAfterSuccess( job_to_process.root_node_->getCID() );
         }
 
         return true; // Processed a job
@@ -181,7 +201,55 @@ namespace sgns::crdt
     bool CrdtDatastore::SeedNextExternalRoot()
     {
         std::unique_lock lk( dagWorkerMutex_ );
-        if ( activeRootCID_.has_value() || pendingRootQueue_.empty() )
+        RefreshRetryGateLocked( monotonicClock_() );
+        if ( activeRootCID_.has_value() )
+        {
+            return false;
+        }
+
+        if ( retryFairnessGate_ )
+        {
+            auto parked = parkedRoots_.find( retryFairnessGate_->root_cid );
+            if ( parked == parkedRoots_.end() )
+            {
+                retryFairnessGate_.reset();
+                return false;
+            }
+
+            if ( retryFairnessGate_->ordinary_roots_ahead > pendingRootQueue_.size() )
+            {
+                retryFairnessGate_->ordinary_roots_ahead = pendingRootQueue_.size();
+            }
+            if ( retryFairnessGate_->ordinary_roots_ahead == 0 )
+            {
+                activeRootCID_ = parked->first;
+                parked->second.evaluation_in_progress = true;
+                ++dependencyRetryStatistics_.dependency_retries;
+                rootCIDJobList_.push( parked->second.job );
+                return true;
+            }
+
+            CID next = pendingRootQueue_.front();
+            pendingRootQueue_.pop();
+            --retryFairnessGate_->ordinary_roots_ahead;
+            activeRootCID_ = next;
+            lk.unlock();
+
+            logger_->debug( "Seeding snapshotted external root CID {}", next.toString().value() );
+            auto res = HandleRootCIDBlock( next );
+            if ( res.has_failure() )
+            {
+                std::unique_lock lk2( dagWorkerMutex_ );
+                if ( activeRootCID_ && *activeRootCID_ == next )
+                {
+                    activeRootCID_.reset();
+                }
+                dagWorkerCv_.notify_all();
+            }
+            return true;
+        }
+
+        if ( pendingRootQueue_.empty() )
         {
             return false;
         }
@@ -287,6 +355,337 @@ namespace sgns::crdt
             // Reset activeRootCID for external jobs
             activeRootCID_.reset();
         }
+    }
+
+    std::chrono::seconds CrdtDatastore::DependencyRetryDelay( std::size_t attempts )
+    {
+        static constexpr std::array<int, 6> delays{ 1, 2, 4, 8, 16, 30 };
+        const auto index = attempts == 0 ? 0 : std::min<std::size_t>( attempts - 1, delays.size() - 1 );
+        return std::chrono::seconds( delays[index] );
+    }
+
+    void CrdtDatastore::RemoveQueuedRootJobsLocked( const CID &root )
+    {
+        std::queue<RootCIDJob> retained;
+        while ( !rootCIDJobList_.empty() )
+        {
+            auto job = std::move( rootCIDJobList_.front() );
+            rootCIDJobList_.pop();
+            if ( !job.root_node_ || job.root_node_->getCID() != root )
+            {
+                retained.push( std::move( job ) );
+            }
+        }
+        std::swap( rootCIDJobList_, retained );
+    }
+
+    void CrdtDatastore::RemovePendingRootLocked( const CID &root )
+    {
+        std::queue<CID> retained;
+        while ( !pendingRootQueue_.empty() )
+        {
+            auto cid = pendingRootQueue_.front();
+            pendingRootQueue_.pop();
+            if ( cid != root )
+            {
+                retained.push( std::move( cid ) );
+            }
+        }
+        std::swap( pendingRootQueue_, retained );
+    }
+
+    std::optional<CID> CrdtDatastore::OldestDueParkedRootLocked(
+        std::chrono::steady_clock::time_point now ) const
+    {
+        const ParkedRoot *oldest = nullptr;
+        const CID        *oldest_cid = nullptr;
+        for ( const auto &[cid, parked] : parkedRoots_ )
+        {
+            if ( parked.evaluation_in_progress || parked.next_retry_deadline > now )
+            {
+                continue;
+            }
+            if ( !oldest || parked.next_retry_deadline < oldest->next_retry_deadline ||
+                 ( parked.next_retry_deadline == oldest->next_retry_deadline &&
+                   parked.insertion_sequence < oldest->insertion_sequence ) )
+            {
+                oldest     = &parked;
+                oldest_cid = &cid;
+            }
+        }
+        if ( oldest_cid )
+        {
+            return *oldest_cid;
+        }
+        return std::nullopt;
+    }
+
+    std::optional<std::chrono::steady_clock::time_point> CrdtDatastore::EarliestParkedDeadlineLocked() const
+    {
+        std::optional<std::chrono::steady_clock::time_point> earliest;
+        for ( const auto &[_, parked] : parkedRoots_ )
+        {
+            if ( parked.evaluation_in_progress )
+            {
+                continue;
+            }
+            if ( !earliest || parked.next_retry_deadline < *earliest )
+            {
+                earliest = parked.next_retry_deadline;
+            }
+        }
+        return earliest;
+    }
+
+    void CrdtDatastore::RefreshRetryGateLocked( std::chrono::steady_clock::time_point now )
+    {
+        for ( auto &[_, parked] : parkedRoots_ )
+        {
+            if ( now - parked.first_stalled >= kParkedRootTtl &&
+                 parked.next_retry_deadline <= now )
+            {
+                parked.expiry_pending = true;
+            }
+        }
+
+        if ( retryFairnessGate_ )
+        {
+            if ( parkedRoots_.find( retryFairnessGate_->root_cid ) == parkedRoots_.end() )
+            {
+                retryFairnessGate_.reset();
+            }
+            return;
+        }
+
+        auto due = OldestDueParkedRootLocked( now );
+        if ( due )
+        {
+            retryFairnessGate_ = RetryFairnessGate{ *due, pendingRootQueue_.size() };
+        }
+    }
+
+    void CrdtDatastore::ParkJobForDependency( const RootCIDJob &job, const CID &dependency )
+    {
+        const auto root = job.root_node_->getCID();
+        const auto now  = monotonicClock_();
+        bool       evict_ttl = false;
+        bool       evict_attempts = false;
+        bool       reject_capacity = false;
+
+        {
+            std::unique_lock lock( dagWorkerMutex_ );
+            if ( closeStarted_ )
+            {
+                reject_capacity = true;
+            }
+            else if ( auto it = parkedRoots_.find( root ); it != parkedRoots_.end() )
+            {
+                auto &parked = it->second;
+                if ( parked.dependency_cid != dependency )
+                {
+                    auto dep = parkedRootsByDependency_.find( parked.dependency_cid );
+                    if ( dep != parkedRootsByDependency_.end() )
+                    {
+                        dep->second.erase( root );
+                        if ( dep->second.empty() )
+                        {
+                            parkedRootsByDependency_.erase( dep );
+                        }
+                    }
+                    parked.dependency_cid = dependency;
+                    parkedRootsByDependency_[dependency].insert( root );
+                }
+                parked.job = job;
+                parked.evaluation_in_progress = false;
+                ++parked.attempt_count;
+                if ( retryFairnessGate_ && retryFairnessGate_->root_cid == root )
+                {
+                    retryFairnessGate_.reset();
+                }
+                if ( activeRootCID_ && *activeRootCID_ == root )
+                {
+                    activeRootCID_.reset();
+                }
+                RemoveQueuedRootJobsLocked( root );
+
+                evict_ttl = parked.expiry_pending || now - parked.first_stalled >= kParkedRootTtl;
+                evict_attempts = parked.attempt_count >= kMaxDependencyStallAttempts;
+                if ( !evict_ttl && !evict_attempts )
+                {
+                    parked.next_retry_deadline = now + DependencyRetryDelay( parked.attempt_count );
+                }
+            }
+            else
+            {
+                const auto dependency_it = parkedRootsByDependency_.find( dependency );
+                const auto dependency_count =
+                    dependency_it == parkedRootsByDependency_.end() ? 0 : dependency_it->second.size();
+                if ( parkedRoots_.size() >= kMaxParkedRoots ||
+                     dependency_count >= kMaxParkedRootsPerDependency )
+                {
+                    ++dependencyRetryStatistics_.dependency_evicted_capacity;
+                    reject_capacity = true;
+                }
+                else
+                {
+                    ParkedRoot parked{ job,
+                                       dependency,
+                                       now,
+                                       now + DependencyRetryDelay( 1 ),
+                                       1,
+                                       parkedInsertionSequence_++,
+                                       false,
+                                       false };
+                    parkedRoots_.emplace( root, std::move( parked ) );
+                    parkedRootsByDependency_[dependency].insert( root );
+                    ++dependencyRetryStatistics_.dependency_roots_parked;
+                    RemoveQueuedRootJobsLocked( root );
+                    if ( activeRootCID_ && *activeRootCID_ == root )
+                    {
+                        activeRootCID_.reset();
+                    }
+                }
+            }
+        }
+
+        if ( reject_capacity )
+        {
+            CleanupRejectedParkedAdmission( job,
+                                            dependency,
+                                            closeStarted_ ? "shutdown" : "capacity" );
+        }
+        else if ( evict_ttl )
+        {
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ++dependencyRetryStatistics_.dependency_evicted_ttl;
+            }
+            CleanupParkedRoot( root, "ttl" );
+        }
+        else if ( evict_attempts )
+        {
+            {
+                std::lock_guard lock( dagWorkerMutex_ );
+                ++dependencyRetryStatistics_.dependency_evicted_attempts;
+            }
+            CleanupParkedRoot( root, "attempts" );
+        }
+
+        dagWorkerCv_.notify_all();
+    }
+
+    void CrdtDatastore::RemoveParkedRootAfterSuccess( const CID &root )
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = parkedRoots_.find( root );
+        if ( it == parkedRoots_.end() )
+        {
+            return;
+        }
+        auto dep = parkedRootsByDependency_.find( it->second.dependency_cid );
+        if ( dep != parkedRootsByDependency_.end() )
+        {
+            dep->second.erase( root );
+            if ( dep->second.empty() )
+            {
+                parkedRootsByDependency_.erase( dep );
+            }
+        }
+        parkedRoots_.erase( it );
+        if ( retryFairnessGate_ && retryFairnessGate_->root_cid == root )
+        {
+            retryFairnessGate_.reset();
+        }
+    }
+
+    void CrdtDatastore::CleanupParkedRoot( const CID &root, std::string_view reason )
+    {
+        std::optional<RootCIDJob> job;
+        std::optional<CID>        dependency;
+        std::size_t               attempts = 0;
+        std::chrono::steady_clock::duration age{};
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            auto            it = parkedRoots_.find( root );
+            if ( it == parkedRoots_.end() )
+            {
+                return;
+            }
+            job        = std::move( it->second.job );
+            dependency = it->second.dependency_cid;
+            attempts   = it->second.attempt_count;
+            age        = monotonicClock_() - it->second.first_stalled;
+            auto dep = parkedRootsByDependency_.find( it->second.dependency_cid );
+            if ( dep != parkedRootsByDependency_.end() )
+            {
+                dep->second.erase( root );
+                if ( dep->second.empty() )
+                {
+                    parkedRootsByDependency_.erase( dep );
+                }
+            }
+            parkedRoots_.erase( it );
+            RemoveQueuedRootJobsLocked( root );
+            RemovePendingRootLocked( root );
+            pending_jobs_.erase( root );
+            if ( activeRootCID_ && *activeRootCID_ == root )
+            {
+                activeRootCID_.reset();
+            }
+            if ( retryFairnessGate_ && retryFairnessGate_->root_cid == root )
+            {
+                retryFairnessGate_.reset();
+            }
+        }
+        {
+            std::lock_guard lock( pendingHeadsMutex_ );
+            pendingHeadsByRootCID_.erase( root );
+        }
+
+        if ( job )
+        {
+            (void)dagSyncer_->DeleteCIDBlock( job->root_node_->getCID() );
+            if ( job->node_ && job->node_->getCID() != job->root_node_->getCID() )
+            {
+                (void)dagSyncer_->DeleteCIDBlock( job->node_->getCID() );
+            }
+        }
+        logger_->warn( "Dependency parked root evicted root={} dependency={} attempts={} age_ms={} reason={}",
+                       root.toString().value(),
+                       dependency->toString().value(),
+                       attempts,
+                       std::chrono::duration_cast<std::chrono::milliseconds>( age ).count(),
+                       reason );
+    }
+
+    void CrdtDatastore::CleanupRejectedParkedAdmission( const RootCIDJob &job,
+                                                        const CID        &dependency,
+                                                        std::string_view  reason )
+    {
+        const auto root = job.root_node_->getCID();
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            RemoveQueuedRootJobsLocked( root );
+            RemovePendingRootLocked( root );
+            pending_jobs_.erase( root );
+            if ( activeRootCID_ && *activeRootCID_ == root )
+            {
+                activeRootCID_.reset();
+            }
+        }
+        {
+            std::lock_guard lock( pendingHeadsMutex_ );
+            pendingHeadsByRootCID_.erase( root );
+        }
+        (void)dagSyncer_->DeleteCIDBlock( job.root_node_->getCID() );
+        if ( job.node_ && job.node_->getCID() != job.root_node_->getCID() )
+        {
+            (void)dagSyncer_->DeleteCIDBlock( job.node_->getCID() );
+        }
+        logger_->warn( "Dependency parked root rejected root={} dependency={} attempts=1 age_ms=0 reason={}",
+                       root.toString().value(),
+                       dependency.toString().value(),
+                       reason );
     }
 
     void CrdtDatastore::Start()
@@ -605,12 +1004,36 @@ namespace sgns::crdt
             logger_->debug( "WaitForWorkersToExit: rebroadcast finished" );
         }
 
+        std::vector<CID> parked_roots;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            parked_roots.reserve( parkedRoots_.size() );
+            for ( const auto &[root, _] : parkedRoots_ )
+            {
+                parked_roots.push_back( root );
+            }
+        }
+        for ( const auto &root : parked_roots )
+        {
+            CleanupParkedRoot( root, "shutdown" );
+        }
+
         {
             std::lock_guard        lock( dagWorkerMutex_ );
             std::queue<RootCIDJob> empty1, empty2;
+            std::queue<CID>        empty_roots;
             std::swap( rootCIDJobList_, empty1 );
             std::swap( selfCreatedJobList_, empty2 );
+            std::swap( pendingRootQueue_, empty_roots );
             pending_jobs_.clear();
+            activeRootCID_.reset();
+            retryFairnessGate_.reset();
+            parkedRootsByDependency_.clear();
+        }
+
+        {
+            std::lock_guard lock( pendingHeadsMutex_ );
+            pendingHeadsByRootCID_.clear();
         }
 
         {
@@ -672,6 +1095,7 @@ namespace sgns::crdt
             {
                 // If the CID request was already triggered but node didn't finish processing
                 bool retry_failed = false;
+                bool dependency_parked = false;
                 {
                     std::lock_guard lock( dagWorkerMutex_ );
                     auto            it = pending_jobs_.find( bCastHeadCID );
@@ -679,6 +1103,11 @@ namespace sgns::crdt
                     {
                         pending_jobs_.erase( it );
                         retry_failed = true;
+                    }
+                    else if ( parkedRoots_.find( bCastHeadCID ) != parkedRoots_.end() )
+                    {
+                        ++dependencyRetryStatistics_.dependency_deduplicated;
+                        dependency_parked = true;
                     }
                 }
 
@@ -691,6 +1120,12 @@ namespace sgns::crdt
                 }
                 else
                 {
+                    if ( dependency_parked )
+                    {
+                        logger_->trace( "{}: Deduplicated parked dependency root {}",
+                                        __func__,
+                                        bCastHeadCID.toString().value() );
+                    }
                     logger_->trace( "{}: Processing block {} on graphsync", __func__, bCastHeadCID.toString().value() );
                     continue;
                 }
@@ -903,7 +1338,8 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<pb::Delta> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self )
+    outcome::result<FilteredDeltaResult> CrdtDatastore::GetDeltaFromNode( const IPLDNode &aNode,
+                                                                         bool            created_by_self )
     {
         auto nodeBuffer = aNode.content();
 
@@ -916,15 +1352,13 @@ namespace sgns::crdt
 
         if ( !created_by_self )
         {
-            crdt_filter_.FilterElementsOnDelta( delta );
-            //crdt_filter_.FilterTombstonesOnDelta( aDelta );
+            auto filtered = crdt_filter_.FilterDelta( std::move( delta ) );
             logger_->debug( "{}: Filtering node {} ", __func__, aNode.getCID().toString().value() );
+            return filtered;
         }
-        else
-        {
-            logger_->debug( "{}: Posting node {} without filtering", __func__, aNode.getCID().toString().value() );
-        }
-        return delta;
+
+        logger_->debug( "{}: Posting node {} without filtering", __func__, aNode.getCID().toString().value() );
+        return FilteredDeltaResult{ std::move( delta ), DeltaFilterDecision::Approve, std::nullopt };
     }
 
     outcome::result<void> CrdtDatastore::MergeDataFromDelta( const CID &node_cid, const Delta &aDelta )
@@ -935,7 +1369,8 @@ namespace sgns::crdt
         return outcome::success();
     }
 
-    outcome::result<void> CrdtDatastore::ProcessJobIteration( const RootCIDJob &job_to_process )
+    outcome::result<CrdtDatastore::JobIterationResult> CrdtDatastore::ProcessJobIteration(
+        const RootCIDJob &job_to_process )
     {
         logger_->debug( "{}: Starting to process Root CID", __func__ );
 
@@ -952,7 +1387,22 @@ namespace sgns::crdt
 
         BOOST_OUTCOME_TRY( auto cid_string, node_to_process->getCID().toString() );
 
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node_to_process, job_to_process.created_by_self_ ) );
+        if ( filtered.decision == DeltaFilterDecision::RetryDependency )
+        {
+            if ( !filtered.dependency_cid )
+            {
+                return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+            }
+            auto dependency = CID::fromString( *filtered.dependency_cid );
+            if ( dependency.has_error() )
+            {
+                return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+            }
+            return JobIterationResult{ JobIterationResult::State::RetryDependency,
+                                       dependency.value() };
+        }
+        auto &delta = filtered.delta;
 
         logger_->debug( "{}: Merging Deltas from {}", __func__, cid_string );
 
@@ -1018,7 +1468,7 @@ namespace sgns::crdt
             dagWorkerCv_.notify_all();
         }
 
-        return outcome::success();
+        return JobIterationResult{};
     }
 
     outcome::result<std::vector<CID>> CrdtDatastore::DecodeBroadcast( const Buffer &buff )
@@ -1919,6 +2369,10 @@ namespace sgns::crdt
 
     bool CrdtDatastore::IsRootCIDPendingOrActiveLocked( const CID &cid ) const
     {
+        if ( parkedRoots_.find( cid ) != parkedRoots_.end() )
+        {
+            return true;
+        }
         if ( activeRootCID_.has_value() && activeRootCID_.value() == cid )
         {
             return true;
@@ -1940,8 +2394,13 @@ namespace sgns::crdt
     bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
+        RefreshRetryGateLocked( monotonicClock_() );
         if ( IsRootCIDPendingOrActiveLocked( cid ) )
         {
+            if ( parkedRoots_.find( cid ) != parkedRoots_.end() )
+            {
+                ++dependencyRetryStatistics_.dependency_deduplicated;
+            }
             return false;
         }
 
@@ -1952,6 +2411,64 @@ namespace sgns::crdt
             pending_jobs_[cid] = JobStatus::PENDING;
         }
         return true;
+    }
+
+    CrdtDatastore::DependencyRetryStatistics CrdtDatastore::GetDependencyRetryStatistics() const
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        return dependencyRetryStatistics_;
+    }
+
+    std::size_t CrdtDatastore::GetParkedRootCount() const
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        return parkedRoots_.size();
+    }
+
+    std::size_t CrdtDatastore::GetParkedRootCountForDependency( const CID &dependency ) const
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = parkedRootsByDependency_.find( dependency );
+        return it == parkedRootsByDependency_.end() ? 0 : it->second.size();
+    }
+
+    bool CrdtDatastore::IsCIDRetainedInCacheForTesting( const CID &cid ) const
+    {
+        return dagSyncer_->IsCIDInCache( cid );
+    }
+
+    outcome::result<bool> CrdtDatastore::IsCIDResolvedForTesting( const CID &cid ) const
+    {
+        return dagSyncer_->isResolved( cid );
+    }
+
+    outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetTrackedJobStatusForTesting(
+        const CID &cid ) const
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        auto            it = pending_jobs_.find( cid );
+        if ( it == pending_jobs_.end() )
+        {
+            return outcome::failure( boost::system::error_code{} );
+        }
+        return it->second;
+    }
+
+    void CrdtDatastore::SetMonotonicClockForTesting(
+        std::function<std::chrono::steady_clock::time_point()> clock )
+    {
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            monotonicClock_ = clock ? std::move( clock )
+                                    : std::function<std::chrono::steady_clock::time_point()>(
+                                          [] { return std::chrono::steady_clock::now(); } );
+        }
+        dagWorkerCv_.notify_all();
+    }
+
+    void CrdtDatastore::WakeDependencyRetryWorkerForTesting()
+    {
+        dagWorkerCv_.notify_all();
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
@@ -1998,10 +2515,10 @@ namespace sgns::crdt
         BOOST_OUTCOME_TRY( auto node, dagSyncer_->GetNodeWithoutRequest( cid ) );
 
         //TODO - Check if filtering is needed here. Currently not filtering.
-        BOOST_OUTCOME_TRY( auto delta, GetDeltaFromNode( *node, true ) );
+        BOOST_OUTCOME_TRY( auto filtered, GetDeltaFromNode( *node, true ) );
 
         //TODO - Maybe check tombstones, right now just grabbing elements.
-        std::vector elements( delta.elements().begin(), delta.elements().end() );
+        std::vector elements( filtered.delta.elements().begin(), filtered.delta.elements().end() );
 
         std::vector<std::pair<std::string, base::Buffer>> result;
         for ( const auto &elem : elements )
