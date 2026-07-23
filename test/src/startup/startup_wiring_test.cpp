@@ -736,7 +736,8 @@ TEST( StartupWiringTest, CatchupWatcherStopCancelsActiveChunkScan )
     };
     auto burn_processor = []( const std::vector<eth::abi::AbiValue> &,
                               const std::string &,
-                              const std::string & )
+                              const std::string &,
+                              uint32_t )
     {
         return true;
     };
