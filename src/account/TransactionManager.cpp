@@ -195,7 +195,11 @@ namespace sgns
                     auto tx = TransactionManager::DeSerializeEmbeddedTransaction( nonce.value().transaction() );
                     if ( tx.has_value() )
                     {
-                        return tx.value()->GetSlotID();
+                        auto slot_id = tx.value()->GetSlotID();
+                        if ( slot_id.has_value() )
+                        {
+                            return slot_id.value();
+                        }
                     }
                 }
                 return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
@@ -1645,51 +1649,41 @@ namespace sgns
         }();
         (void) registered;
 
+        const auto deserialize =
+            []( std::string_view type,
+                const google::protobuf::MessageLite &payload ) -> outcome::result<std::shared_ptr<GeniusTransaction>>
+        {
+            std::string bytes;
+            if ( !payload.SerializeToString( &bytes ) )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            auto tx = GeniusTransaction::GetDeSerializers().at( std::string( type ) )(
+                std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
+            if ( !tx )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return tx;
+        };
+
         // Dispatch on the oneof case — each branch calls the deserializer directly.
         switch ( embedded.transaction_case() )
         {
             case EmbeddedTransaction::kTransfer:
-            {
-                std::string bytes;
-                embedded.transfer().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "transfer" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "transfer", embedded.transfer() );
             case EmbeddedTransaction::kMintV2:
-            {
-                std::string bytes;
-                embedded.mint_v2().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "mint-v2" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "mint-v2", embedded.mint_v2() );
             case EmbeddedTransaction::kMint:
-            {
-                std::string bytes;
-                embedded.mint().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "mint" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "mint", embedded.mint() );
+            case EmbeddedTransaction::kProcessing:
+                return deserialize( "process", embedded.processing() );
             case EmbeddedTransaction::kMigration:
-            {
-                std::string bytes;
-                embedded.migration().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "migration" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "migration", embedded.migration() );
             case EmbeddedTransaction::kEscrow:
-            {
-                std::string bytes;
-                embedded.escrow().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "escrow-hold" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "escrow-hold", embedded.escrow() );
             case EmbeddedTransaction::kEscrowRelease:
-            {
-                std::string bytes;
-                embedded.escrow_release().SerializeToString( &bytes );
-                return GeniusTransaction::GetDeSerializers().at( "escrow-release" )(
-                    std::vector<uint8_t>( bytes.begin(), bytes.end() ) );
-            }
+                return deserialize( "escrow-release", embedded.escrow_release() );
             case EmbeddedTransaction::TRANSACTION_NOT_SET:
             default:
                 return std::errc::invalid_argument;

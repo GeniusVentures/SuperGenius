@@ -10,6 +10,7 @@
 #include <utility>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <optional>
 
 #include <boost/format.hpp>
@@ -268,13 +269,32 @@ namespace sgns
         bool CheckDAGSignatureLegacy() const;
 
         /**
-         * @brief       Generates a slot ID used by consensus to identify competing transactions.
-         * @return      The unique slot ID, typically derived from the source address
+         * @brief       Builds the canonical readable preimage for a normal nonce slot.
+         * @param[in]   source_address Canonical lowercase public-key address.
+         * @param[in]   nonce Unsigned transaction nonce.
+         * @return      Canonical `<source_address>:<nonce>` preimage or invalid_argument.
          */
-        virtual std::string GetSlotID() const
-        {
-            return GetSrcAddress() + ":" + std::to_string( GetNonce() );
-        }
+        static outcome::result<std::string> MakeNonceSlotPreimage( std::string_view source_address,
+                                                                  uint64_t         nonce );
+
+        /**
+         * @brief       Hashes a canonical slot preimage into its operational slot ID.
+         * @param[in]   preimage Canonical human-readable finality identity.
+         * @return      Exactly 64 lowercase hexadecimal SHA-256 characters.
+         */
+        static std::string HashSlotPreimage( std::string_view preimage );
+
+        /**
+         * @brief       Returns the canonical readable finality preimage.
+         * @return      Canonical preimage or invalid_argument for noncanonical identity fields.
+         */
+        virtual outcome::result<std::string> GetSlotPreimage() const;
+
+        /**
+         * @brief       Generates the fixed-size operational consensus slot ID.
+         * @return      SHA-256 of GetSlotPreimage(), or its canonical-input error.
+         */
+        outcome::result<std::string> GetSlotID() const;
 
         /// The DAG metadata struct that is included in all transactions, containing common fields such as source address, hashes, timestamp, nonce, and signature.
         SGTransaction::DAGStruct dag_st;
