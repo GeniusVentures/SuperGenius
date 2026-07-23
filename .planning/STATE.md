@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-23T20:19:14.550Z"
-last_activity: 2026-07-23 -- Phase 09 planning complete
+last_updated: "2026-07-23T20:42:13.452Z"
+last_activity: 2026-07-23
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 9
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 9 — Canonical Slot and Certificate Storage
+**Current focus:** Phase 09 — canonical-slot-and-certificate-storage
 
 ## Current Position
 
-Phase: 09 (Canonical Slot and Certificate Storage) — EXECUTING
-Plan: 4 of 9
+Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
+Plan: 5 of 9
 Status: Ready to execute
-Last activity: 2026-07-23 -- Phase 09 planning complete
+Last activity: 2026-07-23
 
 ## Roadmap Snapshot
 
@@ -76,6 +76,7 @@ Last activity: 2026-07-23 -- Phase 09 planning complete
 | 09 | 02 | 35 min | 3 tasks, 31 files |
 | 09 | 03 | 36 min | 3 tasks, 10 files |
 | Phase 09 P04 | 18 min | 2 tasks | 9 files |
+| Phase 09 P05 | 14 min | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -84,3 +85,6 @@ Last activity: 2026-07-23 -- Phase 09 planning complete
 - [Phase 09]: Protocol v2.0 startup rejects every non-exact key under /cert/ before consensus side effects. — Legacy transaction-keyed state cannot be safely mixed, migrated in place, or dual-read by the v2 certificate store.
 - [Phase 09]: Authoritative slot lookup validates certificate payload and derived slot before compatibility hash lookup can return it. — The slot record is authoritative; index metadata cannot bypass complete certificate validation.
 - [Phase 09]: Full subjects check canonical slot finality while string hashes remain exact winner lookups. — Losing candidates must observe finalized shared resources without receiving the winner certificate under their own hash.
+- [Phase 09]: External mint identities must be canonical unsigned-decimal chains plus nonzero 64-character lowercase hexadecimal burn hashes before mutation. — Slot aliases and invalid sources must fail before UTXO or queue state changes.
+- [Phase 09]: Only explicit supergenius and supergenius_chain identifiers bypass external receipt verification. — Empty or unknown chain metadata cannot classify a claim as local.
+- [Phase 09]: RPC receipts contribute weight only when their transaction hash exactly matches the requested burn hash. — A valid-looking receipt for another transaction cannot prove the mint input.
