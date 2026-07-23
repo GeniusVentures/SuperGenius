@@ -43,6 +43,32 @@ namespace sgns::crdt
         }
     }
 
+    bool CRDTDataFilter::RegisterDeltaFilter( const std::string &pattern, DeltaFilterCallback filter )
+    {
+        try
+        {
+            auto entry = std::make_shared<DeltaFilterCallbackEntry>(
+                DeltaFilterCallbackEntry{ pattern, std::regex( pattern ), std::move( filter ) } );
+            std::lock_guard lock( delta_registry_mutex_ );
+            auto it = std::find_if( delta_registry_.begin(),
+                                    delta_registry_.end(),
+                                    [&]( const auto &registered ) { return registered->pattern == pattern; } );
+            if ( it == delta_registry_.end() )
+            {
+                delta_registry_.push_back( std::move( entry ) );
+            }
+            else
+            {
+                *it = std::move( entry );
+            }
+            return true;
+        }
+        catch ( const std::regex_error & )
+        {
+            return false;
+        }
+    }
+
     bool CRDTDataFilter::RegisterTombstoneFilter( const std::string &pattern, ElementFilterCallback filter )
     {
         try
@@ -78,6 +104,15 @@ namespace sgns::crdt
                                  element_registry_.end() );
     }
 
+    void CRDTDataFilter::UnregisterDeltaFilter( const std::string &pattern )
+    {
+        std::lock_guard lock( delta_registry_mutex_ );
+        delta_registry_.erase( std::remove_if( delta_registry_.begin(),
+                                               delta_registry_.end(),
+                                               [&]( const auto &entry ) { return entry->pattern == pattern; } ),
+                               delta_registry_.end() );
+    }
+
     void CRDTDataFilter::UnregisterTombstoneFilter( const std::string &pattern )
     {
         std::lock_guard lock( tombstone_registry_mutex_ );
@@ -91,6 +126,37 @@ namespace sgns::crdt
     {
         std::vector<std::string>         additional_elements_to_delete;
         std::set<int, std::greater<int>> elements_to_delete_indices; // Set with reverse order
+
+        DeltaFilterCallbackRegistry delta_registry_snapshot;
+        {
+            std::shared_lock lock( delta_registry_mutex_ );
+            delta_registry_snapshot = delta_registry_;
+        }
+
+        for ( const auto &entry : delta_registry_snapshot )
+        {
+            bool matched = false;
+            for ( const auto &element : delta.elements() )
+            {
+                if ( std::regex_match( element.key(), entry->regex ) )
+                {
+                    matched = true;
+                    break;
+                }
+            }
+            if ( !matched || entry->filter( delta ) )
+            {
+                continue;
+            }
+
+            for ( int i = delta.elements_size() - 1; i >= 0; --i )
+            {
+                if ( std::regex_match( delta.elements( i ).key(), entry->regex ) )
+                {
+                    delta.mutable_elements()->DeleteSubrange( i, 1 );
+                }
+            }
+        }
 
         FilterCallbackRegistry registry_snapshot;
         {

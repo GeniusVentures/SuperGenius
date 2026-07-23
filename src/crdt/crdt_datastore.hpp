@@ -59,6 +59,7 @@ namespace sgns::crdt
         using IPLDNode    = ipfs_lite::ipld::IPLDNode;
 
         using CRDTElementFilterCallback  = CRDTDataFilter::ElementFilterCallback;
+        using CRDTDeltaFilterCallback    = CRDTDataFilter::DeltaFilterCallback;
         using CRDTNewElementCallback     = CRDTCallbackManager::NewDataCallback;
         using CRDTDeletedElementCallback = CRDTCallbackManager::DeletedDataCallback;
 
@@ -219,9 +220,11 @@ namespace sgns::crdt
         void CancelAndCloseNow();
 
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
+        bool RegisterDeltaFilter( const std::string &pattern, CRDTDeltaFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
         bool RegisterDeletedElementCallback( const std::string &pattern, CRDTDeletedElementCallback callback );
         void UnregisterElementFilter( const std::string &pattern );
+        void UnregisterDeltaFilter( const std::string &pattern );
         void UnregisterNewElementCallback( const std::string &pattern );
         void UnregisterDeletedElementCallback( const std::string &pattern );
         std::shared_ptr<CRDTWorkJournal> GetWorkJournal() const;

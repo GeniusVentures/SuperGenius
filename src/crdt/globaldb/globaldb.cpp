@@ -580,6 +580,11 @@ namespace sgns::crdt
         return m_crdtDatastore->RegisterElementFilter( pattern, std::move( filter ) );
     }
 
+    bool GlobalDB::RegisterDeltaFilter( const std::string &pattern, GlobalDBDeltaFilterCallback filter )
+    {
+        return m_crdtDatastore->RegisterDeltaFilter( pattern, std::move( filter ) );
+    }
+
     bool GlobalDB::RegisterNewElementCallback( const std::string &pattern, GlobalDBNewElementCallback callback )
     {
         return m_crdtDatastore->RegisterNewElementCallback( pattern, std::move( callback ) );
@@ -600,6 +605,14 @@ namespace sgns::crdt
         if ( crdt_datastore )
         {
             crdt_datastore->UnregisterElementFilter( pattern );
+        }
+    }
+
+    void GlobalDB::UnregisterDeltaFilter( const std::string &pattern )
+    {
+        if ( auto crdt_datastore = m_crdtDatastore )
+        {
+            crdt_datastore->UnregisterDeltaFilter( pattern );
         }
     }
 
