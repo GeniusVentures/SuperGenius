@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-23T21:19:20.592Z"
+last_updated: "2026-07-23T21:53:53.000Z"
 last_activity: 2026-07-23
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 9
-  completed_plans: 7
+  completed_plans: 8
   percent: 0
 ---
 
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
 Last activity: 2026-07-23
 
@@ -79,6 +79,7 @@ Last activity: 2026-07-23
 | Phase 09 P05 | 14 min | 2 tasks | 6 files |
 | Phase 09 P06 | 9 min | 1 tasks | 5 files |
 | Phase 09 P07 | 21 min | 2 tasks | 3 files |
+| Phase 09 P08 | 24 min | 2 tasks | 8 files |
 
 ## Decisions
 
@@ -96,3 +97,5 @@ Last activity: 2026-07-23
 - [Phase 09]: Every serialized certificate vote is validity-critical; invalid or duplicate votes reject the certificate. — Silently skipping attacker-controlled votes permits alternate accepted encodings and weakens canonical quorum semantics.
 - [Phase 09]: Certificate timestamp and weights are derived during normalization, and canonical votes sort by raw voter-ID bytes. — Derived redundant fields and total ordering produce one deterministic authoritative protobuf representation.
 - [Phase 09]: The live delta filter owns the complete /cert/ namespace and rejects certificate tombstones directly. — Runtime legacy or malformed records must not survive to poison restart; shared tombstone matching and removal remains in Plan 09-08.
+- [Phase 09]: External delta filters use Approve, Reject, and RetryDependency decisions across both elements and tombstones. — Terminal namespace attacks must be sanitized before merge while a missing dependency preserves the complete original delta for later validation.
+- [Phase 09]: Missing canonical registry content parks the exact pending source under bounded deadline retry with due-time FIFO snapshot fairness. — Dependency roots already queued may run first, but later arrivals cannot starve the retry or force TTL cleanup without another evaluation.
