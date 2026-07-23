@@ -2380,9 +2380,9 @@ namespace sgns
                                                           /*detach_flag=*/true,
                                                           existing_reg->GetSupersedesSequence() );
 
-        auto put_result = globaldb_m->Put( crdt::HierarchicalKey( reg_key ),
-                                           base::Buffer( updated_reg.SerializeByteVector() ),
-                                           {} );
+        auto put_result = globaldb_m->PutLocal( crdt::HierarchicalKey( reg_key ),
+                                                base::Buffer( updated_reg.SerializeByteVector() ),
+                                                revoke_tx->GetHash() );
         if ( put_result.has_error() )
         {
             m_logger->error( "ParseRevokeTransaction: failed to write updated reg/ record for child {}",

@@ -158,6 +158,24 @@ namespace sgns::crdt
                                      const Buffer                          &aValue,
                                      const std::unordered_set<std::string> &topics );
 
+        /**
+         * @brief Stores the given value directly into the local CRDT set's own storage, bypassing
+         *        DAG-node creation, broadcast, and the AddDAGNode/WaitForJob job-queue wait entirely.
+         *        Intended only for per-node-derived side effects that every node independently and
+         *        deterministically recomputes from data that was already broadcast and validated
+         *        elsewhere (mirrors the architectural rationale already documented in
+         *        05-02-PLAN.md's threat model for ParseRevokeTransaction's reg/ mutation). The
+         *        caller must ensure the mutation is safe to apply without CRDT-level fork
+         *        resolution across peers — i.e. each node is expected to reach the same value
+         *        independently, since this write is never broadcast to other peers.
+         * @param aKey Hierarchical key to put
+         * @param aValue Value to be stored
+         * @param aID Provenance/tie-break identifier for the underlying delta application (not a
+         *        resolvable CID), e.g. the triggering transaction's own hash
+         * @return outcome::success if stored locally, or outcome::failure otherwise.
+         */
+        outcome::result<void> PutKeyLocal( const HierarchicalKey &aKey, const Buffer &aValue, const std::string &aID );
+
         /** HasKey returns whether the `key` is mapped to a `value` in set
         * @param aKey HierarchicalKey to look for in set
         * @return true if key found or false if not found or outcome::failure on error
