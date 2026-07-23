@@ -16,6 +16,7 @@
 #include <unordered_set>
 #include <map>
 #include <condition_variable>
+#include <functional>
 #include <optional>
 #include <thread>
 
@@ -79,6 +80,21 @@ namespace sgns::crdt
             NODE_CREATION,
             GET_NODE,
             INVALID_JOB,
+        };
+
+        static constexpr std::size_t              kMaxParkedRoots              = 256;
+        static constexpr std::size_t              kMaxParkedRootsPerDependency = 32;
+        static constexpr std::chrono::minutes     kParkedRootTtl               = std::chrono::minutes( 10 );
+        static constexpr std::size_t              kMaxDependencyStallAttempts  = 8;
+
+        struct DependencyRetryStatistics
+        {
+            uint64_t dependency_roots_parked      = 0;
+            uint64_t dependency_retries           = 0;
+            uint64_t dependency_deduplicated      = 0;
+            uint64_t dependency_evicted_capacity  = 0;
+            uint64_t dependency_evicted_ttl       = 0;
+            uint64_t dependency_evicted_attempts  = 0;
         };
 
         /**
@@ -246,6 +262,21 @@ namespace sgns::crdt
         outcome::result<uint64_t>                  GetHeadHeight( const CID &aCid, const std::string &topic );
         outcome::result<void>      AddHead( const CID &aCid, const std::string &topic, uint64_t priority );
         outcome::result<JobStatus> GetJobStatus( const CID &cid );
+        DependencyRetryStatistics  GetDependencyRetryStatistics() const;
+        std::size_t                 GetParkedRootCount() const;
+        std::size_t                 GetParkedRootCountForDependency( const CID &dependency ) const;
+        bool                        IsCIDRetainedInCacheForTesting( const CID &cid ) const;
+        outcome::result<bool>       IsCIDResolvedForTesting( const CID &cid ) const;
+        outcome::result<JobStatus>  GetTrackedJobStatusForTesting( const CID &cid ) const;
+
+        /**
+         * @brief Overrides the monotonic clock used by dependency retries.
+         * Intended for deterministic tests; callers must wake the worker after
+         * advancing the supplied clock.
+         */
+        void SetMonotonicClockForTesting(
+            std::function<std::chrono::steady_clock::time_point()> clock );
+        void WakeDependencyRetryWorkerForTesting();
 
         /**
          * @brief       Broadcast heads for the specified topics
@@ -275,6 +306,18 @@ namespace sgns::crdt
             std::shared_ptr<IPLDNode> node_;            ///< Current node to process
             std::shared_ptr<IPLDNode> root_node_;       ///< Root node of the Job
             bool                      created_by_self_; ///< True if the root node was created by self
+        };
+
+        struct JobIterationResult
+        {
+            enum class State
+            {
+                Completed,
+                RetryDependency
+            };
+
+            State              state = State::Completed;
+            std::optional<CID> dependency_cid;
         };
 
         /** DAG worker structure to keep track of worker threads
@@ -322,7 +365,7 @@ namespace sgns::crdt
          * @param[in]   created_by_self True if the node was created by self, false otherwise
          * @return      The Delta contained in the node, or failure otherwise
          */
-        outcome::result<Delta> GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
+        outcome::result<FilteredDeltaResult> GetDeltaFromNode( const IPLDNode &aNode, bool created_by_self );
         /**
          * @brief       Merges the data from a given Delta into the CRDT set
          * @param[in]   node_cid The CID of the node from which the Delta was obtained
@@ -335,7 +378,7 @@ namespace sgns::crdt
          * @param[in]   job_to_process The job received by either @ref HandleCIDBroadcast or by @ref AddDAGNode
          * @return      Success if the job was processed, or failure otherwise
          */
-        outcome::result<void> ProcessJobIteration( const RootCIDJob &job_to_process );
+        outcome::result<JobIterationResult> ProcessJobIteration( const RootCIDJob &job_to_process );
 
         /** Sync ensures that all the data under the given prefix is flushed to disk in
         * the underlying datastore
@@ -432,6 +475,18 @@ namespace sgns::crdt
         void HandleJobProcessingFailure( const RootCIDJob &job );
         void HandleJobProcessingSuccess( const RootCIDJob &job );
         void CleanupFailedJob( const RootCIDJob &job );
+        void ParkJobForDependency( const RootCIDJob &job, const CID &dependency );
+        void RemoveParkedRootAfterSuccess( const CID &root );
+        void CleanupParkedRoot( const CID &root, std::string_view reason );
+        void CleanupRejectedParkedAdmission( const RootCIDJob &job,
+                                             const CID        &dependency,
+                                             std::string_view  reason );
+        void RefreshRetryGateLocked( std::chrono::steady_clock::time_point now );
+        std::optional<CID> OldestDueParkedRootLocked( std::chrono::steady_clock::time_point now ) const;
+        std::optional<std::chrono::steady_clock::time_point> EarliestParkedDeadlineLocked() const;
+        static std::chrono::seconds DependencyRetryDelay( std::size_t attempts );
+        void RemoveQueuedRootJobsLocked( const CID &root );
+        void RemovePendingRootLocked( const CID &root );
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
@@ -463,7 +518,7 @@ namespace sgns::crdt
 
         std::atomic<bool>       closeStarted_                  = false;
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
-        std::mutex              dagWorkerMutex_;
+        mutable std::mutex      dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
 
         std::queue<RootCIDJob>                               rootCIDJobList_;     // External jobs
@@ -472,6 +527,32 @@ namespace sgns::crdt
         std::mutex                                           pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
         std::optional<CID>                                   activeRootCID_;
+
+        struct ParkedRoot
+        {
+            RootCIDJob                                  job;
+            CID                                         dependency_cid;
+            std::chrono::steady_clock::time_point       first_stalled;
+            std::chrono::steady_clock::time_point       next_retry_deadline;
+            std::size_t                                 attempt_count = 0;
+            uint64_t                                    insertion_sequence = 0;
+            bool                                        expiry_pending = false;
+            bool                                        evaluation_in_progress = false;
+        };
+
+        struct RetryFairnessGate
+        {
+            CID         root_cid;
+            std::size_t ordinary_roots_ahead = 0;
+        };
+
+        std::map<CID, ParkedRoot>      parkedRoots_;
+        std::map<CID, std::set<CID>>  parkedRootsByDependency_;
+        std::optional<RetryFairnessGate> retryFairnessGate_;
+        uint64_t                        parkedInsertionSequence_ = 0;
+        std::function<std::chrono::steady_clock::time_point()> monotonicClock_ =
+            [] { return std::chrono::steady_clock::now(); };
+        DependencyRetryStatistics dependencyRetryStatistics_;
 
         std::shared_ptr<CRDTWorkJournal> work_journal_;
         CRDTDataFilter                   crdt_filter_;
