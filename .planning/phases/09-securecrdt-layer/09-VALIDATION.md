@@ -2,8 +2,8 @@
 phase: 9
 slug: securecrdt-layer
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-07-23
 ---
 
@@ -42,6 +42,8 @@ created: 2026-07-23
 | 09-01-02 | 01 | 1 | SCRDT-02 | — | Registry resolves topic/key pattern → policy entry | unit | `ctest -R securecrdt_registry_test` | ❌ W0 | ⬜ pending |
 | 09-01-03 | 01 | 1 | SCRDT-03 | V4 | Under-signed write rejected locally, never applied, before quorum reached | unit (single-node GlobalDB) | `ctest -R securecrdt_quorum_gate_test` | ❌ W0 | ⬜ pending |
 | 09-01-04 | 01 | 1 | SCRDT-04 | V4/V6 | Propose+sign+quorum sequence via CRDT puts/filter callbacks only | unit/integration (single-node GlobalDB) | `ctest -R securecrdt_propose_sign_quorum_test` | ❌ W0 | ⬜ pending |
+| 09-02-05 | 02 | 1 | SCRDT-03 | V5 | Local ProposeValue rejects malformed/invalid payload symmetrically with remote filter path (Warning 1) | unit (single-node GlobalDB) | `ctest -R securecrdt_quorum_gate_test` | ❌ W0 | ⬜ pending |
+| 09-02-06 | 02 | 1 | SCRDT-04 | V4/V6 | ReadIfQuorum handoff contract (Verify/Apply) proven end-to-end (Warning 2) | integration (single-node GlobalDB) | `ctest -R securecrdt_quorum_contract_e2e_test` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -63,11 +65,11 @@ created: 2026-07-23
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved
