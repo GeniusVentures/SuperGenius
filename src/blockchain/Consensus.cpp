@@ -25,6 +25,7 @@
 #include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ConsensusAuth.hpp"
+#include "storage/database_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, error )
 {
@@ -35,6 +36,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, er
             return "Certificate record not found";
         case Error::IntegrityError:
             return "Certificate store integrity error";
+        case Error::StorageError:
+            return "Certificate store operational error";
         case Error::Conflict:
             return "Certificate store conflict";
         case Error::InvalidInput:
@@ -293,6 +296,21 @@ namespace sgns
                                                 consensus_topic ) ),
         consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )
     {
+        certificate_record_reader_ = [this]( const crdt::HierarchicalKey &key ) { return db_->Get( key ); };
+    }
+
+    ConsensusManager::CertificateStoreError ConsensusManager::MapCertificateReadError(
+        const std::error_code &error )
+    {
+        if ( error == make_error_code( storage::DatabaseError::NOT_FOUND ) )
+        {
+            return CertificateStoreError::NotFound;
+        }
+        if ( error == make_error_code( storage::DatabaseError::CORRUPTION ) )
+        {
+            return CertificateStoreError::IntegrityError;
+        }
+        return CertificateStoreError::StorageError;
     }
 
     ConsensusManager::~ConsensusManager()
@@ -3476,10 +3494,18 @@ namespace sgns
         }
 
         const auto slot_key = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
-        auto       certificate_data_result = db_->Get( { slot_key } );
+        auto       certificate_data_result = certificate_record_reader_( { slot_key } );
         if ( certificate_data_result.has_error() )
         {
-            return outcome::failure( CertificateStoreError::NotFound );
+            const auto mapped = MapCertificateReadError( certificate_data_result.error() );
+            if ( mapped != CertificateStoreError::NotFound )
+            {
+                ConsensusManagerLogger()->critical( "{}: certificate read failed key={} error={}",
+                                                    __func__,
+                                                    slot_key,
+                                                    certificate_data_result.error().message() );
+            }
+            return outcome::failure( mapped );
         }
         const auto &certificate_data = certificate_data_result.value();
         const auto  stored_bytes     = std::string( certificate_data.toString() );
@@ -3522,10 +3548,18 @@ namespace sgns
         }
 
         const auto index_key = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
-        auto       slot_data_result = db_->Get( { index_key } );
+        auto       slot_data_result = certificate_record_reader_( { index_key } );
         if ( slot_data_result.has_error() )
         {
-            return outcome::failure( CertificateStoreError::NotFound );
+            const auto mapped = MapCertificateReadError( slot_data_result.error() );
+            if ( mapped != CertificateStoreError::NotFound )
+            {
+                ConsensusManagerLogger()->critical( "{}: certificate index read failed key={} error={}",
+                                                    __func__,
+                                                    index_key,
+                                                    slot_data_result.error().message() );
+            }
+            return outcome::failure( mapped );
         }
         const auto slot = std::string( slot_data_result.value().toString() );
         if ( !IsCanonicalHash( slot ) )

@@ -7,6 +7,7 @@
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 
 namespace sgns
@@ -22,6 +23,13 @@ namespace sgns
         static outcome::result<std::string> Winner( const ConsensusManager::Certificate &certificate )
         {
             return ConsensusManager::GetSubjectHash( certificate.proposal().subject() );
+        }
+
+        static void SetCertificateReader(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )> reader )
+        {
+            manager->certificate_record_reader_ = std::move( reader );
         }
     };
 } // namespace sgns
@@ -149,6 +157,16 @@ namespace sgns::test
             ASSERT_TRUE( result.has_error() );
             EXPECT_EQ( result.error(), make_error_code( expected ) );
         }
+
+        void InjectReadError( const std::shared_ptr<ConsensusManager> &manager,
+                              storage::DatabaseError                    error )
+        {
+            ConsensusManagerTestAccess::SetCertificateReader(
+                manager,
+                [error]( const crdt::HierarchicalKey & )
+                    -> outcome::result<crdt::GlobalDB::Buffer>
+                { return outcome::failure( error ); } );
+        }
     } // namespace
 
     class CertificateCompatibilityTest : public ::test::CRDTFixture
@@ -188,6 +206,30 @@ namespace sgns::test
         ASSERT_TRUE( account && registry && manager );
         ExpectError( manager->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::NotFound );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, SlotReadErrorCorruptionIsIntegrityError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        InjectReadError( manager, storage::DatabaseError::CORRUPTION );
+        ExpectError( manager->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, SlotReadErrorOperationalIsStorageError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        InjectReadError( manager, storage::DatabaseError::IO_ERROR );
+        ExpectError( manager->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::StorageError );
         manager->Close();
     }
 
@@ -254,6 +296,30 @@ namespace sgns::test
         manager->Close();
     }
 
+    TEST_F( CertificateCompatibilityTest, IndexReadErrorCorruptionIsIntegrityError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        InjectReadError( manager, storage::DatabaseError::CORRUPTION );
+        ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, IndexReadErrorOperationalIsStorageError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        InjectReadError( manager, storage::DatabaseError::IO_ERROR );
+        ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::StorageError );
+        manager->Close();
+    }
+
     TEST_F( CertificateCompatibilityTest, HashLookupMalformedIndexIsIntegrityError )
     {
         auto account = MakeAccount( getPathString() );
@@ -281,6 +347,60 @@ namespace sgns::test
         ASSERT_TRUE( manager );
         ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, DanglingIndexSlotCorruptionIsIntegrityError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( account && registry );
+        ASSERT_TRUE( PutRaw( db_,
+                            "/cert/v2/tx/" + std::string( kOtherCanonicalHash ),
+                            kOtherCanonicalHash )
+                         .has_value() );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( manager );
+        ConsensusManagerTestAccess::SetCertificateReader(
+            manager,
+            [db = db_]( const crdt::HierarchicalKey &key )
+                -> outcome::result<crdt::GlobalDB::Buffer>
+            {
+                if ( key.GetKey().find( "/cert/v2/slot/" ) == 0 )
+                {
+                    return outcome::failure( storage::DatabaseError::CORRUPTION );
+                }
+                return db->Get( key );
+            } );
+        ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, DanglingIndexSlotOperationalFailureIsStorageError )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( account && registry );
+        ASSERT_TRUE( PutRaw( db_,
+                            "/cert/v2/tx/" + std::string( kOtherCanonicalHash ),
+                            kOtherCanonicalHash )
+                         .has_value() );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( manager );
+        ConsensusManagerTestAccess::SetCertificateReader(
+            manager,
+            [db = db_]( const crdt::HierarchicalKey &key )
+                -> outcome::result<crdt::GlobalDB::Buffer>
+            {
+                if ( key.GetKey().find( "/cert/v2/slot/" ) == 0 )
+                {
+                    return outcome::failure( storage::DatabaseError::IO_ERROR );
+                }
+                return db->Get( key );
+            } );
+        ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
+                     ConsensusManager::CertificateStoreError::StorageError );
         manager->Close();
     }
 

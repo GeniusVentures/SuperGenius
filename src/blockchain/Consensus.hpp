@@ -119,6 +119,7 @@ namespace sgns
         {
             NotFound = 0,
             IntegrityError,
+            StorageError,
             Conflict,
             InvalidInput,
             InvalidCertificate,
@@ -587,6 +588,14 @@ namespace sgns
                                    Signer                                     signer,
                                    std::string                                address,
                                    std::string                                consensus_topic );
+
+        /**
+         * @brief Maps one raw datastore read failure to the typed certificate API.
+         *
+         * Relationship validation is deliberately handled by the lookup callers;
+         * this helper classifies only the underlying read operation.
+         */
+        static CertificateStoreError MapCertificateReadError( const std::error_code &error );
         /**
          * @brief Starts the background round timer loop.
          */
@@ -887,6 +896,8 @@ namespace sgns
         static std::string                     GetPrintableSubjectHash( const Subject &subject );
         std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
         std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
+        std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )>
+            certificate_record_reader_; ///< Private/friend-only read seam; defaults to GlobalDB::Get.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         std::unordered_map<base::Hash256, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
