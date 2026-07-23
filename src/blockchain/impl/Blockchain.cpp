@@ -1827,6 +1827,12 @@ namespace sgns
         return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
     }
 
+    outcome::result<ConsensusManager::Certificate> Blockchain::GetCertificateBySlotId(
+        const std::string &slot_id ) const
+    {
+        return consensus_manager_->GetCertificateBySlotId( slot_id );
+    }
+
     const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )
     {
         return ConsensusManager::BestHash( a, b );

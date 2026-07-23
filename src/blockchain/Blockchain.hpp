@@ -295,6 +295,12 @@ namespace sgns
             const std::string &subject_hash ) const;
 
         /**
+         * @brief Loads the authoritative certificate by canonical slot identifier.
+         * @param[in] slot_id Canonical 64-lowercase-hex slot identifier.
+         * @return Validated certificate on success, otherwise a typed store error.
+         */
+        outcome::result<ConsensusManager::Certificate> GetCertificateBySlotId( const std::string &slot_id ) const;
+        /**
          * @brief Chooses the preferred hash among two candidates.
          * @param[in] a First hash candidate.
          * @param[in] b Second hash candidate.

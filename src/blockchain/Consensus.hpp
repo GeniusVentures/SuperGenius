@@ -120,6 +120,7 @@ namespace sgns
             NotFound = 0,
             IntegrityError,
             Conflict,
+            InvalidInput,
             InvalidCertificate,
         };
 
@@ -539,6 +540,13 @@ namespace sgns
         void ConfigureCertificateDelay( std::chrono::milliseconds delay );
 
         /**
+         * @brief Retrieves the authoritative certificate for a canonical slot.
+         * @param[in] slot_id Canonical 64-lowercase-hex slot identifier.
+         * @return Validated certificate when present, or a typed store error.
+         */
+        outcome::result<Certificate> GetCertificateBySlotId( const std::string &slot_id ) const;
+
+        /**
          * @brief Retrieves a certificate by subject hash.
          * @param[in] subject_hash Subject hash key.
          * @return Certificate when present, or an error.
@@ -675,6 +683,12 @@ namespace sgns
          * @return Canonical 64-lowercase-hex slot key, or invalid_argument.
          */
         static outcome::result<std::string> GetSlotKey( const Proposal &proposal );
+        /**
+         * @brief Computes the canonical slot directly from a subject.
+         * @param[in] subject Subject to map to its finality slot.
+         * @return Canonical 64-lowercase-hex slot key, or an error.
+         */
+        static outcome::result<std::string> GetSlotKey( const Subject &subject );
         /**
          * @brief Compares competing proposals for the same slot.
          * @param[in] candidate Candidate proposal.

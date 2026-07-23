@@ -36,6 +36,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, er
             return "Certificate store integrity error";
         case Error::Conflict:
             return "Certificate store conflict";
+        case Error::InvalidInput:
+            return "Invalid canonical certificate lookup input";
         case Error::InvalidCertificate:
             return "Invalid certificate";
     }
@@ -2662,13 +2664,16 @@ namespace sgns
     outcome::result<std::string> ConsensusManager::GetSlotKey( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
+        return GetSlotKey( proposal.subject() );
+    }
 
-        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+    outcome::result<std::string> ConsensusManager::GetSlotKey( const Subject &subject )
+    {
+        auto type_hash = ParseSubjectTypeHash( subject );
         if ( !type_hash )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
-        const auto &subject = proposal.subject();
         SlotKeyHandler handler;
         {
             std::shared_lock lock( slot_key_handlers_mutex_ );
@@ -3264,26 +3269,21 @@ namespace sgns
         return true;
     }
 
-    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
-        const std::string &subject_hash ) const
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySlotId(
+        const std::string &slot_id ) const
     {
-        if ( !IsCanonicalHash( subject_hash ) )
+        if ( !IsCanonicalHash( slot_id ) )
+        {
+            return outcome::failure( CertificateStoreError::InvalidInput );
+        }
+
+        const auto slot_key = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
+        auto       certificate_data_result = db_->Get( { slot_key } );
+        if ( certificate_data_result.has_error() )
         {
             return outcome::failure( CertificateStoreError::NotFound );
         }
-
-        const auto index_key = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
-        BOOST_OUTCOME_TRY( auto slot_data, db_->Get( { index_key } ) );
-        const auto slot = std::string( slot_data.toString() );
-        if ( !IsCanonicalHash( slot ) )
-        {
-            ConsensusManagerLogger()->critical(
-                "{}: corrupt certificate index key={} slot={}", __func__, index_key, slot );
-            return outcome::failure( CertificateStoreError::IntegrityError );
-        }
-
-        const auto slot_key = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot;
-        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { slot_key } ) );
+        const auto &certificate_data = certificate_data_result.value();
 
         Certificate certificate;
         if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
@@ -3293,25 +3293,74 @@ namespace sgns
         }
 
         auto certificate_slot = GetSlotKey( certificate.proposal() );
-        auto current_hash     = GetSubjectHash( certificate.proposal().subject() );
-        if ( certificate_slot.has_error() || current_hash.has_error() )
+        if ( certificate_slot.has_error() || certificate_slot.value() != slot_id )
         {
+            ConsensusManagerLogger()->critical( "{}: certificate stored beneath wrong slot key={} actual_slot={}",
+                                                __func__,
+                                                slot_key,
+                                                certificate_slot.has_value() ? certificate_slot.value() : "<invalid>" );
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
-        if ( certificate_slot.value() != slot || current_hash.value() != subject_hash )
+        if ( ValidateCertificate( certificate ) != Check::Approve )
         {
-            ConsensusManagerLogger()->critical(
-                "{}: corrupt certificate pair index_key={} expected_slot={} actual_slot={} expected_winner={} "
-                "actual_winner={}",
-                __func__,
-                index_key,
-                slot,
-                certificate_slot.value(),
-                subject_hash,
-                current_hash.value() );
+            ConsensusManagerLogger()->critical( "{}: invalid authoritative certificate payload key={}",
+                                                __func__,
+                                                slot_key );
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
         return certificate;
+    }
+
+    outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
+        const std::string &subject_hash ) const
+    {
+        if ( !IsCanonicalHash( subject_hash ) )
+        {
+            return outcome::failure( CertificateStoreError::InvalidInput );
+        }
+
+        const auto index_key = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
+        auto       slot_data_result = db_->Get( { index_key } );
+        if ( slot_data_result.has_error() )
+        {
+            return outcome::failure( CertificateStoreError::NotFound );
+        }
+        const auto slot = std::string( slot_data_result.value().toString() );
+        if ( !IsCanonicalHash( slot ) )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: corrupt certificate index key={} slot={}", __func__, index_key, slot );
+            return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+
+        auto certificate_result = GetCertificateBySlotId( slot );
+        if ( certificate_result.has_error() )
+        {
+            if ( certificate_result.error() == make_error_code( CertificateStoreError::NotFound ) )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: certificate index targets missing authoritative slot index_key={} slot={}",
+                    __func__,
+                    index_key,
+                    slot );
+                return outcome::failure( CertificateStoreError::IntegrityError );
+            }
+            return outcome::failure( certificate_result.error() );
+        }
+
+        auto current_hash = GetSubjectHash( certificate_result.value().proposal().subject() );
+        if ( current_hash.has_error() || current_hash.value() != subject_hash )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: corrupt certificate pair index_key={} slot={} expected_winner={} actual_winner={}",
+                __func__,
+                index_key,
+                slot,
+                subject_hash,
+                current_hash.has_value() ? current_hash.value() : "<invalid>" );
+            return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+        return certificate_result.value();
     }
 
     bool ConsensusManager::CheckCertificateForSubject( const std::string &subject_hash ) const
