@@ -394,6 +394,77 @@ namespace sgns::test
         manager->Close();
     }
 
+    TEST_F( ConsensusCertificateStoreTest, DeltaRejectsEverySignedWinningProposalSurfaceMutation )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        auto certificate = MakeCertificate( manager, registry, account, account );
+        ASSERT_TRUE( certificate.has_value() );
+
+        const auto valid_delta = MakeCertificatePairDelta( certificate.value() );
+        const auto slot_key    = valid_delta.elements( 0 ).key();
+        const auto index_key   = valid_delta.elements( 1 ).key();
+        auto expect_rejected   = [&]( std::string_view name, auto mutate )
+        {
+            SCOPED_TRACE( std::string( name ) );
+            auto tampered = certificate.value();
+            mutate( tampered );
+            std::string bytes;
+            ASSERT_TRUE( tampered.SerializeToString( &bytes ) );
+            auto delta = valid_delta;
+            delta.mutable_elements( 0 )->set_value( bytes );
+            EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, delta ) );
+            EXPECT_TRUE( db_->Get( { slot_key } ).has_error() );
+            EXPECT_TRUE( db_->Get( { index_key } ).has_error() );
+        };
+
+        expect_rejected( "subject account identity",
+                         []( auto &cert ) { cert.mutable_proposal()->mutable_subject()->set_account_id( "tampered" ); } );
+        expect_rejected( "subject type",
+                         []( auto &cert )
+                         {
+                             cert.mutable_proposal()
+                                 ->mutable_subject()
+                                 ->mutable_subject_type_hash()
+                                 ->set_hash( std::string( 32, '\x44' ) );
+                         } );
+        expect_rejected( "proposer identity",
+                         []( auto &cert ) { cert.mutable_proposal()->set_proposer_id( "tampered" ); } );
+        expect_rejected( "proposal id",
+                         []( auto &cert ) { cert.mutable_proposal()->set_proposal_id( std::string( 64, '0' ) ); } );
+        expect_rejected( "nonce",
+                         []( auto &cert )
+                         {
+                             auto payload = ConsensusManager::DecodeNonceSubject( cert.proposal().subject() ).value();
+                             payload.set_nonce( payload.nonce() + 1 );
+                             payload.SerializeToString( cert.mutable_proposal()->mutable_subject()->mutable_payload() );
+                         } );
+        expect_rejected( "transaction hash",
+                         []( auto &cert )
+                         {
+                             auto payload = ConsensusManager::DecodeNonceSubject( cert.proposal().subject() ).value();
+                             payload.set_tx_hash( std::string( 64, 'f' ) );
+                             payload.SerializeToString( cert.mutable_proposal()->mutable_subject()->mutable_payload() );
+                         } );
+        expect_rejected( "embedded transaction",
+                         []( auto &cert )
+                         {
+                             auto payload = ConsensusManager::DecodeNonceSubject( cert.proposal().subject() ).value();
+                             payload.mutable_transaction()->mutable_transfer()->mutable_dag_struct()->set_nonce( 99 );
+                             payload.SerializeToString( cert.mutable_proposal()->mutable_subject()->mutable_payload() );
+                         } );
+        expect_rejected( "proposal registry",
+                         []( auto &cert ) { cert.mutable_proposal()->set_registry_cid( "tampered-registry" ); } );
+        expect_rejected( "certificate registry",
+                         []( auto &cert ) { cert.set_registry_cid( "tampered-registry" ); } );
+        expect_rejected( "vote",
+                         []( auto &cert ) { cert.mutable_votes( 0 )->set_approve( false ); } );
+
+        manager->Close();
+    }
+
     TEST_F( ConsensusCertificateStoreTest, LegacyCertificateStateRejectsStartupBeforeSideEffects )
     {
         auto account  = MakeAccount( getPathString() );
