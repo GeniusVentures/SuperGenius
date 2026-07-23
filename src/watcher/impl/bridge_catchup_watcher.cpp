@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <limits>
 #include <set>
+#include <unordered_map>
 
 namespace sgns::evmwatcher
 {
@@ -238,8 +239,11 @@ namespace sgns::evmwatcher
                 filter_v2.topics.push_back( topic0_hash256_v2 );
             }
 
-            // ── Shared tx_hash dedup across v1 + v2 ──────────────────────
-            std::set<std::string> seen_tx_hashes;
+            // Receipt-local identity must be derived from the full ordered receipt.
+            // Cache receipt fetches across v1/v2 queries in this scan batch.
+            std::unordered_map<std::string, std::optional<eth::ReceiptResult>> receipt_cache;
+            std::set<std::pair<std::string, uint32_t>> seen_burns;
+            uint64_t receipt_request_id = 1000000;
 
             // ── Helper: process one batch of logs ─────────────────────────
             auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) -> bool
@@ -254,10 +258,63 @@ namespace sgns::evmwatcher
                     std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
                                                                            rpc_log.tx_hash.size() );
 
-                    if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
+                    auto receipt_it = receipt_cache.find( tx_hash_hex );
+                    if ( receipt_it == receipt_cache.end() )
+                    {
+                        const auto request = eth::rpc::make_get_transaction_receipt_request(
+                            rpc_log.tx_hash, receipt_request_id++ );
+                        const auto response = transport->call( request );
+                        std::optional<eth::ReceiptResult> parsed_receipt;
+                        if ( response.has_value() )
+                        {
+                            parsed_receipt = eth::rpc::parse_transaction_receipt_response( *response );
+                        }
+                        receipt_it = receipt_cache.emplace( tx_hash_hex, std::move( parsed_receipt ) ).first;
+                    }
+
+                    const auto &receipt = receipt_it->second;
+                    if ( !receipt.has_value()
+                         || receipt->tx_hash != rpc_log.tx_hash
+                         || receipt->block_hash != rpc_log.block_hash
+                         || receipt->block_number != rpc_log.block_number
+                         || receipt->log_indices.size() != receipt->receipt.logs.size() )
                     {
                         ++total_skipped;
-                        logger->debug( "CatchUpScan: burn tx {} already seen this scan — skipping", tx_hash_hex );
+                        logger->warn( "CatchUpScan: missing or inconsistent receipt for tx {} — skipping",
+                                      tx_hash_hex );
+                        continue;
+                    }
+
+                    const auto first = std::find( receipt->log_indices.begin(),
+                                                  receipt->log_indices.end(),
+                                                  rpc_log.log_index );
+                    if ( first == receipt->log_indices.end()
+                         || std::find( std::next( first ), receipt->log_indices.end(), rpc_log.log_index )
+                                != receipt->log_indices.end() )
+                    {
+                        ++total_skipped;
+                        logger->warn( "CatchUpScan: block-wide log index {} is unresolved in receipt {} — skipping",
+                                      rpc_log.log_index,
+                                      tx_hash_hex );
+                        continue;
+                    }
+
+                    const auto receipt_distance = std::distance( receipt->log_indices.begin(), first );
+                    if ( receipt_distance < 0
+                         || static_cast<uint64_t>( receipt_distance ) > std::numeric_limits<uint32_t>::max() )
+                    {
+                        ++total_skipped;
+                        logger->warn( "CatchUpScan: receipt-local index overflow for tx {} — skipping", tx_hash_hex );
+                        continue;
+                    }
+                    const uint32_t receipt_log_index = static_cast<uint32_t>( receipt_distance );
+
+                    if ( !seen_burns.emplace( tx_hash_hex, receipt_log_index ).second )
+                    {
+                        ++total_skipped;
+                        logger->debug( "CatchUpScan: burn {}:{} already seen this scan — skipping",
+                                       tx_hash_hex,
+                                       receipt_log_index );
                         continue;
                     }
 
@@ -275,13 +332,15 @@ namespace sgns::evmwatcher
 
                     try
                     {
-                        const bool processed = burn_processor_( decoded.value(), tx_hash_hex, chain_id_str );
+                        const bool processed = burn_processor_(
+                            decoded.value(), tx_hash_hex, chain_id_str, receipt_log_index );
 
                         if ( processed )
                         {
                             ++total_backfilled;
-                            logger->info( "CatchUpScan: backfilled historical burn {} on chain {}",
+                            logger->info( "CatchUpScan: backfilled historical burn {}:{} on chain {}",
                                           tx_hash_hex,
+                                          receipt_log_index,
                                           chain_entry.chain_name );
                         }
                         else
