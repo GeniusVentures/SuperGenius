@@ -5,6 +5,9 @@
  */
 #include "account/MintTransactionV2.hpp"
 
+#include <algorithm>
+#include <cctype>
+
 #include "base/blob.hpp"
 
 namespace sgns
@@ -108,10 +111,26 @@ namespace sgns
         for ( int i = 0; i < utxo_proto_params->inputs_size(); ++i )
         {
             const auto &input_proto = utxo_proto_params->inputs( i );
-            auto        maybe_hash  = base::Hash256::fromReadableString( input_proto.tx_id_hash() );
-            if ( !maybe_hash )
+            const auto &hash_text   = input_proto.tx_id_hash();
+            const bool  canonical_hash_text =
+                hash_text.size() == 64 &&
+                std::all_of(
+                    hash_text.begin(),
+                    hash_text.end(),
+                    []( unsigned char c )
+                    {
+                        return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
+                    } );
+            if ( !canonical_hash_text )
             {
-                std::cerr << "Invalid hash in mint-v2 input." << std::endl;
+                std::cerr << "Invalid or noncanonical hash in mint-v2 input." << std::endl;
+                return nullptr;
+            }
+
+            auto        maybe_hash  = base::Hash256::fromReadableString( input_proto.tx_id_hash() );
+            if ( !maybe_hash || input_proto.tx_id_hash() != maybe_hash.value().toReadableString() )
+            {
+                std::cerr << "Invalid or noncanonical hash in mint-v2 input." << std::endl;
                 return nullptr;
             }
 
@@ -209,29 +228,48 @@ namespace sgns
         return instance;
     }
 
-    std::string MintTransactionV2::GetSlotID() const
+    outcome::result<std::string> MintTransactionV2::GetSlotPreimage() const
     {
         static constexpr std::string_view kPrefix    = "mint-v2:";
         static constexpr std::string_view kSeparator = ":";
 
-        std::string key( kPrefix );
-        key += chain_id_;
-        key += kSeparator;
-        key += token_id_.ToHex();
-        key += kSeparator;
-        key += std::to_string( GetAmount() );
-        if ( !utxo_params_.second.empty() )
+        const bool canonical_chain =
+            !chain_id_.empty() && ( chain_id_ == "0" || chain_id_.front() != '0' ) &&
+            std::all_of(
+                chain_id_.begin(),
+                chain_id_.end(),
+                []( unsigned char c )
+                {
+                    return std::isdigit( c ) != 0;
+                } );
+        if ( !canonical_chain || utxo_params_.first.size() != 1 )
         {
-            key += kSeparator;
-            key += utxo_params_.second.front().dest_address;
-        }
-        if ( !utxo_params_.first.empty() )
-        {
-            key += kSeparator;
-            key += utxo_params_.first.front().txid_hash_.toReadableString();
+            return outcome::failure( std::errc::invalid_argument );
         }
 
-        return key;
+        const auto &input     = utxo_params_.first.front();
+        const auto  burn_hash = input.txid_hash_.toReadableString();
+        const bool  canonical_hash =
+            burn_hash.size() == 64 &&
+            std::all_of(
+                burn_hash.begin(),
+                burn_hash.end(),
+                []( unsigned char c )
+                {
+                    return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
+                } );
+        if ( !canonical_hash )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        std::string preimage( kPrefix );
+        preimage += chain_id_;
+        preimage += kSeparator;
+        preimage += burn_hash;
+        preimage += kSeparator;
+        preimage += std::to_string( input.output_idx_ );
+        return preimage;
     }
 
 }
