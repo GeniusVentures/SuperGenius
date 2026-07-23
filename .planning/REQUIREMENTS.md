@@ -8,10 +8,10 @@
 
 ### Canonical Slots
 
-- [ ] **SLOT-01**: Every consensus proposal resolves to one deterministic canonical slot key, and proposal arbitration, vote locking, certificate lookup, and finalized-state checks use that same key.
-- [ ] **SLOT-02**: A normal transaction's canonical slot remains its source address plus nonce, so competing transactions from the same account and nonce share one finality domain.
-- [ ] **SLOT-03**: A bridge mint's canonical slot is derived from the external burn identity (source chain plus burn transaction hash and canonical event/outpoint index) and is independent of the proposing validator's address and nonce.
-- [ ] **SLOT-04**: Two mint proposals referencing the same canonical burn resolve to the same slot even when their transaction hashes, proposers, nonces, amounts, destinations, or other candidate-controlled fields differ.
+- [x] **SLOT-01**: Every consensus proposal resolves to one deterministic canonical slot key, and proposal arbitration, vote locking, certificate lookup, and finalized-state checks use that same key.
+- [x] **SLOT-02**: A normal transaction's canonical slot remains its source address plus nonce, so competing transactions from the same account and nonce share one finality domain.
+- [x] **SLOT-03**: A bridge mint's canonical slot is derived from the external burn identity (source chain plus burn transaction hash and canonical event/outpoint index) and is independent of the proposing validator's address and nonce.
+- [x] **SLOT-04**: Two mint proposals referencing the same canonical burn resolve to the same slot even when their transaction hashes, proposers, nonces, amounts, destinations, or other candidate-controlled fields differ.
 
 ### Certificates
 
@@ -75,10 +75,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | Phase 9 | Pending |
-| SLOT-02 | Phase 9 | Pending |
-| SLOT-03 | Phase 9 | Pending |
-| SLOT-04 | Phase 9 | Pending |
+| SLOT-01 | Phase 9 | Complete |
+| SLOT-02 | Phase 9 | Complete |
+| SLOT-03 | Phase 9 | Complete |
+| SLOT-04 | Phase 9 | Complete |
 | CERT-01 | Phase 9 | Pending |
 | CERT-02 | Phase 9 | Pending |
 | CERT-03 | Phase 9 | Pending |
