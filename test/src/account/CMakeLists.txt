@@ -155,6 +155,26 @@ else()
     )
 endif()
 
+addtest(public_chain_mint_validation_test
+    public_chain_mint_validation_test.cpp
+)
+
+target_link_libraries(public_chain_mint_validation_test
+    genius_node_test
+)
+
+if(MSVC)
+    target_link_options(public_chain_mint_validation_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(public_chain_mint_validation_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(public_chain_mint_validation_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
 if(MSVC)
     target_link_options(chain_rpc_endpoint_provider_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
