@@ -203,9 +203,11 @@ namespace sgns
         static void AddQuorumReachedProposal( const std::shared_ptr<ConsensusManager> &manager,
                                               const ConsensusManager::Proposal        &proposal )
         {
+            auto slot_result = ConsensusManager::GetSlotKey( proposal );
+            ASSERT_TRUE( slot_result.has_value() );
             ConsensusManager::ProposalState state;
             state.proposal             = proposal;
-            state.slot_key             = ConsensusManager::GetSlotKey( proposal );
+            state.slot_key             = slot_result.value();
             state.quorum_reached       = true;
             state.quorum_reached_ts_ms = 0;
 
@@ -221,7 +223,9 @@ namespace sgns
         static void ContinueProposalAfterSubject( const std::shared_ptr<ConsensusManager> &manager,
                                                   const ConsensusManager::Proposal        &proposal )
         {
-            manager->ContinueProposalAfterSubject( proposal );
+            auto slot_result = ConsensusManager::GetSlotKey( proposal );
+            ASSERT_TRUE( slot_result.has_value() );
+            manager->ContinueProposalAfterSubject( proposal, slot_result.value() );
         }
 
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(

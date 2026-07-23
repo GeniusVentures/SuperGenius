@@ -7,6 +7,7 @@
 #include "blockchain/Consensus.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <set>
 #include <system_error>
@@ -577,11 +578,20 @@ namespace sgns
         return outcome::failure( std::errc::invalid_argument );
     }
 
-    void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal )
+    void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal, const std::string &slot_key )
     {
         const auto &proposal_id = proposal.proposal_id();
-        const auto  slot_key    = GetSlotKey( proposal );
-        bool        should_vote = false;
+        ConsensusManagerLogger()->debug( "{}: Continuing proposal: hash {}, id {}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
+        bool should_vote = false;
+
+        ConsensusManagerLogger()->debug( "{}: Slot key acquired: hash {}, id {}, slot key {}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ),
+                                         slot_key );
         {
             std::lock_guard lock( proposals_mutex_ );
             auto [proposal_it, inserted] = proposals_.try_emplace( proposal_id );
@@ -655,8 +665,17 @@ namespace sgns
         auto [proposal_it, inserted] = proposals_.try_emplace( proposal.proposal_id() );
         if ( inserted )
         {
+            auto slot_result = GetSlotKey( proposal );
+            if ( slot_result.has_error() )
+            {
+                proposals_.erase( proposal_it );
+                ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ) );
+                return false;
+            }
             proposal_it->second.proposal = proposal;
-            proposal_it->second.slot_key = GetSlotKey( proposal );
+            proposal_it->second.slot_key = slot_result.value();
         }
 
         const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
@@ -819,6 +838,16 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash reason={}", __func__, reason );
             return;
         }
+        auto slot_result = GetSlotKey( proposal );
+        if ( slot_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={} reason={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             reason );
+            return;
+        }
+
         SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
@@ -885,7 +914,7 @@ namespace sgns
             return;
         }
 
-        ContinueProposalAfterSubject( proposal );
+        ContinueProposalAfterSubject( proposal, slot_result.value() );
     }
 
     outcome::result<void> ConsensusManager::WakePendingDependency( const PendingDependencyKey &dependency )
@@ -1392,7 +1421,15 @@ namespace sgns
                                          GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ),
                                          self_vote );
-        const auto slot_key = GetSlotKey( proposal );
+        auto slot_result = GetSlotKey( proposal );
+        if ( slot_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ) );
+            return outcome::failure( slot_result.error() );
+        }
+        const auto &slot_key = slot_result.value();
         {
             std::lock_guard lock( proposals_mutex_ );
             auto            it = proposals_.find( proposal.proposal_id() );
@@ -1463,6 +1500,15 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
+        auto slot_result = GetSlotKey( certificate.proposal() );
+        if ( slot_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ) );
+            return outcome::failure( slot_result.error() );
+        }
+
         ConsensusMessage message;
         *message.mutable_certificate() = certificate;
         auto result                    = Publish( message );
@@ -1552,6 +1598,16 @@ namespace sgns
         }
         const auto &subject_hash = subject_hash_result.value();
 
+        auto slot_result = GetSlotKey( proposal );
+        if ( slot_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+        const auto &slot_key = slot_result.value();
+
         auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
@@ -1637,7 +1693,7 @@ namespace sgns
                 AddPendingProposal( proposal, subject_hash, validation_result );
                 return;
             case Check::Approve:
-                ContinueProposalAfterSubject( proposal );
+                ContinueProposalAfterSubject( proposal, slot_key );
                 return;
         }
     }
@@ -2153,6 +2209,15 @@ namespace sgns
             return;
         }
 
+        auto slot_result = GetSlotKey( certificate.proposal() );
+        if ( slot_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+
         ProposalState proposal_state;
         auto          fetch_proposal_state_ret = FetchProposalState( certificate );
         if ( fetch_proposal_state_ret.has_value() )
@@ -2167,7 +2232,7 @@ namespace sgns
             ConsensusManagerLogger()->debug( "{}: proposal state not found, creating new one proposal_id={}",
                                              __func__,
                                              certificate.proposal_id() );
-            proposal_state = CreateProposalState( certificate );
+            proposal_state = CreateProposalState( certificate, slot_result.value() );
         }
 
         if ( !ValidateCertificateBestProposal( proposal_state, certificate ) )
@@ -2191,11 +2256,12 @@ namespace sgns
         return it->second;
     }
 
-    ConsensusManager::ProposalState ConsensusManager::CreateProposalState( const Certificate &certificate )
+    ConsensusManager::ProposalState ConsensusManager::CreateProposalState( const Certificate   &certificate,
+                                                                           const std::string   &slot_key )
     {
         ProposalState new_state;
         new_state.proposal = certificate.proposal();
-        new_state.slot_key = GetSlotKey( new_state.proposal );
+        new_state.slot_key = slot_key;
         proposals_.emplace( new_state.proposal.proposal_id(), new_state );
 
         auto &slot_state = slot_states_[new_state.slot_key];
@@ -2241,7 +2307,15 @@ namespace sgns
         }
         else
         {
-            slot_key = GetSlotKey( proposal );
+            auto slot_result = GetSlotKey( proposal );
+            if ( slot_result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: canonical slot derivation failed proposal_id={}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ) );
+                return;
+            }
+            slot_key = slot_result.value();
         }
 
         std::unordered_set<std::string> ids_to_remove;
@@ -2278,28 +2352,48 @@ namespace sgns
         }
     }
 
-    std::string ConsensusManager::GetSlotKey( const Proposal &proposal )
+    outcome::result<std::string> ConsensusManager::GetSlotKey( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
 
         auto type_hash = ParseSubjectTypeHash( proposal.subject() );
         if ( !type_hash )
         {
-            return proposal.proposal_id();
+            return outcome::failure( std::errc::invalid_argument );
         }
         const auto &subject = proposal.subject();
-
+        SlotKeyHandler handler;
         {
             std::shared_lock lock( slot_key_handlers_mutex_ );
             auto             it = slot_key_handlers_.find( type_hash.value() );
             if ( it != slot_key_handlers_.end() )
             {
-                return it->second( subject );
+                handler = it->second;
             }
         }
 
-        auto subject_id = ComputeSubjectId( subject );
-        return subject_id.has_value() ? subject_id.value() : proposal.proposal_id();
+        auto slot_result = handler ? handler( subject ) : ComputeSubjectId( subject );
+
+        if ( slot_result.has_error() )
+        {
+            return outcome::failure( slot_result.error() );
+        }
+
+        const auto &slot = slot_result.value();
+        const bool  canonical_slot =
+            slot.size() == 64 &&
+            std::all_of(
+                slot.begin(),
+                slot.end(),
+                []( unsigned char c )
+                {
+                    return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
+                } );
+        if ( !canonical_slot )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        return slot;
     }
 
     bool ConsensusManager::IsBetterProposal( const Proposal &candidate, const Proposal &current ) const

@@ -217,9 +217,9 @@ namespace sgns
         ///             Callback invoked when a proposal slot is cleaned up due to timeout.
         ///             Receives the transaction hash so the handler can clean up associated tracking entries.
         using ProposalCleanupHandler = std::function<void( const std::string &tx_hash )>;
-        /// @brief      Alias for a slot key handler — produces a deterministic slot key for a proposal.
+        /// @brief      Alias for a fail-closed canonical slot key handler.
         ///             Takes the raw subject, called from GetSlotKey by subject type hash.
-        using SlotKeyHandler = std::function<std::string( const Subject &subject )>;
+        using SlotKeyHandler = std::function<outcome::result<std::string>( const Subject &subject )>;
 
         /**
          * @brief      Quorum tally structure
@@ -651,9 +651,9 @@ namespace sgns
         /**
          * @brief Computes proposal slot key used for conflict resolution.
          * @param[in] proposal Proposal to map to a slot.
-         * @return Slot key.
+         * @return Canonical 64-lowercase-hex slot key, or invalid_argument.
          */
-        static std::string GetSlotKey( const Proposal &proposal );
+        static outcome::result<std::string> GetSlotKey( const Proposal &proposal );
         /**
          * @brief Compares competing proposals for the same slot.
          * @param[in] candidate Candidate proposal.
@@ -698,9 +698,10 @@ namespace sgns
         /**
          * @brief Creates an initial proposal state from a certificate payload.
          * @param[in] certificate Certificate with base proposal data.
+         * @param[in] slot_key Previously validated canonical slot key.
          * @return Initialized proposal state.
          */
-        ProposalState CreateProposalState( const Certificate &certificate );
+        ProposalState CreateProposalState( const Certificate &certificate, const std::string &slot_key );
         /**
          * @brief Validates whether certificate points to the best known proposal in slot.
          * @param[in] state Runtime state of the referenced proposal.
@@ -722,8 +723,9 @@ namespace sgns
         /**
          * @brief Continues deferred proposal processing after subject validation.
          * @param[in] proposal Proposal to continue processing.
+         * @param[in] slot_key Previously validated canonical slot key.
          */
-        void ContinueProposalAfterSubject( const Proposal &proposal );
+        void ContinueProposalAfterSubject( const Proposal &proposal, const std::string &slot_key );
         /**
          * @brief Stores proposal pending subject readiness.
          * @param[in] proposal Proposal to queue.

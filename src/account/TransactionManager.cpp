@@ -186,23 +186,31 @@ namespace sgns
 
         instance->blockchain_->RegisterSlotKeyHandler(
             NONCE_SUBJECT_TYPE,
-            []( const ConsensusManager::Subject &subject ) -> std::string
+            []( const ConsensusManager::Subject &subject ) -> outcome::result<std::string>
             {
                 auto nonce = ConsensusManager::DecodeNonceSubject( subject );
-                if ( nonce.has_value() &&
-                     nonce.value().transaction().transaction_case() != EmbeddedTransaction::TRANSACTION_NOT_SET )
+                if ( nonce.has_error() )
+                {
+                    return outcome::failure( nonce.error() );
+                }
+
+                if ( nonce.value().transaction().transaction_case() != EmbeddedTransaction::TRANSACTION_NOT_SET )
                 {
                     auto tx = TransactionManager::DeSerializeEmbeddedTransaction( nonce.value().transaction() );
-                    if ( tx.has_value() )
+                    if ( tx.has_error() )
                     {
-                        auto slot_id = tx.value()->GetSlotID();
-                        if ( slot_id.has_value() )
-                        {
-                            return slot_id.value();
-                        }
+                        return outcome::failure( tx.error() );
                     }
+                    return tx.value()->GetSlotID();
                 }
-                return subject.account_id() + ":" + std::to_string( nonce.has_value() ? nonce.value().nonce() : 0ULL );
+
+                auto preimage = GeniusTransaction::MakeNonceSlotPreimage( subject.account_id(),
+                                                                          nonce.value().nonce() );
+                if ( preimage.has_error() )
+                {
+                    return outcome::failure( preimage.error() );
+                }
+                return GeniusTransaction::HashSlotPreimage( preimage.value() );
             } );
 
         auto monitored_networks = GetMonitoredNetworkIDs();
