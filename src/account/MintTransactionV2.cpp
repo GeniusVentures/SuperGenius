@@ -248,6 +248,10 @@ namespace sgns
         }
 
         const auto &input     = utxo_params_.first.front();
+        if ( input.txid_hash_ == base::Hash256{} )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
         const auto  burn_hash = input.txid_hash_.toReadableString();
         const bool  canonical_hash =
             burn_hash.size() == 64 &&

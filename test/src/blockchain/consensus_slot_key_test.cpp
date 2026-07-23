@@ -250,6 +250,17 @@ TEST( CanonicalTransactionSlotTest, MintRejectsNoncanonicalOrIncompleteIdentity 
                      .has_error() );
 }
 
+TEST( CanonicalTransactionSlotTest, MintZeroBurnHashFailsPreimageAndSlot )
+{
+    auto subject = MakeMintV2NonceSubject(
+        "1", "token", 100, kAddressA, std::string( 64, '0' ), 7 );
+    auto tx = TransactionManager::DeSerializeEmbeddedTransaction( subject.transaction() );
+
+    ASSERT_TRUE( tx.has_value() );
+    EXPECT_TRUE( tx.value()->GetSlotPreimage().has_error() );
+    EXPECT_TRUE( tx.value()->GetSlotID().has_error() );
+}
+
 class ConsensusSlotKeyTest : public ::testing::Test
 {
 protected:
