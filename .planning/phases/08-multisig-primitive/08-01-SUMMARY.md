@@ -48,15 +48,21 @@ Task 1 introduced `EvaluateQuorum`/`QuorumResult` in the header with a stub body
 
 None — plan executed exactly as written, including the Task 1 stub → Task 2 real-implementation staging called out explicitly in the `<action>` blocks.
 
-## Build/Test Verification Limitation
+## Build/Test Verification (orchestrator follow-up)
 
-**This worktree/sandbox has no configured CMake build directory** (`build/` contains only vendored toolchain cmake modules, no `CMakeCache.txt`; the same is true of the main repo checkout outside this worktree). The plan's `<verify>` step (`cmake --build . --target multisig_verify_test && ctest -R multisig_verify_test`) could not be executed in this environment — running a from-scratch configure of this project (submodules, vendored deps: libsecp256k1, crypto3, WalletCore, etc.) was out of scope for this execution pass and would risk a very long/uncertain build.
+The executor's worktree had no configured CMake build directory, so it could only verify structurally (see checks below). The orchestrator subsequently ran the real build against the project's existing configured build (`build/OSX/Release`, sibling `thirdparty` deps already built):
 
-What was verified instead (documented under Acceptance Criteria below): all grep-based structural acceptance criteria from the plan pass, and the C++ source was written to mirror an existing, already-building/passing test (`test/src/account/account_signature_test.cpp`) byte-for-byte in its fixture pattern (`SetSecureStorageFactory` + `MemorySecureStorage` + `GeniusAccount::NewFromPrivateKey`), and the CMake target wiring mirrors `account_signature_test`'s (`target_link_libraries(... sgns_genius_account/multisig json_secure_storage)`).
+- Found a pre-existing, unrelated compile error blocking the whole build: `AccountMessenger.cpp:1029` passed a `const std::string` member to `GossipPubSub::getPeerCount(std::string&)` (non-const ref param) — introduced by commit `e46f23d2` ("AccountManager skips requests if there are none"), which had apparently never successfully compiled on this platform/toolchain. Fixed with a minimal local copy (commit `a64761b6`), out of Phase 8's scope but necessary to unblock verification.
+- `cmake --build . --target multisig_verify_test multisig_quorum_test` — **succeeded**, both targets compile and link.
+- `ctest -R multisig --output-on-failure` — **2/2 tests passed** (`multisig_verify_test`, `multisig_quorum_test`).
+- Link-dependency check: `link.txt` for both test targets contains no `crdt`/`genius_node`/`pubsub` libraries — MSIG-03 confirmed empirically, not just structurally.
+- Full project build (`cmake --build .`) succeeded; full `ctest` run: 72/74 tests passed. Two unrelated pre-existing failures investigated and confirmed out of scope:
+  - `account_management_test` (SEGFAULT on full-suite run) — did not reproduce on isolated rerun or a second full-suite rerun (5/5 passed); flaky pre-existing test infra, unrelated to any Phase 8 or fix-commit change.
+  - `transaction_sync_test.MissedCrdtHeadIsRecoveredAfterReconnect` — reproduces consistently, but originates from commit `a11f8386` ("Added reconnection test in transaction_sync") + `e4676de8` ("Fixed tests"), part of unrelated bridge-relayer/coverage-analysis work already on `develop` before this milestone. Not touched by Phase 8 or the unblocking fix.
 
-**This is flagged for the orchestrator/verifier to run an actual build+ctest pass** (`cmake --build . --target multisig_verify_test multisig_quorum_test -j4 && ctest -R multisig --output-on-failure`) before treating MSIG-01/MSIG-02/MSIG-03 as fully proven — the code has not been compiler-verified in this execution.
+MSIG-01, MSIG-02, MSIG-03 are now fully proven by actual compiled/executed tests, not just structural inspection.
 
-## Acceptance Criteria (structural checks performed)
+## Acceptance Criteria (verified)
 
 - `grep -n "add_library(multisig" src/multisig/CMakeLists.txt` — matches
 - `grep -n "GeniusAccount::VerifySignature" src/multisig/MultiSig.cpp` — matches
@@ -64,7 +70,7 @@ What was verified instead (documented under Acceptance Criteria below): all grep
 - `grep -c "crdt_globaldb\|ipfs-pubsub\|genius_node" src/multisig/CMakeLists.txt` — 0
 - Dedup-before-verify ordering: `valid_unique_signers.count(address)` check appears before `VerifyPayloadSignature(...)` call in `EvaluateQuorum`'s loop body — confirmed by inspection
 - `grep -c "\.pb\.h\|genius_node\|crdt" test/src/multisig/multisig_quorum_test.cpp` — 0
-- `ctest -R multisig_verify_test` / `ctest -R multisig` — **not run** (no configured build dir in this environment; see limitation above)
+- `ctest -R multisig_verify_test` / `ctest -R multisig` — **run, 2/2 passed** (orchestrator follow-up)
 
 ## Known Stubs
 
@@ -85,4 +91,4 @@ None — all new surface (`VerifyPayloadSignature`, `EvaluateQuorum`) is already
 - Commit 245c728d: FOUND
 - Commit 10cfe5d9: FOUND
 
-## Self-Check: PASSED (with noted build-verification limitation above)
+## Self-Check: PASSED (build+test verified by orchestrator follow-up)
