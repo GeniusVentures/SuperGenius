@@ -6,8 +6,10 @@
 #include "account/PublicChainInputValidator.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <memory>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 
@@ -34,6 +36,26 @@ namespace sgns
         std::string PreviewValue( const std::string &value, size_t max_length = 12 )
         {
             return value.substr( 0, std::min( value.size(), max_length ) );
+        }
+
+        bool IsCanonicalUnsignedDecimal( std::string_view value )
+        {
+            if ( value.empty() || ( value.size() > 1 && value.front() == '0' ) )
+            {
+                return false;
+            }
+            return std::all_of( value.begin(), value.end(), []( unsigned char character ) {
+                return std::isdigit( character ) != 0;
+            } );
+        }
+
+        bool IsCanonicalHash256Text( std::string_view value )
+        {
+            return value.size() == 64
+                && std::all_of( value.begin(), value.end(), []( unsigned char character ) {
+                       return std::isdigit( character ) != 0
+                           || ( character >= 'a' && character <= 'f' );
+                   } );
         }
 
         base::Logger InputValidatorLogger()
@@ -76,7 +98,7 @@ namespace sgns
         (void)blockchain;
         logger->trace( "ValidateWitness(PublicChain): tx={} inputs={} outputs={}",
                        tx ? PreviewValue( tx->GetHash() ) : "<null>", params.first.size(), params.second.size() );
-        if ( !tx || params.first.empty() || params.second.empty() )
+        if ( !tx || params.first.size() != 1 || params.second.size() != 1 )
         {
             logger->error( "ValidateWitness(PublicChain) invalid inputs: tx_present={} inputs={} outputs={}",
                            tx != nullptr, params.first.size(), params.second.size() );
@@ -107,19 +129,15 @@ namespace sgns
             return false;
         }
 
-        // Feed the public-chain verification with the explicit input hash.
-        // If we had to fallback to an empty Hash256 input, use uncle_hash as external source reference.
-        std::string source_reference;
         const auto &input_tx_hash = params.first.front().txid_hash_;
-        if ( input_tx_hash != base::Hash256{} )
+        if ( input_tx_hash == base::Hash256{} )
         {
-            source_reference = input_tx_hash.toReadableString();
-        }
-        else
-        {
-            source_reference = tx->GetUncleHash();
+            logger->error( "ValidateWitness(PublicChain) rejects zero source hash for tx={}",
+                           PreviewValue( tx->GetHash() ) );
+            return false;
         }
 
+        const std::string source_reference = input_tx_hash.toReadableString();
         const bool verified = VerifyPublicChainSmartContract( tx, source_reference );
         if ( verified )
         {
@@ -317,27 +335,41 @@ namespace sgns
                        tx ? tx->GetChainId() : "<null>",
                        PreviewValue( source_reference ) );
 
-        if ( source_reference.empty() )
+        if ( !tx )
         {
-            logger->debug( "VerifyPublicChainSmartContract skipped because source reference is empty" );
-            return true;
+            logger->error( "VerifyPublicChainSmartContract requires a transaction" );
+            return false;
         }
 
         const auto chain_id = tx->GetChainId();
-        if ( chain_id.empty() || chain_id == "supergenius" )
+        if ( chain_id == "supergenius" || chain_id == GeniusTransaction::GENIUS_CHAIN_ID )
         {
             logger->debug( "VerifyPublicChainSmartContract bypassed for local chain_id={}", chain_id );
             return true;
         }
 
-        auto chain_it = rpc_endpoints_.find( chain_id );
-        if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
+        if ( !IsCanonicalUnsignedDecimal( chain_id ) )
         {
-            logger->error( "VerifyPublicChainSmartContract has no RPC endpoints for chain_id={}", chain_id );
+            logger->error( "VerifyPublicChainSmartContract invalid chain id {}", chain_id );
+            return false;
+        }
+        if ( !IsCanonicalHash256Text( source_reference ) )
+        {
+            logger->error( "VerifyPublicChainSmartContract invalid source reference {}",
+                           PreviewValue( source_reference ) );
             return false;
         }
 
-        const auto &endpoints = chain_it->second;
+        eth::Hash256 tx_hash_parsed{};
+        if ( !rlp::base::parse::hex_array( source_reference, tx_hash_parsed )
+             || std::all_of( tx_hash_parsed.begin(), tx_hash_parsed.end(),
+                             []( uint8_t byte ) { return byte == 0; } ) )
+        {
+            logger->error( "VerifyPublicChainSmartContract invalid source hash {}",
+                           PreviewValue( source_reference ) );
+            return false;
+        }
+
         const auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
         if ( !mint_tx )
         {
@@ -369,6 +401,21 @@ namespace sgns
 
         const auto &mint_input = mint_params.first.front();
         const auto &mint_output = mint_params.second.front();
+        if ( !std::equal( tx_hash_parsed.begin(), tx_hash_parsed.end(),
+                          mint_input.txid_hash_.begin(), mint_input.txid_hash_.end() ) )
+        {
+            logger->error( "VerifyPublicChainSmartContract source/input hash mismatch for tx={}",
+                           PreviewValue( source_reference ) );
+            return false;
+        }
+
+        auto chain_it = rpc_endpoints_.find( chain_id );
+        if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
+        {
+            logger->error( "VerifyPublicChainSmartContract has no RPC endpoints for chain_id={}", chain_id );
+            return false;
+        }
+        const auto &endpoints = chain_it->second;
 
         static constexpr int32_t kRequiredConsensusWeight = 75;
         static constexpr auto    kTimeout                 = std::chrono::seconds( 10 );
@@ -393,15 +440,6 @@ namespace sgns
 
             auto transport = factory( ep.url, kTimeout );
 
-            eth::Hash256 tx_hash_parsed{};
-            if ( !rlp::base::parse::hex_array( source_reference, tx_hash_parsed ) )
-            {
-                logger->error( "VerifyPublicChainSmartContract failed to parse source reference {}",
-                               PreviewValue( source_reference ) );
-                ++tried;
-                continue;
-            }
-
             const auto request  = eth::rpc::make_get_transaction_receipt_request( tx_hash_parsed, 1 );
             const auto response = transport->call( request );
             if ( !response.has_value() )
@@ -415,6 +453,14 @@ namespace sgns
             if ( !receipt.has_value() )
             {
                 logger->debug( "VerifyPublicChainSmartContract failed to parse receipt from url={}", ep.url );
+                ++tried;
+                continue;
+            }
+
+            if ( receipt->tx_hash != tx_hash_parsed )
+            {
+                logger->error( "VerifyPublicChainSmartContract receipt hash mismatch for tx={} via url={}",
+                               PreviewValue( source_reference ), ep.url );
                 ++tried;
                 continue;
             }
