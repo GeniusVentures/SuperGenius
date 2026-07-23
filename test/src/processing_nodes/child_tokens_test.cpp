@@ -185,7 +185,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     // Ensure enough balance with +1 change
     auto mintRes51 = node51->MintTokens( totalMint51 + 1,
                                          sgns::test::NextMintSourceHash(),
-                                         "test",
+                                         "test", 0u,
                                          sgns::TokenID::FromBytes( { 0x51 } ),
                                          "",
                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -194,7 +194,7 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
 
     auto mintRes52 = node52->MintTokens( totalMint52 + 1,
                                          sgns::test::NextMintSourceHash(),
-                                         "test",
+                                         "test", 0u,
                                          sgns::TokenID::FromBytes( { 0x52 } ),
                                          "",
                                          std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -257,13 +257,22 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
     auto initialMain  = node->GetBalance();
     auto initialToken = node->GetBalance( tokenId );
 
+    constexpr uint64_t mintMain = 1000000;
+    auto               res      = node->MintTokens( mintMain,
+                                                    sgns::test::NextMintSourceHash(),
+                                                    "test", 0u,
+                                                    tokenId,
+                                                    "",
+                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( res.has_value() );
+
     auto parsedChildMint = node->ParseTokens( "1.0", tokenId );
     ASSERT_TRUE( parsedChildMint.has_value() );
     EXPECT_EQ( parsedChildMint.value(), 500000 );
 
     auto childMintRes = node->MintTokens( parsedChildMint.value(),
                                           sgns::test::NextMintSourceHash(),
-                                          "test",
+                                          "test", 0u,
                                           tokenId,
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -318,7 +327,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
     {
         auto res = node->MintTokens( tm.amount,
                                      sgns::test::NextMintSourceHash(),
-                                     "test",
+                                     "test", 0u,
                                      tm.tokenId,
                                      "",
                                      std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -371,7 +380,7 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
 
     auto mintResMain = node_main->MintTokens( 1000,
                                               sgns::test::NextMintSourceHash(),
-                                              "test",
+                                              "test", 0u,
                                               sgns::TokenID::FromBytes( { 0x00 } ),
                                               "",
                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );

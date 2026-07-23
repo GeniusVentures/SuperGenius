@@ -4,6 +4,8 @@
 #include <eth/event_filter.hpp>
 #include <gtest/gtest.h>
 
+#include "account/TransactionManager.hpp"
+
 #include <cstdint>
 #include <optional>
 #include <vector>
@@ -107,4 +109,15 @@ TEST( BridgeEventIdentityTest, BlockWideObservationCannotInventReceiptOrdinal )
 
     ASSERT_TRUE( observed.has_value() );
     EXPECT_FALSE( observed->receipt_log_index.has_value() );
+}
+
+TEST( BridgeEventIdentityTest, PersistenceIdentityIncludesReceiptOrdinal )
+{
+    const std::string burn_hash( 64, 'a' );
+    const auto index_zero = sgns::TransactionManager::MakeBridgeExecutedKey( "11155111", burn_hash, 0 );
+    const auto index_two = sgns::TransactionManager::MakeBridgeExecutedKey( "11155111", burn_hash, 2 );
+
+    EXPECT_NE( index_zero, index_two );
+    EXPECT_EQ( index_zero, "/bridge/executed/11155111:" + burn_hash + ":0" );
+    EXPECT_EQ( index_two, "/bridge/executed/11155111:" + burn_hash + ":2" );
 }

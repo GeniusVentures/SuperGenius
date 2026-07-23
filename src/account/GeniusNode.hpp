@@ -401,6 +401,7 @@ namespace sgns
          * @param[in] amount Amount to mint in token base units.
          * @param[in] transaction_hash Source-chain transaction hash that justifies the mint.
          * @param[in] chainid Source chain identifier where the burn or lock event occurred.
+         * @param[in] receipt_log_index Absolute zero-based position in the finalized receipt.
          * @param[in] tokenid Token identifier to mint.
          * @param[in] destination Recipient address; defaults to the active account address when empty.
          * @return Mint transaction hash on success, or a transaction readiness/submission error.
@@ -408,6 +409,7 @@ namespace sgns
         outcome::result<std::string> MintTokens( uint64_t           amount,
                                                  const std::string &transaction_hash,
                                                  const std::string &chainid,
+                                                 uint32_t           receipt_log_index,
                                                  TokenID            tokenid,
                                                  std::string        destination = "" );
 
@@ -416,6 +418,7 @@ namespace sgns
          * @param[in] amount Amount to mint in token base units.
          * @param[in] transaction_hash Source-chain transaction hash that justifies the mint.
          * @param[in] chainid Source chain identifier where the burn or lock event occurred.
+         * @param[in] receipt_log_index Absolute zero-based position in the finalized receipt.
          * @param[in] tokenid Token identifier to mint.
          * @param[in] destination Recipient address for the minted tokens.
          * @param[in] timeout Maximum time to wait for finalization.
@@ -424,6 +427,7 @@ namespace sgns
         outcome::result<std::pair<std::string, uint64_t>> MintTokens( uint64_t                  amount,
                                                                       const std::string        &transaction_hash,
                                                                       const std::string        &chainid,
+                                                                      uint32_t                  receipt_log_index,
                                                                       TokenID                   tokenid,
                                                                       std::string               destination,
                                                                       std::chrono::milliseconds timeout );

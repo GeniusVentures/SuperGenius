@@ -480,7 +480,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilBurnToMintPipeline )
     EXPECT_OUTCOME_TRUE( mint_result,
                          s_nodes[0]->MintTokens( kMintAmount,
                                                  tx_hash,
-                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::test::anvil::kSepoliaChainId, 0u,
                                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                                  dest_addr,
                                                  kMintTimeout ) );
@@ -526,7 +526,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     EXPECT_OUTCOME_TRUE( first_result,
                          s_nodes[0]->MintTokens( kMintAmount,
                                                  tx_hash,
-                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::test::anvil::kSepoliaChainId, 0u,
                                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                                  dest_addr,
                                                  kReplayTimeout ) );
@@ -544,7 +544,7 @@ TEST_F( BridgeAnvilE2ETest, AnvilReplayRejection )
     // Second mint with the SAME tx hash must be rejected by the dedup cache.
     auto second_result = s_nodes[0]->MintTokens( kMintAmount,
                                                  tx_hash,
-                                                 sgns::test::anvil::kSepoliaChainId,
+                                                 sgns::test::anvil::kSepoliaChainId, 0u,
                                                  sgns::TokenID::FromBytes( { 0x00 } ),
                                                  dest_addr,
                                                  kReplayTimeout );

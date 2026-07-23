@@ -654,9 +654,18 @@ namespace sgns
         return transfer_transaction->GetHash();
     }
 
+    std::string TransactionManager::MakeBridgeExecutedKey( const std::string &chainid,
+                                                            const std::string &transaction_hash,
+                                                            uint32_t           receipt_log_index )
+    {
+        return std::string( kBridgeExecutedPrefix ) + chainid + std::string( kBridgeKeySeparator )
+             + transaction_hash + std::string( kBridgeKeySeparator ) + std::to_string( receipt_log_index );
+    }
+
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
+                                                                uint32_t    receipt_log_index,
                                                                 TokenID     tokenid,
                                                                 std::string destination )
     {
@@ -683,37 +692,41 @@ namespace sgns
         {
             burn_tx_hash   = parsed.value();
             auto &utxo_mgr = account_m->GetUTXOManager();
-            if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) || utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
+            if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index )
+                 || utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
             {
                 TransactionManagerLogger()->warn(
-                    "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={}",
+                    "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={} receipt_index={}",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     __func__,
                     chainid,
-                    transaction_hash );
+                    transaction_hash,
+                    receipt_log_index );
                 return outcome::failure( std::errc::already_connected );
             }
         }
 
         // Persistence check — reject if this burn was already executed (survives restart)
-        const std::string persistence_key = chainid + std::string( kBridgeKeySeparator ) + transaction_hash;
+        const std::string persistence_key =
+            MakeBridgeExecutedKey( chainid, transaction_hash, receipt_log_index );
         {
             auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
             if ( datastore )
             {
                 crdt::GlobalDB::Buffer key_buffer;
-                key_buffer.put( std::string( kBridgeExecutedPrefix ) + persistence_key );
+                key_buffer.put( persistence_key );
                 auto existing = datastore->get( key_buffer );
                 if ( existing.has_value() )
                 {
                     TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={}",
+                        "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={} receipt_index={}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
                         __func__,
                         chainid,
-                        transaction_hash );
+                        transaction_hash,
+                        receipt_log_index );
                     return outcome::failure( std::errc::already_connected );
                 }
             }
@@ -736,14 +749,16 @@ namespace sgns
         // D-18/D-19: Insert burn UTXO, then reserve via ReserveUTXOs (sets RESERVED state)
         if ( !source_hash.has_error() )
         {
-            GeniusUTXO burn_utxo( source_hash.value(), 0, amount, tokenid, account_m->GetAddress() );
+            GeniusUTXO burn_utxo(
+                source_hash.value(), receipt_log_index, amount, tokenid, account_m->GetAddress() );
             account_m->GetUTXOManager().PutUTXO( burn_utxo,
                                                  account_m->GetAddress(),
                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
         }
 
         std::vector<GeniusUTXO> source_utxos;
-        source_utxos.emplace_back( source_input_hash, 0, amount, tokenid, account_m->GetAddress() );
+        source_utxos.emplace_back(
+            source_input_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
 
         // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
@@ -4726,14 +4741,27 @@ namespace sgns
                     auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
                     if ( mint_tx )
                     {
-                        const std::string reservation_key = mint_tx->GetChainId() + std::string( kBridgeKeySeparator ) +
-                                                            tx->dag_st.uncle_hash();
+                        const auto &mint_inputs = mint_tx->GetUTXOParameters().first;
+                        if ( mint_inputs.empty() )
+                        {
+                            TransactionManagerLogger()->error(
+                                "[{} - full: {}] {}: Cannot persist executed bridge mint {} without source input",
+                                account_m->GetAddress().substr( 0, 8 ),
+                                full_node_m,
+                                __func__,
+                                tx->GetHash() );
+                            break;
+                        }
+                        const std::string reservation_key = MakeBridgeExecutedKey(
+                            mint_tx->GetChainId(),
+                            tx->dag_st.uncle_hash(),
+                            mint_inputs.front().output_idx_ );
                         // Persist executed state to RocksDB — survives restart
                         auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
                         if ( datastore )
                         {
                             crdt::GlobalDB::Buffer key_buffer;
-                            key_buffer.put( std::string( kBridgeExecutedPrefix ) + reservation_key );
+                            key_buffer.put( reservation_key );
                             crdt::GlobalDB::Buffer value_buffer;
                             value_buffer.put( "1" );
                             auto put_result = datastore->put( key_buffer, value_buffer );

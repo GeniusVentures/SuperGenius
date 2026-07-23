@@ -159,6 +159,7 @@ namespace sgns
          * @param[in] amount  Amount to mint.
          * @param[in] transaction_hash  Source-chain transaction hash used as the previous hash in the DAG.
          * @param[in] chainid  Originating chain identifier.
+         * @param[in] receipt_log_index Absolute zero-based position in the finalized receipt.
          * @param[in] tokenid  Token to mint.
          * @param[in] destination  Recipient address; defaults to the local account address when empty.
          * @return Transaction hash on success.
@@ -166,8 +167,14 @@ namespace sgns
         outcome::result<std::string> MintFunds( uint64_t    amount,
                                                 std::string transaction_hash,
                                                 std::string chainid,
+                                                uint32_t    receipt_log_index,
                                                 TokenID     tokenid,
                                                 std::string destination );
+
+        /// @brief Builds the durable identity key for one canonical external burn.
+        static std::string MakeBridgeExecutedKey( const std::string &chainid,
+                                                  const std::string &transaction_hash,
+                                                  uint32_t           receipt_log_index );
 
         /**
          * @brief Creates and enqueues a one-time migration mint transaction.

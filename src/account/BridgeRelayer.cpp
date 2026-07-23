@@ -321,6 +321,13 @@ namespace sgns
         auto                  &burn        = parsed.value();
         static constexpr size_t kSrcChainIndex = 3;
 
+        if ( !notification.event.receipt_log_index.has_value() )
+        {
+            logger_->error( "BridgeRelayer: rejecting burn without receipt-local index for chain {}", chain_name );
+            return;
+        }
+        const uint32_t receipt_log_index = *notification.event.receipt_log_index;
+
         // Transaction hash from the event
         const std::string tx_hash  = rlp::base::parse::hex_array_string( notification.event.tx_hash );
 
@@ -328,26 +335,35 @@ namespace sgns
         const std::string chain_id = std::to_string(
             static_cast<uint64_t>( std::get<intx::uint256>( notification.values[kSrcChainIndex] ) ) );
 
-        logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} token={} amount={} dest={}",
+        logger_->info( "BridgeRelayer: burn detected chain={} chain_name={} tx={} receipt_index={} token={} amount={} dest={}",
                        chain_id,
                        chain_name,
                        tx_hash.substr( 0, 16 ),
+                       receipt_log_index,
                        burn.token_id.ToHex().substr( 0, 16 ),
                        burn.amount,
                        burn.destination.substr( 0, 16 ) );
 
         auto strong_tx_manager = tx_manager_.lock();
-        if ( !strong_tx_manager )
+        if ( !mint_funds_override_ && !strong_tx_manager )
         {
             logger_->error( "BridgeRelayer: no TransactionManager available for chain {}", chain_name );
             return;
         }
 
-        auto result = strong_tx_manager->MintFunds( burn.amount,
-                                                     tx_hash,
-                                                     chain_id,
-                                                     burn.token_id,
-                                                     burn.destination );
+        auto result = mint_funds_override_
+                        ? mint_funds_override_( burn.amount,
+                                                tx_hash,
+                                                chain_id,
+                                                receipt_log_index,
+                                                burn.token_id,
+                                                burn.destination )
+                        : strong_tx_manager->MintFunds( burn.amount,
+                                                        tx_hash,
+                                                        chain_id,
+                                                        receipt_log_index,
+                                                        burn.token_id,
+                                                        burn.destination );
         if ( result.has_error() )
         {
             if ( result.error() == std::errc::already_connected )

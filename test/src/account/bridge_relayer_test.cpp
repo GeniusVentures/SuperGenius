@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <functional>
 #include <string>
 #include <unordered_map>
 
@@ -51,6 +52,18 @@ public:
         }
         return BridgeRelayer( std::weak_ptr<TransactionManager>(), nullptr, std::move( logger ) );
     }
+
+    static void SetMintFundsOverride(
+        BridgeRelayer &relayer,
+        std::function<outcome::result<std::string>( uint64_t,
+                                                    const std::string &,
+                                                    const std::string &,
+                                                    uint32_t,
+                                                    TokenID,
+                                                    const std::string & )> override_fn )
+    {
+        relayer.mint_funds_override_ = std::move( override_fn );
+    }
 };
 
 // ─── Test Helpers ───────────────────────────────────────────────────────────
@@ -62,7 +75,8 @@ eth::WatchEventNotification MakeBurnNotification( const std::string &sender_hex,
                                                   uint64_t           src_chain_id,
                                                   uint64_t           dest_chain_id,
                                                   const std::string &tx_hash_hex,
-                                                  const std::string &sgns_dest_hex )
+                                                  const std::string &sgns_dest_hex,
+                                                  uint32_t           receipt_log_index = 0 )
 {
     eth::WatchEventNotification notification;
 
@@ -72,6 +86,7 @@ eth::WatchEventNotification MakeBurnNotification( const std::string &sender_hex,
 
     notification.event.tx_hash = {};
     rlp::base::parse::hex_array( tx_hash_hex, notification.event.tx_hash );
+    notification.event.receipt_log_index = receipt_log_index;
 
     // ABI-decoded values:
     //   values[0]: sender (address)
@@ -109,7 +124,8 @@ eth::WatchEventNotification MakeV2BurnNotification( const std::string           
                                                     uint64_t                       dest_chain_id,
                                                     const std::string             &tx_hash_hex,
                                                     const std::array<uint8_t, 32> &x_only_bytes,
-                                                    bool                           destination_y_odd )
+                                                    bool                           destination_y_odd,
+                                                    uint32_t                       receipt_log_index = 0 )
 {
     eth::WatchEventNotification notification;
 
@@ -118,6 +134,7 @@ eth::WatchEventNotification MakeV2BurnNotification( const std::string           
 
     notification.event.tx_hash = {};
     rlp::base::parse::hex_array( tx_hash_hex, notification.event.tx_hash );
+    notification.event.receipt_log_index = receipt_log_index;
 
     // ABI-decoded values for BridgeOutInitiated:
     //   values[0]: sender (address)
@@ -190,6 +207,73 @@ TEST( BridgeRelayerTest, ExtractsBurnDetailsFromNotification )
 
     // Verify tx_hash is populated
     EXPECT_FALSE( notification.event.tx_hash.empty() );
+}
+
+TEST( BridgeRelayerTest, DispatchesDistinctReceiptOrdinalsWithoutDefaulting )
+{
+    auto relayer = BridgeRelayerTestAccess::CreateForTest();
+    std::vector<uint32_t> received_indexes;
+    BridgeRelayerTestAccess::SetMintFundsOverride(
+        relayer,
+        [&]( uint64_t,
+             const std::string &,
+             const std::string &,
+             uint32_t receipt_log_index,
+             TokenID,
+             const std::string & ) -> outcome::result<std::string>
+        {
+            received_indexes.push_back( receipt_log_index );
+            return std::string( "minted" );
+        } );
+
+    const auto make_notification = []( uint32_t receipt_log_index )
+    {
+        return MakeBurnNotification(
+            "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+            42,
+            1000000,
+            11155111,
+            8453,
+            "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            kTestSgnsDestination,
+            receipt_log_index );
+    };
+
+    BridgeRelayerTestAccess::OnWatchEvent( relayer, make_notification( 0 ) );
+    BridgeRelayerTestAccess::OnWatchEvent( relayer, make_notification( 2 ) );
+
+    EXPECT_EQ( received_indexes, ( std::vector<uint32_t>{ 0, 2 } ) );
+}
+
+TEST( BridgeRelayerTest, RejectsBurnWithoutReceiptLocalOrdinal )
+{
+    auto relayer = BridgeRelayerTestAccess::CreateForTest();
+    size_t dispatch_count = 0;
+    BridgeRelayerTestAccess::SetMintFundsOverride(
+        relayer,
+        [&]( uint64_t,
+             const std::string &,
+             const std::string &,
+             uint32_t,
+             TokenID,
+             const std::string & ) -> outcome::result<std::string>
+        {
+            ++dispatch_count;
+            return std::string( "minted" );
+        } );
+
+    auto notification = MakeBurnNotification(
+        "d8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+        42,
+        1000000,
+        11155111,
+        8453,
+        "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        kTestSgnsDestination );
+    notification.event.receipt_log_index.reset();
+
+    BridgeRelayerTestAccess::OnWatchEvent( relayer, notification );
+    EXPECT_EQ( dispatch_count, 0u );
 }
 
 TEST( BridgeRelayerTest, TokenIdConversionRoundTrip )
