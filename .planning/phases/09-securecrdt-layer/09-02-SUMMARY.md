@@ -119,7 +119,21 @@ As a substitute, this plan's code was verified by:
 
 This does **not** confirm `cmake --build . --target securecrdt` or `ctest -R securecrdt` actually succeed inside a real build -- that remains to be confirmed the next time a full project build is run (e.g. by the orchestrator's follow-up, as happened for Plan 01). Flagging this explicitly per the plan's `<verify>` requirement so it is not silently assumed green.
 
-## Self-Check: PENDING (build/test verification deferred to orchestrator follow-up, per Plan 01 precedent)
+## Build/Test Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`). This surfaced **two real bugs** the executor's standalone cross-reference could not have caught:
+
+1. **Segfault in `MakeSecureCrdtTestNode`**: constructing a `GossipPubSub`/libp2p `Host` before configuring libp2p's soralog logging system crashes inside the Noise security adaptor's DI injector (`createLogger()` called unconditionally during construction). Fixed by adding a one-time `EnsureLoggingSystemConfigured()` call to `securecrdt_test_node.hpp`, mirroring `test/src/crdt/globaldb_integration.cpp`'s `SetUpTestSuite` sequence. Commit `ba02fb58`.
+2. **`LastKeySegment()` extracted the wrong path segment**: `GlobalDB::QueryKeyValues(..., QUERY_VALUESUFFIX)` returns entries keyed by the *raw datastore key* (`/crdt/s/k/<base>/sig/<address>/v`), not the logical CRDT key (`/base/sig/<address>`) — the original code took the *last* path segment, which was always the fixed `"v"` value-suffix marker, not the signer address. This meant `EvaluateQuorum` always saw 0 valid unique signers regardless of how many real, valid signatures were collected — `ReadIfQuorum` could never report quorum met. Fixed to take the second-to-last segment (the suffix marker is always exactly one path component). Commit `ba02fb58`.
+
+After both fixes:
+- `cmake --build . --target securecrdt_quorum_gate_test securecrdt_propose_sign_quorum_test securecrdt_quorum_contract_e2e_test` — **succeeded**.
+- `ctest -R securecrdt --output-on-failure` — **5/5 tests passed** (all of Plan 01 + Plan 02's tests, including the malformed-payload symmetry test and the end-to-end `ReadIfQuorum`→`Verify`/`Apply` handoff-contract test).
+- Full project build + full `ctest`: 77/79 passed. The 2 failures (`transaction_sync_test`, `multi_account_test`) are pre-existing/flaky and unrelated to this phase — `multi_account_test` passes 4/4 in isolation (full-suite resource contention), and `transaction_sync_test` traces to unrelated bridge-relayer commits (same finding as Phase 8's verification).
+
+SCRDT-03 and SCRDT-04 (and D-03/D-04's safety properties) are now fully proven by actual compiled/executed tests against real signature verification and real CRDT storage — not just structural/cross-reference verification.
+
+## Self-Check: PASSED (build+test verified by orchestrator follow-up; two real bugs found and fixed)
 
 - FOUND: src/securecrdt/SecureCrdt.hpp
 - FOUND: src/securecrdt/SecureCrdt.cpp
