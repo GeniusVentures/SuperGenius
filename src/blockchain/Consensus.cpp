@@ -2372,7 +2372,7 @@ namespace sgns
                 {
                     return strong->FilterCertificateDelta( delta );
                 }
-                return false;
+                return crdt::DeltaFilterResult::Reject();
             } );
 
         const bool filter_registered = db_->RegisterElementFilter(
@@ -2401,7 +2401,7 @@ namespace sgns
         return delta_filter_registered && filter_registered && callback_registered;
     }
 
-    bool ConsensusManager::FilterCertificateDelta( const crdt::pb::Delta &delta )
+    crdt::DeltaFilterResult ConsensusManager::FilterCertificateDelta( const crdt::pb::Delta &delta )
     {
         static const std::regex namespace_regex{ std::string( CERT_NAMESPACE_KEY_PATTERN ) };
         static const std::regex slot_regex{ std::string( CERT_SLOT_KEY_PATTERN ) };
@@ -2415,7 +2415,7 @@ namespace sgns
                                                     __func__,
                                                     tombstone.key(),
                                                     tombstone.id() );
-                return false;
+                return crdt::DeltaFilterResult::Reject();
             }
         }
 
@@ -2434,7 +2434,7 @@ namespace sgns
                 if ( slot_element )
                 {
                     ConsensusManagerLogger()->critical( "{}: duplicate slot record in certificate delta", __func__ );
-                    return false;
+                    return crdt::DeltaFilterResult::Reject();
                 }
                 slot_element = &element;
             }
@@ -2443,7 +2443,7 @@ namespace sgns
                 if ( index_element )
                 {
                     ConsensusManagerLogger()->critical( "{}: duplicate index record in certificate delta", __func__ );
-                    return false;
+                    return crdt::DeltaFilterResult::Reject();
                 }
                 index_element = &element;
             }
@@ -2452,7 +2452,7 @@ namespace sgns
                 ConsensusManagerLogger()->critical( "{}: legacy or malformed certificate key={}",
                                                     __func__,
                                                     element.key() );
-                return false;
+                return crdt::DeltaFilterResult::Reject();
             }
         }
 
@@ -2464,7 +2464,7 @@ namespace sgns
                 certificate_count,
                 slot_element != nullptr,
                 index_element != nullptr );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
 
         Certificate certificate;
@@ -2473,18 +2473,52 @@ namespace sgns
             ConsensusManagerLogger()->critical( "{}: invalid certificate payload key={}",
                                                 __func__,
                                                 slot_element->key() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
-        auto normalized = NormalizeCertificate( certificate );
-        if ( normalized.check != Check::Approve ||
-             normalized.deterministic_bytes != slot_element->value() )
+
+        if ( HasUnknownFieldsRecursively( certificate ) || certificate.proposal_id().empty() ||
+             !certificate.has_proposal() )
         {
-            ConsensusManagerLogger()->critical( "{}: noncanonical certificate payload key={}",
-                                                __func__,
-                                                slot_element->key() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
-        certificate = std::move( normalized.certificate );
+        const auto &proposal = certificate.proposal();
+        if ( proposal.proposal_id() != certificate.proposal_id() ||
+             proposal.registry_cid() != certificate.registry_cid() ||
+             proposal.registry_epoch() != certificate.registry_epoch() ||
+             !ValidateSubject( proposal.subject() ) || !CheckProposal( proposal ) ||
+             CreateProposalId( proposal ) != certificate.proposal_id() ||
+             certificate.votes().empty() )
+        {
+            return crdt::DeltaFilterResult::Reject();
+        }
+
+        std::unordered_set<std::string> voters;
+        uint64_t                        max_vote_timestamp = 0;
+        const Vote                     *previous_vote = nullptr;
+        for ( const auto &vote : certificate.votes() )
+        {
+            if ( vote.proposal_id() != certificate.proposal_id() || !CheckVote( vote ) ||
+                 !voters.insert( vote.voter_id() ).second )
+            {
+                return crdt::DeltaFilterResult::Reject();
+            }
+            auto signing_bytes = VoteSigningBytes( vote );
+            if ( signing_bytes.has_error() ||
+                 !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
+            {
+                return crdt::DeltaFilterResult::Reject();
+            }
+            if ( previous_vote && VoterIdBytewiseLess( vote, *previous_vote ) )
+            {
+                return crdt::DeltaFilterResult::Reject();
+            }
+            previous_vote      = &vote;
+            max_vote_timestamp = std::max( max_vote_timestamp, vote.timestamp() );
+        }
+        if ( max_vote_timestamp == 0 || certificate.timestamp() != max_vote_timestamp )
+        {
+            return crdt::DeltaFilterResult::Reject();
+        }
 
         auto slot_result = GetSlotKey( certificate.proposal() );
         auto hash_result = GetSubjectHash( certificate.proposal().subject() );
@@ -2494,7 +2528,7 @@ namespace sgns
             ConsensusManagerLogger()->critical( "{}: certificate pair derivation failed proposal_id={}",
                                                 __func__,
                                                 certificate.proposal_id() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
 
         const auto expected_slot_key = std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value();
@@ -2516,7 +2550,7 @@ namespace sgns
                 slot_element->key(),
                 index_element->key(),
                 index_element->value() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
 
         const auto existing_slot  = db_->Get( { expected_slot_key } );
@@ -2527,7 +2561,7 @@ namespace sgns
                                                 __func__,
                                                 slot_result.value(),
                                                 hash_result.value() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
         if ( existing_slot.has_value() &&
              ( std::string( existing_slot.value().toString() ) != slot_element->value() ||
@@ -2539,10 +2573,29 @@ namespace sgns
                 slot_result.value(),
                 certificate.proposal_id(),
                 hash_result.value() );
-            return false;
+            return crdt::DeltaFilterResult::Reject();
         }
 
-        return true;
+        auto normalized = NormalizeCertificate( certificate );
+        if ( normalized.check == Check::Stalled )
+        {
+            auto dependency = CID::fromString( certificate.registry_cid() );
+            if ( dependency.has_error() )
+            {
+                return crdt::DeltaFilterResult::Reject();
+            }
+            return crdt::DeltaFilterResult::RetryDependency( certificate.registry_cid() );
+        }
+        if ( normalized.check != Check::Approve || normalized.deterministic_bytes != slot_element->value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: noncanonical certificate payload key={}",
+                                                __func__,
+                                                slot_element->key() );
+            return crdt::DeltaFilterResult::Reject();
+        }
+        certificate = std::move( normalized.certificate );
+
+        return crdt::DeltaFilterResult::Approve();
     }
 
     std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(
@@ -2715,12 +2768,24 @@ namespace sgns
         auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
         if ( registry_ret.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: stalled: registry load error={} for registry cid {} proposal_id={}",
-                                             __func__,
-                                             registry_ret.error().message(),
-                                             certificate.registry_cid(),
-                                             certificate.proposal_id() );
-            result.check = Check::Stalled;
+            if ( registry_ret.error() == std::errc::no_such_file_or_directory )
+            {
+                ConsensusManagerLogger()->error(
+                    "{}: stalled: registry missing for registry cid {} proposal_id={}",
+                    __func__,
+                    certificate.registry_cid(),
+                    certificate.proposal_id() );
+                result.check = Check::Stalled;
+            }
+            else
+            {
+                ConsensusManagerLogger()->error(
+                    "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
+                    __func__,
+                    registry_ret.error().message(),
+                    certificate.registry_cid(),
+                    certificate.proposal_id() );
+            }
             return result;
         }
         auto &registry = registry_ret.value();
