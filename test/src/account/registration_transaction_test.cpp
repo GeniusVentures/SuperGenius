@@ -2247,7 +2247,11 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     SGTransaction::DAGStruct dag;
     dag.set_type( "registration" );
     dag.set_source_addr( child_account_->GetAddress() );
-    dag.set_nonce( 0 );
+    dag.set_nonce( 1 );
+    // Nonce > 0 requires previous_hash to resolve to a certified transaction for this same
+    // address (EvaluateTransactionReplayProtection, TransactionManager.cpp:4648-4659) — child_reg
+    // is child_account_'s nonce=0 certified tx, so it's the correct link for this nonce=1 tx.
+    dag.set_previous_hash( child_reg.GetHash() );
     dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
                             std::chrono::system_clock::now().time_since_epoch() )
                             .count() );

@@ -108,6 +108,28 @@ namespace test
 
     void CRDTFixture::SetUpTestSuite()
     {
+        // Defensive cleanup: a prior run's process-exit segfault (a known, pre-existing,
+        // unrelated lifecycle issue) can skip the destructor's fs::remove_all cleanup below,
+        // leaving "CRDT.Datastore.TEST" / "CRDT.Datastore.TEST.unit_N" directories behind.
+        // fixture_counter_ restarts at 0 every process, so a fresh run's unit_N paths can
+        // collide with stale leftovers from a previous crashed run - clear them up front.
+        try
+        {
+            fs::remove_all( basePath );
+            for ( const auto &entry : fs::directory_iterator( fs::current_path() ) )
+            {
+                const auto filename = entry.path().filename().string();
+                if ( filename.rfind( basePath + ".unit_", 0 ) == 0 )
+                {
+                    fs::remove_all( entry.path() );
+                }
+            }
+        }
+        catch ( const fs::filesystem_error &err )
+        {
+            std::cerr << err.what() << std::endl;
+        }
+
         if ( !logging_system_ )
         {
             logging_system_ = std::make_shared<soralog::LoggingSystem>(
