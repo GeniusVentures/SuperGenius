@@ -67,7 +67,7 @@ namespace sgns::securecrdt
          *        base_key element (DeserializeFromBytes + Verify) BEFORE ever
          *        calling Put -- closes the local/remote asymmetry gap (T-09-10).
          *        Proposing a value has no signature requirement by itself; it
-         *        only becomes trusted once quorum-worth of sig/* entries exist
+         *        only becomes trusted once quorum-worth of sig-entries exist
          *        (D-04), so this is not a bypass of D-03.
          * @param[in] base_key Registered CRDT key to propose a value for.
          * @param[in] payload Raw payload bytes to persist.

@@ -16,7 +16,11 @@
 #include <gtest/gtest.h>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
+#include <libp2p/log/configurator.hpp>
+#include <libp2p/log/logger.hpp>
 #include <memory>
+#include <mutex>
+#include <soralog/impl/configurator_from_yaml.hpp>
 #include <string>
 #include <thread>
 
@@ -29,6 +33,44 @@
 
 namespace sgns::test::securecrdt
 {
+    /// @brief Configures libp2p's soralog logging system exactly once per
+    ///        process. Constructing a GossipPubSub/libp2p Host before this
+    ///        runs segfaults inside libp2p's Noise security adaptor, which
+    ///        unconditionally calls createLogger() during DI injector
+    ///        construction (see test/src/crdt/globaldb_integration.cpp's
+    ///        SetUpTestSuite for the reference sequence this mirrors).
+    inline void EnsureLoggingSystemConfigured()
+    {
+        static std::once_flag once;
+        std::call_once( once,
+                        []()
+                        {
+                            static const std::string kConfig = R"(
+sinks:
+  - name: console
+    type: console
+    color: true
+groups:
+  - name: securecrdt_test
+    sink: console
+    level: error
+    children:
+      - name: libp2p
+      - name: gossip
+      - name: debug
+)";
+                            auto loggerConfigurator = std::make_shared<libp2p::log::Configurator>();
+                            auto configFromYAML =
+                                std::make_shared<soralog::ConfiguratorFromYAML>( loggerConfigurator, kConfig );
+                            auto loggingSystem = std::make_shared<soralog::LoggingSystem>( configFromYAML );
+                            const auto confResult = loggingSystem->configure();
+                            if ( confResult.has_error )
+                            {
+                                throw std::runtime_error( "Could not configure logger for securecrdt tests" );
+                            }
+                            libp2p::log::setLoggingSystem( loggingSystem );
+                        } );
+    }
     /// @brief One unconnected single-node GlobalDB instance for SecureCrdt tests.
     struct SecureCrdtTestNode
     {
@@ -67,6 +109,7 @@ namespace sgns::test::securecrdt
     ///        currently-running gtest test case.
     inline std::unique_ptr<SecureCrdtTestNode> MakeSecureCrdtTestNode( const std::string &dbName )
     {
+        EnsureLoggingSystemConfigured();
         const std::string testName   = ::testing::UnitTest::GetInstance()->current_test_info()->name();
         const std::string binaryPath = boost::dll::program_location().parent_path().string();
         const std::string basePath   = binaryPath + "/" + dbName + "_" + testName;

@@ -30,17 +30,22 @@ namespace sgns::securecrdt
 {
     namespace
     {
-        /// @brief Extracts the trailing path segment (signer address) of a
-        ///        `sig/<addr>` CRDT key, per HierarchicalKey::GetList().
+        /// @brief Extracts the signer address from a raw datastore key returned by
+        ///        GlobalDB::QueryKeyValues(..., QUERY_VALUESUFFIX). QueryElements
+        ///        returns entries keyed by the RAW datastore key (e.g.
+        ///        "/crdt/s/k/<base>/sig/<address>/v"), not the logical CRDT key
+        ///        ("/<base>/sig/<address>") — the value-suffix marker ("v") is
+        ///        always the last path segment, so the address is the segment
+        ///        immediately preceding it.
         std::string LastKeySegment( const std::string &key )
         {
             sgns::crdt::HierarchicalKey hk( key );
             auto                        list = hk.GetList();
-            if ( list.empty() )
+            if ( list.size() < 2 )
             {
                 return {};
             }
-            return list.back();
+            return list[list.size() - 2];
         }
     } // namespace
 
