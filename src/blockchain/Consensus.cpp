@@ -190,6 +190,14 @@ namespace sgns
             return nullptr;
         }
 
+        if ( !instance->HasCompatibleCertificateState() )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: refusing consensus startup because certificate state is incompatible with protocol v2.0",
+                __func__ );
+            return nullptr;
+        }
+
         instance->consensus_subs_future_ = instance->pubsub_->Subscribe(
             instance->consensus_messages_topic_,
             [weakptr( std::weak_ptr<ConsensusManager>( instance ) )](
@@ -3212,6 +3220,48 @@ namespace sgns
             }
             CertificateReceived( { entry.key, value.value() }, std::string{} );
         }
+    }
+
+    bool ConsensusManager::HasCompatibleCertificateState() const
+    {
+        static const std::regex slot_regex{ std::string( CERT_SLOT_KEY_PATTERN ) };
+        static const std::regex index_regex{ std::string( CERT_TX_INDEX_KEY_PATTERN ) };
+
+        auto certificate_entries = db_->QueryKeyValues( CERTIFICATE_BASE_PATH_KEY );
+        if ( certificate_entries.has_error() )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: unable to inspect certificate state for protocol v2.0 compatibility error={}",
+                __func__,
+                certificate_entries.error().message() );
+            return false;
+        }
+
+        for ( const auto &[stored_key, unused_value] : certificate_entries.value() )
+        {
+            (void) unused_value;
+            auto key_result = db_->KeyToString( stored_key );
+            if ( key_result.has_error() )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: unable to decode certificate-state key for protocol v2.0 compatibility error={}",
+                    __func__,
+                    key_result.error().message() );
+                return false;
+            }
+
+            const auto &key = key_result.value();
+            if ( !std::regex_match( key, slot_regex ) && !std::regex_match( key, index_regex ) )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: incompatible legacy or malformed certificate state for protocol v2.0 key={}; "
+                    "migration and dual-read are not supported",
+                    __func__,
+                    key );
+                return false;
+            }
+        }
+        return true;
     }
 
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(

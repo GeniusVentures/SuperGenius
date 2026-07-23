@@ -205,6 +205,15 @@ namespace sgns::test
             index_element->set_value( slot );
             return delta;
         }
+
+        outcome::result<CID> PutRawCertificateState( const std::shared_ptr<crdt::GlobalDB> &db,
+                                                      const std::string                     &key,
+                                                      std::string_view                       value )
+        {
+            crdt::GlobalDB::Buffer buffer;
+            buffer.put( value );
+            return db->Put( { key }, buffer, {} );
+        }
     } // namespace
 
     class ConsensusCertificateStoreTest : public ::test::CRDTFixture
@@ -382,6 +391,50 @@ namespace sgns::test
         tampered.mutable_votes( 0 )->set_signature( "invalid" );
         auto invalid_signature = MakeCertificatePairDelta( tampered );
         EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, invalid_signature ) );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, LegacyCertificateStateRejectsStartupBeforeSideEffects )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( account && registry );
+
+        const auto legacy_key = "/cert/" + std::string( kTx );
+        ASSERT_TRUE( PutRawCertificateState( db_, legacy_key, "legacy-certificate" ).has_value() );
+        ASSERT_TRUE( db_->Get( { legacy_key } ).has_value() );
+
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        EXPECT_FALSE( manager );
+
+        // A failed startup must not have installed the v2 pair filter. This
+        // post-failure probe is deliberately partial and remains locally visible.
+        const auto probe_key = "/cert/v2/slot/" + std::string( kSlot );
+        ASSERT_TRUE( PutRawCertificateState( db_, probe_key, "startup-side-effect-probe" ).has_value() );
+        EXPECT_TRUE( db_->Get( { probe_key } ).has_value() );
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, StartupAcceptsEmptyCertificateState )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, StartupAcceptsV2OnlyCertificateState )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( account && registry );
+
+        ASSERT_TRUE(
+            PutRawCertificateState( db_, "/cert/v2/slot/" + std::string( kSlot ), "certificate" ).has_value() );
+        ASSERT_TRUE( PutRawCertificateState( db_, "/cert/v2/tx/" + std::string( kTx ), kSlot ).has_value() );
+
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( manager );
         manager->Close();
     }
 } // namespace sgns::test

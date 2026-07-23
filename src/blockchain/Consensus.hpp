@@ -803,6 +803,10 @@ namespace sgns
          */
         void RecoverPendingCertificateWork();
         /**
+         * @brief Rejects incompatible certificate state before startup side effects.
+         */
+        bool HasCompatibleCertificateState() const;
+        /**
          * @brief Validates a certificate semantic and quorum constraints.
          * @param[in] certificate Certificate to validate.
          * @return Validation result enum.
