@@ -113,6 +113,17 @@ namespace sgns
         };
 
         /**
+         * @brief Typed failures for the v2 authoritative certificate store.
+         */
+        enum class CertificateStoreError
+        {
+            NotFound = 0,
+            IntegrityError,
+            Conflict,
+            InvalidCertificate,
+        };
+
+        /**
          * @brief Local-only dependency key for deferred subject validation.
          */
         struct PendingDependencyKey
@@ -533,6 +544,7 @@ namespace sgns
          * @return Certificate when present, or an error.
          */
         outcome::result<Certificate> GetCertificateBySubjectHash( const std::string &subject_hash ) const;
+
         /**
          * @brief Checks whether a certificate exists for a subject hash.
          * @param[in] subject_hash Subject hash key.
@@ -575,7 +587,11 @@ namespace sgns
         static constexpr std::string_view CONSENSUS_CHANNEL_PREFIX =
             "consensus-channel-"; ///< Prefix for pubsub consensus channels.
         static constexpr std::string_view CERTIFICATE_BASE_PATH_KEY =
-            "/cert/"; ///< Datastore key prefix for certificates.
+            "/cert/"; ///< Datastore root used for compatibility checks.
+        static constexpr std::string_view CERTIFICATE_SLOT_BASE_PATH_KEY =
+            "/cert/v2/slot/"; ///< Authoritative v2 slot certificate namespace.
+        static constexpr std::string_view CERTIFICATE_TX_INDEX_BASE_PATH_KEY =
+            "/cert/v2/tx/"; ///< Winning transaction hash secondary index namespace.
         static constexpr std::chrono::milliseconds DEFAULT_TIMESTAMP_WINDOW = std::chrono::minutes(
             5 ); ///< Default timestamp acceptance window.
         static constexpr std::chrono::milliseconds DEFAULT_ROUND_DURATION = std::chrono::milliseconds(
@@ -584,7 +600,12 @@ namespace sgns
             250 ); ///< Default round skew tolerance.
         static constexpr uint64_t NO_ROUND =
             std::numeric_limits<uint64_t>::max();                             ///< Sentinel for uninitialized round.
-        static constexpr std::string_view CERT_KEY_PATTERN = "^/?cert/[^/]+"; ///< Regex for certificate CRDT keys.
+        static constexpr std::string_view CERT_SLOT_KEY_PATTERN =
+            "^/?cert/v2/slot/[0-9a-f]{64}$"; ///< Exact authoritative slot key regex.
+        static constexpr std::string_view CERT_TX_INDEX_KEY_PATTERN =
+            "^/?cert/v2/tx/[0-9a-f]{64}$"; ///< Exact winning transaction index regex.
+        static constexpr std::string_view CERT_V2_KEY_PATTERN =
+            "^/?cert/v2/(slot|tx)/.*$"; ///< Broad v2 routing regex used by pair validation.
 
         /**
          * @brief Runtime state tracked for one proposal.
@@ -762,6 +783,10 @@ namespace sgns
          */
         bool RegisterCertificateFilter();
         /**
+         * @brief Validates a complete incoming v2 certificate/index delta.
+         */
+        bool FilterCertificateDelta( const crdt::pb::Delta &delta );
+        /**
          * @brief Filters CRDT entries to certificate payloads.
          * @param[in] element CRDT element candidate.
          * @return Filtered element vector, or `std::nullopt` when rejected.
@@ -868,14 +893,17 @@ namespace sgns
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
         std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
-        bool                      certificate_filter_registered_   = false; ///< Owns the CRDT certificate filter.
-        bool                      certificate_callback_registered_ = false; ///< Owns the CRDT certificate callback.
-        std::atomic<bool>         stop_timer_{ false };                     ///< Signals the round timer thread to stop.
+        bool certificate_delta_filter_registered_ = false; ///< Owns the CRDT certificate delta filter.
+        bool certificate_filter_registered_       = false; ///< Owns the CRDT certificate element filter.
+        bool certificate_callback_registered_     = false; ///< Owns the CRDT certificate callback.
+        std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
         std::thread               round_timer_;                   ///< Background thread driving round-based retries.
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, ConsensusManager::CertificateStoreError );
 
 #endif // CONSENSUS_MANAGER_HPP

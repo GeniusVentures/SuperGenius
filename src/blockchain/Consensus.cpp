@@ -9,12 +9,15 @@
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <regex>
 #include <set>
 #include <system_error>
 #include <boost/format.hpp>
 
 #include <gsl/span>
 #include <utility>
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
 
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
@@ -22,10 +25,53 @@
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, error )
+{
+    using Error = sgns::ConsensusManager::CertificateStoreError;
+    switch ( error )
+    {
+        case Error::NotFound:
+            return "Certificate record not found";
+        case Error::IntegrityError:
+            return "Certificate store integrity error";
+        case Error::Conflict:
+            return "Certificate store conflict";
+        case Error::InvalidCertificate:
+            return "Invalid certificate";
+    }
+    return "Unknown certificate store error";
+}
+
 namespace sgns
 {
     namespace
     {
+        bool IsCanonicalHash( std::string_view value )
+        {
+            return value.size() == 64 &&
+                   std::all_of( value.begin(),
+                                value.end(),
+                                []( unsigned char c )
+                                { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ); } );
+        }
+
+        outcome::result<std::string> SerializeCertificateDeterministically(
+            const ConsensusManager::Certificate &certificate )
+        {
+            {
+                std::string serialized( certificate.ByteSizeLong(), '\0' );
+                google::protobuf::io::ArrayOutputStream output( serialized.data(),
+                                                                static_cast<int>( serialized.size() ) );
+                google::protobuf::io::CodedOutputStream coded_output( &output );
+                coded_output.SetSerializationDeterministic( true );
+                if ( !certificate.SerializeToCodedStream( &coded_output ) || coded_output.HadError() )
+                {
+                    return outcome::failure( ConsensusManager::CertificateStoreError::InvalidCertificate );
+                }
+                return serialized;
+            }
+        }
+
         bool IsPublicChainMintChainId( std::string_view chain_id )
         {
             if ( chain_id.empty() )
@@ -207,18 +253,22 @@ namespace sgns
         // before a replacement ConsensusManager registers the same pattern.
         // The one-shot guard also prevents a delayed destructor from removing
         // registrations that belong to the replacement manager.
-        const std::string pattern = std::string( CERT_KEY_PATTERN );
         if ( db_ )
         {
             if ( certificate_callback_registered_ )
             {
-                db_->UnregisterNewElementCallback( pattern );
+                db_->UnregisterNewElementCallback( std::string( CERT_SLOT_KEY_PATTERN ) );
                 certificate_callback_registered_ = false;
             }
             if ( certificate_filter_registered_ )
             {
-                db_->UnregisterElementFilter( pattern );
+                db_->UnregisterElementFilter( std::string( CERT_SLOT_KEY_PATTERN ) );
                 certificate_filter_registered_ = false;
+            }
+            if ( certificate_delta_filter_registered_ )
+            {
+                db_->UnregisterDeltaFilter( std::string( CERT_V2_KEY_PATTERN ) );
+                certificate_delta_filter_registered_ = false;
             }
         }
 
@@ -1303,6 +1353,8 @@ namespace sgns
         uint64_t                        total_weight    = ValidatorRegistry::TotalWeight( registry );
         uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
+        std::vector<Vote>               verified_votes;
+        verified_votes.reserve( votes.size() );
 
         for ( const auto &vote : votes )
         {
@@ -1347,6 +1399,7 @@ namespace sgns
                                              GetPrintableSubjectHash( proposal.subject() ),
                                              vote.voter_id().substr( 0, 8 ),
                                              vote.approve() );
+            verified_votes.push_back( vote );
             if ( vote.approve() )
             {
                 ConsensusManagerLogger()->debug( "{}: Adding weight for hash {}: voter_id={} weight={}",
@@ -1367,7 +1420,7 @@ namespace sgns
         // single-pool IsQuorum result; sig verification stays in this loop.
         // Both TallyVotes (certificate creation) and the incremental HandleVote
         // tally agree on bridge-mint quorum via this single helper (Pitfall 1).
-        auto quorum_result = EvaluateQuorum( proposal, votes, registry );
+        auto quorum_result = EvaluateQuorum( proposal, verified_votes, registry );
         if ( quorum_result.has_error() )
         {
             return quorum_result.error();
@@ -1500,6 +1553,14 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
+        if ( ValidateCertificate( certificate ) != Check::Approve )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected invalid certificate proposal_id={}",
+                                             __func__,
+                                             certificate.proposal_id() );
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
+        }
+
         auto slot_result = GetSlotKey( certificate.proposal() );
         if ( slot_result.has_error() )
         {
@@ -1507,15 +1568,6 @@ namespace sgns
                                              __func__,
                                              certificate.proposal_id().substr( 0, 8 ) );
             return outcome::failure( slot_result.error() );
-        }
-
-        ConsensusMessage message;
-        *message.mutable_certificate() = certificate;
-        auto result                    = Publish( message );
-        if ( result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: publish error={}", __func__, result.error().message() );
-            return result;
         }
 
         auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
@@ -1528,19 +1580,87 @@ namespace sgns
             return outcome::failure( subject_hash_result.error() );
         }
 
-        std::string serialized;
-        if ( !certificate.SerializeToString( &serialized ) )
+        const auto &slot_id      = slot_result.value();
+        const auto &subject_hash = subject_hash_result.value();
+        if ( !IsCanonicalHash( slot_id ) || !IsCanonicalHash( subject_hash ) )
         {
-            ConsensusManagerLogger()->error( "{}: failed: certificate serialize error", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
+            ConsensusManagerLogger()->error( "{}: rejected noncanonical certificate keys slot={} winner={}",
+                                             __func__,
+                                             slot_id,
+                                             subject_hash );
+            return outcome::failure( CertificateStoreError::IntegrityError );
         }
 
-        const auto             key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash_result.value();
-        crdt::HierarchicalKey  cert_key( key );
+        BOOST_OUTCOME_TRY( auto serialized, SerializeCertificateDeterministically( certificate ) );
+
+        const auto slot_key_string = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
+        const auto index_key_string = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
+        const auto existing_slot    = db_->Get( { slot_key_string } );
+        const auto existing_index   = db_->Get( { index_key_string } );
+
+        if ( existing_slot.has_value() )
+        {
+            const auto existing_bytes = std::string( existing_slot.value().toString() );
+            if ( existing_bytes == serialized )
+            {
+                if ( !existing_index.has_value() ||
+                     std::string( existing_index.value().toString() ) != slot_id )
+                {
+                    ConsensusManagerLogger()->error(
+                        "{}: integrity failure for replay slot={} proposal_id={} winner={}: index missing or mismatched",
+                        __func__,
+                        slot_id,
+                        certificate.proposal_id(),
+                        subject_hash );
+                    return outcome::failure( CertificateStoreError::IntegrityError );
+                }
+                ConsensusManagerLogger()->debug( "{}: idempotent certificate replay slot={} proposal_id={}",
+                                                 __func__,
+                                                 slot_id,
+                                                 certificate.proposal_id() );
+                return outcome::success();
+            }
+
+            Certificate existing_certificate;
+            const bool  parsed = existing_certificate.ParseFromString( existing_bytes );
+            ConsensusManagerLogger()->critical(
+                "{}: certificate conflict slot={} existing_proposal_id={} incoming_proposal_id={} "
+                "existing_winner={} incoming_winner={}",
+                __func__,
+                slot_id,
+                parsed ? existing_certificate.proposal_id() : "<invalid>",
+                certificate.proposal_id(),
+                parsed && GetSubjectHash( existing_certificate.proposal().subject() ).has_value()
+                    ? GetSubjectHash( existing_certificate.proposal().subject() ).value()
+                    : "<invalid>",
+                subject_hash );
+            return outcome::failure( CertificateStoreError::Conflict );
+        }
+
+        if ( existing_index.has_value() )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: certificate index conflict slot={} proposal_id={} winner={} existing_target={}",
+                __func__,
+                slot_id,
+                certificate.proposal_id(),
+                subject_hash,
+                std::string( existing_index.value().toString() ) );
+            return outcome::failure( std::string( existing_index.value().toString() ) == slot_id
+                                         ? CertificateStoreError::IntegrityError
+                                         : CertificateStoreError::Conflict );
+        }
+
+        crdt::HierarchicalKey  cert_key( slot_key_string );
         crdt::GlobalDB::Buffer cert_value;
         cert_value.put( serialized );
+        crdt::HierarchicalKey  index_key( index_key_string );
+        crdt::GlobalDB::Buffer index_value;
+        index_value.put( slot_id );
 
-        auto cert_put = db_->Put( cert_key, cert_value, { consensus_datastore_topic_ } );
+        auto cert_put = db_->Put( { { std::move( cert_key ), std::move( cert_value ) },
+                                    { std::move( index_key ), std::move( index_value ) } },
+                                  { consensus_datastore_topic_ } );
         if ( cert_put.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: cert put for hash {} error={}",
@@ -1550,9 +1670,22 @@ namespace sgns
             return outcome::failure( cert_put.error() );
         }
 
-        ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} and proposal_id={}",
+        ConsensusMessage message;
+        *message.mutable_certificate() = certificate;
+        auto result                    = Publish( message );
+        if ( result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: pair stored but live publish failed slot={} error={}",
+                                             __func__,
+                                             slot_id,
+                                             result.error().message() );
+            return result;
+        }
+
+        ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} slot={} proposal_id={}",
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
+                                         slot_id,
                                          certificate.proposal_id().substr( 0, 8 ) );
         return result;
     }
@@ -1845,11 +1978,20 @@ namespace sgns
 
     bool ConsensusManager::RegisterCertificateFilter()
     {
-        const std::string pattern = std::string( CERT_KEY_PATTERN );
+        auto weak_self = weak_from_this();
+        certificate_delta_filter_registered_ = db_->RegisterDeltaFilter(
+            std::string( CERT_V2_KEY_PATTERN ),
+            [weak_self]( const crdt::pb::Delta &delta )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    return strong->FilterCertificateDelta( delta );
+                }
+                return false;
+            } );
 
-        auto weak_self                 = weak_from_this();
         certificate_filter_registered_ = db_->RegisterElementFilter(
-            pattern,
+            std::string( CERT_SLOT_KEY_PATTERN ),
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
                 if ( auto strong = weak_self.lock() )
@@ -1860,7 +2002,7 @@ namespace sgns
             } );
 
         certificate_callback_registered_ = db_->RegisterNewElementCallback(
-            pattern,
+            std::string( CERT_SLOT_KEY_PATTERN ),
             [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
             {
                 if ( auto strong = weak_self.lock() )
@@ -1871,7 +2013,129 @@ namespace sgns
 
         db_->AddListenTopic( consensus_datastore_topic_ );
 
-        return certificate_filter_registered_ && certificate_callback_registered_;
+        return certificate_delta_filter_registered_ && certificate_filter_registered_ &&
+               certificate_callback_registered_;
+    }
+
+    bool ConsensusManager::FilterCertificateDelta( const crdt::pb::Delta &delta )
+    {
+        static const std::regex v2_regex{ std::string( CERT_V2_KEY_PATTERN ) };
+        static const std::regex slot_regex{ std::string( CERT_SLOT_KEY_PATTERN ) };
+        static const std::regex index_regex{ std::string( CERT_TX_INDEX_KEY_PATTERN ) };
+
+        const crdt::pb::Element *slot_element  = nullptr;
+        const crdt::pb::Element *index_element = nullptr;
+        std::size_t              v2_count      = 0;
+        for ( const auto &element : delta.elements() )
+        {
+            if ( !std::regex_match( element.key(), v2_regex ) )
+            {
+                continue;
+            }
+            ++v2_count;
+            if ( std::regex_match( element.key(), slot_regex ) )
+            {
+                if ( slot_element )
+                {
+                    ConsensusManagerLogger()->critical( "{}: duplicate slot record in certificate delta", __func__ );
+                    return false;
+                }
+                slot_element = &element;
+            }
+            else if ( std::regex_match( element.key(), index_regex ) )
+            {
+                if ( index_element )
+                {
+                    ConsensusManagerLogger()->critical( "{}: duplicate index record in certificate delta", __func__ );
+                    return false;
+                }
+                index_element = &element;
+            }
+            else
+            {
+                ConsensusManagerLogger()->critical( "{}: malformed v2 certificate key={}", __func__, element.key() );
+                return false;
+            }
+        }
+
+        if ( v2_count != 2 || !slot_element || !index_element )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: rejected partial certificate delta elements={} has_slot={} has_index={}",
+                __func__,
+                v2_count,
+                slot_element != nullptr,
+                index_element != nullptr );
+            return false;
+        }
+
+        Certificate certificate;
+        if ( !certificate.ParseFromString( slot_element->value() ) ||
+             ValidateCertificate( certificate ) != Check::Approve )
+        {
+            ConsensusManagerLogger()->critical( "{}: invalid certificate payload key={}",
+                                                __func__,
+                                                slot_element->key() );
+            return false;
+        }
+
+        auto slot_result = GetSlotKey( certificate.proposal() );
+        auto hash_result = GetSubjectHash( certificate.proposal().subject() );
+        if ( slot_result.has_error() || hash_result.has_error() ||
+             !IsCanonicalHash( slot_result.value() ) || !IsCanonicalHash( hash_result.value() ) )
+        {
+            ConsensusManagerLogger()->critical( "{}: certificate pair derivation failed proposal_id={}",
+                                                __func__,
+                                                certificate.proposal_id() );
+            return false;
+        }
+
+        const auto expected_slot_key = std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value();
+        const auto expected_index_key =
+            std::string( CERTIFICATE_TX_INDEX_BASE_PATH_KEY ) + hash_result.value();
+        const bool slot_key_matches = slot_element->key() == expected_slot_key ||
+                                      slot_element->key() == expected_slot_key.substr( 1 );
+        const bool index_key_matches = index_element->key() == expected_index_key ||
+                                       index_element->key() == expected_index_key.substr( 1 );
+        if ( !slot_key_matches || !index_key_matches || index_element->value() != slot_result.value() )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: mismatched certificate pair slot={} proposal_id={} winner={} slot_key={} index_key={} "
+                "index_value={}",
+                __func__,
+                slot_result.value(),
+                certificate.proposal_id(),
+                hash_result.value(),
+                slot_element->key(),
+                index_element->key(),
+                index_element->value() );
+            return false;
+        }
+
+        const auto existing_slot  = db_->Get( { expected_slot_key } );
+        const auto existing_index = db_->Get( { expected_index_key } );
+        if ( existing_slot.has_value() != existing_index.has_value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: partial existing certificate pair slot={} winner={}",
+                                                __func__,
+                                                slot_result.value(),
+                                                hash_result.value() );
+            return false;
+        }
+        if ( existing_slot.has_value() &&
+             ( std::string( existing_slot.value().toString() ) != slot_element->value() ||
+               std::string( existing_index.value().toString() ) != slot_result.value() ) )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: replicated certificate conflict slot={} incoming_proposal_id={} winner={}",
+                __func__,
+                slot_result.value(),
+                certificate.proposal_id(),
+                hash_result.value() );
+            return false;
+        }
+
+        return true;
     }
 
     std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(
@@ -1897,6 +2161,17 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
+        auto slot_result = GetSlotKey( certificate.proposal() );
+        if ( slot_result.has_error() ||
+             element.key() != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: slot key mismatch, rejecting key={} proposal_id={}",
+                                                __func__,
+                                                element.key(),
+                                                certificate.proposal_id() );
+            return std::vector<crdt::pb::Element>{};
+        }
+
         ConsensusManagerLogger()->debug( "{}: certificate accepted key={}", __func__, element.key() );
         return std::nullopt;
     }
@@ -1912,7 +2187,27 @@ namespace sgns
             return;
         }
 
-        const auto certificate_check = ValidateCertificate( certificate );
+        auto slot_result = GetSlotKey( certificate.proposal() );
+        if ( slot_result.has_error() ||
+             key != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: rejecting certificate callback for mismatched slot key={}",
+                                                __func__,
+                                                key );
+            return;
+        }
+
+        auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
+        if ( subject_hash_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
+                                             __func__,
+                                             certificate.proposal_id().substr( 0, 8 ),
+                                             subject_hash_result.error().message() );
+            return;
+        }
+
+        auto certificate_check = ValidateCertificate( certificate );
         if ( certificate_check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
@@ -1931,15 +2226,6 @@ namespace sgns
 
         const auto &proposal            = certificate.proposal();
         const auto &proposal_id         = certificate.proposal_id();
-        auto        subject_hash_result = GetSubjectHash( proposal.subject() );
-        if ( subject_hash_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
-                                             __func__,
-                                             proposal_id.substr( 0, 8 ),
-                                             subject_hash_result.error().message() );
-            return;
-        }
         const auto &subject_hash = subject_hash_result.value();
 
         auto registry_result = registry_->OnFinalizedCertificate( certificate );
@@ -2074,6 +2360,19 @@ namespace sgns
         auto tally = TallyVotes( proposal, votes, registry, certificate.registry_cid() );
         if ( tally.has_error() || !tally.value().has_quorum )
         {
+            return Check::Reject;
+        }
+        if ( certificate.total_weight() != tally.value().total_weight ||
+             certificate.approved_weight() != tally.value().approved_weight )
+        {
+            ConsensusManagerLogger()->error(
+                "{}: rejected: certificate tally mismatch proposal_id={} expected={}/{} actual={}/{}",
+                __func__,
+                certificate.proposal_id(),
+                tally.value().approved_weight,
+                tally.value().total_weight,
+                certificate.approved_weight(),
+                certificate.total_weight() );
             return Check::Reject;
         }
 
@@ -2880,14 +3179,14 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        static std::regex PATTERN{ CERT_KEY_PATTERN.data(), CERT_KEY_PATTERN.size() };
-        auto recovered = certificate_work_journal_->RecoverStaleProcessing( PATTERN, std::chrono::seconds( 15 ) );
+        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_SLOT_KEY_PATTERN,
+                                                                            std::chrono::seconds( 15 ) );
         if ( recovered > 0 )
         {
             ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
         }
 
-        auto       unfinished = certificate_work_journal_->ListUnfinished( PATTERN );
+        auto       unfinished = certificate_work_journal_->ListUnfinished( CERT_SLOT_KEY_PATTERN );
         const auto now_ms     = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
@@ -2918,25 +3217,49 @@ namespace sgns
     outcome::result<ConsensusManager::Certificate> ConsensusManager::GetCertificateBySubjectHash(
         const std::string &subject_hash ) const
     {
-        const auto key = std::string{ CERTIFICATE_BASE_PATH_KEY } + subject_hash;
+        if ( !IsCanonicalHash( subject_hash ) )
+        {
+            return outcome::failure( CertificateStoreError::NotFound );
+        }
 
-        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { key } ) );
+        const auto index_key = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
+        BOOST_OUTCOME_TRY( auto slot_data, db_->Get( { index_key } ) );
+        const auto slot = std::string( slot_data.toString() );
+        if ( !IsCanonicalHash( slot ) )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: corrupt certificate index key={} slot={}", __func__, index_key, slot );
+            return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+
+        const auto slot_key = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot;
+        BOOST_OUTCOME_TRY( auto certificate_data, db_->Get( { slot_key } ) );
 
         Certificate certificate;
         if ( !certificate.ParseFromArray( certificate_data.data(), certificate_data.size() ) )
         {
-            ConsensusManagerLogger()->error( "{}: invalid certificate payload key={}", __func__, key );
-            return outcome::failure( std::errc::invalid_argument );
+            ConsensusManagerLogger()->critical( "{}: invalid certificate payload key={}", __func__, slot_key );
+            return outcome::failure( CertificateStoreError::IntegrityError );
         }
 
-        BOOST_OUTCOME_TRY( auto current_hash, GetSubjectHash( certificate.proposal().subject() ) );
-        if ( current_hash != subject_hash )
+        auto certificate_slot = GetSlotKey( certificate.proposal() );
+        auto current_hash     = GetSubjectHash( certificate.proposal().subject() );
+        if ( certificate_slot.has_error() || current_hash.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}",
-                                             __func__,
-                                             subject_hash,
-                                             current_hash );
-            return outcome::failure( std::errc::invalid_argument );
+            return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+        if ( certificate_slot.value() != slot || current_hash.value() != subject_hash )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: corrupt certificate pair index_key={} expected_slot={} actual_slot={} expected_winner={} "
+                "actual_winner={}",
+                __func__,
+                index_key,
+                slot,
+                certificate_slot.value(),
+                subject_hash,
+                current_hash.value() );
+            return outcome::failure( CertificateStoreError::IntegrityError );
         }
         return certificate;
     }
