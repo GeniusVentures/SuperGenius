@@ -724,6 +724,103 @@ namespace sgns::test
         manager->Close();
     }
 
+    TEST_F( ConsensusCertificateStoreTest, RuntimeNamespaceRejectsLegacyAndMalformedElements )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+
+        const std::vector<std::string> rejected_keys{
+            "/cert/" + std::string( kTx ),
+            "/cert/v1/slot/" + std::string( kSlot ),
+            "/cert/v2/slot/not-a-canonical-slot",
+            "/cert/v2/tx/" + std::string( kTx ) + "/extra",
+        };
+        for ( const auto &key : rejected_keys )
+        {
+            SCOPED_TRACE( key );
+            crdt::pb::Delta delta;
+            auto           *element = delta.add_elements();
+            element->set_key( key );
+            element->set_value( "poison" );
+            EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, delta ) );
+            EXPECT_TRUE( db_->Get( { key } ).has_error() );
+        }
+
+        crdt::CRDTDataFilter runtime_filter( db_->GetWorkJournal() );
+        ASSERT_TRUE( runtime_filter.RegisterDeltaFilter(
+            "^/?cert/.*$",
+            [manager]( const crdt::pb::Delta &delta )
+            { return ConsensusManagerTestAccess::FilterDelta( manager, delta ); } ) );
+        crdt::pb::Delta mixed;
+        auto           *legacy = mixed.add_elements();
+        legacy->set_key( "/cert/" + std::string( kTx ) );
+        legacy->set_value( "legacy" );
+        auto *unrelated = mixed.add_elements();
+        unrelated->set_key( "/unrelated/runtime-value" );
+        unrelated->set_value( "preserved" );
+        runtime_filter.FilterElementsOnDelta( mixed );
+        ASSERT_EQ( mixed.elements_size(), 1 );
+        EXPECT_EQ( mixed.elements( 0 ).key(), "/unrelated/runtime-value" );
+        EXPECT_EQ( mixed.elements( 0 ).value(), "preserved" );
+
+        manager->Close();
+        manager.reset();
+        auto restarted = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( restarted );
+        restarted->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, RestartAfterRejectedLegacyRuntimeDeliverySucceeds )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+
+        crdt::pb::Delta legacy;
+        legacy.add_elements()->set_key( "/cert/v1/" + std::string( kTx ) );
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, legacy ) );
+        EXPECT_TRUE( db_->Get( { "/cert/v1/" + std::string( kTx ) } ).has_error() );
+
+        manager->Close();
+        manager.reset();
+        auto restarted = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( restarted );
+        restarted->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, RuntimeNamespaceTombstonesAreTerminallyRejected )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        auto certificate = MakeCertificate( manager, registry, account, account );
+        ASSERT_TRUE( certificate.has_value() );
+
+        const auto valid = MakeCertificatePairDelta( certificate.value() );
+        const auto slot_key = valid.elements( 0 ).key();
+
+        crdt::pb::Delta tombstone_only;
+        auto           *slot_tombstone = tombstone_only.add_tombstones();
+        slot_tombstone->set_key( slot_key );
+        slot_tombstone->set_id( "exact-element-id" );
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, tombstone_only ) );
+
+        auto mixed = valid;
+        auto *index_tombstone = mixed.add_tombstones();
+        index_tombstone->set_key( valid.elements( 1 ).key() );
+        index_tombstone->set_id( "exact-index-id" );
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, mixed ) );
+
+        crdt::pb::Delta malformed_tombstone;
+        malformed_tombstone.add_tombstones()->set_key( "/cert/v2/malformed" );
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta( manager, malformed_tombstone ) );
+        manager->Close();
+    }
+
     TEST_F( ConsensusCertificateStoreTest, LegacyCertificateStateRejectsStartupBeforeSideEffects )
     {
         auto account  = MakeAccount( getPathString() );
