@@ -477,7 +477,11 @@ Plans:
   2. A static, code-declared registry maps topic/key patterns to {signer-set source, quorum rule, `ISignedCRDTData` type}, resolvable at startup for a given key.
   3. A propose+sign+quorum sequence for a registered key — driven entirely by CRDT puts and filter callbacks (pending-value entry + signature entries) — results in the value being applied only after quorum is reached, with no new networking/RPC code path introduced.
   4. An unsigned or under-signed write attempt to a registered key is rejected locally (never applied) before quorum is reached, verified by an automated test.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — ISignedCRDTData interface + SecureCrdtRegistry static registry + Wave-0 tests (SCRDT-01, SCRDT-02)
+- [ ] 09-02-PLAN.md — SecureCrdt wrapper (local-write gate + filter registration + read-path quorum re-derivation) + quorum-gate/propose-sign-quorum tests (SCRDT-03, SCRDT-04)
 
 ### Phase 10: TrustedPeerRegistry
 
@@ -516,7 +520,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|-----------------|--------|-----------|
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
-| 9. SecureCRDT Layer | 0/TBD | Not started | - |
+| 9. SecureCRDT Layer | 0/2 | Not started | - |
 | 10. TrustedPeerRegistry | 0/TBD | Not started | - |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
