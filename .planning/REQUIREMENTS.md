@@ -15,9 +15,9 @@
 
 ### Certificates
 
-- [ ] **CERT-01**: A certificate continues to cryptographically bind the complete winning proposal, including its subject, proposer/account identity, nonce, transaction hash, embedded transaction, registry, and votes.
-- [ ] **CERT-02**: The authoritative certificate is persisted under a stable hash of the canonical slot key, and a slot can expose at most one authoritative certificate.
-- [ ] **CERT-03**: A successful certificate write creates a transaction-hash-to-slot secondary index for the winning transaction without making the transaction hash the finality key.
+- [x] **CERT-01**: A certificate continues to cryptographically bind the complete winning proposal, including its subject, proposer/account identity, nonce, transaction hash, embedded transaction, registry, and votes.
+- [x] **CERT-02**: The authoritative certificate is persisted under a stable hash of the canonical slot key, and a slot can expose at most one authoritative certificate.
+- [x] **CERT-03**: A successful certificate write creates a transaction-hash-to-slot secondary index for the winning transaction without making the transaction hash the finality key.
 - [ ] **CERT-04**: `GetCertificateBySubjectHash(tx_hash)` resolves through the secondary index and verifies that the loaded slot certificate contains the requested transaction hash before returning it.
 - [ ] **CERT-05**: On first observing a valid certificate, a node atomically marks the slot finalized before clearing proposal candidates, pending votes, or temporary vote-lock state.
 - [ ] **CERT-06**: Pubsub certificate handling, local certificate submission, and CRDT certificate delivery are idempotent views of the same finalized slot and cannot apply the winning transaction more than once.
@@ -44,7 +44,7 @@
 ### Compatibility and Verification
 
 - [ ] **COMP-01**: Previous-nonce validation and producer-UTXO validation continue retrieving new-format certificates by transaction hash through the verified secondary index.
-- [ ] **COMP-02**: Nodes fail startup with a clear protocol-state error when legacy certificate state is present, rather than silently mixing transaction-keyed and slot-keyed finality formats.
+- [x] **COMP-02**: Nodes fail startup with a clear protocol-state error when legacy certificate state is present, rather than silently mixing transaction-keyed and slot-keyed finality formats.
 - [ ] **TEST-01**: The 11-node single-burn race deterministically demonstrates that all competing mints use one canonical slot, at most one validator signature per validator is usable for that slot, exactly one certificate exists, and exactly one mint becomes confirmed.
 - [ ] **TEST-02**: A regression test reproduces the observed ordering where `HandleCertificate()` runs before CRDT certificate application and proves that a second proposal cannot collect a certificate in that gap.
 - [ ] **TEST-03**: A restart test proves that a validator which signed before shutdown restores its vote lock and does not sign a competing proposal after restart.
@@ -79,9 +79,9 @@
 | SLOT-02 | Phase 9 | Complete |
 | SLOT-03 | Phase 9 | Complete |
 | SLOT-04 | Phase 9 | Complete |
-| CERT-01 | Phase 9 | Pending |
-| CERT-02 | Phase 9 | Pending |
-| CERT-03 | Phase 9 | Pending |
+| CERT-01 | Phase 9 | Complete |
+| CERT-02 | Phase 9 | Complete |
+| CERT-03 | Phase 9 | Complete |
 | CERT-04 | Phase 9 | Pending |
 | CERT-05 | Phase 10 | Pending |
 | CERT-06 | Phase 10 | Pending |
@@ -99,7 +99,7 @@
 | BURN-04 | Phase 11 | Pending |
 | BURN-05 | Phase 11 | Pending |
 | COMP-01 | Phase 9 | Pending |
-| COMP-02 | Phase 9 | Pending |
+| COMP-02 | Phase 9 | Complete |
 | TEST-01 | Phase 12 | Pending |
 | TEST-02 | Phase 12 | Pending |
 | TEST-03 | Phase 12 | Pending |

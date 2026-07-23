@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-23T13:47:42.198Z"
-last_activity: 2026-07-23 -- Completed 09-02 canonical bridge event identity
+last_updated: "2026-07-23T14:29:06.133Z"
+last_activity: 2026-07-23 -- Completed 09-03 canonical certificate storage
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 09 (Canonical Slot and Certificate Storage) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 Status: Ready to execute
-Last activity: 2026-07-23 -- Completed 09-02 canonical bridge event identity
+Last activity: 2026-07-23 -- Completed 09-03 canonical certificate storage
 
 ## Roadmap Snapshot
 
@@ -74,3 +74,10 @@ Last activity: 2026-07-23 -- Completed 09-02 canonical bridge event identity
 |-------|------|----------|-------|
 | 09 | 01 | 16 min | 2 tasks, 9 files |
 | 09 | 02 | 35 min | 3 tasks, 31 files |
+| 09 | 03 | 36 min | 3 tasks, 10 files |
+
+## Decisions
+
+- [Phase 09]: Certificate storage uses one deterministic slot payload and winner-to-slot index in a single CRDT batch. — The slot is authoritative while the index preserves transaction-hash lookup without duplicate handlers.
+- [Phase 09]: Certificate replication validates the complete slot/index delta before element filters or merge. — Partial, malformed, mismatched, and conflicting sibling records must fail atomically while unrelated namespaces remain unaffected.
+- [Phase 09]: Protocol v2.0 startup rejects every non-exact key under /cert/ before consensus side effects. — Legacy transaction-keyed state cannot be safely mixed, migrated in place, or dual-read by the v2 certificate store.
