@@ -327,7 +327,7 @@ namespace sgns
             }
             if ( certificate_delta_filter_registered_ )
             {
-                db_->UnregisterDeltaFilter( std::string( CERT_V2_KEY_PATTERN ) );
+                db_->UnregisterDeltaFilter( std::string( CERT_NAMESPACE_KEY_PATTERN ) );
                 certificate_delta_filter_registered_ = false;
             }
         }
@@ -2064,7 +2064,7 @@ namespace sgns
     {
         auto weak_self = weak_from_this();
         certificate_delta_filter_registered_ = db_->RegisterDeltaFilter(
-            std::string( CERT_V2_KEY_PATTERN ),
+            std::string( CERT_NAMESPACE_KEY_PATTERN ),
             [weak_self]( const crdt::pb::Delta &delta )
             {
                 if ( auto strong = weak_self.lock() )
@@ -2103,20 +2103,32 @@ namespace sgns
 
     bool ConsensusManager::FilterCertificateDelta( const crdt::pb::Delta &delta )
     {
-        static const std::regex v2_regex{ std::string( CERT_V2_KEY_PATTERN ) };
+        static const std::regex namespace_regex{ std::string( CERT_NAMESPACE_KEY_PATTERN ) };
         static const std::regex slot_regex{ std::string( CERT_SLOT_KEY_PATTERN ) };
         static const std::regex index_regex{ std::string( CERT_TX_INDEX_KEY_PATTERN ) };
 
+        for ( const auto &tombstone : delta.tombstones() )
+        {
+            if ( std::regex_match( tombstone.key(), namespace_regex ) )
+            {
+                ConsensusManagerLogger()->critical( "{}: certificate tombstone is forbidden key={} id={}",
+                                                    __func__,
+                                                    tombstone.key(),
+                                                    tombstone.id() );
+                return false;
+            }
+        }
+
         const crdt::pb::Element *slot_element  = nullptr;
         const crdt::pb::Element *index_element = nullptr;
-        std::size_t              v2_count = 0;
+        std::size_t              certificate_count = 0;
         for ( const auto &element : delta.elements() )
         {
-            if ( !std::regex_match( element.key(), v2_regex ) )
+            if ( !std::regex_match( element.key(), namespace_regex ) )
             {
                 continue;
             }
-            ++v2_count;
+            ++certificate_count;
             if ( std::regex_match( element.key(), slot_regex ) )
             {
                 if ( slot_element )
@@ -2144,12 +2156,12 @@ namespace sgns
             }
         }
 
-        if ( v2_count != 2 || !slot_element || !index_element )
+        if ( certificate_count != 2 || !slot_element || !index_element )
         {
             ConsensusManagerLogger()->critical(
-                "{}: rejected partial v2 certificate delta elements={} has_slot={} has_index={}",
+                "{}: rejected partial certificate delta elements={} has_slot={} has_index={}",
                 __func__,
-                v2_count,
+                certificate_count,
                 slot_element != nullptr,
                 index_element != nullptr );
             return false;

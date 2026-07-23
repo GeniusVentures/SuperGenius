@@ -612,8 +612,8 @@ namespace sgns
             "^/?cert/v2/slot/[0-9a-f]{64}$"; ///< Exact authoritative slot key regex.
         static constexpr std::string_view CERT_TX_INDEX_KEY_PATTERN =
             "^/?cert/v2/tx/[0-9a-f]{64}$"; ///< Exact winning transaction index regex.
-        static constexpr std::string_view CERT_V2_KEY_PATTERN =
-            "^/?cert/v2/(slot|tx)/.*$"; ///< Live v2 certificate pair routing regex.
+        static constexpr std::string_view CERT_NAMESPACE_KEY_PATTERN =
+            "^/?cert/.*$"; ///< Complete live certificate namespace routing regex.
 
         /**
          * @brief Result of strict certificate normalization.
