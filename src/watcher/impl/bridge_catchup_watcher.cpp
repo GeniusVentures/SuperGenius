@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <limits>
 #include <set>
+#include <tuple>
 #include <unordered_map>
 
 namespace sgns::evmwatcher
@@ -240,127 +241,11 @@ namespace sgns::evmwatcher
             }
 
             // Receipt-local identity must be derived from the full ordered receipt.
-            // Cache receipt fetches across v1/v2 queries in this scan batch.
+            // This cache lives for one poll attempt only, so a failed poll always
+            // performs fresh receipt requests when the same chunk is retried.
             std::unordered_map<std::string, std::optional<eth::ReceiptResult>> receipt_cache;
             std::set<std::pair<std::string, uint32_t>> seen_burns;
             uint64_t receipt_request_id = 1000000;
-
-            // ── Helper: process one batch of logs ─────────────────────────
-            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) -> bool
-            {
-                for ( const auto &rpc_log : rpc_logs )
-                {
-                    if ( stop_requested() )
-                    {
-                        return false;
-                    }
-
-                    std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
-                                                                           rpc_log.tx_hash.size() );
-
-                    auto receipt_it = receipt_cache.find( tx_hash_hex );
-                    if ( receipt_it == receipt_cache.end() )
-                    {
-                        const auto request = eth::rpc::make_get_transaction_receipt_request(
-                            rpc_log.tx_hash, receipt_request_id++ );
-                        const auto response = transport->call( request );
-                        std::optional<eth::ReceiptResult> parsed_receipt;
-                        if ( response.has_value() )
-                        {
-                            parsed_receipt = eth::rpc::parse_transaction_receipt_response( *response );
-                        }
-                        receipt_it = receipt_cache.emplace( tx_hash_hex, std::move( parsed_receipt ) ).first;
-                    }
-
-                    const auto &receipt = receipt_it->second;
-                    if ( !receipt.has_value()
-                         || receipt->tx_hash != rpc_log.tx_hash
-                         || receipt->block_hash != rpc_log.block_hash
-                         || receipt->block_number != rpc_log.block_number
-                         || receipt->log_indices.size() != receipt->receipt.logs.size() )
-                    {
-                        ++total_skipped;
-                        logger->warn( "CatchUpScan: missing or inconsistent receipt for tx {} — skipping",
-                                      tx_hash_hex );
-                        continue;
-                    }
-
-                    const auto first = std::find( receipt->log_indices.begin(),
-                                                  receipt->log_indices.end(),
-                                                  rpc_log.log_index );
-                    if ( first == receipt->log_indices.end()
-                         || std::find( std::next( first ), receipt->log_indices.end(), rpc_log.log_index )
-                                != receipt->log_indices.end() )
-                    {
-                        ++total_skipped;
-                        logger->warn( "CatchUpScan: block-wide log index {} is unresolved in receipt {} — skipping",
-                                      rpc_log.log_index,
-                                      tx_hash_hex );
-                        continue;
-                    }
-
-                    const auto receipt_distance = std::distance( receipt->log_indices.begin(), first );
-                    if ( receipt_distance < 0
-                         || static_cast<uint64_t>( receipt_distance ) > std::numeric_limits<uint32_t>::max() )
-                    {
-                        ++total_skipped;
-                        logger->warn( "CatchUpScan: receipt-local index overflow for tx {} — skipping", tx_hash_hex );
-                        continue;
-                    }
-                    const uint32_t receipt_log_index = static_cast<uint32_t>( receipt_distance );
-
-                    if ( !seen_burns.emplace( tx_hash_hex, receipt_log_index ).second )
-                    {
-                        ++total_skipped;
-                        logger->debug( "CatchUpScan: burn {}:{} already seen this scan — skipping",
-                                       tx_hash_hex,
-                                       receipt_log_index );
-                        continue;
-                    }
-
-                    // Decode the full log entry into ABI values
-                    const std::string &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
-                    const auto         all_params = eth::cli::event_registry().params_for( event_sig );
-                    auto               decoded    = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
-
-                    if ( !decoded.has_value() )
-                    {
-                        ++total_skipped;
-                        logger->warn( "CatchUpScan: failed to decode log for tx {} — skipping", tx_hash_hex );
-                        continue;
-                    }
-
-                    try
-                    {
-                        const bool processed = burn_processor_(
-                            decoded.value(), tx_hash_hex, chain_id_str, receipt_log_index );
-
-                        if ( processed )
-                        {
-                            ++total_backfilled;
-                            logger->info( "CatchUpScan: backfilled historical burn {}:{} on chain {}",
-                                          tx_hash_hex,
-                                          receipt_log_index,
-                                          chain_entry.chain_name );
-                        }
-                        else
-                        {
-                            logger->debug( "CatchUpScan: burn processor returned false for tx {} — "
-                                           "likely already processed",
-                                           tx_hash_hex );
-                            ++total_skipped;
-                        }
-                    }
-                    catch ( const std::exception &e )
-                    {
-                        logger->debug( "CatchUpScan: burn processor threw for tx {}: {} — skipping",
-                                       tx_hash_hex,
-                                       e.what() );
-                        ++total_skipped;
-                    }
-                }
-                return true;
-            };
 
             // ── Forward chunked scan from from_block → current_block ──────
             // eth_getLogs with topic filter returns only matching events.
@@ -389,8 +274,147 @@ namespace sgns::evmwatcher
                               chunk_to,
                               current_block );
 
-                bool chunk_ok = false;
                 bool chunk_cancelled = false;
+
+                struct StagedBurn
+                {
+                    std::vector<eth::abi::AbiValue> decoded_values;
+                    std::string                     tx_hash_hex;
+                    std::string                     chain_id;
+                    uint32_t                        receipt_log_index = 0;
+                    bool                            is_v2 = false;
+                };
+
+                enum class ProcessLogsResult
+                {
+                    kSuccess,
+                    kFailure,
+                    kCancelled,
+                };
+
+                std::vector<StagedBurn> staged_burns;
+                std::set<std::pair<std::string, uint32_t>> chunk_seen_burns;
+
+                // Resolve and decode logs without exposing any candidate. The
+                // owning chunk publishes staged_burns only after every enabled
+                // query family has succeeded.
+                auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs,
+                                         bool                                  is_v2 ) -> ProcessLogsResult
+                {
+                    for ( const auto &rpc_log : rpc_logs )
+                    {
+                        if ( stop_requested() )
+                        {
+                            return ProcessLogsResult::kCancelled;
+                        }
+
+                        std::string tx_hash_hex = rlp::base::parse::hex_bytes(
+                            rpc_log.tx_hash.data(), rpc_log.tx_hash.size() );
+                        if ( tx_hash_hex.rfind( "0x", 0 ) == 0 )
+                        {
+                            tx_hash_hex.erase( 0, 2 );
+                        }
+
+                        auto receipt_it = receipt_cache.find( tx_hash_hex );
+                        if ( receipt_it == receipt_cache.end() )
+                        {
+                            const auto request = eth::rpc::make_get_transaction_receipt_request(
+                                rpc_log.tx_hash, receipt_request_id++ );
+                            const auto response = transport->call( request );
+                            std::optional<eth::ReceiptResult> parsed_receipt;
+                            if ( response.has_value() )
+                            {
+                                parsed_receipt = eth::rpc::parse_transaction_receipt_response( *response );
+                            }
+                            receipt_it = receipt_cache.emplace(
+                                tx_hash_hex, std::move( parsed_receipt ) ).first;
+                        }
+
+                        const auto &receipt = receipt_it->second;
+                        if ( !receipt.has_value()
+                             || receipt->tx_hash != rpc_log.tx_hash
+                             || receipt->block_hash != rpc_log.block_hash
+                             || receipt->block_number != rpc_log.block_number
+                             || receipt->log_indices.size() != receipt->receipt.logs.size() )
+                        {
+                            logger->warn(
+                                "CatchUpScan: missing or inconsistent receipt for tx {} — failing chunk",
+                                tx_hash_hex );
+                            return ProcessLogsResult::kFailure;
+                        }
+
+                        const auto first = std::find( receipt->log_indices.begin(),
+                                                      receipt->log_indices.end(),
+                                                      rpc_log.log_index );
+                        if ( first == receipt->log_indices.end()
+                             || std::find( std::next( first ),
+                                           receipt->log_indices.end(),
+                                           rpc_log.log_index )
+                                    != receipt->log_indices.end() )
+                        {
+                            logger->warn(
+                                "CatchUpScan: block-wide log index {} is unresolved in receipt {} — failing chunk",
+                                rpc_log.log_index,
+                                tx_hash_hex );
+                            return ProcessLogsResult::kFailure;
+                        }
+
+                        const auto receipt_distance = std::distance(
+                            receipt->log_indices.begin(), first );
+                        if ( receipt_distance < 0 )
+                        {
+                            logger->warn(
+                                "CatchUpScan: negative receipt-local index for tx {} — failing chunk",
+                                tx_hash_hex );
+                            return ProcessLogsResult::kFailure;
+                        }
+                        const auto receipt_log_index = eth::checked_receipt_log_ordinal(
+                            static_cast<uint64_t>( receipt_distance ) );
+                        if ( !receipt_log_index.has_value() )
+                        {
+                            logger->warn(
+                                "CatchUpScan: receipt-local index overflow for tx {} — failing chunk",
+                                tx_hash_hex );
+                            return ProcessLogsResult::kFailure;
+                        }
+
+                        const auto burn_id = std::make_pair( tx_hash_hex, *receipt_log_index );
+                        if ( seen_burns.count( burn_id ) != 0
+                             || !chunk_seen_burns.emplace( burn_id ).second )
+                        {
+                            ++total_skipped;
+                            logger->debug(
+                                "CatchUpScan: burn {}:{} already seen this poll — skipping",
+                                tx_hash_hex,
+                                *receipt_log_index );
+                            continue;
+                        }
+
+                        const std::string &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
+                        const auto all_params = eth::cli::event_registry().params_for( event_sig );
+                        auto decoded = eth::abi::decode_log(
+                            rpc_log.log, event_sig, all_params );
+                        if ( !decoded.has_value() )
+                        {
+                            logger->warn(
+                                "CatchUpScan: failed to decode log for tx {} — failing chunk",
+                                tx_hash_hex );
+                            return ProcessLogsResult::kFailure;
+                        }
+
+                        staged_burns.push_back( {
+                            std::move( decoded.value() ),
+                            tx_hash_hex,
+                            chain_id_str,
+                            *receipt_log_index,
+                            is_v2,
+                        } );
+                    }
+                    return ProcessLogsResult::kSuccess;
+                };
+
+                bool v1_ok = false;
+                bool v2_ok = !has_v2_topic0;
 
                 // ── v1 query per chunk ───────────────────────────────────
                 auto v1_request  = eth::rpc::make_get_logs_request( filter_v1,
@@ -422,11 +446,12 @@ namespace sgns::evmwatcher
                     }
                     else
                     {
-                        if ( process_logs( v1_logs.value(), /*is_v2=*/false ) )
+                        const auto result = process_logs( v1_logs.value(), /*is_v2=*/false );
+                        if ( result == ProcessLogsResult::kSuccess )
                         {
-                            chunk_ok = true;
+                            v1_ok = true;
                         }
-                        else
+                        else if ( result == ProcessLogsResult::kCancelled )
                         {
                             chunk_cancelled = true;
                         }
@@ -476,11 +501,12 @@ namespace sgns::evmwatcher
                         }
                         else
                         {
-                            if ( process_logs( v2_logs.value(), /*is_v2=*/true ) )
+                            const auto result = process_logs( v2_logs.value(), /*is_v2=*/true );
+                            if ( result == ProcessLogsResult::kSuccess )
                             {
-                                chunk_ok = true;
+                                v2_ok = true;
                             }
-                            else
+                            else if ( result == ProcessLogsResult::kCancelled )
                             {
                                 chunk_cancelled = true;
                             }
@@ -493,13 +519,8 @@ namespace sgns::evmwatcher
                     break;
                 }
 
-                if ( !chunk_ok )
+                if ( !v1_ok || !v2_ok )
                 {
-                    // Both v1 and v2 (if present) failed for this chunk — RPC
-                    // error or unparseable response. Do NOT advance from_block;
-                    // leave the cursor at this chunk's start so it is retried on
-                    // the next poll (CR-02). Advancing past a failed chunk would
-                    // silently drop any burns it contained.
                     logger->warn( "CatchUpScan: chunk {}-{} for chain {} failed — will retry on next poll",
                                   from_block,
                                   chunk_to,
@@ -507,6 +528,58 @@ namespace sgns::evmwatcher
                     break;
                 }
 
+                // Complete v1/v2 validation is the commit point. Only now can
+                // candidates become externally visible or dedup state become
+                // committed for later chunks in this poll.
+                for ( auto &staged : staged_burns )
+                {
+                    if ( stop_requested() )
+                    {
+                        chunk_cancelled = true;
+                        break;
+                    }
+
+                    try
+                    {
+                        const bool processed = burn_processor_(
+                            staged.decoded_values,
+                            staged.tx_hash_hex,
+                            staged.chain_id,
+                            staged.receipt_log_index );
+                        if ( processed )
+                        {
+                            ++total_backfilled;
+                            logger->info(
+                                "CatchUpScan: backfilled historical {} burn {}:{} on chain {}",
+                                staged.is_v2 ? "v2" : "v1",
+                                staged.tx_hash_hex,
+                                staged.receipt_log_index,
+                                chain_entry.chain_name );
+                        }
+                        else
+                        {
+                            ++total_skipped;
+                            logger->debug(
+                                "CatchUpScan: burn processor returned false for tx {} — likely already processed",
+                                staged.tx_hash_hex );
+                        }
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        ++total_skipped;
+                        logger->debug(
+                            "CatchUpScan: burn processor threw for tx {}: {} — skipping",
+                            staged.tx_hash_hex,
+                            e.what() );
+                    }
+                }
+
+                if ( chunk_cancelled )
+                {
+                    break;
+                }
+
+                seen_burns.insert( chunk_seen_burns.begin(), chunk_seen_burns.end() );
                 from_block = chunk_to + 1;
                 ++chunks_done;
 

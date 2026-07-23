@@ -42,6 +42,7 @@ namespace eth::rpc
 
 namespace sgns::evmwatcher
 {
+    class BridgeCatchupWatcherTestAccess;
 
     /**
      * @brief Polling watcher that scans bridge chains for historical burn events
@@ -132,6 +133,8 @@ namespace sgns::evmwatcher
         void watch() override;
 
     private:
+        friend class BridgeCatchupWatcherTestAccess;
+
         void poll_once();
 
         Config            config_;           ///< Polling and start-block configuration.
