@@ -557,6 +557,18 @@ namespace
         bool ExecutedKeyAbsent( const std::string &chain_id,
                                 const std::string &transaction_hash ) const
         {
+            if ( transaction_hash.size() != 64 ||
+                 !std::all_of(
+                     transaction_hash.begin(),
+                     transaction_hash.end(),
+                     []( unsigned char c )
+                     {
+                         return ( c >= '0' && c <= '9' ) ||
+                                ( c >= 'a' && c <= 'f' );
+                     } ) )
+            {
+                return true;
+            }
             auto hash = base::Hash256::fromReadableString( transaction_hash );
             if ( hash.has_error() )
             {
