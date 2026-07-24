@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-24T14:30:42.380Z"
-last_activity: 2026-07-24 -- Phase 09 planning complete
+last_updated: "2026-07-24T15:04:42.126Z"
+last_activity: 2026-07-24 -- Completed Plan 09-10 durable catch-up publication
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 13
-  completed_plans: 9
+  completed_plans: 10
   percent: 0
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 09 — Canonical Slot and Certificate Storage gap closure
+**Current focus:** Phase 09 — canonical-slot-and-certificate-storage
 
 ## Current Position
 
-Phase: 09 (Canonical Slot and Certificate Storage) — PLANNED
-Plan: 9 of 13
-Status: Ready to execute gap plans 09-10 through 09-13
-Last activity: 2026-07-24 -- Phase 09 planning complete
+Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
+Plan: 11 of 13
+Status: Ready to execute
+Last activity: 2026-07-24 -- Completed Plan 09-10 durable catch-up publication
 
 ## Roadmap Snapshot
 
@@ -81,6 +81,7 @@ Last activity: 2026-07-24 -- Phase 09 planning complete
 | Phase 09 P07 | 21 min | 2 tasks | 3 files |
 | Phase 09 P08 | 24 min | 2 tasks | 8 files |
 | Phase 09 P09 | 2h 16m | 2 tasks | 7 files |
+| Phase 09 P10 | 16 min | 2 tasks | 10 files |
 
 ## Decisions
 
@@ -104,3 +105,5 @@ Last activity: 2026-07-24 -- Phase 09 planning complete
 - [Phase 09]: Certificate index-to-slot relationship validation stays separate from raw read classification. — A dangling index is IntegrityError while operational slot failures propagate unchanged.
 - [Phase 09]: Only previous-certificate NotFound creates an admission dependency. — Integrity and operational errors reject, and producer-witness validation rejects every non-success read.
 - [Phase 09]: Certificate failure injection remains private and friend-only. — Production APIs remain unchanged while real consumers receive exact datastore outcomes in focused tests.
+- [Phase 09]: Only exact datastore NOT_FOUND permits bridge burn evaluation to continue. — All other executed-record read errors fail before any UTXO, reservation, persistence, or queue mutation.
+- [Phase 09]: Catch-up commits only Processed or durably AlreadyHandled chunks. — Retry and callback exceptions preserve the failed chunk cursor and uncommitted dedup tuples.
