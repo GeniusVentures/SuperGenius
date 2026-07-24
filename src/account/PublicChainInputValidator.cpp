@@ -156,16 +156,24 @@ namespace sgns
                                                       std::vector<WeightedRpcEndpoint> endpoints )
     {
         auto logger = InputValidatorLogger();
-        rpc_endpoints_[chain_id] = std::move( endpoints );
+        std::lock_guard lock( rpc_configuration_write_mutex_ );
+        auto next = std::make_shared<RpcConfiguration>( *CaptureRpcConfiguration() );
+        next->rpc_endpoints[chain_id] = std::move( endpoints );
+        ++next->generation;
+        const auto endpoint_count = next->rpc_endpoints[chain_id].size();
+        std::atomic_store( &rpc_configuration_,
+                           std::static_pointer_cast<const RpcConfiguration>( std::move( next ) ) );
         logger->info( "SetRpcEndpoints: chain_id={} endpoint_count={}",
-                      chain_id, rpc_endpoints_[chain_id].size() );
+                      chain_id, endpoint_count );
     }
 
     void PublicChainInputValidator::AddRpcEndpoints( const std::string &chain_id,
                                                       std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto        logger = InputValidatorLogger();
-        auto       &existing = rpc_endpoints_[chain_id];
+        auto logger = InputValidatorLogger();
+        std::lock_guard lock( rpc_configuration_write_mutex_ );
+        auto next = std::make_shared<RpcConfiguration>( *CaptureRpcConfiguration() );
+        auto &existing = next->rpc_endpoints[chain_id];
 
         // The fetched endpoints carry the chain's canonical {v1, v2} topic set
         // (and bridge contract). That set is a per-chain property — every
@@ -235,18 +243,57 @@ namespace sgns
 
         logger->info( "AddRpcEndpoints: chain_id={} added={} upgraded={} total={}",
                       chain_id, added, upgraded, existing.size() );
+        ++next->generation;
+        std::atomic_store( &rpc_configuration_,
+                           std::static_pointer_cast<const RpcConfiguration>( std::move( next ) ) );
+    }
+
+    PublicChainInputValidator::RpcConfigurationPtr
+        PublicChainInputValidator::CaptureRpcConfiguration() const noexcept
+    {
+        return std::atomic_load( &rpc_configuration_ );
+    }
+
+    void PublicChainInputValidator::SetTransportFactory( TransportFactory factory )
+    {
+        std::lock_guard lock( rpc_configuration_write_mutex_ );
+        auto next = std::make_shared<RpcConfiguration>( *CaptureRpcConfiguration() );
+        next->transport_factory = std::move( factory );
+        ++next->generation;
+        std::atomic_store( &rpc_configuration_,
+                           std::static_pointer_cast<const RpcConfiguration>( std::move( next ) ) );
+    }
+
+    std::optional<std::string>
+        PublicChainInputValidator::GetFirstRpcUrl( const std::string &chain_id ) const
+    {
+        const auto snapshot = CaptureRpcConfiguration();
+        const auto it = snapshot->rpc_endpoints.find( chain_id );
+        if ( it != snapshot->rpc_endpoints.end() && !it->second.empty() )
+        {
+            return it->second.front().url;
+        }
+        return std::nullopt;
     }
 
     std::vector<uint8_t>
         PublicChainInputValidator::GetSlotHash( size_t slot_index, const std::string &chain_id ) const noexcept
+    {
+        return GetSlotHash( *CaptureRpcConfiguration(), slot_index, chain_id );
+    }
+
+    std::vector<uint8_t>
+        PublicChainInputValidator::GetSlotHash( const RpcConfiguration &configuration,
+                                                size_t                  slot_index,
+                                                const std::string      &chain_id ) noexcept
     {
         auto logger = InputValidatorLogger();
 
         // Phase 6 (D-01): consensus_weight threshold separating DIRECT_API from PUBLIC slots.
         static constexpr uint8_t kDirectApiWeightThreshold = 50;
 
-        const auto chain_it = rpc_endpoints_.find( chain_id );
-        if ( chain_it == rpc_endpoints_.end() )
+        const auto chain_it = configuration.rpc_endpoints.find( chain_id );
+        if ( chain_it == configuration.rpc_endpoints.end() )
         {
             logger->debug( "GetSlotHash: no endpoints for chain_id={} slot={}", chain_id, slot_index );
             return {};
@@ -322,6 +369,36 @@ namespace sgns
             logger->debug( "GetSlotHash: no qualifying endpoint for slot={} chain_id={} (abstain)", slot_index, chain_id );
         }
         return result;
+    }
+
+    std::optional<PublicChainInputValidator::VoteRpcSnapshot>
+        PublicChainInputValidator::GetVoteRpcSnapshot() const noexcept
+    {
+        const auto snapshot = CaptureRpcConfiguration();
+        if ( snapshot->rpc_endpoints.empty() )
+        {
+            return std::nullopt;
+        }
+
+        VoteRpcSnapshot result;
+        result.chain_id = snapshot->rpc_endpoints.begin()->first;
+        result.generation = snapshot->generation;
+        for ( size_t slot = 0; slot < result.slot_hashes.size(); ++slot )
+        {
+            result.slot_hashes[slot] = GetSlotHash( *snapshot, slot, result.chain_id );
+        }
+        return result;
+    }
+
+    std::optional<std::string>
+        PublicChainInputValidator::GetFirstConfiguredChainId() const noexcept
+    {
+        const auto snapshot = CaptureRpcConfiguration();
+        if ( snapshot->rpc_endpoints.empty() )
+        {
+            return std::nullopt;
+        }
+        return snapshot->rpc_endpoints.begin()->first;
     }
 
 
@@ -409,8 +486,9 @@ namespace sgns
             return false;
         }
 
-        auto chain_it = rpc_endpoints_.find( chain_id );
-        if ( chain_it == rpc_endpoints_.end() || chain_it->second.empty() )
+        const auto configuration = CaptureRpcConfiguration();
+        auto chain_it = configuration->rpc_endpoints.find( chain_id );
+        if ( chain_it == configuration->rpc_endpoints.end() || chain_it->second.empty() )
         {
             logger->error( "VerifyPublicChainSmartContract has no RPC endpoints for chain_id={}", chain_id );
             return false;
@@ -422,8 +500,8 @@ namespace sgns
 
         // Resolve transport factory: use injected factory if set (D-07, D-14),
         // otherwise default to real RpcHttpTransport (production path per D-16).
-        auto factory = transport_factory_
-                           ? transport_factory_
+        auto factory = configuration->transport_factory
+                           ? configuration->transport_factory
                            : []( const std::string &url, std::chrono::seconds timeout ) {
                                  eth::rpc::RpcHttpTransportOptions opts;
                                  opts.timeout = timeout;

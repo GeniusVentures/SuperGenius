@@ -831,15 +831,15 @@ namespace sgns
                             return;
                         }
                         auto      &validator = transaction_manager->GetPublicChainInputValidator();
-                        const auto chain_id  = validator.GetFirstConfiguredChainId();
-                        if ( !chain_id.has_value() )
+                        const auto rpc_snapshot = validator.GetVoteRpcSnapshot();
+                        if ( !rpc_snapshot.has_value() )
                         {
                             logger->debug( "SlotHashPopulator: no configured chain; abstaining" );
                             return;
                         }
-                        const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
-                        const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
-                        const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+                        const auto &slot0 = rpc_snapshot->slot_hashes[0];
+                        const auto &slot1 = rpc_snapshot->slot_hashes[1];
+                        const auto &slot2 = rpc_snapshot->slot_hashes[2];
                         if ( !slot0.empty() )
                         {
                             vote.set_slot_0_hash( slot0.data(), slot0.size() );
@@ -854,7 +854,7 @@ namespace sgns
                         }
 
                         logger->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
-                                       chain_id.value(),
+                                       rpc_snapshot->chain_id,
                                        !slot0.empty(),
                                        !slot1.empty(),
                                        !slot2.empty() );

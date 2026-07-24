@@ -1,7 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <cstdint>
+#include <future>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "account/PublicChainInputValidator.hpp"
@@ -105,5 +107,60 @@ namespace
         // Fail-closed: unknown slot index returns empty (abstention).
         EXPECT_TRUE( validator.GetSlotHash( 3, "1" ).empty() );
         EXPECT_TRUE( validator.GetSlotHash( 99, "1" ).empty() );
+    }
+
+    TEST( PublicChainInputValidatorSlotTest, ConcurrentPublicationCannotMixVoteSlotGenerations )
+    {
+        PublicChainInputValidator validator;
+        const auto config_a = std::vector<WeightedRpcEndpoint>{
+            MakeEndpoint( "https://a-direct.example/rpc", 50 ),
+            MakeEndpoint( "https://a-public-1.example/rpc", 25 ),
+            MakeEndpoint( "https://a-public-2.example/rpc", 25 )
+        };
+        const auto config_b = std::vector<WeightedRpcEndpoint>{
+            MakeEndpoint( "https://b-direct.example/rpc", 50 ),
+            MakeEndpoint( "https://b-public-1.example/rpc", 25 ),
+            MakeEndpoint( "https://b-public-2.example/rpc", 25 )
+        };
+
+        validator.SetRpcEndpoints( "1", config_a );
+        const auto snapshot_a = validator.GetVoteRpcSnapshot();
+        validator.SetRpcEndpoints( "1", config_b );
+        const auto snapshot_b = validator.GetVoteRpcSnapshot();
+        ASSERT_TRUE( snapshot_a.has_value() );
+        ASSERT_TRUE( snapshot_b.has_value() );
+
+        std::promise<void> start_promise;
+        auto start = start_promise.get_future().share();
+        std::atomic<bool> failed{ false };
+        std::thread reader( [&] {
+            start.wait();
+            for ( size_t i = 0; i < 400; ++i )
+            {
+                const auto vote = validator.GetVoteRpcSnapshot();
+                if ( !vote.has_value()
+                     || ( vote->slot_hashes != snapshot_a->slot_hashes
+                          && vote->slot_hashes != snapshot_b->slot_hashes ) )
+                {
+                    failed.store( true );
+                    return;
+                }
+                EXPECT_EQ( validator.GetFirstConfiguredChainId(), std::optional<std::string>( "1" ) );
+                EXPECT_TRUE( validator.GetFirstRpcUrl( "1" ).has_value() );
+                EXPECT_EQ( validator.GetSlotHash( 0, "1" ).size(), 32u );
+            }
+        } );
+        std::thread writer( [&] {
+            start.wait();
+            for ( size_t i = 0; i < 400; ++i )
+            {
+                validator.SetRpcEndpoints( "1", i % 2 == 0 ? config_a : config_b );
+            }
+        } );
+
+        start_promise.set_value();
+        reader.join();
+        writer.join();
+        EXPECT_FALSE( failed.load() );
     }
 } // namespace
