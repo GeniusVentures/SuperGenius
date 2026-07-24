@@ -507,7 +507,11 @@ Plans:
   1. `BURN_BASIS_POINTS` is stored and updated as a `TrustedPeerRegistry`-quorum-signed CRDT value (via the Phase 9/10 SecureCRDT machinery), not a hardcoded constant in `TransactionManager.hpp`.
   2. `TransactionManager::PayEscrow` uses a cached in-memory value for the burn rate; no CRDT read occurs on the `PayEscrow` call path, and the cache updates automatically via a CRDT-change callback when a quorum-signed update lands.
   3. A freshly-seeded genesis node burns exactly 1% (`BURN_BASIS_POINTS=100`) on `PayEscrow` by default, matching pre-milestone behavior, until a quorum-signed update changes the value.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Majority-floor quorum validation (D-07) + TrustedPeerRegistry::New breaking-change retrofit + BurnConfigPayload/BurnConfig core (genesis auto-seed, signer-set-source, cache-refresh) + tests (BURN-01)
+- [ ] 11-02-PLAN.md — TransactionManager cached burn-rate + GeniusNode INITIALIZING_TRANSACTIONS wiring (SecureCrdt/TrustedPeerRegistry/BurnConfig construction) + config fields + CMake linkage (BURN-02, BURN-03)
 
 ### Phase 12: ValidatorRegistry Migration
 
@@ -526,5 +530,5 @@ Plans:
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
 | 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
-| 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
+| 11. BurnConfig Quorum Wiring | 0/2 | Planned | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
