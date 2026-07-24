@@ -31,6 +31,7 @@
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher.hpp"
 #include "processing/impl/processing_core_impl.hpp"
@@ -764,6 +765,38 @@ namespace sgns
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
 
     private:
+        friend class GeniusNodeCatchupTestAccess;
+
+        enum class CatchupSubmissionState : uint8_t
+        {
+            NotAttempted,
+            Succeeded,
+            Failed
+        };
+
+        struct CatchupBurnFacts
+        {
+            bool account_available = false;
+            bool transaction_manager_available = false;
+            outcome::result<TransactionManager::BridgeBurnState> burn_state;
+            CatchupSubmissionState submission = CatchupSubmissionState::NotAttempted;
+
+            CatchupBurnFacts(
+                bool account_available,
+                bool transaction_manager_available,
+                outcome::result<TransactionManager::BridgeBurnState> burn_state,
+                CatchupSubmissionState submission ) :
+                account_available( account_available ),
+                transaction_manager_available( transaction_manager_available ),
+                burn_state( std::move( burn_state ) ),
+                submission( submission )
+            {
+            }
+        };
+
+        static evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome
+        ClassifyCatchupBurnOutcome( const CatchupBurnFacts &facts );
+
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
                                                      io_work_guard_;     ///< Keeps @ref io_ alive.
