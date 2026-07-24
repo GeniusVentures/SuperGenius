@@ -23,7 +23,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Previous-nonce and producer-UTXO validation retrieve new-format certificates through `GetCertificateBySubjectHash()` without treating the transaction hash as the finality key.
 4. A node presented with legacy transaction-keyed certificate state fails startup with a clear v2.0 clean-state error.
 
-**Plans:** 15/16 plans executed
+**Plans:** 16/16 plans complete
 
 **Wave 7 gap closure** *(blocked on Wave 6 completion; serialized because worktrees are disabled)*:
 - 09-10 — Durable catch-up publication outcomes and fail-closed bridge replay reads

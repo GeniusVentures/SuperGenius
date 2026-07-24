@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-24T18:19:51.182Z"
-last_activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
+last_updated: "2026-07-24T18:33:31.710Z"
+last_activity: 2026-07-24 -- Completed Plan 09-16 immutable RPC configuration snapshots
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 16
-  completed_plans: 15
-  percent: 94
+  completed_plans: 16
+  percent: 25
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -29,10 +29,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 15 of 16
-Status: Executing Phase 09
-Last activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
+Phase: 09 (canonical-slot-and-certificate-storage) — COMPLETE
+Plan: 16 of 16
+Status: Phase 09 complete; ready for verification and Phase 10 planning
+Last activity: 2026-07-24 -- Completed Plan 09-16 immutable RPC configuration snapshots
 
 ## Roadmap Snapshot
 
@@ -66,7 +66,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
 
 ## Operator Next Steps
 
-- Continue with Plan 09-16 immutable RPC configuration snapshots and concurrent publication.
+- Verify Phase 09 and begin planning Phase 10 durable vote locks and finalization state.
 
 ## Performance Metrics
 
@@ -87,6 +87,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
 | Phase 09 P13 | 6 min | 1 tasks | 3 files |
 | Phase 09 P14 | 21 min | 2 tasks | 8 files |
 | Phase 09 P15 | 22 min | 2 tasks | 4 files |
+| Phase 09 P16 | 13 min | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -122,3 +123,6 @@ Last activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
 - [Phase 09]: AlreadyApplied requires exact identity, winner, ordered outputs, and consumed bridge-input verification against live durable state. — Duplicate delivery and restart recovery fail closed on incomplete or conflicting records.
 - [Phase 09]: CRDT final strong-owner release queues close and deletion to one process reaper. — Worker and callback weak-pointer promotions remain the sole lifetime guards, while destructor and delete must never execute on the final releasing worker.
 - [Phase 09]: CRDT worker promotions are bounded to one operation or callback and released before blocking waits. — Idle workers must not circulate ownership indefinitely or prevent deterministic zero-count finalization.
+- [Phase 09]: RPC endpoints and transport factories publish together as immutable generation-numbered snapshots. — Concurrent writers serialize copy-on-write publication while readers retain stable lifetime ownership without mutable references.
+- [Phase 09]: One vote snapshot supplies the chain and all three endpoint slot hashes. — Signed votes cannot combine endpoint hashes from different operator/provider configuration generations.
+- [Phase 09]: Weighted receipt verification retains one configuration from endpoint lookup through quorum completion. — A blocked RPC call cannot observe endpoints or a factory published after its decision began.
