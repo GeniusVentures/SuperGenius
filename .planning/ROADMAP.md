@@ -492,7 +492,11 @@ Plans:
   1. A freshly-initialized genesis node's `TrustedPeerRegistry` contains exactly the initial trusted-peer set hardcoded in genesis config, with no manual bootstrapping step required.
   2. Adding, removing, or replacing a trusted-peer member succeeds only when a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set is presented; a sub-quorum attempt is rejected and the membership set is unchanged.
   3. `TrustedPeerRegistry`'s implementation is a consumer of `ISignedCRDTData`/SecureCRDT (registered via the Phase 9 policy registry) — code inspection confirms no parallel/duplicate signature-verification logic exists outside SecureCRDT.
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
+- [ ] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
 
 ### Phase 11: BurnConfig Quorum Wiring
 
@@ -521,6 +525,6 @@ Plans:
 |-------|-----------------|--------|-----------|
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
-| 10. TrustedPeerRegistry | 0/TBD | Not started | - |
+| 10. TrustedPeerRegistry | 0/2 | Planned | - |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
