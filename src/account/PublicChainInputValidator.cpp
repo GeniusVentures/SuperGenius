@@ -467,9 +467,15 @@ namespace sgns
 
             if ( !receipt->receipt.status.has_value() || !receipt->receipt.status.value() )
             {
-                logger->error( "VerifyPublicChainSmartContract receipt status failed for tx={} via url={}",
-                               PreviewValue( source_reference ), ep.url );
-                return false;
+                const char *status_class =
+                    receipt->receipt.status.has_value() ? "failed" : "missing";
+                logger->error(
+                    "VerifyPublicChainSmartContract receipt status {} for tx={} via url={}",
+                    status_class,
+                    PreviewValue( source_reference ),
+                    ep.url );
+                ++tried;
+                continue;
             }
 
             bool log_matched = false;

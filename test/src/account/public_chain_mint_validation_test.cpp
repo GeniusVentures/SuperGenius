@@ -10,6 +10,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -77,8 +78,10 @@ namespace
         return rlp::base::parse::hex_bytes( hash.data(), hash.size() );
     }
 
-    std::string ReceiptJson( const std::vector<ReceiptLog> &logs,
-                             const std::string             &transaction_hash = kBurnHash )
+    std::string ReceiptJson(
+        const std::vector<ReceiptLog> &logs,
+        const std::string             &transaction_hash = kBurnHash,
+        std::optional<std::string>     status = std::string{ "0x1" } )
     {
         const std::string tx_hash = "0x" + transaction_hash;
         const std::string block_hash = "0x" + std::string( 64, '1' );
@@ -88,7 +91,10 @@ namespace
         root["id"] = 1;
 
         boost::json::object result;
-        result["status"] = "0x1";
+        if ( status.has_value() )
+        {
+            result["status"] = status.value();
+        }
         result["blockNumber"] = "0x10";
         result["blockHash"] = block_hash;
         result["transactionHash"] = tx_hash;
@@ -132,6 +138,41 @@ namespace
     private:
         std::string response_;
     };
+
+    struct ScriptedReceiptState
+    {
+        std::unordered_map<std::string, std::string> responses;
+        std::vector<std::string>                     calls;
+    };
+
+    std::shared_ptr<ScriptedReceiptState> SetScriptedReceipts(
+        sgns::PublicChainInputValidator                              &validator,
+        std::unordered_map<std::string, std::string> configured_responses )
+    {
+        auto state = std::make_shared<ScriptedReceiptState>();
+        state->responses = std::move( configured_responses );
+        validator.SetTransportFactory(
+            [state]( const std::string &url, std::chrono::seconds )
+            {
+                state->calls.push_back( url );
+                const auto response = state->responses.find( url );
+                EXPECT_NE( response, state->responses.end() )
+                    << "Unexpected scripted endpoint: " << url;
+                return std::make_unique<FixedReceiptTransport>(
+                    response == state->responses.end() ? std::string{} : response->second );
+            } );
+        return state;
+    }
+
+    sgns::WeightedRpcEndpoint Endpoint( std::string url, uint8_t weight )
+    {
+        sgns::WeightedRpcEndpoint endpoint;
+        endpoint.url = std::move( url );
+        endpoint.consensus_weight = weight;
+        endpoint.bridge_contract_address = kBridgeAddress;
+        endpoint.accepted_topic0_hashes = { BridgeTopic0() };
+        return endpoint;
+    }
 
     std::shared_ptr<sgns::MintTransactionV2> MakeMint( uint32_t           receipt_index,
                                                        uint64_t           token_id = kTokenId,
@@ -290,6 +331,72 @@ TEST( PublicChainMintValidationTest, RejectsReceiptHashMismatchWithValidLog )
         ReceiptJson( { ValidBurn() }, std::string( 64, 'b' ) ) );
     EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
         validator, MakeMint( 0 ), kBurnHash ) );
+}
+
+TEST( PublicChainMintValidationTest, FailedReceiptStatusIsEndpointLocalAndLaterWeightCanProveMint )
+{
+    const std::vector<std::optional<std::string>> failed_statuses{
+        std::string{ "0x0" },
+        std::nullopt,
+    };
+
+    for ( const auto &failed_status : failed_statuses )
+    {
+        SCOPED_TRACE( failed_status.value_or( "<missing>" ) );
+        sgns::PublicChainInputValidator validator;
+        validator.SetRpcEndpoints(
+            std::to_string( kChainId ),
+            {
+                Endpoint( "mock://failed-status", 25 ),
+                Endpoint( "mock://valid-50", 50 ),
+                Endpoint( "mock://valid-25", 25 ),
+            } );
+        const auto calls = SetScriptedReceipts(
+            validator,
+            {
+                { "mock://failed-status",
+                  ReceiptJson( { ValidBurn() }, kBurnHash, failed_status ) },
+                { "mock://valid-50", ReceiptJson( { ValidBurn() } ) },
+                { "mock://valid-25", ReceiptJson( { ValidBurn() } ) },
+            } );
+
+        EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify(
+            validator, MakeMint( 0 ), kBurnHash ) );
+        EXPECT_EQ(
+            calls->calls,
+            ( std::vector<std::string>{
+                "mock://failed-status",
+                "mock://valid-50",
+                "mock://valid-25",
+            } ) );
+    }
+}
+
+TEST( PublicChainMintValidationTest, FailedReceiptStatusContributesNoWeight )
+{
+    sgns::PublicChainInputValidator validator;
+    validator.SetRpcEndpoints(
+        std::to_string( kChainId ),
+        {
+            Endpoint( "mock://failed-status-50", 50 ),
+            Endpoint( "mock://valid-25", 25 ),
+        } );
+    const auto calls = SetScriptedReceipts(
+        validator,
+        {
+            { "mock://failed-status-50",
+              ReceiptJson( { ValidBurn() }, kBurnHash, std::string{ "0x0" } ) },
+            { "mock://valid-25", ReceiptJson( { ValidBurn() } ) },
+        } );
+
+    EXPECT_FALSE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0 ), kBurnHash ) );
+    EXPECT_EQ(
+        calls->calls,
+        ( std::vector<std::string>{
+            "mock://failed-status-50",
+            "mock://valid-25",
+        } ) );
 }
 
 TEST( PublicChainMintValidationTest, ExplicitLocalChainIdsBypassRpc )
