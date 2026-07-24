@@ -322,14 +322,12 @@ namespace
         }
 
         /**
-         * @brief Builds a child-signed RegistrationTransaction under `account_`'s address, writes
-         *        it directly into the CRDT at the same reg/{child_addr} key format
-         *        RegisterChild/FilterRegistration already use (TransactionManager.cpp:618-619,
-         *        :2873-2874), then certifies it by replicating the exact real-transaction
-         *        submission recipe verified at TransactionManager.cpp:1501-1509
-         *        (Blockchain::CreateConsensusProposal + Blockchain::SubmitProposal — a
-         *        single-validator self-vote, since this fixture's Blockchain::New already
-         *        established a genesis registry with account_ as sole validator). Polls
+         * @brief Builds a child-signed RegistrationTransaction under `account_`'s address,
+         *        certifies it via a manually-assembled consensus proposal (single-validator
+         *        self-vote, since this fixture's Blockchain::New already established a genesis
+         *        registry with account_ as sole validator), then writes it directly into the
+         *        CRDT at the same reg/{child_addr} key format RegisterChild/FilterRegistration
+         *        already use (TransactionManager.cpp:618-619, :2873-2874). Polls
          *        Blockchain::CheckCertificate until the round-timer thread (already running
          *        since Blockchain::New) processes the certificate (D-26).
          * @param[in] sequence Registration sequence number.
@@ -372,12 +370,17 @@ namespace
          *        CreateConsensusNonceSubject/manual-proposal/SubmitProposal/poll-CheckCertificate
          *        logic a second time.
          *
-         * Writes @p reg_tx directly into the CRDT at reg/{reg_tx.GetSrcAddress()}, then submits a
-         * manually-assembled consensus proposal signed by @p signer (per this fixture's
-         * registration convention, every RegistrationTx — initial or lifecycle-change — is always
-         * signed by the registering child itself, D-04/D-05/D-37, so @p signer is always
-         * child_account_ in practice; kept as a parameter rather than hard-coded so this helper's
-         * contract stays explicit about whose signature the proposal_id/signature fields need).
+         * Submits a manually-assembled consensus proposal signed by @p signer, waits for the
+         * certificate, then writes @p reg_tx directly into the CRDT at
+         * reg/{reg_tx.GetSrcAddress()} (the CRDT write is deferred past certification so
+         * FilterRegistration's gate 3b sees the pre-change stored sequence — D-38 / D-70).
+         *
+         * Per this fixture's registration convention, every RegistrationTx — initial or
+         * lifecycle-change — is always signed by the registering child itself (D-04/D-05/D-37),
+         * so @p signer is always child_account_ in practice; kept as a parameter rather than
+         * hard-coded so this helper's contract stays explicit about whose signature the
+         * proposal_id/signature fields need).
+         *
          * Uses non-fatal EXPECT_* internally (void-returning function). Callers MUST immediately
          * assert `blockchain_->CheckCertificate(reg_tx.GetHash())`.
          * @param[in] reg_tx Already child-signed RegistrationTransaction to certify.
@@ -385,15 +388,6 @@ namespace
          */
         void CertifySignedRegistrationTx( const RegistrationTransaction &reg_tx, GeniusAccount &signer )
         {
-            // Write directly into the CRDT at the same reg/{src_addr} key RegisterChild/
-            // FilterRegistration already use.
-            std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + reg_tx.GetSrcAddress();
-            auto                   serialized = reg_tx.SerializeByteVector();
-            base::Buffer           buffer( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
-            crdt::HierarchicalKey  hk( reg_key );
-            auto                   put_result = db_->Put( hk, buffer, {} );
-            EXPECT_TRUE( put_result.has_value() ) << "Registration CRDT Put should succeed";
-
             // Certify by manually assembling and SIGNER-signing a consensus proposal, then
             // submitting it through main's blockchain_ for automatic self-voting/certification.
             //
@@ -467,6 +461,19 @@ namespace
                 std::chrono::milliseconds( 25000 ),
                 "Registration should be certified within timeout",
                 nullptr );
+
+            // Write the registration into the CRDT at reg/{src_addr} AFTER the certificate is
+            // confirmed. Deferring the CRDT write past certification ensures FilterRegistration's
+            // gate 3b (D-38: supersedes_sequence == stored_sequence fork-prevention) sees the
+            // pre-change stored sequence, not the new one — critical for lifecycle-change
+            // registrations (Detach/Replace-Main/re-registration) where a premature CRDT write
+            // would advance the stored sequence and cause a self-inflicted tombstone (D-70).
+            std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + reg_tx.GetSrcAddress();
+            auto                   serialized = reg_tx.SerializeByteVector();
+            base::Buffer           buffer( std::vector<uint8_t>( serialized.begin(), serialized.end() ) );
+            crdt::HierarchicalKey  hk( reg_key );
+            auto                   put_result = db_->Put( hk, buffer, {} );
+            EXPECT_TRUE( put_result.has_value() ) << "Registration CRDT Put should succeed";
         }
 
         std::shared_ptr<GeniusAccount>      account_;
