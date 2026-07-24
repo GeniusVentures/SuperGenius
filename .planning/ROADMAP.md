@@ -495,7 +495,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
+- [x] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
 - [ ] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
 
 ### Phase 11: BurnConfig Quorum Wiring
@@ -525,6 +525,6 @@ Plans:
 |-------|-----------------|--------|-----------|
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
-| 10. TrustedPeerRegistry | 0/2 | Planned | - |
+| 10. TrustedPeerRegistry | 1/2 | In Progress|  |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |

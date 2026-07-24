@@ -82,11 +82,20 @@ None - plan executed exactly as written.
 - `grep -rn "secp256k1\|VerifySignature\|VerifyPayloadSignature" src/trustedpeer/` → zero matches (TPR-03 gate)
 - `grep -c "db_->Put\|->Put(" src/trustedpeer/TrustedPeerRegistry.cpp` → 0
 
-Implementation was verified by careful manual review against `SecureCrdt.hpp`'s documented contracts (types, signatures, `outcome::result` usage) and by mirroring the same `outcome::failure(std::errc::...)` idiom already used elsewhere in the codebase (`src/proof/TransferProof.cpp`, `src/local_secure_storage/impl/Apple.cpp`). Recommend the orchestrator (or a follow-up CI run) execute the actual `cmake --build build --target trustedpeer` step once a fully-configured build environment with submodules is available, before this phase is considered fully verified.
+Implementation was verified by careful manual review against `SecureCrdt.hpp`'s documented contracts (types, signatures, `outcome::result` usage) and by mirroring the same `outcome::failure(std::errc::...)` idiom already used elsewhere in the codebase (`src/proof/TransferProof.cpp`, `src/local_secure_storage/impl/Apple.cpp`).
+
+## Build Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`, sibling `thirdparty` deps already built):
+
+- `cmake .` (reconfigure) picked up the new `add_subdirectory(trustedpeer)` cleanly.
+- `cmake --build . --target trustedpeer` — **succeeded**, no compile errors or warnings.
+
+No tests exist yet for this plan (Plan 02 adds them) — real test-level verification of TPR-01/TPR-02's behavior happens in Wave 2's build+test pass.
 
 ## Next Phase Readiness
 - `TrustedPeerRegistry::New`, `SeedGenesis`, `ProposeMembershipChange`, `SignMembershipChange`, `TryConfirm`, `GetCurrentPeers` are all available for Plan 02's test scaffold (ceremony helper, quorum tests) and for Phase 11's real wiring.
-- Blocker: a real compiled build/CTest run of the `trustedpeer` target has not yet happened in this environment — recommend this be the first verification step of Plan 02 or the phase's overall verification pass.
+- The library compiles cleanly against the real project build — no blocker remains for Plan 02.
 
 ---
 *Phase: 10-trustedpeerregistry*
