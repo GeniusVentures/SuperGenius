@@ -26,6 +26,7 @@
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/wait_condition.hpp"
 
 namespace
 {
@@ -313,19 +314,15 @@ namespace
 
             auto migrate_result = tm_->MigrationFunds( amount, migration_version, kTestTokenId, "" );
             ASSERT_TRUE( migrate_result.has_value() ) << "Migrating main's funds should succeed";
-
-            auto           mint_start = std::chrono::steady_clock::now();
-            constexpr auto kMintTimeout = std::chrono::seconds( 10 );
-            while ( account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ) < target )
-            {
-                if ( std::chrono::steady_clock::now() - mint_start > kMintTimeout )
-                {
-                    break;
-                }
-                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            }
-            ASSERT_GE( account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ), target )
-                << "Main's migrated balance should be visible within timeout";
+            std::chrono::milliseconds elapsed;
+            auto checkMigrated = [this, target]() {
+                return account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ) >= target;
+            };
+            ASSERT_WAIT_FOR_CONDITION(
+                checkMigrated,
+                std::chrono::milliseconds( 10000 ),
+                "Main's migrated balance should be visible within timeout",
+                &elapsed );
         }
 
         /**
@@ -470,18 +467,14 @@ namespace
                 EXPECT_TRUE( submit_result.has_value() ) << "SubmitProposal should succeed";
             }
 
-            auto           cert_start      = std::chrono::steady_clock::now();
-            constexpr auto kCertifyTimeout = std::chrono::seconds( 25 );
-            while ( !blockchain_->CheckCertificate( reg_tx.GetHash() ) )
-            {
-                if ( std::chrono::steady_clock::now() - cert_start > kCertifyTimeout )
-                {
-                    break;
-                }
-                std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            }
-            EXPECT_TRUE( blockchain_->CheckCertificate( reg_tx.GetHash() ) )
-                << "Registration should be certified within " << kCertifyTimeout.count() << "s";
+            auto checkCertified = [this, &reg_tx]() {
+                return blockchain_->CheckCertificate( reg_tx.GetHash() );
+            };
+            EXPECT_WAIT_FOR_CONDITION(
+                checkCertified,
+                std::chrono::milliseconds( 25000 ),
+                "Registration should be certified within timeout",
+                nullptr );
         }
 
         std::shared_ptr<GeniusAccount>      account_;
@@ -506,23 +499,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     // nonce fetch, so allow generous timeout.
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto                      start = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-        {
-            break;
-        }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY state within "
-        << kReadyTimeout.count() << "s";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY state within 60 s",
+        nullptr );
 
     // Registration data
     std::string                        main_address( 128, 'a' ); // 128-hex main pubkey
@@ -540,22 +521,14 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     ASSERT_NE( tx, nullptr );
 
     // Verify status is SENDING (processed asynchronously by TickOnce READY branch — poll briefly)
-    {
-        auto           status = tm_->GetTransactionStatusByTxId( tx_hash );
-        auto           tstart = std::chrono::steady_clock::now();
-        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
-
-        while ( status != TransactionManager::TransactionStatus::SENDING )
-        {
-            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-            status = tm_->GetTransactionStatusByTxId( tx_hash );
-        }
-        EXPECT_EQ( status, TransactionManager::TransactionStatus::SENDING );
-    }
+    auto checkSending = [this, &tx_hash]() {
+        return tm_->GetTransactionStatusByTxId( tx_hash ) == TransactionManager::TransactionStatus::SENDING;
+    };
+    EXPECT_WAIT_FOR_CONDITION(
+        checkSending,
+        std::chrono::milliseconds( 10000 ),
+        "Transaction should reach SENDING status",
+        nullptr );
 
     // Downcast to RegistrationTransaction
     auto reg_tx = std::dynamic_pointer_cast<RegistrationTransaction>( tx );
@@ -888,18 +861,11 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveFirstRegistration
     // Start TM and wait for READY (needed for RegisterChild)
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_address( 128, 'a' );
     SGTransaction::RegistrationMetadata metadata;
@@ -924,18 +890,11 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromSto
     // Start TM and wait for READY
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_address( 128, 'b' );
     SGTransaction::RegistrationMetadata metadata;
@@ -946,16 +905,14 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromSto
     ASSERT_TRUE( result1.has_value() );
 
     // Poll for SENDING to ensure CRDT is committed
-    {
-        auto tstart = std::chrono::steady_clock::now();
-        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
-        while ( tm_->GetTransactionStatusByTxId( result1.value() ) != TransactionManager::TransactionStatus::SENDING )
-        {
-            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
-                break;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-        }
-    }
+    auto checkSending1 = [this, &result1]() {
+        return tm_->GetTransactionStatusByTxId( result1.value() ) == TransactionManager::TransactionStatus::SENDING;
+    };
+    EXPECT_WAIT_FOR_CONDITION(
+        checkSending1,
+        std::chrono::milliseconds( 10000 ),
+        "CRDT should be committed and status should reach SENDING",
+        nullptr );
 
     // Second: 2-arg call — should auto-derive sequence=6 (stored=5 + 1)
     auto result2 = tm_->RegisterChild( main_address, metadata );
@@ -973,18 +930,11 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildPreservesCallerSequence )
     // Start TM and wait for READY
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_address( 128, 'c' );
     SGTransaction::RegistrationMetadata metadata;
@@ -1010,18 +960,11 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsEmptyForNo
     // Start TM and wait for READY
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_address( 128, 'd' );
     auto result = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
@@ -1035,18 +978,11 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsMatchingEn
     // Start TM and wait for READY
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_address( 128, 'e' );
     SGTransaction::RegistrationMetadata metadata1;
@@ -1061,7 +997,15 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsMatchingEn
     ASSERT_TRUE( result2.has_value() );
 
     // Allow time for CRDT processing
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    auto checkRegistrations = [this, &main_address]() {
+        auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
+        return entries.has_value() && !entries.value().empty();
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegistrations,
+        std::chrono::milliseconds( 5000 ),
+        "Registrations for main should appear in CRDT",
+        nullptr );
 
     auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
     ASSERT_TRUE( entries.has_value() );
@@ -1080,18 +1024,11 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainFiltersByMainAddr
     // Start TM and wait for READY
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     std::string main_a( 128, 'f' );
     std::string main_b( 128, 'g' );
@@ -1103,7 +1040,15 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainFiltersByMainAddr
     ASSERT_TRUE( result.has_value() );
 
     // Allow time for CRDT processing
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    auto checkRegistrationsA = [this, &main_a]() {
+        auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
+        return entries.has_value() && !entries.value().empty();
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegistrationsA,
+        std::chrono::milliseconds( 5000 ),
+        "Registrations for main_a should appear in CRDT",
+        nullptr );
 
     // Query main_a — should find the registration
     auto entries_a = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
@@ -1132,18 +1077,11 @@ TEST_F( RegistrationTransactionE2ETest, MainFundsChildApprovedByGate )
 {
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto           start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     // Fund main with two independent spendable UTXOs (two separate migration transactions, each
     // under its own migration_version namespace since MigrationTransaction derives a one-time
@@ -1176,18 +1114,11 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
 {
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto           start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "cons02_test" );
@@ -1205,20 +1136,11 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
 
     // Poll for the child's UTXO to appear — the node's own TickOnce READY-branch ingests its
     // own submitted transaction and calls PutProducedUTXOs on first CRDT observation.
-    {
-        auto           fund_start   = std::chrono::steady_clock::now();
-        constexpr auto kFundTimeout = std::chrono::seconds( 10 );
-        while ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) < kFundAmount )
-        {
-            if ( std::chrono::steady_clock::now() - fund_start > kFundTimeout )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        }
-    }
-    ASSERT_GE( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ), kFundAmount )
-        << "Child's funded balance should be visible within timeout";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        std::chrono::milliseconds( 10000 ),
+        "Child's funded balance should be visible within timeout",
+        nullptr );
 
     auto recover_result = tm_->RecoverFromChild( child_account_->GetAddress(), kRecoverAmount, kTestTokenId );
     ASSERT_TRUE( recover_result.has_value() ) << "Main should be able to recover funds from the certified child";
@@ -1274,18 +1196,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
 {
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto           start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "regr01_test" );
@@ -1298,19 +1213,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
-    {
-        auto           fund_start   = std::chrono::steady_clock::now();
-        constexpr auto kFundTimeout = std::chrono::seconds( 10 );
-        while ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) < kFundAmount )
-        {
-            if ( std::chrono::steady_clock::now() - fund_start > kFundTimeout )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        }
-    }
-    ASSERT_GE( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ), kFundAmount );
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        std::chrono::milliseconds( 10000 ),
+        "Child's funded balance should be visible within timeout",
+        nullptr );
 
     std::vector<InputUTXOInfo> inputs;
     for ( const auto &utxo : account_->GetUTXOManager().GetUnconsumedUTXOs( child_account_->GetAddress() ) )
@@ -1361,18 +1268,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
 {
     tm_->Start();
 
-    TransactionManager::State state = tm_->GetState();
-    auto           start = std::chrono::steady_clock::now();
-    constexpr auto kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "regr02_test" );
@@ -1385,19 +1285,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
-    {
-        auto           fund_start   = std::chrono::steady_clock::now();
-        constexpr auto kFundTimeout = std::chrono::seconds( 10 );
-        while ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) < kFundAmount )
-        {
-            if ( std::chrono::steady_clock::now() - fund_start > kFundTimeout )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        }
-    }
-    ASSERT_GE( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ), kFundAmount );
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        std::chrono::milliseconds( 10000 ),
+        "Child's funded balance should be visible within timeout",
+        nullptr );
 
     std::vector<InputUTXOInfo> inputs;
     for ( const auto &utxo : account_->GetUTXOManager().GetUnconsumedUTXOs( child_account_->GetAddress() ) )
@@ -1588,18 +1480,11 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "detach_e2e_test" );
@@ -1609,19 +1494,18 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
 
     // Allow time for the initial registration's CRDT write to land before Detach's
     // auto-derive overload reads it back.
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    auto checkRegExists = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegExists,
+        std::chrono::milliseconds( 5000 ),
+        "Initial registration CRDT write should be visible before Detach",
+        nullptr );
 
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
-    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
-    crdt::HierarchicalKey  hk( reg_key );
-
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto                                      poll_start   = std::chrono::steady_clock::now();
-    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
+    auto checkDetached = [this, &stored_reg, &hk]() {
         auto get_result = db_->Get( hk );
         if ( get_result.has_value() )
         {
@@ -1632,12 +1516,17 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
                 if ( candidate && candidate->GetDetachFlag() )
                 {
                     stored_reg = candidate;
-                    break;
+                    return true;
                 }
             }
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkDetached,
+        std::chrono::milliseconds( 10000 ),
+        "Detached reg/ record should be visible within timeout",
+        nullptr );
 
     ASSERT_NE( stored_reg, nullptr ) << "Detached reg/ record should be visible within timeout";
     EXPECT_EQ( stored_reg->GetMainAddress(), std::string( 128, '0' ) );
@@ -1653,18 +1542,11 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "replace_main_e2e_test" );
@@ -1672,20 +1554,19 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
     auto register_result = tm_->RegisterChild( std::string( 128, 's' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
 
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    auto checkRegExists2 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegExists2,
+        std::chrono::milliseconds( 5000 ),
+        "Initial registration CRDT write should be visible before ReplaceMain",
+        nullptr );
 
     std::string new_main_address( 128, 'u' );
     auto        replace_result = tm_->ReplaceMain( new_main_address, metadata );
     ASSERT_TRUE( replace_result.has_value() ) << "ReplaceMain should succeed against an existing registration";
 
-    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
-    crdt::HierarchicalKey  hk( reg_key );
-
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto                                      poll_start   = std::chrono::steady_clock::now();
-    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
+    auto checkReplacedMain = [this, &stored_reg, &hk, &new_main_address]() {
         auto get_result = db_->Get( hk );
         if ( get_result.has_value() )
         {
@@ -1696,12 +1577,17 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
                 if ( candidate && candidate->GetMainAddress() == new_main_address )
                 {
                     stored_reg = candidate;
-                    break;
+                    return true;
                 }
             }
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkReplacedMain,
+        std::chrono::milliseconds( 10000 ),
+        "Replace-Main'd reg/ record should be visible within timeout",
+        nullptr );
 
     ASSERT_NE( stored_reg, nullptr ) << "Replace-Main'd reg/ record should be visible within timeout";
     EXPECT_EQ( stored_reg->GetMainAddress(), new_main_address );
@@ -1718,18 +1604,11 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "reregister_e2e_test" );
@@ -1737,39 +1616,39 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
     auto register_result = tm_->RegisterChild( std::string( 128, 'v' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
 
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    auto checkRegExists3 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegExists3,
+        std::chrono::milliseconds( 5000 ),
+        "Initial registration CRDT write should be visible before Detach",
+        nullptr );
 
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
-    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
-    crdt::HierarchicalKey  hk( reg_key );
-
     // Poll until the Detach's write is visible before attempting re-registration.
-    {
-        auto           poll_start   = std::chrono::steady_clock::now();
-        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-        bool           detached     = false;
-        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    auto checkDetached2 = [this, &hk]() {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
         {
-            auto get_result = db_->Get( hk );
-            if ( get_result.has_value() )
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
             {
-                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-                if ( !deserialize_result.has_error() )
-                {
-                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                    if ( candidate && candidate->GetDetachFlag() )
-                    {
-                        detached = true;
-                        break;
-                    }
-                }
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                    return true;
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
-        ASSERT_TRUE( detached ) << "Detach should be visible before re-registration is attempted";
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkDetached2,
+        std::chrono::milliseconds( 10000 ),
+        "Detach should be visible before re-registration is attempted",
+        nullptr );
 
     std::string third_main_address( 128, 'w' );
     auto        reregister_result = tm_->ReplaceMain( third_main_address, metadata );
@@ -1777,10 +1656,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
         << "ReplaceMain should succeed as a re-registration after a prior Detach (D-39)";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto                                      poll_start   = std::chrono::steady_clock::now();
-    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
+    auto checkReregistered2 = [this, &stored_reg, &hk, &third_main_address]() {
         auto get_result = db_->Get( hk );
         if ( get_result.has_value() )
         {
@@ -1791,12 +1667,17 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
                 if ( candidate && candidate->GetMainAddress() == third_main_address )
                 {
                     stored_reg = candidate;
-                    break;
+                    return true;
                 }
             }
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkReregistered2,
+        std::chrono::milliseconds( 10000 ),
+        "Re-registered reg/ record should be visible within timeout",
+        nullptr );
 
     ASSERT_NE( stored_reg, nullptr ) << "Re-registered reg/ record should be visible within timeout";
     EXPECT_EQ( stored_reg->GetMainAddress(), third_main_address );
@@ -1812,18 +1693,11 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     MintMainFunds( 1000, "life04_migration" );
 
@@ -1837,36 +1711,36 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
     auto register_result = tm_->RegisterChild( std::string( 128, 'l' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
 
-    std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
+    auto checkRegExists4 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRegExists4,
+        std::chrono::milliseconds( 5000 ),
+        "Initial registration CRDT write should be visible before Detach",
+        nullptr );
 
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
-    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
-    crdt::HierarchicalKey  hk( reg_key );
-
-    bool           detached     = false;
-    auto           poll_start   = std::chrono::steady_clock::now();
-    constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    auto checkDetached3 = [this, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    detached = true;
-                    break;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                        return true;
                 }
             }
-        }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
-    ASSERT_TRUE( detached ) << "Detach should be visible within timeout";
+            return false;
+        },
+        std::chrono::milliseconds( 10000 ),
+        "Detach should be visible within timeout",
+        nullptr );
 
     // Address is unchanged — no keypair rotation API exists, confirmed by construction.
     EXPECT_EQ( account_->GetAddress(), address_before );
@@ -1893,18 +1767,11 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "replay_nonce_test" );
@@ -1916,42 +1783,29 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
 
     // Poll for CONFIRMED — CheckTransactionReplayProtection's nonce-chain check reads
     // account_m->GetPeerNonce(), which is only populated once a transaction is genuinely
-    // CONFIRMED (certified), not merely SENDING. This fixture's single-validator registry
-    // (established in the constructor, D-65/D-26) self-certifies real submitted transactions
-    // the same way CertifyChildRegistration's manual recipe does, just automatically via the
-    // normal SendTransactionItem -> proposal -> self-vote -> round-timer certification path.
-    {
-        auto           confirm_start   = std::chrono::steady_clock::now();
-        constexpr auto kConfirmTimeout = std::chrono::seconds( 30 );
-        auto           status          = tm_->GetTransactionStatusByTxId( register_hash );
-        while ( status != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            if ( std::chrono::steady_clock::now() - confirm_start > kConfirmTimeout )
-                break;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-            status = tm_->GetTransactionStatusByTxId( register_hash );
-        }
-        ASSERT_EQ( status, TransactionManager::TransactionStatus::CONFIRMED )
-            << "Initial registration should be CONFIRMED within timeout so account_'s own confirmed "
-               "nonce chain has genuinely advanced past nonce 0";
-    }
+    // CONFIRMED (certified), not merely SENDING.
+    auto checkConfirmed = [this, &register_hash]() {
+        return tm_->GetTransactionStatusByTxId( register_hash ) == TransactionManager::TransactionStatus::CONFIRMED;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkConfirmed,
+        std::chrono::milliseconds( 30000 ),
+        "Initial registration should be CONFIRMED within timeout",
+        nullptr );
 
     // Consumes nonce 1 — advances the nonce chain further, matching the plan's setup sequence.
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
-    {
-        auto           tstart        = std::chrono::steady_clock::now();
-        constexpr auto kStatusTimeout = std::chrono::seconds( 10 );
-        auto           status         = tm_->GetTransactionStatusByTxId( detach_result.value() );
-        while ( status != TransactionManager::TransactionStatus::SENDING &&
-                status != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            if ( std::chrono::steady_clock::now() - tstart > kStatusTimeout )
-                break;
-            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-            status = tm_->GetTransactionStatusByTxId( detach_result.value() );
-        }
-    }
+    auto checkSendingOrConfirmed = [this, &detach_result]() {
+        auto s = tm_->GetTransactionStatusByTxId( detach_result.value() );
+        return s == TransactionManager::TransactionStatus::SENDING ||
+               s == TransactionManager::TransactionStatus::CONFIRMED;
+    };
+    EXPECT_WAIT_FOR_CONDITION(
+        checkSendingOrConfirmed,
+        std::chrono::milliseconds( 10000 ),
+        "DetachChild should reach SENDING or CONFIRMED status",
+        nullptr );
 
     // Manually construct a "replayed" lifecycle-change RegistrationTransaction reusing nonce 0
     // (the STALE, already-consumed nonce) — everything else about this tx is well-formed and
@@ -1989,18 +1843,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_e2e_test" );
@@ -2015,10 +1862,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
     crdt::HierarchicalKey hk( reg_key );
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto                                      poll_start   = std::chrono::steady_clock::now();
-    constexpr auto                            kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
+    auto checkRevoked = [this, &stored_reg, &hk]() {
         auto get_result = db_->Get( hk );
         if ( get_result.has_value() )
         {
@@ -2029,12 +1873,17 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
                 if ( candidate && candidate->GetDetachFlag() )
                 {
                     stored_reg = candidate;
-                    break;
+                    return true;
                 }
             }
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkRevoked,
+        std::chrono::milliseconds( 10000 ),
+        "Revoked reg/ record should be visible within timeout",
+        nullptr );
 
     ASSERT_NE( stored_reg, nullptr ) << "Revoked reg/ record should be visible within timeout";
     EXPECT_EQ( stored_reg->GetMainAddress(), account_->GetAddress() );
@@ -2083,18 +1932,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_already_detached_test" );
@@ -2110,29 +1952,29 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
 
     bool     detached        = false;
     uint64_t stored_sequence = 0;
-    {
-        auto           poll_start   = std::chrono::steady_clock::now();
-        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    auto checkDetached4 = [this, &detached, &stored_sequence, &hk]() {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
         {
-            auto get_result = db_->Get( hk );
-            if ( get_result.has_value() )
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
             {
-                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-                if ( !deserialize_result.has_error() )
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
                 {
-                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                    if ( candidate && candidate->GetDetachFlag() )
-                    {
-                        detached        = true;
-                        stored_sequence = candidate->GetSequence();
-                        break;
-                    }
+                    detached        = true;
+                    stored_sequence = candidate->GetSequence();
+                    return true;
                 }
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkDetached4,
+        std::chrono::milliseconds( 10000 ),
+        "First Revoke should be visible before the second Revoke is attempted",
+        nullptr );
     ASSERT_TRUE( detached ) << "First Revoke should be visible before the second Revoke is attempted";
 
     // A SECOND RevokeTransaction targeting the SAME (now-detached) child, matching the
@@ -2192,18 +2034,11 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "rereg_after_revoke_test" );
@@ -2218,11 +2053,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     crdt::HierarchicalKey hk( reg_key );
 
     {
-        bool           detached     = false;
-        auto           poll_start   = std::chrono::steady_clock::now();
-        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-        {
+        auto checkDetached5 = [this, &hk]() {
             auto get_result = db_->Get( hk );
             if ( get_result.has_value() )
             {
@@ -2231,15 +2062,16 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
                 {
                     auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
                     if ( candidate && candidate->GetDetachFlag() )
-                    {
-                        detached = true;
-                        break;
-                    }
+                        return true;
                 }
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        }
-        ASSERT_TRUE( detached ) << "Revoke should be visible before re-registration is attempted";
+            return false;
+        };
+        ASSERT_WAIT_FOR_CONDITION(
+            checkDetached5,
+            std::chrono::milliseconds( 10000 ),
+            "Revoke should be visible before re-registration is attempted",
+            nullptr );
     }
 
     std::string new_main_address( 128, 'p' );
@@ -2268,28 +2100,28 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
         << "Re-registration should be certified before checking the stored reg/ record";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    {
-        auto           poll_start   = std::chrono::steady_clock::now();
-        constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-        while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
+    auto checkReregistered2 = [this, &stored_reg, &hk, &new_main_address]() {
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
         {
-            auto get_result = db_->Get( hk );
-            if ( get_result.has_value() )
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
             {
-                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-                if ( !deserialize_result.has_error() )
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetMainAddress() == new_main_address )
                 {
-                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                    if ( candidate && candidate->GetMainAddress() == new_main_address )
-                    {
-                        stored_reg = candidate;
-                        break;
-                    }
+                    stored_reg = candidate;
+                    return true;
                 }
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         }
-    }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkReregistered2,
+        std::chrono::milliseconds( 10000 ),
+        "Re-registered reg/ record should be visible within timeout",
+        nullptr );
 
     ASSERT_NE( stored_reg, nullptr ) << "Re-registered reg/ record should be visible within timeout";
     EXPECT_EQ( stored_reg->GetMainAddress(), new_main_address );
@@ -2307,18 +2139,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
 {
     tm_->Start();
 
-    TransactionManager::State state         = tm_->GetState();
-    auto                      start         = std::chrono::steady_clock::now();
-    constexpr auto            kReadyTimeout = std::chrono::seconds( 60 );
-    while ( state != TransactionManager::State::READY )
-    {
-        if ( std::chrono::steady_clock::now() - start > kReadyTimeout )
-            break;
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        state = tm_->GetState();
-    }
-    ASSERT_EQ( state, TransactionManager::State::READY )
-        << "TransactionManager did not reach READY";
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return tm_->GetState() == TransactionManager::State::READY; },
+        std::chrono::milliseconds( 60000 ),
+        "TransactionManager did not reach READY",
+        nullptr );
 
     SGTransaction::RegistrationMetadata metadata;
     metadata.set_game_id( "revoke_life04_test" );
@@ -2332,18 +2157,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
 
-    {
-        auto           fund_start   = std::chrono::steady_clock::now();
-        constexpr auto kFundTimeout = std::chrono::seconds( 10 );
-        while ( account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) < kFundAmount )
-        {
-            if ( std::chrono::steady_clock::now() - fund_start > kFundTimeout )
-            {
-                break;
-            }
-            std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-        }
-    }
+    ASSERT_WAIT_FOR_CONDITION(
+        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        std::chrono::milliseconds( 10000 ),
+        "Child's funded balance should be visible within timeout",
+        nullptr );
     const std::string address_before = child_account_->GetAddress();
     const uint64_t    balance_before =
         account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() );
@@ -2355,11 +2173,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
     crdt::HierarchicalKey hk( reg_key );
 
-    bool           detached     = false;
-    auto           poll_start   = std::chrono::steady_clock::now();
-    constexpr auto kPollTimeout = std::chrono::seconds( 10 );
-    while ( std::chrono::steady_clock::now() - poll_start < kPollTimeout )
-    {
+    auto checkDetached6 = [this, &hk]() {
         auto get_result = db_->Get( hk );
         if ( get_result.has_value() )
         {
@@ -2368,15 +2182,16 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
             {
                 auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
                 if ( candidate && candidate->GetDetachFlag() )
-                {
-                    detached = true;
-                    break;
-                }
+                    return true;
             }
         }
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-    }
-    ASSERT_TRUE( detached ) << "Revoke should be visible within timeout";
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkDetached6,
+        std::chrono::milliseconds( 10000 ),
+        "Revoke should be visible within timeout",
+        nullptr );
 
     // Address is unchanged — no keypair rotation API exists, confirmed by construction.
     EXPECT_EQ( child_account_->GetAddress(), address_before );
