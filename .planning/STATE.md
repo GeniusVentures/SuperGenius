@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-24T17:53:25Z"
-last_activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
+last_updated: "2026-07-24T18:19:51.182Z"
+last_activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 16
-  completed_plans: 14
-  percent: 88
+  completed_plans: 15
+  percent: 94
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 14 of 16
+Plan: 15 of 16
 Status: Executing Phase 09
-Last activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
+Last activity: 2026-07-24 -- Completed Plan 09-15 CRDT callback lifetime safety
 
 ## Roadmap Snapshot
 
@@ -66,7 +66,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
 
 ## Operator Next Steps
 
-- Continue with Plan 09-15 deferred CRDT destruction and callback-lifetime closure.
+- Continue with Plan 09-16 immutable RPC configuration snapshots and concurrent publication.
 
 ## Performance Metrics
 
@@ -86,6 +86,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
 | Phase 09 P12 | 16 min | 2 tasks | 5 files |
 | Phase 09 P13 | 6 min | 1 tasks | 3 files |
 | Phase 09 P14 | 21 min | 2 tasks | 8 files |
+| Phase 09 P15 | 22 min | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -119,3 +120,5 @@ Last activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
 - [Phase 09]: A canonical burn-keyed application record written with every mint effect is the sole durable mint-completion authority. — A naked consumed bridge input cannot prove which winner or outputs were applied.
 - [Phase 09]: Ordinary UTXO persistence and atomic mint application share one persistence gate from snapshot read through batch commit. — A stale ordinary snapshot cannot overwrite effects certified by a committed application record.
 - [Phase 09]: AlreadyApplied requires exact identity, winner, ordered outputs, and consumed bridge-input verification against live durable state. — Duplicate delivery and restart recovery fail closed on incomplete or conflicting records.
+- [Phase 09]: CRDT final strong-owner release queues close and deletion to one process reaper. — Worker and callback weak-pointer promotions remain the sole lifetime guards, while destructor and delete must never execute on the final releasing worker.
+- [Phase 09]: CRDT worker promotions are bounded to one operation or callback and released before blocking waits. — Idle workers must not circulate ownership indefinitely or prevent deterministic zero-count finalization.
