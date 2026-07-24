@@ -9,6 +9,7 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -36,6 +37,21 @@
 namespace fs = std::filesystem;
 
 using namespace sgns;
+
+class PublicChainInputValidatorTestAccess
+{
+public:
+    static std::vector<WeightedRpcEndpoint> Endpoints(
+        const PublicChainInputValidator &validator,
+        const std::string               &chain_id )
+    {
+        const auto snapshot = validator.CaptureRpcConfiguration();
+        const auto it = snapshot->rpc_endpoints.find( chain_id );
+        return it == snapshot->rpc_endpoints.end()
+                 ? std::vector<WeightedRpcEndpoint>{}
+                 : it->second;
+    }
+};
 
 // ─── Test Constants ─────────────────────────────────────────────────────────
 
@@ -470,6 +486,76 @@ TEST( StartupWiringTest, ProviderInitializeWithValidConfigReturnsTrue )
     auto url2 = validator.GetFirstRpcUrl( "1" );
     EXPECT_TRUE( url1.has_value() );
     EXPECT_TRUE( url2.has_value() );
+
+    RemoveTempFile( path );
+}
+
+TEST( StartupWiringTest, BlockedProviderInitializationPreservesOperatorConfigurationAndStableReads )
+{
+    const std::string json = R"({
+        "blocked-provider-chain": {
+            "chain_id": 31337,
+            "bridge_contract_address": "0x1234567890123456789012345678901234567890"
+        }
+    })";
+    const auto path = WriteTempChainsConfig( json );
+    ASSERT_TRUE( fs::exists( path ) );
+
+    ChainRpcEndpointProvider provider;
+    PublicChainInputValidator validator;
+    std::promise<void> fetch_entered;
+    auto fetch_entered_future = fetch_entered.get_future();
+    std::promise<void> release_fetch;
+    auto release_fetch_future = release_fetch.get_future().share();
+    provider.SetChainlistFetcher(
+        [&]() -> std::optional<std::string>
+        {
+            fetch_entered.set_value();
+            release_fetch_future.wait();
+            return std::string{ R"([
+                {"name":"Blocked Provider","chainId":31337,
+                 "rpc":["https://public-a.example","https://public-a.example","https://public-b.example"]}
+            ])" };
+        } );
+
+    auto initialization = std::async( std::launch::async, [&] {
+        return provider.Initialize( path, validator );
+    } );
+    fetch_entered_future.wait();
+
+    WeightedRpcEndpoint operator_endpoint;
+    operator_endpoint.url = "https://operator.example";
+    operator_endpoint.consensus_weight = 50;
+    validator.SetRpcEndpoints( "31337", { operator_endpoint } );
+
+    const auto before = validator.GetVoteRpcSnapshot();
+    ASSERT_TRUE( before.has_value() );
+    EXPECT_EQ( before->chain_id, "31337" );
+    EXPECT_EQ( before->slot_hashes[0].size(), 32u );
+    EXPECT_TRUE( before->slot_hashes[1].empty() );
+    EXPECT_EQ( validator.GetFirstRpcUrl( "31337" ),
+               std::optional<std::string>( "https://operator.example" ) );
+
+    release_fetch.set_value();
+    EXPECT_TRUE( initialization.get() );
+
+    const auto after = validator.GetVoteRpcSnapshot();
+    ASSERT_TRUE( after.has_value() );
+    EXPECT_GT( after->generation, before->generation );
+    EXPECT_EQ( after->slot_hashes[0], before->slot_hashes[0] );
+    EXPECT_EQ( after->slot_hashes[1].size(), 32u );
+    EXPECT_EQ( after->slot_hashes[2].size(), 32u );
+    EXPECT_EQ( validator.GetFirstRpcUrl( "31337" ),
+               std::optional<std::string>( "https://operator.example" ) );
+
+    const auto endpoints = PublicChainInputValidatorTestAccess::Endpoints( validator, "31337" );
+    ASSERT_EQ( endpoints.size(), 3u );
+    EXPECT_EQ( endpoints[0].url, "https://operator.example" );
+    EXPECT_EQ( endpoints[0].consensus_weight, 50u );
+    EXPECT_FALSE( endpoints[0].bridge_contract_address.empty() );
+    EXPECT_EQ( endpoints[0].accepted_topic0_hashes.size(), 2u );
+    EXPECT_EQ( endpoints[1].url, "https://public-a.example" );
+    EXPECT_EQ( endpoints[2].url, "https://public-b.example" );
 
     RemoveTempFile( path );
 }
