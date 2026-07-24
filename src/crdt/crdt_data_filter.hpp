@@ -124,7 +124,8 @@ namespace sgns::crdt
          *
          * The callback runs before element filters whenever at least one element
          * or tombstone matches pattern. Reject removes every matching element
-         * and tombstone. RetryDependency returns the original delta unchanged.
+         * and tombstone. A retained RetryDependency returns the sanitized delta
+         * without running legacy element filters.
          */
         bool RegisterDeltaFilter( const std::string &pattern, DeltaFilterCallback filter );
 
