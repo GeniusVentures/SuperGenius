@@ -3,6 +3,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/wait_condition.hpp"
 
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
@@ -46,7 +47,8 @@ namespace
 // Scene A (CONTEXT D-02/CFG-03): the new canonical factory derives is_full_node_ from the
 // "node_type" sgns_config.json key AFTER LoadSgnsConfig. "full" (lowercase) must parse
 // case-insensitively to NodeType::Full -> is_full_node_=true. is_full_node_ is set in the ctor
-// body before New() returns, so it is observable immediately (no READY wait needed).
+// body before New() returns, so it is observable immediately. The READY wait only lets New()'s
+// asynchronous database initialization finish before the test process releases the node.
 TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 {
     UseMemorySecureStorage();
@@ -64,6 +66,10 @@ TEST( NodeTypeDerivation, ConfigDrivenCaseInsensitive )
 
     EXPECT_EQ( node->GetNodeType(), GeniusNode::NodeType::Full );
     EXPECT_TRUE( node->IsFullNode() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::seconds( 50 ),
+        "node-type test node did not finish initialization" ) );
 }
 
 // Scene B (CONTEXT D-04): New(dev_config, AccountSource) preserves nullptr-on-failure.

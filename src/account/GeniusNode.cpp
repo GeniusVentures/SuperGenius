@@ -217,7 +217,8 @@ namespace sgns
         {
             return Error::DATABASE_WRITE_ERROR;
         }
-        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" ) << " }";
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
+            << ", \"upnp_enabled\": false }";
         return outcome::success();
     }
 
@@ -577,7 +578,7 @@ namespace sgns
             {
                 if ( !bootstrap_fullnodes_.empty() )
                 {
-                    pubsub_->AddPeers( bootstrap_fullnodes_ );
+                    AddPeers( bootstrap_fullnodes_ );
                     node_logger_->info( "Added {} bootstrap fullnodes", bootstrap_fullnodes_.size() );
                 }
                 account_->InitMessenger( pubsub_ );
@@ -1787,7 +1788,87 @@ namespace sgns
 
     void GeniusNode::AddPeer( const std::string &peer )
     {
-        pubsub_->AddPeers( { peer } );
+        auto peer_info = ParsePeerInfoFromString( peer );
+        if ( !peer_info )
+        {
+            node_logger_->warn( "Cannot add invalid peer multiaddress: {}", peer );
+            return;
+        }
+
+        ConnectPeer( peer, std::move( peer_info.value() ), 0 );
+    }
+
+    void GeniusNode::ConnectPeer( std::string peer, libp2p::peer::PeerInfo peer_info, unsigned attempt )
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        auto weak_self = weak_from_this();
+        pubsub_->GetAsioContext()->post(
+            [weak_self, peer = std::move( peer ), peer_info = std::move( peer_info ), attempt]()
+            {
+                auto strong = weak_self.lock();
+                if ( !strong || strong->shutdown_started_.load() )
+                {
+                    return;
+                }
+
+                strong->pubsub_->GetHost()->connect(
+                    peer_info,
+                    [weak_self, peer, peer_info, attempt]( auto result ) mutable
+                    {
+                        auto strong = weak_self.lock();
+                        if ( !strong || strong->shutdown_started_.load() )
+                        {
+                            return;
+                        }
+
+                        if ( result )
+                        {
+                            strong->node_logger_->debug( "Connected to peer {}", peer_info.id.toBase58() );
+                            // Register only after the transport is connected. Otherwise
+                            // GossipSub joins the failed dial and bans the peer for a minute.
+                            strong->pubsub_->AddPeers( { peer } );
+                            return;
+                        }
+
+                        const auto retry_attempt = std::min( attempt, 10u );
+                        auto       delay_sec =
+                            strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
+                        delay_sec = std::min<uint64_t>(
+                            delay_sec,
+                            static_cast<uint64_t>( strong->reconnect_config_.max_delay.count() ) );
+                        const auto delay = std::chrono::seconds( delay_sec );
+
+                        strong->node_logger_->warn( "Failed to connect to peer {}: {}; retrying in {}s",
+                                                    peer_info.id.toBase58(),
+                                                    result.error().message(),
+                                                    delay.count() );
+                        strong->scheduler_->schedule(
+                            [weak_self,
+                             peer = std::move( peer ),
+                             peer_info = std::move( peer_info ),
+                             attempt = retry_attempt + 1]() mutable
+                            {
+                                if ( auto strong = weak_self.lock() )
+                                {
+                                    strong->ConnectPeer( std::move( peer ), std::move( peer_info ), attempt );
+                                }
+                            },
+                            delay );
+                    },
+                    std::chrono::seconds( 15 ) );
+            } );
+    }
+
+    void GeniusNode::AddPeers( const std::vector<std::string> &peers )
+    {
+        for ( const auto &peer : peers )
+        {
+            AddPeer( peer );
+        }
     }
 
     void GeniusNode::DHTInit()
@@ -3521,7 +3602,15 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->DoReconnectToBootstrapPeer( peer_id );
+                    // DialerImpl is shared with GossipSub and is not thread-safe.
+                    strong->pubsub_->GetAsioContext()->post(
+                        [weak_self, peer_id]()
+                        {
+                            if ( auto strong = weak_self.lock() )
+                            {
+                                strong->DoReconnectToBootstrapPeer( peer_id );
+                            }
+                        } );
                 }
             },
             delay );

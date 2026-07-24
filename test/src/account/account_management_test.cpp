@@ -147,9 +147,9 @@ TEST_F( AccountManagement, SetPayoutAddress )
         { "0xcafe", "0.65", "1.0", TOKEN_ID, path_requester.generic_string() + '/' },
         sgns::FromPrivateKey{ "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0" } );
 
-    node_->GetPubSub()->AddPeers(
+    node_->AddPeers(
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
-    node_receiver->GetPubSub()->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
+    node_receiver->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

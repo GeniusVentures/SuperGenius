@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thread>
 
 #include <boost/dll.hpp>
 #include <gtest/gtest.h>
@@ -65,6 +66,7 @@ namespace sgns
                 config << "{ \"pubsub_port\": \"" << full_node_->GetPubsubPort()
                        << "\", \"auto_dht\": false, \"upnp_enabled\": false }";
             }
+            full_node_.reset();
 
             std::filesystem::create_directories( client_config_.BaseWritePath );
             {
@@ -104,7 +106,7 @@ namespace sgns
         std::string                 bootstrap_address_;
     };
 
-    TEST_F( GeniusNodeBootstrapReconnectTest, ReconnectsToConfiguredBootstrapAfterRestart )
+    TEST_F( GeniusNodeBootstrapReconnectTest, ConnectsWhenConfiguredBootstrapStartsLateAndReconnectsAfterRestart )
     {
         auto multiaddress_result = libp2p::multi::Multiaddress::create( bootstrap_address_ );
         ASSERT_TRUE( multiaddress_result.has_value() );
@@ -116,6 +118,21 @@ namespace sgns
         ASSERT_TRUE( peer_id_result.has_value() );
         const libp2p::peer::PeerInfo bootstrap_peer{ peer_id_result.value(), { multiaddress } };
 
+        // Leave the configured bootstrap offline long enough for the initial transport dial
+        // to fail. The client must retry without first handing that failure to GossipSub,
+        // which bans failed peers for one minute.
+        std::this_thread::sleep_for( std::chrono::seconds( 2 ) );
+        EXPECT_NE( client_node_->GetPubSub()->GetHost()->connectedness( bootstrap_peer ),
+                   libp2p::Host::Connectedness::CONNECTED );
+
+        full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
+        ASSERT_TRUE( full_node_ );
+        Blockchain::SetAuthorizedFullNodeAddress( full_node_->GetAddress() );
+
+        ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
+            [&]() { return full_node_->GetState() == GeniusNode::NodeState::READY; },
+            std::chrono::seconds( 50 ),
+            "late bootstrap full node did not become ready" ) );
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]() { return client_node_->GetState() == GeniusNode::NodeState::READY; },
             std::chrono::seconds( 50 ),

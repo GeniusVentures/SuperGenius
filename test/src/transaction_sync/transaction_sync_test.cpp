@@ -109,9 +109,9 @@ namespace sgns
                 DEV_CONFIG2,
                 sgns::FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
 
-            node_proc1->GetPubSub()->AddPeers(
+            node_proc1->AddPeers(
                 { node_proc2->GetPubSub()->GetInterfaceAddress(), full_node->GetPubSub()->GetInterfaceAddress() } );
-            node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+            node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
             test::assertWaitForCondition( [&]() { return full_node->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::milliseconds( 50000 ),
@@ -550,7 +550,7 @@ TEST_F( TransactionSyncTest, MissedCrdtHeadIsRecoveredAfterReconnect )
         DEV_CONFIG2,
         FromPrivateKey{ "19c2f2db8e7cb27e5438093cf377d27888ddd4b257827baddd0418eefacedd02" } );
     ASSERT_TRUE( node_proc2 );
-    node_proc2->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+    node_proc2->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return node_proc2->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),

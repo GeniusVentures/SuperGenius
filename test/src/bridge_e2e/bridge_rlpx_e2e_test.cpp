@@ -360,9 +360,9 @@ void BridgeRlpxE2ETest::SetUpTestSuite()
     node_proc2 = GeniusNode::New( gGeniusNodeConfig3, sgns::FromPrivateKey{ s_eth_private_key } );
 
     // Bootstrap PubSub
-    node_proc1->GetPubSub()->AddPeers(
+    node_proc1->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for processor nodes to sync and reach READY (polling only, no thread sleep)
     {

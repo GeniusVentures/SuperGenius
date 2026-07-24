@@ -86,10 +86,10 @@ protected:
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetInterfaceAddress(),
                                       node_proc2->GetPubSub()->GetInterfaceAddress() };
-        node_main->GetPubSub()->AddPeers( bootstrappers );
+        node_main->AddPeers( bootstrappers );
 
         bootstrappers = { node_proc2->GetPubSub()->GetInterfaceAddress() };
-        node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        node_proc1->AddPeers( bootstrappers );
 
         sgns::test::assertWaitForCondition( [&]
                                             { return node_proc1->GetState() == sgns::GeniusNode::NodeState::READY; },

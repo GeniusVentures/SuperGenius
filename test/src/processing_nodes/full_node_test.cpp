@@ -80,7 +80,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             false,
                                             "fnt_original",
                                             sharedKey );
-    originalNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
+    originalNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     test::assertWaitForCondition( [&]() { return fullNode->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
@@ -114,7 +114,7 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
                                             false,
                                             "fnt_recovery",
                                             sharedKey );
-    recoveryNode->GetPubSub()->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
+    recoveryNode->AddPeers( { fullNode->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "****** Verifying recovery node balance ****" << std::endl;
     test::assertWaitForCondition( [&]() { return recoveryNode->GetBalance() == afterMint; },

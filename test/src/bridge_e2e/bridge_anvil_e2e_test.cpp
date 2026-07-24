@@ -383,7 +383,7 @@ void BridgeAnvilE2ETest::SetUpTestSuite()
                 peers.push_back( s_nodes[j]->GetPubSub()->GetLocalAddress() );
             }
         }
-        s_nodes[i]->GetPubSub()->AddPeers( peers );
+        s_nodes[i]->AddPeers( peers );
     }
 
     // Wait for all processor nodes to sync and reach READY.

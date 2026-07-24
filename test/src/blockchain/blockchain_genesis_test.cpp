@@ -198,9 +198,9 @@ TEST_F( BlockchainGenesisTest, DISABLED_NoAuthorizationNoSync )
     // Connect nodes to each other
     std::cout << "Connecting nodes..." << std::endl;
 
-    node_regular_1->GetPubSub()->AddPeers(
+    node_regular_1->AddPeers(
         { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     // Without authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.
@@ -246,7 +246,7 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSync )
     std::cout << "Full node address: " << node_full->GetAddress() << std::endl;
     std::cout << "Regular node 1 address: " << node_regular_1->GetAddress() << std::endl;
 
-    node_regular_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_1->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     std::cout << "Authorized address set on all nodes" << std::endl;
 
@@ -294,9 +294,9 @@ TEST_F( BlockchainGenesisTest, WithAuthorizationCanSyncAndProcessTransactions )
                                       false );
 
     // Establish connectivity for gossiping blocks/transactions
-    node_regular_1->GetPubSub()->AddPeers(
+    node_regular_1->AddPeers(
         { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     auto token_id = sgns::TokenID::FromBytes( { 0x00 } );
 
@@ -396,9 +396,9 @@ TEST_F( BlockchainGenesisTest, DISABLED_WrongAuthorizationCannotSync )
     // Connect nodes to each other
     std::cout << "Connecting nodes..." << std::endl;
 
-    node_regular_1->GetPubSub()->AddPeers(
+    node_regular_1->AddPeers(
         { node_full->GetPubSub()->GetInterfaceAddress(), node_regular_2->GetPubSub()->GetInterfaceAddress() } );
-    node_regular_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_regular_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     // With wrong authorization, nodes must NOT reach READY. Bounded-wait (via
     // waitForCondition) for sync that should not occur, then observe state.

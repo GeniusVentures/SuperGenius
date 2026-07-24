@@ -132,9 +132,9 @@ TEST( TransferTokenValue, ThreeNodeTransferTest )
     auto node52 = CreateNode( "0xdafe", "2.0", sgns::TokenID::FromBytes( { 0x52 } ) );
 
     // Configure peer connections
-    node51->GetPubSub()->AddPeers(
+    node51->AddPeers(
         { node50->GetPubSub()->GetInterfaceAddress(), node52->GetPubSub()->GetInterfaceAddress() } );
-    node52->GetPubSub()->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
+    node52->AddPeers( { node50->GetPubSub()->GetInterfaceAddress() } );
     ConfigureTestConsensus( node50, "node50" );
     ConfigureTestConsensus( node51, "node51" );
     ConfigureTestConsensus( node52, "node52" );
@@ -249,7 +249,7 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
     auto tokenId  = sgns::TokenID::FromBytes( { 0x05 } );
     auto nodefull = CreateNode( "0xaffb", "0.5", tokenId, true, true );
     auto node = CreateNode( "0xfadb", "0.5", tokenId );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
+    nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     ConfigureTestConsensus( nodefull, "nodefull" );
     ConfigureTestConsensus( node, "node" );
@@ -281,7 +281,7 @@ TEST( GeniusNodeMultiTokenMintTest, MintMultipleTokenIds )
 {
     auto nodefull = CreateNode( "0xaffd", "1.0", sgns::TokenID::FromBytes( { 0x0a } ), true, true );
     auto node = CreateNode( "0xfafe", "1.0", sgns::TokenID::FromBytes( { 0x0a } ) );
-    nodefull->GetPubSub()->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
+    nodefull->AddPeers( { node->GetPubSub()->GetInterfaceAddress() } );
 
     ConfigureTestConsensus( nodefull, "nodefull" );
     ConfigureTestConsensus( node, "node" );
@@ -361,9 +361,9 @@ TEST_F( ProcessingNodesModuleTest, SinglePostProcessing )
     auto node_main  = CreateNode( "0xacfe", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), false );
     auto node_proc2 = CreateNode( "0xaffa", "0.65", sgns::TokenID::FromBytes( { 0x02 } ), false, false, true );
 
-    node_main->GetPubSub()->AddPeers(
+    node_main->AddPeers(
         { node_proc1->GetPubSub()->GetInterfaceAddress(), node_proc2->GetPubSub()->GetInterfaceAddress() } );
-    node_proc1->GetPubSub()->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
+    node_proc1->AddPeers( { node_proc2->GetPubSub()->GetInterfaceAddress() } );
 
     ConfigureTestConsensus( node_proc1, "node_proc1" );
     ConfigureTestConsensus( node_main, "node_main" );

@@ -203,7 +203,7 @@ void BridgeSepoliaE2ETest::SetUpTestSuite()
         {
             if ( j != i ) { peers.push_back( s_nodes[j]->GetPubSub()->GetLocalAddress() ); }
         }
-        s_nodes[i]->GetPubSub()->AddPeers( peers );
+        s_nodes[i]->AddPeers( peers );
     }
 
     ASSERT_WAIT_FOR_CONDITION(

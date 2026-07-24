@@ -413,10 +413,16 @@ namespace sgns
                                                                       std::chrono::milliseconds timeout );
 
         /**
-         * @brief Adds a peer address to the underlying PubSub service.
-         * @param[in] peer Peer multiaddress to add.
+         * @brief Adds a peer to PubSub and starts connecting to it.
+         * @param[in] peer Peer multiaddress to connect to.
          */
         void AddPeer( const std::string &peer );
+
+        /**
+         * @brief Adds peers to PubSub and starts connecting to them.
+         * @param[in] peers Peer multiaddresses to connect to.
+         */
+        void AddPeers( const std::vector<std::string> &peers );
 
         /**
          * @brief Starts or restarts the background UPnP port refresh thread.
@@ -992,6 +998,11 @@ namespace sgns
          * @brief Parse a multiaddr string into a PeerInfo, replicating ipfs_pubsub::PeerInfoFromString
          */
         static boost::optional<libp2p::peer::PeerInfo> ParsePeerInfoFromString( const std::string &multiaddr_str );
+
+        /**
+         * @brief Connect to a peer on the PubSub I/O thread, retrying transient failures.
+         */
+        void ConnectPeer( std::string peer, libp2p::peer::PeerInfo peer_info, unsigned attempt );
 
         /**
          * @brief Subscribe to libp2p disconnect events for bootstrap fullnodes
