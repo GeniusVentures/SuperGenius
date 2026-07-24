@@ -299,11 +299,12 @@ namespace sgns::crdt
         }
         std::shared_ptr<libp2p::Host> host = m_pubsub->GetHost();
 
+        // Run Graphsync response handling on the executor that owns the pubsub host's stream queues.
         auto graphsync = std::make_shared<GraphsyncImpl>( host,
                                                           std::move( scheduler ),
                                                           graphsyncnetwork,
                                                           generator,
-                                                          m_context );
+                                                          m_pubsub->GetAsioContext() );
         auto dagSyncer = std::make_shared<GraphsyncDAGSyncer>( ipfsDataStore, graphsync, host );
 
         // Start DagSyner listener

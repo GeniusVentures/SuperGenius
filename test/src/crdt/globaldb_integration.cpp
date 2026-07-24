@@ -168,6 +168,10 @@ public:
         {
             for ( auto &node : nodes_ )
             {
+                if ( node.db )
+                {
+                    node.db->ShutdownNow();
+                }
                 if ( node.io )
                 {
                     node.io->stop();
@@ -353,8 +357,8 @@ TEST_F( GlobalDBIntegrationTest, ReplicationAcrossMultipleTopicsTest )
     {
         const auto resA = testNodes->getNodes()[2].db->Get( keyA );
         const auto resB = testNodes->getNodes()[2].db->Get( keyB );
-        EXPECT_TRUE( resA.has_value() );
-        EXPECT_TRUE( resB.has_value() );
+        ASSERT_TRUE( resA.has_value() );
+        ASSERT_TRUE( resB.has_value() );
         EXPECT_EQ( resA.value().toString(), "Data from topic A" );
         EXPECT_EQ( resB.value().toString(), "Data from topic B" );
     }
