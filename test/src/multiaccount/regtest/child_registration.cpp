@@ -116,9 +116,9 @@ protected:
         // D-51: genesis-authorized node (full node + processor + authorized)
         genesis_node_ = CreateNode( "regtest_genesis", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ), true, true, true );
-        sgns::test::assertWaitForCondition(
-            [&]() { return genesis_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::milliseconds( 180000 ), "genesis_node_ not synced" );
+        ASSERT_WAIT_FOR_CONDITION(
+            ([&]() { return genesis_node_->GetState() == GeniusNode::NodeState::READY; }),
+            std::chrono::milliseconds( 180000 ), "genesis_node_ not synced", nullptr );
 
         // Main wallet node A
         main_node_ = CreateNode( "regtest_main", "0xcafe", "1.0",
