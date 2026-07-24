@@ -92,6 +92,13 @@ namespace sgns
             INVALID      ///< Invalid transaction
         };
 
+        enum class BridgeBurnState : uint8_t
+        {
+            Available,
+            Reserved,
+            AlreadyHandled
+        };
+
         /**
          * @brief Value delivered when an asynchronous outgoing-transaction wait completes.
          *
@@ -632,6 +639,16 @@ namespace sgns
         /// @brief Bridge mint reservation/persistence constants.
         static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
         static constexpr std::string_view kBridgeKeySeparator   = ":";
+
+        using BridgeExecutedReader =
+            std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::GlobalDB::Buffer & )>;
+
+        outcome::result<BridgeBurnState> GetBridgeBurnState( const std::string &chainid,
+                                                             const std::string &transaction_hash,
+                                                             uint32_t receipt_log_index ) const;
+        void ResetBridgeExecutedReader();
+
+        BridgeExecutedReader bridge_executed_reader_;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );

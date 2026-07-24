@@ -99,6 +99,28 @@ namespace sgns
             return manager.tx_queue_m.size();
         }
 
+        static outcome::result<TransactionManager::BridgeBurnState> GetBridgeBurnState(
+            const TransactionManager &manager,
+            const std::string        &chain_id,
+            const std::string        &transaction_hash,
+            uint32_t                  receipt_log_index )
+        {
+            return manager.GetBridgeBurnState(
+                chain_id, transaction_hash, receipt_log_index );
+        }
+
+        static void SetBridgeExecutedReader(
+            TransactionManager &manager,
+            TransactionManager::BridgeExecutedReader reader )
+        {
+            manager.bridge_executed_reader_ = std::move( reader );
+        }
+
+        static void ResetBridgeExecutedReader( TransactionManager &manager )
+        {
+            manager.ResetBridgeExecutedReader();
+        }
+
         static std::shared_ptr<MintTransactionV2> LastQueuedMint( TransactionManager &manager )
         {
             std::lock_guard lock( manager.mutex_m );
@@ -1016,6 +1038,143 @@ TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreate
     ASSERT_EQ( inputs.size(), 1U );
     EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
     EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        MintFundsExecutedReadErrorsFailClosedBeforeMutation )
+{
+    ASSERT_NE( manager_, nullptr );
+    for ( const auto error :
+          { storage::DatabaseError::CORRUPTION, storage::DatabaseError::IO_ERROR } )
+    {
+        const std::string burn_hash(
+            64, error == storage::DatabaseError::CORRUPTION ? 'b' : 'c' );
+        const auto parsed_hash = base::Hash256::fromReadableString( burn_hash );
+        ASSERT_TRUE( parsed_hash.has_value() );
+        const auto queue_before =
+            TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
+
+        TransactionManagerPendingLifecycleTestAccess::SetBridgeExecutedReader(
+            *manager_,
+            [error]( const crdt::GlobalDB::Buffer & )
+                -> outcome::result<crdt::GlobalDB::Buffer>
+            {
+                return outcome::failure( error );
+            } );
+        auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+            *manager_,
+            kAmount,
+            burn_hash,
+            "11155111",
+            kReceiptIndex,
+            kTokenId,
+            account_->GetAddress() );
+        TransactionManagerPendingLifecycleTestAccess::ResetBridgeExecutedReader(
+            *manager_ );
+
+        ASSERT_TRUE( result.has_error() );
+        EXPECT_EQ( result.error(), error );
+        EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+                   queue_before );
+        EXPECT_FALSE( account_->GetUTXOManager()
+                          .GetOutPointState( parsed_hash.value(), kReceiptIndex )
+                          .has_value() );
+        EXPECT_TRUE( ExecutedKeyAbsent( "11155111", burn_hash ) );
+    }
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        MintFundsExecutedReadNotFoundAllowsIndexedMint )
+{
+    ASSERT_NE( manager_, nullptr );
+    const std::string burn_hash( 64, 'd' );
+    const auto queue_before =
+        TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
+    TransactionManagerPendingLifecycleTestAccess::SetBridgeExecutedReader(
+        *manager_,
+        []( const crdt::GlobalDB::Buffer & )
+            -> outcome::result<crdt::GlobalDB::Buffer>
+        {
+            return outcome::failure( storage::DatabaseError::NOT_FOUND );
+        } );
+    auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+        *manager_,
+        kAmount,
+        burn_hash,
+        "11155111",
+        kReceiptIndex,
+        kTokenId,
+        account_->GetAddress() );
+    TransactionManagerPendingLifecycleTestAccess::ResetBridgeExecutedReader( *manager_ );
+
+    ASSERT_TRUE( result.has_value() );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+               queue_before + 1 );
+    auto mint = TransactionManagerPendingLifecycleTestAccess::LastQueuedMint( *manager_ );
+    ASSERT_NE( mint, nullptr );
+    ASSERT_EQ( mint->GetUTXOParameters().first.size(), 1U );
+    EXPECT_EQ( mint->GetUTXOParameters().first.front().output_idx_, kReceiptIndex );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        BridgeBurnStateDistinguishesReservedConsumedAndPersisted )
+{
+    ASSERT_NE( manager_, nullptr );
+    auto &utxo_manager = account_->GetUTXOManager();
+
+    const std::string reserved_hash_text( 64, 'e' );
+    auto reserved_hash = base::Hash256::fromReadableString( reserved_hash_text );
+    ASSERT_TRUE( reserved_hash.has_value() );
+    GeniusUTXO reserved_utxo(
+        reserved_hash.value(), kReceiptIndex, kAmount, kTokenId, account_->GetAddress() );
+    ASSERT_TRUE( utxo_manager
+                     .PutUTXO( reserved_utxo,
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    auto reserved_inputs = account_->CreateInputsFromUTXOs( { reserved_utxo } );
+    utxo_manager.ReserveUTXOs(
+        reserved_inputs, reserved_hash_text, UTXOManager::UTXOType::UTXO_BRIDGE );
+    auto reserved = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
+        *manager_, "11155111", reserved_hash_text, kReceiptIndex );
+    ASSERT_TRUE( reserved.has_value() );
+    EXPECT_EQ( reserved.value(), TransactionManager::BridgeBurnState::Reserved );
+
+    const std::string consumed_hash_text( 64, 'f' );
+    auto consumed_hash = base::Hash256::fromReadableString( consumed_hash_text );
+    ASSERT_TRUE( consumed_hash.has_value() );
+    GeniusUTXO consumed_utxo(
+        consumed_hash.value(), kReceiptIndex, kAmount, kTokenId, account_->GetAddress() );
+    ASSERT_TRUE( utxo_manager
+                     .PutUTXO( consumed_utxo,
+                               account_->GetAddress(),
+                               UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    auto consumed_inputs = account_->CreateInputsFromUTXOs( { consumed_utxo } );
+    ASSERT_TRUE( utxo_manager
+                     .ConsumeUTXOs( consumed_inputs,
+                                    account_->GetAddress(),
+                                    UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .has_value() );
+    auto consumed = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
+        *manager_, "11155111", consumed_hash_text, kReceiptIndex );
+    ASSERT_TRUE( consumed.has_value() );
+    EXPECT_EQ( consumed.value(), TransactionManager::BridgeBurnState::AlreadyHandled );
+
+    const std::string persisted_hash( 64, '1' );
+    crdt::GlobalDB::Buffer key;
+    key.put( TransactionManager::MakeBridgeExecutedKey(
+        "11155111", persisted_hash, kReceiptIndex ) );
+    crdt::GlobalDB::Buffer value;
+    value.put( "executed" );
+    ASSERT_TRUE( db_->GetDataStore()->put( key, value ).has_value() );
+    auto persisted = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
+        *manager_, "11155111", persisted_hash, kReceiptIndex );
+    ASSERT_TRUE( persisted.has_value() );
+    EXPECT_EQ( persisted.value(), TransactionManager::BridgeBurnState::AlreadyHandled );
+
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
+               0U );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,

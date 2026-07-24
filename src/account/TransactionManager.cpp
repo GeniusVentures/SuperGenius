@@ -32,6 +32,7 @@
 #include "crdt/proto/delta.pb.h"
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
+#include "storage/database_error.hpp"
 
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
@@ -351,6 +352,7 @@ namespace sgns
         last_loop_time_( std::chrono::steady_clock::now() ),
         m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
     {
+        ResetBridgeExecutedReader();
     }
 
     TransactionManager::~TransactionManager()
@@ -688,6 +690,62 @@ namespace sgns
              + transaction_hash + std::string( kBridgeKeySeparator ) + std::to_string( receipt_log_index );
     }
 
+    void TransactionManager::ResetBridgeExecutedReader()
+    {
+        bridge_executed_reader_ =
+            [this]( const crdt::GlobalDB::Buffer &key ) -> outcome::result<crdt::GlobalDB::Buffer>
+        {
+            auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
+            if ( !datastore )
+            {
+                return outcome::failure( storage::DatabaseError::UNITIALIZED );
+            }
+            return datastore->get( key );
+        };
+    }
+
+    outcome::result<TransactionManager::BridgeBurnState>
+    TransactionManager::GetBridgeBurnState( const std::string &chainid,
+                                             const std::string &transaction_hash,
+                                             uint32_t receipt_log_index ) const
+    {
+        if ( !IsCanonicalUnsignedDecimal( chainid ) || !IsCanonicalHash256Text( transaction_hash ) )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        auto source_hash = base::Hash256::fromReadableString( transaction_hash );
+        if ( source_hash.has_error() || source_hash.value() == base::Hash256{} ||
+             source_hash.value().toReadableString() != transaction_hash )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        crdt::GlobalDB::Buffer key;
+        key.put( MakeBridgeExecutedKey( chainid, transaction_hash, receipt_log_index ) );
+        auto executed = bridge_executed_reader_( key );
+        if ( executed.has_value() )
+        {
+            return BridgeBurnState::AlreadyHandled;
+        }
+        if ( executed.error() != storage::DatabaseError::NOT_FOUND )
+        {
+            return outcome::failure( executed.error() );
+        }
+
+        const auto outpoint_state =
+            account_m->GetUTXOManager().GetOutPointState( source_hash.value(), receipt_log_index );
+        if ( outpoint_state == UTXOManager::UTXOState::UTXO_CONSUMED )
+        {
+            return BridgeBurnState::AlreadyHandled;
+        }
+        if ( outpoint_state == UTXOManager::UTXOState::UTXO_RESERVED )
+        {
+            return BridgeBurnState::Reserved;
+        }
+        return BridgeBurnState::Available;
+    }
+
     outcome::result<std::string> TransactionManager::MintFunds( uint64_t    amount,
                                                                 std::string transaction_hash,
                                                                 std::string chainid,
@@ -700,60 +758,27 @@ namespace sgns
             return outcome::failure( boost::system::error_code{} );
         }
 
-        if ( !IsCanonicalUnsignedDecimal( chainid ) || !IsCanonicalHash256Text( transaction_hash ) )
+        auto burn_state = GetBridgeBurnState( chainid, transaction_hash, receipt_log_index );
+        if ( burn_state.has_error() )
         {
-            return outcome::failure( std::errc::invalid_argument );
+            return outcome::failure( burn_state.error() );
         }
-
-        auto source_hash = base::Hash256::fromReadableString( transaction_hash );
-        if ( source_hash.has_error() || source_hash.value() == base::Hash256{} ||
-             source_hash.value().toReadableString() != transaction_hash )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        const auto burn_tx_hash = source_hash.value();
-
-        // UTXO reservation check — prevent duplicate mint creation for the same burn
-        // Uses UTXO_RESERVED state (D-18) instead of in-memory bridge_mint_reservations_
-        auto &utxo_mgr = account_m->GetUTXOManager();
-        if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index )
-             || utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
+        if ( burn_state.value() != BridgeBurnState::Available )
         {
             TransactionManagerLogger()->warn(
-                "[{} - full: {}] {}: Bridge mint already processed (UTXO) for chain={} tx_hash={} receipt_index={}",
+                "[{} - full: {}] {}: Bridge mint unavailable for chain={} tx_hash={} receipt_index={} state={}",
                 account_m->GetAddress().substr( 0, 8 ),
                 full_node_m,
                 __func__,
                 chainid,
                 transaction_hash,
-                receipt_log_index );
+                receipt_log_index,
+                burn_state.value() == BridgeBurnState::Reserved ? "reserved" : "already-handled" );
             return outcome::failure( std::errc::already_connected );
         }
 
-        // Persistence check — reject if this burn was already executed (survives restart)
-        const std::string persistence_key =
-            MakeBridgeExecutedKey( chainid, transaction_hash, receipt_log_index );
-        {
-            auto datastore = globaldb_m ? globaldb_m->GetDataStore() : nullptr;
-            if ( datastore )
-            {
-                crdt::GlobalDB::Buffer key_buffer;
-                key_buffer.put( persistence_key );
-                auto existing = datastore->get( key_buffer );
-                if ( existing.has_value() )
-                {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] {}: Bridge mint already executed (persisted) for chain={} tx_hash={} receipt_index={}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        chainid,
-                        transaction_hash,
-                        receipt_log_index );
-                    return outcome::failure( std::errc::already_connected );
-                }
-            }
-        }
+        const auto burn_tx_hash =
+            base::Hash256::fromReadableString( transaction_hash ).value();
 
         // D-18/D-19: Insert burn UTXO, then reserve via ReserveUTXOs (sets RESERVED state)
         GeniusUTXO burn_utxo(
