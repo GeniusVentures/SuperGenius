@@ -12,6 +12,7 @@
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/crdt_data_filter.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/outcome.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
@@ -42,6 +43,26 @@ namespace sgns
         {
             return manager ? manager->FilterCertificateDelta( delta )
                            : crdt::DeltaFilterResult::Reject();
+        }
+
+        static void SetCertificateReader(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )> reader )
+        {
+            manager->certificate_record_reader_ = std::move( reader );
+        }
+
+        static void ResetCertificateReader( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            auto db = manager->db_;
+            manager->certificate_record_reader_ =
+                [db = std::move( db )]( const crdt::HierarchicalKey &key ) { return db->Get( key ); };
+        }
+
+        static void SetCertificatePublishObserver( const std::shared_ptr<ConsensusManager> &manager,
+                                                   std::function<void()>                    observer )
+        {
+            manager->certificate_publish_observer_ = std::move( observer );
         }
     };
 } // namespace sgns
@@ -439,6 +460,251 @@ namespace sgns::test
         ConsensusManager::Certificate parsed;
         ASSERT_TRUE( parsed.ParseFromArray( stored.value().data(), stored.value().size() ) );
         EXPECT_EQ( parsed.proposal_id(), first.value().proposal_id() );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, SubmitCertificatePreflightReadErrorsFailClosed )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        ASSERT_OUTCOME_SUCCESS( certificate, MakeCertificate( manager, registry, account, account ) );
+
+        const auto slot   = ConsensusManagerTestAccess::Slot( certificate ).value();
+        const auto winner = ConsensusManagerTestAccess::Winner( certificate ).value();
+        const auto slot_key  = "/cert/v2/slot/" + slot;
+        const auto index_key = "/cert/v2/tx/" + winner;
+
+        std::atomic<int> callbacks{ 0 };
+        std::atomic<int> publishes{ 0 };
+        ASSERT_TRUE( manager->RegisterCertificateHandler(
+            NONCE_SUBJECT_TYPE,
+            [&callbacks]( const std::string &, const ConsensusManager::Certificate & )
+            {
+                ++callbacks;
+                return outcome::success( ConsensusManager::Check::Approve );
+            } ) );
+        ConsensusManagerTestAccess::SetCertificatePublishObserver( manager, [&publishes]() { ++publishes; } );
+
+        struct ReadRow
+        {
+            const char            *name;
+            storage::DatabaseError slot_error;
+            storage::DatabaseError index_error;
+            std::optional<ConsensusManager::CertificateStoreError> expected_error;
+        };
+        const std::array<ReadRow, 7> rows{
+            ReadRow{ "both not found",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::NOT_FOUND,
+                     std::nullopt },
+            ReadRow{ "slot corruption",
+                     storage::DatabaseError::CORRUPTION,
+                     storage::DatabaseError::NOT_FOUND,
+                     ConsensusManager::CertificateStoreError::IntegrityError },
+            ReadRow{ "index corruption",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::CORRUPTION,
+                     ConsensusManager::CertificateStoreError::IntegrityError },
+            ReadRow{ "both corruption",
+                     storage::DatabaseError::CORRUPTION,
+                     storage::DatabaseError::CORRUPTION,
+                     ConsensusManager::CertificateStoreError::IntegrityError },
+            ReadRow{ "slot I/O",
+                     storage::DatabaseError::IO_ERROR,
+                     storage::DatabaseError::NOT_FOUND,
+                     ConsensusManager::CertificateStoreError::StorageError },
+            ReadRow{ "index I/O",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::IO_ERROR,
+                     ConsensusManager::CertificateStoreError::StorageError },
+            ReadRow{ "both I/O",
+                     storage::DatabaseError::IO_ERROR,
+                     storage::DatabaseError::IO_ERROR,
+                     ConsensusManager::CertificateStoreError::StorageError },
+        };
+
+        for ( const auto &row : rows )
+        {
+            SCOPED_TRACE( row.name );
+            int slot_reads  = 0;
+            int index_reads = 0;
+            ConsensusManagerTestAccess::SetCertificateReader(
+                manager,
+                [&, slot_error = row.slot_error, index_error = row.index_error](
+                    const crdt::HierarchicalKey &key ) -> outcome::result<crdt::GlobalDB::Buffer>
+                {
+                    if ( key.GetKey() == slot_key )
+                    {
+                        ++slot_reads;
+                        return outcome::failure( slot_error );
+                    }
+                    if ( key.GetKey() == index_key )
+                    {
+                        ++index_reads;
+                        return outcome::failure( index_error );
+                    }
+                    ADD_FAILURE() << "unexpected certificate preflight key: " << key.GetKey();
+                    return db_->Get( key );
+                } );
+
+            const auto before_slot     = db_->Get( { slot_key } );
+            const auto before_index    = db_->Get( { index_key } );
+            const auto before_callback = callbacks.load();
+            const auto before_publish  = publishes.load();
+            auto       result          = manager->SubmitCertificate( certificate );
+            ConsensusManagerTestAccess::ResetCertificateReader( manager );
+
+            EXPECT_EQ( slot_reads, 1 );
+            EXPECT_EQ( index_reads, 1 );
+            if ( row.expected_error )
+            {
+                ASSERT_TRUE( result.has_error() );
+                EXPECT_EQ( result.error(), make_error_code( *row.expected_error ) );
+                auto after_slot  = db_->Get( { slot_key } );
+                auto after_index = db_->Get( { index_key } );
+                ASSERT_EQ( after_slot.has_value(), before_slot.has_value() );
+                ASSERT_EQ( after_index.has_value(), before_index.has_value() );
+                if ( before_slot )
+                {
+                    EXPECT_EQ( after_slot.value().toString(), before_slot.value().toString() );
+                }
+                if ( before_index )
+                {
+                    EXPECT_EQ( after_index.value().toString(), before_index.value().toString() );
+                }
+                std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+                EXPECT_EQ( callbacks.load(), before_callback );
+                EXPECT_EQ( publishes.load(), before_publish );
+            }
+            else
+            {
+                ASSERT_TRUE( result.has_value() );
+                ASSERT_WAIT_FOR_CONDITION( [&callbacks]() { return callbacks.load() >= 1; },
+                                           std::chrono::milliseconds( 2000 ),
+                                           "certificate callback after the NOT_FOUND control",
+                                           nullptr );
+                EXPECT_EQ( publishes.load(), 1 );
+                EXPECT_TRUE( db_->Get( { slot_key } ).has_value() );
+                EXPECT_TRUE( db_->Get( { index_key } ).has_value() );
+            }
+        }
+
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, FilterCertificateDeltaPreflightReadErrorsFailClosed )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager  = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        ASSERT_OUTCOME_SUCCESS( certificate, MakeCertificate( manager, registry, account, account ) );
+
+        const auto delta     = MakeCertificatePairDelta( certificate );
+        const auto slot      = ConsensusManagerTestAccess::Slot( certificate ).value();
+        const auto winner    = ConsensusManagerTestAccess::Winner( certificate ).value();
+        const auto slot_key  = "/cert/v2/slot/" + slot;
+        const auto index_key = "/cert/v2/tx/" + winner;
+
+        struct ReadRow
+        {
+            const char            *name;
+            storage::DatabaseError slot_error;
+            storage::DatabaseError index_error;
+            crdt::DeltaFilterDecision expected;
+            bool                       deliver;
+        };
+        const std::array<ReadRow, 7> rows{
+            ReadRow{ "both not found",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::NOT_FOUND,
+                     crdt::DeltaFilterDecision::Approve,
+                     false },
+            ReadRow{ "slot corruption",
+                     storage::DatabaseError::CORRUPTION,
+                     storage::DatabaseError::NOT_FOUND,
+                     crdt::DeltaFilterDecision::Reject,
+                     true },
+            ReadRow{ "index corruption",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::CORRUPTION,
+                     crdt::DeltaFilterDecision::Reject,
+                     false },
+            ReadRow{ "both corruption",
+                     storage::DatabaseError::CORRUPTION,
+                     storage::DatabaseError::CORRUPTION,
+                     crdt::DeltaFilterDecision::Reject,
+                     false },
+            ReadRow{ "slot I/O",
+                     storage::DatabaseError::IO_ERROR,
+                     storage::DatabaseError::NOT_FOUND,
+                     crdt::DeltaFilterDecision::Reject,
+                     false },
+            ReadRow{ "index I/O",
+                     storage::DatabaseError::NOT_FOUND,
+                     storage::DatabaseError::IO_ERROR,
+                     crdt::DeltaFilterDecision::Reject,
+                     true },
+            ReadRow{ "both I/O",
+                     storage::DatabaseError::IO_ERROR,
+                     storage::DatabaseError::IO_ERROR,
+                     crdt::DeltaFilterDecision::Reject,
+                     false },
+        };
+
+        for ( const auto &row : rows )
+        {
+            SCOPED_TRACE( row.name );
+            int slot_reads  = 0;
+            int index_reads = 0;
+            ConsensusManagerTestAccess::SetCertificateReader(
+                manager,
+                [&, slot_error = row.slot_error, index_error = row.index_error](
+                    const crdt::HierarchicalKey &key ) -> outcome::result<crdt::GlobalDB::Buffer>
+                {
+                    if ( key.GetKey() == slot_key )
+                    {
+                        ++slot_reads;
+                        return outcome::failure( slot_error );
+                    }
+                    if ( key.GetKey() == index_key )
+                    {
+                        ++index_reads;
+                        return outcome::failure( index_error );
+                    }
+                    ADD_FAILURE() << "unexpected certificate preflight key: " << key.GetKey();
+                    return db_->Get( key );
+                } );
+
+            const auto result = ConsensusManagerTestAccess::FilterDeltaResult( manager, delta );
+            EXPECT_EQ( result.decision, row.expected );
+            EXPECT_NE( result.decision, crdt::DeltaFilterDecision::RetryDependency );
+            EXPECT_EQ( slot_reads, 1 );
+            EXPECT_EQ( index_reads, 1 );
+
+            if ( row.deliver )
+            {
+                crdt::CRDTDataFilter receiver_filter( db_->GetWorkJournal() );
+                ASSERT_TRUE( receiver_filter.RegisterDeltaFilter(
+                    "^/?cert/.*$",
+                    [manager]( const crdt::pb::Delta &incoming )
+                    { return ConsensusManagerTestAccess::FilterDeltaResult( manager, incoming ); } ) );
+                auto filtered = receiver_filter.FilterDelta( delta );
+                EXPECT_EQ( filtered.decision, crdt::DeltaFilterDecision::Reject );
+                EXPECT_EQ( filtered.delta.elements_size(), 0 );
+                ASSERT_TRUE(
+                    db_->GetCRDTDataStore()
+                        ->Publish( std::make_shared<crdt::pb::Delta>( filtered.delta ), {} )
+                        .has_value() );
+                EXPECT_TRUE( db_->Get( { slot_key } ).has_error() );
+                EXPECT_TRUE( db_->Get( { index_key } ).has_error() );
+            }
+
+            ConsensusManagerTestAccess::ResetCertificateReader( manager );
+        }
+
         manager->Close();
     }
 
