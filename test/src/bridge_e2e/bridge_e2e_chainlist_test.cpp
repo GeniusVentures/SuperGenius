@@ -141,6 +141,9 @@ static std::string BuildValidReceiptJson( const std::string &tx_hash,
                                           const std::string &contract_addr,
                                           const std::string &topic0 )
 {
+    const std::string rpc_tx_hash =
+        tx_hash.rfind( "0x", 0 ) == 0 ? tx_hash : "0x" + tx_hash;
+
     boost::json::object root;
     root["jsonrpc"] = "2.0";
     root["id"]      = 1;
@@ -149,7 +152,7 @@ static std::string BuildValidReceiptJson( const std::string &tx_hash,
     result["status"]          = "0x1";
     result["blockNumber"]     = "0x100000";
     result["blockHash"]       = "0x" + std::string( 64, '1' );
-    result["transactionHash"] = tx_hash;
+    result["transactionHash"] = rpc_tx_hash;
 
     boost::json::object log_entry;
     log_entry["address"]         = contract_addr;
@@ -160,7 +163,7 @@ static std::string BuildValidReceiptJson( const std::string &tx_hash,
     log_entry["data"]            = BuildV2BurnData();
     log_entry["blockNumber"]     = "0x100000";
     log_entry["blockHash"]       = "0x" + std::string( 64, '1' );
-    log_entry["transactionHash"] = tx_hash;
+    log_entry["transactionHash"] = rpc_tx_hash;
     log_entry["logIndex"]        = "0x0";
 
     result["logs"] = boost::json::array{ std::move( log_entry ) };
@@ -338,7 +341,7 @@ TEST( BridgeE2EChainlistTest, ProviderWiresBothTopic0AndValidatorAcceptsV2Receip
     }
     validator.SetRpcEndpoints( "11155111", std::move( endpoints ) );
 
-    const std::string source_ref = "0x" + std::string( 64, 'b' );
+    const std::string source_ref( 64, 'b' );
     validator.SetTransportFactory(
         [&]( const std::string &, std::chrono::seconds ) {
             return std::make_unique<FixedReceiptTransport>(
@@ -379,7 +382,7 @@ TEST( BridgeE2EChainlistTest, RuntimeFetchWiresEndpointsThatReachQuorum )
 
     const auto        v2_hash   = eth::abi::event_signature_hash( std::string( kBridgeOutInitiatedSig ) );
     const std::string v2_topic0 = rlp::base::parse::hex_bytes( v2_hash.data(), v2_hash.size() );
-    const std::string source_ref = "0x" + std::string( 64, 'f' );
+    const std::string source_ref( 64, 'f' );
     validator.SetTransportFactory(
         [&]( const std::string &, std::chrono::seconds ) {
             return std::make_unique<FixedReceiptTransport>(
@@ -516,7 +519,7 @@ TEST( BridgeE2EChainlistTest, V2ReceiptPassesPastStaleV1OnlyOperatorEndpoint )
 
     // The operator's endpoint is first and mismatches a v2 receipt; without the
     // continue-on-mismatch fix, verification would return false here.
-    const std::string source_ref = "0x" + std::string( 64, '7' );
+    const std::string source_ref( 64, '7' );
     validator.SetTransportFactory(
         [&]( const std::string &, std::chrono::seconds ) {
             return std::make_unique<FixedReceiptTransport>(
@@ -576,7 +579,7 @@ TEST( BridgeE2EChainlistTest, DuplicateUrlFetchedUpgradesExistingEndpointMetadat
     // A v2 receipt reaches quorum because the high-weight shared.example endpoint
     // was upgraded to {v1,v2} (50 + 25 = 75). Without the upgrade it would stay
     // v1-only, mismatch v2, and leave only the 25-weight endpoint (< quorum).
-    const std::string source_ref = "0x" + std::string( 64, '8' );
+    const std::string source_ref( 64, '8' );
     validator.SetTransportFactory(
         [&]( const std::string &, std::chrono::seconds ) {
             return std::make_unique<FixedReceiptTransport>(
@@ -632,7 +635,7 @@ TEST( BridgeE2EChainlistTest, FetchedTopicSetUpgradesAllExistingEndpointsNotOnly
 
     // Two public endpoints (50 weight) cannot reach quorum alone; the private
     // endpoint must have been upgraded to {v1,v2} to contribute its 50 weight.
-    const std::string source_ref = "0x" + std::string( 64, '6' );
+    const std::string source_ref( 64, '6' );
     validator.SetTransportFactory(
         [&]( const std::string &, std::chrono::seconds ) {
             return std::make_unique<FixedReceiptTransport>(
