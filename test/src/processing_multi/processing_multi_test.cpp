@@ -88,13 +88,13 @@ protected:
         //Connect to each other
         std::vector bootstrappers = { node_proc1->GetPubSub()->GetLocalAddress(),
                                       node_proc2->GetPubSub()->GetLocalAddress() };
-        node_main->GetPubSub()->AddPeers( bootstrappers );
+        node_main->AddPeers( bootstrappers );
 
         bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() };
-        node_proc1->GetPubSub()->AddPeers( bootstrappers );
+        node_proc1->AddPeers( bootstrappers );
 
         // bootstrappers = { node_main->GetPubSub()->GetLocalAddress(), node_proc1->GetPubSub()->GetLocalAddress() };
-        // node_proc2->GetPubSub()->AddPeers( bootstrappers );
+        // node_proc2->AddPeers( bootstrappers );
     }
 
     static void TearDownTestSuite()
@@ -349,7 +349,7 @@ TEST_F( ProcessingMultiTest, ProcessTwo )
     node_proc2->StartProcessing();
     std::vector bootstrappers = { node_main->GetPubSub()->GetLocalAddress(),
                                   node_proc1->GetPubSub()->GetLocalAddress() };
-    node_proc2->GetPubSub()->AddPeers( bootstrappers );
+    node_proc2->AddPeers( bootstrappers );
     node_main->ProcessImage( json_data );
     //node_main->ProcessImage(json_data);
 

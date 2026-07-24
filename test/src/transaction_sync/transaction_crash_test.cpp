@@ -151,8 +151,8 @@ namespace sgns
         }
 
         std::cout << "Reconnecting nodes for transaction propagation" << std::endl;
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout << "Waiting for the first batch of incoming transactions" << std::endl;
         for ( int i = 0; i < INITIAL_WAIT_TRANSFERS; i++ )
@@ -165,8 +165,8 @@ namespace sgns
 
         std::cout << "Simulating crash and recovery" << std::endl;
         RestartNode2();
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout
             << "****************************Waiting for the remaining transactions after recovery****************************"

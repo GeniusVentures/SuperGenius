@@ -3,6 +3,7 @@
 #include "blockchain/Blockchain.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/remove_all.hpp"
+#include "testutil/wait_condition.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
@@ -45,6 +46,15 @@ namespace
             []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
             { return std::make_shared<MemorySecureStorage>( identifier ); } );
     }
+
+    void WaitForReady( const std::shared_ptr<GeniusNode> &node )
+    {
+        // New() starts database initialization asynchronously. Let it finish before
+        // releasing the last node reference at the end of these short config tests.
+        test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+                                      std::chrono::seconds( 50 ),
+                                      "network-config test node did not finish initialization" );
+    }
 } // namespace
 
 // Scene A (reframed in Phase 3): the canonical New(dev_config, AccountSource) factory has no
@@ -64,6 +74,7 @@ TEST( NetworkConfigPrecedence, AutoDhtConfigDriven )
 
     // config "auto_dht": false drives the resolved value.
     EXPECT_FALSE( node->IsAutodhtEnabled() );
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
 }
 
 // Scene B (reframed in Phase 3): port_seed comes only from network_config.json. pubsubport_ is
@@ -88,6 +99,7 @@ TEST( NetworkConfigPrecedence, PortSeedConfigDriven )
     const auto resolved = node->GetPubsubPort();
     EXPECT_GE( resolved, 20000u );
     EXPECT_LE( resolved, 20300u );
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
 }
 
 TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
@@ -103,7 +115,9 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
 
     auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
     ASSERT_NE( node, nullptr );
+    sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
 
     EXPECT_GT( node->GetPubsubPort(), 0u );
     EXPECT_EQ( node->GetPubSub()->GetInterfaceAddress().find( "/tcp/0/" ), std::string::npos );
+    ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
 }

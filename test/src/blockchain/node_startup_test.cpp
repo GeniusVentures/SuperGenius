@@ -186,10 +186,10 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
     // Create a regular node and connect it to the genesis node.
     auto regularNode = CreateNode( "regular_node_startup", "0xcafe", "1.0", TokenID::FromBytes( { 0x00 } ), false );
     // GetInterfaceAddress() returns the full multiaddr WITH peer ID (required for
-    // AddPeers to dial). GetLocalAddress() omits the peer ID, so the dial never
+    // GeniusNode::AddPeer to dial). GetLocalAddress() omits the peer ID, so the dial never
     // completes and the regular node can't reach the genesis node — the cause of
     // the 5s nonce-timeout stall. This matches every other multi-node E2E test.
-    regularNode->GetPubSub()->AddPeers( { genesisNode->GetPubSub()->GetInterfaceAddress() } );
+    regularNode->AddPeer( genesisNode->GetPubSub()->GetInterfaceAddress() );
 
     // Measure the regular node's READY latency (connect -> READY). Generous budget
     // until a baseline is measured; tighten afterward.

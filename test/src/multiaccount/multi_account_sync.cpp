@@ -234,7 +234,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
 {
     auto node_full   = CreateNode( "registry_cid_full", true, true, true );
     auto node_client = CreateNode( "registry_cid_client" );
-    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_full );
     WaitForReady( node_client );
 
@@ -314,7 +314,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     // Create nodes dynamically
     auto node_full     = CreateNode( "node_multi_full", true, true, true );
     auto node_original = CreateNode( "node_multi_1" );
-    node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_original->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_full );
     WaitForReady( node_original );
 
@@ -347,7 +347,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     std::cout << " 3 mint transactions on original node completed, Creating duplicated node..." << std::endl;
 
     auto node_duplicated = CreateNode( "node_multi_1", false, true );
-    node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_duplicated->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     WaitForReady( node_duplicated );
 
     mint_result = node_duplicated->MintTokens( 60000,
@@ -375,10 +375,10 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     // Create 3 nodes - 2 with the same address, 1 different (full node for network)
     auto node_full        = CreateNode( "full_node_address_unique", true, true, true );
     auto node_same_addr_1 = CreateNode( "duplicate_address_12345" );
-    node_same_addr_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_1->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     auto node_same_addr_2 = CreateNode( "duplicate_address_12345", false, true );
-    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
     WaitForReady( node_full );
     WaitForReady( node_same_addr_1 );
@@ -462,7 +462,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     ASSERT_TRUE( transfer2_res.has_value() ) << "Transfer 2 failed on node_same_addr_2";
 
     // Add peers to each node
-    node_same_addr_2->GetPubSub()->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
 
     auto tx1_received = node_full->WaitForTransactionIncoming(
         transfer1_res.value(),
@@ -547,7 +547,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
     const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
     for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        nodes[i]->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     }
     for ( const auto &node : nodes )
     {
@@ -720,7 +720,7 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
     const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
     for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        nodes[i]->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
     }
     for ( const auto &node : nodes )
     {

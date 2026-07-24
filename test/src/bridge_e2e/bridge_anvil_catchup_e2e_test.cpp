@@ -416,9 +416,9 @@ void BridgeAnvilCatchupE2ETest::SetUpTestSuite()
                   node_main->GetAddress().substr( 0, 16 ) );
 
     // Bootstrap PubSub mesh so ValidatorRegistry syncs via CRDT.
-    node_proc1->GetPubSub()->AddPeers(
+    node_proc1->AddPeers(
         { node_main->GetPubSub()->GetLocalAddress(), node_proc2->GetPubSub()->GetLocalAddress() } );
-    node_proc2->GetPubSub()->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
+    node_proc2->AddPeers( { node_main->GetPubSub()->GetLocalAddress() } );
 
     // Wait for the full node to reach READY. The BridgeCatchupWatcher polls
     // eth_getLogs independently on its own thread — no state machine coupling.
