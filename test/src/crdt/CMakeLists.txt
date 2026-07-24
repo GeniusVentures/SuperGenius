@@ -29,8 +29,31 @@ target_link_libraries(crdt_test
     crdt_heads
 )
 
+addtest(crdt_datastore_last_owner_test
+    crdt_datastore_last_owner_test.cpp
+    crdt_mirror_broadcaster.cpp
+    crdt_custom_dagsyncer.cpp
+)
+
+target_link_libraries(crdt_datastore_last_owner_test
+    crdt_datastore
+    crdt_globaldb_proto
+    rocksdb
+    database_error
+    ipfs-lite-cpp::cid
+    ipfs-lite-cpp::ipfs_datastore_in_memory
+    ipfs-lite-cpp::blake2
+    p2p::p2p_cid
+    p2p::p2p_multihash
+    p2p::p2p_multiaddress
+    Boost::headers
+    Boost::filesystem
+    crdt_heads
+)
+
 if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
+  set_target_properties(crdt_datastore_last_owner_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
 
 addtest(globaldb_integration_test
@@ -45,4 +68,3 @@ target_link_libraries(globaldb_integration_test
 if(FORCE_MULTIPLE)
   set_target_properties(crdt_test PROPERTIES LINK_FLAGS "${MULTIPLE_OPTION}")
 endif()
-
