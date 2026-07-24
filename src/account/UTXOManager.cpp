@@ -77,6 +77,53 @@ namespace sgns
             }
         }
 
+        SGTransaction::UTXOEntryType ToProtoType( UTXOManager::UTXOType type )
+        {
+            return type == UTXOManager::UTXOType::UTXO_BRIDGE
+                     ? SGTransaction::UTXO_ENTRY_BRIDGE
+                     : SGTransaction::UTXO_ENTRY_NORMAL;
+        }
+
+        UTXOManager::UTXOType FromProtoType( SGTransaction::UTXOEntryType type )
+        {
+            return type == SGTransaction::UTXO_ENTRY_BRIDGE
+                     ? UTXOManager::UTXOType::UTXO_BRIDGE
+                     : UTXOManager::UTXOType::UTXO_NORMAL;
+        }
+
+        outcome::result<base::Buffer> SerializeUTXOEntry( const UTXOManager::UTXOEntry &entry,
+                                                          const std::string &address )
+        {
+            SGTransaction::UTXOEntryRecord record;
+            auto *utxo = record.mutable_utxo();
+            const auto txid = entry.utxo.GetTxID();
+            const auto token = entry.utxo.GetTokenID();
+            utxo->set_hash( txid.data(), txid.size() );
+            utxo->set_token( token.bytes().data(), token.size() );
+            utxo->set_amount( entry.utxo.GetAmount() );
+            utxo->set_output_idx( entry.utxo.GetOutputIdx() );
+            record.set_owner_address( address );
+            record.set_state( ToProtoState( entry.state ) );
+            record.set_type( ToProtoType( entry.type ) );
+            record.set_created_epoch( entry.created_epoch );
+            record.set_has_spent_epoch( entry.spent_epoch.has_value() );
+            if ( entry.spent_epoch )
+            {
+                record.set_spent_epoch( *entry.spent_epoch );
+            }
+            record.set_has_spent_by_txid( entry.spent_by_txid.has_value() );
+            if ( entry.spent_by_txid )
+            {
+                record.set_spent_by_txid( entry.spent_by_txid->data(), entry.spent_by_txid->size() );
+            }
+            base::Buffer value( std::vector<uint8_t>( record.ByteSizeLong() ) );
+            if ( !record.SerializeToArray( value.data(), value.size() ) )
+            {
+                return outcome::failure( std::errc::bad_message );
+            }
+            return value;
+        }
+
         base::Hash256 ComputeMerkleRootFromUTXOList( std::vector<GeniusUTXO> unspent )
         {
             return utxo_merkle::ComputeMerkleRootFromUTXOs( unspent );
@@ -687,6 +734,7 @@ namespace sgns
             return std::errc::invalid_argument;
         }
 
+        std::unique_lock persistence_lock( persistence_mutex_ );
         {
             std::unique_lock lock( utxos_mutex_ );
             if ( db_ != nullptr )
@@ -699,7 +747,11 @@ namespace sgns
             local_reservations_.clear();
         }
 
-        auto db_handle = AcquireStorage();
+        std::shared_ptr<storage::rocksdb> db_handle;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            db_handle = db_;
+        }
         if ( db_handle == nullptr )
         {
             logger_->error( "Tried to query UTXOs without loading DB" );
@@ -768,6 +820,7 @@ namespace sgns
                 const auto outpoint = loaded_utxo.GetOutPoint();
                 UTXOEntry  loaded_entry;
                 loaded_entry.state         = state;
+                loaded_entry.type          = FromProtoType( entry_record.type() );
                 loaded_entry.utxo          = loaded_utxo;
                 loaded_entry.created_epoch = entry_record.created_epoch();
                 if ( entry_record.has_spent_epoch() )
@@ -794,19 +847,28 @@ namespace sgns
 
     std::shared_ptr<storage::rocksdb> UTXOManager::AcquireStorage() const
     {
+        std::lock_guard persistence_lock( persistence_mutex_ );
         std::shared_lock lock( utxos_mutex_ );
         return db_;
     }
 
     void UTXOManager::ReleaseStorage()
     {
+        std::lock_guard persistence_lock( persistence_mutex_ );
         std::unique_lock lock( utxos_mutex_ );
         db_.reset();
     }
 
     outcome::result<void> UTXOManager::StoreUTXOs( const std::string &address )
     {
-        auto db = AcquireStorage();
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::OrdinaryStoreWaitingForPersistenceGate ) );
+        std::unique_lock persistence_lock( persistence_mutex_ );
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::OrdinaryStorePersistenceGateAcquired ) );
+        std::shared_ptr<storage::rocksdb> db;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            db = db_;
+        }
         if ( db == nullptr )
         {
             logger_->error( "Tried to store UTXOs without loading DB" );
@@ -853,35 +915,7 @@ namespace sgns
         uint64_t stored = 0;
         for ( const auto &[outpoint, entry] : entries_to_store )
         {
-            SGTransaction::UTXOEntryRecord entry_record;
-            auto                          *utxo_proto = entry_record.mutable_utxo();
-            const auto                     txid       = entry.utxo.GetTxID();
-            const auto                     token_id   = entry.utxo.GetTokenID();
-            utxo_proto->set_hash( txid.data(), txid.size() );
-            utxo_proto->set_token( token_id.bytes().data(), token_id.size() );
-            utxo_proto->set_amount( entry.utxo.GetAmount() );
-            utxo_proto->set_output_idx( entry.utxo.GetOutputIdx() );
-            entry_record.set_owner_address( address );
-            entry_record.set_state( ToProtoState( entry.state ) );
-            entry_record.set_created_epoch( entry.created_epoch );
-            entry_record.set_has_spent_epoch( entry.spent_epoch.has_value() );
-            if ( entry.spent_epoch.has_value() )
-            {
-                entry_record.set_spent_epoch( entry.spent_epoch.value() );
-            }
-            entry_record.set_has_spent_by_txid( entry.spent_by_txid.has_value() );
-            if ( entry.spent_by_txid.has_value() )
-            {
-                entry_record.set_spent_by_txid( entry.spent_by_txid.value().data(),
-                                                entry.spent_by_txid.value().size() );
-            }
-
-            base::Buffer value_buf( std::vector<uint8_t>( entry_record.ByteSizeLong() ) );
-            if ( !entry_record.SerializeToArray( value_buf.data(), value_buf.size() ) )
-            {
-                logger_->error( "Failed to serialize UTXO record for address {}", address );
-                return std::errc::bad_message;
-            }
+            BOOST_OUTCOME_TRY( auto value_buf, SerializeUTXOEntry( entry, address ) );
 
             base::Buffer key_buf;
             key_buf.put( BuildUTXORecordKey( address, outpoint ) );
@@ -894,6 +928,7 @@ namespace sgns
             ++stored;
         }
 
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::OrdinaryStoreSnapshotReadyBeforeCommit ) );
         if ( auto commit_res = batch->commit(); commit_res.has_error() )
         {
             logger_->error( "Error when committing UTXO records for address {}", address );
@@ -902,6 +937,334 @@ namespace sgns
 
         logger_->info( "Stored {} UTXOs for address {}", stored, address );
         return outcome::success();
+    }
+
+    std::string UTXOManager::MakeBridgeApplicationKey( const std::string &chain_id,
+                                                        const base::Hash256 &burn_hash,
+                                                        uint32_t receipt_log_index )
+    {
+        return fmt::format( "{}{}:{}:{}",
+                            BRIDGE_APPLICATION_PREFIX,
+                            chain_id,
+                            burn_hash.toReadableString(),
+                            receipt_log_index );
+    }
+
+    outcome::result<void> UTXOManager::InvokeFault( FaultStage stage ) const
+    {
+        return fault_callback_ ? fault_callback_( stage ) : outcome::success();
+    }
+
+    void UTXOManager::ResetFaultCallback()
+    {
+        fault_callback_ = []( FaultStage ) -> outcome::result<void>
+        {
+            return outcome::success();
+        };
+    }
+
+    void UTXOManager::ResetBridgeApplicationReader()
+    {
+        bridge_application_reader_ =
+            []( const std::shared_ptr<storage::rocksdb> &db,
+                const base::Buffer &key ) -> outcome::result<base::Buffer>
+        {
+            if ( !db )
+            {
+                return outcome::failure( storage::DatabaseError::UNITIALIZED );
+            }
+            return db->get( key );
+        };
+    }
+
+    outcome::result<UTXOManager::AtomicMintEffectResult>
+    UTXOManager::ApplyMintEffectsAtomically( const AtomicMintEffectRequest &request )
+    {
+        if ( request.chain_id.empty() || request.burn_hash == base::Hash256{} ||
+             request.winning_transaction_hash == base::Hash256{} ||
+             request.bridge_input.txid_hash_ != request.burn_hash ||
+             request.bridge_input.output_idx_ != request.receipt_log_index ||
+             request.bridge_input_owner.empty() ||
+             request.bridge_input_type != UTXOType::UTXO_BRIDGE )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        SGTransaction::BridgeApplicationRecord application;
+        application.set_version( 1 );
+        application.set_chain_id( request.chain_id );
+        application.set_burn_hash( request.burn_hash.data(), request.burn_hash.size() );
+        application.set_receipt_log_index( request.receipt_log_index );
+        application.set_winning_transaction_hash( request.winning_transaction_hash.data(),
+                                                  request.winning_transaction_hash.size() );
+        application.set_bridge_input_owner( request.bridge_input_owner );
+        application.set_bridge_input_type( ToProtoType( request.bridge_input_type ) );
+        for ( const auto &output : request.produced_outputs )
+        {
+            auto *record = application.add_produced_outputs();
+            auto *utxo = record->mutable_utxo();
+            const auto txid = output.GetTxID();
+            const auto token = output.GetTokenID();
+            utxo->set_hash( txid.data(), txid.size() );
+            utxo->set_token( token.bytes().data(), token.size() );
+            utxo->set_amount( output.GetAmount() );
+            utxo->set_output_idx( output.GetOutputIdx() );
+            record->set_owner_address( output.GetOwnerAddress() );
+            record->set_state( SGTransaction::UTXO_ENTRY_READY );
+            record->set_type( SGTransaction::UTXO_ENTRY_NORMAL );
+        }
+        std::string application_bytes;
+        if ( !application.SerializeToString( &application_bytes ) )
+        {
+            return outcome::failure( std::errc::bad_message );
+        }
+
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::AtomicMintWaitingForPersistenceGate ) );
+        std::unique_lock persistence_lock( persistence_mutex_ );
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::AtomicMintPersistenceGateAcquired ) );
+        std::unique_lock state_lock( utxos_mutex_ );
+        auto db = db_;
+        if ( !db )
+        {
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
+        }
+
+        base::Buffer application_key;
+        application_key.put( MakeBridgeApplicationKey(
+            request.chain_id, request.burn_hash, request.receipt_log_index ) );
+        auto existing_application = bridge_application_reader_( db, application_key );
+        if ( existing_application.has_value() )
+        {
+            if ( existing_application.value().toString() != application_bytes )
+            {
+                return outcome::failure( std::errc::state_not_recoverable );
+            }
+            for ( const auto &output : request.produced_outputs )
+            {
+                auto it = utxo_outpoints_.find( output.GetOutPoint() );
+                if ( it == utxo_outpoints_.end() ||
+                     it->second.state != UTXOState::UTXO_READY ||
+                     it->second.type != UTXOType::UTXO_NORMAL ||
+                     it->second.utxo.GetOwnerAddress() != output.GetOwnerAddress() ||
+                     it->second.utxo.GetAmount() != output.GetAmount() ||
+                     !it->second.utxo.GetTokenID().Equals( output.GetTokenID() ) )
+                {
+                    return outcome::failure( std::errc::state_not_recoverable );
+                }
+            }
+            const OutPoint bridge_outpoint{ request.burn_hash, request.receipt_log_index };
+            auto bridge_it = utxo_outpoints_.find( bridge_outpoint );
+            if ( bridge_it == utxo_outpoints_.end() ||
+                 bridge_it->second.state != UTXOState::UTXO_CONSUMED ||
+                 bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
+                 bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner )
+            {
+                return outcome::failure( std::errc::state_not_recoverable );
+            }
+            return AtomicMintEffectResult::AlreadyApplied;
+        }
+        if ( existing_application.error() != storage::DatabaseError::NOT_FOUND )
+        {
+            return outcome::failure( existing_application.error() );
+        }
+
+        auto candidate_outpoints = utxo_outpoints_;
+        auto candidate_addresses = address_outpoints_;
+        std::unordered_set<std::string> affected_owners;
+        for ( const auto &output : request.produced_outputs )
+        {
+            if ( output.GetTxID() != request.winning_transaction_hash ||
+                 output.GetOwnerAddress().empty() )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto outpoint = output.GetOutPoint();
+            auto existing = candidate_outpoints.find( outpoint );
+            if ( existing != candidate_outpoints.end() )
+            {
+                const auto &entry = existing->second;
+                if ( entry.state != UTXOState::UTXO_READY ||
+                     entry.type != UTXOType::UTXO_NORMAL ||
+                     entry.utxo.GetOwnerAddress() != output.GetOwnerAddress() ||
+                     entry.utxo.GetAmount() != output.GetAmount() ||
+                     !entry.utxo.GetTokenID().Equals( output.GetTokenID() ) )
+                {
+                    return outcome::failure( std::errc::file_exists );
+                }
+            }
+            else
+            {
+                UTXOEntry entry;
+                entry.utxo = output;
+                candidate_outpoints.emplace( outpoint, entry );
+                candidate_addresses[output.GetOwnerAddress()].push_back( outpoint );
+            }
+            affected_owners.insert( output.GetOwnerAddress() );
+            BOOST_OUTCOME_TRY( InvokeFault( FaultStage::ProducedOutputStage ) );
+        }
+
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::BridgeInputStage ) );
+        const OutPoint bridge_outpoint{ request.burn_hash, request.receipt_log_index };
+        auto bridge_it = candidate_outpoints.find( bridge_outpoint );
+        if ( bridge_it == candidate_outpoints.end() ||
+             bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
+             bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner ||
+             ( bridge_it->second.state != UTXOState::UTXO_READY &&
+               bridge_it->second.state != UTXOState::UTXO_RESERVED ) )
+        {
+            return outcome::failure( std::errc::state_not_recoverable );
+        }
+        bridge_it->second.state = UTXOState::UTXO_CONSUMED;
+        auto &bridge_owner_points = candidate_addresses[request.bridge_input_owner];
+        bridge_owner_points.erase(
+            std::remove( bridge_owner_points.begin(), bridge_owner_points.end(), bridge_outpoint ),
+            bridge_owner_points.end() );
+        affected_owners.insert( request.bridge_input_owner );
+
+        auto batch = db->batch();
+        for ( const auto &owner : affected_owners )
+        {
+            base::Buffer prefix;
+            prefix.put( fmt::format( "{}/{}/", DB_PREFIX, owner ) );
+            auto existing = db->query( prefix );
+            if ( existing.has_error() && existing.error() != storage::DatabaseError::NOT_FOUND )
+            {
+                return outcome::failure( existing.error() );
+            }
+            if ( existing.has_value() )
+            {
+                for ( const auto &[key, ignored] : existing.value() )
+                {
+                    (void) ignored;
+                    BOOST_OUTCOME_TRY( batch->remove( key ) );
+                }
+            }
+            for ( const auto &[outpoint, entry] : candidate_outpoints )
+            {
+                if ( entry.utxo.GetOwnerAddress() != owner )
+                {
+                    continue;
+                }
+                BOOST_OUTCOME_TRY( auto value, SerializeUTXOEntry( entry, owner ) );
+                base::Buffer key;
+                key.put( BuildUTXORecordKey( owner, outpoint ) );
+                BOOST_OUTCOME_TRY( batch->put( key, value ) );
+            }
+        }
+        base::Buffer application_value;
+        application_value.put( application_bytes );
+        BOOST_OUTCOME_TRY( batch->put( application_key, application_value ) );
+        BOOST_OUTCOME_TRY( InvokeFault( FaultStage::AtomicMintBeforeBatchCommit ) );
+        BOOST_OUTCOME_TRY( batch->commit() );
+
+        utxo_outpoints_.swap( candidate_outpoints );
+        address_outpoints_.swap( candidate_addresses );
+        local_reservations_.erase( bridge_outpoint );
+        return AtomicMintEffectResult::Applied;
+    }
+
+    outcome::result<std::optional<UTXOManager::BridgeApplication>>
+    UTXOManager::GetBridgeApplication( const std::string &chain_id,
+                                        const base::Hash256 &burn_hash,
+                                        uint32_t receipt_log_index ) const
+    {
+        std::unique_lock persistence_lock( persistence_mutex_ );
+        std::shared_lock state_lock( utxos_mutex_ );
+        auto db = db_;
+        if ( !db )
+        {
+            return outcome::failure( storage::DatabaseError::UNITIALIZED );
+        }
+        base::Buffer key;
+        key.put( MakeBridgeApplicationKey( chain_id, burn_hash, receipt_log_index ) );
+        auto raw = bridge_application_reader_( db, key );
+        if ( raw.has_error() )
+        {
+            if ( raw.error() == storage::DatabaseError::NOT_FOUND )
+            {
+                return std::optional<BridgeApplication>{};
+            }
+            return outcome::failure( raw.error() );
+        }
+
+        SGTransaction::BridgeApplicationRecord record;
+        if ( !record.ParseFromArray( raw.value().data(), raw.value().size() ) ||
+             record.version() != 1 || record.chain_id() != chain_id ||
+             record.receipt_log_index() != receipt_log_index ||
+             record.bridge_input_type() != SGTransaction::UTXO_ENTRY_BRIDGE )
+        {
+            return outcome::failure( std::errc::bad_message );
+        }
+        BOOST_OUTCOME_TRY(
+            auto record_burn,
+            base::Hash256::fromSpan( gsl::span(
+                reinterpret_cast<uint8_t *>( const_cast<char *>( record.burn_hash().data() ) ),
+                record.burn_hash().size() ) ) );
+        BOOST_OUTCOME_TRY(
+            auto winner,
+            base::Hash256::fromSpan( gsl::span(
+                reinterpret_cast<uint8_t *>( const_cast<char *>( record.winning_transaction_hash().data() ) ),
+                record.winning_transaction_hash().size() ) ) );
+        if ( record_burn != burn_hash || winner == base::Hash256{} ||
+             record.bridge_input_owner().empty() )
+        {
+            return outcome::failure( std::errc::bad_message );
+        }
+
+        BridgeApplication result;
+        result.winning_transaction_hash = winner;
+        result.chain_id = chain_id;
+        result.burn_hash = burn_hash;
+        result.receipt_log_index = receipt_log_index;
+        result.bridge_input_owner = record.bridge_input_owner();
+        result.bridge_input_type = UTXOType::UTXO_BRIDGE;
+        result.canonical_bytes.assign( raw.value().begin(), raw.value().end() );
+        for ( const auto &produced : record.produced_outputs() )
+        {
+            if ( produced.state() != SGTransaction::UTXO_ENTRY_READY ||
+                 produced.type() != SGTransaction::UTXO_ENTRY_NORMAL ||
+                 produced.owner_address().empty() )
+            {
+                return outcome::failure( std::errc::bad_message );
+            }
+            BOOST_OUTCOME_TRY(
+                auto txid,
+                base::Hash256::fromSpan( gsl::span(
+                    reinterpret_cast<uint8_t *>( const_cast<char *>( produced.utxo().hash().data() ) ),
+                    produced.utxo().hash().size() ) ) );
+            if ( txid != winner )
+            {
+                return outcome::failure( std::errc::bad_message );
+            }
+            auto token = TokenID::FromBytes( produced.utxo().token().data(),
+                                             produced.utxo().token().size() );
+            GeniusUTXO output( txid,
+                               produced.utxo().output_idx(),
+                               produced.utxo().amount(),
+                               token,
+                               produced.owner_address() );
+            auto live = utxo_outpoints_.find( output.GetOutPoint() );
+            if ( live == utxo_outpoints_.end() ||
+                 live->second.state != UTXOState::UTXO_READY ||
+                 live->second.type != UTXOType::UTXO_NORMAL ||
+                 live->second.utxo.GetOwnerAddress() != output.GetOwnerAddress() ||
+                 live->second.utxo.GetAmount() != output.GetAmount() ||
+                 !live->second.utxo.GetTokenID().Equals( output.GetTokenID() ) )
+            {
+                return outcome::failure( std::errc::state_not_recoverable );
+            }
+            result.produced_outputs.push_back( std::move( output ) );
+        }
+        const OutPoint bridge_outpoint{ burn_hash, receipt_log_index };
+        auto bridge = utxo_outpoints_.find( bridge_outpoint );
+        if ( bridge == utxo_outpoints_.end() ||
+             bridge->second.state != UTXOState::UTXO_CONSUMED ||
+             bridge->second.type != UTXOType::UTXO_BRIDGE ||
+             bridge->second.utxo.GetOwnerAddress() != record.bridge_input_owner() )
+        {
+            return outcome::failure( std::errc::state_not_recoverable );
+        }
+        return std::optional<BridgeApplication>{ std::move( result ) };
     }
 
     outcome::result<void> UTXOManager::CreateCheckpoint( uint64_t             epoch,
@@ -916,7 +1279,12 @@ namespace sgns
                                                          const base::Hash256 &last_finalized_tx,
                                                          const base::Hash256 &registry_hash )
     {
-        auto db = AcquireStorage();
+        std::unique_lock persistence_lock( persistence_mutex_ );
+        std::shared_ptr<storage::rocksdb> db;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            db = db_;
+        }
         if ( db == nullptr )
         {
             logger_->error( "Tried to create checkpoint without loading DB" );
@@ -993,7 +1361,12 @@ namespace sgns
     outcome::result<std::optional<UTXOManager::UTXOCheckpoint>> UTXOManager::LoadLatestCheckpoint(
         const std::string &address ) const
     {
-        auto db = AcquireStorage();
+        std::unique_lock persistence_lock( persistence_mutex_ );
+        std::shared_ptr<storage::rocksdb> db;
+        {
+            std::shared_lock lock( utxos_mutex_ );
+            db = db_;
+        }
         if ( db == nullptr )
         {
             logger_->error( "Tried to load checkpoint without loading DB" );

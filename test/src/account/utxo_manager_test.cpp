@@ -1,6 +1,10 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 
 #include "base/blob.hpp" // for sgns::base::Hash256
 #include "account/UTXOManager.hpp"
@@ -11,6 +15,56 @@
 
 using namespace sgns;
 using namespace sgns::base;
+
+namespace sgns
+{
+    class UTXOManagerTestAccess
+    {
+    public:
+        using Stage = UTXOManager::FaultStage;
+        using Result = UTXOManager::AtomicMintEffectResult;
+
+        static void SetFault( UTXOManager &manager, UTXOManager::FaultCallback callback )
+        {
+            manager.fault_callback_ = std::move( callback );
+        }
+
+        static void ResetFault( UTXOManager &manager )
+        {
+            manager.ResetFaultCallback();
+        }
+
+        static outcome::result<UTXOManager::AtomicMintEffectResult> Apply(
+            UTXOManager &manager,
+            const base::Hash256 &winner,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index,
+            const std::vector<GeniusUTXO> &outputs,
+            const std::string &owner )
+        {
+            UTXOManager::AtomicMintEffectRequest request;
+            request.winning_transaction_hash = winner;
+            request.chain_id = chain;
+            request.burn_hash = burn;
+            request.receipt_log_index = index;
+            request.produced_outputs = outputs;
+            request.bridge_input = InputUTXOInfo{ burn, index, {} };
+            request.bridge_input_owner = owner;
+            request.bridge_input_type = UTXOManager::UTXOType::UTXO_BRIDGE;
+            return manager.ApplyMintEffectsAtomically( request );
+        }
+
+        static outcome::result<std::optional<UTXOManager::BridgeApplication>> Application(
+            const UTXOManager &manager,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index )
+        {
+            return manager.GetBridgeApplication( chain, burn, index );
+        }
+    };
+}
 
 // Test constants
 static constexpr std::string_view PRIV_KEY = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
@@ -484,4 +538,186 @@ TEST_F( UTXOManagerTest, GetAllUTXOsIncludesBridgeTypeEntries )
     // Verify the state is READY (PutUTXO always sets READY)
     EXPECT_EQ( it->second[0].first, UTXOManager::UTXOState::UTXO_READY );
     EXPECT_EQ( it->second[0].second.GetAmount(), 1000u );
+}
+
+TEST_F( UTXOManagerTest, AtomicMintApplicationSerializesOverlappingOrdinaryStore )
+{
+    using Stage = UTXOManagerTestAccess::Stage;
+    const auto burn = crypto::sha2_256( std::vector<uint8_t>{ 0x41 } );
+    const auto winner = crypto::sha2_256( std::vector<uint8_t>{ 0x42 } );
+    const auto unrelated = crypto::sha2_256( std::vector<uint8_t>{ 0x43 } );
+    const std::string owner = "atomic-owner";
+    const std::string destination = "mint-destination";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( burn, 7, 500, TOKEN_1 ),
+                                owner,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
+    ASSERT_TRUE( utxo_manager->PutUTXO( GeniusUTXO( unrelated, 0, 9, TOKEN_1 ), owner ).value() );
+    const std::vector<GeniusUTXO> outputs{
+        GeniusUTXO( winner, 0, 500, TOKEN_1, destination )
+    };
+
+    std::mutex mutex;
+    std::condition_variable cv;
+    bool ordinary_paused = false;
+    bool atomic_waiting = false;
+    bool release_ordinary = false;
+    bool atomic_acquired = false;
+    UTXOManagerTestAccess::SetFault(
+        *utxo_manager,
+        [&]( Stage stage ) -> outcome::result<void>
+        {
+            std::unique_lock lock( mutex );
+            if ( stage == Stage::OrdinaryStoreSnapshotReadyBeforeCommit )
+            {
+                ordinary_paused = true;
+                cv.notify_all();
+                cv.wait( lock, [&] { return release_ordinary; } );
+            }
+            else if ( stage == Stage::AtomicMintWaitingForPersistenceGate )
+            {
+                atomic_waiting = true;
+                cv.notify_all();
+            }
+            else if ( stage == Stage::AtomicMintPersistenceGateAcquired )
+            {
+                atomic_acquired = true;
+                cv.notify_all();
+            }
+            return outcome::success();
+        } );
+
+    outcome::result<void> ordinary_result = outcome::success();
+    outcome::result<UTXOManagerTestAccess::Result> atomic_result =
+        outcome::failure( std::errc::operation_canceled );
+    std::thread ordinary_thread( [&] { ordinary_result = utxo_manager->StoreUTXOs( owner ); } );
+    {
+        std::unique_lock lock( mutex );
+        ASSERT_TRUE( cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return ordinary_paused; } ) );
+    }
+    std::thread atomic_thread(
+        [&]
+        {
+            atomic_result = UTXOManagerTestAccess::Apply(
+                *utxo_manager, winner, "11155111", burn, 7, outputs, owner );
+        } );
+    {
+        std::unique_lock lock( mutex );
+        ASSERT_TRUE( cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return atomic_waiting; } ) );
+        EXPECT_FALSE( atomic_acquired );
+        release_ordinary = true;
+        cv.notify_all();
+    }
+    ordinary_thread.join();
+    atomic_thread.join();
+    ASSERT_TRUE( ordinary_result.has_value() );
+    ASSERT_TRUE( atomic_result.has_value() );
+
+    UTXOManagerTestAccess::ResetFault( *utxo_manager );
+    utxo_manager->ReleaseStorage();
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature,
+            const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ).has_value() );
+    auto application = UTXOManagerTestAccess::Application( *reloaded, "11155111", burn, 7 );
+    ASSERT_TRUE( application.has_value() );
+    ASSERT_TRUE( application.value().has_value() );
+    EXPECT_TRUE( reloaded->IsOutPointConsumed( burn, 7 ) );
+    ASSERT_TRUE( reloaded->GetUnconsumedUTXO( winner, 0 ).has_value() );
+    ASSERT_TRUE( reloaded->GetUnconsumedUTXO( unrelated, 0 ).has_value() );
+
+    const auto burn2 = crypto::sha2_256( std::vector<uint8_t>{ 0x51 } );
+    const auto winner2 = crypto::sha2_256( std::vector<uint8_t>{ 0x52 } );
+    ASSERT_TRUE( reloaded
+                     ->PutUTXO( GeniusUTXO( burn2, 8, 600, TOKEN_1 ),
+                                owner,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
+    const std::vector<GeniusUTXO> outputs2{
+        GeniusUTXO( winner2, 0, 600, TOKEN_1, destination )
+    };
+    bool atomic_paused = false;
+    bool ordinary_waiting = false;
+    bool release_atomic = false;
+    bool ordinary_acquired = false;
+    UTXOManagerTestAccess::SetFault(
+        *reloaded,
+        [&]( Stage stage ) -> outcome::result<void>
+        {
+            std::unique_lock lock( mutex );
+            if ( stage == Stage::AtomicMintBeforeBatchCommit )
+            {
+                atomic_paused = true;
+                cv.notify_all();
+                cv.wait( lock, [&] { return release_atomic; } );
+            }
+            else if ( stage == Stage::OrdinaryStoreWaitingForPersistenceGate )
+            {
+                ordinary_waiting = true;
+                cv.notify_all();
+            }
+            else if ( stage == Stage::OrdinaryStorePersistenceGateAcquired )
+            {
+                ordinary_acquired = true;
+                cv.notify_all();
+            }
+            return outcome::success();
+        } );
+    std::thread atomic_first(
+        [&]
+        {
+            atomic_result = UTXOManagerTestAccess::Apply(
+                *reloaded, winner2, "11155111", burn2, 8, outputs2, owner );
+        } );
+    {
+        std::unique_lock lock( mutex );
+        ASSERT_TRUE( cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return atomic_paused; } ) );
+    }
+    std::thread ordinary_second( [&] { ordinary_result = reloaded->StoreUTXOs( owner ); } );
+    {
+        std::unique_lock lock( mutex );
+        ASSERT_TRUE( cv.wait_for( lock, std::chrono::seconds( 5 ), [&] { return ordinary_waiting; } ) );
+        EXPECT_FALSE( ordinary_acquired );
+        release_atomic = true;
+        cv.notify_all();
+    }
+    atomic_first.join();
+    ordinary_second.join();
+    ASSERT_TRUE( atomic_result.has_value() );
+    ASSERT_TRUE( ordinary_result.has_value() );
+    UTXOManagerTestAccess::ResetFault( *reloaded );
+    reloaded->ReleaseStorage();
+
+    auto final_reload = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature,
+            const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( final_reload->LoadUTXOs( db_ ).has_value() );
+    auto application2 = UTXOManagerTestAccess::Application(
+        *final_reload, "11155111", burn2, 8 );
+    ASSERT_TRUE( application2.has_value() );
+    ASSERT_TRUE( application2.value().has_value() );
+    EXPECT_TRUE( final_reload->IsOutPointConsumed( burn2, 8 ) );
+    EXPECT_TRUE( final_reload->GetUnconsumedUTXO( winner2, 0 ).has_value() );
+    EXPECT_TRUE( final_reload->GetUnconsumedUTXO( unrelated, 0 ).has_value() );
 }

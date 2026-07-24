@@ -15,12 +15,17 @@
 #include "storage/rocksdb/rocksdb.hpp"
 
 #include <optional>
+#include <functional>
+#include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace sgns
 {
+    class TransactionManager;
+    class TransactionManagerPendingLifecycleTestAccess;
+    class UTXOManagerTestAccess;
     /**
      * @brief Hash functor for using OutPoint keys in unordered containers.
      */
@@ -120,6 +125,8 @@ namespace sgns
             sign_( std::move( sign ) ),
             verify_signature_( std::move( verify_signature ) )
         {
+            ResetFaultCallback();
+            ResetBridgeApplicationReader();
         }
 
         /**
@@ -388,6 +395,11 @@ namespace sgns
          */
         outcome::result<void> StoreUTXOs( const std::string &address );
 
+        /// Builds the sole durable key for one canonical bridge burn application.
+        static std::string MakeBridgeApplicationKey( const std::string &chain_id,
+                                                     const base::Hash256 &burn_hash,
+                                                     uint32_t receipt_log_index );
+
         /**
          * @brief       Creates a checkpoint for the manager's default address.
          * @param[in]   epoch The epoch number associated with the checkpoint
@@ -428,10 +440,72 @@ namespace sgns
         outcome::result<std::optional<UTXOCheckpoint>> LoadLatestCheckpoint( const std::string &address ) const;
 
     private:
+        friend class TransactionManager;
+        friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class UTXOManagerTestAccess;
+
+        enum class AtomicMintEffectResult : uint8_t
+        {
+            Applied,
+            AlreadyApplied
+        };
+
+        struct AtomicMintEffectRequest
+        {
+            base::Hash256               winning_transaction_hash;
+            std::string                 chain_id;
+            base::Hash256               burn_hash;
+            uint32_t                    receipt_log_index{ 0 };
+            std::vector<GeniusUTXO>     produced_outputs;
+            InputUTXOInfo               bridge_input;
+            std::string                 bridge_input_owner;
+            UTXOType                    bridge_input_type{ UTXOType::UTXO_BRIDGE };
+        };
+
+        struct BridgeApplication
+        {
+            base::Hash256           winning_transaction_hash;
+            std::string             chain_id;
+            base::Hash256           burn_hash;
+            uint32_t                receipt_log_index{ 0 };
+            std::string             bridge_input_owner;
+            UTXOType                bridge_input_type{ UTXOType::UTXO_BRIDGE };
+            std::vector<GeniusUTXO> produced_outputs;
+            std::vector<uint8_t>    canonical_bytes;
+        };
+
+        enum class FaultStage : uint8_t
+        {
+            ProducedOutputStage,
+            BridgeInputStage,
+            AtomicMintWaitingForPersistenceGate,
+            AtomicMintPersistenceGateAcquired,
+            AtomicMintBeforeBatchCommit,
+            OrdinaryStoreWaitingForPersistenceGate,
+            OrdinaryStorePersistenceGateAcquired,
+            OrdinaryStoreSnapshotReadyBeforeCommit
+        };
+
+        using FaultCallback = std::function<outcome::result<void>( FaultStage )>;
+        using BridgeApplicationReader =
+            std::function<outcome::result<base::Buffer>(
+                const std::shared_ptr<storage::rocksdb> &, const base::Buffer & )>;
+
         /// Prefix for UTXO-related keys in RocksDB
         static constexpr std::string_view DB_PREFIX = "/utxo";
         ///< Prefix for UTXO checkpoint keys in RocksDB
         static constexpr std::string_view CHECKPOINT_PREFIX = "/utxo-checkpoint";
+        static constexpr std::string_view BRIDGE_APPLICATION_PREFIX = "/bridge/application/v1/";
+
+        outcome::result<AtomicMintEffectResult> ApplyMintEffectsAtomically(
+            const AtomicMintEffectRequest &request );
+        outcome::result<std::optional<BridgeApplication>> GetBridgeApplication(
+            const std::string &chain_id,
+            const base::Hash256 &burn_hash,
+            uint32_t receipt_log_index ) const;
+        outcome::result<void> InvokeFault( FaultStage stage ) const;
+        void ResetFaultCallback();
+        void ResetBridgeApplicationReader();
 
         /**
          * @brief       Grabs the current storage as a shared pointer copy
@@ -462,11 +536,15 @@ namespace sgns
         VerifySignatureFunc verify_signature_; ///< Verifier method for validating signatures on UTXO spends
         std::shared_ptr<storage::rocksdb> db_; ///< Database handle for persisting UTXO state and checkpoints
 
+        /// Serializes every persistent snapshot. Lock order is persistence_mutex_ then utxos_mutex_.
+        mutable std::mutex persistence_mutex_;
         mutable std::shared_mutex utxos_mutex_;       ///< Mutex for UTXO state structures
         UTXOOutPointMap           utxo_outpoints_;    ///< Maps outpoints to their UTXO entries for efficient lookup
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
         /// Transient local ownership for reservations; never persisted or used for consensus validity.
         std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
+        FaultCallback fault_callback_;
+        BridgeApplicationReader bridge_application_reader_;
     };
 
 }
