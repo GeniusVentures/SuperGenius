@@ -44,6 +44,8 @@ namespace sgns
 namespace sgns::crdt
 {
     class CrdtSet; ///< Forward declaration of CRDT Set class
+    class CrdtDatastoreReaper;
+    class CrdtDatastoreLifetimeObserver;
 
     /**
      * @brief       CRDT datastore class based on https://github.com/ipfs/go-ds-crdt
@@ -485,22 +487,37 @@ namespace sgns::crdt
         outcome::result<CID> WaitForJob( const CID &cid );
 
     private:
+        friend class CrdtDatastoreReaper;
+        friend class CrdtDatastoreLifetimeObserver;
+
+        struct ShutdownControl;
+
+        struct DeferredCrdtDelete
+        {
+            std::shared_ptr<ShutdownControl> control;
+            std::shared_ptr<void>            reaper_registration;
+
+            void operator()( CrdtDatastore *datastore ) const noexcept;
+        };
+
         CrdtDatastore() = delete;
 
         CrdtDatastore( std::shared_ptr<RocksDB>     aDatastore,
                        const HierarchicalKey       &aKey,
                        std::shared_ptr<DAGSyncer>   aDagSyncer,
                        std::shared_ptr<Broadcaster> aBroadcaster,
-                       std::shared_ptr<CrdtOptions> aOptions );
+                       std::shared_ptr<CrdtOptions> aOptions,
+                       std::shared_ptr<ShutdownControl> shutdownControl );
 
         bool ShouldContinueWorkerThread( DagWorker &dagWorker );
+        std::optional<std::chrono::steady_clock::time_point> GetNextWorkerWakeDeadline();
+        void NotifyRuntimeWake();
         bool ProcessJobs( std::queue<RootCIDJob> &jobs );
         bool SeedNextExternalRoot();
         void StopWorkerLoops();
         bool IsCurrentThreadInternalWorker() const;
         ShutdownSnapshot SnapshotShutdownStateLocked() const;
-        void CompleteClose();
-        void JoinCloseCoordinator();
+        void CompleteCloseOnReaper();
         void WaitForWorkersToExit();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
@@ -522,6 +539,7 @@ namespace sgns::crdt
 
         std::shared_ptr<RocksDB>     dataStore_ = nullptr;
         std::shared_ptr<CrdtOptions> options_   = nullptr;
+        std::shared_ptr<ShutdownControl> shutdownControl_;
 
         HierarchicalKey namespaceKey_;
 
@@ -552,12 +570,7 @@ namespace sgns::crdt
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         mutable std::mutex      dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
-        mutable std::mutex      closeLifecycleMutex_;
         std::recursive_mutex    callbackDispatchMutex_;
-        std::mutex              closeCoordinatorJoinMutex_;
-        std::shared_ptr<std::promise<void>> closePromise_;
-        std::shared_future<void> closeCompletion_;
-        std::thread              closeCoordinatorThread_;
 
         std::queue<RootCIDJob>                               rootCIDJobList_;     // External jobs
         std::queue<RootCIDJob>                               selfCreatedJobList_; // Self-created jobs (high priority)
@@ -600,7 +613,6 @@ namespace sgns::crdt
 
         std::mutex                      rebroadcastMutex_;
         std::mutex                      dagWorkerCvMutex_;
-        std::condition_variable         rebroadcastCv_;
         std::unordered_set<std::string> topicNames_;
         mutable std::mutex              topicNamesMutex_;
         std::unordered_set<std::string> pendingBroadcastTopics_;

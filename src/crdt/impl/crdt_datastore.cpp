@@ -10,6 +10,8 @@
 #include <thread>
 #include <utility>
 #include <array>
+#include <cassert>
+#include <deque>
 #include <boost/format.hpp>
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
@@ -37,6 +39,191 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::crdt, CrdtDatastore::Error, e )
 
 namespace sgns::crdt
 {
+    struct CrdtDatastore::ShutdownControl
+    {
+        enum class Lifecycle
+        {
+            Open,
+            Closing,
+            Closed
+        };
+
+        ShutdownControl() :
+            close_promise( std::make_shared<std::promise<void>>() ),
+            close_completion( close_promise->get_future().share() )
+        {
+        }
+
+        std::mutex lifecycle_mutex;
+        Lifecycle lifecycle = Lifecycle::Open;
+        bool requested_close_queued = false;
+        bool completion_fulfilled = false;
+        std::shared_ptr<std::promise<void>> close_promise;
+        std::shared_future<void> close_completion;
+
+        std::mutex runtime_mutex;
+        std::condition_variable runtime_cv;
+        std::atomic<bool> stop_requested{ false };
+        std::atomic<uint64_t> wake_generation{ 0 };
+
+        std::atomic<uint64_t> callback_wrapper_entries{ 0 };
+        std::atomic<uint64_t> put_callback_wrapper_entries{ 0 };
+        std::atomic<uint64_t> delete_callback_wrapper_entries{ 0 };
+        std::atomic<uint64_t> active_callback_wrappers{ 0 };
+        std::atomic<bool> destructor_started{ false };
+        std::mutex observation_mutex;
+        std::thread::id reaper_thread_id;
+        std::thread::id destructor_thread_id;
+        std::thread::id delete_thread_id;
+    };
+
+    class CrdtDatastoreReaper
+    {
+    public:
+        CrdtDatastoreReaper() :
+            service_thread_( [this] { Run(); } )
+        {
+        }
+
+        ~CrdtDatastoreReaper()
+        {
+            {
+                std::lock_guard lock( mutex_ );
+                assert( registrations_ == 0 );
+                assert( jobs_.empty() );
+                accepting_ = false;
+                stopping_ = true;
+            }
+            cv_.notify_all();
+            service_thread_.join();
+        }
+
+        std::shared_ptr<void> Register()
+        {
+            std::lock_guard lock( mutex_ );
+            assert( accepting_ );
+            ++registrations_;
+            return std::shared_ptr<void>(
+                new unsigned char( 0 ),
+                [this]( void *token )
+                {
+                    delete static_cast<unsigned char *>( token );
+                    std::lock_guard registration_lock( mutex_ );
+                    assert( registrations_ != 0 );
+                    --registrations_;
+                    cv_.notify_all();
+                } );
+        }
+
+        void EnqueueRequestedClose( std::shared_ptr<CrdtDatastore> datastore )
+        {
+            Job job;
+            job.kind = Job::Kind::RequestedClose;
+            job.owner = std::move( datastore );
+            Enqueue( std::move( job ) );
+        }
+
+        void EnqueueFinalDelete( CrdtDatastore *datastore,
+                                 std::shared_ptr<CrdtDatastore::ShutdownControl> control,
+                                 std::shared_ptr<void> registration ) noexcept
+        {
+            Job job;
+            job.kind = Job::Kind::FinalDelete;
+            job.raw = datastore;
+            job.control = std::move( control );
+            job.registration = std::move( registration );
+            Enqueue( std::move( job ) );
+        }
+
+        bool IsReaperThread() const
+        {
+            return std::this_thread::get_id() == service_thread_.get_id();
+        }
+
+    private:
+        struct Job
+        {
+            enum class Kind
+            {
+                RequestedClose,
+                FinalDelete
+            };
+
+            Kind kind = Kind::RequestedClose;
+            std::shared_ptr<CrdtDatastore> owner;
+            CrdtDatastore *raw = nullptr;
+            std::shared_ptr<CrdtDatastore::ShutdownControl> control;
+            std::shared_ptr<void> registration;
+        };
+
+        void Enqueue( Job job ) noexcept
+        {
+            {
+                std::lock_guard lock( mutex_ );
+                assert( accepting_ );
+                jobs_.push_back( std::move( job ) );
+            }
+            cv_.notify_one();
+        }
+
+        void Run()
+        {
+            while ( true )
+            {
+                Job job;
+                {
+                    std::unique_lock lock( mutex_ );
+                    cv_.wait( lock, [&] { return stopping_ || !jobs_.empty(); } );
+                    if ( stopping_ && jobs_.empty() )
+                    {
+                        return;
+                    }
+                    job = std::move( jobs_.front() );
+                    jobs_.pop_front();
+                }
+
+                if ( job.kind == Job::Kind::RequestedClose )
+                {
+                    job.owner->CompleteCloseOnReaper();
+                    job.owner.reset();
+                    continue;
+                }
+
+                assert( job.raw != nullptr );
+                {
+                    std::lock_guard observation_lock( job.control->observation_mutex );
+                    job.control->reaper_thread_id = std::this_thread::get_id();
+                    job.control->delete_thread_id = std::this_thread::get_id();
+                }
+                job.raw->CompleteCloseOnReaper();
+                delete job.raw;
+                job.raw = nullptr;
+                job.registration.reset();
+            }
+        }
+
+        mutable std::mutex mutex_;
+        std::condition_variable cv_;
+        std::deque<Job> jobs_;
+        std::size_t registrations_ = 0;
+        bool accepting_ = true;
+        bool stopping_ = false;
+        std::thread service_thread_;
+    };
+
+    namespace
+    {
+        CrdtDatastoreReaper &GetCrdtDatastoreReaper()
+        {
+            static CrdtDatastoreReaper reaper;
+            return reaper;
+        }
+    } // namespace
+
+    void CrdtDatastore::DeferredCrdtDelete::operator()( CrdtDatastore *datastore ) const noexcept
+    {
+        GetCrdtDatastoreReaper().EnqueueFinalDelete( datastore, control, reaper_registration );
+    }
 
     using CRDTBroadcast = pb::CRDTBroadcast;
 
@@ -46,7 +233,8 @@ namespace sgns::crdt
                                                        std::shared_ptr<Broadcaster> aBroadcaster,
                                                        std::shared_ptr<CrdtOptions> aOptions )
     {
-        if ( ( aDatastore == nullptr ) || ( aDagSyncer == nullptr ) || ( aBroadcaster == nullptr ) )
+        if ( ( aDatastore == nullptr ) || ( aDagSyncer == nullptr ) || ( aBroadcaster == nullptr ) ||
+             ( aOptions == nullptr ) )
         {
             return nullptr;
         }
@@ -55,11 +243,17 @@ namespace sgns::crdt
         {
             return nullptr;
         }
-        auto crdtInstance = std::shared_ptr<CrdtDatastore>( new CrdtDatastore( std::move( aDatastore ),
-                                                                               aKey,
-                                                                               std::move( aDagSyncer ),
-                                                                               std::move( aBroadcaster ),
-                                                                               std::move( aOptions ) ) );
+        auto &reaper = GetCrdtDatastoreReaper();
+        auto reaper_registration = reaper.Register();
+        auto shutdown_control = std::make_shared<ShutdownControl>();
+        auto crdtInstance = std::shared_ptr<CrdtDatastore>(
+            new CrdtDatastore( std::move( aDatastore ),
+                               aKey,
+                               std::move( aDagSyncer ),
+                               std::move( aBroadcaster ),
+                               std::move( aOptions ),
+                               shutdown_control ),
+            DeferredCrdtDelete{ shutdown_control, std::move( reaper_registration ) } );
 
         crdtInstance->set_ = std::make_shared<CrdtSet>(
             crdtInstance->dataStore_,
@@ -69,14 +263,40 @@ namespace sgns::crdt
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->PutElementsCallback( key, value, cid );
+                    auto control = strong->shutdownControl_;
+                    ++control->callback_wrapper_entries;
+                    ++control->put_callback_wrapper_entries;
+                    ++control->active_callback_wrappers;
+                    try
+                    {
+                        strong->PutElementsCallback( key, value, cid );
+                    }
+                    catch ( ... )
+                    {
+                        --control->active_callback_wrappers;
+                        throw;
+                    }
+                    --control->active_callback_wrappers;
                 }
             },
             [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) )]( const std::string &key, const std::string &cid )
             {
                 if ( auto strong = weakptr.lock() )
                 {
-                    strong->DeleteElementsCallback( key, cid );
+                    auto control = strong->shutdownControl_;
+                    ++control->callback_wrapper_entries;
+                    ++control->delete_callback_wrapper_entries;
+                    ++control->active_callback_wrappers;
+                    try
+                    {
+                        strong->DeleteElementsCallback( key, cid );
+                    }
+                    catch ( ... )
+                    {
+                        --control->active_callback_wrappers;
+                        throw;
+                    }
+                    --control->active_callback_wrappers;
                 }
             } );
         crdtInstance->dagWorkerJobListThreadRunning_ = true;
@@ -91,39 +311,76 @@ namespace sgns::crdt
                 std::launch::async,
                 [weakptr( std::weak_ptr<CrdtDatastore>( crdtInstance ) ), worker_ptr]
                 {
-                    if ( auto self = weakptr.lock() )
+                    auto control = [&]() -> std::shared_ptr<ShutdownControl>
                     {
-                        std::lock_guard lock( self->workerThreadIdsMutex_ );
-                        worker_ptr->threadId_ = std::this_thread::get_id();
+                        if ( auto self = weakptr.lock() )
+                        {
+                            auto result = self->shutdownControl_;
+                            std::lock_guard lock( self->workerThreadIdsMutex_ );
+                            worker_ptr->threadId_ = std::this_thread::get_id();
+                            return result;
+                        }
+                        return nullptr;
+                    }();
+                    if ( !control )
+                    {
+                        return;
                     }
-                    auto dagThreadRunning = true;
-                    while ( dagThreadRunning )
+
+                    while ( !control->stop_requested.load() )
                     {
+                        const auto generation = control->wake_generation.load();
+                        bool did_work = false;
+                        std::optional<std::chrono::steady_clock::time_point> deadline;
                         if ( auto self = weakptr.lock() )
                         {
                             if ( !self->ShouldContinueWorkerThread( *worker_ptr ) )
                             {
-                                dagThreadRunning = false;
-                                continue;
+                                break;
                             }
 
                             // Process jobs in priority order
                             if ( self->ProcessJobs( self->selfCreatedJobList_ ) )
                             {
-                                continue;
+                                did_work = true;
                             }
-                            if ( self->ProcessJobs( self->rootCIDJobList_ ) )
+                            else if ( self->ProcessJobs( self->rootCIDJobList_ ) )
                             {
-                                continue;
+                                did_work = true;
                             }
-                            if ( self->SeedNextExternalRoot() )
+                            else if ( self->SeedNextExternalRoot() )
                             {
-                                continue;
+                                did_work = true;
+                            }
+                            else
+                            {
+                                deadline = self->GetNextWorkerWakeDeadline();
                             }
                         }
                         else
                         {
-                            dagThreadRunning = false;
+                            break;
+                        }
+
+                        if ( !did_work )
+                        {
+                            std::unique_lock wait_lock( control->runtime_mutex );
+                            const auto ready = [&]
+                            {
+                                return control->stop_requested.load() ||
+                                       control->wake_generation.load() != generation;
+                            };
+                            if ( deadline )
+                            {
+                                control->runtime_cv.wait_until( wait_lock, *deadline, ready );
+                            }
+                            else
+                            {
+                                control->runtime_cv.wait_for(
+                                    wait_lock,
+                                    CrdtDatastore::threadSleepTimeInMilliseconds_,
+                                    ready );
+                            }
                         }
                     }
                     if ( auto self = weakptr.lock() )
@@ -138,31 +395,21 @@ namespace sgns::crdt
 
     bool CrdtDatastore::ShouldContinueWorkerThread( DagWorker &dagWorker )
     {
-        std::unique_lock lk( dagWorkerMutex_ );
-        auto ready = [&]
-        {
-            RefreshRetryGateLocked( monotonicClock_() );
-            return closeStarted_ || !dagWorkerJobListThreadRunning_ ||
-                   !dagWorker.dagWorkerThreadRunning_ || !selfCreatedJobList_.empty() ||
-                   !rootCIDJobList_.empty() ||
-                   ( !activeRootCID_.has_value() &&
-                     ( !pendingRootQueue_.empty() || retryFairnessGate_.has_value() ) );
-        };
-
-        if ( !ready() )
-        {
-            auto deadline = EarliestParkedDeadlineLocked();
-            if ( deadline )
-            {
-                dagWorkerCv_.wait_until( lk, *deadline, ready );
-            }
-            else
-            {
-                dagWorkerCv_.wait_for( lk, threadSleepTimeInMilliseconds_, ready );
-            }
-        }
-
+        std::lock_guard lk( dagWorkerMutex_ );
         return !closeStarted_ && dagWorkerJobListThreadRunning_ && dagWorker.dagWorkerThreadRunning_;
+    }
+
+    std::optional<std::chrono::steady_clock::time_point> CrdtDatastore::GetNextWorkerWakeDeadline()
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        RefreshRetryGateLocked( monotonicClock_() );
+        return EarliestParkedDeadlineLocked();
+    }
+
+    void CrdtDatastore::NotifyRuntimeWake()
+    {
+        ++shutdownControl_->wake_generation;
+        shutdownControl_->runtime_cv.notify_all();
     }
 
     bool CrdtDatastore::ProcessJobs( std::queue<RootCIDJob> &jobs )
@@ -245,6 +492,7 @@ namespace sgns::crdt
                     activeRootCID_.reset();
                 }
                 dagWorkerCv_.notify_all();
+                NotifyRuntimeWake();
             }
             return true;
         }
@@ -266,6 +514,7 @@ namespace sgns::crdt
             std::unique_lock lk2( dagWorkerMutex_ );
             activeRootCID_.reset();
             dagWorkerCv_.notify_all();
+            NotifyRuntimeWake();
         }
 
         return true; // Seeded a root
@@ -300,6 +549,7 @@ namespace sgns::crdt
         }
 
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     void CrdtDatastore::HandleJobProcessingSuccess( const RootCIDJob &job )
@@ -310,6 +560,7 @@ namespace sgns::crdt
             pending_jobs_[job.root_node_->getCID()] = JobStatus::COMPLETED;
         }
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
         if ( job.created_by_self_ )
         {
             logger_->debug( "Successfully completed self-created job for CID {}",
@@ -572,6 +823,7 @@ namespace sgns::crdt
         }
 
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     void CrdtDatastore::RemoveParkedRootAfterSuccess( const CID &root )
@@ -720,12 +972,17 @@ namespace sgns::crdt
         handleNextFuture_ = std::async(
             [weakptr{ weak_from_this() }]
             {
-                auto threadRunning = true;
+                std::shared_ptr<ShutdownControl> control;
                 bool thread_id_set = false;
-                while ( threadRunning )
+                while ( true )
                 {
+                    const auto generation = control ? control->wake_generation.load() : 0;
                     if ( auto self = weakptr.lock() )
                     {
+                        if ( !control )
+                        {
+                            control = self->shutdownControl_;
+                        }
                         if ( !thread_id_set )
                         {
                             std::lock_guard lock( self->workerThreadIdsMutex_ );
@@ -737,17 +994,26 @@ namespace sgns::crdt
                         if ( !self->handleNextThreadRunning_ )
                         {
                             self->logger_->debug( "HandleNext thread finished" );
-                            threadRunning = false;
+                            break;
                         }
                     }
                     else
                     {
-                        threadRunning = false;
+                        break;
                     }
 
-                    if ( threadRunning )
+                    std::unique_lock wait_lock( control->runtime_mutex );
+                    control->runtime_cv.wait_for(
+                        wait_lock,
+                        CrdtDatastore::threadSleepTimeInMilliseconds_,
+                        [&]
+                        {
+                            return control->stop_requested.load() ||
+                                   control->wake_generation.load() != generation;
+                        } );
+                    if ( control->stop_requested.load() )
                     {
-                        std::this_thread::sleep_for( threadSleepTimeInMilliseconds_ );
+                        break;
                     }
                 }
             } );
@@ -775,33 +1041,50 @@ namespace sgns::crdt
         rebroadcastFuture_ = std::async(
             [weakptr{ weak_from_this() }]
             {
-                auto self = weakptr.lock();
-                if ( !self )
+                std::shared_ptr<ShutdownControl> control;
+                bool thread_id_set = false;
+                while ( true )
                 {
-                    return;
-                }
+                    const auto generation = control ? control->wake_generation.load() : 0;
+                    auto interval = std::chrono::milliseconds( 100 );
+                    if ( auto self = weakptr.lock() )
+                    {
+                        if ( !control )
+                        {
+                            control = self->shutdownControl_;
+                        }
+                        if ( !thread_id_set )
+                        {
+                            std::lock_guard lock( self->workerThreadIdsMutex_ );
+                            self->rebroadcastThreadId_ = std::this_thread::get_id();
+                            thread_id_set = true;
+                        }
+                        if ( !self->rebroadcastThreadRunning_ )
+                        {
+                            break;
+                        }
+                        interval = std::chrono::milliseconds(
+                            self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
+                        self->RebroadcastHeads();
+                    }
+                    else
+                    {
+                        break;
+                    }
 
-                {
-                    std::lock_guard lock( self->workerThreadIdsMutex_ );
-                    self->rebroadcastThreadId_ = std::this_thread::get_id();
-                }
-
-                const auto interval = std::chrono::milliseconds(
-                    self->options_ ? self->options_->rebroadcastIntervalMilliseconds : 100 );
-                std::unique_lock lock( self->rebroadcastMutex_ );
-
-                while ( self->rebroadcastThreadRunning_ )
-                {
-                    lock.unlock();
-                    self->RebroadcastHeads();
-                    lock.lock();
-                    self->rebroadcastCv_.wait_for( lock,
-                                                   interval,
-                                                   [&]
-                                                   {
-                                                       return !self->rebroadcastThreadRunning_ || self->closeStarted_ ||
-                                                              !self->pendingBroadcastTopics_.empty();
-                                                   } );
+                    std::unique_lock wait_lock( control->runtime_mutex );
+                    control->runtime_cv.wait_for(
+                        wait_lock,
+                        interval,
+                        [&]
+                        {
+                            return control->stop_requested.load() ||
+                                   control->wake_generation.load() != generation;
+                        } );
+                    if ( control->stop_requested.load() )
+                    {
+                        break;
+                    }
                 }
             } );
 
@@ -812,9 +1095,11 @@ namespace sgns::crdt
                                   const HierarchicalKey       &aKey,
                                   std::shared_ptr<DAGSyncer>   aDagSyncer,
                                   std::shared_ptr<Broadcaster> aBroadcaster,
-                                  std::shared_ptr<CrdtOptions> aOptions ) :
+                                  std::shared_ptr<CrdtOptions> aOptions,
+                                  std::shared_ptr<ShutdownControl> shutdownControl ) :
         dataStore_( std::move( aDatastore ) ),
         options_( std::move( aOptions ) ),
+        shutdownControl_( std::move( shutdownControl ) ),
         namespaceKey_( aKey ),
         broadcaster_( std::move( aBroadcaster ) ),
         dagSyncer_( std::move( aDagSyncer ) ),
@@ -846,8 +1131,22 @@ namespace sgns::crdt
 
     CrdtDatastore::~CrdtDatastore()
     {
+        shutdownControl_->destructor_started = true;
+        {
+            std::lock_guard observation_lock( shutdownControl_->observation_mutex );
+            shutdownControl_->destructor_thread_id = std::this_thread::get_id();
+        }
+        assert( GetCrdtDatastoreReaper().IsReaperThread() );
+        {
+            std::lock_guard lifecycle_lock( shutdownControl_->lifecycle_mutex );
+            assert( shutdownControl_->lifecycle == ShutdownControl::Lifecycle::Closed );
+        }
+        {
+            std::lock_guard state_lock( dagWorkerMutex_ );
+            assert( SnapshotShutdownStateLocked().empty() );
+        }
+        assert( GetPendingHeadCountForTesting() == 0 );
         logger_->debug( "~CrdtDatastore CALLED at {} ", std::this_thread::get_id() );
-        Close();
     }
 
     std::shared_ptr<CrdtDatastore::Delta> CrdtDatastore::DeltaMerge( const std::shared_ptr<Delta> &aDelta1,
@@ -905,47 +1204,26 @@ namespace sgns::crdt
         }
 
         completion.wait();
-        JoinCloseCoordinator();
     }
 
     std::shared_future<void> CrdtDatastore::RequestClose()
     {
-        bool should_start_coordinator = false;
-        ShutdownSnapshot begin;
+        bool should_enqueue = false;
         {
-            std::lock_guard callback_gate( callbackDispatchMutex_ );
-            std::lock_guard lifecycle_lock( closeLifecycleMutex_ );
-            if ( !closeCompletion_.valid() )
+            std::lock_guard lifecycle_lock( shutdownControl_->lifecycle_mutex );
+            if ( !shutdownControl_->requested_close_queued &&
+                 shutdownControl_->lifecycle != ShutdownControl::Lifecycle::Closed )
             {
-                closePromise_ = std::make_shared<std::promise<void>>();
-                closeCompletion_ = closePromise_->get_future().share();
-                {
-                    std::lock_guard worker_lock( dagWorkerMutex_ );
-                    closeStarted_ = true;
-                    begin = SnapshotShutdownStateLocked();
-                }
-                should_start_coordinator = true;
+                shutdownControl_->requested_close_queued = true;
+                should_enqueue = true;
             }
         }
 
-        if ( !should_start_coordinator )
+        if ( should_enqueue )
         {
-            return closeCompletion_;
+            GetCrdtDatastoreReaper().EnqueueRequestedClose( shared_from_this() );
         }
-
-        logger_->info(
-            "RequestClose: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_roots={}, parked_roots={}, parked_dependencies={})",
-            begin.pending_jobs,
-            begin.self_queue,
-            begin.root_queue,
-            begin.pending_roots,
-            begin.active_roots,
-            begin.parked_roots,
-            begin.parked_dependencies );
-
-        StopWorkerLoops();
-        closeCoordinatorThread_ = std::thread( [this] { CompleteClose(); } );
-        return closeCompletion_;
+        return shutdownControl_->close_completion;
     }
 
     CrdtDatastore::ShutdownSnapshot CrdtDatastore::SnapshotShutdownStateLocked() const
@@ -959,8 +1237,38 @@ namespace sgns::crdt
                                  parkedRootsByDependency_.size() };
     }
 
-    void CrdtDatastore::CompleteClose()
+    void CrdtDatastore::CompleteCloseOnReaper()
     {
+        assert( GetCrdtDatastoreReaper().IsReaperThread() );
+
+        ShutdownSnapshot begin;
+        {
+            std::lock_guard callback_gate( callbackDispatchMutex_ );
+            std::lock_guard lifecycle_lock( shutdownControl_->lifecycle_mutex );
+            if ( shutdownControl_->lifecycle == ShutdownControl::Lifecycle::Closed )
+            {
+                return;
+            }
+            shutdownControl_->lifecycle = ShutdownControl::Lifecycle::Closing;
+            {
+                std::lock_guard worker_lock( dagWorkerMutex_ );
+                closeStarted_ = true;
+                begin = SnapshotShutdownStateLocked();
+            }
+            shutdownControl_->stop_requested = true;
+        }
+
+        logger_->info(
+            "RequestClose: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_roots={}, parked_roots={}, parked_dependencies={})",
+            begin.pending_jobs,
+            begin.self_queue,
+            begin.root_queue,
+            begin.pending_roots,
+            begin.active_roots,
+            begin.parked_roots,
+            begin.parked_dependencies );
+
+        StopWorkerLoops();
         WaitForWorkersToExit();
         started_ = false;
 
@@ -979,21 +1287,14 @@ namespace sgns::crdt
             end.parked_roots,
             end.parked_dependencies );
 
-        std::shared_ptr<std::promise<void>> completion;
         {
-            std::lock_guard lock( closeLifecycleMutex_ );
-            completion = closePromise_;
-        }
-        completion->set_value();
-    }
-
-    void CrdtDatastore::JoinCloseCoordinator()
-    {
-        std::lock_guard lock( closeCoordinatorJoinMutex_ );
-        if ( closeCoordinatorThread_.joinable() &&
-             closeCoordinatorThread_.get_id() != std::this_thread::get_id() )
-        {
-            closeCoordinatorThread_.join();
+            std::lock_guard lock( shutdownControl_->lifecycle_mutex );
+            shutdownControl_->lifecycle = ShutdownControl::Lifecycle::Closed;
+            if ( !shutdownControl_->completion_fulfilled )
+            {
+                shutdownControl_->completion_fulfilled = true;
+                shutdownControl_->close_promise->set_value();
+            }
         }
     }
 
@@ -1012,7 +1313,6 @@ namespace sgns::crdt
         if ( rebroadcastThreadRunning_ )
         {
             rebroadcastThreadRunning_ = false;
-            rebroadcastCv_.notify_all();
         }
 
         if ( dagWorkerJobListThreadRunning_ )
@@ -1025,6 +1325,7 @@ namespace sgns::crdt
         }
 
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     bool CrdtDatastore::IsCurrentThreadInternalWorker() const
@@ -1223,6 +1524,7 @@ namespace sgns::crdt
             {
                 logger_->debug( "{}: Queueing processing for block {}", __func__, bCastHeadCID.toString().value() );
                 dagWorkerCv_.notify_one(); // wake a worker to possibly seed the next root
+                NotifyRuntimeWake();
             }
             else
             {
@@ -1374,6 +1676,7 @@ namespace sgns::crdt
                 rootCIDJobList_.push( root_node_only_job );
             }
             dagWorkerCv_.notify_one();
+            NotifyRuntimeWake();
             return outcome::success();
         }
 
@@ -1424,6 +1727,7 @@ namespace sgns::crdt
                 rootCIDJobList_.push( newRootJob );
             }
             dagWorkerCv_.notify_one();
+            NotifyRuntimeWake();
         }
         return outcome::success();
     }
@@ -1549,6 +1853,7 @@ namespace sgns::crdt
                 activeRootCID_.reset(); // this root fully done
             }
             dagWorkerCv_.notify_all(); // let one worker seed the next root
+            NotifyRuntimeWake();
 
             // Signal job completion after UpdateCRDTHeads is done
             {
@@ -1560,6 +1865,7 @@ namespace sgns::crdt
                 }
             }
             dagWorkerCv_.notify_all();
+            NotifyRuntimeWake();
         }
 
         return JobIterationResult{};
@@ -2047,6 +2353,7 @@ namespace sgns::crdt
 
         // Notify all workers to ensure immediate processing
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
 
         return WaitForJob( node->getCID() );
     }
@@ -2148,6 +2455,7 @@ namespace sgns::crdt
             pending_jobs_[cid] = JobStatus::FAILED;
         }
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     outcome::result<CrdtDatastore::JobStatus> CrdtDatastore::GetJobStatus( const CID &cid )
@@ -2483,7 +2791,7 @@ namespace sgns::crdt
             pendingBroadcastTopics_.insert( updated_topics.begin(), updated_topics.end() );
         }
 
-        rebroadcastCv_.notify_one();
+        NotifyRuntimeWake();
     }
 
     bool CrdtDatastore::IsRootCIDPendingOrActive( const CID &cid )
@@ -2621,11 +2929,13 @@ namespace sgns::crdt
                                           [] { return std::chrono::steady_clock::now(); } );
         }
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     void CrdtDatastore::WakeDependencyRetryWorkerForTesting()
     {
         dagWorkerCv_.notify_all();
+        NotifyRuntimeWake();
     }
 
     outcome::result<CrdtHeads::CRDTListResult> CrdtDatastore::GetHeadList()
