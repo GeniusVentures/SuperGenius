@@ -583,6 +583,49 @@ namespace
             return TransactionManagerPendingLifecycleTestAccess::LastQueuedMint( *manager_ );
         }
 
+        void RebuildProductionObjects()
+        {
+            manager_.reset();
+            consensus_.reset();
+            registry_.reset();
+            blockchain_.reset();
+            if ( account_ )
+            {
+                account_->GetUTXOManager().ReleaseStorage();
+            }
+            account_.reset();
+
+            ++restart_count_;
+            account_ = GeniusAccount::NewFromPrivateKey(
+                kTokenId,
+                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                base_path / ( "account-restart-" + std::to_string( restart_count_ ) ),
+                false );
+            ASSERT_NE( account_, nullptr );
+            ASSERT_TRUE( account_->GetUTXOManager()
+                             .LoadUTXOs( db_->GetDataStore() )
+                             .has_value() );
+            blockchain_ = Blockchain::New(
+                db_, account_, pubs_, []( outcome::result<void> ) {} );
+            ASSERT_NE( blockchain_, nullptr );
+            registry_ = blockchain_->GetValidatorRegistry();
+            ASSERT_NE( registry_, nullptr );
+            consensus_ =
+                TransactionManagerPendingLifecycleTestAccess::Consensus( blockchain_ );
+            ASSERT_NE( consensus_, nullptr );
+            manager_ = TransactionManager::New(
+                db_,
+                io_,
+                account_,
+                blockchain_,
+                false,
+                0,
+                std::chrono::milliseconds( 300000 ),
+                std::chrono::milliseconds( 600000 ) );
+            ASSERT_NE( manager_, nullptr );
+            TransactionManagerPendingLifecycleTestAccess::SetReady( *manager_ );
+        }
+
         void ExpectMintFundsInvalid( const std::string &chain_id,
                                      const std::string &transaction_hash )
         {
@@ -828,6 +871,7 @@ namespace
         std::shared_ptr<TransactionManager> manager_;
         std::shared_ptr<ValidatorRegistry>  registry_;
         std::shared_ptr<ConsensusManager>   consensus_;
+        size_t                              restart_count_{ 0 };
     };
 
     const TokenID TransactionManagerPendingLifecycleTest::kTokenId =
@@ -1397,8 +1441,36 @@ TEST_F( TransactionManagerPendingLifecycleTest,
 TEST_F( TransactionManagerPendingLifecycleTest,
         RestartRecoversCommittedAndInterruptedMintApplication )
 {
+    using UTXOStage = TransactionManagerPendingLifecycleTestAccess::UTXOFaultStage;
     using MintStage = TransactionManagerPendingLifecycleTestAccess::MintFaultStage;
-    auto mint = PrepareMint( '5' );
+
+    auto precommit_mint = PrepareMint( '5' );
+    ASSERT_NE( precommit_mint, nullptr );
+    const auto precommit_input = precommit_mint->GetUTXOParameters().first.front();
+    TransactionManagerPendingLifecycleTestAccess::SetUTXOFault(
+        *manager_,
+        []( UTXOStage stage ) -> outcome::result<void>
+        {
+            if ( stage == UTXOStage::AtomicMintBeforeBatchCommit )
+            {
+                return outcome::failure( std::errc::operation_canceled );
+            }
+            return outcome::success();
+        } );
+    auto precommit_failure =
+        TransactionManagerPendingLifecycleTestAccess::Confirm(
+            *manager_, precommit_mint );
+    TransactionManagerPendingLifecycleTestAccess::ResetUTXOFault( *manager_ );
+    ASSERT_TRUE( precommit_failure.has_error() );
+    EXPECT_TRUE( ExecutedKeyAbsent(
+        "11155111", precommit_input.txid_hash_.toReadableString() ) );
+    RebuildProductionObjects();
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, precommit_mint ).has_value() );
+    EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        precommit_input.txid_hash_, precommit_input.output_idx_ ) );
+
+    auto mint = PrepareMint( '6' );
     ASSERT_NE( mint, nullptr );
     const auto input = mint->GetUTXOParameters().first.front();
     TransactionManagerPendingLifecycleTestAccess::SetMintFault(
@@ -1418,6 +1490,7 @@ TEST_F( TransactionManagerPendingLifecycleTest,
             *manager_, "11155111", input.txid_hash_, input.output_idx_ );
     ASSERT_TRUE( application.has_value() && application.value().has_value() );
 
+    RebuildProductionObjects();
     ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
                      *manager_, mint ).has_value() );
     status = TransactionManagerPendingLifecycleTestAccess::Status( *manager_, *mint );
@@ -1425,10 +1498,15 @@ TEST_F( TransactionManagerPendingLifecycleTest,
     EXPECT_EQ( *status, TransactionManager::TransactionStatus::CONFIRMED );
     const auto metric =
         TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ );
+    const auto balance = account_->GetUTXOManager().GetBalance();
+    const auto root = account_->GetUTXOManager().ComputeUTXOMerkleRoot();
+    RebuildProductionObjects();
     ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
                      *manager_, mint ).has_value() );
-    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ ),
-               metric );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ ), 1U );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), balance );
+    EXPECT_EQ( account_->GetUTXOManager().ComputeUTXOMerkleRoot(), root );
+    EXPECT_GE( metric, 1U );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,
