@@ -83,13 +83,6 @@ namespace
         return base + dist( rng );
     }
 
-    uint16_t AvailablePort()
-    {
-        boost::asio::io_context        io;
-        boost::asio::ip::tcp::acceptor acceptor( io, { boost::asio::ip::tcp::v4(), 0 } );
-        return acceptor.local_endpoint().port();
-    }
-
     const char *NodeStateToString( sgns::GeniusNode::NodeState state )
     {
         using State = sgns::GeniusNode::NodeState;
@@ -1290,12 +1283,6 @@ namespace sgns
         else
         {
             pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
-            if ( pubsubport_ == 0 )
-            {
-                // ponytail: GossipPubSub cannot take ownership of the reservation socket, so a
-                // small bind/close race remains. Let Start accept a bound socket to remove it.
-                pubsubport_ = AvailablePort();
-            }
         }
 
         do
@@ -1364,6 +1351,29 @@ namespace sgns
                 pubsub_.reset();
                 ret = false;
                 break;
+            }
+            if ( pubsubport_ == 0 )
+            {
+                auto address = libp2p::multi::Multiaddress::create( pubsub_interface_address );
+                if ( address )
+                {
+                    auto assigned_port = address.value().getFirstValueForProtocol<uint16_t>(
+                        libp2p::multi::Protocol::Code::TCP,
+                        []( const std::string &value ) { return static_cast<uint16_t>( std::stoul( value ) ); } );
+                    if ( assigned_port )
+                    {
+                        pubsubport_ = assigned_port.value();
+                    }
+                }
+                if ( pubsubport_ == 0 )
+                {
+                    node_logger_->error( "PubSub did not report its OS-assigned TCP port: {}",
+                                         pubsub_interface_address );
+                    pubsub_->Stop();
+                    pubsub_.reset();
+                    ret = false;
+                    break;
+                }
             }
             node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
 
