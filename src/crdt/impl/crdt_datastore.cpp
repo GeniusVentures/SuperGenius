@@ -50,7 +50,11 @@ namespace sgns::crdt
 
         ShutdownControl() :
             close_promise( std::make_shared<std::promise<void>>() ),
-            close_completion( close_promise->get_future().share() )
+            close_completion( close_promise->get_future().share() ),
+            destructor_promise( std::make_shared<std::promise<std::thread::id>>() ),
+            destructor_completion( destructor_promise->get_future().share() ),
+            deletion_promise( std::make_shared<std::promise<std::thread::id>>() ),
+            deletion_completion( deletion_promise->get_future().share() )
         {
         }
 
@@ -60,6 +64,10 @@ namespace sgns::crdt
         bool completion_fulfilled = false;
         std::shared_ptr<std::promise<void>> close_promise;
         std::shared_future<void> close_completion;
+        std::shared_ptr<std::promise<std::thread::id>> destructor_promise;
+        std::shared_future<std::thread::id> destructor_completion;
+        std::shared_ptr<std::promise<std::thread::id>> deletion_promise;
+        std::shared_future<std::thread::id> deletion_completion;
 
         std::mutex runtime_mutex;
         std::condition_variable runtime_cv;
@@ -198,6 +206,7 @@ namespace sgns::crdt
                 job.raw->CompleteCloseOnReaper();
                 delete job.raw;
                 job.raw = nullptr;
+                job.control->deletion_promise->set_value( std::this_thread::get_id() );
                 job.registration.reset();
             }
         }
@@ -1136,6 +1145,7 @@ namespace sgns::crdt
             std::lock_guard observation_lock( shutdownControl_->observation_mutex );
             shutdownControl_->destructor_thread_id = std::this_thread::get_id();
         }
+        shutdownControl_->destructor_promise->set_value( std::this_thread::get_id() );
         assert( GetCrdtDatastoreReaper().IsReaperThread() );
         {
             std::lock_guard lifecycle_lock( shutdownControl_->lifecycle_mutex );
@@ -2702,6 +2712,32 @@ namespace sgns::crdt
     std::shared_ptr<CRDTWorkJournal> CrdtDatastore::GetWorkJournal() const
     {
         return work_journal_;
+    }
+
+    std::shared_future<void> CrdtDatastoreLifetimeObserver::CloseCompletion(
+        const std::shared_ptr<CrdtDatastore> &datastore )
+    {
+        return datastore->shutdownControl_->close_completion;
+    }
+
+    CrdtDatastoreLifetimeObserver::DestructionFutures
+    CrdtDatastoreLifetimeObserver::DestructionCompletion(
+        const std::shared_ptr<CrdtDatastore> &datastore )
+    {
+        return { datastore->shutdownControl_->destructor_completion,
+                 datastore->shutdownControl_->deletion_completion };
+    }
+
+    CrdtDatastoreLifetimeObserver::CallbackSnapshot
+    CrdtDatastoreLifetimeObserver::Snapshot(
+        const std::shared_ptr<CrdtDatastore> &datastore )
+    {
+        auto control = datastore->shutdownControl_;
+        return { control->callback_wrapper_entries.load(),
+                 control->put_callback_wrapper_entries.load(),
+                 control->delete_callback_wrapper_entries.load(),
+                 control->active_callback_wrappers.load(),
+                 control->destructor_started.load() };
     }
 
     void CrdtDatastore::UpdateCRDTHeads( const CID &rootCID, uint64_t rootPriority, bool add_topics_to_broadcast )

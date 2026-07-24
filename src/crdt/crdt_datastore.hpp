@@ -630,6 +630,38 @@ namespace sgns::crdt
         mutable std::mutex                 cid_string_cache_mutex_;
     };
 
+    /**
+     * Narrow lifetime observer used by the isolated final-owner regression.
+     *
+     * Returned futures and snapshots never retain a CrdtDatastore and cannot
+     * initiate or alter shutdown.
+     */
+    class CrdtDatastoreLifetimeObserver
+    {
+    public:
+        struct DestructionFutures
+        {
+            std::shared_future<std::thread::id> destructor;
+            std::shared_future<std::thread::id> deletion;
+        };
+
+        struct CallbackSnapshot
+        {
+            uint64_t callback_wrapper_entries = 0;
+            uint64_t put_callback_wrapper_entries = 0;
+            uint64_t delete_callback_wrapper_entries = 0;
+            uint64_t active_callback_wrappers = 0;
+            bool destructor_started = false;
+        };
+
+        static std::shared_future<void> CloseCompletion(
+            const std::shared_ptr<CrdtDatastore> &datastore );
+        static DestructionFutures DestructionCompletion(
+            const std::shared_ptr<CrdtDatastore> &datastore );
+        static CallbackSnapshot Snapshot(
+            const std::shared_ptr<CrdtDatastore> &datastore );
+    };
+
 }
 
 /**
