@@ -93,7 +93,7 @@ None - plan executed as specified.
 ## Verification
 
 - Exact one-test list guard passes.
-- Isolated final-owner subprocess passes 20/20 repetitions with `--gtest_break_on_failure`.
+- Isolated final-owner subprocess passes 20/20 repetitions with immediate-stop checking enabled.
 - Complete `crdt_test` passes 27/27 tests.
 - CTest selection passes 2/2: `crdt_test` and `crdt_datastore_last_owner_test`.
 - Existing shutdown/dependency focused slice passes 2/2.
