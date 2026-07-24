@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-24T15:23:30.913Z"
-last_activity: 2026-07-24 -- Completed Plan 09-11 fail-closed certificate preflight
+last_updated: "2026-07-24T15:43:06.593Z"
+last_activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutdown completion
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 12 of 13
+Plan: 13 of 13
 Status: Ready to execute
-Last activity: 2026-07-24 -- Completed Plan 09-11 fail-closed certificate preflight
+Last activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutdown completion
 
 ## Roadmap Snapshot
 
@@ -66,7 +66,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-11 fail-closed certificate prefli
 
 ## Operator Next Steps
 
-- Execute Phase 09 gap plans 09-12 through 09-13, then re-verify Phase 09.
+- Execute Phase 09 gap plan 09-13, then re-verify Phase 09.
 
 ## Performance Metrics
 
@@ -83,6 +83,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-11 fail-closed certificate prefli
 | Phase 09 P09 | 2h 16m | 2 tasks | 7 files |
 | Phase 09 P10 | 16 min | 2 tasks | 10 files |
 | Phase 09 P11 | 15 min | 1 tasks | 3 files |
+| Phase 09 P12 | 16 min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -110,3 +111,5 @@ Last activity: 2026-07-24 -- Completed Plan 09-11 fail-closed certificate prefli
 - [Phase 09]: Catch-up commits only Processed or durably AlreadyHandled chunks. — Retry and callback exceptions preserve the failed chunk cursor and uncommitted dedup tuples.
 - [Phase 09]: Certificate ingress uses one typed two-key preflight. — Both exact slot and winner-index reads complete before classification; only exact NOT_FOUND is absence, while corruption and operational failures fail closed before mutation.
 - [Phase 09]: Replicated preflight failures are terminal rejection. — Unknown durable occupancy cannot be approved or converted into a missing-dependency retry, regardless of whether the read failed from corruption or I/O.
+- [Phase 09]: Reject sanitation preserves retry barriers for retained namespaces; distinct retained dependencies fail closed. — Reject authority is namespace-local and must not choose or erase another namespace dependency.
+- [Phase 09]: CRDT RequestClose returns one shared completion barrier while external CancelAndCloseNow waits and joins. — Worker-originated close cannot self-wait, but external owners require a truthful completed-and-drained boundary.
