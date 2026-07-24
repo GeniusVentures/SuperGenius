@@ -982,6 +982,7 @@ namespace sgns
     {
         if ( request.chain_id.empty() || request.burn_hash == base::Hash256{} ||
              request.winning_transaction_hash == base::Hash256{} ||
+             request.produced_outputs.empty() ||
              request.bridge_input.txid_hash_ != request.burn_hash ||
              request.bridge_input.output_idx_ != request.receipt_log_index ||
              request.bridge_input_owner.empty() ||
@@ -1195,6 +1196,12 @@ namespace sgns
         {
             return outcome::failure( std::errc::bad_message );
         }
+        std::string canonical_record;
+        if ( !record.SerializeToString( &canonical_record ) ||
+             canonical_record != raw.value().toString() )
+        {
+            return outcome::failure( std::errc::bad_message );
+        }
         BOOST_OUTCOME_TRY(
             auto record_burn,
             base::Hash256::fromSpan( gsl::span(
@@ -1219,11 +1226,13 @@ namespace sgns
         result.bridge_input_owner = record.bridge_input_owner();
         result.bridge_input_type = UTXOType::UTXO_BRIDGE;
         result.canonical_bytes.assign( raw.value().begin(), raw.value().end() );
+        uint32_t expected_output_index = 0;
         for ( const auto &produced : record.produced_outputs() )
         {
             if ( produced.state() != SGTransaction::UTXO_ENTRY_READY ||
                  produced.type() != SGTransaction::UTXO_ENTRY_NORMAL ||
-                 produced.owner_address().empty() )
+                 produced.owner_address().empty() ||
+                 produced.utxo().output_idx() != expected_output_index++ )
             {
                 return outcome::failure( std::errc::bad_message );
             }
