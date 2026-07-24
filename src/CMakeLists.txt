@@ -16,6 +16,7 @@ add_subdirectory(coinprices)
 add_subdirectory(proof)
 add_subdirectory(multisig)
 add_subdirectory(securecrdt)
+add_subdirectory(trustedpeer)
 
 install(
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/"
