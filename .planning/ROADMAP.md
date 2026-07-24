@@ -23,13 +23,18 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Previous-nonce and producer-UTXO validation retrieve new-format certificates through `GetCertificateBySubjectHash()` without treating the transaction hash as the finality key.
 4. A node presented with legacy transaction-keyed certificate state fails startup with a clear v2.0 clean-state error.
 
-**Plans:** 13/13 plans complete
+**Plans:** 14/16 plans complete
 
 **Wave 7 gap closure** *(blocked on Wave 6 completion; serialized because worktrees are disabled)*:
 - 09-10 — Durable catch-up publication outcomes and fail-closed bridge replay reads
 - 09-11 — Typed certificate write-once preflight for local and replicated paths
 - 09-12 — Mixed CRDT decision preservation and synchronized shutdown completion
 - 09-13 — Endpoint-local receipt-status disagreement under weighted validation
+
+**Wave 8 post-verification gap closure** *(serialized because worktrees are disabled)*:
+- 09-14 — Atomic mint application and durable restart recovery
+- 09-15 — Deferred CRDT destruction and callback-lifetime closure
+- 09-16 — Immutable RPC configuration snapshots and concurrent publication
 
 ### Phase 10: Durable Vote Lock and Finalization State Machine
 

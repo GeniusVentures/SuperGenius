@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
 status: executing
-last_updated: "2026-07-24T17:26:39.537Z"
-last_activity: 2026-07-24 -- Phase 09 planning complete
+last_updated: "2026-07-24T17:53:25Z"
+last_activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 16
-  completed_plans: 13
-  percent: 0
+  completed_plans: 14
+  percent: 88
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 09 — Canonical Slot and Certificate Storage gap closure
+**Current focus:** Phase 09 — canonical-slot-and-certificate-storage
 
 ## Current Position
 
-Phase: 09 (Canonical Slot and Certificate Storage) — GAPS FOUND
-Plan: 13 of 13
-Status: Ready to execute
-Last activity: 2026-07-24 -- Phase 09 planning complete
+Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
+Plan: 14 of 16
+Status: Executing Phase 09
+Last activity: 2026-07-24 -- Completed Plan 09-14 atomic mint application
 
 ## Roadmap Snapshot
 
@@ -66,7 +66,7 @@ Last activity: 2026-07-24 -- Phase 09 planning complete
 
 ## Operator Next Steps
 
-- Run `$gsd-plan-phase 9 --gaps` to plan closure for the three blockers in `09-VERIFICATION.md`.
+- Continue with Plan 09-15 deferred CRDT destruction and callback-lifetime closure.
 
 ## Performance Metrics
 
@@ -85,6 +85,7 @@ Last activity: 2026-07-24 -- Phase 09 planning complete
 | Phase 09 P11 | 15 min | 1 tasks | 3 files |
 | Phase 09 P12 | 16 min | 2 tasks | 5 files |
 | Phase 09 P13 | 6 min | 1 tasks | 3 files |
+| Phase 09 P14 | 21 min | 2 tasks | 8 files |
 
 ## Decisions
 
@@ -115,3 +116,6 @@ Last activity: 2026-07-24 -- Phase 09 planning complete
 - [Phase 09]: Reject sanitation preserves retry barriers for retained namespaces; distinct retained dependencies fail closed. — Reject authority is namespace-local and must not choose or erase another namespace dependency.
 - [Phase 09]: CRDT RequestClose returns one shared completion barrier while external CancelAndCloseNow waits and joins. — Worker-originated close cannot self-wait, but external owners require a truthful completed-and-drained boundary.
 - [Phase 09]: Missing or failed receipt status is endpoint-local and contributes zero weight; later exact endpoints may still reach quorum. — One stale or malicious provider cannot veto independent receipts, while unsuccessful endpoints never help satisfy the 75-weight threshold.
+- [Phase 09]: A canonical burn-keyed application record written with every mint effect is the sole durable mint-completion authority. — A naked consumed bridge input cannot prove which winner or outputs were applied.
+- [Phase 09]: Ordinary UTXO persistence and atomic mint application share one persistence gate from snapshot read through batch commit. — A stale ordinary snapshot cannot overwrite effects certified by a committed application record.
+- [Phase 09]: AlreadyApplied requires exact identity, winner, ordered outputs, and consumed bridge-input verification against live durable state. — Duplicate delivery and restart recovery fail closed on incomplete or conflicting records.
