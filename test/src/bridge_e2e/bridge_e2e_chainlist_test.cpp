@@ -209,8 +209,9 @@ public:
     static std::vector<std::string> AcceptedTopic0Hashes( const PublicChainInputValidator &validator,
                                                           const std::string               &chain_id )
     {
-        auto it = validator.rpc_endpoints_.find( chain_id );
-        if ( it == validator.rpc_endpoints_.end() || it->second.empty() )
+        const auto snapshot = validator.CaptureRpcConfiguration();
+        auto it = snapshot->rpc_endpoints.find( chain_id );
+        if ( it == snapshot->rpc_endpoints.end() || it->second.empty() )
         {
             return {};
         }
@@ -220,8 +221,9 @@ public:
     /// @brief Count the wired endpoints for a chain id (after a merge).
     static size_t EndpointCount( const PublicChainInputValidator &validator, const std::string &chain_id )
     {
-        auto it = validator.rpc_endpoints_.find( chain_id );
-        return it == validator.rpc_endpoints_.end() ? 0 : it->second.size();
+        const auto snapshot = validator.CaptureRpcConfiguration();
+        auto it = snapshot->rpc_endpoints.find( chain_id );
+        return it == snapshot->rpc_endpoints.end() ? 0 : it->second.size();
     }
 };
 

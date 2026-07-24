@@ -65,6 +65,16 @@ namespace sgns
         }
     } // namespace
 
+    PublicChainInputValidator::PublicChainInputValidator( PublicChainInputValidator &&other ) noexcept
+    {
+        std::lock_guard lock( other.rpc_configuration_write_mutex_ );
+        rpc_configuration_ = std::atomic_load( &other.rpc_configuration_ );
+        registered_chain_ids_ = std::move( other.registered_chain_ids_ );
+        std::atomic_store(
+            &other.rpc_configuration_,
+            std::make_shared<const RpcConfiguration>() );
+    }
+
     bool PublicChainInputValidator::ValidateUTXOParameters( const UTXOTxParameters &params,
                                                             const std::string      &address,
                                                             const UTXOManager      &utxo_manager ) const

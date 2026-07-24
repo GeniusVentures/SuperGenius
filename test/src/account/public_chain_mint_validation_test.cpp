@@ -6,7 +6,9 @@
 #include <boost/json.hpp>
 
 #include <iomanip>
+#include <future>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -137,6 +139,31 @@ namespace
 
     private:
         std::string response_;
+    };
+
+    class BlockingReceiptTransport final : public eth::rpc::JsonRpcTransport
+    {
+    public:
+        BlockingReceiptTransport( std::string response,
+                                  std::shared_ptr<std::promise<void>> entered,
+                                  std::shared_future<void> release )
+            : response_( std::move( response ) ),
+              entered_( std::move( entered ) ),
+              release_( std::move( release ) )
+        {
+        }
+
+        std::optional<std::string> call( const boost::json::object & ) override
+        {
+            entered_->set_value();
+            release_.wait();
+            return response_;
+        }
+
+    private:
+        std::string                         response_;
+        std::shared_ptr<std::promise<void>> entered_;
+        std::shared_future<void>             release_;
     };
 
     struct ScriptedReceiptState
@@ -397,6 +424,82 @@ TEST( PublicChainMintValidationTest, FailedReceiptStatusContributesNoWeight )
             "mock://failed-status-50",
             "mock://valid-25",
         } ) );
+}
+
+TEST( PublicChainMintValidationTest, ConcurrentConfigurationKeepsOneStableReceiptSnapshot )
+{
+    sgns::PublicChainInputValidator validator;
+    const auto chain_id = std::to_string( kChainId );
+    validator.SetRpcEndpoints(
+        chain_id,
+        {
+            Endpoint( "old://direct", 50 ),
+            Endpoint( "old://public", 25 ),
+        } );
+
+    auto entered = std::make_shared<std::promise<void>>();
+    auto entered_future = entered->get_future();
+    auto release = std::make_shared<std::promise<void>>();
+    auto release_future = release->get_future().share();
+    auto old_calls = std::make_shared<std::vector<std::string>>();
+    auto old_mutex = std::make_shared<std::mutex>();
+    validator.SetTransportFactory(
+        [entered, release_future, old_calls, old_mutex]( const std::string &url, std::chrono::seconds )
+        {
+            {
+                std::lock_guard lock( *old_mutex );
+                old_calls->push_back( url );
+            }
+            if ( url == "old://direct" )
+            {
+                return std::unique_ptr<eth::rpc::JsonRpcTransport>(
+                    std::make_unique<BlockingReceiptTransport>(
+                        ReceiptJson( { ValidBurn() } ), entered, release_future ) );
+            }
+            return std::unique_ptr<eth::rpc::JsonRpcTransport>(
+                std::make_unique<FixedReceiptTransport>( ReceiptJson( { ValidBurn() } ) ) );
+        } );
+
+    auto first = std::async( std::launch::async, [&] {
+        return PublicChainInputValidatorTestAccess::Verify(
+            validator, MakeMint( 0 ), kBurnHash );
+    } );
+    entered_future.wait();
+
+    validator.SetRpcEndpoints(
+        chain_id,
+        {
+            Endpoint( "new://failed", 25 ),
+            Endpoint( "new://quorum", 75 ),
+        } );
+    auto new_calls = std::make_shared<std::vector<std::string>>();
+    validator.SetTransportFactory(
+        [new_calls]( const std::string &url, std::chrono::seconds )
+        {
+            new_calls->push_back( url );
+            const auto status = url == "new://failed"
+                                  ? std::optional<std::string>{ "0x0" }
+                                  : std::optional<std::string>{ "0x1" };
+            return std::make_unique<FixedReceiptTransport>(
+                ReceiptJson( { ValidBurn() }, kBurnHash, status ) );
+        } );
+
+    EXPECT_TRUE( PublicChainInputValidatorTestAccess::Verify(
+        validator, MakeMint( 0 ), kBurnHash ) );
+    const auto vote = validator.GetVoteRpcSnapshot();
+    ASSERT_TRUE( vote.has_value() );
+    EXPECT_EQ( validator.GetFirstRpcUrl( chain_id ), std::optional<std::string>( "new://failed" ) );
+
+    release->set_value();
+    EXPECT_TRUE( first.get() );
+
+    {
+        std::lock_guard lock( *old_mutex );
+        EXPECT_EQ( *old_calls,
+                   ( std::vector<std::string>{ "old://direct", "old://public" } ) );
+    }
+    EXPECT_EQ( *new_calls,
+               ( std::vector<std::string>{ "new://failed", "new://quorum" } ) );
 }
 
 TEST( PublicChainMintValidationTest, ExplicitLocalChainIdsBypassRpc )

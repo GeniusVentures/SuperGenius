@@ -68,6 +68,11 @@ namespace sgns
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
+        PublicChainInputValidator() = default;
+        PublicChainInputValidator( const PublicChainInputValidator & ) = delete;
+        PublicChainInputValidator &operator=( const PublicChainInputValidator & ) = delete;
+        PublicChainInputValidator( PublicChainInputValidator &&other ) noexcept;
+
         struct VoteRpcSnapshot
         {
             std::string                                chain_id;
