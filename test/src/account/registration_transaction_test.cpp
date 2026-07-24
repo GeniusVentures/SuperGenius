@@ -315,11 +315,7 @@ namespace
             auto migrate_result = tm_->MigrationFunds( amount, migration_version, kTestTokenId, "" );
             ASSERT_TRUE( migrate_result.has_value() ) << "Migrating main's funds should succeed";
             std::chrono::milliseconds elapsed;
-            auto checkMigrated = [this, target]() {
-                return account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ) >= target;
-            };
-            ASSERT_WAIT_FOR_CONDITION(
-                checkMigrated,
+            ASSERT_WAIT_FOR_CONDITION( ([this, target]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, account_->GetAddress() ) >= target; }),
                 std::chrono::milliseconds( 10000 ),
                 "Main's migrated balance should be visible within timeout",
                 &elapsed );
@@ -467,11 +463,7 @@ namespace
                 EXPECT_TRUE( submit_result.has_value() ) << "SubmitProposal should succeed";
             }
 
-            auto checkCertified = [this, &reg_tx]() {
-                return blockchain_->CheckCertificate( reg_tx.GetHash() );
-            };
-            EXPECT_WAIT_FOR_CONDITION(
-                checkCertified,
+            EXPECT_WAIT_FOR_CONDITION( ([this, &reg_tx]() { return blockchain_->CheckCertificate( reg_tx.GetHash() ); }),
                 std::chrono::milliseconds( 25000 ),
                 "Registration should be certified within timeout",
                 nullptr );
@@ -521,11 +513,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildRegistrationEndToEnd )
     ASSERT_NE( tx, nullptr );
 
     // Verify status is SENDING (processed asynchronously by TickOnce READY branch — poll briefly)
-    auto checkSending = [this, &tx_hash]() {
-        return tm_->GetTransactionStatusByTxId( tx_hash ) == TransactionManager::TransactionStatus::SENDING;
-    };
-    EXPECT_WAIT_FOR_CONDITION(
-        checkSending,
+    EXPECT_WAIT_FOR_CONDITION( ([this, &tx_hash]() { return tm_->GetTransactionStatusByTxId( tx_hash ) == TransactionManager::TransactionStatus::SENDING; }),
         std::chrono::milliseconds( 10000 ),
         "Transaction should reach SENDING status",
         nullptr );
@@ -905,11 +893,7 @@ TEST_F( RegistrationTransactionE2ETest, RegisterChildAutoDeriveIncrementsFromSto
     ASSERT_TRUE( result1.has_value() );
 
     // Poll for SENDING to ensure CRDT is committed
-    auto checkSending1 = [this, &result1]() {
-        return tm_->GetTransactionStatusByTxId( result1.value() ) == TransactionManager::TransactionStatus::SENDING;
-    };
-    EXPECT_WAIT_FOR_CONDITION(
-        checkSending1,
+    EXPECT_WAIT_FOR_CONDITION( ([this, &result1]() { return tm_->GetTransactionStatusByTxId( result1.value() ) == TransactionManager::TransactionStatus::SENDING; }),
         std::chrono::milliseconds( 10000 ),
         "CRDT should be committed and status should reach SENDING",
         nullptr );
@@ -997,12 +981,10 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainReturnsMatchingEn
     ASSERT_TRUE( result2.has_value() );
 
     // Allow time for CRDT processing
-    auto checkRegistrations = [this, &main_address]() {
-        auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
-        return entries.has_value() && !entries.value().empty();
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegistrations,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &main_address]() {
+            auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_address );
+            return entries.has_value() && !entries.value().empty();
+        }),
         std::chrono::milliseconds( 5000 ),
         "Registrations for main should appear in CRDT",
         nullptr );
@@ -1040,12 +1022,10 @@ TEST_F( RegistrationTransactionE2ETest, GetRegistrationsForMainFiltersByMainAddr
     ASSERT_TRUE( result.has_value() );
 
     // Allow time for CRDT processing
-    auto checkRegistrationsA = [this, &main_a]() {
-        auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
-        return entries.has_value() && !entries.value().empty();
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegistrationsA,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &main_a]() {
+            auto entries = RegistrationE2ETestAccess::GetRegistrationsForMain( *tm_, main_a );
+            return entries.has_value() && !entries.value().empty();
+        }),
         std::chrono::milliseconds( 5000 ),
         "Registrations for main_a should appear in CRDT",
         nullptr );
@@ -1136,11 +1116,7 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
 
     // Poll for the child's UTXO to appear — the node's own TickOnce READY-branch ingests its
     // own submitted transaction and calls PutProducedUTXOs on first CRDT observation.
-    auto checkChildFunded = [this, &kFundAmount]() {
-        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkChildFunded,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1216,11 +1192,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
-    auto checkChildFunded1 = [this, &kFundAmount]() {
-        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkChildFunded1,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1291,11 +1263,7 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
-    auto checkChildFunded2 = [this, &kFundAmount]() {
-        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkChildFunded2,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1506,9 +1474,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
 
     // Allow time for the initial registration's CRDT write to land before Detach's
     // auto-derive overload reads it back.
-    auto checkRegExists = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegExists,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); }),
         std::chrono::milliseconds( 5000 ),
         "Initial registration CRDT write should be visible before Detach",
         nullptr );
@@ -1517,25 +1483,23 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto checkDetached = [this, &stored_reg, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &stored_reg, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    stored_reg = candidate;
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        stored_reg = candidate;
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkDetached,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Detached reg/ record should be visible within timeout",
         nullptr );
@@ -1569,9 +1533,7 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
     std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
     crdt::HierarchicalKey  hk( reg_key );
 
-    auto checkRegExists2 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegExists2,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); }),
         std::chrono::milliseconds( 5000 ),
         "Initial registration CRDT write should be visible before ReplaceMain",
         nullptr );
@@ -1581,25 +1543,23 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
     ASSERT_TRUE( replace_result.has_value() ) << "ReplaceMain should succeed against an existing registration";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto checkReplacedMain = [this, &stored_reg, &hk, &new_main_address]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &stored_reg, &hk, &new_main_address]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetMainAddress() == new_main_address )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    stored_reg = candidate;
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetMainAddress() == new_main_address )
+                    {
+                        stored_reg = candidate;
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkReplacedMain,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Replace-Main'd reg/ record should be visible within timeout",
         nullptr );
@@ -1634,9 +1594,7 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
     std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
     crdt::HierarchicalKey  hk( reg_key );
 
-    auto checkRegExists3 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegExists3,
+ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); }),
         std::chrono::milliseconds( 5000 ),
         "Initial registration CRDT write should be visible before Detach",
         nullptr );
@@ -1645,22 +1603,20 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
     // Poll until the Detach's write is visible before attempting re-registration.
-    auto checkDetached2 = [this, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
-                    return true;
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                        return true;
+                }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkDetached2,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Detach should be visible before re-registration is attempted",
         nullptr );
@@ -1671,25 +1627,23 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterDetachViaReplaceMain 
         << "ReplaceMain should succeed as a re-registration after a prior Detach (D-39)";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto checkReregistered2 = [this, &stored_reg, &hk, &third_main_address]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &stored_reg, &hk, &third_main_address]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetMainAddress() == third_main_address )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    stored_reg = candidate;
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetMainAddress() == third_main_address )
+                    {
+                        stored_reg = candidate;
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkReregistered2,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Re-registered reg/ record should be visible within timeout",
         nullptr );
@@ -1729,9 +1683,7 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
     std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
     crdt::HierarchicalKey  hk( reg_key );
 
-    auto checkRegExists4 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRegExists4,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); }),
         std::chrono::milliseconds( 5000 ),
         "Initial registration CRDT write should be visible before Detach",
         nullptr );
@@ -1739,22 +1691,20 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
-    auto checkDetached3 = [this, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
-                    return true;
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                        return true;
+                }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkDetached3,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Detach should be visible within timeout",
         nullptr );
@@ -1801,11 +1751,7 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
     // Poll for CONFIRMED — CheckTransactionReplayProtection's nonce-chain check reads
     // account_m->GetPeerNonce(), which is only populated once a transaction is genuinely
     // CONFIRMED (certified), not merely SENDING.
-    auto checkConfirmed = [this, &register_hash]() {
-        return tm_->GetTransactionStatusByTxId( register_hash ) == TransactionManager::TransactionStatus::CONFIRMED;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkConfirmed,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &register_hash]() { return tm_->GetTransactionStatusByTxId( register_hash ) == TransactionManager::TransactionStatus::CONFIRMED; }),
         std::chrono::milliseconds( 30000 ),
         "Initial registration should be CONFIRMED within timeout",
         nullptr );
@@ -1813,13 +1759,11 @@ TEST_F( RegistrationTransactionE2ETest, LifecycleChangeReplayRejectedByNonceChai
     // Consumes nonce 1 — advances the nonce chain further, matching the plan's setup sequence.
     auto detach_result = tm_->DetachChild( metadata );
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
-    auto checkSendingOrConfirmed = [this, &detach_result]() {
-        auto s = tm_->GetTransactionStatusByTxId( detach_result.value() );
-        return s == TransactionManager::TransactionStatus::SENDING ||
-               s == TransactionManager::TransactionStatus::CONFIRMED;
-    };
-    EXPECT_WAIT_FOR_CONDITION(
-        checkSendingOrConfirmed,
+    EXPECT_WAIT_FOR_CONDITION( ([this, &detach_result]() {
+            auto s = tm_->GetTransactionStatusByTxId( detach_result.value() );
+            return s == TransactionManager::TransactionStatus::SENDING ||
+                   s == TransactionManager::TransactionStatus::CONFIRMED;
+        }),
         std::chrono::milliseconds( 10000 ),
         "DetachChild should reach SENDING or CONFIRMED status",
         nullptr );
@@ -1879,25 +1823,23 @@ TEST_F( RegistrationTransactionE2ETest, RevokeChildEndToEnd )
     crdt::HierarchicalKey hk( reg_key );
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto checkRevoked = [this, &stored_reg, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &stored_reg, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    stored_reg = candidate;
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        stored_reg = candidate;
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkRevoked,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Revoked reg/ record should be visible within timeout",
         nullptr );
@@ -1969,26 +1911,24 @@ TEST_F( RegistrationTransactionE2ETest, RevokeRejectedForAlreadyDetachedChild )
 
     bool     detached        = false;
     uint64_t stored_sequence = 0;
-    auto checkDetached4 = [this, &detached, &stored_sequence, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &detached, &stored_sequence, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    detached        = true;
-                    stored_sequence = candidate->GetSequence();
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                    {
+                        detached        = true;
+                        stored_sequence = candidate->GetSequence();
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkDetached4,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "First Revoke should be visible before the second Revoke is attempted",
         nullptr );
@@ -2070,22 +2010,20 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
     crdt::HierarchicalKey hk( reg_key );
 
     {
-        auto checkDetached5 = [this, &hk]() {
-            auto get_result = db_->Get( hk );
-            if ( get_result.has_value() )
-            {
-                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-                if ( !deserialize_result.has_error() )
+        ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() {
+                auto get_result = db_->Get( hk );
+                if ( get_result.has_value() )
                 {
-                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                    if ( candidate && candidate->GetDetachFlag() )
-                        return true;
+                    auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                    if ( !deserialize_result.has_error() )
+                    {
+                        auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                        if ( candidate && candidate->GetDetachFlag() )
+                            return true;
+                    }
                 }
-            }
-            return false;
-        };
-        ASSERT_WAIT_FOR_CONDITION(
-            checkDetached5,
+                return false;
+            }),
             std::chrono::milliseconds( 10000 ),
             "Revoke should be visible before re-registration is attempted",
             nullptr );
@@ -2117,25 +2055,23 @@ TEST_F( RegistrationTransactionE2ETest, ReRegistrationAfterRevoke )
         << "Re-registration should be certified before checking the stored reg/ record";
 
     std::shared_ptr<RegistrationTransaction> stored_reg;
-    auto checkReregistered2 = [this, &stored_reg, &hk, &new_main_address]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &stored_reg, &hk, &new_main_address]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetMainAddress() == new_main_address )
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
                 {
-                    stored_reg = candidate;
-                    return true;
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetMainAddress() == new_main_address )
+                    {
+                        stored_reg = candidate;
+                        return true;
+                    }
                 }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkReregistered2,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Re-registered reg/ record should be visible within timeout",
         nullptr );
@@ -2174,11 +2110,7 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
 
-    auto checkChildFunded3 = [this, &kFundAmount]() {
-        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkChildFunded3,
+    ASSERT_WAIT_FOR_CONDITION( ([this, &kFundAmount]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; }),
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -2193,22 +2125,20 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     std::string           reg_key = TransactionManager::GetBlockChainBase() + "reg/" + child_account_->GetAddress();
     crdt::HierarchicalKey hk( reg_key );
 
-    auto checkDetached6 = [this, &hk]() {
-        auto get_result = db_->Get( hk );
-        if ( get_result.has_value() )
-        {
-            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-            if ( !deserialize_result.has_error() )
+    ASSERT_WAIT_FOR_CONDITION( ([this, &hk]() {
+            auto get_result = db_->Get( hk );
+            if ( get_result.has_value() )
             {
-                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                if ( candidate && candidate->GetDetachFlag() )
-                    return true;
+                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+                if ( !deserialize_result.has_error() )
+                {
+                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                    if ( candidate && candidate->GetDetachFlag() )
+                        return true;
+                }
             }
-        }
-        return false;
-    };
-    ASSERT_WAIT_FOR_CONDITION(
-        checkDetached6,
+            return false;
+        }),
         std::chrono::milliseconds( 10000 ),
         "Revoke should be visible within timeout",
         nullptr );
