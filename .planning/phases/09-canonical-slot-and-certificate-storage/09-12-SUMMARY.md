@@ -100,6 +100,13 @@ None - plan executed exactly as written.
 
 - The first Task 2 compile exposed that the new const pending-head test accessor needed the existing pending-head mutex to be mutable. The mutex qualification was corrected and all prescribed tests then passed.
 
+## Post-Merge Integration Fix
+
+- Combined CTest exposed a nondeterministic assertion in `MixedRejectAndRetryDependencyParksRetainedNamespace`: merged values and callbacks are observable inside `MergeDataFromDelta`, while `RemoveParkedRootAfterSuccess` runs only after `ProcessJobIteration` returns to the scheduler.
+- The production order is intentional—the root remains parked until the complete job iteration succeeds—so the test's value-only wait condition was structurally incomplete.
+- Commit `e01d7ceb` makes the condition wait for merged values, both callbacks, and parked-root removal as one lifecycle completion predicate. It adds no delay or timing workaround.
+- The exact two-test mixed-decision slice passed 20 consecutive repetitions after the fix, followed by the complete 27-test CRDT suite.
+
 ## Known Stubs
 
 None introduced. Existing unrelated TODO comments in legacy tombstone filtering and IPLD content inspection remain unchanged and do not affect this plan.
@@ -112,6 +119,7 @@ None - no external service configuration required.
 
 - `cmake --build build/OSX/Release --target crdt_test -j2` — PASS.
 - Exact nonzero list guard plus `DeltaFilterMixedRejectAndRetryDependencyPreservesRetry` and `MixedRejectAndRetryDependencyParksRetainedNamespace` — PASS, 2/2.
+- Post-merge stress run of that exact mixed-decision slice — PASS, 20/20 consecutive repetitions.
 - Exact nonzero list guard plus `DeltaFilterDependencyAttemptLimitAndShutdownDrainParkedRoots` and `WorkerInitiatedShutdownCompletesBeforeBarrierAndRunsNoPostCloseWork` — PASS, 2/2.
 - Complete `crdt_test` — PASS, 27/27.
 - Existing ThreadSanitizer configuration search — none exposed by the repository; deterministic mutex/barrier coverage used as planned.
@@ -127,7 +135,7 @@ None - no external service configuration required.
 ## Self-Check: PASSED
 
 - All five modified plan files exist.
-- Task commits `6debb627` and `1af67849` are present.
+- Task commits `6debb627`, `1af67849`, and post-merge integration fix `e01d7ceb` are present.
 - Both exact filtered slices and the complete 27-test CRDT suite pass.
 - Shutdown source contains one synchronized snapshot helper and no detached close helper.
 - Protected user-owned dirty and generated paths remain unstaged and untouched.
