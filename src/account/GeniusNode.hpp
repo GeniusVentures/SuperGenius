@@ -31,6 +31,7 @@
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "eth/eth_watch_service.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
 #include <ipfs_lite/ipfs/graphsync/graphsync.hpp>
 #include "crypto/hasher.hpp"
 #include "processing/impl/processing_core_impl.hpp"
@@ -779,6 +780,38 @@ namespace sgns
         std::string write_base_path_; ///< Base path for node databases, logs, and account storage.
 
     private:
+        friend class GeniusNodeCatchupTestAccess;
+
+        enum class CatchupSubmissionState : uint8_t
+        {
+            NotAttempted,
+            Succeeded,
+            Failed
+        };
+
+        struct CatchupBurnFacts
+        {
+            bool account_available = false;
+            bool transaction_manager_available = false;
+            outcome::result<TransactionManager::BridgeBurnState> burn_state;
+            CatchupSubmissionState submission = CatchupSubmissionState::NotAttempted;
+
+            CatchupBurnFacts(
+                bool account_available,
+                bool transaction_manager_available,
+                outcome::result<TransactionManager::BridgeBurnState> burn_state,
+                CatchupSubmissionState submission ) :
+                account_available( account_available ),
+                transaction_manager_available( transaction_manager_available ),
+                burn_state( std::move( burn_state ) ),
+                submission( submission )
+            {
+            }
+        };
+
+        static evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome
+        ClassifyCatchupBurnOutcome( const CatchupBurnFacts &facts );
+
         // ─────────────────────────────────────────────────────────────────────────────
         // Runtime object graph — OWNERSHIP ORDER.
         //

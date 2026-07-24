@@ -3173,6 +3173,28 @@ namespace sgns
                             catchup_chains_.size() );
     }
 
+    evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome
+    GeniusNode::ClassifyCatchupBurnOutcome( const CatchupBurnFacts &facts )
+    {
+        using Outcome = evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+        if ( !facts.account_available || !facts.transaction_manager_available
+             || facts.burn_state.has_error() )
+        {
+            return Outcome::Retry;
+        }
+        if ( facts.burn_state.value() == TransactionManager::BridgeBurnState::AlreadyHandled )
+        {
+            return Outcome::AlreadyHandled;
+        }
+        if ( facts.burn_state.value() == TransactionManager::BridgeBurnState::Reserved )
+        {
+            return Outcome::Retry;
+        }
+        return facts.submission == CatchupSubmissionState::Succeeded
+                 ? Outcome::Processed
+                 : Outcome::Retry;
+    }
+
     void GeniusNode::InitializeAndStartBridge()
     {
         node_logger_->info( "InitializeAndStartBridge: thin orchestrator (D-01, D-03)" );
@@ -3239,43 +3261,71 @@ namespace sgns
             auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
                                                                   const std::string                     &tx_hash_hex,
                                                                   const std::string                     &chain_id_str,
-                                                                  uint32_t                               receipt_log_index ) -> bool
+                                                                  uint32_t receipt_log_index )
             {
+                using BurnState = TransactionManager::BridgeBurnState;
+                using Outcome = evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
                 if ( !burn )
                 {
-                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
+                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — retrying",
                                                tx_hash_hex );
-                    return false;
+                    return Outcome::Retry;
                 }
 
-                // UTXO state checks (same guards as the old scan)
                 base::Hash256 burn_tx_hash;
                 if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
                 {
-                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — skipping",
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — retrying",
                                                tx_hash_hex );
-                    return false;
+                    return Outcome::Retry;
                 }
 
                 auto strong = weak_self.lock();
-                if ( !strong || !strong->account_ )
+                if ( !strong )
                 {
-                    return false;
+                    return Outcome::Retry;
                 }
-                auto &utxo_mgr = strong->account_->GetUTXOManager();
-                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, receipt_log_index ) )
+                if ( !strong->account_ )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
-                                                 tx_hash_hex );
-                    return false;
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            false,
+                            strong->transaction_manager_ != nullptr,
+                            outcome::failure( std::errc::operation_canceled ),
+                            CatchupSubmissionState::NotAttempted } );
                 }
-                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, receipt_log_index ) )
+                if ( !strong->transaction_manager_ )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
-                                                 tx_hash_hex );
-                    return false;
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            true,
+                            false,
+                            outcome::failure( std::errc::operation_canceled ),
+                            CatchupSubmissionState::NotAttempted } );
+                }
+
+                auto burn_state = strong->transaction_manager_->GetBridgeBurnState(
+                    chain_id_str, tx_hash_hex, receipt_log_index );
+                if ( burn_state.has_error() )
+                {
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            true,
+                            true,
+                            outcome::failure( burn_state.error() ),
+                            CatchupSubmissionState::NotAttempted } );
+                }
+                if ( burn_state.value() != BurnState::Available )
+                {
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            true,
+                            true,
+                            burn_state.value(),
+                            CatchupSubmissionState::NotAttempted } );
                 }
 
                 try
@@ -3286,14 +3336,46 @@ namespace sgns
                                                       receipt_log_index,
                                                       burn.value().token_id,
                                                       burn.value().destination );
-                    return result.has_value();
+                    if ( result.has_value() )
+                    {
+                        return ClassifyCatchupBurnOutcome(
+                            CatchupBurnFacts{
+                                true,
+                                true,
+                                BurnState::Available,
+                                CatchupSubmissionState::Succeeded } );
+                    }
+
+                    auto durable_after_failure =
+                        strong->transaction_manager_->GetBridgeBurnState(
+                            chain_id_str, tx_hash_hex, receipt_log_index );
+                    if ( durable_after_failure.has_error() )
+                    {
+                        return ClassifyCatchupBurnOutcome(
+                            CatchupBurnFacts{
+                                true,
+                                true,
+                                outcome::failure( durable_after_failure.error() ),
+                                CatchupSubmissionState::Failed } );
+                    }
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            true,
+                            true,
+                            durable_after_failure.value(),
+                            CatchupSubmissionState::Failed } );
                 }
                 catch ( const std::exception &e )
                 {
-                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
+                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — retrying",
                                                  tx_hash_hex,
                                                  e.what() );
-                    return false;
+                    return ClassifyCatchupBurnOutcome(
+                        CatchupBurnFacts{
+                            true,
+                            true,
+                            BurnState::Available,
+                            CatchupSubmissionState::Failed } );
                 }
             };
 

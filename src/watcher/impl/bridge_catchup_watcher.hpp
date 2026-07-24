@@ -98,12 +98,20 @@ namespace sgns::evmwatcher
          * @param[in] tx_hash_hex     Source-chain transaction hash (hex, no 0x).
          * @param[in] chain_id_str    Source chain ID as a decimal string.
          * @param[in] receipt_log_index Absolute zero-based position in the full receipt.
-         * @return true if the burn was successfully submitted for minting.
+         * @return Durable publication outcome for this burn.
          */
-        using BurnProcessor = std::function<bool( const std::vector<eth::abi::AbiValue> &decoded_values,
-                                                  const std::string                     &tx_hash_hex,
-                                                  const std::string                     &chain_id_str,
-                                                  uint32_t                               receipt_log_index )>;
+        enum class BurnProcessOutcome : uint8_t
+        {
+            Processed,
+            AlreadyHandled,
+            Retry
+        };
+
+        using BurnProcessor =
+            std::function<BurnProcessOutcome( const std::vector<eth::abi::AbiValue> &decoded_values,
+                                              const std::string                     &tx_hash_hex,
+                                              const std::string                     &chain_id_str,
+                                              uint32_t receipt_log_index )>;
 
         /**
          * @brief      Constructs a BridgeCatchupWatcher.

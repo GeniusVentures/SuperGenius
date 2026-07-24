@@ -7,8 +7,10 @@
 #include <gtest/gtest.h>
 
 #include "account/BridgeEventTypes.hpp"
+#include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
 #include "base/parse_utility.hpp"
+#include "storage/database_error.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 
 #include <boost/json.hpp>
@@ -18,6 +20,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <set>
 #include <sstream>
 #include <string>
@@ -38,6 +41,44 @@ namespace sgns::evmwatcher
         }
     };
 } // namespace sgns::evmwatcher
+
+namespace sgns
+{
+    class GeniusNodeCatchupTestAccess
+    {
+    public:
+        enum class Submission
+        {
+            NotAttempted,
+            Succeeded,
+            Failed
+        };
+
+        static evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome Classify(
+            bool account_available,
+            bool transaction_manager_available,
+            outcome::result<TransactionManager::BridgeBurnState> burn_state,
+            Submission submission )
+        {
+            GeniusNode::CatchupSubmissionState internal_submission =
+                GeniusNode::CatchupSubmissionState::NotAttempted;
+            if ( submission == Submission::Succeeded )
+            {
+                internal_submission = GeniusNode::CatchupSubmissionState::Succeeded;
+            }
+            else if ( submission == Submission::Failed )
+            {
+                internal_submission = GeniusNode::CatchupSubmissionState::Failed;
+            }
+            return GeniusNode::ClassifyCatchupBurnOutcome(
+                GeniusNode::CatchupBurnFacts{
+                    account_available,
+                    transaction_manager_available,
+                    std::move( burn_state ),
+                    internal_submission } );
+        }
+    };
+} // namespace sgns
 
 namespace
 {
@@ -291,8 +332,14 @@ namespace
     class CatchupHarness
     {
     public:
-        explicit CatchupHarness( std::vector<CatchupAttempt> attempts )
-            : script_( std::make_shared<CatchupScript>() )
+        using Outcome =
+            sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+
+        explicit CatchupHarness(
+            std::vector<CatchupAttempt> attempts,
+            std::vector<std::optional<Outcome>> scripted_outcomes = {} )
+            : script_( std::make_shared<CatchupScript>() ),
+              scripted_outcomes_( std::move( scripted_outcomes ) )
         {
             script_->attempts = std::move( attempts );
             script_->receipt_calls.resize( script_->attempts.size() );
@@ -326,7 +373,16 @@ namespace
                         uint32_t                               receipt_log_index )
                 {
                     delivered_.push_back( { tx_hash, receipt_log_index } );
-                    return true;
+                    if ( next_outcome_ >= scripted_outcomes_.size() )
+                    {
+                        return Outcome::Processed;
+                    }
+                    const auto &scripted = scripted_outcomes_[next_outcome_++];
+                    if ( !scripted.has_value() )
+                    {
+                        throw std::runtime_error( "scripted burn processor failure" );
+                    }
+                    return scripted.value();
                 } );
         }
 
@@ -356,6 +412,8 @@ namespace
         std::shared_ptr<CatchupScript> script_;
         std::unique_ptr<sgns::evmwatcher::BridgeCatchupWatcher> watcher_;
         std::vector<DeliveredBurn> delivered_;
+        std::vector<std::optional<Outcome>> scripted_outcomes_;
+        size_t next_outcome_ = 0;
     };
 } // namespace
 
@@ -539,6 +597,143 @@ TEST( BridgeCatchupReceiptDecodeTest, UndecodableMatchingLogFailsChunk )
     harness.PollOnce();
     EXPECT_TRUE( harness.Delivered().empty() );
     EXPECT_EQ( harness.Cursor(), kCatchupBlock );
+}
+
+TEST( BridgeCatchupPublicationOutcomeTest, RetryPreservesCursorAndDedup )
+{
+    using Outcome =
+        sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+    const std::string tx_hash( 64, '2' );
+    const CatchupLog burn{ tx_hash, 52, false };
+    const CatchupAttempt attempt{
+        LogsJson( { burn } ),
+        LogsJson( {} ),
+        { { tx_hash, ReceiptJson( tx_hash, { burn } ) } },
+    };
+    CatchupHarness harness(
+        { attempt, attempt },
+        { Outcome::Retry, Outcome::Processed } );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock );
+    ASSERT_EQ( harness.Delivered().size(), 1U );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock + 1 );
+    ASSERT_EQ( harness.Delivered().size(), 2U );
+    EXPECT_EQ( harness.Delivered().front().tx_hash,
+               harness.Delivered().back().tx_hash );
+}
+
+TEST( BridgeCatchupPublicationOutcomeTest, ExceptionPreservesCursorAndDedup )
+{
+    using Outcome =
+        sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+    const std::string tx_hash( 64, '3' );
+    const CatchupLog burn{ tx_hash, 53, false };
+    const CatchupAttempt attempt{
+        LogsJson( { burn } ),
+        LogsJson( {} ),
+        { { tx_hash, ReceiptJson( tx_hash, { burn } ) } },
+    };
+    CatchupHarness harness(
+        { attempt, attempt },
+        { std::nullopt, Outcome::AlreadyHandled } );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock );
+    ASSERT_EQ( harness.Delivered().size(), 1U );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock + 1 );
+    EXPECT_EQ( harness.Delivered().size(), 2U );
+}
+
+TEST( BridgeCatchupPublicationOutcomeTest, PartialProcessedThenRetryDoesNotCommitChunk )
+{
+    using Outcome =
+        sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+    const std::string tx_a( 64, '4' );
+    const std::string tx_b( 64, '5' );
+    const CatchupLog burn_a{ tx_a, 54, false };
+    const CatchupLog burn_b{ tx_b, 55, false };
+    const CatchupAttempt attempt{
+        LogsJson( { burn_a, burn_b } ),
+        LogsJson( {} ),
+        {
+            { tx_a, ReceiptJson( tx_a, { burn_a } ) },
+            { tx_b, ReceiptJson( tx_b, { burn_b } ) },
+        },
+    };
+    CatchupHarness harness(
+        { attempt, attempt },
+        {
+            Outcome::Processed,
+            Outcome::Retry,
+            Outcome::AlreadyHandled,
+            Outcome::Processed,
+        } );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock );
+    ASSERT_EQ( harness.Delivered().size(), 2U );
+
+    harness.PollOnce();
+    EXPECT_EQ( harness.Cursor(), kCatchupBlock + 1 );
+    ASSERT_EQ( harness.Delivered().size(), 4U );
+    EXPECT_EQ( harness.Delivered()[0].tx_hash, harness.Delivered()[2].tx_hash );
+    EXPECT_EQ( harness.Delivered()[1].tx_hash, harness.Delivered()[3].tx_hash );
+}
+
+TEST( BridgeCatchupPublicationOutcomeTest, GeniusNodeClassifierMapsTransientStatesToRetry )
+{
+    using Access = sgns::GeniusNodeCatchupTestAccess;
+    using BurnState = sgns::TransactionManager::BridgeBurnState;
+    using Outcome =
+        sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+
+    EXPECT_EQ( Access::Classify(
+                   false, true, BurnState::Available, Access::Submission::NotAttempted ),
+               Outcome::Retry );
+    EXPECT_EQ( Access::Classify(
+                   true, false, BurnState::Available, Access::Submission::NotAttempted ),
+               Outcome::Retry );
+    EXPECT_EQ( Access::Classify(
+                   true,
+                   true,
+                   outcome::failure( sgns::storage::DatabaseError::IO_ERROR ),
+                   Access::Submission::NotAttempted ),
+               Outcome::Retry );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::Reserved, Access::Submission::NotAttempted ),
+               Outcome::Retry );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::Available, Access::Submission::NotAttempted ),
+               Outcome::Retry );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::Available, Access::Submission::Failed ),
+               Outcome::Retry );
+}
+
+TEST( BridgeCatchupPublicationOutcomeTest, GeniusNodeClassifierMapsSubmissionAndDurableCompletion )
+{
+    using Access = sgns::GeniusNodeCatchupTestAccess;
+    using BurnState = sgns::TransactionManager::BridgeBurnState;
+    using Outcome =
+        sgns::evmwatcher::BridgeCatchupWatcher::BurnProcessOutcome;
+
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::Available, Access::Submission::Succeeded ),
+               Outcome::Processed );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::AlreadyHandled, Access::Submission::NotAttempted ),
+               Outcome::AlreadyHandled );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::AlreadyHandled, Access::Submission::NotAttempted ),
+               Outcome::AlreadyHandled );
+    EXPECT_EQ( Access::Classify(
+                   true, true, BurnState::AlreadyHandled, Access::Submission::Failed ),
+               Outcome::AlreadyHandled );
 }
 
 enum class ReceiptFailure

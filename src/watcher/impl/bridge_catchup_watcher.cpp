@@ -531,6 +531,7 @@ namespace sgns::evmwatcher
                 // Complete v1/v2 validation is the commit point. Only now can
                 // candidates become externally visible or dedup state become
                 // committed for later chunks in this poll.
+                bool publication_retry = false;
                 for ( auto &staged : staged_burns )
                 {
                     if ( stop_requested() )
@@ -541,12 +542,12 @@ namespace sgns::evmwatcher
 
                     try
                     {
-                        const bool processed = burn_processor_(
+                        const auto outcome = burn_processor_(
                             staged.decoded_values,
                             staged.tx_hash_hex,
                             staged.chain_id,
                             staged.receipt_log_index );
-                        if ( processed )
+                        if ( outcome == BurnProcessOutcome::Processed )
                         {
                             ++total_backfilled;
                             logger->info(
@@ -556,25 +557,44 @@ namespace sgns::evmwatcher
                                 staged.receipt_log_index,
                                 chain_entry.chain_name );
                         }
-                        else
+                        else if ( outcome == BurnProcessOutcome::AlreadyHandled )
                         {
                             ++total_skipped;
                             logger->debug(
-                                "CatchUpScan: burn processor returned false for tx {} — likely already processed",
-                                staged.tx_hash_hex );
+                                "CatchUpScan: burn {}:{} has durable already-handled proof",
+                                staged.tx_hash_hex,
+                                staged.receipt_log_index );
+                        }
+                        else
+                        {
+                            publication_retry = true;
+                            logger->debug(
+                                "CatchUpScan: burn processor requested retry for tx {}:{}",
+                                staged.tx_hash_hex,
+                                staged.receipt_log_index );
+                            break;
                         }
                     }
                     catch ( const std::exception &e )
                     {
-                        ++total_skipped;
+                        publication_retry = true;
                         logger->debug(
-                            "CatchUpScan: burn processor threw for tx {}: {} — skipping",
+                            "CatchUpScan: burn processor threw for tx {}: {} — retrying chunk",
                             staged.tx_hash_hex,
                             e.what() );
+                        break;
+                    }
+                    catch ( ... )
+                    {
+                        publication_retry = true;
+                        logger->debug(
+                            "CatchUpScan: burn processor threw an unknown exception for tx {} — retrying chunk",
+                            staged.tx_hash_hex );
+                        break;
                     }
                 }
 
-                if ( chunk_cancelled )
+                if ( chunk_cancelled || publication_retry )
                 {
                     break;
                 }
