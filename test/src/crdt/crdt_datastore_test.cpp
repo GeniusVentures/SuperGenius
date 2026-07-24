@@ -951,13 +951,81 @@ namespace sgns::crdt
                                    "shutdown root was not parked",
                                    nullptr );
         const auto callbacks_before_shutdown = filter_calls.load();
+        auto close_barrier = receiver->RequestClose();
+        ASSERT_EQ( close_barrier.wait_for( std::chrono::seconds( 5 ) ), std::future_status::ready );
         receiver->CancelAndCloseNow();
+        EXPECT_TRUE( receiver->AreWorkerFuturesCompleteForTesting() );
+        EXPECT_TRUE( receiver->GetShutdownSnapshotForTesting().empty() );
+        EXPECT_EQ( receiver->GetPendingHeadCountForTesting(), 0 );
         EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
         EXPECT_TRUE( receiver->GetTrackedJobStatusForTesting( shutdown_cid ).has_error() );
         fake_elapsed_ms = 200000;
         receiver->WakeDependencyRetryWorkerForTesting();
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         EXPECT_EQ( filter_calls.load(), callbacks_before_shutdown );
+        CloseAndResetCRDT( receiver, receiver_broadcaster );
+    }
+
+    TEST_F( CrdtDatastoreTest, WorkerInitiatedShutdownCompletesBeforeBarrierAndRunsNoPostCloseWork )
+    {
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "worker-shutdown", ipfsDataStore_ );
+        auto receiver = crdt_pair.first;
+        auto receiver_broadcaster = crdt_pair.second;
+
+        std::promise<std::shared_future<void>> barrier_promise;
+        auto barrier_delivery = barrier_promise.get_future();
+        std::atomic<int> trigger_callbacks{ 0 };
+        std::atomic<int> after_callbacks{ 0 };
+        std::weak_ptr<CrdtDatastore> weak_receiver = receiver;
+        ASSERT_TRUE( receiver->RegisterNewElementCallback(
+            "^/?shutdown/trigger$",
+            [&]( CRDTCallbackManager::NewDataPair, const std::string & )
+            {
+                ++trigger_callbacks;
+                if ( auto datastore = weak_receiver.lock() )
+                {
+                    barrier_promise.set_value( datastore->RequestClose() );
+                }
+            } ) );
+        ASSERT_TRUE( receiver->RegisterNewElementCallback(
+            "^/?shutdown/after$",
+            [&]( CRDTCallbackManager::NewDataPair, const std::string & ) { ++after_callbacks; } ) );
+        receiver->Start();
+        broadcaster_->SetMirrorCounterPart( receiver_broadcaster );
+        receiver_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        ASSERT_OUTCOME_SUCCESS(
+            trigger_cid,
+            crdtDatastore_->Publish( CreateTestDelta( "/shutdown/trigger", "close" ), { "topic" } ) );
+        ASSERT_OUTCOME_SUCCESS(
+            after_cid,
+            crdtDatastore_->Publish( CreateTestDelta( "/shutdown/after", "must-not-run" ), { "topic" } ) );
+
+        ASSERT_EQ( barrier_delivery.wait_for( std::chrono::seconds( 5 ) ), std::future_status::ready );
+        auto close_barrier = barrier_delivery.get();
+        ASSERT_EQ( close_barrier.wait_for( std::chrono::seconds( 5 ) ), std::future_status::ready );
+        receiver->CancelAndCloseNow();
+
+        EXPECT_EQ( trigger_callbacks.load(), 1 );
+        EXPECT_EQ( after_callbacks.load(), 0 );
+        EXPECT_TRUE( receiver->AreWorkerFuturesCompleteForTesting() );
+        EXPECT_TRUE( receiver->GetShutdownSnapshotForTesting().empty() );
+        EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
+        EXPECT_EQ( receiver->GetPendingHeadCountForTesting(), 0 );
+        EXPECT_FALSE( receiver->HasKey( { "/shutdown/after" } ).value() );
+
+        const auto trigger_count_after_completion = trigger_callbacks.load();
+        const auto after_count_after_completion = after_callbacks.load();
+        receiver->WakeDependencyRetryWorkerForTesting();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+        EXPECT_EQ( trigger_callbacks.load(), trigger_count_after_completion );
+        EXPECT_EQ( after_callbacks.load(), after_count_after_completion );
+        EXPECT_TRUE(
+            receiver->Publish( CreateTestDelta( "/shutdown/post-close", "invisible" ), { "topic" } ).has_error() );
+        EXPECT_FALSE( receiver->HasKey( { "/shutdown/post-close" } ).value() );
+
+        auto repeated_barrier = receiver->RequestClose();
+        EXPECT_EQ( repeated_barrier.wait_for( std::chrono::seconds( 0 ) ), std::future_status::ready );
         CloseAndResetCRDT( receiver, receiver_broadcaster );
     }
 }

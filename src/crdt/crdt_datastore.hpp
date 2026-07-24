@@ -97,6 +97,24 @@ namespace sgns::crdt
             uint64_t dependency_evicted_attempts  = 0;
         };
 
+        struct ShutdownSnapshot
+        {
+            std::size_t pending_jobs = 0;
+            std::size_t self_queue = 0;
+            std::size_t root_queue = 0;
+            std::size_t pending_roots = 0;
+            std::size_t active_roots = 0;
+            std::size_t parked_roots = 0;
+            std::size_t parked_dependencies = 0;
+
+            bool empty() const
+            {
+                return pending_jobs == 0 && self_queue == 0 && root_queue == 0 &&
+                       pending_roots == 0 && active_roots == 0 &&
+                       parked_roots == 0 && parked_dependencies == 0;
+            }
+        };
+
         /**
          * @brief       Factory method to create a shared_ptr to a CrdtDatastore
          * @param[in]   aDatastore The underlying database where CRDT is stored
@@ -235,6 +253,14 @@ namespace sgns::crdt
          */
         void CancelAndCloseNow();
 
+        /**
+         * @brief Requests close without waiting for the calling worker.
+         *
+         * Every call returns the same barrier. The barrier becomes ready only
+         * after all workers exit and retained state is drained.
+         */
+        std::shared_future<void> RequestClose();
+
         bool RegisterElementFilter( const std::string &pattern, CRDTElementFilterCallback filter );
         bool RegisterDeltaFilter( const std::string &pattern, CRDTDeltaFilterCallback filter );
         bool RegisterNewElementCallback( const std::string &pattern, CRDTNewElementCallback callback );
@@ -268,6 +294,9 @@ namespace sgns::crdt
         bool                        IsCIDRetainedInCacheForTesting( const CID &cid ) const;
         outcome::result<bool>       IsCIDResolvedForTesting( const CID &cid ) const;
         outcome::result<JobStatus>  GetTrackedJobStatusForTesting( const CID &cid ) const;
+        ShutdownSnapshot            GetShutdownSnapshotForTesting() const;
+        std::size_t                 GetPendingHeadCountForTesting() const;
+        bool                        AreWorkerFuturesCompleteForTesting();
 
         /**
          * @brief Overrides the monotonic clock used by dependency retries.
@@ -469,6 +498,9 @@ namespace sgns::crdt
         bool SeedNextExternalRoot();
         void StopWorkerLoops();
         bool IsCurrentThreadInternalWorker() const;
+        ShutdownSnapshot SnapshotShutdownStateLocked() const;
+        void CompleteClose();
+        void JoinCloseCoordinator();
         void WaitForWorkersToExit();
         bool IsRootCIDPendingOrActive( const CID &cid );
         bool IsRootCIDPendingOrActiveLocked( const CID &cid ) const;
@@ -520,11 +552,17 @@ namespace sgns::crdt
         std::atomic<bool>       dagWorkerJobListThreadRunning_ = false;
         mutable std::mutex      dagWorkerMutex_;
         std::condition_variable dagWorkerCv_;
+        mutable std::mutex      closeLifecycleMutex_;
+        std::recursive_mutex    callbackDispatchMutex_;
+        std::mutex              closeCoordinatorJoinMutex_;
+        std::shared_ptr<std::promise<void>> closePromise_;
+        std::shared_future<void> closeCompletion_;
+        std::thread              closeCoordinatorThread_;
 
         std::queue<RootCIDJob>                               rootCIDJobList_;     // External jobs
         std::queue<RootCIDJob>                               selfCreatedJobList_; // Self-created jobs (high priority)
         std::map<CID, std::set<std::pair<CID, std::string>>> pendingHeadsByRootCID_;
-        std::mutex                                           pendingHeadsMutex_;
+        mutable std::mutex                                   pendingHeadsMutex_;
         std::queue<CID>                                      pendingRootQueue_;
         std::optional<CID>                                   activeRootCID_;
 
@@ -571,7 +609,6 @@ namespace sgns::crdt
 
         std::map<CID, JobStatus> pending_jobs_;
         bool                     has_full_node_topic_;
-        std::atomic_bool         shutdown_started_{ false };
 
         void MarkJobPending( const CID &cid );
         void MarkJobFailed( const CID &cid );
