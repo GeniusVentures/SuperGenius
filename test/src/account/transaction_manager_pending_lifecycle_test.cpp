@@ -268,6 +268,31 @@ namespace sgns
             return std::dynamic_pointer_cast<MintTransactionV2>(
                 manager.tx_queue_m.back().first.back().first );
         }
+
+        static ConsensusManager::ValidationResult EvaluateReplayProtection(
+            const TransactionManager &manager,
+            const GeniusTransaction  &transaction )
+        {
+            return manager.EvaluateTransactionReplayProtection( transaction ).validation;
+        }
+
+        static std::shared_ptr<ConsensusManager> Consensus(
+            const std::shared_ptr<Blockchain> &blockchain )
+        {
+            return blockchain->consensus_manager_;
+        }
+    };
+
+    class ConsensusManagerTestAccess
+    {
+    public:
+        static void SetCertificateReader(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<outcome::result<crdt::GlobalDB::Buffer>(
+                const crdt::HierarchicalKey & )> reader )
+        {
+            manager->certificate_record_reader_ = std::move( reader );
+        }
     };
 } // namespace sgns
 
@@ -1711,4 +1736,93 @@ TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreate
     ASSERT_EQ( inputs.size(), 1U );
     EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
     EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        PreviousNonceCertificateLookupPreservesConsumerSemantics )
+{
+    ASSERT_NE( manager_, nullptr );
+    ASSERT_NE( consensus_, nullptr );
+    const std::string winner_hash( 64, 'a' );
+    auto              certificate = MakeCertificate( winner_hash, 7 );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( consensus_->SubmitCertificate( certificate.value() ).has_value() );
+
+    auto winning_transaction = MakeReplayTransaction( winner_hash, 8 );
+    ASSERT_NE( winning_transaction, nullptr );
+    auto approved =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( approved.check, ConsensusManager::Check::Approve );
+    EXPECT_TRUE( approved.dependencies.empty() );
+
+    const std::string absent_hash( 64, 'b' );
+    auto absent_transaction = MakeReplayTransaction( absent_hash, 8 );
+    auto pending =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *absent_transaction );
+    EXPECT_EQ( pending.check, ConsensusManager::Check::Pending );
+    ASSERT_EQ( pending.dependencies.size(), 1U );
+    EXPECT_EQ(
+        pending.dependencies.front().type,
+        ConsensusManager::PendingDependencyKey::Type::Certificate );
+    EXPECT_EQ( pending.dependencies.front().value, absent_hash );
+
+    FailCertificateReads( storage::DatabaseError::CORRUPTION );
+    auto corrupt =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( corrupt.check, ConsensusManager::Check::Reject );
+    EXPECT_TRUE( corrupt.dependencies.empty() );
+
+    FailCertificateReads( storage::DatabaseError::IO_ERROR );
+    auto unavailable =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( unavailable.check, ConsensusManager::Check::Reject );
+    EXPECT_TRUE( unavailable.dependencies.empty() );
+    UseRealCertificateReader();
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        ProducerUTXOCertificateLookupPreservesConsumerSemantics )
+{
+    ASSERT_NE( blockchain_, nullptr );
+    ASSERT_NE( consensus_, nullptr );
+    const std::string producer_hash( 64, 'c' );
+    auto witness_case = MakeWitnessCase( producer_hash );
+    ASSERT_TRUE( witness_case.has_value() );
+    auto certificate = MakeCertificate(
+        producer_hash, 7, witness_case.value().producer_commitment );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( consensus_->SubmitCertificate( certificate.value() ).has_value() );
+
+    GeniusInputValidator validator;
+    EXPECT_TRUE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::NOT_FOUND );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::CORRUPTION );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::IO_ERROR );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+    UseRealCertificateReader();
 }
