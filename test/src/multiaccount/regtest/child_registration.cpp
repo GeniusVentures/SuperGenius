@@ -124,17 +124,17 @@ protected:
         main_node_ = CreateNode( "regtest_main", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ) );
         main_node_->GetPubSub()->AddPeers( { genesis_node_->GetPubSub()->GetInterfaceAddress() } );
-        sgns::test::assertWaitForCondition(
-            [&]() { return main_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::milliseconds( 180000 ), "main_node_ not synced" );
+        ASSERT_WAIT_FOR_CONDITION(
+            ([&]() { return main_node_->GetState() == GeniusNode::NodeState::READY; }),
+            std::chrono::milliseconds( 180000 ), "main_node_ not synced", nullptr );
 
         // Child wallet node B
         child_node_ = CreateNode( "regtest_child", "0xcafe", "1.0",
             sgns::TokenID::FromBytes( { 0x00 } ) );
         child_node_->GetPubSub()->AddPeers( { genesis_node_->GetPubSub()->GetInterfaceAddress() } );
-        sgns::test::assertWaitForCondition(
-            [&]() { return child_node_->GetState() == GeniusNode::NodeState::READY; },
-            std::chrono::milliseconds( 180000 ), "child_node_ not synced" );
+        ASSERT_WAIT_FOR_CONDITION(
+            ([&]() { return child_node_->GetState() == GeniusNode::NodeState::READY; }),
+            std::chrono::milliseconds( 180000 ), "child_node_ not synced", nullptr );
     }
 
     static void TearDownTestSuite()
@@ -247,8 +247,8 @@ TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
     std::string child_address = child_node_->GetAddress();
 
     // Poll for discovery — CRDT/pubsub propagation takes time
-    sgns::test::assertWaitForCondition(
-        [&]() -> bool
+    ASSERT_WAIT_FOR_CONDITION(
+        ([&]() -> bool
         {
             auto entries_result = main_node_->GetRegistrationsForMain( main_address );
             if ( !entries_result.has_value() ) return false;
@@ -257,9 +257,9 @@ TEST_F( ChildRegistrationIntegrationTest, MainDiscoversChild )
             return entries[0].child_addr == child_address
                 && entries[0].main_addr == main_address
                 && entries[0].sequence == 2;
-        },
+        }),
         std::chrono::milliseconds( 60000 ),
-        "Main node did not discover child registration" );
+        "Main node did not discover child registration", nullptr );
 
     // Verify discovery entry fields
     ASSERT_OUTCOME_SUCCESS( entries, main_node_->GetRegistrationsForMain( main_address ) );
@@ -371,8 +371,8 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
 
         // Step 2: Poll for the registration to reach the main node's CRDT
         //         via pubsub propagation (up to 30s)
-        sgns::test::assertWaitForCondition(
-            [&]() -> bool
+        ASSERT_WAIT_FOR_CONDITION(
+            ([&]() -> bool
             {
                 auto entries_result = main_node_->GetRegistrationsForMain( main_address );
                 if ( !entries_result.has_value() ) return false;
@@ -382,9 +382,9 @@ TEST_F( ChildRegistrationIntegrationTest, InvalidRegistrationRejected )
                         return true;
                 }
                 return false;
-            },
+            }),
             std::chrono::milliseconds( 30000 ),
-            "Main node did not receive baseline registration (seq=50)" );
+            "Main node did not receive baseline registration (seq=50)", nullptr );
 
         // Step 3: Inject a CRDT element with sequence=49 (lower than stored 50)
         SGTransaction::RegistrationMetadata meta_low;
@@ -445,15 +445,15 @@ TEST_F( ChildRegistrationIntegrationTest, MainQueriesChildBalance )
 
     // D-65: poll child's own view first to confirm mint landed, then poll main's
     // synced view until the CRDT propagation converges (avoids flakiness).
-    sgns::test::assertWaitForCondition(
-        [&]() { return child_node_->GetBalance( child_token ) > 0; },
+    ASSERT_WAIT_FOR_CONDITION(
+        ([&]() { return child_node_->GetBalance( child_token ) > 0; }),
         std::chrono::milliseconds( 60000 ),
-        "child_node_ balance did not become non-zero after mint" );
+        "child_node_ balance did not become non-zero after mint", nullptr );
 
-    sgns::test::assertWaitForCondition(
-        [&]() { return main_node_->GetChildBalance( child_address, child_token ) > 0; },
+    ASSERT_WAIT_FOR_CONDITION(
+        ([&]() { return main_node_->GetChildBalance( child_address, child_token ) > 0; }),
         std::chrono::milliseconds( 60000 ),
-        "main_node_ did not observe child balance after CRDT sync" );
+        "main_node_ did not observe child balance after CRDT sync", nullptr );
 
     EXPECT_EQ( main_node_->GetChildBalance( child_address, child_token ), kMintAmount );
 }
