@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v2.0
-milestone_name: Slot-Scoped Consensus Finality
+milestone_name: Phases
 current_phase: 09
-status: executing
-last_updated: "2026-07-23T21:53:53.000Z"
-last_activity: 2026-07-23
+status: completed
+last_updated: "2026-07-24T00:24:34.886Z"
+last_activity: 2026-07-24 -- Phase 09 marked complete
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 9
-  completed_plans: 8
-  percent: 0
+  completed_plans: 9
+  percent: 25
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -29,10 +29,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
-Plan: 8 of 9
-Status: Ready to execute
-Last activity: 2026-07-23
+Phase: 09 — COMPLETE
+Plan: 9 of 9
+Status: Phase 09 complete
+Last activity: 2026-07-24 -- Phase 09 marked complete
 
 ## Roadmap Snapshot
 
@@ -80,6 +80,7 @@ Last activity: 2026-07-23
 | Phase 09 P06 | 9 min | 1 tasks | 5 files |
 | Phase 09 P07 | 21 min | 2 tasks | 3 files |
 | Phase 09 P08 | 24 min | 2 tasks | 8 files |
+| Phase 09 P09 | 2h 16m | 2 tasks | 7 files |
 
 ## Decisions
 
@@ -99,3 +100,7 @@ Last activity: 2026-07-23
 - [Phase 09]: The live delta filter owns the complete /cert/ namespace and rejects certificate tombstones directly. — Runtime legacy or malformed records must not survive to poison restart; shared tombstone matching and removal remains in Plan 09-08.
 - [Phase 09]: External delta filters use Approve, Reject, and RetryDependency decisions across both elements and tombstones. — Terminal namespace attacks must be sanitized before merge while a missing dependency preserves the complete original delta for later validation.
 - [Phase 09]: Missing canonical registry content parks the exact pending source under bounded deadline retry with due-time FIFO snapshot fairness. — Dependency roots already queued may run first, but later arrivals cannot starve the retry or force TTL cleanup without another evaluation.
+- [Phase 09]: Only true database NOT_FOUND is certificate absence. — Corruption maps to IntegrityError and every other or unknown read failure maps conservatively to StorageError.
+- [Phase 09]: Certificate index-to-slot relationship validation stays separate from raw read classification. — A dangling index is IntegrityError while operational slot failures propagate unchanged.
+- [Phase 09]: Only previous-certificate NotFound creates an admission dependency. — Integrity and operational errors reject, and producer-witness validation rejects every non-success read.
+- [Phase 09]: Certificate failure injection remains private and friend-only. — Production APIs remain unchanged while real consumers receive exact datastore outcomes in focused tests.
