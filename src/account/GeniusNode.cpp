@@ -426,6 +426,24 @@ namespace sgns
             node_logger_->info( "sgns_config.json: setting authorized_full_node" );
             Blockchain::SetAuthorizedFullNodeAddress( addr );
         }
+        // Parse-only: trusted_peers/bootstrapper_node are stored for a future phase's live
+        // wiring, no live signer-set/genesis behavior is activated in this phase.
+        if ( config_json.HasMember( "trusted_peers" ) && config_json["trusted_peers"].IsArray() )
+        {
+            for ( auto &v : config_json["trusted_peers"].GetArray() )
+            {
+                if ( v.IsString() )
+                {
+                    trusted_peers_genesis_.push_back( v.GetString() );
+                }
+            }
+            node_logger_->info( "sgns_config.json: loaded {} trusted peers", trusted_peers_genesis_.size() );
+        }
+        if ( config_json.HasMember( "bootstrapper_node" ) && config_json["bootstrapper_node"].IsString() )
+        {
+            bootstrapper_node_address_ = config_json["bootstrapper_node"].GetString();
+            node_logger_->info( "sgns_config.json: loaded bootstrapper_node" );
+        }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
             ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();

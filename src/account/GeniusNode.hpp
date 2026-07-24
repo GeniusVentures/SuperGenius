@@ -818,6 +818,8 @@ namespace sgns
 
         std::vector<std::string>                 bootstrap_peers_;
         std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<std::string>                 trusted_peers_genesis_;   ///< Parsed-only genesis trusted-peer list (Phase 11 consumes this; not wired live yet).
+        std::string                               bootstrapper_node_address_; ///< Parsed-only genesis bootstrapper address (Phase 11 consumes this; not wired live yet).
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
