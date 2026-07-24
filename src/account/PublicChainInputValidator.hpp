@@ -8,9 +8,12 @@
 #define SGNS_PUBLIC_CHAIN_INPUT_VALIDATOR_HPP
 
 #include <chrono>
+#include <array>
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -65,6 +68,13 @@ namespace sgns
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
+        struct VoteRpcSnapshot
+        {
+            std::string                                chain_id;
+            uint64_t                                   generation = 0;
+            std::array<std::vector<uint8_t>, 3>         slot_hashes;
+        };
+
         /// @brief Attempts to claim @p chain_id in the global registry and records
         ///        successful claims for self-removal on destruction.
         /// @return True when this validator claimed the chain; false when another
@@ -154,10 +164,7 @@ namespace sgns
          *
          * @param[in] factory Callable taking (url, timeout) → unique_ptr<JsonRpcTransport>.
          */
-        void SetTransportFactory( TransportFactory factory )
-        {
-            transport_factory_ = std::move( factory );
-        }
+        void SetTransportFactory( TransportFactory factory );
 
         /**
          * @brief Returns the first RPC endpoint URL for a given chain ID, if any exist.
@@ -168,15 +175,7 @@ namespace sgns
          * @param[in] chain_id Numeric chain ID as a string (e.g. "1" for Ethereum).
          * @return The first endpoint URL if one exists, std::nullopt otherwise.
          */
-        [[nodiscard]] std::optional<std::string> GetFirstRpcUrl( const std::string &chain_id ) const
-        {
-            auto it = rpc_endpoints_.find( chain_id );
-            if ( it != rpc_endpoints_.end() && !it->second.empty() )
-            {
-                return it->second.front().url;
-            }
-            return std::nullopt;
-        }
+        [[nodiscard]] std::optional<std::string> GetFirstRpcUrl( const std::string &chain_id ) const;
 
         /**
          * @brief Returns the SHA-256 hash of an endpoint URL for a vote slot (Phase 6, D-01).
@@ -199,6 +198,8 @@ namespace sgns
         [[nodiscard]] std::vector<uint8_t> GetSlotHash( size_t           slot_index,
                                                         const std::string &chain_id ) const noexcept;
 
+        [[nodiscard]] std::optional<VoteRpcSnapshot> GetVoteRpcSnapshot() const noexcept;
+
         /**
          * @brief Returns the first configured chain id, if any (Phase 6, D-01).
          *
@@ -208,18 +209,7 @@ namespace sgns
          *
          * @return First configured chain id, or std::nullopt when none configured.
          */
-        [[nodiscard]] std::optional<std::string> GetFirstConfiguredChainId() const noexcept
-        {
-            if ( rpc_endpoints_.empty() )
-            {
-                return std::nullopt;
-            }
-            // unordered_map iteration is not order-stable across runs, but for
-            // single-chain deployments (the Phase 6 target) there is exactly one
-            // entry. Multi-chain resolution will read chain_id from the proposal
-            // subject instead.
-            return rpc_endpoints_.begin()->first;
-        }
+        [[nodiscard]] std::optional<std::string> GetFirstConfiguredChainId() const noexcept;
 
     private:
         /// @brief Friend accessor for unit testing VerifyPublicChainSmartContract
@@ -241,14 +231,27 @@ namespace sgns
         bool VerifyPublicChainSmartContract( const std::shared_ptr<GeniusTransaction> &tx,
                                              const std::string                        &source_reference ) const;
 
-        std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints_;
+        struct RpcConfiguration
+        {
+            std::unordered_map<std::string, std::vector<WeightedRpcEndpoint>> rpc_endpoints;
+            TransportFactory                                                    transport_factory;
+            uint64_t                                                            generation = 0;
+        };
+
+        using RpcConfigurationPtr = std::shared_ptr<const RpcConfiguration>;
+
+        [[nodiscard]] RpcConfigurationPtr CaptureRpcConfiguration() const noexcept;
+        [[nodiscard]] static std::vector<uint8_t>
+            GetSlotHash( const RpcConfiguration &configuration,
+                         size_t                  slot_index,
+                         const std::string      &chain_id ) noexcept;
+
+        mutable std::mutex       rpc_configuration_write_mutex_;
+        RpcConfigurationPtr      rpc_configuration_ = std::make_shared<const RpcConfiguration>();
 
         /// Chain IDs this validator registered for (self-deregistered on destruction).
         std::vector<std::string> registered_chain_ids_;
 
-        /// @brief Pluggable transport factory for DI-based mock injection (D-07, D-14).
-        /// When empty, VerifyPublicChainSmartContract uses the default RpcHttpTransport factory.
-        mutable TransportFactory transport_factory_;
     };
 } // namespace sgns
 
