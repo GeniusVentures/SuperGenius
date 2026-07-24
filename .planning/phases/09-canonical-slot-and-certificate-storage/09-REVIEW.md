@@ -1,8 +1,8 @@
 ---
 phase: 09-canonical-slot-and-certificate-storage
-reviewed: 2026-07-24T12:33:04Z
+reviewed: 2026-07-24T16:14:40Z
 depth: standard
-files_reviewed: 35
+files_reviewed: 40
 files_reviewed_list:
   - evmrelay/include/eth/eth_receipt_source.hpp
   - evmrelay/include/eth/event_filter.hpp
@@ -11,12 +11,14 @@ files_reviewed_list:
   - src/account/BridgeRelayer.cpp
   - src/account/GeniusInputValidator.cpp
   - src/account/GeniusNode.cpp
+  - src/account/GeniusNode.hpp
   - src/account/GeniusTransaction.cpp
   - src/account/GeniusTransaction.hpp
   - src/account/MintTransactionV2.cpp
   - src/account/MintTransactionV2.hpp
   - src/account/PublicChainInputValidator.cpp
   - src/account/TransactionManager.cpp
+  - src/account/TransactionManager.hpp
   - src/blockchain/Blockchain.hpp
   - src/blockchain/Consensus.cpp
   - src/blockchain/Consensus.hpp
@@ -38,12 +40,15 @@ files_reviewed_list:
   - test/src/blockchain/consensus_certificate_store_test.cpp
   - test/src/blockchain/consensus_pending_lifecycle_test.cpp
   - test/src/blockchain/consensus_slot_key_test.cpp
+  - test/src/bridge_e2e/bridge_anvil_catchup_e2e_test.cpp
+  - test/src/bridge_e2e/bridge_e2e_chainlist_test.cpp
   - test/src/crdt/crdt_datastore_test.cpp
+  - test/src/startup/startup_wiring_test.cpp
 findings:
-  critical: 2
-  warning: 4
+  critical: 3
+  warning: 1
   info: 0
-  total: 6
+  total: 4
 status: issues_found
 ---
 
@@ -51,147 +56,155 @@ status: issues_found
 
 ## Summary
 
-The post-gap Phase 09 implementation closes the previously reported receipt-proof,
-canonical-serialization, typed-lookup, legacy-namespace, and registry-retry gaps.
-The scoped build and all nine requested test binaries pass. Two correctness
-blockers remain at durability boundaries, plus four robustness issues in bridge
-validation and CRDT lifecycle/filter behavior.
+Plans 09-10 through 09-13 close the four findings they targeted: catch-up
+publication now preserves the cursor on retry, bridge and certificate reads fail
+closed, mixed CRDT decisions preserve dependency barriers, and failed receipt
+status is endpoint-local. The post-merge CRDT test synchronization change also
+matches the production lifecycle.
+
+Four new issues remain. Three are correctness or process-safety blockers: mint
+confirmation can become durable before its UTXO effects succeed, CRDT destruction
+can terminate or access a destroyed object when ownership ends on a worker, and
+the intentionally concurrent RPC endpoint configuration path accesses an
+unprotected container. A receipt-source bridge lifetime issue is also present.
+
+Phase 9's documented distributed boundary is preserved in this review:
+certificate preflight is not reported as a distributed compare-and-swap gap.
+The phase research explicitly assigns prevention of concurrently formed
+certificates to Phase 10's durable one-signature-per-slot rule.
 
 ## Narrative Findings (AI reviewer)
 
 ### Critical
 
-#### CR-01 — Catch-up commits the cursor after recoverable mint-submission failures
+#### CR-01 — Mint confirmation is made durable before transaction effects succeed
 
-**File/line:** `src/watcher/impl/bridge_catchup_watcher.cpp:531-583`,
-`src/watcher/impl/bridge_catchup_watcher.cpp:592-602`,
-`src/account/GeniusNode.cpp:2973-3031`
+**File/line:** `src/account/TransactionManager.cpp:4636-4706`,
+`src/account/TransactionManager.cpp:1791-1826`
 
-**Issue:** Receipt resolution is now staged atomically, but publication is not.
-After the chunk has been validated, a `false` return or exception from
-`burn_processor_` is counted as “already processed” and processing continues.
-The chunk's dedup state is then committed and `from_block` advances. The real
-callback returns `false` for several conditions that are not durable duplicate
-proofs: an unavailable node/account, a reserved outpoint, a failed
-`MintTokens`/transaction-manager submission, and exceptions.
+**Issue:** `ChangeTransactionState(CONFIRMED)` first writes the in-memory
+`CONFIRMED` state and, for `mint-v2`, persists the executed-burn marker. Only
+after those irreversible decisions does it call `ParseTransaction`, which
+creates produced UTXOs and consumes the bridge input. Any failure from
+`PutProducedUTXOs` or `ConsumeUTXOs` is returned after the transaction and burn
+have already been classified as complete. A repeated certificate delivery then
+hits the already-`CONFIRMED` branch and skips `ParseTransaction`; catch-up also
+sees the executed marker as durable `AlreadyHandled`.
 
-**Impact:** A transient node or transaction-manager failure can cause a valid
-historical burn to be skipped permanently once the catch-up cursor advances.
+The empty-input branch has the same shape: it marks the transaction confirmed
+at line 4647 and then breaks at line 4664 without applying effects.
 
-**Fix:** Replace the boolean callback contract with an explicit result such as
-`Processed`, `AlreadyHandled`, and `Retry`. Advance the chunk only when every
-staged burn is either processed or proven durably handled; abort publication and
-preserve the cursor on `Retry`. Add integration coverage for unavailable
-transaction-manager, temporary reservation, `false`, and exception paths.
+**Impact:** A transient storage failure can permanently leave a certified mint
+without its UTXO state while suppressing every retry. If produced-UTXO creation
+succeeds and bridge-input consumption fails, the node can also retain a partial
+application that is never reconciled.
 
-#### CR-02 — Certificate write-once checks treat datastore errors as absence
+**Fix:** Introduce an idempotent/transactional application boundary. Apply and
+verify all transaction effects before publishing `CONFIRMED` and the executed
+burn marker, or persist an explicit applying state whose retries resume safely.
+Do not treat a transaction as already confirmed until effect application has
+completed. Add fault-injection regressions for produced-UTXO and bridge-input
+failures followed by duplicate certificate delivery and restart.
 
-**File/line:** `src/blockchain/Consensus.cpp:1869-1936`,
-`src/blockchain/Consensus.cpp:2582-2603`
+#### CR-02 — Worker-owned CRDT destruction can terminate or use freed state
 
-**Issue:** Both local `SubmitCertificate` and the remote certificate delta
-filter call `db_->Get` for the slot and transaction index, but only inspect
-`has_value()`. `NOT_FOUND`, corruption, I/O failure, shutdown, and other
-operational errors are therefore indistinguishable. Local submission can write
-a new pair after an unknown read, while remote filtering can approve a pair
-without establishing whether it conflicts with durable state.
+**File/line:** `src/crdt/impl/crdt_datastore.cpp:90-133`,
+`src/crdt/impl/crdt_datastore.cpp:847-850`,
+`src/crdt/impl/crdt_datastore.cpp:892-948`,
+`src/crdt/impl/crdt_datastore.cpp:990-997`
 
-**Impact:** A temporary or integrity-related read failure can bypass the
-certificate store's write-once preflight and admit conflicting or partial
-canonical state.
+**Issue:** Worker loops repeatedly promote a weak pointer to a temporary strong
+`self`, so releasing the last external owner can either strand the object in a
+worker wait or make the final strong reference disappear on an internal worker.
+The destructor calls `Close()`. `RequestClose()` then starts a member
+`std::thread` capturing raw `this`, while `CancelAndCloseNow()` detects the
+worker thread and returns without joining it. Destruction of the still-joinable
+thread member invokes `std::terminate`; independently, the coordinator's raw
+capture can outlive the object and dereference freed storage.
 
-**Fix:** Classify both reads with the typed certificate-store error mapper.
-Treat only exact `NOT_FOUND` as absence; reject/fail closed on all integrity and
-operational errors before any write or merge. Add injected-error tests for both
-local submission and remote filtering, including asymmetric slot/index errors.
+`WorkerInitiatedShutdownCompletesBeforeBarrierAndRunsNoPostCloseWork` does not
+cover this path because the test deliberately retains the external `receiver`
+owner and later joins from the test thread.
+
+**Impact:** Normal shared-ownership teardown can leak indefinitely, terminate
+the process, or cause use-after-free during shutdown.
+
+**Fix:** Make the asynchronous shutdown operation own a separate lifetime-safe
+control state, and ensure `CrdtDatastore` destruction occurs only after all
+workers and the coordinator have completed. The destructor must never spawn an
+unjoinable raw-`this` coordinator. Add a subprocess/death-safe regression in
+which a worker callback releases the last external datastore owner and prove
+clean destruction with no post-close work.
+
+#### CR-03 — Runtime RPC endpoint publication races with consensus and validation reads
+
+**File/line:** `src/account/PublicChainInputValidator.cpp:155-168`,
+`src/account/PublicChainInputValidator.cpp:226-255`,
+`src/account/PublicChainInputValidator.cpp:412-425`,
+`src/account/GeniusNode.cpp:711-727`,
+`src/account/GeniusNode.cpp:2849-2859`,
+`src/account/GeniusNode.cpp:3132-3172`
+
+**Issue:** `SetRpcEndpoints` and `AddRpcEndpoints` mutate the shared
+`rpc_endpoints_` unordered map and its endpoint vectors without synchronization.
+`GetSlotHash`, receipt verification, and the inline URL/chain accessors read the
+same state without synchronization. This is not merely a hypothetical caller
+misuse: `InitializeAndStartBridge` posts endpoint discovery asynchronously
+because it may block for about 15 seconds, while `ConfigureRpcEndpoint` is
+explicitly allowed to publish operator endpoints during that fetch and
+consensus vote creation reads slot hashes concurrently.
+
+**Impact:** Concurrent rehash/vector growth and iteration is undefined behavior.
+It can crash, corrupt endpoint metadata, produce inconsistent signed slot
+hashes, or make receipt quorum depend on a torn configuration snapshot.
+
+**Fix:** Protect endpoint and transport-factory state with a reader/writer lock,
+or publish immutable per-chain snapshots through atomic shared pointers. Each
+validation or vote operation must hold/use one stable snapshot for its entire
+decision. Add a deterministic concurrency regression that blocks asynchronous
+provider initialization while operator configuration and slot/quorum reads run.
 
 ### Warnings
 
-#### WR-01 — Bridge mint replay protection fails open when its durable read fails
+#### WR-01 — Receipt source retains a callback to a destroyed bridge
 
-**File/line:** `src/account/TransactionManager.cpp:652-675`
+**File/line:** `evmrelay/include/eth/eth_receipt_source.hpp:61-87`,
+`evmrelay/src/eth/eth_receipt_source.cpp:39-48`,
+`evmrelay/src/eth/eth_receipt_source.cpp:73-90`
 
-**Issue:** `MintFunds` rejects a persisted duplicate only when the underlying
-datastore `get` returns a value. Any read error falls through to UTXO creation,
-reservation, and proposal enqueueing.
+**Issue:** `EthReceiptSourceBridge` installs a source callback that captures raw
+`this`, but the class has no destructor that clears the callback or removes its
+remaining source/service subscriptions. Because both collaborators are stored
+by reference, either can validly outlive the bridge and deliver a later receipt
+batch through the dangling callback.
 
-**Impact:** During corruption or storage unavailability, the restart-persistent
-executed-burn guard becomes ineffective and duplicate mint work can be created.
+**Impact:** Destroying a bridge before its receipt source can cause a
+use-after-free; stale filters and service watches also remain active.
 
-**Fix:** Distinguish `NOT_FOUND` from all other datastore errors and return a
-storage failure before mutating UTXO or queue state. Add fault-injection tests
-that assert no mutation for corruption and I/O errors.
-
-#### WR-02 — A mixed reject/retry delta loses the dependency retry
-
-**File/line:** `src/crdt/impl/crdt_data_filter.cpp:133-219`,
-`src/crdt/impl/crdt_data_filter.cpp:221-289`,
-`src/crdt/impl/crdt_datastore.cpp:1390-1409`
-
-**Issue:** When one matching delta filter returns `RetryDependency` and another
-returns `Reject`, the aggregate becomes `Reject`. Only the rejecting
-namespace is removed, the dependency is discarded, and the remaining delta is
-returned as `Reject`. The datastore parks only `RetryDependency`; it merges all
-other returned deltas. Consequently, the retry-dependent namespace can merge
-without its dependency after being combined with an unrelated rejected
-namespace.
-
-**Impact:** An attacker can co-package rejected data with dependency-stalled
-data and bypass the latter's validation barrier.
-
-**Fix:** Preserve retry semantics for every retained retry-dependent namespace.
-For example, sanitize rejected namespaces and return `RetryDependency` with the
-remaining original delta, or terminally remove both classes. Add a two-filter
-mixed-decision regression that proves stalled keys remain invisible.
-
-#### WR-03 — One failed-status RPC response vetoes the weighted endpoint policy
-
-**File/line:** `src/account/PublicChainInputValidator.cpp:437-473`
-
-**Issue:** Transport, parse, transaction-hash, and log mismatches contribute
-zero weight and allow later endpoints to vote. A missing or false receipt status
-instead returns `false` immediately.
-
-**Impact:** One stale or malicious endpoint placed before otherwise sufficient
-independent endpoint weight can deny a valid mint, contrary to the preserved
-weighted verification policy.
-
-**Fix:** Treat failed receipt status as an endpoint failure (`continue`) and
-let the configured weight threshold decide the result. Add a disagreement test
-with one failed-status endpoint followed by at least 75 successful weight.
-
-#### WR-04 — Shutdown reads shared queues without synchronization and may return before close completes
-
-**File/line:** `src/crdt/impl/crdt_datastore.cpp:884-924`
-
-**Issue:** The opening shutdown log reads `pending_jobs_`,
-`selfCreatedJobList_`, `rootCIDJobList_`, `pendingRootQueue_`, and
-`activeRootCID_` before acquiring `dagWorkerMutex_` while worker threads can
-still mutate them. If shutdown is initiated by an internal worker,
-`CancelAndCloseNow` starts a detached helper and returns before worker joins and
-draining finish.
-
-**Impact:** The unsynchronized container access is undefined behavior, and the
-worker-thread path breaks the synchronous “closed on return” contract relied on
-to prevent post-close callbacks.
-
-**Fix:** Snapshot queue state under `dagWorkerMutex_` and make the close
-contract explicit. A synchronous API must not return until another safe owner
-has completed joins and drain; otherwise expose a distinct asynchronous close
-operation and require a completion barrier. Add a worker-initiated shutdown
-test that asserts no callback or queued work occurs after completion.
+**Fix:** Add explicit teardown that first prevents new callback dispatch,
+clears the source handler, and unwatches every subscription with synchronization
+appropriate to the source's dispatch model. Alternatively, use a lifetime token
+captured weakly by the handler. Add a test that destroys the bridge, emits a
+batch from the still-live source, and verifies no callback or watch remains.
 
 ## Verification
 
-- Built the nine requested targets successfully:
-  `consensus_certificate_store_test`, `certificate_compatibility_test`,
-  `consensus_pending_lifecycle_test`, `consensus_slot_key_test`,
-  `bridge_event_identity_test`, `bridge_relayer_test`,
-  `public_chain_mint_validation_test`,
-  `transaction_manager_pending_lifecycle_test`, and `crdt_test`.
-- Ran all nine binaries sequentially; all exited successfully.
-- `git diff --check` passed before this report was written.
+- Reviewed the 40 requested files at standard depth, with cross-file tracing of
+  Plans 09-10 through 09-13 and the post-merge CRDT lifecycle test change.
+- Confirmed the prior four review findings are closed in current source and
+  covered by the focused tests recorded in the plan summaries.
+- Checked the documented Phase 9/Phase 10 boundary before excluding distributed
+  empty-state certificate races from the findings.
+- No source or test files were edited, and no commits were created.
+
+## Self-Check
+
+- Frontmatter file count and `files_reviewed_list` both contain all 40 requested
+  paths.
+- Severity counts sum to four and match the narrative sections.
+- Every finding includes a concrete file/line, impact, and proposed fix.
+- The protected unrelated `src/account/GeniusNode.cpp` logger hunk and all other
+  user-owned dirty paths were left untouched.
 
 ---
-
-*Reviewed: 2026-07-24 | Depth: standard | Files: 35 | Findings: 2 critical, 4 warnings, 0 info*
+*Reviewed: 2026-07-24 | Depth: standard | Files: 40 | Findings: 3 critical, 1 warning, 0 info*
