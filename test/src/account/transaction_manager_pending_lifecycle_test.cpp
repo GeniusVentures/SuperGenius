@@ -9,28 +9,33 @@
 
 #include <gtest/gtest.h>
 
-#include "account/TransactionManager.hpp"
 #include "account/EscrowTransaction.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/GeniusInputValidator.hpp"
 #include "account/MintTransaction.hpp"
 #include "account/MintTransactionV2.hpp"
+#include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
+#include "account/UTXOMerkle.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <chrono>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <system_error>
+#include <thread>
 #include <vector>
 
 namespace sgns
@@ -103,6 +108,31 @@ namespace sgns
             }
             return std::dynamic_pointer_cast<MintTransactionV2>(
                 manager.tx_queue_m.back().first.back().first );
+        }
+
+        static ConsensusManager::ValidationResult EvaluateReplayProtection(
+            const TransactionManager &manager,
+            const GeniusTransaction  &transaction )
+        {
+            return manager.EvaluateTransactionReplayProtection( transaction ).validation;
+        }
+
+        static std::shared_ptr<ConsensusManager> Consensus(
+            const std::shared_ptr<Blockchain> &blockchain )
+        {
+            return blockchain->consensus_manager_;
+        }
+    };
+
+    class ConsensusManagerTestAccess
+    {
+    public:
+        static void SetCertificateReader(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<outcome::result<crdt::GlobalDB::Buffer>(
+                const crdt::HierarchicalKey & )> reader )
+        {
+            manager->certificate_record_reader_ = std::move( reader );
         }
     };
 } // namespace sgns
@@ -381,6 +411,31 @@ namespace
             {
                 return;
             }
+            registry_ = blockchain_->GetValidatorRegistry();
+            EXPECT_NE( registry_, nullptr );
+            if ( !registry_ )
+            {
+                return;
+            }
+            auto genesis_result = registry_->StoreGenesisRegistry(
+                { account_->GetAddress() },
+                [this]( std::vector<uint8_t> payload )
+                {
+                    return account_->Sign( std::move( payload ) );
+                } );
+            EXPECT_TRUE( genesis_result.has_value() );
+            for ( int attempt = 0;
+                  attempt < 100 &&
+                  ( registry_->LoadCurrentRegistry().has_error() ||
+                    registry_->GetRegistryCid().empty() );
+                  ++attempt )
+            {
+                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
+            }
+            EXPECT_FALSE( registry_->GetRegistryCid().empty() );
+            consensus_ =
+                TransactionManagerPendingLifecycleTestAccess::Consensus( blockchain_ );
+            EXPECT_NE( consensus_, nullptr );
 
             manager_ = TransactionManager::New(
                 db_,
@@ -401,6 +456,7 @@ namespace
     protected:
         static const TokenID kTokenId;
         static constexpr uint32_t kReceiptIndex = 19;
+        static constexpr uint64_t kAmount = 1000;
 
         bool ExecutedKeyAbsent( const std::string &chain_id,
                                 const std::string &transaction_hash ) const
@@ -451,9 +507,211 @@ namespace
             }
         }
 
+        static std::string RawBytes( const base::Hash256 &hash )
+        {
+            return std::string(
+                reinterpret_cast<const char *>( hash.data() ), hash.size() );
+        }
+
+        static std::vector<uint8_t> SerializeOutpoint(
+            const base::Hash256 &hash,
+            uint32_t             output_index )
+        {
+            std::vector<uint8_t> payload( hash.begin(), hash.end() );
+            utxo_merkle::AppendUInt32BE( payload, output_index );
+            return payload;
+        }
+
+        static std::vector<uint8_t> SerializeOutput(
+            const base::Hash256 &hash,
+            uint32_t             output_index,
+            const std::string   &owner,
+            const TokenID       &token_id,
+            uint64_t             amount )
+        {
+            std::vector<uint8_t> payload( hash.begin(), hash.end() );
+            utxo_merkle::AppendUInt32BE( payload, output_index );
+            utxo_merkle::AppendUInt32BE(
+                payload, static_cast<uint32_t>( owner.size() ) );
+            payload.insert( payload.end(), owner.begin(), owner.end() );
+            const auto &token_bytes = token_id.bytes();
+            payload.insert(
+                payload.end(), token_bytes.begin(), token_bytes.end() );
+            utxo_merkle::AppendUInt64BE( payload, amount );
+            return payload;
+        }
+
+        outcome::result<ConsensusManager::Certificate> MakeCertificate(
+            const std::string                             &transaction_hash,
+            uint64_t                                       nonce,
+            const std::optional<UTXOTransitionCommitment> &commitment =
+                std::nullopt )
+        {
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    account_->GetAddress(),
+                    nonce,
+                    transaction_hash,
+                    EmbeddedTransaction{},
+                    commitment,
+                    std::nullopt ) );
+            BOOST_OUTCOME_TRY(
+                auto proposal,
+                ConsensusManager::CreateProposal(
+                    subject,
+                    account_->GetAddress(),
+                    registry_->GetRegistryCid(),
+                    registry_->GetRegistryEpoch(),
+                    [this]( std::vector<uint8_t> payload )
+                    {
+                        return account_->Sign( std::move( payload ) );
+                    } ) );
+            BOOST_OUTCOME_TRY(
+                auto vote,
+                consensus_->CreateVote(
+                    proposal.proposal_id(),
+                    account_->GetAddress(),
+                    true,
+                    [this]( std::vector<uint8_t> payload )
+                    {
+                        return account_->Sign( std::move( payload ) );
+                    } ) );
+            return consensus_->CreateCertificate( proposal, { vote } );
+        }
+
+        std::shared_ptr<TransferTransaction> MakeReplayTransaction(
+            const std::string &previous_hash,
+            uint64_t           nonce ) const
+        {
+            SGTransaction::DAGStruct dag;
+            dag.set_source_addr( account_->GetAddress() );
+            dag.set_previous_hash( previous_hash );
+            dag.set_nonce( nonce );
+            dag.set_timestamp(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() );
+            return std::make_shared<TransferTransaction>(
+                TransferTransaction::New( {}, {}, std::move( dag ) ) );
+        }
+
+        void UseRealCertificateReader()
+        {
+            ConsensusManagerTestAccess::SetCertificateReader(
+                consensus_,
+                [db = db_]( const crdt::HierarchicalKey &key )
+                {
+                    return db->Get( key );
+                } );
+        }
+
+        void FailCertificateReads( storage::DatabaseError error )
+        {
+            ConsensusManagerTestAccess::SetCertificateReader(
+                consensus_,
+                [error]( const crdt::HierarchicalKey & )
+                    -> outcome::result<crdt::GlobalDB::Buffer>
+                {
+                    return outcome::failure( error );
+                } );
+        }
+
+        struct WitnessCase
+        {
+            std::shared_ptr<TransferTransaction> transaction;
+            UTXOTxParameters                     parameters;
+            ConsensusManager::Subject            subject;
+            UTXOTransitionCommitment             producer_commitment;
+        };
+
+        outcome::result<WitnessCase> MakeWitnessCase(
+            const std::string &producer_hash_text )
+        {
+            BOOST_OUTCOME_TRY(
+                auto producer_hash,
+                base::Hash256::fromReadableString( producer_hash_text ) );
+
+            InputUTXOInfo input;
+            input.txid_hash_  = producer_hash;
+            input.output_idx_ = 0;
+            input.signature_  = account_->Sign( input.SerializeForSigning() );
+            OutputDestInfo output{
+                kAmount, account_->GetAddress(), kTokenId
+            };
+
+            SGTransaction::DAGStruct dag;
+            dag.set_source_addr( account_->GetAddress() );
+            dag.set_previous_hash( producer_hash_text );
+            dag.set_nonce( 8 );
+            dag.set_timestamp(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::system_clock::now().time_since_epoch() )
+                    .count() );
+            auto transaction = std::make_shared<TransferTransaction>(
+                TransferTransaction::New( { input }, { output }, std::move( dag ) ) );
+            BOOST_OUTCOME_TRY(
+                auto transaction_hash,
+                base::Hash256::fromReadableString( transaction->GetHash() ) );
+
+            const auto producer_leaf = SerializeOutput(
+                producer_hash, 0, account_->GetAddress(), kTokenId, kAmount );
+            UTXOTransitionCommitment producer_commitment;
+            producer_commitment.set_produced_outputs_root(
+                RawBytes( utxo_merkle::HashLeaf( producer_leaf ) ) );
+
+            UTXOTransitionCommitment commitment;
+            auto *consumed = commitment.add_consumed_outpoints();
+            consumed->set_tx_id_hash( RawBytes( producer_hash ) );
+            consumed->set_output_index( 0 );
+            commitment.set_consumed_outpoints_root(
+                RawBytes( utxo_merkle::ComputeMerkleRootFromPayloads(
+                    { SerializeOutpoint( producer_hash, 0 ) } ) ) );
+            auto *produced = commitment.add_produced_outputs();
+            produced->set_tx_id_hash( RawBytes( transaction_hash ) );
+            produced->set_output_index( 0 );
+            produced->set_owner_address( account_->GetAddress() );
+            produced->set_token_id(
+                kTokenId.bytes().data(), kTokenId.bytes().size() );
+            produced->set_amount( kAmount );
+            commitment.set_produced_outputs_root(
+                RawBytes( utxo_merkle::ComputeMerkleRootFromPayloads(
+                    { SerializeOutput(
+                        transaction_hash,
+                        0,
+                        account_->GetAddress(),
+                        kTokenId,
+                        kAmount ) } ) ) );
+
+            UTXOWitness witness;
+            auto       *proof = witness.add_consumed_inputs();
+            proof->set_tx_id_hash( RawBytes( producer_hash ) );
+            proof->set_output_index( 0 );
+            proof->set_leaf_payload(
+                producer_leaf.data(), producer_leaf.size() );
+
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    account_->GetAddress(),
+                    transaction->GetNonce(),
+                    transaction->GetHash(),
+                    transaction->SerializeToEmbeddedTransaction(),
+                    commitment,
+                    witness ) );
+            return WitnessCase{
+                transaction,
+                UTXOTxParameters{ { input }, { output } },
+                subject,
+                producer_commitment
+            };
+        }
+
         std::shared_ptr<GeniusAccount>      account_;
         std::shared_ptr<Blockchain>         blockchain_;
         std::shared_ptr<TransactionManager> manager_;
+        std::shared_ptr<ValidatorRegistry>  registry_;
+        std::shared_ptr<ConsensusManager>   consensus_;
     };
 
     const TokenID TransactionManagerPendingLifecycleTest::kTokenId =
@@ -758,4 +1016,93 @@ TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreate
     ASSERT_EQ( inputs.size(), 1U );
     EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
     EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        PreviousNonceCertificateLookupPreservesConsumerSemantics )
+{
+    ASSERT_NE( manager_, nullptr );
+    ASSERT_NE( consensus_, nullptr );
+    const std::string winner_hash( 64, 'a' );
+    auto              certificate = MakeCertificate( winner_hash, 7 );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( consensus_->SubmitCertificate( certificate.value() ).has_value() );
+
+    auto winning_transaction = MakeReplayTransaction( winner_hash, 8 );
+    ASSERT_NE( winning_transaction, nullptr );
+    auto approved =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( approved.check, ConsensusManager::Check::Approve );
+    EXPECT_TRUE( approved.dependencies.empty() );
+
+    const std::string absent_hash( 64, 'b' );
+    auto absent_transaction = MakeReplayTransaction( absent_hash, 8 );
+    auto pending =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *absent_transaction );
+    EXPECT_EQ( pending.check, ConsensusManager::Check::Pending );
+    ASSERT_EQ( pending.dependencies.size(), 1U );
+    EXPECT_EQ(
+        pending.dependencies.front().type,
+        ConsensusManager::PendingDependencyKey::Type::Certificate );
+    EXPECT_EQ( pending.dependencies.front().value, absent_hash );
+
+    FailCertificateReads( storage::DatabaseError::CORRUPTION );
+    auto corrupt =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( corrupt.check, ConsensusManager::Check::Reject );
+    EXPECT_TRUE( corrupt.dependencies.empty() );
+
+    FailCertificateReads( storage::DatabaseError::IO_ERROR );
+    auto unavailable =
+        TransactionManagerPendingLifecycleTestAccess::EvaluateReplayProtection(
+            *manager_, *winning_transaction );
+    EXPECT_EQ( unavailable.check, ConsensusManager::Check::Reject );
+    EXPECT_TRUE( unavailable.dependencies.empty() );
+    UseRealCertificateReader();
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        ProducerUTXOCertificateLookupPreservesConsumerSemantics )
+{
+    ASSERT_NE( blockchain_, nullptr );
+    ASSERT_NE( consensus_, nullptr );
+    const std::string producer_hash( 64, 'c' );
+    auto witness_case = MakeWitnessCase( producer_hash );
+    ASSERT_TRUE( witness_case.has_value() );
+    auto certificate = MakeCertificate(
+        producer_hash, 7, witness_case.value().producer_commitment );
+    ASSERT_TRUE( certificate.has_value() );
+    ASSERT_TRUE( consensus_->SubmitCertificate( certificate.value() ).has_value() );
+
+    GeniusInputValidator validator;
+    EXPECT_TRUE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::NOT_FOUND );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::CORRUPTION );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+
+    FailCertificateReads( storage::DatabaseError::IO_ERROR );
+    EXPECT_FALSE( validator.ValidateWitness(
+        witness_case.value().subject,
+        witness_case.value().transaction,
+        witness_case.value().parameters,
+        blockchain_ ) );
+    UseRealCertificateReader();
 }

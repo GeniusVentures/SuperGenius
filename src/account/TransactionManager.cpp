@@ -4101,13 +4101,27 @@ namespace sgns
                     return { ConsensusManager::ValidationResult::Pending(
                         { ConsensusManager::PendingDependencyKey::Certificate( previous_hash ) } ) };
                 }
-                TransactionManagerLogger()->critical(
-                    "[{} - full: {}] {}: Certificate store corruption for previous hash {} error={}",
-                    account_m->GetAddress().substr( 0, 8 ),
-                    full_node_m,
-                    __func__,
-                    previous_hash,
-                    previous_cert_result.error().message() );
+                if ( previous_cert_result.error() ==
+                     make_error_code( ConsensusManager::CertificateStoreError::IntegrityError ) )
+                {
+                    TransactionManagerLogger()->critical(
+                        "[{} - full: {}] {}: Certificate store corruption for previous hash {} error={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        previous_hash,
+                        previous_cert_result.error().message() );
+                }
+                else
+                {
+                    TransactionManagerLogger()->critical(
+                        "[{} - full: {}] {}: Certificate store unavailable for previous hash {} error={}",
+                        account_m->GetAddress().substr( 0, 8 ),
+                        full_node_m,
+                        __func__,
+                        previous_hash,
+                        previous_cert_result.error().message() );
+                }
                 return { ConsensusManager::ValidationResult::Reject() };
             }
             const auto &previous_subject = previous_cert_result.value().proposal().subject();

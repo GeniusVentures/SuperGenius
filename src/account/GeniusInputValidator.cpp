@@ -460,10 +460,18 @@ namespace sgns
                     logger->error( "ValidateWitness(Genius) missing producer certificate for input tx={}",
                                    PreviewValue( input.txid_hash_.toReadableString() ) );
                 }
-                else
+                else if ( producer_cert_result.error() ==
+                          make_error_code( ConsensusManager::CertificateStoreError::IntegrityError ) )
                 {
                     logger->critical(
                         "ValidateWitness(Genius) certificate store corruption for producer tx={} error={}",
+                        PreviewValue( input.txid_hash_.toReadableString() ),
+                        producer_cert_result.error().message() );
+                }
+                else
+                {
+                    logger->critical(
+                        "ValidateWitness(Genius) certificate store unavailable for producer tx={} error={}",
                         PreviewValue( input.txid_hash_.toReadableString() ),
                         producer_cert_result.error().message() );
                 }
