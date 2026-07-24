@@ -4,6 +4,7 @@ set(TRUSTEDPEER_TEST_NODE_LIBS
     crdt_globaldb
     multisig
     json_secure_storage
+    libsecp256k1::secp256k1
 )
 
 addtest(trustedpeerregistry_genesis_test
@@ -12,6 +13,7 @@ addtest(trustedpeerregistry_genesis_test
 target_link_libraries(trustedpeerregistry_genesis_test
     ${TRUSTEDPEER_TEST_NODE_LIBS}
 )
+target_include_directories(trustedpeerregistry_genesis_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 addtest(trustedpeerregistry_quorum_test
     trustedpeerregistry_quorum_test.cpp
@@ -19,3 +21,4 @@ addtest(trustedpeerregistry_quorum_test
 target_link_libraries(trustedpeerregistry_quorum_test
     ${TRUSTEDPEER_TEST_NODE_LIBS}
 )
+target_include_directories(trustedpeerregistry_quorum_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

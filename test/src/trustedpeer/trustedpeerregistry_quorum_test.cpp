@@ -15,12 +15,18 @@
  *             10-VALIDATION.md's Manual-Only Verifications table; run before
  *             /gsd:verify-work.
  */
+// genesis_ceremony_helper.hpp pulls in nil::crypto3 algebra headers that use
+// local variable names (B0/B1) colliding with <sys/termios.h>'s B0/B1 baud
+// macros if termios.h is transitively included first (e.g. via boost/gtest).
+// Must be included before gtest/boost, mirroring GeniusAccount.cpp's own
+// crypto3-headers-first include ordering (lines 1-4).
+#include "genesis_ceremony_helper.hpp"
+
 #include <gtest/gtest.h>
 
 #include <boost/filesystem/operations.hpp>
 
 #include "account/GeniusAccount.hpp"
-#include "genesis_ceremony_helper.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
