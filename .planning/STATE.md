@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 09
-status: executing
-last_updated: "2026-07-24T15:43:06.593Z"
-last_activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutdown completion
+status: verifying
+last_updated: "2026-07-24T15:51:52.777Z"
+last_activity: 2026-07-24 -- Completed Plan 09-13 endpoint-local receipt-status disagreement handling
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 13
-  completed_plans: 12
-  percent: 0
+  completed_plans: 13
+  percent: 25
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -29,10 +29,10 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 09 (canonical-slot-and-certificate-storage) — EXECUTING
+Phase: 09 (canonical-slot-and-certificate-storage) — VERIFYING
 Plan: 13 of 13
-Status: Ready to execute
-Last activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutdown completion
+Status: Phase complete — ready for verification
+Last activity: 2026-07-24 -- Completed Plan 09-13 endpoint-local receipt-status disagreement handling
 
 ## Roadmap Snapshot
 
@@ -66,7 +66,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutd
 
 ## Operator Next Steps
 
-- Execute Phase 09 gap plan 09-13, then re-verify Phase 09.
+- Run the post-gap Phase 09 code review and independent phase verification.
 
 ## Performance Metrics
 
@@ -84,6 +84,7 @@ Last activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutd
 | Phase 09 P10 | 16 min | 2 tasks | 10 files |
 | Phase 09 P11 | 15 min | 1 tasks | 3 files |
 | Phase 09 P12 | 16 min | 2 tasks | 5 files |
+| Phase 09 P13 | 6 min | 1 tasks | 3 files |
 
 ## Decisions
 
@@ -113,3 +114,4 @@ Last activity: 2026-07-24 -- Completed Plan 09-12 mixed CRDT decisions and shutd
 - [Phase 09]: Replicated preflight failures are terminal rejection. — Unknown durable occupancy cannot be approved or converted into a missing-dependency retry, regardless of whether the read failed from corruption or I/O.
 - [Phase 09]: Reject sanitation preserves retry barriers for retained namespaces; distinct retained dependencies fail closed. — Reject authority is namespace-local and must not choose or erase another namespace dependency.
 - [Phase 09]: CRDT RequestClose returns one shared completion barrier while external CancelAndCloseNow waits and joins. — Worker-originated close cannot self-wait, but external owners require a truthful completed-and-drained boundary.
+- [Phase 09]: Missing or failed receipt status is endpoint-local and contributes zero weight; later exact endpoints may still reach quorum. — One stale or malicious provider cannot veto independent receipts, while unsuccessful endpoints never help satisfy the 75-weight threshold.
