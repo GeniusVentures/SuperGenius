@@ -201,8 +201,14 @@ namespace sgns
             }
             return instance;
         }
-        catch ( ... ) //NOLINT(bugprone-empty-catch)
+        catch ( const std::exception &e )
         {
+            std::cerr << "GeniusNode initialization failed: " << e.what() << '\n';
+            return nullptr;
+        }
+        catch ( ... )
+        {
+            std::cerr << "GeniusNode initialization failed with an unknown exception\n";
             return nullptr;
         }
     }
