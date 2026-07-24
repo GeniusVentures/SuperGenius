@@ -597,6 +597,15 @@ namespace sgns
          */
         static CertificateStoreError MapCertificateReadError( const std::error_code &error );
         /**
+         * @brief Reads one certificate preflight record with typed absence semantics.
+         *
+         * Only an exact datastore NOT_FOUND is returned as an empty optional.
+         * Integrity and operational failures remain typed errors so callers
+         * cannot mistake unknown durable state for an unoccupied key.
+         */
+        outcome::result<std::optional<crdt::GlobalDB::Buffer>> ReadCertificatePreflightRecord(
+            const crdt::HierarchicalKey &key ) const;
+        /**
          * @brief Starts the background round timer loop.
          */
         void StartRoundTimer();
@@ -898,6 +907,7 @@ namespace sgns
         std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
         std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )>
             certificate_record_reader_; ///< Private/friend-only read seam; defaults to GlobalDB::Get.
+        std::function<void()> certificate_publish_observer_; ///< Private/friend-only publish-attempt observer.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         std::unordered_map<base::Hash256, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.

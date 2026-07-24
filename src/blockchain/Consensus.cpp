@@ -313,6 +313,30 @@ namespace sgns
         return CertificateStoreError::StorageError;
     }
 
+    outcome::result<std::optional<crdt::GlobalDB::Buffer>> ConsensusManager::ReadCertificatePreflightRecord(
+        const crdt::HierarchicalKey &key ) const
+    {
+        auto result = certificate_record_reader_( key );
+        if ( result.has_value() )
+        {
+            return std::optional<crdt::GlobalDB::Buffer>{ std::move( result.value() ) };
+        }
+
+        const auto mapped = MapCertificateReadError( result.error() );
+        if ( mapped == CertificateStoreError::NotFound )
+        {
+            return std::optional<crdt::GlobalDB::Buffer>{};
+        }
+
+        ConsensusManagerLogger()->critical(
+            "{}: certificate preflight read failed key={} raw_error={} mapped_error={}",
+            __func__,
+            key.GetKey(),
+            result.error().message(),
+            make_error_code( mapped ).message() );
+        return outcome::failure( mapped );
+    }
+
     ConsensusManager::~ConsensusManager()
     {
         Close();
@@ -1697,16 +1721,40 @@ namespace sgns
 
         const auto slot_key_string = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
         const auto index_key_string = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
-        const auto existing_slot    = db_->Get( { slot_key_string } );
-        const auto existing_index   = db_->Get( { index_key_string } );
-
-        if ( existing_slot.has_value() )
+        const auto existing_slot_result = ReadCertificatePreflightRecord( { slot_key_string } );
+        const auto existing_index_result = ReadCertificatePreflightRecord( { index_key_string } );
+        if ( existing_slot_result.has_error() || existing_index_result.has_error() )
         {
-            const auto existing_bytes = std::string( existing_slot.value().toString() );
+            const bool slot_integrity =
+                existing_slot_result.has_error() &&
+                existing_slot_result.error() == make_error_code( CertificateStoreError::IntegrityError );
+            const bool index_integrity =
+                existing_index_result.has_error() &&
+                existing_index_result.error() == make_error_code( CertificateStoreError::IntegrityError );
+            const auto failure = slot_integrity || index_integrity
+                                     ? CertificateStoreError::IntegrityError
+                                     : CertificateStoreError::StorageError;
+            ConsensusManagerLogger()->critical(
+                "{}: certificate preflight failed closed slot={} winner={} slot_key={} slot_error={} "
+                "index_key={} index_error={}",
+                __func__,
+                slot_id,
+                subject_hash,
+                slot_key_string,
+                existing_slot_result.has_error() ? existing_slot_result.error().message() : "none",
+                index_key_string,
+                existing_index_result.has_error() ? existing_index_result.error().message() : "none" );
+            return outcome::failure( failure );
+        }
+        const auto &existing_slot  = existing_slot_result.value();
+        const auto &existing_index = existing_index_result.value();
+
+        if ( existing_slot )
+        {
+            const auto existing_bytes = std::string( existing_slot->toString() );
             if ( existing_bytes == serialized )
             {
-                if ( !existing_index.has_value() ||
-                     std::string( existing_index.value().toString() ) != slot_id )
+                if ( !existing_index || std::string( existing_index->toString() ) != slot_id )
                 {
                     ConsensusManagerLogger()->error(
                         "{}: integrity failure for replay slot={} proposal_id={} winner={}: index missing or mismatched",
@@ -1739,7 +1787,7 @@ namespace sgns
             return outcome::failure( CertificateStoreError::Conflict );
         }
 
-        if ( existing_index.has_value() )
+        if ( existing_index )
         {
             ConsensusManagerLogger()->critical(
                 "{}: certificate index conflict slot={} proposal_id={} winner={} existing_target={}",
@@ -1747,8 +1795,8 @@ namespace sgns
                 slot_id,
                 canonical.proposal_id(),
                 subject_hash,
-                std::string( existing_index.value().toString() ) );
-            return outcome::failure( std::string( existing_index.value().toString() ) == slot_id
+                std::string( existing_index->toString() ) );
+            return outcome::failure( std::string( existing_index->toString() ) == slot_id
                                          ? CertificateStoreError::IntegrityError
                                          : CertificateStoreError::Conflict );
         }
@@ -1774,6 +1822,10 @@ namespace sgns
 
         ConsensusMessage message;
         *message.mutable_certificate() = canonical;
+        if ( certificate_publish_observer_ )
+        {
+            certificate_publish_observer_();
+        }
         auto result                    = Publish( message );
         if ( result.has_error() )
         {
@@ -2271,9 +2323,25 @@ namespace sgns
             return crdt::DeltaFilterResult::Reject();
         }
 
-        const auto existing_slot  = db_->Get( { expected_slot_key } );
-        const auto existing_index = db_->Get( { expected_index_key } );
-        if ( existing_slot.has_value() != existing_index.has_value() )
+        const auto existing_slot_result = ReadCertificatePreflightRecord( { expected_slot_key } );
+        const auto existing_index_result = ReadCertificatePreflightRecord( { expected_index_key } );
+        if ( existing_slot_result.has_error() || existing_index_result.has_error() )
+        {
+            ConsensusManagerLogger()->critical(
+                "{}: replicated certificate preflight failed closed slot={} winner={} slot_key={} slot_error={} "
+                "index_key={} index_error={}",
+                __func__,
+                slot_result.value(),
+                hash_result.value(),
+                expected_slot_key,
+                existing_slot_result.has_error() ? existing_slot_result.error().message() : "none",
+                expected_index_key,
+                existing_index_result.has_error() ? existing_index_result.error().message() : "none" );
+            return crdt::DeltaFilterResult::Reject();
+        }
+        const auto &existing_slot  = existing_slot_result.value();
+        const auto &existing_index = existing_index_result.value();
+        if ( static_cast<bool>( existing_slot ) != static_cast<bool>( existing_index ) )
         {
             ConsensusManagerLogger()->critical( "{}: partial existing certificate pair slot={} winner={}",
                                                 __func__,
@@ -2281,9 +2349,9 @@ namespace sgns
                                                 hash_result.value() );
             return crdt::DeltaFilterResult::Reject();
         }
-        if ( existing_slot.has_value() &&
-             ( std::string( existing_slot.value().toString() ) != slot_element->value() ||
-               std::string( existing_index.value().toString() ) != slot_result.value() ) )
+        if ( existing_slot &&
+             ( std::string( existing_slot->toString() ) != slot_element->value() ||
+               std::string( existing_index->toString() ) != slot_result.value() ) )
         {
             ConsensusManagerLogger()->critical(
                 "{}: replicated certificate conflict slot={} incoming_proposal_id={} winner={}",
