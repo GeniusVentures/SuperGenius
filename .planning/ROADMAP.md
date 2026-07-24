@@ -447,7 +447,7 @@ Plans:
 
 - [x] **Phase 8: MultiSig Primitive** - Standalone N-of-M signature/quorum component reusing `ConsensusAuth` primitives (completed 2026-07-23)
 - [x] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow (completed 2026-07-23)
-- [ ] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT
+- [x] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT (completed 2026-07-24)
 - [ ] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager`
 - [ ] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry` migrated onto `ISignedCRDTData`, existing behavior/tests preserved
 
@@ -496,7 +496,7 @@ Plans:
 
 Plans:
 - [x] 10-01-PLAN.md — TrustedPeerRegistry core: TrustedPeerListPayload (ISignedCRDTData) + cache/signer-set-source/Propose/Sign/TryConfirm/SeedGenesis + CMake wiring (TPR-01, TPR-02, TPR-03)
-- [ ] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
+- [x] 10-02-PLAN.md — Genesis ceremony test helper + genesis/quorum tests + sgns_config.json trusted_peers/bootstrapper_node parsing (TPR-01, TPR-02, TPR-03)
 
 ### Phase 11: BurnConfig Quorum Wiring
 
@@ -525,6 +525,6 @@ Plans:
 |-------|-----------------|--------|-----------|
 | 8. MultiSig Primitive | 1/1 | Complete   | 2026-07-23 |
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
-| 10. TrustedPeerRegistry | 1/2 | In Progress|  |
+| 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
 | 11. BurnConfig Quorum Wiring | 0/TBD | Not started | - |
 | 12. ValidatorRegistry Migration | 0/TBD | Not started | - |

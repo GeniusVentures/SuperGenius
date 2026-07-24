@@ -109,16 +109,30 @@ Implementation was verified via careful manual review:
 - Include ordering in the new test helper mirrors `GeniusAccount.cpp`'s documented "keep these include files here to prevent errors within crypto3's headers" comment exactly.
 - Cross-directory test includes (`"securecrdt/securecrdt_test_node.hpp"`, `"trustedpeer/..."`) verified against `test/CMakeLists.txt`'s `include_directories(${CMAKE_CURRENT_SOURCE_DIR} ...)` (i.e. `test/`), matching the pattern already used elsewhere in the test tree.
 
-The orchestrator's real-build follow-up pass (as performed for Plan 01) should run `cmake --build . --target trustedpeerregistry_genesis_test trustedpeerregistry_quorum_test` and `ctest -R trustedpeer` against the configured `build/OSX/Release` tree to get compiled/executed confirmation.
+## Build/Test Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`). This surfaced **three real build-wiring bugs** the executor's grep/manual-review verification could not have caught:
+
+1. **Missing `libsecp256k1::secp256k1` link**: `test/src/trustedpeer/CMakeLists.txt` didn't link secp256k1 even though `genesis_ceremony_helper.hpp` directly includes `<secp256k1.h>` — `#include <secp256k1.h>` failed with "file not found" (the link library also carries the include path via CMake's transitive `INTERFACE_INCLUDE_DIRECTORIES`). Fixed by adding `libsecp256k1::secp256k1` to `TRUSTEDPEER_TEST_NODE_LIBS`.
+2. **Missing include path for the shared test fixture**: `"securecrdt/securecrdt_test_node.hpp"` couldn't resolve — `test/src/securecrdt/` isn't under the `src/` include root that makes `"securecrdt/SecureCrdt.hpp"` resolve. Fixed with `target_include_directories(... PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)` on both new test targets, so quoted includes resolve relative to `test/src/`.
+3. **Header-order macro collision** (the SUMMARY's claim that include ordering "mirrors GeniusAccount.cpp's... pattern" was inaccurate for `trustedpeerregistry_quorum_test.cpp`): it included `<gtest/gtest.h>` and `<boost/filesystem/operations.hpp>` *before* `genesis_ceremony_helper.hpp`. Since boost/gtest transitively include `<sys/termios.h>` (which `#define`s `B0`/`B1` as baud-rate constants), and `genesis_ceremony_helper.hpp` pulls in `nil::crypto3` algebra headers that use `B0`/`B1` as local variable names, the macros corrupted the crypto3 header's own source — 3 compile errors. Fixed by reordering the ceremony helper's include to be first in the file, actually matching `GeniusAccount.cpp`'s documented pattern this time.
+
+After all three fixes:
+- `cmake --build . --target trustedpeerregistry_genesis_test trustedpeerregistry_quorum_test` — **succeeded**.
+- `ctest -R trustedpeer --output-on-failure` — **2/2 tests passed**.
+- TPR-03 grep gate re-confirmed: `grep -rn "secp256k1\|VerifySignature\|VerifyPayloadSignature" src/trustedpeer/` — zero matches.
+- Full project build + full `ctest`: 80/81 passed. The 1 failure (`transaction_sync_test`) is the same pre-existing, unrelated issue already confirmed out of scope in Phase 8/9's verification.
+
+TPR-01, TPR-02, TPR-03 are now fully proven by actual compiled/executed tests, not just grep-based structural checks.
 
 ## Next Phase Readiness
-- Phase 10's success criteria (TPR-01, TPR-02, TPR-03) now have both implementation (Plan 01) and automated test coverage (this plan), pending the orchestrator's real-build+ctest confirmation pass.
+- Phase 10's success criteria (TPR-01, TPR-02, TPR-03) now have both implementation (Plan 01) and automated test coverage (this plan), verified against a real compiled build.
 - `GeniusNode` exposes a clean, parse-only `trusted_peers_genesis_`/`bootstrapper_node_address_` config surface for Phase 11 (BURN_BASIS_POINTS/quorum wiring) to consume, with zero premature `Blockchain`/startup coupling.
 
 ---
 *Phase: 10-trustedpeerregistry*
 *Completed: 2026-07-24*
 
-## Self-Check: PASSED
+## Self-Check: PASSED (build+test verified by orchestrator follow-up; three real build-wiring bugs found and fixed)
 
 All created files verified present on disk; all task commits (`033fd43e`, `99b51085`, `3ac739db`) verified present in git log.
