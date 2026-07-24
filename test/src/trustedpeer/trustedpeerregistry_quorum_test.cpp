@@ -92,8 +92,10 @@ namespace
             const auto genesis_payload = TrustedPeerListPayload( genesis_peers_ ).SerializeToBytes();
             const auto artifact        = sgns::test::trustedpeer::GenerateGenesisCeremonyArtifact( genesis_payload );
 
-            registry_ =
+            auto new_result =
                 TrustedPeerRegistry::New( secure_crdt_, genesis_peers_, artifact.bootstrapper_address, /*threshold=*/2 );
+            ASSERT_FALSE( new_result.has_error() ) << new_result.error().message();
+            registry_ = new_result.value();
 
             auto seed_result = registry_->SeedGenesis( genesis_peers_, artifact.signature );
             ASSERT_FALSE( seed_result.has_error() ) << seed_result.error().message();

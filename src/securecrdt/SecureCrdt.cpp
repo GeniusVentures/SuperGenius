@@ -22,6 +22,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
             return "signature verification failed against the current value";
         case Error::MALFORMED_VALUE:
             return "payload failed DeserializeFromBytes/Verify (codec/semantic check)";
+        case Error::QUORUM_THRESHOLD_BELOW_FLOOR:
+            return "configured quorum_threshold is below the majority-safety floor (ceil(0.51*signer_set_size))";
     }
     return "unknown SecureCrdt::Error";
 }

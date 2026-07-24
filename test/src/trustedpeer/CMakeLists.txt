@@ -23,3 +23,11 @@ target_link_libraries(trustedpeerregistry_quorum_test
     ${TRUSTEDPEER_TEST_NODE_LIBS}
 )
 target_include_directories(trustedpeerregistry_quorum_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+addtest(trustedpeerregistry_threshold_floor_test
+    trustedpeerregistry_threshold_floor_test.cpp
+)
+target_link_libraries(trustedpeerregistry_threshold_floor_test
+    ${TRUSTEDPEER_TEST_NODE_LIBS}
+)
+target_include_directories(trustedpeerregistry_threshold_floor_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)

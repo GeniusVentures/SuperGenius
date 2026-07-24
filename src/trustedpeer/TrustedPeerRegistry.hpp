@@ -102,9 +102,14 @@ namespace sgns::trustedpeer
          * @param[in] quorum_threshold Quorum threshold applied once genesis is
          *            confirmed.
          * @param[in] base_key Registered CRDT key this instance owns.
-         * @return Newly-constructed, registered TrustedPeerRegistry instance.
+         * @return outcome::success(instance) with the newly-constructed,
+         *         registered TrustedPeerRegistry instance, or
+         *         outcome::failure(SecureCrdt::Error::QUORUM_THRESHOLD_BELOW_FLOOR)
+         *         if `quorum_threshold` is below the majority-safety floor for
+         *         `genesis_peers.size()` (D-07) -- construction fails, no
+         *         instance is produced.
          */
-        static std::shared_ptr<TrustedPeerRegistry> New(
+        static outcome::result<std::shared_ptr<TrustedPeerRegistry>> New(
             std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
             std::vector<std::string>                      genesis_peers,
             std::string                                    bootstrapper_address,

@@ -11,6 +11,8 @@
 #include <set>
 #include <system_error>
 
+#include "securecrdt/QuorumThresholdValidation.hpp"
+
 namespace
 {
     constexpr size_t kTrustedPeerAddressHexLength = 128; ///< Mirrors GeniusAccount::PUBLIC_KEY_HEX_LENGTH (src/account/GeniusAccount.cpp:38).
@@ -143,13 +145,20 @@ namespace sgns::trustedpeer
     {
     }
 
-    std::shared_ptr<TrustedPeerRegistry> TrustedPeerRegistry::New(
+    outcome::result<std::shared_ptr<TrustedPeerRegistry>> TrustedPeerRegistry::New(
         std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
         std::vector<std::string>                      genesis_peers,
         std::string                                    bootstrapper_address,
         uint64_t                                        quorum_threshold,
         sgns::crdt::HierarchicalKey                     base_key )
     {
+        auto validation_result =
+            sgns::securecrdt::ValidateQuorumThreshold( quorum_threshold, genesis_peers.size() );
+        if ( validation_result.has_error() )
+        {
+            return validation_result.error();
+        }
+
         auto instance = std::make_shared<TrustedPeerRegistry>( std::move( secure_crdt ),
                                                                  std::move( genesis_peers ),
                                                                  std::move( bootstrapper_address ),
