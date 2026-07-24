@@ -304,6 +304,7 @@ namespace sgns
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
+        friend class TransactionManagerPendingLifecycleTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
