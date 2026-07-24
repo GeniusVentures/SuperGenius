@@ -690,6 +690,11 @@ namespace sgns::crdt
 
     void CrdtDatastore::Start()
     {
+        if ( closeStarted_ )
+        {
+            logger_->warn( "{}: datastore is closing, refusing start", __func__ );
+            return;
+        }
         StartCIDProcessing();
         StartRebroadcastHeads();
         started_ = true;
@@ -697,6 +702,10 @@ namespace sgns::crdt
 
     void CrdtDatastore::StartCIDProcessing()
     {
+        if ( closeStarted_ )
+        {
+            return;
+        }
         if ( handleNextThreadRunning_ )
         {
             return;
@@ -748,6 +757,10 @@ namespace sgns::crdt
 
     void CrdtDatastore::StartRebroadcastHeads()
     {
+        if ( closeStarted_ )
+        {
+            return;
+        }
         if ( rebroadcastThreadRunning_ )
         {
             return;
@@ -883,44 +896,105 @@ namespace sgns::crdt
 
     void CrdtDatastore::CancelAndCloseNow()
     {
-        bool expected = false;
-        if ( !shutdown_started_.compare_exchange_strong( expected, true ) )
+        auto completion = RequestClose();
+        if ( IsCurrentThreadInternalWorker() )
         {
-            logger_->warn( "CancelAndCloseNow called but shutdown has already started" );
+            logger_->error( "{}: synchronous close requested from a CRDT worker; wait on RequestClose externally",
+                            __func__ );
             return;
+        }
+
+        completion.wait();
+        JoinCloseCoordinator();
+    }
+
+    std::shared_future<void> CrdtDatastore::RequestClose()
+    {
+        bool should_start_coordinator = false;
+        ShutdownSnapshot begin;
+        {
+            std::lock_guard callback_gate( callbackDispatchMutex_ );
+            std::lock_guard lifecycle_lock( closeLifecycleMutex_ );
+            if ( !closeCompletion_.valid() )
+            {
+                closePromise_ = std::make_shared<std::promise<void>>();
+                closeCompletion_ = closePromise_->get_future().share();
+                {
+                    std::lock_guard worker_lock( dagWorkerMutex_ );
+                    closeStarted_ = true;
+                    begin = SnapshotShutdownStateLocked();
+                }
+                should_start_coordinator = true;
+            }
+        }
+
+        if ( !should_start_coordinator )
+        {
+            return closeCompletion_;
         }
 
         logger_->info(
-            "CancelAndCloseNow: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
-            pending_jobs_.size(),
-            selfCreatedJobList_.size(),
-            rootCIDJobList_.size(),
-            pendingRootQueue_.size(),
-            activeRootCID_.has_value() );
+            "RequestClose: begin (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_roots={}, parked_roots={}, parked_dependencies={})",
+            begin.pending_jobs,
+            begin.self_queue,
+            begin.root_queue,
+            begin.pending_roots,
+            begin.active_roots,
+            begin.parked_roots,
+            begin.parked_dependencies );
 
-        closeStarted_ = true;
         StopWorkerLoops();
+        closeCoordinatorThread_ = std::thread( [this] { CompleteClose(); } );
+        return closeCompletion_;
+    }
 
-        if ( IsCurrentThreadInternalWorker() )
-        {
-            logger_->error( "{}: CancelAndCloseNow called from CRDT worker thread; deferring waits to helper thread",
-                            __func__ );
-            auto keep_alive = shared_from_this();
-            std::thread( [keep_alive = std::move( keep_alive )]() { keep_alive->WaitForWorkersToExit(); } ).detach();
-            return;
-        }
+    CrdtDatastore::ShutdownSnapshot CrdtDatastore::SnapshotShutdownStateLocked() const
+    {
+        return ShutdownSnapshot{ pending_jobs_.size(),
+                                 selfCreatedJobList_.size(),
+                                 rootCIDJobList_.size(),
+                                 pendingRootQueue_.size(),
+                                 activeRootCID_.has_value() ? 1U : 0U,
+                                 parkedRoots_.size(),
+                                 parkedRootsByDependency_.size() };
+    }
 
+    void CrdtDatastore::CompleteClose()
+    {
         WaitForWorkersToExit();
-
         started_ = false;
-        logger_->info( "CancelAndCloseNow: CRDT workers stopped" );
+
+        ShutdownSnapshot end;
+        {
+            std::lock_guard lock( dagWorkerMutex_ );
+            end = SnapshotShutdownStateLocked();
+        }
         logger_->debug(
-            "CancelAndCloseNow: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_root={})",
-            pending_jobs_.size(),
-            selfCreatedJobList_.size(),
-            rootCIDJobList_.size(),
-            pendingRootQueue_.size(),
-            activeRootCID_.has_value() );
+            "RequestClose: end (pending_jobs={}, self_queue={}, root_queue={}, pending_roots={}, active_roots={}, parked_roots={}, parked_dependencies={})",
+            end.pending_jobs,
+            end.self_queue,
+            end.root_queue,
+            end.pending_roots,
+            end.active_roots,
+            end.parked_roots,
+            end.parked_dependencies );
+
+        std::shared_ptr<std::promise<void>> completion;
+        {
+            std::lock_guard lock( closeLifecycleMutex_ );
+            completion = closePromise_;
+        }
+        completion->set_value();
+    }
+
+    void CrdtDatastore::JoinCloseCoordinator()
+    {
+        std::lock_guard lock( closeCoordinatorJoinMutex_ );
+        if ( closeCoordinatorThread_.joinable() &&
+             closeCoordinatorThread_.get_id() != std::this_thread::get_id() )
+        {
+            closeCoordinatorThread_.join();
+        }
     }
 
     void CrdtDatastore::StopWorkerLoops()
@@ -1049,6 +1123,10 @@ namespace sgns::crdt
 
     void CrdtDatastore::HandleCIDBroadcast()
     {
+        if ( closeStarted_ )
+        {
+            return;
+        }
         if ( broadcaster_ == nullptr )
         {
             handleNextThreadRunning_ = false;
@@ -1077,6 +1155,10 @@ namespace sgns::crdt
 
         for ( const auto &bCastHeadCID : decodeResult.value() )
         {
+            if ( closeStarted_ )
+            {
+                return;
+            }
             logger_->trace( "{}: Received CID {}", __func__, bCastHeadCID.toString().value() );
             auto dagSyncerResult = dagSyncer_->HasBlock( bCastHeadCID );
             if ( dagSyncerResult.has_failure() )
@@ -1285,6 +1367,10 @@ namespace sgns::crdt
             {
                 RootCIDJob       root_node_only_job{ nullptr, aRootJob.root_node_, aRootJob.created_by_self_ };
                 std::unique_lock lock( dagWorkerMutex_ );
+                if ( closeStarted_ )
+                {
+                    return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+                }
                 rootCIDJobList_.push( root_node_only_job );
             }
             dagWorkerCv_.notify_one();
@@ -1331,6 +1417,10 @@ namespace sgns::crdt
             }
             {
                 std::unique_lock lock( dagWorkerMutex_ );
+                if ( closeStarted_ )
+                {
+                    return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+                }
                 rootCIDJobList_.push( newRootJob );
             }
             dagWorkerCv_.notify_one();
@@ -1427,6 +1517,10 @@ namespace sgns::crdt
             RootCIDJob root_final_job{ nullptr, job_to_process.root_node_, job_to_process.created_by_self_ };
             {
                 std::unique_lock lock( dagWorkerMutex_ );
+                if ( closeStarted_ )
+                {
+                    return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+                }
                 rootCIDJobList_.push( root_final_job );
             }
         }
@@ -1580,6 +1674,10 @@ namespace sgns::crdt
 
     void CrdtDatastore::RebroadcastHeads()
     {
+        if ( closeStarted_ )
+        {
+            return;
+        }
         std::unordered_set<std::string> pending_topics;
         {
             std::lock_guard lock( rebroadcastMutex_ );
@@ -1645,6 +1743,10 @@ namespace sgns::crdt
 
     outcome::result<void> CrdtDatastore::BroadcastHeadsForTopics( const std::set<std::string> &topics )
     {
+        if ( closeStarted_ )
+        {
+            return outcome::failure( CrdtDatastore::Error::INVALID_JOB );
+        }
         if ( !broadcast_enabled_ )
         {
             logger_->error( "{}: broadcast suppressed", __func__ );
@@ -1783,6 +1885,10 @@ namespace sgns::crdt
     outcome::result<CID> CrdtDatastore::Publish( const std::shared_ptr<Delta>          &aDelta,
                                                  const std::unordered_set<std::string> &topics )
     {
+        if ( closeStarted_ )
+        {
+            return outcome::failure( Error::NODE_CREATION );
+        }
         BOOST_OUTCOME_TRY( auto node, CreateDAGNode( aDelta, topics ) );
         BOOST_OUTCOME_TRY( auto newCID, AddDAGNode( node ) );
         return newCID;
@@ -1792,6 +1898,10 @@ namespace sgns::crdt
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
+        if ( closeStarted_ )
+        {
+            return outcome::failure( Error::INVALID_JOB );
+        }
         if ( !broadcast_enabled_ )
         {
             logger_->error( "{}: No broadcaster, Failed to broadcast", __func__ );
@@ -1910,17 +2020,20 @@ namespace sgns::crdt
 
     outcome::result<CID> CrdtDatastore::AddDAGNode( const std::shared_ptr<CrdtDatastore::IPLDNode> &node )
     {
-        if ( closeStarted_ )
-        {
-            logger_->warn( "{}: datastore is closing, refusing AddDAGNode", __func__ );
-            return outcome::failure( Error::NODE_CREATION );
-        }
-
         RootCIDJob rootJob{ nullptr, node, true };
 
         {
-            MarkJobPending( node->getCID() );
             std::unique_lock lock( dagWorkerMutex_ );
+            if ( closeStarted_ )
+            {
+                logger_->warn( "{}: datastore is closing, refusing AddDAGNode", __func__ );
+                return outcome::failure( Error::NODE_CREATION );
+            }
+            auto it = pending_jobs_.find( node->getCID() );
+            if ( it == pending_jobs_.end() || it->second != JobStatus::COMPLETED )
+            {
+                pending_jobs_[node->getCID()] = JobStatus::PENDING;
+            }
             selfCreatedJobList_.push( rootJob ); // Use high-priority self-created queue
             if ( logger_->level() == spdlog::level::trace )
             {
@@ -2258,11 +2371,23 @@ namespace sgns::crdt
 
     void CrdtDatastore::PutElementsCallback( const std::string &key, const Buffer &value, const std::string &cid )
     {
+        std::lock_guard callback_gate( callbackDispatchMutex_ );
+        if ( closeStarted_ )
+        {
+            logger_->debug( "{}: callback suppressed while datastore is closing for key '{}'", __func__, key );
+            return;
+        }
         crdt_cb_manager_.PutDataCallback( key, value, cid );
     }
 
     void CrdtDatastore::DeleteElementsCallback( const std::string &key, const std::string &cid )
     {
+        std::lock_guard callback_gate( callbackDispatchMutex_ );
+        if ( closeStarted_ )
+        {
+            logger_->debug( "{}: callback suppressed while datastore is closing for key '{}'", __func__, key );
+            return;
+        }
         crdt_cb_manager_.DeleteDataCallback( key, cid );
     }
 
@@ -2394,6 +2519,10 @@ namespace sgns::crdt
     bool CrdtDatastore::EnqueueRootCID( const CID &cid )
     {
         std::unique_lock lk( dagWorkerMutex_ );
+        if ( closeStarted_ )
+        {
+            return false;
+        }
         RefreshRetryGateLocked( monotonicClock_() );
         if ( IsRootCIDPendingOrActiveLocked( cid ) )
         {
@@ -2452,6 +2581,34 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
         return it->second;
+    }
+
+    CrdtDatastore::ShutdownSnapshot CrdtDatastore::GetShutdownSnapshotForTesting() const
+    {
+        std::lock_guard lock( dagWorkerMutex_ );
+        return SnapshotShutdownStateLocked();
+    }
+
+    std::size_t CrdtDatastore::GetPendingHeadCountForTesting() const
+    {
+        std::lock_guard lock( pendingHeadsMutex_ );
+        return pendingHeadsByRootCID_.size();
+    }
+
+    bool CrdtDatastore::AreWorkerFuturesCompleteForTesting()
+    {
+        const auto ready = []( std::future<void> &future )
+        {
+            return !future.valid() ||
+                   future.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready;
+        };
+        if ( !ready( handleNextFuture_ ) || !ready( rebroadcastFuture_ ) )
+        {
+            return false;
+        }
+        return std::all_of( dagWorkers_.begin(),
+                            dagWorkers_.end(),
+                            [&]( const auto &worker ) { return ready( worker->dagWorkerFuture_ ); } );
     }
 
     void CrdtDatastore::SetMonotonicClockForTesting(
