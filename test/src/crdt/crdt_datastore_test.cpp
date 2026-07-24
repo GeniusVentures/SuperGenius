@@ -800,10 +800,12 @@ namespace sgns::crdt
             [&]
             {
                 return receiver->HasKey( { "/retry/slot" } ).value() &&
-                       receiver->HasKey( { "/unrelated/live" } ).value();
+                       receiver->HasKey( { "/unrelated/live" } ).value() &&
+                       callback_calls.load() == 2 &&
+                       receiver->GetParkedRootCount() == 0;
             },
             std::chrono::milliseconds( 5000 ),
-            "mixed dependency retry did not merge",
+            "mixed dependency retry did not complete",
             nullptr );
         EXPECT_FALSE( receiver->HasKey( { "/reject/attack" } ).value() );
         EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
