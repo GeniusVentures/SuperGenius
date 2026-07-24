@@ -276,4 +276,9 @@ namespace sgns::trustedpeer
         std::shared_lock<std::shared_mutex> lock( cache_mutex_ );
         return genesis_confirmed_;
     }
+
+    void TrustedPeerRegistry::Unregister()
+    {
+        sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( base_key_.GetKey(), &registry_token_ );
+    }
 } // namespace sgns::trustedpeer

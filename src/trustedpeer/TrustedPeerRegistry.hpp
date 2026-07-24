@@ -166,6 +166,12 @@ namespace sgns::trustedpeer
          */
         bool IsGenesisConfirmed() const;
 
+        /**
+         * @brief Unregisters this instance's signer-set-source from
+         *        SecureCrdtRegistry (test-fixture teardown helper).
+         */
+        void Unregister();
+
     private:
         /**
          * @brief Registers this instance's signer-set-source with
