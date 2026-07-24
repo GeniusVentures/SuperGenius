@@ -43,6 +43,7 @@ namespace sgns::account
 
 namespace sgns
 {
+    class MintTransactionV2;
     using namespace boost::multiprecision;
     using EscrowDataPair = std::pair<std::string, base::Buffer>;
 
@@ -177,11 +178,6 @@ namespace sgns
                                                 uint32_t    receipt_log_index,
                                                 TokenID     tokenid,
                                                 std::string destination );
-
-        /// @brief Builds the durable identity key for one canonical external burn.
-        static std::string MakeBridgeExecutedKey( const std::string &chainid,
-                                                  const std::string &transaction_hash,
-                                                  uint32_t           receipt_log_index );
 
         /**
          * @brief Creates and enqueues a one-time migration mint transaction.
@@ -636,19 +632,22 @@ namespace sgns
         mutable std::chrono::steady_clock::time_point last_nonce_request_time_{};
         static constexpr std::chrono::milliseconds    k_init_tx_request_cooldown_ms{ 5000 };
 
-        /// @brief Bridge mint reservation/persistence constants.
-        static constexpr std::string_view kBridgeExecutedPrefix = "/bridge/executed/";
-        static constexpr std::string_view kBridgeKeySeparator   = ":";
-
-        using BridgeExecutedReader =
-            std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::GlobalDB::Buffer & )>;
-
         outcome::result<BridgeBurnState> GetBridgeBurnState( const std::string &chainid,
                                                              const std::string &transaction_hash,
                                                              uint32_t receipt_log_index ) const;
-        void ResetBridgeExecutedReader();
+        outcome::result<UTXOManager::AtomicMintEffectResult> ApplyConfirmedMintV2(
+            const std::shared_ptr<MintTransactionV2> &tx );
 
-        BridgeExecutedReader bridge_executed_reader_;
+        enum class MintFaultStage : uint8_t
+        {
+            AfterMintBatchCommitBeforeConfirmed
+        };
+        using MintFaultCallback =
+            std::function<outcome::result<void>( MintFaultStage )>;
+        outcome::result<void> InvokeMintFault( MintFaultStage stage ) const;
+        void ResetMintFaultCallback();
+        mutable std::mutex mint_application_mutex_;
+        MintFaultCallback mint_fault_callback_;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
         outcome::result<void> ParseMintTransaction( const std::shared_ptr<GeniusTransaction> &tx );

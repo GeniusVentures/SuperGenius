@@ -51,6 +51,12 @@ enum UTXOEntryState
     UTXO_ENTRY_RESERVED = 2;
 }
 
+enum UTXOEntryType
+{
+    UTXO_ENTRY_NORMAL = 0;
+    UTXO_ENTRY_BRIDGE = 1;
+}
+
 message UTXOEntryRecord
 {
     UTXO utxo = 1;
@@ -61,6 +67,19 @@ message UTXOEntryRecord
     uint64 spent_epoch = 6;
     bool has_spent_by_txid = 7;
     bytes spent_by_txid = 8;
+    UTXOEntryType type = 9;
+}
+
+message BridgeApplicationRecord
+{
+    uint32 version = 1;
+    string chain_id = 2;
+    bytes burn_hash = 3;
+    uint32 receipt_log_index = 4;
+    bytes winning_transaction_hash = 5;
+    string bridge_input_owner = 6;
+    UTXOEntryType bridge_input_type = 7;
+    repeated UTXOEntryRecord produced_outputs = 8;
 }
 
 message UTXOCheckpointRecord

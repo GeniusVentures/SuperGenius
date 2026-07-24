@@ -46,6 +46,9 @@ namespace sgns
     class TransactionManagerPendingLifecycleTestAccess
     {
     public:
+        using UTXOFaultStage = UTXOManager::FaultStage;
+        using MintFaultStage = TransactionManager::MintFaultStage;
+
         static void ChangeState( TransactionManager &manager, TransactionManager::State state )
         {
             manager.ChangeState( state );
@@ -109,16 +112,87 @@ namespace sgns
                 chain_id, transaction_hash, receipt_log_index );
         }
 
-        static void SetBridgeExecutedReader(
+        static void SetBridgeApplicationReader(
             TransactionManager &manager,
-            TransactionManager::BridgeExecutedReader reader )
+            UTXOManager::BridgeApplicationReader reader )
         {
-            manager.bridge_executed_reader_ = std::move( reader );
+            manager.account_m->GetUTXOManager().bridge_application_reader_ =
+                std::move( reader );
         }
 
-        static void ResetBridgeExecutedReader( TransactionManager &manager )
+        static void ResetBridgeApplicationReader( TransactionManager &manager )
         {
-            manager.ResetBridgeExecutedReader();
+            manager.account_m->GetUTXOManager().ResetBridgeApplicationReader();
+        }
+
+        static void SetUTXOFault(
+            TransactionManager &manager,
+            UTXOManager::FaultCallback callback )
+        {
+            manager.account_m->GetUTXOManager().fault_callback_ = std::move( callback );
+        }
+
+        static void ResetUTXOFault( TransactionManager &manager )
+        {
+            manager.account_m->GetUTXOManager().ResetFaultCallback();
+        }
+
+        static void SetMintFault(
+            TransactionManager &manager,
+            TransactionManager::MintFaultCallback callback )
+        {
+            manager.mint_fault_callback_ = std::move( callback );
+        }
+
+        static void ResetMintFault( TransactionManager &manager )
+        {
+            manager.ResetMintFaultCallback();
+        }
+
+        static outcome::result<void> Confirm(
+            TransactionManager &manager,
+            const std::shared_ptr<GeniusTransaction> &tx )
+        {
+            return manager.ChangeTransactionState(
+                tx, TransactionManager::TransactionStatus::CONFIRMED );
+        }
+
+        static std::optional<TransactionManager::TransactionStatus> Status(
+            const TransactionManager &manager,
+            const GeniusTransaction &tx )
+        {
+            std::shared_lock lock( manager.tx_mutex_m );
+            auto it = manager.tx_processed_m.find(
+                TransactionManager::GetTransactionPath( tx ) );
+            return it == manager.tx_processed_m.end()
+                     ? std::nullopt
+                     : std::optional<TransactionManager::TransactionStatus>( it->second.status );
+        }
+
+        static uint64_t ConfirmMetric( const TransactionManager &manager )
+        {
+            return manager.metrics_tracking_confirm_.load();
+        }
+
+        static std::optional<TransactionManager::AccountUTXOState> AccountState(
+            const TransactionManager &manager,
+            const std::string &address )
+        {
+            std::shared_lock lock( manager.account_utxo_state_mutex_ );
+            auto it = manager.account_utxo_state_.find( address );
+            return it == manager.account_utxo_state_.end()
+                     ? std::nullopt
+                     : std::optional<TransactionManager::AccountUTXOState>( it->second );
+        }
+
+        static outcome::result<std::optional<UTXOManager::BridgeApplication>> Application(
+            const TransactionManager &manager,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index )
+        {
+            return manager.account_m->GetUTXOManager().GetBridgeApplication(
+                chain, burn, index );
         }
 
         static std::shared_ptr<MintTransactionV2> LastQueuedMint( TransactionManager &manager )
@@ -483,10 +557,30 @@ namespace
         bool ExecutedKeyAbsent( const std::string &chain_id,
                                 const std::string &transaction_hash ) const
         {
+            auto hash = base::Hash256::fromReadableString( transaction_hash );
+            if ( hash.has_error() )
+            {
+                return true;
+            }
             crdt::GlobalDB::Buffer key;
-            key.put( TransactionManager::MakeBridgeExecutedKey(
-                chain_id, transaction_hash, kReceiptIndex ) );
+            key.put( UTXOManager::MakeBridgeApplicationKey(
+                chain_id, hash.value(), kReceiptIndex ) );
             return db_->GetDataStore()->get( key ).has_error();
+        }
+
+        std::shared_ptr<MintTransactionV2> PrepareMint( char burn_digit )
+        {
+            const std::string burn_hash( 64, burn_digit );
+            auto result = TransactionManagerPendingLifecycleTestAccess::MintFunds(
+                *manager_,
+                kAmount,
+                burn_hash,
+                "11155111",
+                kReceiptIndex,
+                kTokenId,
+                account_->GetAddress() );
+            EXPECT_TRUE( result.has_value() );
+            return TransactionManagerPendingLifecycleTestAccess::LastQueuedMint( *manager_ );
         }
 
         void ExpectMintFundsInvalid( const std::string &chain_id,
@@ -1054,9 +1148,10 @@ TEST_F( TransactionManagerPendingLifecycleTest,
         const auto queue_before =
             TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
 
-        TransactionManagerPendingLifecycleTestAccess::SetBridgeExecutedReader(
+        TransactionManagerPendingLifecycleTestAccess::SetBridgeApplicationReader(
             *manager_,
-            [error]( const crdt::GlobalDB::Buffer & )
+            [error]( const std::shared_ptr<storage::rocksdb> &,
+                     const crdt::GlobalDB::Buffer & )
                 -> outcome::result<crdt::GlobalDB::Buffer>
             {
                 return outcome::failure( error );
@@ -1069,7 +1164,7 @@ TEST_F( TransactionManagerPendingLifecycleTest,
             kReceiptIndex,
             kTokenId,
             account_->GetAddress() );
-        TransactionManagerPendingLifecycleTestAccess::ResetBridgeExecutedReader(
+        TransactionManagerPendingLifecycleTestAccess::ResetBridgeApplicationReader(
             *manager_ );
 
         ASSERT_TRUE( result.has_error() );
@@ -1090,9 +1185,10 @@ TEST_F( TransactionManagerPendingLifecycleTest,
     const std::string burn_hash( 64, 'd' );
     const auto queue_before =
         TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ );
-    TransactionManagerPendingLifecycleTestAccess::SetBridgeExecutedReader(
+    TransactionManagerPendingLifecycleTestAccess::SetBridgeApplicationReader(
         *manager_,
-        []( const crdt::GlobalDB::Buffer & )
+        []( const std::shared_ptr<storage::rocksdb> &,
+            const crdt::GlobalDB::Buffer & )
             -> outcome::result<crdt::GlobalDB::Buffer>
         {
             return outcome::failure( storage::DatabaseError::NOT_FOUND );
@@ -1105,7 +1201,7 @@ TEST_F( TransactionManagerPendingLifecycleTest,
         kReceiptIndex,
         kTokenId,
         account_->GetAddress() );
-    TransactionManagerPendingLifecycleTestAccess::ResetBridgeExecutedReader( *manager_ );
+    TransactionManagerPendingLifecycleTestAccess::ResetBridgeApplicationReader( *manager_ );
 
     ASSERT_TRUE( result.has_value() );
     EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
@@ -1158,23 +1254,181 @@ TEST_F( TransactionManagerPendingLifecycleTest,
                      .has_value() );
     auto consumed = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
         *manager_, "11155111", consumed_hash_text, kReceiptIndex );
-    ASSERT_TRUE( consumed.has_value() );
-    EXPECT_EQ( consumed.value(), TransactionManager::BridgeBurnState::AlreadyHandled );
+    ASSERT_TRUE( consumed.has_error() );
+    EXPECT_EQ( consumed.error(), std::make_error_code( std::errc::state_not_recoverable ) );
 
     const std::string persisted_hash( 64, '1' );
     crdt::GlobalDB::Buffer key;
-    key.put( TransactionManager::MakeBridgeExecutedKey(
-        "11155111", persisted_hash, kReceiptIndex ) );
+    key.put( "/bridge/executed/11155111:" + persisted_hash + ":" +
+             std::to_string( kReceiptIndex ) );
     crdt::GlobalDB::Buffer value;
     value.put( "executed" );
     ASSERT_TRUE( db_->GetDataStore()->put( key, value ).has_value() );
     auto persisted = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
         *manager_, "11155111", persisted_hash, kReceiptIndex );
     ASSERT_TRUE( persisted.has_value() );
-    EXPECT_EQ( persisted.value(), TransactionManager::BridgeBurnState::AlreadyHandled );
+    EXPECT_EQ( persisted.value(), TransactionManager::BridgeBurnState::Available );
 
     EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
                0U );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        MintConfirmationProducedEffectFailureIsRetryable )
+{
+    using Stage = TransactionManagerPendingLifecycleTestAccess::UTXOFaultStage;
+    auto mint = PrepareMint( '2' );
+    ASSERT_NE( mint, nullptr );
+    auto winner = base::Hash256::fromReadableString( mint->GetHash() );
+    ASSERT_TRUE( winner.has_value() );
+    const auto input = mint->GetUTXOParameters().first.front();
+
+    TransactionManagerPendingLifecycleTestAccess::SetUTXOFault(
+        *manager_,
+        []( Stage stage ) -> outcome::result<void>
+        {
+            if ( stage == Stage::ProducedOutputStage )
+            {
+                return outcome::failure( storage::DatabaseError::IO_ERROR );
+            }
+            return outcome::success();
+        } );
+    auto failed = TransactionManagerPendingLifecycleTestAccess::Confirm( *manager_, mint );
+    TransactionManagerPendingLifecycleTestAccess::ResetUTXOFault( *manager_ );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_EQ( failed.error(), storage::DatabaseError::IO_ERROR );
+    auto status = TransactionManagerPendingLifecycleTestAccess::Status( *manager_, *mint );
+    EXPECT_TRUE( !status || *status != TransactionManager::TransactionStatus::CONFIRMED );
+    EXPECT_FALSE( account_->GetUTXOManager().GetUnconsumedUTXO( winner.value(), 0 ) );
+    EXPECT_NE( account_->GetUTXOManager().GetOutPointState(
+                   input.txid_hash_, input.output_idx_ ),
+               UTXOManager::UTXOState::UTXO_CONSUMED );
+    EXPECT_TRUE( ExecutedKeyAbsent( "11155111", input.txid_hash_.toReadableString() ) );
+
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    EXPECT_TRUE( account_->GetUTXOManager().GetUnconsumedUTXO( winner.value(), 0 ) );
+    EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        input.txid_hash_, input.output_idx_ ) );
+    EXPECT_FALSE( ExecutedKeyAbsent( "11155111", input.txid_hash_.toReadableString() ) );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        MintConfirmationBridgeInputFailureLeavesNoPartialEffects )
+{
+    using Stage = TransactionManagerPendingLifecycleTestAccess::UTXOFaultStage;
+    auto mint = PrepareMint( '3' );
+    ASSERT_NE( mint, nullptr );
+    auto winner = base::Hash256::fromReadableString( mint->GetHash() );
+    ASSERT_TRUE( winner.has_value() );
+    const auto input = mint->GetUTXOParameters().first.front();
+
+    TransactionManagerPendingLifecycleTestAccess::SetUTXOFault(
+        *manager_,
+        []( Stage stage ) -> outcome::result<void>
+        {
+            if ( stage == Stage::BridgeInputStage )
+            {
+                return outcome::failure( storage::DatabaseError::IO_ERROR );
+            }
+            return outcome::success();
+        } );
+    auto failed = TransactionManagerPendingLifecycleTestAccess::Confirm( *manager_, mint );
+    TransactionManagerPendingLifecycleTestAccess::ResetUTXOFault( *manager_ );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_FALSE( account_->GetUTXOManager().GetUnconsumedUTXO( winner.value(), 0 ) );
+    EXPECT_NE( account_->GetUTXOManager().GetOutPointState(
+                   input.txid_hash_, input.output_idx_ ),
+               UTXOManager::UTXOState::UTXO_CONSUMED );
+    EXPECT_TRUE( ExecutedKeyAbsent( "11155111", input.txid_hash_.toReadableString() ) );
+
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    EXPECT_TRUE( account_->GetUTXOManager().GetUnconsumedUTXO( winner.value(), 0 ) );
+    EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        input.txid_hash_, input.output_idx_ ) );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        DuplicateCertificateReplayDoesNotDoubleApplyMintEffects )
+{
+    auto mint = PrepareMint( '4' );
+    ASSERT_NE( mint, nullptr );
+    const auto input = mint->GetUTXOParameters().first.front();
+    auto burn = input.txid_hash_;
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    const auto balance = account_->GetUTXOManager().GetBalance();
+    const auto root = account_->GetUTXOManager().ComputeUTXOMerkleRoot();
+    const auto metric =
+        TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ );
+    const auto state =
+        TransactionManagerPendingLifecycleTestAccess::AccountState(
+            *manager_, account_->GetAddress() );
+    auto application =
+        TransactionManagerPendingLifecycleTestAccess::Application(
+            *manager_, "11155111", burn, input.output_idx_ );
+    ASSERT_TRUE( application.has_value() && application.value().has_value() );
+    const auto bytes = application.value()->canonical_bytes;
+
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    EXPECT_EQ( account_->GetUTXOManager().GetBalance(), balance );
+    EXPECT_EQ( account_->GetUTXOManager().ComputeUTXOMerkleRoot(), root );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ ),
+               metric );
+    const auto state_after =
+        TransactionManagerPendingLifecycleTestAccess::AccountState(
+            *manager_, account_->GetAddress() );
+    ASSERT_EQ( state.has_value(), state_after.has_value() );
+    if ( state && state_after )
+    {
+        EXPECT_EQ( state->version, state_after->version );
+        EXPECT_EQ( state->root, state_after->root );
+    }
+    auto application_after =
+        TransactionManagerPendingLifecycleTestAccess::Application(
+            *manager_, "11155111", burn, input.output_idx_ );
+    ASSERT_TRUE( application_after.has_value() &&
+                 application_after.value().has_value() );
+    EXPECT_EQ( application_after.value()->canonical_bytes, bytes );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        RestartRecoversCommittedAndInterruptedMintApplication )
+{
+    using MintStage = TransactionManagerPendingLifecycleTestAccess::MintFaultStage;
+    auto mint = PrepareMint( '5' );
+    ASSERT_NE( mint, nullptr );
+    const auto input = mint->GetUTXOParameters().first.front();
+    TransactionManagerPendingLifecycleTestAccess::SetMintFault(
+        *manager_,
+        []( MintStage ) -> outcome::result<void>
+        {
+            return outcome::failure( std::errc::operation_canceled );
+        } );
+    auto interrupted =
+        TransactionManagerPendingLifecycleTestAccess::Confirm( *manager_, mint );
+    TransactionManagerPendingLifecycleTestAccess::ResetMintFault( *manager_ );
+    ASSERT_TRUE( interrupted.has_error() );
+    auto status = TransactionManagerPendingLifecycleTestAccess::Status( *manager_, *mint );
+    EXPECT_TRUE( !status || *status != TransactionManager::TransactionStatus::CONFIRMED );
+    auto application =
+        TransactionManagerPendingLifecycleTestAccess::Application(
+            *manager_, "11155111", input.txid_hash_, input.output_idx_ );
+    ASSERT_TRUE( application.has_value() && application.value().has_value() );
+
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    status = TransactionManagerPendingLifecycleTestAccess::Status( *manager_, *mint );
+    ASSERT_TRUE( status.has_value() );
+    EXPECT_EQ( *status, TransactionManager::TransactionStatus::CONFIRMED );
+    const auto metric =
+        TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ );
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::Confirm(
+                     *manager_, mint ).has_value() );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::ConfirmMetric( *manager_ ),
+               metric );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,

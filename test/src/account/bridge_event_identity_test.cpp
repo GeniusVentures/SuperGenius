@@ -467,12 +467,16 @@ TEST( BridgeEventIdentityTest, BlockWideObservationCannotInventReceiptOrdinal )
 TEST( BridgeEventIdentityTest, PersistenceIdentityIncludesReceiptOrdinal )
 {
     const std::string burn_hash( 64, 'a' );
-    const auto index_zero = sgns::TransactionManager::MakeBridgeExecutedKey( "11155111", burn_hash, 0 );
-    const auto index_two = sgns::TransactionManager::MakeBridgeExecutedKey( "11155111", burn_hash, 2 );
+    const auto parsed_burn = sgns::base::Hash256::fromReadableString( burn_hash );
+    ASSERT_TRUE( parsed_burn.has_value() );
+    const auto index_zero = sgns::UTXOManager::MakeBridgeApplicationKey(
+        "11155111", parsed_burn.value(), 0 );
+    const auto index_two = sgns::UTXOManager::MakeBridgeApplicationKey(
+        "11155111", parsed_burn.value(), 2 );
 
     EXPECT_NE( index_zero, index_two );
-    EXPECT_EQ( index_zero, "/bridge/executed/11155111:" + burn_hash + ":0" );
-    EXPECT_EQ( index_two, "/bridge/executed/11155111:" + burn_hash + ":2" );
+    EXPECT_EQ( index_zero, "/bridge/application/v1/11155111:" + burn_hash + ":0" );
+    EXPECT_EQ( index_two, "/bridge/application/v1/11155111:" + burn_hash + ":2" );
 }
 
 TEST( BridgeCatchupReceiptOrdinalTest, CheckedNarrowingCoversUint32Boundary )
