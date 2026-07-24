@@ -1136,8 +1136,11 @@ TEST_F( RegistrationTransactionE2ETest, MainRecoversFromChildApproved )
 
     // Poll for the child's UTXO to appear — the node's own TickOnce READY-branch ingests its
     // own submitted transaction and calls PutProducedUTXOs on first CRDT observation.
+    auto checkChildFunded = [this, &kFundAmount]() {
+        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
+    };
     ASSERT_WAIT_FOR_CONDITION(
-        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        checkChildFunded,
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1213,8 +1216,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToArbitraryAndMainUnaffecte
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
+    auto checkChildFunded1 = [this, &kFundAmount]() {
+        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
+    };
     ASSERT_WAIT_FOR_CONDITION(
-        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        checkChildFunded1,
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1285,8 +1291,11 @@ TEST_F( RegistrationTransactionE2ETest, ChildTransferToDevWalletUnaffected )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() );
 
+    auto checkChildFunded2 = [this, &kFundAmount]() {
+        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
+    };
     ASSERT_WAIT_FOR_CONDITION(
-        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        checkChildFunded2,
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
@@ -1492,6 +1501,9 @@ TEST_F( RegistrationTransactionE2ETest, DetachChildEndToEnd )
     auto register_result = tm_->RegisterChild( std::string( 128, 'r' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
 
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
+
     // Allow time for the initial registration's CRDT write to land before Detach's
     // auto-derive overload reads it back.
     auto checkRegExists = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
@@ -1553,6 +1565,9 @@ TEST_F( RegistrationTransactionE2ETest, ReplaceMainEndToEnd )
 
     auto register_result = tm_->RegisterChild( std::string( 128, 's' ), metadata, 1 );
     ASSERT_TRUE( register_result.has_value() ) << "Initial registration should succeed";
+
+    std::string            reg_key = TransactionManager::GetBlockChainBase() + "reg/" + account_->GetAddress();
+    crdt::HierarchicalKey  hk( reg_key );
 
     auto checkRegExists2 = [this, &hk]() { auto get_result = db_->Get( hk ); return get_result.has_value(); };
     ASSERT_WAIT_FOR_CONDITION(
@@ -1725,19 +1740,21 @@ TEST_F( RegistrationTransactionE2ETest, DetachPreservesChildUTXOsKeypairNonce )
     ASSERT_TRUE( detach_result.has_value() ) << "DetachChild should succeed against an existing registration";
 
     auto checkDetached3 = [this, &hk]() {
-            auto get_result = db_->Get( hk );
-            if ( get_result.has_value() )
+        auto get_result = db_->Get( hk );
+        if ( get_result.has_value() )
+        {
+            auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
+            if ( !deserialize_result.has_error() )
             {
-                auto deserialize_result = TransactionManager::DeSerializeTransaction( get_result.value() );
-                if ( !deserialize_result.has_error() )
-                {
-                    auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
-                    if ( candidate && candidate->GetDetachFlag() )
-                        return true;
-                }
+                auto candidate = std::dynamic_pointer_cast<RegistrationTransaction>( deserialize_result.value() );
+                if ( candidate && candidate->GetDetachFlag() )
+                    return true;
             }
-            return false;
-        },
+        }
+        return false;
+    };
+    ASSERT_WAIT_FOR_CONDITION(
+        checkDetached3,
         std::chrono::milliseconds( 10000 ),
         "Detach should be visible within timeout",
         nullptr );
@@ -2157,8 +2174,11 @@ TEST_F( RegistrationTransactionE2ETest, RevokePreservesChildUTXOsKeypairNonce )
     auto               fund_result = tm_->TransferFunds( kFundAmount, child_account_->GetAddress(), kTestTokenId );
     ASSERT_TRUE( fund_result.has_value() ) << "Main should be able to fund the certified child";
 
+    auto checkChildFunded3 = [this, &kFundAmount]() {
+        return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount;
+    };
     ASSERT_WAIT_FOR_CONDITION(
-        [this]() { return account_->GetUTXOManager().GetBalance( kTestTokenId, child_account_->GetAddress() ) >= kFundAmount; },
+        checkChildFunded3,
         std::chrono::milliseconds( 10000 ),
         "Child's funded balance should be visible within timeout",
         nullptr );
