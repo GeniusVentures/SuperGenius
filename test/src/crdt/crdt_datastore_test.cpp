@@ -678,6 +678,144 @@ namespace sgns::crdt
         EXPECT_TRUE( result.delta.tombstones().empty() );
     }
 
+    TEST_F( CrdtDatastoreTest, DeltaFilterMixedRejectAndRetryDependencyPreservesRetry )
+    {
+        CRDTDataFilter filter( crdtDatastore_->GetWorkJournal() );
+        std::atomic<int> legacy_filter_calls{ 0 };
+        ASSERT_TRUE( filter.RegisterDeltaFilter(
+            "^/?reject/.*$",
+            []( const pb::Delta & ) { return DeltaFilterResult::Reject(); } ) );
+        ASSERT_TRUE( filter.RegisterDeltaFilter(
+            "^/?retry/.*$",
+            []( const pb::Delta & )
+            {
+                return DeltaFilterResult::RetryDependency( "dependency-one" );
+            } ) );
+        ASSERT_TRUE( filter.RegisterElementFilter(
+            "^/?unrelated/.*$",
+            [&]( const Element & ) -> std::optional<std::vector<Element>>
+            {
+                ++legacy_filter_calls;
+                return std::nullopt;
+            } ) );
+
+        Delta mixed;
+        mixed.add_elements()->set_key( "/reject/attack" );
+        mixed.add_elements()->set_key( "/retry/slot" );
+        mixed.add_elements()->set_key( "/unrelated/live" );
+        auto result = filter.FilterDelta( mixed );
+
+        ASSERT_EQ( result.decision, DeltaFilterDecision::RetryDependency );
+        ASSERT_TRUE( result.dependency_cid.has_value() );
+        EXPECT_EQ( *result.dependency_cid, "dependency-one" );
+        EXPECT_EQ( result.delta.elements_size(), 2 );
+        EXPECT_EQ( result.delta.elements( 0 ).key(), "/retry/slot" );
+        EXPECT_EQ( result.delta.elements( 1 ).key(), "/unrelated/live" );
+        EXPECT_EQ( legacy_filter_calls.load(), 0 );
+
+        CRDTDataFilter conflicting_filter( crdtDatastore_->GetWorkJournal() );
+        ASSERT_TRUE( conflicting_filter.RegisterDeltaFilter(
+            "^/?retry/one/.*$",
+            []( const pb::Delta & )
+            {
+                return DeltaFilterResult::RetryDependency( "dependency-one" );
+            } ) );
+        ASSERT_TRUE( conflicting_filter.RegisterDeltaFilter(
+            "^/?retry/two/.*$",
+            []( const pb::Delta & )
+            {
+                return DeltaFilterResult::RetryDependency( "dependency-two" );
+            } ) );
+        Delta conflicting;
+        conflicting.add_elements()->set_key( "/retry/one/slot" );
+        conflicting.add_elements()->set_key( "/retry/two/slot" );
+        conflicting.add_elements()->set_key( "/unrelated/live" );
+        auto conflict_result = conflicting_filter.FilterDelta( conflicting );
+
+        EXPECT_EQ( conflict_result.decision, DeltaFilterDecision::Reject );
+        EXPECT_FALSE( conflict_result.dependency_cid.has_value() );
+        ASSERT_EQ( conflict_result.delta.elements_size(), 1 );
+        EXPECT_EQ( conflict_result.delta.elements( 0 ).key(), "/unrelated/live" );
+    }
+
+    TEST_F( CrdtDatastoreTest, MixedRejectAndRetryDependencyParksRetainedNamespace )
+    {
+        auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "mixed-dependency", ipfsDataStore_ );
+        auto receiver = crdt_pair.first;
+        auto receiver_broadcaster = crdt_pair.second;
+
+        std::atomic<int64_t> fake_elapsed_ms{ 0 };
+        const auto base_now = std::chrono::steady_clock::now();
+        receiver->SetMonotonicClockForTesting(
+            [&] { return base_now + std::chrono::milliseconds( fake_elapsed_ms.load() ); } );
+
+        ASSERT_OUTCOME_SUCCESS(
+            dependency_root,
+            crdtDatastore_->Publish( CreateTestDelta( "/dependency/mixed", "ready-marker" ), { "topic" } ) );
+        const auto dependency_cid = dependency_root.toString().value();
+        std::atomic<bool> dependency_ready{ false };
+        std::atomic<int>  callback_calls{ 0 };
+        ASSERT_TRUE( receiver->RegisterDeltaFilter(
+            "^/?reject/.*$",
+            []( const pb::Delta & ) { return DeltaFilterResult::Reject(); } ) );
+        ASSERT_TRUE( receiver->RegisterDeltaFilter(
+            "^/?retry/.*$",
+            [&]( const pb::Delta & )
+            {
+                return dependency_ready.load()
+                           ? DeltaFilterResult::Approve()
+                           : DeltaFilterResult::RetryDependency( dependency_cid );
+            } ) );
+        ASSERT_TRUE( receiver->RegisterNewElementCallback(
+            "^/?(retry|unrelated)/.*$",
+            [&]( CRDTCallbackManager::NewDataPair, const std::string & ) { ++callback_calls; } ) );
+        receiver->Start();
+
+        broadcaster_->SetMirrorCounterPart( receiver_broadcaster );
+        receiver_broadcaster->SetMirrorCounterPart( broadcaster_ );
+
+        auto mixed = std::make_shared<Delta>();
+        mixed->add_elements()->set_key( "/reject/attack" );
+        mixed->mutable_elements( 0 )->set_value( "attack" );
+        mixed->add_elements()->set_key( "/retry/slot" );
+        mixed->mutable_elements( 1 )->set_value( "certificate" );
+        mixed->add_elements()->set_key( "/unrelated/live" );
+        mixed->mutable_elements( 2 )->set_value( "live" );
+        ASSERT_OUTCOME_SUCCESS( source_cid, crdtDatastore_->Publish( mixed, { "topic" } ) );
+
+        ASSERT_WAIT_FOR_CONDITION( [&] { return receiver->GetParkedRootCount() == 1; },
+                                   std::chrono::milliseconds( 5000 ),
+                                   "mixed dependency root was not parked",
+                                   nullptr );
+        EXPECT_EQ( receiver->GetParkedRootCountForDependency( dependency_root ), 1 );
+        EXPECT_FALSE( receiver->HasKey( { "/reject/attack" } ).value() );
+        EXPECT_FALSE( receiver->HasKey( { "/retry/slot" } ).value() );
+        EXPECT_FALSE( receiver->HasKey( { "/unrelated/live" } ).value() );
+        EXPECT_EQ( callback_calls.load(), 0 );
+
+        dependency_ready = true;
+        fake_elapsed_ms = 1000;
+        receiver->WakeDependencyRetryWorkerForTesting();
+        ASSERT_WAIT_FOR_CONDITION(
+            [&]
+            {
+                return receiver->HasKey( { "/retry/slot" } ).value() &&
+                       receiver->HasKey( { "/unrelated/live" } ).value();
+            },
+            std::chrono::milliseconds( 5000 ),
+            "mixed dependency retry did not merge",
+            nullptr );
+        EXPECT_FALSE( receiver->HasKey( { "/reject/attack" } ).value() );
+        EXPECT_EQ( receiver->GetParkedRootCount(), 0 );
+        EXPECT_EQ( callback_calls.load(), 2 );
+
+        fake_elapsed_ms = 3000;
+        receiver->WakeDependencyRetryWorkerForTesting();
+        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+        EXPECT_EQ( callback_calls.load(), 2 );
+        CloseAndResetCRDT( receiver, receiver_broadcaster );
+    }
+
     TEST_F( CrdtDatastoreTest, DeltaFilterDependencyRetryRetainsAndEventuallyProcessesSource )
     {
         auto crdt_pair = CreateLoopBackCRDTInstance( databasePath + "dependency", ipfsDataStore_ );

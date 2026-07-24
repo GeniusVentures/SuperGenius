@@ -130,13 +130,19 @@ namespace sgns::crdt
             delta_registry_snapshot = delta_registry_;
         }
 
-        DeltaFilterDecision aggregate = DeltaFilterDecision::Approve;
-        std::optional<std::string> dependency;
-        DeltaFilterCallbackRegistry rejected_entries;
+        struct MatchingDecision
+        {
+            std::shared_ptr<const DeltaFilterCallbackEntry> entry;
+            DeltaFilterDecision                             decision;
+            std::optional<std::string>                      dependency_cid;
+        };
+
+        const pb::Delta             original_delta = delta;
+        std::vector<MatchingDecision> matching_decisions;
         for ( const auto &entry : delta_registry_snapshot )
         {
             bool matched = false;
-            for ( const auto &element : delta.elements() )
+            for ( const auto &element : original_delta.elements() )
             {
                 if ( std::regex_match( element.key(), entry->regex ) )
                 {
@@ -146,7 +152,7 @@ namespace sgns::crdt
             }
             if ( !matched )
             {
-                for ( const auto &tombstone : delta.tombstones() )
+                for ( const auto &tombstone : original_delta.tombstones() )
                 {
                     if ( std::regex_match( tombstone.key(), entry->regex ) )
                     {
@@ -160,62 +166,97 @@ namespace sgns::crdt
                 continue;
             }
 
-            auto result = entry->filter( delta );
-            if ( result.decision == DeltaFilterDecision::RetryDependency && !result.dependency_cid )
+            auto result = entry->filter( original_delta );
+            if ( result.decision == DeltaFilterDecision::RetryDependency &&
+                 ( !result.dependency_cid || result.dependency_cid->empty() ) )
             {
                 result = DeltaFilterResult::Reject();
             }
+            matching_decisions.push_back(
+                MatchingDecision{ entry, result.decision, std::move( result.dependency_cid ) } );
+        }
+
+        auto remove_matching_namespace = [&]( const DeltaFilterCallbackEntry &entry )
+        {
+            for ( int i = delta.elements_size() - 1; i >= 0; --i )
+            {
+                if ( std::regex_match( delta.elements( i ).key(), entry.regex ) )
+                {
+                    delta.mutable_elements()->DeleteSubrange( i, 1 );
+                }
+            }
+            for ( int i = delta.tombstones_size() - 1; i >= 0; --i )
+            {
+                if ( std::regex_match( delta.tombstones( i ).key(), entry.regex ) )
+                {
+                    delta.mutable_tombstones()->DeleteSubrange( i, 1 );
+                }
+            }
+        };
+
+        bool rejected_namespace = false;
+        for ( const auto &result : matching_decisions )
+        {
             if ( result.decision == DeltaFilterDecision::Reject )
             {
-                aggregate = DeltaFilterDecision::Reject;
-                rejected_entries.push_back( entry );
-            }
-            else if ( aggregate != DeltaFilterDecision::Reject &&
-                      result.decision == DeltaFilterDecision::RetryDependency )
-            {
-                aggregate  = DeltaFilterDecision::RetryDependency;
-                dependency = std::move( result.dependency_cid );
+                remove_matching_namespace( *result.entry );
+                rejected_namespace = true;
             }
         }
 
-        if ( aggregate == DeltaFilterDecision::RetryDependency )
+        auto namespace_is_retained = [&]( const DeltaFilterCallbackEntry &entry )
         {
-            return { std::move( delta ), aggregate, std::move( dependency ) };
-        }
-
-        if ( aggregate == DeltaFilterDecision::Reject )
-        {
-            for ( const auto &entry : rejected_entries )
+            for ( const auto &element : delta.elements() )
             {
-                bool matched = false;
-                for ( const auto &element : delta.elements() )
+                if ( std::regex_match( element.key(), entry.regex ) )
                 {
-                    matched |= std::regex_match( element.key(), entry->regex );
-                }
-                for ( const auto &tombstone : delta.tombstones() )
-                {
-                    matched |= std::regex_match( tombstone.key(), entry->regex );
-                }
-                if ( !matched )
-                {
-                    continue;
-                }
-
-                for ( int i = delta.elements_size() - 1; i >= 0; --i )
-                {
-                    if ( std::regex_match( delta.elements( i ).key(), entry->regex ) )
-                    {
-                        delta.mutable_elements()->DeleteSubrange( i, 1 );
-                    }
-                }
-                for ( int i = delta.tombstones_size() - 1; i >= 0; --i )
-                {
-                    if ( std::regex_match( delta.tombstones( i ).key(), entry->regex ) )
-                    {
-                        delta.mutable_tombstones()->DeleteSubrange( i, 1 );
-                    }
+                    return true;
                 }
             }
+            for ( const auto &tombstone : delta.tombstones() )
+            {
+                if ( std::regex_match( tombstone.key(), entry.regex ) )
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        std::optional<std::string> retry_dependency;
+        std::vector<std::shared_ptr<const DeltaFilterCallbackEntry>> retained_retry_entries;
+        bool conflicting_dependencies = false;
+        for ( const auto &result : matching_decisions )
+        {
+            if ( result.decision != DeltaFilterDecision::RetryDependency ||
+                 !namespace_is_retained( *result.entry ) )
+            {
+                continue;
+            }
+
+            retained_retry_entries.push_back( result.entry );
+            if ( !retry_dependency )
+            {
+                retry_dependency = result.dependency_cid;
+            }
+            else if ( *retry_dependency != *result.dependency_cid )
+            {
+                conflicting_dependencies = true;
+            }
+        }
+
+        if ( conflicting_dependencies )
+        {
+            for ( const auto &entry : retained_retry_entries )
+            {
+                remove_matching_namespace( *entry );
+            }
+            return { std::move( delta ), DeltaFilterDecision::Reject, std::nullopt };
+        }
+
+        if ( retry_dependency )
+        {
+            return { std::move( delta ), DeltaFilterDecision::RetryDependency, std::move( retry_dependency ) };
         }
 
         std::vector<std::string>         additional_elements_to_delete;
@@ -286,7 +327,9 @@ namespace sgns::crdt
             delta.mutable_elements()->DeleteSubrange( index, 1 );
         }
 
-        return { std::move( delta ), aggregate, std::nullopt };
+        return { std::move( delta ),
+                 rejected_namespace ? DeltaFilterDecision::Reject : DeltaFilterDecision::Approve,
+                 std::nullopt };
     }
 
     void CRDTDataFilter::FilterElementsOnDelta( pb::Delta &delta ) const
