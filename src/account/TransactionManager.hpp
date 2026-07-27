@@ -36,6 +36,11 @@
 #include "processing/proto/SGProcessing.pb.h"
 #include "outcome/outcome.hpp"
 
+namespace sgns::account
+{
+    class BurnConfig;
+} // namespace sgns::account
+
 namespace sgns
 {
     using namespace boost::multiprecision;
@@ -52,9 +57,10 @@ namespace sgns
         static constexpr uint64_t         NONCE_REQUEST_TIMEOUT_MS = 5000; ///< Unified timeout for all nonce requests
 
         /// Fraction of an escrow payout burned to the zero address during PayEscrow, in basis points.
-        /// Eventually settable via multisig CRDT config; hardcoded default until then.
-        static constexpr uint64_t BURN_BASIS_POINTS  = 100; // 1%
-        static constexpr uint64_t BASIS_POINTS_TOTAL = 10000;
+        /// Pre-quorum/genesis-absent fallback only -- the live value is cached in burn_basis_points_
+        /// and refreshed via BurnConfig's quorum-signed CRDT value (BURN-02, BURN-03).
+        static constexpr uint64_t BURN_BASIS_POINTS_DEFAULT = 100; // 1%
+        static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
 
         /**
          * @brief State of the Transaction Manager
@@ -124,7 +130,9 @@ namespace sgns
             bool                                     full_node           = false,
             uint16_t                                 subnet_id           = 0,
             std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
+            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ),
+            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::shared_ptr<sgns::account::BurnConfig> burn_config             = nullptr );
 
         ~TransactionManager();
 
@@ -385,7 +393,9 @@ namespace sgns
                             bool                                     full_node,
                             uint16_t                                 subnet_id,
                             std::chrono::milliseconds                timestamp_tolerance,
-                            std::chrono::milliseconds                mutability_window );
+                            std::chrono::milliseconds                mutability_window,
+                            uint64_t                                 initial_burn_basis_points,
+                            std::shared_ptr<sgns::account::BurnConfig> burn_config );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
@@ -596,6 +606,10 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_insert_{ 0 };
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
+
+        /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
+        ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
+        std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );

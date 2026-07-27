@@ -344,7 +344,7 @@ namespace sgns
          */
         static constexpr uint64_t GetBurnBasisPoints()
         {
-            return TransactionManager::BURN_BASIS_POINTS;
+            return TransactionManager::BURN_BASIS_POINTS_DEFAULT;
         }
 
         /**

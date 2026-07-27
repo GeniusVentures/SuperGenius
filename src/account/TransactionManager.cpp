@@ -23,6 +23,7 @@
 #include "MigrationAllowList.hpp"
 #include "EscrowTransaction.hpp"
 #include "UTXOMerkle.hpp"
+#include "account/BurnConfig.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/AccountMessenger.hpp"
 #include "account/proto/SGTransaction.pb.h"
@@ -127,7 +128,9 @@ namespace sgns
                                                                  bool                                     full_node,
                                                                  uint16_t                                 subnet_id,
                                                                  std::chrono::milliseconds timestamp_tolerance,
-                                                                 std::chrono::milliseconds mutability_window )
+                                                                 std::chrono::milliseconds mutability_window,
+                                                                 uint64_t                  initial_burn_basis_points,
+                                                                 std::shared_ptr<sgns::account::BurnConfig> burn_config )
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
@@ -136,7 +139,9 @@ namespace sgns
                                                                                      full_node,
                                                                                      subnet_id,
                                                                                      timestamp_tolerance,
-                                                                                     mutability_window ) );
+                                                                                     mutability_window,
+                                                                                     initial_burn_basis_points,
+                                                                                     burn_config ) );
 
         instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
@@ -256,6 +261,18 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
 
+        if ( burn_config )
+        {
+            burn_config->RegisterRefreshCallback(
+                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( uint64_t new_value )
+                {
+                    if ( auto strong = weak_ptr.lock() )
+                    {
+                        strong->burn_basis_points_.store( new_value, std::memory_order_relaxed );
+                    }
+                } );
+        }
+
         return instance;
     }
 
@@ -266,7 +283,9 @@ namespace sgns
                                             bool                                     full_node,
                                             uint16_t                                 subnet_id,
                                             std::chrono::milliseconds                timestamp_tolerance,
-                                            std::chrono::milliseconds                mutability_window ) :
+                                            std::chrono::milliseconds                mutability_window,
+                                            uint64_t                                 initial_burn_basis_points,
+                                            std::shared_ptr<sgns::account::BurnConfig> /*burn_config*/ ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
@@ -277,6 +296,7 @@ namespace sgns
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( timestamp_tolerance ),
         mutability_window_m( mutability_window ),
+        burn_basis_points_( initial_burn_basis_points ),
         last_loop_time_( std::chrono::steady_clock::now() ),
         m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
     {
@@ -803,7 +823,8 @@ namespace sgns
 
         // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
         // taken at escrow creation.
-        const auto burn_amount = ( escrow_amount * BURN_BASIS_POINTS ) / BASIS_POINTS_TOTAL;
+        const auto burn_amount = ( escrow_amount * burn_basis_points_.load( std::memory_order_relaxed ) ) /
+                                  BASIS_POINTS_TOTAL;
         const auto available   = escrow_amount - burn_amount;
 
         BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
