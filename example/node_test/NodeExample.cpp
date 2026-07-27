@@ -23,6 +23,9 @@
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
 #include "account/GeniusNode.hpp"
+#include "account/TokenAmount.hpp"
+#include <boost/algorithm/hex.hpp>
+#include <array>
 #include <thread>
 #include <chrono>
 
@@ -163,6 +166,17 @@ static bool check_arg_count_min( const std::vector<std::string> &args, size_t mi
     return true;
 }
 
+static bool check_arg_count_range( const std::vector<std::string> &args, size_t min, size_t max,
+                                    const std::string &usage )
+{
+    if ( args.size() < min || args.size() > max )
+    {
+        logger->error( "Usage: {}", usage );
+        return false;
+    }
+    return true;
+}
+
 static constexpr const char *POSENET_JSON = R"({
   "name": "posenet-inference",
   "version": "1.0.0",
@@ -245,6 +259,33 @@ static constexpr const char *POSENET_JSON = R"({
   ]
 })";
 
+static bool parse_token_id( const std::string &hex_str, sgns::TokenID &out_token_id )
+{
+    std::string hex = hex_str;
+    if ( hex.size() >= 2 && ( hex.rfind( "0x", 0 ) == 0 || hex.rfind( "0X", 0 ) == 0 ) )
+    {
+        hex = hex.substr( 2 );
+    }
+
+    if ( hex.size() != 64 )
+    {
+        return false;
+    }
+
+    std::array<uint8_t, 32> buf;
+    try
+    {
+        boost::algorithm::unhex( hex.begin(), hex.end(), buf.begin() );
+    }
+    catch ( ... )
+    {
+        return false;
+    }
+
+    out_token_id = sgns::TokenID::FromBytes( buf.data(), buf.size() );
+    return true;
+}
+
 static void cmd_info( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
     if ( !check_arg_count( args, 1, "info" ) )
@@ -261,6 +302,29 @@ static void cmd_balance( const std::vector<std::string> &args, std::shared_ptr<s
         return;
     }
     logger->info( "Balance: {}", node->GetBalance( args[1] ) );
+}
+
+static void cmd_childbalance( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count_range( args, 2, 3, "childbalance <child_address> [token_id]" ) )
+    {
+        return;
+    }
+
+    if ( args.size() == 2 )
+    {
+        logger->info( "Child balance: {}", node->GetChildBalance( args[1] ) );
+        return;
+    }
+
+    sgns::TokenID token_id;
+    if ( !parse_token_id( args[2], token_id ) )
+    {
+        logger->error( "Invalid token_id: '{}' — must be 64 hex digits (optionally 0x-prefixed).", args[2] );
+        return;
+    }
+
+    logger->info( "Child balance: {}", node->GetChildBalance( args[1], token_id ) );
 }
 
 static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
@@ -358,6 +422,7 @@ static const std::map<std::string, CmdFunc> COMMANDS = {
     { "?", cmd_help },
     { "info", cmd_info },
     { "balance", cmd_balance },
+    { "childbalance", cmd_childbalance },
     { "ds", cmd_ds },
     { "mint", cmd_mint },
     { "transfer", cmd_transfer },
@@ -374,6 +439,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  help, ?                  Show this help\n"
               << "  info                     Display account balance\n"
               << "  balance <token_id>       Display balance for a specific token\n"
+              << "  childbalance <addr> [id]  Query a child wallet's balance\n"
               << "  ds                       Print the data store\n"
               << "  mint <amount>            Mint tokens\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
