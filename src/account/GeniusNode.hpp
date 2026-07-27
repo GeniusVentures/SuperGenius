@@ -783,6 +783,37 @@ namespace sgns
         friend class GeniusNodeCatchupTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 
+        enum class NetworkConfigValueStatus : uint8_t
+        {
+            Missing,
+            Valid,
+            Invalid
+        };
+
+        struct NetworkConsensusConfigResolution
+        {
+            uint16_t                  port_seed;
+            bool                      auto_dht;
+            std::chrono::milliseconds vote_selection_window;
+            NetworkConfigValueStatus  port_seed_status;
+            NetworkConfigValueStatus  auto_dht_status;
+            NetworkConfigValueStatus  vote_selection_window_status;
+        };
+
+        /**
+         * @brief Resolves side-effect-free network/consensus JSON values shared by startup and focused tests.
+         * @param[in] json Serialized network_config.json contents.
+         * @param[in] default_port_seed Port seed used when the key is missing or invalid.
+         * @param[in] default_auto_dht Auto-DHT value used when the key is missing or invalid.
+         * @param[in] default_vote_selection_window Vote window used when the key is missing or invalid.
+         * @return Resolved values plus per-key status for startup diagnostics.
+         */
+        static NetworkConsensusConfigResolution ResolveNetworkConsensusConfig(
+            std::string_view          json,
+            uint16_t                  default_port_seed,
+            bool                      default_auto_dht,
+            std::chrono::milliseconds default_vote_selection_window );
+
         enum class CatchupSubmissionState : uint8_t
         {
             NotAttempted,

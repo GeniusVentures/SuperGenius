@@ -252,6 +252,70 @@ namespace sgns
         return outcome::success();
     }
 
+    GeniusNode::NetworkConsensusConfigResolution GeniusNode::ResolveNetworkConsensusConfig(
+        std::string_view          json,
+        uint16_t                  default_port_seed,
+        bool                      default_auto_dht,
+        std::chrono::milliseconds default_vote_selection_window )
+    {
+        NetworkConsensusConfigResolution resolved{ default_port_seed,
+                                                   default_auto_dht,
+                                                   default_vote_selection_window,
+                                                   NetworkConfigValueStatus::Missing,
+                                                   NetworkConfigValueStatus::Missing,
+                                                   NetworkConfigValueStatus::Missing };
+
+        rapidjson::Document config_json;
+        config_json.Parse( json.data(), json.size() );
+        if ( config_json.HasParseError() || !config_json.IsObject() )
+        {
+            return resolved;
+        }
+
+        if ( config_json.HasMember( "port_seed" ) )
+        {
+            if ( config_json["port_seed"].IsUint() )
+            {
+                resolved.port_seed        = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                resolved.port_seed_status = NetworkConfigValueStatus::Valid;
+            }
+            else
+            {
+                resolved.port_seed_status = NetworkConfigValueStatus::Invalid;
+            }
+        }
+
+        if ( config_json.HasMember( "auto_dht" ) )
+        {
+            if ( config_json["auto_dht"].IsBool() )
+            {
+                resolved.auto_dht        = config_json["auto_dht"].GetBool();
+                resolved.auto_dht_status = NetworkConfigValueStatus::Valid;
+            }
+            else
+            {
+                resolved.auto_dht_status = NetworkConfigValueStatus::Invalid;
+            }
+        }
+
+        if ( config_json.HasMember( "consensus_vote_selection_window_ms" ) )
+        {
+            const auto &value = config_json["consensus_vote_selection_window_ms"];
+            if ( value.IsUint64() && value.GetUint64() > 0 &&
+                 value.GetUint64() <= static_cast<uint64_t>( ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count() ) )
+            {
+                resolved.vote_selection_window = std::chrono::milliseconds( value.GetUint64() );
+                resolved.vote_selection_window_status = NetworkConfigValueStatus::Valid;
+            }
+            else
+            {
+                resolved.vote_selection_window_status = NetworkConfigValueStatus::Invalid;
+            }
+        }
+
+        return resolved;
+    }
+
     // Reordered constructor (INTF-03 / CONTEXT D-05). Account is created via std::visit
     // AFTER LoadSgnsConfig() resolves node_type_ -> is_full_node_ (the init-order hinge fix).
     // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
@@ -1220,7 +1284,8 @@ namespace sgns
         {
             std::stringstream buffer;
             buffer << config_file.rdbuf();
-            config_json.Parse( buffer.str().c_str() );
+            const auto config_text = buffer.str();
+            config_json.Parse( config_text.c_str() );
             if ( !config_json.HasParseError() && config_json.IsObject() )
             {
                 if ( config_json.HasMember( "pubsub_port" ) && config_json["pubsub_port"].IsString() )
@@ -1266,57 +1331,49 @@ namespace sgns
                     low_water = config_json["low_water"].GetInt();
                 }
 
+                const auto resolved_config = ResolveNetworkConsensusConfig(
+                    config_text, port_seed, autodht_, consensus_vote_selection_window_ );
+                port_seed                       = resolved_config.port_seed;
+                autodht_                        = resolved_config.auto_dht;
+                consensus_vote_selection_window_ = resolved_config.vote_selection_window;
+
                 // ── port_seed: numeric read (intentional divergence from the legacy
                 //    string-based pubsub_port read above — see HARD-01 / CONTEXT D-08).
                 //    Config wins when present; the constructor param is the fallback.
-                if ( config_json.HasMember( "port_seed" ) )
+                if ( resolved_config.port_seed_status == NetworkConfigValueStatus::Valid )
                 {
-                    if ( config_json["port_seed"].IsUint() )
-                    {
-                        port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
-                        node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
-                    }
-                    else
-                    {
-                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
-                                            port_seed );
-                    }
+                    node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
+                }
+                else if ( resolved_config.port_seed_status == NetworkConfigValueStatus::Invalid )
+                {
+                    node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
+                                        port_seed );
                 }
 
                 // ── auto_dht: bool read. JSON key "auto_dht" -> member autodht_ (D-07).
                 //    Config wins when present; the constructor param (assigned in the ctor
                 //    init-list) is the fallback.
-                if ( config_json.HasMember( "auto_dht" ) )
+                if ( resolved_config.auto_dht_status == NetworkConfigValueStatus::Valid )
                 {
-                    if ( config_json["auto_dht"].IsBool() )
-                    {
-                        autodht_ = config_json["auto_dht"].GetBool();
-                        node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
-                    }
-                    else
-                    {
-                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}",
-                                            autodht_ );
-                    }
+                    node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
+                }
+                else if ( resolved_config.auto_dht_status == NetworkConfigValueStatus::Invalid )
+                {
+                    node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}",
+                                        autodht_ );
                 }
 
-                if ( config_json.HasMember( "consensus_vote_selection_window_ms" ) )
+                if ( resolved_config.vote_selection_window_status == NetworkConfigValueStatus::Valid )
                 {
-                    const auto &value = config_json["consensus_vote_selection_window_ms"];
-                    if ( value.IsUint64() && value.GetUint64() > 0 &&
-                         value.GetUint64() <= static_cast<uint64_t>( ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count() ) )
-                    {
-                        consensus_vote_selection_window_ = std::chrono::milliseconds( value.GetUint64() );
-                        node_logger_->info( "network_config.json: consensus vote selection window overridden to {} ms",
-                                            consensus_vote_selection_window_.count() );
-                    }
-                    else
-                    {
-                        node_logger_->warn(
-                            "network_config.json: consensus_vote_selection_window_ms must be an integer in [1, {}], using compiled default {} ms",
-                            ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count(),
-                            ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW.count() );
-                    }
+                    node_logger_->info( "network_config.json: consensus vote selection window overridden to {} ms",
+                                        consensus_vote_selection_window_.count() );
+                }
+                else if ( resolved_config.vote_selection_window_status == NetworkConfigValueStatus::Invalid )
+                {
+                    node_logger_->warn(
+                        "network_config.json: consensus_vote_selection_window_ms must be an integer in [1, {}], using compiled default {} ms",
+                        ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count(),
+                        ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW.count() );
                 }
 
                 // ── Parse reconnect config ──
