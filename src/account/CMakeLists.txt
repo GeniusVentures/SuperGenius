@@ -83,6 +83,7 @@ set(GENIUS_NODE_SOURCES
     GeniusNode.cpp
     ChainRpcEndpointProvider.cpp
     BridgeRelayer.cpp
+    BurnConfig.cpp
 )
 
 set(GENIUS_NODE_LIBS
@@ -130,6 +131,7 @@ set(GENIUS_NODE_LIBS
     migration
     evm_watcher_service
     sgns_genius_account
+    trustedpeer
 )
 
 
