@@ -44,14 +44,14 @@ The current milestone hardens consensus finality so competing transactions resol
 - ✓ Certificates remain cryptographically bound to exact proposals while authoritative storage and finality identity use the canonical slot — **Validated in Phase 9**
 - ✓ Existing transaction-hash consumers retrieve the winning slot certificate through a verified secondary index — **Validated in Phase 9**
 - ✓ Normal transactions retain address-plus-nonce slot identity and certificate-chain validation — **Validated in Phase 9**
+- ✓ A validator signs at most one proposal per canonical slot while its signature can still contribute to a valid certificate — **Validated in Phase 10**
+- ✓ Validator vote locks survive restart and transition atomically to finalized slot state when a valid certificate is observed — **Validated in Phase 10**
+- ✓ Competing proposals may replace the current best before voting; a validator never revotes after publishing its slot signature — **Validated in Phase 10**
 
 ### Active
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] A validator signs at most one proposal per canonical slot while its signature can still contribute to a valid certificate
-- [ ] Validator vote locks survive restart and transition atomically to finalized slot state when a valid certificate is observed
-- [ ] Competing proposals may replace the current best before voting; a validator never revotes after publishing its slot signature
 - [ ] Bridge burn reservations are owned by the canonical burn slot, survive losing proposals, and become consumed at certificate finality
 - [ ] Automated tests reproduce the observed double-certificate race and prove exactly one certificate and one confirmed mint
 
@@ -74,7 +74,7 @@ The current milestone hardens consensus finality so competing transactions resol
 
 ## Context
 
-**Current state:** Phase 9 completed on 2026-07-24. Canonical slot identities, authoritative slot-keyed certificates, verified transaction-hash lookup, atomic mint application, safe CRDT teardown, and immutable RPC decision snapshots are implemented and verified. Durable validator vote locking remains Phase 10.
+**Current state:** Phase 10 completed on 2026-07-27. Canonical slot identities, authoritative slot-keyed certificates, durable one-signature-per-slot vote locking, deterministic pre-vote selection, and finality-before-cleanup are implemented and verified. Slot-owned bridge burn reservations remain Phase 11.
 
 **Observed safety failure:** In `log_bridge_race.txt`, transaction `7541b3e2...` and transaction `9a378fd9...` reference the same burn `771780cf...` and resolve to the same mint-v2 slot. Nine validators sign both proposals, allowing both to reach quorum and become confirmed.
 
@@ -106,10 +106,10 @@ The current milestone hardens consensus finality so competing transactions resol
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Store the authoritative certificate by canonical slot, with transaction hash as a secondary lookup index | Certificate finality must match the resource over which proposals compete while existing transaction-chain consumers still need hash retrieval | Phase 9 ✓ |
-| Enforce one published validator signature per slot | A 75% quorum can only remain safe if honest validators do not sign competing proposals in the same finality domain | — Pending |
-| Keep vote locks until certificate finality or cryptographic expiry, and persist them before publishing | In-memory or proposal-lifetime locks allow restart and timeout equivocation while old signatures remain usable | — Pending |
-| Finalize the slot in `HandleCertificate()` before clearing proposal state | This is the earliest valid-certificate observation and closes the gap before CRDT transaction application | — Pending |
-| Allow best-proposal replacement only before the validator's one irreversible vote | Published signatures cannot be retracted; a bounded collection window preserves deterministic candidate selection without double-signing | — Pending |
+| Enforce one published validator signature per slot | A 75% quorum can only remain safe if honest validators do not sign competing proposals in the same finality domain | Phase 10 ✓ |
+| Keep vote locks until certificate finality or cryptographic expiry, and persist them before publishing | In-memory or proposal-lifetime locks allow restart and timeout equivocation while old signatures remain usable | Phase 10 ✓ |
+| Finalize the slot in `HandleCertificate()` before clearing proposal state | This is the earliest valid-certificate observation and closes the gap before CRDT transaction application | Phase 10 ✓ |
+| Allow best-proposal replacement only before the validator's one irreversible vote | Published signatures cannot be retracted; a bounded collection window preserves deterministic candidate selection without double-signing | Phase 10 ✓ |
 | Make bridge reservations slot-owned rather than proposal-owned | Competing candidates share one burn resource; losing proposals must not unlock the eventual winner | — Pending |
 | `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
 | `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`). Factory params still exist (additive) — collapse deferred to Phase 2/3 |
@@ -137,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-24 after completing Phase 9 Canonical Slot and Certificate Storage*
+*Last updated: 2026-07-27 after completing Phase 10 Durable Vote Lock and Finalization State Machine*
