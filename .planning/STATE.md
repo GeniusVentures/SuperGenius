@@ -4,14 +4,14 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
 status: executing
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-07-27T16:00:10.542Z"
+stopped_at: Completed 10-04-PLAN.md
+last_updated: "2026-07-27T16:48:50.733Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 19
+  completed_plans: 20
   percent: 25
 ---
 
@@ -31,7 +31,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-07-27
 
@@ -71,8 +71,8 @@ Last activity: 2026-07-27
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T16:00:10.538Z
-**Stopped at:** Completed 10-03-PLAN.md
+**Last session:** 2026-07-27T16:48:50.663Z
+**Stopped at:** Completed 10-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -98,6 +98,7 @@ Last activity: 2026-07-27
 | Phase 10 P01 | 5 min | 1 tasks | 3 files |
 | Phase 10 P02 | 9 min | 1 tasks | 5 files |
 | Phase 10 P03 | 24 min | 1 tasks | 10 files |
+| Phase 10 P04 | 34 min | 1 tasks | 4 files |
 
 ## Decisions
 
@@ -142,3 +143,6 @@ Last activity: 2026-07-27
 - [Phase 10]: Only exact RocksDB NOT_FOUND represents absence; all query, decode, canonicalization, identity, and relationship failures return typed errors. — Unreadable or contradictory local state cannot safely unlock a validator for another signature.
 - [Phase 10]: Conflict evidence and SafetyViolation are one batch, and safety authority must identify one member of the canonical digest/proposal pair. — Crash recovery must never expose conflict evidence without the participation stop, or accept mismatched safety authority.
 - [Phase 10]: Consensus startup restores and validates durable vote, process, conflict, safety, and certificate authority before live side effects; replay publishes only exact stored envelopes after transport readiness, while stale or handler-blocked work remains Pending. — This preserves crash safety and signature identity while preventing corrupt local state, stale leases, or unavailable handlers from creating observable consensus actions or false completion.
+- [Phase 10]: SigningPublishing reserves a slot through durable storage and completion of the first raw publish attempt. — Finalization cannot interleave with a partially published irreversible vote.
+- [Phase 10]: PublishingReplay retries exact persisted envelope bytes without re-signing and stops under finality or safety authority. — Durable signature identity remains stable across transport failure.
+- [Phase 10]: Later generations require durable retirement strictly after the acceptance horizon. — Boundary equality remains locked and retirement precedes later signing.
