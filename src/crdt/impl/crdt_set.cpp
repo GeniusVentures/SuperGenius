@@ -668,56 +668,62 @@ namespace sgns::crdt
             return outcome::failure( boost::system::error_code{} );
         }
 
-        std::lock_guard lg( this->mutex_ );
-        CRDTSet()->debug( "PutElems called with {} elements, id '{}', priority {}",
-                          aElems.size(),
-                          aID,
-                          aPriority );
-
-        auto batchDatastore = this->dataStore_->batch();
-
         // Elements actually written to the batch (SetValue returned true) --
         // hooks for these fire only after the batch below successfully commits
-        // (see SetValue's doc comment for why pre-commit hook firing is wrong).
+        // (see SetValue's doc comment for why pre-commit hook firing is wrong)
+        // AND only after this->mutex_ is released (see below -- a hook that
+        // re-enters CrdtSet/CrdtDatastore/GlobalDB synchronously, as
+        // SecureCrdt::ReadIfQuorum's callback-driven re-derivation does, must
+        // never run while this instance's own mutex_ is still held).
         std::vector<std::pair<std::string, Buffer>> hookPending;
 
-        for ( auto &elem : aElems )
         {
-            // overwrite the identifier as it would come unset
-            elem.set_id( aID );
-            auto key = elem.key();
-            CRDTSet()->debug( "PutElems writing key '{}' with id '{}'", key, aID );
+            std::lock_guard lg( this->mutex_ );
+            CRDTSet()->debug( "PutElems called with {} elements, id '{}', priority {}",
+                              aElems.size(),
+                              aID,
+                              aPriority );
 
-            // /namespace/s/<key>/<id>
-            auto kNamespace = this->ElemsPrefix( key ).ChildString( aID );
+            auto batchDatastore = this->dataStore_->batch();
 
-            Buffer keyBuffer;
-            keyBuffer.put( kNamespace.GetKey() );
-
-            BOOST_OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
-            // update the value if applicable:
-            // * higher priority than we currently have.
-            // * not tombstoned before.
-            Buffer valueBuffer;
-            valueBuffer.put( elem.value() );
-            auto setValueResult = this->SetValue( batchDatastore, key, aID, valueBuffer, aPriority );
-            if ( setValueResult.has_failure() )
+            for ( auto &elem : aElems )
             {
-                return outcome::failure( setValueResult.error() );
-            }
-            if ( setValueResult.value() )
-            {
-                hookPending.emplace_back( key, std::move( valueBuffer ) );
-            }
-        }
-        auto commitResult = batchDatastore->commit();
-        if ( commitResult.has_failure() )
-        {
-            CRDTSet()->error( "PutElems batch commit failed for id '{}'", aID );
-            return outcome::failure( commitResult.error() );
-        }
+                // overwrite the identifier as it would come unset
+                elem.set_id( aID );
+                auto key = elem.key();
+                CRDTSet()->debug( "PutElems writing key '{}' with id '{}'", key, aID );
 
-        CRDTSet()->debug( "PutElems committed {} elements for id '{}'", aElems.size(), aID );
+                // /namespace/s/<key>/<id>
+                auto kNamespace = this->ElemsPrefix( key ).ChildString( aID );
+
+                Buffer keyBuffer;
+                keyBuffer.put( kNamespace.GetKey() );
+
+                BOOST_OUTCOME_TRY( batchDatastore->put( std::move( keyBuffer ), Buffer() ) );
+                // update the value if applicable:
+                // * higher priority than we currently have.
+                // * not tombstoned before.
+                Buffer valueBuffer;
+                valueBuffer.put( elem.value() );
+                auto setValueResult = this->SetValue( batchDatastore, key, aID, valueBuffer, aPriority );
+                if ( setValueResult.has_failure() )
+                {
+                    return outcome::failure( setValueResult.error() );
+                }
+                if ( setValueResult.value() )
+                {
+                    hookPending.emplace_back( key, std::move( valueBuffer ) );
+                }
+            }
+            auto commitResult = batchDatastore->commit();
+            if ( commitResult.has_failure() )
+            {
+                CRDTSet()->error( "PutElems batch commit failed for id '{}'", aID );
+                return outcome::failure( commitResult.error() );
+            }
+
+            CRDTSet()->debug( "PutElems committed {} elements for id '{}'", aElems.size(), aID );
+        } // lg released here -- hooks below run with this->mutex_ NOT held.
 
         if ( putHookFunc_ != nullptr )
         {
