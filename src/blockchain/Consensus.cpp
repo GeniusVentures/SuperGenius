@@ -202,7 +202,8 @@ namespace sgns
                                                              std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                              Signer                                     signer,
                                                              std::string                                address,
-                                                             std::string consensus_topic )
+                                                             std::string                                consensus_topic,
+                                                             ConsensusConfig                            config )
     {
         if ( !registry )
         {
@@ -235,7 +236,8 @@ namespace sgns
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
                                                                                  std::move( address ),
-                                                                                 std::move( consensus_topic ) ) );
+                                                                                 std::move( consensus_topic ),
+                                                                                 config ) );
         instance->certificate_work_journal_ = instance->db_->GetWorkJournal();
 
         if ( !instance->certificate_work_journal_ )
@@ -245,14 +247,15 @@ namespace sgns
             return nullptr;
         }
 
-        if ( !instance->HasCompatibleCertificateState() )
+        if ( !instance->RestoreLocalState() )
         {
             ConsensusManagerLogger()->critical(
-                "{}: refusing consensus startup because certificate state is incompatible with protocol v2.0",
+                "{}: refusing consensus startup because durable consensus state failed strict restoration",
                 __func__ );
             return nullptr;
         }
 
+        instance->EmitStartupEvent( "subscribe" );
         instance->consensus_subs_future_ = instance->pubsub_->Subscribe(
             instance->consensus_messages_topic_,
             [weakptr( std::weak_ptr<ConsensusManager>( instance ) )](
@@ -269,12 +272,17 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}",
                                          __func__,
                                          instance->consensus_messages_topic_ );
-        instance->StartRoundTimer();
+        instance->EmitStartupEvent( "certificate-filter" );
         if ( !instance->RegisterCertificateFilter() )
         {
             ConsensusManagerLogger()->error( "{}: Failed to register certificate filter", __func__ );
+            return nullptr;
         }
+        instance->EmitStartupEvent( "timer" );
+        instance->StartRoundTimer();
         instance->RecoverPendingCertificateWork();
+        instance->RecoverRestoredCertificateWork();
+        instance->ReplayRestoredVotes();
 
         return instance;
     }
@@ -284,12 +292,14 @@ namespace sgns
                                         std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                         Signer                                     signer,
                                         std::string                                address,
-                                        std::string                                consensus_topic ) :
-        registry_( std::move( registry ) ),       //
-        db_( std::move( db ) ),                   //
-        pubsub_( std::move( pubsub ) ),           //
-        signer_( std::move( signer ) ),           //
+                                        std::string                                consensus_topic,
+                                        ConsensusConfig                            config ) :
+        registry_( std::move( registry ) ), //
+        db_( std::move( db ) ),             //
+        signer_( std::move( signer ) ),     //
         account_address_( std::move( address ) ), //
+        pubsub_( std::move( pubsub ) ),     //
+        config_( config.vote_selection_window ), //
         consensus_messages_topic_( fmt::format( "{}{}{}",
                                                 CONSENSUS_CHANNEL_PREFIX,
                                                 sgns::version::GetNetAndVersionAppendix(),
@@ -297,6 +307,130 @@ namespace sgns
         consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )
     {
         certificate_record_reader_ = [this]( const crdt::HierarchicalKey &key ) { return db_->Get( key ); };
+    }
+
+    uint64_t ConsensusManager::CurrentTimeMs()
+    {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
+                .count() );
+    }
+
+    void ConsensusManager::EmitStartupEvent( std::string_view event ) const
+    {
+        if ( startup_event_observer_ ) startup_event_observer_( event );
+    }
+
+    bool ConsensusManager::RestoreLocalState()
+    {
+        auto datastore = db_->GetDataStore();
+        if ( !datastore || !HasCompatibleCertificateState() ) return false;
+
+        state_store_ = std::make_unique<ConsensusStateStore>( std::move( datastore ) );
+        if ( startup_local_query_override_ ) state_store_->query_ = startup_local_query_override_;
+        auto votes = state_store_->ScanVotes();
+        auto processes = state_store_->ScanProcesses();
+        auto conflicts = state_store_->ScanConflicts();
+        auto safeties = state_store_->ScanSafety();
+        if ( !votes || !processes || !conflicts || !safeties ) return false;
+
+        struct FinalRecord
+        {
+            std::string digest;
+            std::string proposal_id;
+            std::string winner_id;
+        };
+        std::unordered_map<std::string, FinalRecord> finals;
+        auto certificate_entries = db_->QueryKeyValues( CERTIFICATE_SLOT_BASE_PATH_KEY );
+        if ( certificate_entries.has_error() ) return false;
+        for ( const auto &[stored_key, stored_value] : certificate_entries.value() )
+        {
+            auto key = db_->KeyToString( stored_key );
+            if ( key.has_error() ) return false;
+            const auto marker = key.value().find( std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) );
+            if ( marker == std::string::npos ) return false;
+            const auto slot = key.value().substr( marker + CERTIFICATE_SLOT_BASE_PATH_KEY.size() );
+            if ( slot.size() != 64 ) return false;
+
+            Certificate certificate;
+            const auto bytes = stored_value.toString();
+            if ( !certificate.ParseFromArray( stored_value.data(), stored_value.size() ) ) return false;
+            auto normalized = NormalizeCertificate( certificate );
+            if ( normalized.check != Check::Approve || normalized.deterministic_bytes != bytes ) return false;
+            auto actual_slot = GetSlotKey( normalized.certificate.proposal() );
+            auto winner = GetSubjectHash( normalized.certificate.proposal().subject() );
+            if ( !actual_slot || actual_slot.value() != slot || !winner ) return false;
+            auto digest_bytes = crypto::sha2_256( bytes.data(), bytes.size() );
+            const auto digest = base::hex_lower(
+                gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+            if ( !finals.emplace( slot,
+                                  FinalRecord{ digest, normalized.certificate.proposal_id(), winner.value() } )
+                      .second )
+                return false;
+        }
+
+        restored_votes_ = std::move( votes.value() );
+        for ( const auto &record : restored_votes_ )
+        {
+            if ( record.validator_id() != account_address_ ) return false;
+            Vote vote;
+            Proposal proposal;
+            if ( !vote.ParseFromString( record.signed_vote_bytes() ) ||
+                 !proposal.ParseFromString( record.signed_proposal_bytes() ) || !CheckProposal( proposal ) ||
+                 !ValidateSubject( proposal.subject() ) )
+                return false;
+            auto vote_bytes = VoteSigningBytes( vote );
+            auto slot = GetSlotKey( proposal );
+            if ( !vote_bytes || !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), vote_bytes.value() ) ||
+                 !slot || slot.value() != record.slot_id() )
+                return false;
+        }
+
+        const auto now = CurrentTimeMs();
+        for ( auto record : processes.value() )
+        {
+            auto final = finals.find( record.slot_id() );
+            if ( final == finals.end() || final->second.digest != record.certificate_digest() ||
+                 final->second.proposal_id != record.proposal_id() || final->second.winner_id != record.winner_id() )
+                return false;
+            if ( record.state() == ConsensusStateStore::ProcessRecord::PROCESSING )
+            {
+                if ( !state_store_->RestorePending( record.slot_id(), now ) ) return false;
+                record.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+                record.set_lease_until_ms( 0 );
+                record.set_updated_at_ms( now );
+            }
+            restored_processes_.emplace( record.slot_id(), std::move( record ) );
+        }
+
+        for ( const auto &[slot, final] : finals )
+        {
+            restored_final_slots_.insert( slot );
+            if ( restored_processes_.find( slot ) == restored_processes_.end() )
+            {
+                ConsensusStateStore::ProcessRecord pending;
+                pending.set_schema_version( 2 );
+                pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+                pending.set_slot_id( slot );
+                pending.set_certificate_digest( final.digest );
+                pending.set_proposal_id( final.proposal_id );
+                pending.set_winner_id( final.winner_id );
+                pending.set_updated_at_ms( now );
+                if ( !state_store_->PutPendingProcess( pending ) ) return false;
+                restored_processes_.emplace( slot, std::move( pending ) );
+            }
+        }
+
+        for ( const auto &record : safeties.value() )
+        {
+            auto final = finals.find( record.slot_id() );
+            if ( final == finals.end() || final->second.digest != record.authoritative_certificate_digest() ||
+                 final->second.proposal_id != record.authoritative_proposal_id() )
+                return false;
+            restored_safety_slots_.insert( record.slot_id() );
+        }
+        EmitStartupEvent( "restored" );
+        return true;
     }
 
     ConsensusManager::CertificateStoreError ConsensusManager::MapCertificateReadError(
@@ -380,6 +514,12 @@ namespace sgns
         {
             round_timer_.join();
         }
+        if ( db_ )
+        {
+            db_->UnregisterNewElementCallback( std::string( CERT_SLOT_KEY_PATTERN ) );
+            db_->UnregisterElementFilter( std::string( CERT_SLOT_KEY_PATTERN ) );
+            db_->UnregisterDeltaFilter( std::string( CERT_NAMESPACE_KEY_PATTERN ) );
+        }
     }
 
     void ConsensusManager::StartRoundTimer()
@@ -432,14 +572,24 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::Publish( const ConsensusMessage &message )
     {
-        std::vector<uint8_t> serialized_proto( message.ByteSizeLong() );
-        if ( !message.SerializeToArray( serialized_proto.data(), serialized_proto.size() ) )
+        std::string serialized_proto;
+        if ( !message.SerializeToString( &serialized_proto ) )
         {
             ConsensusManagerLogger()->error( "{}: Failed to serialize consensus message", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
+        return PublishSerialized( serialized_proto );
+    }
+
+    outcome::result<void> ConsensusManager::PublishSerialized( std::string_view envelope_bytes )
+    {
+        if ( envelope_bytes.empty() ) return outcome::failure( std::errc::invalid_argument );
+        EmitStartupEvent( "publish" );
+        if ( raw_publish_override_ ) return raw_publish_override_( envelope_bytes );
+
         ConsensusManagerLogger()->debug( "{}: Sending consensus packet to {}", __func__, consensus_messages_topic_ );
+        std::vector<uint8_t> serialized_proto( envelope_bytes.begin(), envelope_bytes.end() );
         pubsub_->Publish( consensus_messages_topic_, serialized_proto );
         ConsensusManagerLogger()->debug( "{}: Consensus packet published (bytes={})",
                                          __func__,
@@ -490,6 +640,8 @@ namespace sgns
                                          subject_type );
         std::unique_lock lock( certificate_handlers_mutex_ );
         certificate_subject_handlers_[type_hash.value()] = std::move( handler );
+        lock.unlock();
+        RecoverRestoredCertificateWork();
         return true;
     }
 
@@ -2478,6 +2630,33 @@ namespace sgns
         const auto &proposal            = certificate.proposal();
         const auto &proposal_id         = certificate.proposal_id();
         const auto &subject_hash         = subject_hash_result.value();
+        const auto &slot_id              = slot_result.value();
+        auto        digest_bytes         = crypto::sha2_256( normalized.deterministic_bytes.data(),
+                                                             normalized.deterministic_bytes.size() );
+        const auto digest = base::hex_lower(
+            gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+        ConsensusStateStore::ProcessRecord pending;
+        pending.set_schema_version( 2 );
+        pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+        pending.set_slot_id( slot_id );
+        pending.set_certificate_digest( digest );
+        pending.set_proposal_id( proposal_id );
+        pending.set_winner_id( subject_hash );
+        pending.set_updated_at_ms( CurrentTimeMs() );
+        if ( !state_store_ || !state_store_->PutPendingProcess( pending ) )
+        {
+            ConsensusManagerLogger()->critical( "{}: unable to retain durable pending work key={}", __func__, key );
+            return;
+        }
+        auto stored_process = state_store_->GetProcess( slot_id );
+        if ( !stored_process || !stored_process.value() )
+        {
+            return;
+        }
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            restored_processes_[slot_id] = stored_process.value().value();
+        }
 
         auto registry_result = registry_->OnFinalizedCertificate( certificate );
         if ( registry_result.has_error() )
@@ -2487,6 +2666,7 @@ namespace sgns
                                              proposal_id.substr( 0, 8 ),
                                              registry_result.error().message() );
             certificate_work_journal_->MarkStalled( key );
+            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
             return;
         }
 
@@ -2510,6 +2690,8 @@ namespace sgns
                                                  __func__,
                                                  proposal_id.substr( 0, 8 ),
                                                  result.error().message() );
+                certificate_work_journal_->MarkStalled( key );
+                (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
                 return;
             }
 
@@ -2519,6 +2701,7 @@ namespace sgns
                                                 __func__,
                                                 proposal_id.substr( 0, 8 ) );
                 certificate_work_journal_->MarkStalled( key );
+                (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
                 return;
             }
         }
@@ -2527,6 +2710,21 @@ namespace sgns
             ConsensusManagerLogger()->warn( "{}: no subject handler for certificate key={}", __func__, key );
         }
 
+        if ( !state_store_->MarkComplete( slot_id, CurrentTimeMs() ) )
+        {
+            ConsensusManagerLogger()->critical( "{}: failed to durably complete certificate work key={}",
+                                                __func__,
+                                                key );
+            return;
+        }
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            auto process = state_store_->GetProcess( slot_id );
+            if ( process && process.value() )
+            {
+                restored_processes_[slot_id] = process.value().value();
+            }
+        }
         (void) certificate_work_journal_->MarkDone( key );
         (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
     }
@@ -3508,6 +3706,46 @@ namespace sgns
                 continue;
             }
             CertificateReceived( { entry.key, value.value() }, std::string{} );
+        }
+    }
+
+    void ConsensusManager::RecoverRestoredCertificateWork()
+    {
+        std::vector<std::string> pending_slots;
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            for ( const auto &[slot, process] : restored_processes_ )
+            {
+                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING ) pending_slots.push_back( slot );
+            }
+        }
+        for ( const auto &slot : pending_slots )
+        {
+            const auto key = std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot;
+            auto value = db_->Get( { key } );
+            if ( value ) CertificateReceived( { key, value.value() }, std::string{} );
+        }
+    }
+
+    void ConsensusManager::ReplayRestoredVotes()
+    {
+        const auto now = CurrentTimeMs();
+        for ( const auto &record : restored_votes_ )
+        {
+            if ( record.state() != ConsensusStateStore::VoteRecord::ACTIVE ||
+                 record.acceptance_horizon_ms() < now || restored_final_slots_.count( record.slot_id() ) != 0 ||
+                 restored_safety_slots_.count( record.slot_id() ) != 0 )
+                continue;
+            auto published = PublishSerialized( record.outbound_envelope_bytes() );
+            if ( !state_store_->UpdatePublication( record.validator_id(),
+                                                   record.slot_id(),
+                                                   CurrentTimeMs(),
+                                                   published.has_value() ) )
+            {
+                ConsensusManagerLogger()->error( "{}: failed to record replay publication slot={}",
+                                                 __func__,
+                                                 record.slot_id() );
+            }
         }
     }
 

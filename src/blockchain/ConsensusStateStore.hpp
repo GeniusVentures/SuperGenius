@@ -14,6 +14,7 @@
 
 namespace sgns
 {
+    class ConsensusManager;
     class ConsensusVoteJournalTestAccess;
 
     enum class ConsensusStateStoreError : uint8_t
@@ -52,6 +53,7 @@ namespace sgns
         outcome::result<void> MarkProcessing( const std::string &slot_id,
                                               uint64_t           lease_until_ms,
                                               uint64_t           updated_at_ms );
+        outcome::result<void> RestorePending( const std::string &slot_id, uint64_t updated_at_ms );
         outcome::result<void> MarkComplete( const std::string &slot_id, uint64_t updated_at_ms );
 
         outcome::result<std::vector<ConflictRecord>> ScanConflicts() const;
@@ -81,6 +83,7 @@ namespace sgns
         QueryFn                          query_;
 
         friend class ConsensusVoteJournalTestAccess;
+        friend class ConsensusManager;
     };
 } // namespace sgns
 

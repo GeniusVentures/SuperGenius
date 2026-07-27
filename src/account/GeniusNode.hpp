@@ -781,6 +781,7 @@ namespace sgns
 
     private:
         friend class GeniusNodeCatchupTestAccess;
+        friend class NetworkConfigPrecedenceTestAccess;
 
         enum class CatchupSubmissionState : uint8_t
         {
@@ -883,6 +884,8 @@ namespace sgns
         std::vector<std::string> my_task_ids_; ///< Recent task IDs submitted by this node (capped in memory).
         static constexpr size_t  kMyTasksMemoryLimit = 50; ///< Max task IDs kept in @ref my_task_ids_.
         bool                     autodht_;                 ///< Whether DHT discovery is enabled.
+        std::chrono::milliseconds consensus_vote_selection_window_{
+            ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW }; ///< Resolved before Blockchain construction.
         bool                     isprocessor_;             ///< Whether processing service should run.
         bool                     is_full_node_ = false;    ///< Whether this node runs in full-node mode.
         NodeType                 node_type_ =

@@ -25,6 +25,7 @@
 #include <limits>
 
 #include "blockchain/ValidatorRegistry.hpp"
+#include "blockchain/ConsensusStateStore.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "base/blob.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
@@ -38,6 +39,22 @@ namespace sgns
     static constexpr std::string_view NONCE_SUBJECT_TYPE          = "sgns.nonce.v1";
     static constexpr std::string_view TASK_RESULT_SUBJECT_TYPE    = "sgns.task_result.v1";
     static constexpr std::string_view REGISTRY_BATCH_SUBJECT_TYPE = "sgns.registry_batch.v1";
+
+    /** Fixed consensus settings resolved before the manager starts any observable work. */
+    struct ConsensusConfig
+    {
+        static constexpr std::chrono::milliseconds DEFAULT_VOTE_SELECTION_WINDOW{ 500 };
+        /** Operator values above this bound are rejected to prevent unbounded selection delay. */
+        static constexpr std::chrono::milliseconds MAX_VOTE_SELECTION_WINDOW{ 30'000 };
+
+        explicit constexpr ConsensusConfig(
+            std::chrono::milliseconds selection_window = DEFAULT_VOTE_SELECTION_WINDOW ) :
+            vote_selection_window( selection_window )
+        {
+        }
+
+        const std::chrono::milliseconds vote_selection_window;
+    };
 
     /**
      * @brief      Implements Consensus with weighted voting.
@@ -90,7 +107,8 @@ namespace sgns
                                                       std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                                       Signer                                     signer,
                                                       std::string                                address,
-                                                      std::string                                consensus_topic = "" );
+                                                      std::string                                consensus_topic = "",
+                                                      ConsensusConfig                            config = ConsensusConfig{} );
         /**
          * @brief      Destroys the Consensus Manager object
          */
@@ -572,6 +590,8 @@ namespace sgns
         friend class ConsensusPendingLifecycleTestAccess;
         friend class ConsensusSlotKeyTestAccess;
         friend class CertificateFallbackTestAccess;
+        friend class ConsensusVoteJournalTestAccess;
+        friend class NetworkConfigPrecedenceTestAccess;
 
         /**
          * @brief Constructs a consensus manager.
@@ -587,7 +607,15 @@ namespace sgns
                                    std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
                                    Signer                                     signer,
                                    std::string                                address,
-                                   std::string                                consensus_topic );
+                                   std::string                                consensus_topic,
+                                   ConsensusConfig                            config );
+
+        bool RestoreLocalState();
+        void ReplayRestoredVotes();
+        void RecoverRestoredCertificateWork();
+        outcome::result<void> PublishSerialized( std::string_view envelope_bytes );
+        static uint64_t CurrentTimeMs();
+        void EmitStartupEvent( std::string_view event ) const;
 
         /**
          * @brief Maps one raw datastore read failure to the typed certificate API.
@@ -938,6 +966,18 @@ namespace sgns
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
+        const ConsensusConfig config_; ///< Immutable settings fixed before factory side effects.
+        std::unique_ptr<ConsensusStateStore> state_store_; ///< Strict node-local consensus state owner.
+        std::vector<ConsensusStateStore::VoteRecord> restored_votes_; ///< Validated durable vote records.
+        std::unordered_map<std::string, ConsensusStateStore::ProcessRecord>
+            restored_processes_; ///< Restored certificate work keyed by canonical slot.
+        mutable std::mutex restored_state_mutex_; ///< Guards restored process state used by recovery callbacks.
+        std::unordered_set<std::string> restored_final_slots_; ///< Slots with authoritative finality.
+        std::unordered_set<std::string> restored_safety_slots_; ///< Slots stopped by SafetyViolation.
+        static inline std::function<void( std::string_view )> startup_event_observer_;
+        static inline std::function<outcome::result<void>( std::string_view )> raw_publish_override_;
+        static inline std::function<outcome::result<storage::rocksdb::QueryResult>( const base::Buffer & )>
+            startup_local_query_override_;
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
