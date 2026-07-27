@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
 status: executing
-last_updated: "2026-07-27T17:31:35.088Z"
+last_updated: "2026-07-27T18:13:53.238Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 21
+  completed_plans: 22
   percent: 25
 ---
 
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-07-27
 
@@ -70,8 +70,8 @@ Last activity: 2026-07-27
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T17:31:19.495Z
-**Stopped at:** Completed 10-05-PLAN.md
+**Last session:** 2026-07-27T18:13:53.233Z
+**Stopped at:** Completed 10-06-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -99,6 +99,7 @@ Last activity: 2026-07-27
 | Phase 10 P03 | 24 min | 1 tasks | 10 files |
 | Phase 10 P04 | 34 min | 1 tasks | 4 files |
 | Phase 10 P05 | 41 min | 1 tasks | 5 files |
+| Phase 10 P06 | 44 min | 1 tasks | 8 files |
 
 ## Decisions
 
@@ -148,3 +149,5 @@ Last activity: 2026-07-27
 - [Phase 10]: Later generations require durable retirement strictly after the acceptance horizon. — Boundary equality remains locked and retirement precedes later signing.
 - [Phase 10]: All certificate ingress sources delegate to one authoritative FinalizeSlot path; adapters do not apply or clean independently.
 - [Phase 10]: Finalization persists the exact Pending marker before one leased handler attempt and durable Complete before cleanup.
+- [Phase 10]: Canonical conflict evidence sorts only its digest-pair key while explicit fields preserve authoritative and incoming direction.
+- [Phase 10]: Restored safety loads both conflict proposal IDs before replay so slot-local vote publication remains suppressed after restart.
