@@ -676,18 +676,23 @@ TEST_F( ConsensusVoteJournalHarness, ConflictPairIsSortedDeduplicatedAndBatchedW
     safety.set_schema_version( 2 );
     safety.set_state( sgns::ConsensusStateStore::SafetyRecord::SAFETY_VIOLATION );
     safety.set_slot_id( conflict.slot_id() );
-    safety.set_authoritative_certificate_digest( HashText( 'a' ) );
-    safety.set_authoritative_proposal_id( HashText( 'c' ) );
+    safety.set_authoritative_certificate_digest( HashText( 'b' ) );
+    safety.set_authoritative_proposal_id( HashText( 'd' ) );
     safety.set_updated_at_ms( 100 );
-    ASSERT_TRUE( store.RecordConflictAndSafety( conflict, safety ).has_value() );
+    auto first_record = store.RecordConflictAndSafety( conflict, safety );
+    ASSERT_TRUE( first_record.has_value() )
+        << ( first_record.has_error() ? first_record.error().value() : -1 );
 
     conflict.set_low_certificate_digest( HashText( 'a' ) );
     conflict.set_high_certificate_digest( HashText( 'b' ) );
     conflict.set_low_proposal_id( HashText( 'c' ) );
     conflict.set_high_proposal_id( HashText( 'd' ) );
     conflict.set_sources_bitset( 2 );
+    conflict.set_first_source( 2 );
     conflict.set_last_seen_at_ms( 200 );
-    ASSERT_TRUE( store.RecordConflictAndSafety( conflict, safety ).has_value() );
+    auto repeated_record = store.RecordConflictAndSafety( conflict, safety );
+    ASSERT_TRUE( repeated_record.has_value() )
+        << ( repeated_record.has_error() ? repeated_record.error().value() : -1 );
 
     auto conflicts = store.ScanConflicts();
     auto safeties = store.ScanSafety();
@@ -697,6 +702,7 @@ TEST_F( ConsensusVoteJournalHarness, ConflictPairIsSortedDeduplicatedAndBatchedW
     EXPECT_EQ( conflicts.value()[0].low_certificate_digest(), HashText( 'a' ) );
     EXPECT_EQ( conflicts.value()[0].high_certificate_digest(), HashText( 'b' ) );
     EXPECT_EQ( conflicts.value()[0].sources_bitset(), 3 );
+    EXPECT_EQ( conflicts.value()[0].first_source(), 1 );
     EXPECT_EQ( conflicts.value()[0].observation_count(), 2 );
     EXPECT_EQ( conflicts.value()[0].GetDescriptor()->FindFieldByName( "certificate" ), nullptr );
 
