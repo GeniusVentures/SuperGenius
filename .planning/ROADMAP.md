@@ -449,7 +449,7 @@ Plans:
 - [x] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow (completed 2026-07-23)
 - [x] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT (completed 2026-07-24)
 - [x] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager` (completed 2026-07-27)
-- [ ] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry` migrated onto `ISignedCRDTData`, existing behavior/tests preserved
+- [ ] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved
 
 ## Phase Details
 
@@ -515,13 +515,15 @@ Plans:
 
 ### Phase 12: ValidatorRegistry Migration
 
-**Goal**: `ValidatorRegistry`'s existing signature+quorum-gated CRDT update logic is re-expressed on top of the `ISignedCRDTData`/SecureCRDT abstraction introduced in Phase 9, proving the abstraction generalizes beyond its first two consumers, with zero regression in existing behavior or tests.
-**Depends on**: Phase 9
+**Goal**: `ValidatorRegistry`'s genesis-path signature verification is migrated from `GeniusAccount::VerifySignature` onto the shared `multisig::VerifyPayloadSignature` primitive (Phase 8), narrowed per 12-CONTEXT.md D-01/D-03 to signature-verification-only reuse — `ValidatorRegistry` does not adopt `ISignedCRDTData`/`SecureCrdt` (its weighted-quorum/certificate machinery is structurally incompatible), with zero regression in existing behavior or tests.
+**Depends on**: Phase 8
 **Requirements**: MIG-05, MIG-06
 **Success Criteria** (what must be TRUE):
-  1. `ValidatorRegistry` implements `ISignedCRDTData` (or is registered through the Phase 9 policy registry) for its signature-gated CRDT updates, with its bespoke pre-migration verification/quorum code paths removed.
-  2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged (or with only mechanical updates for the new interface), with no behavioral regression in validator add/remove/quorum semantics.
-**Plans**: TBD
+  1. `VerifyUpdate`'s genesis-path signature check calls `multisig::VerifyPayloadSignature` instead of `GeniusAccount::VerifySignature`; `blockchain_genesis` links `multisig` directly.
+  2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged, with no behavioral regression in genesis-signature verification, and the D-05 `multi_account_test` exit gate (5-10 consecutive clean runs) is satisfied.
+**Plans:** 1 plan
+Plans:
+- [ ] 12-01-PLAN.md — Migrate genesis-path signature verification onto multisig::VerifyPayloadSignature, wire CMake link, run D-05 exit gate
 
 ### Progress Table (v1.1)
 
@@ -531,4 +533,4 @@ Plans:
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
 | 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
 | 11. BurnConfig Quorum Wiring | 2/2 | Complete   | 2026-07-27 |
-| 12. ValidatorRegistry Migration | 0/TBD | Not started | - |
+| 12. ValidatorRegistry Migration | 0/1 | Not started | - |
