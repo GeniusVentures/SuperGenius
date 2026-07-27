@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
 status: executing
-last_updated: "2026-07-27T15:08:32.188Z"
-last_activity: 2026-07-27 -- Phase 10 planning complete
+last_updated: "2026-07-27T15:19:50.847Z"
+last_activity: 2026-07-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 16
+  completed_plans: 17
   percent: 25
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 10 — durable vote lock and finalization state machine
+**Current focus:** Phase 10 — Durable Vote Lock and Finalization State Machine
 
 ## Current Position
 
-Phase: 09 (canonical-slot-and-certificate-storage) — COMPLETE
-Plan: Not started
+Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-07-27 -- Phase 10 planning complete
+Last activity: 2026-07-27
 
 ## Roadmap Snapshot
 
@@ -70,9 +70,9 @@ Last activity: 2026-07-27 -- Phase 10 planning complete
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T13:57:07.320Z
-**Stopped at:** Phase 10 context gathered
-**Resume file:** .planning/phases/10-durable-vote-lock-and-finalization-state-machine/10-CONTEXT.md
+**Last session:** 2026-07-27T15:19:50.843Z
+**Stopped at:** Completed 10-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -94,6 +94,7 @@ Last activity: 2026-07-27 -- Phase 10 planning complete
 | Phase 09 P14 | 21 min | 2 tasks | 8 files |
 | Phase 09 P15 | 22 min | 2 tasks | 4 files |
 | Phase 09 P16 | 13 min | 2 tasks | 7 files |
+| Phase 10 P01 | 5 min | 1 tasks | 3 files |
 
 ## Decisions
 
@@ -132,3 +133,5 @@ Last activity: 2026-07-27 -- Phase 10 planning complete
 - [Phase 09]: RPC endpoints and transport factories publish together as immutable generation-numbered snapshots. — Concurrent writers serialize copy-on-write publication while readers retain stable lifetime ownership without mutable references.
 - [Phase 09]: One vote snapshot supplies the chain and all three endpoint slot hashes. — Signed votes cannot combine endpoint hashes from different operator/provider configuration generations.
 - [Phase 09]: Weighted receipt verification retains one configuration from endpoint lookup through quorum completion. — A blocked RPC call cannot observe endpoints or a factory published after its decision began.
+- [Phase 10]: Wave 0 uses real CRDT and RocksDB dependencies with friend-only test access surfaces. — Later durable-vote hooks remain private while the harness exercises production ownership and persistence.
+- [Phase 10]: Finalization concurrency tests use predicate barriers and RAII release and join ownership. — Deterministic ordering avoids timing sleeps, detached workers, and stranded threads after assertion failures.
