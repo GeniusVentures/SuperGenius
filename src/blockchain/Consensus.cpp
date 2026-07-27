@@ -263,6 +263,8 @@ namespace sgns
             {
                 if ( auto self = weakptr.lock() )
                 {
+                    auto activity = self->BeginActivity();
+                    if ( !activity ) return;
                     ConsensusManagerLogger()->trace( "{}: Received Consensus Message on topic {}",
                                                      __func__,
                                                      self->consensus_messages_topic_ );
@@ -522,18 +524,20 @@ namespace sgns
 
     void ConsensusManager::Close()
     {
-        bool expected = false;
-        if ( !close_started_.compare_exchange_strong( expected, true ) )
+        std::unique_lock close_lock( close_mutex_ );
+        if ( close_complete_ ) return;
         {
-            return;
+            std::lock_guard activity_lock( activity_state_->mutex );
+            activity_state_->closing = true;
+            activity_state_->cv.notify_all();
         }
-
-        // Account switches reuse GlobalDB. Remove this manager's registrations
-        // before a replacement ConsensusManager registers the same pattern.
-        // The one-shot guard also prevents a delayed destructor from removing
-        // registrations that belong to the replacement manager.
+        stop_timer_.store( true );
+        timer_cv_.notify_all();
+        slot_cv_.notify_all();
         if ( db_ )
         {
+            // Account switches reuse GlobalDB. Remove only registrations owned
+            // by this manager so a delayed close cannot remove replacements.
             if ( certificate_callback_registered_ )
             {
                 db_->UnregisterNewElementCallback( std::string( CERT_SLOT_KEY_PATTERN ) );
@@ -550,19 +554,32 @@ namespace sgns
                 certificate_delta_filter_registered_ = false;
             }
         }
-
-        stop_timer_.store( true );
-        timer_cv_.notify_all();
         if ( round_timer_.joinable() )
         {
             round_timer_.join();
         }
-        if ( db_ )
         {
-            db_->UnregisterNewElementCallback( std::string( CERT_SLOT_KEY_PATTERN ) );
-            db_->UnregisterElementFilter( std::string( CERT_SLOT_KEY_PATTERN ) );
-            db_->UnregisterDeltaFilter( std::string( CERT_NAMESPACE_KEY_PATTERN ) );
+            std::unique_lock activity_lock( activity_state_->mutex );
+            activity_state_->cv.wait( activity_lock, [this]() { return activity_state_->active == 0; } );
         }
+        close_complete_ = true;
+    }
+
+    std::shared_ptr<void> ConsensusManager::BeginActivity()
+    {
+        auto state = activity_state_;
+        {
+            std::lock_guard lock( state->mutex );
+            if ( state->closing ) return {};
+            ++state->active;
+        }
+        return std::shared_ptr<void>(
+            state.get(),
+            [state]( void * )
+            {
+                std::lock_guard lock( state->mutex );
+                if ( --state->active == 0 ) state->cv.notify_all();
+            } );
     }
 
     void ConsensusManager::StartRoundTimer()
@@ -576,14 +593,29 @@ namespace sgns
             return;
         }
 
-        round_timer_ = std::thread(
-            [this]()
+        auto *self           = this;
+        auto  activity_state = activity_state_;
+        round_timer_         = std::thread(
+            [self, activity_state]()
             {
                 constexpr auto min_interval = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
-                    std::unique_lock<std::mutex> lock( timer_mutex_ );
-                    auto                         interval = round_duration_ / 2;
+                    {
+                        std::lock_guard lock( activity_state->mutex );
+                        if ( activity_state->closing ) return;
+                        ++activity_state->active;
+                    }
+                    auto activity = std::shared_ptr<void>(
+                        activity_state.get(),
+                        [activity_state]( void * )
+                        {
+                            std::lock_guard lock( activity_state->mutex );
+                            if ( --activity_state->active == 0 ) activity_state->cv.notify_all();
+                        } );
+
+                    std::unique_lock<std::mutex> lock( self->timer_mutex_ );
+                    auto                         interval = self->round_duration_ / 2;
                     if ( interval.count() <= 0 )
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
@@ -593,10 +625,10 @@ namespace sgns
                         interval = min_interval;
                     }
                     {
-                        std::lock_guard slot_lock( proposals_mutex_ );
-                        const auto now = steady_now_override_ ? steady_now_override_()
-                                                              : std::chrono::steady_clock::now();
-                        for ( const auto &[unused_slot, state] : slot_states_ )
+                        std::lock_guard slot_lock( self->proposals_mutex_ );
+                        const auto now = self->steady_now_override_ ? self->steady_now_override_()
+                                                                    : std::chrono::steady_clock::now();
+                        for ( const auto &[unused_slot, state] : self->slot_states_ )
                         {
                             (void) unused_slot;
                             if ( state.lifecycle == SlotState::Lifecycle::Selecting && state.deadline > now )
@@ -611,34 +643,36 @@ namespace sgns
                             }
                         }
                     }
-                    if ( certificates_pending_.load() )
+                    if ( self->certificates_pending_.load() )
                     {
                         // Work is pending: run on cadence, only interrupt for shutdown.
-                        timer_cv_.wait_for( lock, interval, [this]() { return stop_timer_.load(); } );
+                        self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } );
                     }
                     else
                     {
                         // No pending work: wait up to interval, but wake immediately when new work appears.
-                        timer_cv_.wait_for( lock,
-                                            interval,
-                                            [this]() { return stop_timer_.load() || certificates_pending_.load(); } );
+                        self->timer_cv_.wait_for(
+                            lock,
+                            interval,
+                            [self]() { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
                     }
-                    if ( stop_timer_.load() )
+                    if ( self->stop_timer_.load() )
                     {
                         return;
                     }
                     lock.unlock();
-                    const auto steady_now = steady_now_override_ ? steady_now_override_()
-                                                                  : std::chrono::steady_clock::now();
-                    ProcessCandidateDeadlines( steady_now );
-                    if ( certificates_pending_.load() )
+                    const auto steady_now = self->steady_now_override_ ? self->steady_now_override_()
+                                                                        : std::chrono::steady_clock::now();
+                    self->ProcessCandidateDeadlines( steady_now );
+                    if ( self->certificates_pending_.load() )
                     {
-                        ProcessCertificates();
+                        self->ProcessCertificates();
+                        self->UpdateCertificatesPending();
                     }
-                    ExpirePendingProposals();
-                    ProcessDuePendingRetries();
+                    self->ExpirePendingProposals();
+                    self->ProcessDuePendingRetries();
                     // Keep replaying unfinished certificate work while the node is running.
-                    RecoverPendingCertificateWork();
+                    self->RecoverPendingCertificateWork();
                 }
             } );
     }
@@ -2272,6 +2306,8 @@ namespace sgns
     ConsensusManager::FinalizeResult ConsensusManager::FinalizeSlot( const Certificate &certificate,
                                                                       DeliverySource      source )
     {
+        auto activity = BeginActivity();
+        if ( !activity ) return FinalizeResult::StorageFailure;
         auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check != Check::Approve ) return FinalizeResult::Invalid;
 
@@ -2332,9 +2368,19 @@ namespace sgns
                         slot.lifecycle == SlotState::Lifecycle::PublishingReplay ||
                         slot.lifecycle == SlotState::Lifecycle::Finalizing )
                 {
+                    if ( stop_timer_.load() ) return FinalizeResult::StorageFailure;
                     if ( finalization_stage_observer_ ) finalization_stage_observer_( "waiting-publication" );
-                    slot_cv_.wait( lock );
+                    slot_cv_.wait(
+                        lock,
+                        [this, &slot]()
+                        {
+                            return stop_timer_.load() ||
+                                   ( slot.lifecycle != SlotState::Lifecycle::SigningPublishing &&
+                                     slot.lifecycle != SlotState::Lifecycle::PublishingReplay &&
+                                     slot.lifecycle != SlotState::Lifecycle::Finalizing );
+                        } );
                 }
+                if ( stop_timer_.load() ) return FinalizeResult::StorageFailure;
 
                 lock.unlock();
                 auto authority = GetCertificateBySlotId( slot_id );
@@ -2895,6 +2941,8 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
+                    auto activity = strong->BeginActivity();
+                    if ( !activity ) return crdt::DeltaFilterResult::Reject();
                     return strong->FilterCertificateDelta( delta );
                 }
                 return crdt::DeltaFilterResult::Reject();
@@ -2906,6 +2954,8 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
+                    auto activity = strong->BeginActivity();
+                    if ( !activity ) return std::nullopt;
                     return strong->FilterCertificate( element );
                 }
                 return std::nullopt;
@@ -2917,6 +2967,8 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
+                    auto activity = strong->BeginActivity();
+                    if ( !activity ) return;
                     strong->CertificateReceived( std::move( new_data ), cid );
                 }
             } );
@@ -3202,28 +3254,17 @@ namespace sgns
         auto slot_result = GetSlotKey( certificate.proposal() );
         if ( slot_result.has_error() || key != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
             return;
-        {
-            std::lock_guard lock( proposals_mutex_ );
-            auto it = slot_states_.find( slot_result.value() );
-            if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::Finalizing &&
-                 it->second.reserved_finalization_proposal_id == certificate.proposal_id() )
-            {
-                (void) certificate_work_journal_->MarkStalled( key );
-                return;
-            }
-        }
-        const auto result = FinalizeSlot( certificate, DeliverySource::CRDT );
-        if ( result == FinalizeResult::Applied || result == FinalizeResult::AlreadyFinalized )
-        {
-            auto process = state_store_->GetProcess( slot_result.value() );
-            if ( process && process.value() &&
-                 process.value()->state() == ConsensusStateStore::ProcessRecord::COMPLETE )
-                (void) certificate_work_journal_->MarkDone( key );
-        }
-        else if ( result == FinalizeResult::PendingApplication )
-        {
-            (void) certificate_work_journal_->MarkStalled( key );
-        }
+
+        // CRDT invokes new-element callbacks synchronously while the incoming
+        // delta is still being merged.  FinalizeSlot may publish the canonical
+        // slot/index pair when its preflight cannot yet observe that in-flight
+        // merge.  Calling it here would therefore enqueue a nested DAG job and
+        // wait for that job from the worker which must finish the outer job: a
+        // GraphSync teardown/deadline deadlock.  Leave the exact callback key in
+        // the durable journal and let the owned recovery turn run only after the
+        // merge has committed and the authoritative pair is readable.
+        certificate_work_journal_->MarkSeen( key );
+        certificate_work_journal_->MarkStalled( key, std::chrono::milliseconds( 0 ) );
     }
 
     ConsensusManager::CertificateNormalization ConsensusManager::NormalizeCertificateStructural(
