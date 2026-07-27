@@ -54,13 +54,6 @@ groups:
         const auto fixture_id = fixture_counter.fetch_add( 1, std::memory_order_relaxed ) + 1;
         return path.string() + "." + boost::dll::program_location().stem().string() + "." + std::to_string( fixture_id );
     }
-
-    uint16_t AvailablePort()
-    {
-        boost::asio::io_context        io;
-        boost::asio::ip::tcp::acceptor acceptor( io, { boost::asio::ip::tcp::v4(), 0 } );
-        return acceptor.local_endpoint().port();
-    }
 }
 
 namespace test
@@ -91,7 +84,7 @@ namespace test
         db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
         db_->Start();
 
-        auto future = pubs_->Start( AvailablePort(), {} );
+        auto future = pubs_->Start( 0, {} );
         auto result = future.get();
         BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
     }
