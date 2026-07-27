@@ -93,6 +93,26 @@ target_link_libraries(consensus_certificate_store_test
     base_crdt_test
 )
 
+addtest(consensus_vote_journal_test
+    consensus_vote_journal_test.cpp
+)
+target_link_libraries(consensus_vote_journal_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
+addtest(consensus_finalization_test
+    consensus_finalization_test.cpp
+)
+target_link_libraries(consensus_finalization_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 addtest(certificate_compatibility_test
     certificate_compatibility_test.cpp
 )
