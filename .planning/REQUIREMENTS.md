@@ -28,7 +28,7 @@
 - [x] **VOTE-01**: Before publishing an approval signature, a validator durably records the canonical slot and proposal ID in a local vote journal.
 - [x] **VOTE-02**: While a recorded signature can still contribute to a valid certificate, the validator may reproduce the same proposal's vote idempotently but cannot sign a different proposal in that slot.
 - [x] **VOTE-03**: Validator restart restores outstanding slot vote locks before proposal processing or vote publication begins.
-- [ ] **VOTE-04**: Before its first signature, a validator may collect valid competing proposals for a bounded selection window and deterministically choose the best candidate using the existing proposal-ordering rule.
+- [x] **VOTE-04**: Before its first signature, a validator may collect valid competing proposals for a bounded selection window and deterministically choose the best candidate using the existing proposal-ordering rule.
 - [ ] **VOTE-05**: Once the validator publishes its slot vote, a later better proposal may be tracked but cannot cause the validator to retract, replace, or publish another vote for that slot.
 - [x] **VOTE-06**: A valid certificate finalizes its winner even when the validator locally voted for a different proposal, transitioning the local slot from voted to finalized without applying multiple winners.
 - [x] **VOTE-07**: An uncertified vote lock may expire only after the recorded proposal and signature can no longer participate in a certificate accepted by current validation rules.
@@ -89,7 +89,7 @@
 | VOTE-01 | Phase 10 | Complete |
 | VOTE-02 | Phase 10 | Complete |
 | VOTE-03 | Phase 10 | Complete |
-| VOTE-04 | Phase 10 | Pending |
+| VOTE-04 | Phase 10 | Complete |
 | VOTE-05 | Phase 10 | Pending |
 | VOTE-06 | Phase 10 | Complete |
 | VOTE-07 | Phase 10 | Complete |
@@ -108,6 +108,7 @@
 | TEST-06 | Phase 12 | Pending |
 
 **Coverage:**
+
 - v2.0 requirements: 31 total
 - Mapped to phases: 31
 - Unmapped: 0 ✓
