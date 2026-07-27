@@ -775,6 +775,11 @@ namespace sgns
          */
         void HandleCertificate( const Certificate &certificate );
         FinalizeResult FinalizeSlot( const Certificate &certificate, DeliverySource source );
+        bool RecordCertificateConflict( const CertificateNormalization &authoritative,
+                                        const CertificateNormalization &incoming,
+                                        const std::string              &slot_id,
+                                        DeliverySource                  source,
+                                        uint64_t                        now_ms );
         FinalizeResult ProcessFinalizedCertificate( const CertificateNormalization &normalized,
                                                     const std::string              &slot_id,
                                                     const std::string              &winner_id );
@@ -989,6 +994,8 @@ namespace sgns
         std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )>
             certificate_record_reader_; ///< Private/friend-only read seam; defaults to GlobalDB::Get.
         std::function<void()> certificate_publish_observer_; ///< Private/friend-only publish-attempt observer.
+        std::function<void( const ConsensusStateStore::ConflictRecord &, bool )>
+            certificate_conflict_observer_; ///< Private/friend-only conflict record observer (record, unique pair).
         std::function<void( std::string_view )> finalization_stage_observer_; ///< Private/friend-only stage observer.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         std::unordered_map<base::Hash256, SubjectHandler>
@@ -1029,6 +1036,8 @@ namespace sgns
         std::unordered_set<std::string> processing_slots_; ///< In-process leases; callbacks never overlap per slot.
         std::unordered_set<std::string> restored_final_slots_; ///< Slots with authoritative finality.
         std::unordered_set<std::string> restored_safety_slots_; ///< Slots stopped by SafetyViolation.
+        std::unordered_set<std::string> restored_safety_proposal_ids_; ///< Proposal ids bound to stopped slots.
+        std::atomic<uint64_t> certificate_conflict_unique_pairs_{ 0 }; ///< Unique canonical digest pairs observed.
         static inline std::function<void( std::string_view )> startup_event_observer_;
         static inline std::function<outcome::result<void>( std::string_view )> raw_publish_override_;
         static inline std::function<outcome::result<storage::rocksdb::QueryResult>( const base::Buffer & )>

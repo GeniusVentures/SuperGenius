@@ -60,6 +60,39 @@ namespace sgns
             return manager->proposals_.count( proposal_id ) != 0;
         }
 
+        static std::vector<ConsensusStateStore::ConflictRecord> Conflicts(
+            const std::shared_ptr<ConsensusManager> &manager )
+        {
+            auto conflicts = manager->state_store_->ScanConflicts();
+            return conflicts ? conflicts.value() : std::vector<ConsensusStateStore::ConflictRecord>{};
+        }
+
+        static bool SafetyStopped( const std::shared_ptr<ConsensusManager> &manager,
+                                   const std::string                       &slot )
+        {
+            std::lock_guard lock( manager->proposals_mutex_ );
+            return manager->restored_safety_slots_.count( slot ) != 0 &&
+                   manager->slot_states_[slot].lifecycle == ConsensusManager::SlotState::Lifecycle::SafetyViolation;
+        }
+
+        static uint64_t UniqueConflictPairs( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager->certificate_conflict_unique_pairs_.load();
+        }
+
+        static void SetConflictObserver(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<void( const ConsensusStateStore::ConflictRecord &, bool )> observer )
+        {
+            manager->certificate_conflict_observer_ = std::move( observer );
+        }
+
+        static void SetPublishObserver( const std::shared_ptr<ConsensusManager> &manager,
+                                        std::function<void()> observer )
+        {
+            manager->certificate_publish_observer_ = std::move( observer );
+        }
+
         static void SetStageObserver( const std::shared_ptr<ConsensusManager> &manager,
                                       std::function<void( std::string_view )> observer )
         {
@@ -286,18 +319,28 @@ namespace
             const std::shared_ptr<sgns::ConsensusManager>  &manager,
             const std::shared_ptr<sgns::ValidatorRegistry> &registry,
             const std::shared_ptr<sgns::GeniusAccount>     &account,
-            std::string                                      winner )
+            std::string                                      winner,
+            const sgns::ConsensusManager::Subject           *existing_subject = nullptr,
+            const std::shared_ptr<sgns::GeniusAccount>      &proposer = nullptr )
         {
-            sgns::UTXOTransitionCommitment commitment;
-            commitment.set_consumed_outpoints_root( std::string( 32, '\x01' ) );
-            commitment.set_produced_outputs_root( std::string( 32, '\x02' ) );
-            BOOST_OUTCOME_TRY( auto subject,
-                sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, std::move( winner ),
-                    sgns::EmbeddedTransaction{}, commitment, sgns::UTXOWitness{} ) );
+            sgns::ConsensusManager::Subject subject;
+            if ( existing_subject ) subject = *existing_subject;
+            else
+            {
+                sgns::UTXOTransitionCommitment commitment;
+                commitment.set_consumed_outpoints_root( std::string( 32, '\x01' ) );
+                commitment.set_produced_outputs_root( std::string( 32, '\x02' ) );
+                BOOST_OUTCOME_TRY( auto created,
+                    sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, std::move( winner ),
+                        sgns::EmbeddedTransaction{}, commitment, sgns::UTXOWitness{} ) );
+                subject = std::move( created );
+            }
+            const auto proposal_account = proposer ? proposer : account;
             BOOST_OUTCOME_TRY( auto proposal,
-                sgns::ConsensusManager::CreateProposal( subject, account->GetAddress(), registry->GetRegistryCid(),
+                sgns::ConsensusManager::CreateProposal( subject, proposal_account->GetAddress(), registry->GetRegistryCid(),
                     registry->GetRegistryEpoch(),
-                    [account]( std::vector<uint8_t> bytes ) { return account->Sign( std::move( bytes ) ); } ) );
+                    [proposal_account]( std::vector<uint8_t> bytes )
+                    { return proposal_account->Sign( std::move( bytes ) ); } ) );
             BOOST_OUTCOME_TRY( auto vote,
                 manager->CreateVote( proposal.proposal_id(), account->GetAddress(), true,
                     [account]( std::vector<uint8_t> bytes ) { return account->Sign( std::move( bytes ) ); } ) );
@@ -451,6 +494,101 @@ TEST_F( ConsensusFinalizationHarness, ConcurrentDeliverySourcesApplyExactWinnerO
     ASSERT_TRUE( complete );
     EXPECT_EQ( complete->state(), sgns::ConsensusStateStore::ProcessRecord::COMPLETE );
     EXPECT_EQ( handler_count.load(), 1 );
+    manager->Close();
+}
+
+TEST_F( ConsensusFinalizationHarness, ValidConflictIsCanonicalDurableSlotLocalAndOriginalWinnerCanRetry )
+{
+    auto account = MakeAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeRegistry( account );
+    auto manager = MakeManager( registry, account );
+    ASSERT_TRUE( manager );
+    auto authoritative = MakeCertificate(
+        manager, registry, account,
+        "456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123" );
+    ASSERT_TRUE( authoritative );
+    auto proposer2 = sgns::GeniusAccount::NewFromPrivateKey(
+        sgns::TokenID::FromBytes( { 0 } ),
+        "deedbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+        boost::filesystem::path( db_path_ ) / "conflict-proposer", false );
+    ASSERT_TRUE( proposer2 );
+    auto incoming = MakeCertificate(
+        manager, registry, account,
+        "56789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234",
+        &authoritative.value().proposal().subject(), proposer2 );
+    ASSERT_TRUE( incoming );
+    ASSERT_NE( authoritative.value().proposal_id(), incoming.value().proposal_id() );
+    auto slot = sgns::ConsensusFinalizationTestAccess::Slot( authoritative.value() );
+    ASSERT_TRUE( slot );
+    ASSERT_EQ( slot.value(), sgns::ConsensusFinalizationTestAccess::Slot( incoming.value() ).value() );
+
+    std::atomic<uint64_t> publish_count{ 0 };
+    std::vector<sgns::ConsensusStateStore::ConflictRecord> observations;
+    std::mutex observations_mutex;
+    sgns::ConsensusFinalizationTestAccess::SetPublishObserver(
+        manager, [&]() { ++publish_count; } );
+    sgns::ConsensusFinalizationTestAccess::SetConflictObserver(
+        manager,
+        [&]( const auto &record, bool )
+        {
+            std::lock_guard lock( observations_mutex );
+            observations.push_back( record );
+        } );
+
+    EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::Finalize(
+                   manager, authoritative.value(), sgns::ConsensusManager::DeliverySource::Local ),
+               sgns::ConsensusManager::FinalizeResult::PendingApplication );
+    EXPECT_EQ( publish_count.load(), 1U );
+    for ( const auto source : { sgns::ConsensusManager::DeliverySource::Local,
+                               sgns::ConsensusManager::DeliverySource::PubSub,
+                               sgns::ConsensusManager::DeliverySource::Recovery } )
+        EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::Finalize( manager, incoming.value(), source ),
+                   sgns::ConsensusManager::FinalizeResult::Conflict );
+
+    const auto conflicts = sgns::ConsensusFinalizationTestAccess::Conflicts( manager );
+    ASSERT_EQ( conflicts.size(), 1U );
+    const auto &conflict = conflicts.front();
+    EXPECT_LT( conflict.low_certificate_digest(), conflict.high_certificate_digest() );
+    EXPECT_EQ( conflict.authoritative_proposal_id(), authoritative.value().proposal_id() );
+    EXPECT_EQ( conflict.incoming_proposal_id(), incoming.value().proposal_id() );
+    EXPECT_EQ( conflict.first_source(), 1U );
+    EXPECT_EQ( conflict.sources_bitset(), 1U | 2U | 8U );
+    EXPECT_EQ( conflict.observation_count(), 3U );
+    ASSERT_EQ( observations.size(), 3U );
+    EXPECT_EQ( conflict.first_seen_at_ms(), observations.front().first_seen_at_ms() );
+    EXPECT_GE( conflict.last_seen_at_ms(), conflict.first_seen_at_ms() );
+    EXPECT_EQ( conflict.GetDescriptor()->FindFieldByName( "certificate" ), nullptr );
+    EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::UniqueConflictPairs( manager ), 1U );
+    EXPECT_TRUE( sgns::ConsensusFinalizationTestAccess::SafetyStopped( manager, slot.value() ) );
+    EXPECT_EQ( publish_count.load(), 1U );
+    EXPECT_TRUE( manager->SubmitProposal( incoming.value().proposal(), false ).has_error() );
+    EXPECT_TRUE( manager->SubmitVote( incoming.value().votes( 0 ), false ).has_error() );
+    EXPECT_TRUE( manager->CreateCertificate(
+        incoming.value().proposal(), { incoming.value().votes( 0 ) } ).has_error() );
+    auto unrelated = MakeCertificate(
+        manager, registry, account,
+        "6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345" );
+    ASSERT_TRUE( unrelated );
+    EXPECT_TRUE( manager->SubmitProposal( unrelated.value().proposal(), false ) );
+
+    EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::Finalize(
+                   manager, authoritative.value(), sgns::ConsensusManager::DeliverySource::Recovery ),
+               sgns::ConsensusManager::FinalizeResult::PendingApplication );
+    std::atomic<uint64_t> handler_count{ 0 };
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&]( const std::string &winner, const sgns::ConsensusManager::Certificate &certificate )
+            -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            ++handler_count;
+            EXPECT_EQ( winner,
+                       "456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123" );
+            EXPECT_EQ( certificate.proposal_id(), authoritative.value().proposal_id() );
+            return sgns::ConsensusManager::Check::Approve;
+        } ) );
+    EXPECT_EQ( handler_count.load(), 1U );
+    EXPECT_TRUE( sgns::ConsensusFinalizationTestAccess::SafetyStopped( manager, slot.value() ) );
     manager->Close();
 }
 

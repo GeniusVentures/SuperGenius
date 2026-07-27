@@ -58,7 +58,7 @@ namespace sgns
 
         outcome::result<std::vector<ConflictRecord>> ScanConflicts() const;
         outcome::result<std::vector<SafetyRecord>>   ScanSafety() const;
-        outcome::result<void> RecordConflictAndSafety( ConflictRecord conflict, SafetyRecord safety );
+        outcome::result<ConflictRecord> RecordConflictAndSafety( ConflictRecord conflict, SafetyRecord safety );
 
         static std::string VoteKey( const std::string &validator_id, const std::string &slot_id );
         static std::string ProcessKey( const std::string &slot_id );

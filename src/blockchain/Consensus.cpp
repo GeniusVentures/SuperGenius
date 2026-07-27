@@ -334,6 +334,12 @@ namespace sgns
         auto conflicts = state_store_->ScanConflicts();
         auto safeties = state_store_->ScanSafety();
         if ( !votes || !processes || !conflicts || !safeties ) return false;
+        certificate_conflict_unique_pairs_.store( conflicts.value().size(), std::memory_order_relaxed );
+        for ( const auto &record : conflicts.value() )
+        {
+            restored_safety_proposal_ids_.insert( record.authoritative_proposal_id() );
+            restored_safety_proposal_ids_.insert( record.incoming_proposal_id() );
+        }
 
         struct FinalRecord
         {
@@ -437,6 +443,7 @@ namespace sgns
                  final->second.proposal_id != record.authoritative_proposal_id() )
                 return false;
             restored_safety_slots_.insert( record.slot_id() );
+            slot_states_[record.slot_id()].lifecycle = SlotState::Lifecycle::SafetyViolation;
         }
         for ( const auto &record : restored_votes_ )
         {
@@ -1771,6 +1778,13 @@ namespace sgns
             votes.size(),
             proposal.registry_cid(),
             proposal.registry_epoch() );
+        auto slot_result = GetSlotKey( proposal );
+        if ( !slot_result ) return outcome::failure( slot_result.error() );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( restored_safety_slots_.count( slot_result.value() ) != 0 )
+                return outcome::failure( CertificateStoreError::Conflict );
+        }
         auto tally_result = TallyVotes( proposal, votes );
         if ( tally_result.has_error() )
         {
@@ -2074,6 +2088,8 @@ namespace sgns
         const auto &slot_key = slot_result.value();
         {
             std::lock_guard lock( proposals_mutex_ );
+            if ( restored_safety_slots_.count( slot_key ) != 0 )
+                return outcome::failure( std::errc::operation_not_permitted );
             auto            it = proposals_.find( proposal.proposal_id() );
             if ( it == proposals_.end() )
             {
@@ -2117,6 +2133,15 @@ namespace sgns
                                          __func__,
                                          vote.voter_id().substr( 0, 8 ),
                                          vote.proposal_id().substr( 0, 8 ) );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( restored_safety_proposal_ids_.count( vote.proposal_id() ) != 0 )
+                return outcome::failure( std::errc::operation_not_permitted );
+            auto proposal = proposals_.find( vote.proposal_id() );
+            if ( proposal != proposals_.end() &&
+                 restored_safety_slots_.count( proposal->second.slot_key ) != 0 )
+                return outcome::failure( std::errc::operation_not_permitted );
+        }
         ConsensusMessage message;
         *message.mutable_vote() = vote;
         auto result             = Publish( message );
@@ -2166,6 +2191,84 @@ namespace sgns
         return outcome::success();
     }
 
+    bool ConsensusManager::RecordCertificateConflict( const CertificateNormalization &authoritative,
+                                                       const CertificateNormalization &incoming,
+                                                       const std::string              &slot_id,
+                                                       DeliverySource                  source,
+                                                       uint64_t                        now_ms )
+    {
+        if ( !state_store_ || authoritative.check != Check::Approve || incoming.check != Check::Approve ||
+             authoritative.deterministic_bytes == incoming.deterministic_bytes || !IsCanonicalHash( slot_id ) ||
+             now_ms == 0 )
+            return false;
+
+        const auto digest_of = []( const std::string &bytes )
+        {
+            const auto digest = crypto::sha2_256( bytes.data(), bytes.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( digest.data(), digest.size() ) );
+        };
+        const auto authoritative_digest = digest_of( authoritative.deterministic_bytes );
+        const auto incoming_digest = digest_of( incoming.deterministic_bytes );
+        if ( authoritative_digest == incoming_digest ) return false;
+
+        const uint32_t source_bit = 1u << static_cast<uint8_t>( source );
+        ConsensusStateStore::ConflictRecord conflict;
+        conflict.set_schema_version( 2 );
+        conflict.set_slot_id( slot_id );
+        conflict.set_low_certificate_digest( authoritative_digest );
+        conflict.set_low_proposal_id( authoritative.certificate.proposal_id() );
+        conflict.set_high_certificate_digest( incoming_digest );
+        conflict.set_high_proposal_id( incoming.certificate.proposal_id() );
+        conflict.set_sources_bitset( source_bit );
+        conflict.set_first_source( source_bit );
+        conflict.set_first_seen_at_ms( now_ms );
+        conflict.set_last_seen_at_ms( now_ms );
+        conflict.set_observation_count( 1 );
+        conflict.set_authoritative_certificate_digest( authoritative_digest );
+        conflict.set_authoritative_proposal_id( authoritative.certificate.proposal_id() );
+        conflict.set_incoming_certificate_digest( incoming_digest );
+        conflict.set_incoming_proposal_id( incoming.certificate.proposal_id() );
+
+        ConsensusStateStore::SafetyRecord safety;
+        safety.set_schema_version( 2 );
+        safety.set_state( ConsensusStateStore::SafetyRecord::SAFETY_VIOLATION );
+        safety.set_slot_id( slot_id );
+        safety.set_authoritative_certificate_digest( authoritative_digest );
+        safety.set_authoritative_proposal_id( authoritative.certificate.proposal_id() );
+        safety.set_updated_at_ms( now_ms );
+
+        auto stored = state_store_->RecordConflictAndSafety( std::move( conflict ), std::move( safety ) );
+        if ( !stored ) return false;
+        const bool unique_pair = stored.value().observation_count() == 1;
+        if ( unique_pair ) certificate_conflict_unique_pairs_.fetch_add( 1, std::memory_order_relaxed );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            restored_safety_slots_.insert( slot_id );
+            restored_safety_proposal_ids_.insert( stored.value().authoritative_proposal_id() );
+            restored_safety_proposal_ids_.insert( stored.value().incoming_proposal_id() );
+            slot_states_[slot_id].lifecycle = SlotState::Lifecycle::SafetyViolation;
+            slot_cv_.notify_all();
+        }
+        const auto evidence_key = ConsensusStateStore::ConflictKey(
+            slot_id, stored.value().low_certificate_digest(), stored.value().high_certificate_digest() );
+        ConsensusManagerLogger()->critical(
+            "certificate_safety_violation evidence_key={} slot={} authoritative_proposal_id={} "
+            "incoming_proposal_id={} authoritative_digest={} incoming_digest={} first_source={} "
+            "sources_bitset={} observation_count={} unique_pair={}",
+            evidence_key,
+            slot_id,
+            stored.value().authoritative_proposal_id(),
+            stored.value().incoming_proposal_id(),
+            stored.value().authoritative_certificate_digest(),
+            stored.value().incoming_certificate_digest(),
+            stored.value().first_source(),
+            stored.value().sources_bitset(),
+            stored.value().observation_count(),
+            unique_pair );
+        if ( certificate_conflict_observer_ ) certificate_conflict_observer_( stored.value(), unique_pair );
+        return true;
+    }
+
     ConsensusManager::FinalizeResult ConsensusManager::FinalizeSlot( const Certificate &certificate,
                                                                       DeliverySource      source )
     {
@@ -2193,10 +2296,19 @@ namespace sgns
         bool authority_existed = initial_slot.value().has_value();
         if ( authority_existed )
         {
-            if ( !initial_index.value() ||
-                 std::string( initial_slot.value()->toString() ) != normalized.deterministic_bytes ||
-                 std::string( initial_index.value()->toString() ) != slot_id )
+            const auto authoritative = GetCertificateBySlotId( slot_id );
+            if ( !authoritative ) return FinalizeResult::StorageFailure;
+            const auto authoritative_normalized = NormalizeCertificateStructural( authoritative.value() );
+            if ( authoritative_normalized.check != Check::Approve ) return FinalizeResult::StorageFailure;
+            if ( authoritative_normalized.deterministic_bytes != normalized.deterministic_bytes )
+            {
+                if ( !RecordCertificateConflict(
+                         authoritative_normalized, normalized, slot_id, source, CurrentTimeMs() ) )
+                    return FinalizeResult::StorageFailure;
                 return FinalizeResult::Conflict;
+            }
+            if ( !initial_index.value() || std::string( initial_index.value()->toString() ) != slot_id )
+                return FinalizeResult::StorageFailure;
         }
         else if ( initial_index.value() )
         {
@@ -2229,7 +2341,14 @@ namespace sgns
                 if ( authority )
                 {
                     if ( authority.value().SerializeAsString() != normalized.deterministic_bytes )
+                    {
+                        const auto authoritative_normalized = NormalizeCertificateStructural( authority.value() );
+                        if ( authoritative_normalized.check != Check::Approve ||
+                             !RecordCertificateConflict(
+                                 authoritative_normalized, normalized, slot_id, source, CurrentTimeMs() ) )
+                            return FinalizeResult::StorageFailure;
                         return FinalizeResult::Conflict;
+                    }
                     authority_existed = true;
                     break;
                 }
@@ -2287,15 +2406,11 @@ namespace sgns
             {
                 if ( reread.value().SerializeAsString() != normalized.deterministic_bytes )
                 {
-                    std::lock_guard lock( proposals_mutex_ );
-                    auto it = slot_states_.find( slot_id );
-                    if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::Finalizing &&
-                         it->second.generation == reservation_generation &&
-                         it->second.reserved_finalization_digest == digest )
-                    {
-                        it->second.lifecycle = SlotState::Lifecycle::SafetyViolation;
-                        slot_cv_.notify_all();
-                    }
+                    const auto authoritative_normalized = NormalizeCertificateStructural( reread.value() );
+                    if ( authoritative_normalized.check != Check::Approve ||
+                         !RecordCertificateConflict(
+                             authoritative_normalized, normalized, slot_id, source, CurrentTimeMs() ) )
+                        return FinalizeResult::StorageFailure;
                     return FinalizeResult::Conflict;
                 }
                 exact_pair = true;
@@ -2516,6 +2631,17 @@ namespace sgns
         }
         const auto &slot_key = slot_result.value();
 
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( restored_safety_slots_.count( slot_key ) != 0 )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: proposal admission blocked by slot safety violation slot={} proposal_id={}",
+                    __func__, slot_key, proposal.proposal_id() );
+                return;
+            }
+        }
+
         auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
@@ -2644,7 +2770,14 @@ namespace sgns
         {
             const auto &proposal     = state.proposal;
             const auto &proposal_id  = proposal.proposal_id();
-            auto        subject_hash = GetSubjectHash( proposal.subject() );
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                if ( restored_safety_slots_.count( state.slot_key ) != 0 )
+                {
+                    continue;
+                }
+            }
+            auto subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
             {
                 ConsensusManagerLogger()->debug( "{}: hash {} already certified, finalizing proposal_id={}",
@@ -2946,6 +3079,24 @@ namespace sgns
             return crdt::DeltaFilterResult::Reject();
         }
 
+        // Full structural, signature, quorum, registry, and deterministic-byte
+        // validation must precede occupied-slot conflict classification. Invalid
+        // traffic is an ordinary rejection and can never create local safety state.
+        auto normalized = NormalizeCertificateStructural( certificate );
+        if ( normalized.check == Check::Stalled )
+        {
+            auto dependency = CID::fromString( certificate.registry_cid() );
+            if ( dependency.has_error() ) return crdt::DeltaFilterResult::Reject();
+            return crdt::DeltaFilterResult::RetryDependency( certificate.registry_cid() );
+        }
+        if ( normalized.check != Check::Approve || normalized.deterministic_bytes != slot_element->value() )
+        {
+            ConsensusManagerLogger()->critical( "{}: noncanonical certificate payload key={}",
+                                                __func__, slot_element->key() );
+            return crdt::DeltaFilterResult::Reject();
+        }
+        certificate = normalized.certificate;
+
         const auto existing_slot_result = ReadCertificatePreflightRecord( { expected_slot_key } );
         const auto existing_index_result = ReadCertificatePreflightRecord( { expected_index_key } );
         if ( existing_slot_result.has_error() || existing_index_result.has_error() )
@@ -2964,45 +3115,32 @@ namespace sgns
         }
         const auto &existing_slot  = existing_slot_result.value();
         const auto &existing_index = existing_index_result.value();
-        if ( static_cast<bool>( existing_slot ) != static_cast<bool>( existing_index ) )
+        if ( existing_slot )
         {
-            ConsensusManagerLogger()->critical( "{}: partial existing certificate pair slot={} winner={}",
-                                                __func__,
-                                                slot_result.value(),
-                                                hash_result.value() );
-            return crdt::DeltaFilterResult::Reject();
-        }
-        if ( existing_slot &&
-             ( std::string( existing_slot->toString() ) != slot_element->value() ||
-               std::string( existing_index->toString() ) != slot_result.value() ) )
-        {
-            ConsensusManagerLogger()->critical(
-                "{}: replicated certificate conflict slot={} incoming_proposal_id={} winner={}",
-                __func__,
-                slot_result.value(),
-                certificate.proposal_id(),
-                hash_result.value() );
-            return crdt::DeltaFilterResult::Reject();
-        }
-
-        auto normalized = NormalizeCertificateStructural( certificate );
-        if ( normalized.check == Check::Stalled )
-        {
-            auto dependency = CID::fromString( certificate.registry_cid() );
-            if ( dependency.has_error() )
+            if ( std::string( existing_slot->toString() ) != normalized.deterministic_bytes )
             {
+                Certificate authoritative;
+                if ( !authoritative.ParseFromString( existing_slot->toString() ) )
+                    return crdt::DeltaFilterResult::Reject();
+                auto authoritative_normalized = NormalizeCertificateStructural( authoritative );
+                if ( authoritative_normalized.check != Check::Approve ||
+                     authoritative_normalized.deterministic_bytes != existing_slot->toString() )
+                    return crdt::DeltaFilterResult::Reject();
+                (void) RecordCertificateConflict( authoritative_normalized,
+                                                  normalized,
+                                                  slot_result.value(),
+                                                  DeliverySource::CRDT,
+                                                  CurrentTimeMs() );
+                ConsensusManagerLogger()->critical(
+                    "{}: replicated certificate conflict slot={} incoming_proposal_id={} winner={}",
+                    __func__, slot_result.value(), certificate.proposal_id(), hash_result.value() );
                 return crdt::DeltaFilterResult::Reject();
             }
-            return crdt::DeltaFilterResult::RetryDependency( certificate.registry_cid() );
+            if ( !existing_index || std::string( existing_index->toString() ) != slot_result.value() )
+                return crdt::DeltaFilterResult::Reject();
         }
-        if ( normalized.check != Check::Approve || normalized.deterministic_bytes != slot_element->value() )
-        {
-            ConsensusManagerLogger()->critical( "{}: noncanonical certificate payload key={}",
-                                                __func__,
-                                                slot_element->key() );
+        else if ( existing_index )
             return crdt::DeltaFilterResult::Reject();
-        }
-        certificate = std::move( normalized.certificate );
 
         return crdt::DeltaFilterResult::Approve();
     }
@@ -3265,6 +3403,10 @@ namespace sgns
                                              vote.voter_id().substr( 0, 8 ) );
             return;
         }
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            if ( restored_safety_proposal_ids_.count( vote.proposal_id() ) != 0 ) return;
+        }
 
         auto signing_bytes = sgns::VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
@@ -3289,10 +3431,21 @@ namespace sgns
             if ( it == proposals_.end() )
             {
                 pending_votes_[proposal_id].push_back( vote );
+                ConsensusManagerLogger()->debug( "{}: queued pending vote proposal_id={}",
+                                                 __func__,
+                                                 proposal_id.substr( 0, 8 ) );
                 return;
             }
 
-            auto       &state        = it->second;
+            auto &state = it->second;
+            if ( restored_safety_slots_.count( state.slot_key ) != 0 )
+            {
+                ConsensusManagerLogger()->critical(
+                    "{}: vote aggregation blocked by slot safety violation slot={} proposal_id={}",
+                    __func__, state.slot_key, proposal_id );
+                return;
+            }
+
             const auto &proposal     = state.proposal;
             auto        subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
