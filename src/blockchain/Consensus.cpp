@@ -420,6 +420,14 @@ namespace sgns
                 if ( !state_store_->PutPendingProcess( pending ) ) return false;
                 restored_processes_.emplace( slot, std::move( pending ) );
             }
+            auto &slot_state = slot_states_[slot];
+            slot_state.reserved_finalization_proposal_id = final.proposal_id;
+            slot_state.reserved_finalization_digest = final.digest;
+            slot_state.reserved_finalization_winner_id = final.winner_id;
+            slot_state.lifecycle = restored_processes_.at( slot ).state() ==
+                                           ConsensusStateStore::ProcessRecord::COMPLETE
+                                       ? SlotState::Lifecycle::Applied
+                                       : SlotState::Lifecycle::FinalizedPendingApplication;
         }
 
         for ( const auto &record : safeties.value() )
@@ -443,7 +451,10 @@ namespace sgns
             if ( restored_safety_slots_.count( record.slot_id() ) != 0 )
                 slot.lifecycle = SlotState::Lifecycle::SafetyViolation;
             else if ( restored_final_slots_.count( record.slot_id() ) != 0 )
-                slot.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+                slot.lifecycle = restored_processes_.at( record.slot_id() ).state() ==
+                                         ConsensusStateStore::ProcessRecord::COMPLETE
+                                     ? SlotState::Lifecycle::Applied
+                                     : SlotState::Lifecycle::FinalizedPendingApplication;
             else if ( record.state() == ConsensusStateStore::VoteRecord::RETIRED )
                 slot.lifecycle = SlotState::Lifecycle::Retired;
             else if ( now > record.acceptance_horizon_ms() )
@@ -1635,17 +1646,14 @@ namespace sgns
                     continue;
                 }
                 const auto proposal_id = it->first;
-                expired.push_back( it->second.proposal );
+                auto       proposal = it->second.proposal;
                 ++it;
-                RemovePendingProposalLocked( proposal_id, "ttl-expired" );
+                if ( RemovePendingProposalLocked( proposal_id, "ttl-expired" ) )
+                    expired.push_back( std::move( proposal ) );
             }
         }
 
-        for ( const auto &proposal : expired )
-        {
-            FireProposalCleanupCallbacks( proposal );
-            ClearProposalSlot( proposal );
-        }
+        for ( const auto &proposal : expired ) ClearProposalSlot( proposal );
     }
 
     outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
@@ -2130,184 +2138,331 @@ namespace sgns
 
     outcome::result<void> ConsensusManager::SubmitCertificate( const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: called for hash {} and proposal_id={}",
-                                         __func__,
-                                         GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                         certificate.proposal_id().substr( 0, 8 ) );
+        // Preserve the public store API's distinction between integrity and
+        // operational read failures. FinalizeSlot intentionally collapses
+        // storage failures into its source-independent typed result.
         auto normalized = NormalizeCertificateStructural( certificate );
-        if ( normalized.check != Check::Approve )
+        if ( normalized.check == Check::Approve )
         {
-            ConsensusManagerLogger()->error( "{}: rejected invalid certificate proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return outcome::failure( CertificateStoreError::InvalidCertificate );
-        }
-        const auto &canonical = normalized.certificate;
-
-        auto slot_result = GetSlotKey( canonical.proposal() );
-        if ( slot_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id().substr( 0, 8 ) );
-            return outcome::failure( slot_result.error() );
-        }
-
-        auto subject_hash_result = GetSubjectHash( canonical.proposal().subject() );
-        if ( subject_hash_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: subject hash {} error proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                             certificate.proposal_id().substr( 0, 8 ) );
-            return outcome::failure( subject_hash_result.error() );
-        }
-
-        const auto &slot_id      = slot_result.value();
-        const auto &subject_hash = subject_hash_result.value();
-        if ( !IsCanonicalHash( slot_id ) || !IsCanonicalHash( subject_hash ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected noncanonical certificate keys slot={} winner={}",
-                                             __func__,
-                                             slot_id,
-                                             subject_hash );
-            return outcome::failure( CertificateStoreError::IntegrityError );
-        }
-
-        auto existing_authority = GetCertificateBySlotId( slot_id );
-        const bool timeless_identical_replay = existing_authority.has_value() &&
-            existing_authority.value().SerializeAsString() == canonical.SerializeAsString();
-        if ( !timeless_identical_replay &&
-             ValidateCertificateForFirstObservation( normalized, CurrentTimeMs() ) != Check::Approve )
-        {
-            return outcome::failure( CertificateStoreError::InvalidCertificate );
-        }
-
-        const auto &serialized = normalized.deterministic_bytes;
-
-        const auto slot_key_string = std::string{ CERTIFICATE_SLOT_BASE_PATH_KEY } + slot_id;
-        const auto index_key_string = std::string{ CERTIFICATE_TX_INDEX_BASE_PATH_KEY } + subject_hash;
-        const auto existing_slot_result = ReadCertificatePreflightRecord( { slot_key_string } );
-        const auto existing_index_result = ReadCertificatePreflightRecord( { index_key_string } );
-        if ( existing_slot_result.has_error() || existing_index_result.has_error() )
-        {
-            const bool slot_integrity =
-                existing_slot_result.has_error() &&
-                existing_slot_result.error() == make_error_code( CertificateStoreError::IntegrityError );
-            const bool index_integrity =
-                existing_index_result.has_error() &&
-                existing_index_result.error() == make_error_code( CertificateStoreError::IntegrityError );
-            const auto failure = slot_integrity || index_integrity
-                                     ? CertificateStoreError::IntegrityError
-                                     : CertificateStoreError::StorageError;
-            ConsensusManagerLogger()->critical(
-                "{}: certificate preflight failed closed slot={} winner={} slot_key={} slot_error={} "
-                "index_key={} index_error={}",
-                __func__,
-                slot_id,
-                subject_hash,
-                slot_key_string,
-                existing_slot_result.has_error() ? existing_slot_result.error().message() : "none",
-                index_key_string,
-                existing_index_result.has_error() ? existing_index_result.error().message() : "none" );
-            return outcome::failure( failure );
-        }
-        const auto &existing_slot  = existing_slot_result.value();
-        const auto &existing_index = existing_index_result.value();
-
-        if ( existing_slot )
-        {
-            const auto existing_bytes = std::string( existing_slot->toString() );
-            if ( existing_bytes == serialized )
+            auto slot = GetSlotKey( normalized.certificate.proposal() );
+            auto winner = GetSubjectHash( normalized.certificate.proposal().subject() );
+            if ( slot && winner )
             {
-                if ( !existing_index || std::string( existing_index->toString() ) != slot_id )
+                auto slot_record = ReadCertificatePreflightRecord(
+                    { std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot.value() } );
+                auto index_record = ReadCertificatePreflightRecord(
+                    { std::string( CERTIFICATE_TX_INDEX_BASE_PATH_KEY ) + winner.value() } );
+                if ( !slot_record ) return outcome::failure( slot_record.error() );
+                if ( !index_record ) return outcome::failure( index_record.error() );
+            }
+        }
+        const auto finalized = FinalizeSlot( certificate, DeliverySource::Local );
+        if ( finalized == FinalizeResult::Conflict )
+            return outcome::failure( CertificateStoreError::Conflict );
+        if ( finalized == FinalizeResult::Invalid )
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
+        if ( finalized == FinalizeResult::StorageFailure )
+            return outcome::failure( CertificateStoreError::StorageError );
+        return outcome::success();
+    }
+
+    ConsensusManager::FinalizeResult ConsensusManager::FinalizeSlot( const Certificate &certificate,
+                                                                      DeliverySource      source )
+    {
+        auto normalized = NormalizeCertificateStructural( certificate );
+        if ( normalized.check != Check::Approve ) return FinalizeResult::Invalid;
+
+        auto slot_result = GetSlotKey( normalized.certificate.proposal() );
+        auto winner_result = GetSubjectHash( normalized.certificate.proposal().subject() );
+        if ( !slot_result || !winner_result || !IsCanonicalHash( slot_result.value() ) ||
+             !IsCanonicalHash( winner_result.value() ) )
+            return FinalizeResult::Invalid;
+
+        const auto &slot_id = slot_result.value();
+        const auto &winner_id = winner_result.value();
+        const auto digest_bytes = crypto::sha2_256( normalized.deterministic_bytes.data(),
+                                                    normalized.deterministic_bytes.size() );
+        const auto digest = base::hex_lower(
+            gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+
+        const auto slot_key_string = std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_id;
+        const auto index_key_string = std::string( CERTIFICATE_TX_INDEX_BASE_PATH_KEY ) + winner_id;
+        auto initial_slot = ReadCertificatePreflightRecord( { slot_key_string } );
+        auto initial_index = ReadCertificatePreflightRecord( { index_key_string } );
+        if ( !initial_slot || !initial_index ) return FinalizeResult::StorageFailure;
+        bool authority_existed = initial_slot.value().has_value();
+        if ( authority_existed )
+        {
+            if ( !initial_index.value() ||
+                 std::string( initial_slot.value()->toString() ) != normalized.deterministic_bytes ||
+                 std::string( initial_index.value()->toString() ) != slot_id )
+                return FinalizeResult::Conflict;
+        }
+        else if ( initial_index.value() )
+        {
+            return FinalizeResult::Conflict;
+        }
+        else if ( ValidateCertificateForFirstObservation( normalized, CurrentTimeMs() ) != Check::Approve )
+        {
+            return FinalizeResult::Invalid;
+        }
+
+        uint64_t reservation_generation = 0;
+        uint64_t prior_generation = 0;
+        SlotState::Lifecycle prior_lifecycle = SlotState::Lifecycle::Empty;
+        if ( !authority_existed )
+        {
+            for ( ;; )
+            {
+                std::unique_lock lock( proposals_mutex_ );
+                auto &slot = slot_states_[slot_id];
+                while ( slot.lifecycle == SlotState::Lifecycle::SigningPublishing ||
+                        slot.lifecycle == SlotState::Lifecycle::PublishingReplay ||
+                        slot.lifecycle == SlotState::Lifecycle::Finalizing )
                 {
-                    ConsensusManagerLogger()->error(
-                        "{}: integrity failure for replay slot={} proposal_id={} winner={}: index missing or mismatched",
-                        __func__,
-                        slot_id,
-                        canonical.proposal_id(),
-                        subject_hash );
-                    return outcome::failure( CertificateStoreError::IntegrityError );
+                    if ( finalization_stage_observer_ ) finalization_stage_observer_( "waiting-publication" );
+                    slot_cv_.wait( lock );
                 }
-                ConsensusManagerLogger()->debug( "{}: idempotent certificate replay slot={} proposal_id={}",
-                                                 __func__,
-                                                 slot_id,
-                                                 canonical.proposal_id() );
-                return outcome::success();
+
+                lock.unlock();
+                auto authority = GetCertificateBySlotId( slot_id );
+                if ( authority )
+                {
+                    if ( authority.value().SerializeAsString() != normalized.deterministic_bytes )
+                        return FinalizeResult::Conflict;
+                    authority_existed = true;
+                    break;
+                }
+                if ( authority.error() != make_error_code( CertificateStoreError::NotFound ) )
+                    return FinalizeResult::StorageFailure;
+
+                lock.lock();
+                auto &rechecked = slot_states_[slot_id];
+                if ( rechecked.lifecycle == SlotState::Lifecycle::SigningPublishing ||
+                     rechecked.lifecycle == SlotState::Lifecycle::PublishingReplay ||
+                     rechecked.lifecycle == SlotState::Lifecycle::Finalizing )
+                    continue;
+                prior_lifecycle = rechecked.lifecycle;
+                prior_generation = rechecked.generation;
+                reservation_generation = ++rechecked.generation;
+                rechecked.lifecycle = SlotState::Lifecycle::Finalizing;
+                rechecked.reserved_finalization_proposal_id = normalized.certificate.proposal_id();
+                rechecked.reserved_finalization_digest = digest;
+                rechecked.reserved_finalization_winner_id = winner_id;
+                break;
+            }
+        }
+
+        if ( reservation_generation != 0 && finalization_stage_observer_ )
+            finalization_stage_observer_( "reserved" );
+
+        bool newly_persisted = false;
+        if ( !authority_existed )
+        {
+            auto existing_slot = ReadCertificatePreflightRecord( { slot_key_string } );
+            auto existing_index = ReadCertificatePreflightRecord( { index_key_string } );
+            bool exact_pair = existing_slot && existing_index && existing_slot.value() && existing_index.value() &&
+                              std::string( existing_slot.value()->toString() ) == normalized.deterministic_bytes &&
+                              std::string( existing_index.value()->toString() ) == slot_id;
+            bool confirmed_absent = existing_slot && existing_index && !existing_slot.value() && !existing_index.value();
+
+            outcome::result<CID> put_result = outcome::failure( std::errc::io_error );
+            if ( confirmed_absent )
+            {
+                crdt::GlobalDB::Buffer cert_value;
+                cert_value.put( normalized.deterministic_bytes );
+                crdt::GlobalDB::Buffer index_value;
+                index_value.put( slot_id );
+                put_result = db_->Put( { { crdt::HierarchicalKey( slot_key_string ), std::move( cert_value ) },
+                                         { crdt::HierarchicalKey( index_key_string ), std::move( index_value ) } },
+                                       { consensus_datastore_topic_ } );
+                newly_persisted = put_result.has_value();
+                exact_pair = newly_persisted;
             }
 
-            Certificate existing_certificate;
-            const bool  parsed = existing_certificate.ParseFromString( existing_bytes );
-            ConsensusManagerLogger()->critical(
-                "{}: certificate conflict slot={} existing_proposal_id={} incoming_proposal_id={} "
-                "existing_winner={} incoming_winner={}",
-                __func__,
-                slot_id,
-                parsed ? existing_certificate.proposal_id() : "<invalid>",
-                canonical.proposal_id(),
-                parsed && GetSubjectHash( existing_certificate.proposal().subject() ).has_value()
-                    ? GetSubjectHash( existing_certificate.proposal().subject() ).value()
-                    : "<invalid>",
-                subject_hash );
-            return outcome::failure( CertificateStoreError::Conflict );
+            auto reread = newly_persisted
+                              ? outcome::result<Certificate>( normalized.certificate )
+                              : GetCertificateBySlotId( slot_id );
+            if ( reread )
+            {
+                if ( reread.value().SerializeAsString() != normalized.deterministic_bytes )
+                {
+                    std::lock_guard lock( proposals_mutex_ );
+                    auto it = slot_states_.find( slot_id );
+                    if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::Finalizing &&
+                         it->second.generation == reservation_generation &&
+                         it->second.reserved_finalization_digest == digest )
+                    {
+                        it->second.lifecycle = SlotState::Lifecycle::SafetyViolation;
+                        slot_cv_.notify_all();
+                    }
+                    return FinalizeResult::Conflict;
+                }
+                exact_pair = true;
+            }
+            else if ( reread.error() == make_error_code( CertificateStoreError::NotFound ) &&
+                      confirmed_absent && put_result.has_error() )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto it = slot_states_.find( slot_id );
+                if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::Finalizing &&
+                     it->second.generation == reservation_generation &&
+                     it->second.reserved_finalization_proposal_id == normalized.certificate.proposal_id() &&
+                     it->second.reserved_finalization_digest == digest &&
+                     it->second.reserved_finalization_winner_id == winner_id )
+                {
+                    it->second.lifecycle = prior_lifecycle;
+                    it->second.generation = prior_generation;
+                    it->second.reserved_finalization_proposal_id.clear();
+                    it->second.reserved_finalization_digest.clear();
+                    it->second.reserved_finalization_winner_id.clear();
+                    slot_cv_.notify_all();
+                }
+                return FinalizeResult::StorageFailure;
+            }
+            if ( !exact_pair ) return FinalizeResult::StorageFailure;
         }
 
-        if ( existing_index )
+        bool first_local_finality = false;
         {
-            ConsensusManagerLogger()->critical(
-                "{}: certificate index conflict slot={} proposal_id={} winner={} existing_target={}",
-                __func__,
-                slot_id,
-                canonical.proposal_id(),
-                subject_hash,
-                std::string( existing_index->toString() ) );
-            return outcome::failure( std::string( existing_index->toString() ) == slot_id
-                                         ? CertificateStoreError::IntegrityError
-                                         : CertificateStoreError::Conflict );
+            std::lock_guard lock( proposals_mutex_ );
+            auto &slot = slot_states_[slot_id];
+            first_local_finality = restored_final_slots_.insert( slot_id ).second;
+            if ( slot.lifecycle != SlotState::Lifecycle::SafetyViolation )
+                slot.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+            slot.reserved_finalization_proposal_id = normalized.certificate.proposal_id();
+            slot.reserved_finalization_digest = digest;
+            slot.reserved_finalization_winner_id = winner_id;
+            slot_cv_.notify_all();
         }
 
-        crdt::HierarchicalKey  cert_key( slot_key_string );
-        crdt::GlobalDB::Buffer cert_value;
-        cert_value.put( serialized );
-        crdt::HierarchicalKey  index_key( index_key_string );
-        crdt::GlobalDB::Buffer index_value;
-        index_value.put( slot_id );
-
-        auto cert_put = db_->Put( { { std::move( cert_key ), std::move( cert_value ) },
-                                    { std::move( index_key ), std::move( index_value ) } },
-                                  { consensus_datastore_topic_ } );
-        if ( cert_put.has_error() )
+        ConsensusStateStore::ProcessRecord pending;
+        pending.set_schema_version( 2 );
+        pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+        pending.set_slot_id( slot_id );
+        pending.set_certificate_digest( digest );
+        pending.set_proposal_id( normalized.certificate.proposal_id() );
+        pending.set_winner_id( winner_id );
+        pending.set_updated_at_ms( CurrentTimeMs() );
+        if ( !state_store_ || !state_store_->PutPendingProcess( pending ) )
+            return FinalizeResult::StorageFailure;
+        auto process = state_store_->GetProcess( slot_id );
+        if ( !process || !process.value() ) return FinalizeResult::StorageFailure;
         {
-            ConsensusManagerLogger()->error( "{}: failed: cert put for hash {} error={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                             cert_put.error().message() );
-            return outcome::failure( cert_put.error() );
+            std::lock_guard lock( restored_state_mutex_ );
+            restored_processes_[slot_id] = process.value().value();
         }
 
-        ConsensusMessage message;
-        *message.mutable_certificate() = canonical;
-        if ( certificate_publish_observer_ )
+        if ( first_local_finality ) registry_->OnFinalizedCertificate( normalized.certificate );
+        if ( source == DeliverySource::Local && newly_persisted )
         {
-            certificate_publish_observer_();
-        }
-        auto result                    = Publish( message );
-        if ( result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: pair stored but live publish failed slot={} error={}",
-                                             __func__,
-                                             slot_id,
-                                             result.error().message() );
-            return result;
+            ConsensusMessage message;
+            *message.mutable_certificate() = normalized.certificate;
+            if ( certificate_publish_observer_ ) certificate_publish_observer_();
+            (void) Publish( message );
         }
 
-        ConsensusManagerLogger()->debug( "{}: success submitting certificate for {} slot={} proposal_id={}",
-                                         __func__,
-                                         GetPrintableSubjectHash( certificate.proposal().subject() ),
-                                         slot_id,
-                                         canonical.proposal_id().substr( 0, 8 ) );
-        return result;
+        auto processed = ProcessFinalizedCertificate( normalized, slot_id, winner_id );
+        if ( processed == FinalizeResult::Applied || processed == FinalizeResult::AlreadyFinalized )
+            (void) certificate_work_journal_->MarkDone(
+                std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_id );
+        if ( processed == FinalizeResult::PendingApplication || processed == FinalizeResult::StorageFailure )
+            return processed;
+        return authority_existed && processed == FinalizeResult::Applied
+                   ? FinalizeResult::AlreadyFinalized
+                   : processed;
+    }
+
+    ConsensusManager::FinalizeResult ConsensusManager::ProcessFinalizedCertificate(
+        const CertificateNormalization &normalized,
+        const std::string              &slot_id,
+        const std::string              &winner_id )
+    {
+        auto process = state_store_->GetProcess( slot_id );
+        if ( !process || !process.value() ) return FinalizeResult::StorageFailure;
+        auto record = process.value().value();
+        const auto digest_bytes = crypto::sha2_256( normalized.deterministic_bytes.data(),
+                                                    normalized.deterministic_bytes.size() );
+        const auto digest = base::hex_lower(
+            gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+        if ( record.proposal_id() != normalized.certificate.proposal_id() ||
+             record.winner_id() != winner_id || record.certificate_digest() != digest )
+            return FinalizeResult::StorageFailure;
+
+        if ( record.state() == ConsensusStateStore::ProcessRecord::COMPLETE )
+        {
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &slot = slot_states_[slot_id];
+                if ( slot.lifecycle != SlotState::Lifecycle::SafetyViolation )
+                    slot.lifecycle = SlotState::Lifecycle::Applied;
+            }
+            ClearProposalSlot( normalized.certificate.proposal() );
+            return FinalizeResult::AlreadyFinalized;
+        }
+
+        CertificateSubjectHandler handler;
+        {
+            std::shared_lock lock( certificate_handlers_mutex_ );
+            auto it = certificate_subject_handlers_.find(
+                normalized.certificate.proposal().subject().subject_type_hash().hash() );
+            if ( it == certificate_subject_handlers_.end() ) return FinalizeResult::PendingApplication;
+            handler = it->second;
+        }
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            if ( !processing_slots_.insert( slot_id ).second ) return FinalizeResult::PendingApplication;
+        }
+        const auto release_processing = [this, &slot_id]()
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            processing_slots_.erase( slot_id );
+        };
+
+        const auto now = CurrentTimeMs();
+        if ( record.state() == ConsensusStateStore::ProcessRecord::PROCESSING )
+            (void) state_store_->RestorePending( slot_id, now );
+        if ( !state_store_->MarkProcessing( slot_id, now + 15'000, now ) )
+        {
+            release_processing();
+            return FinalizeResult::StorageFailure;
+        }
+
+        auto handled = handler( winner_id, normalized.certificate );
+        if ( !handled || handled.value() != Check::Approve )
+        {
+            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
+            auto pending = state_store_->GetProcess( slot_id );
+            if ( pending && pending.value() )
+            {
+                std::lock_guard lock( restored_state_mutex_ );
+                restored_processes_[slot_id] = pending.value().value();
+            }
+            release_processing();
+            return FinalizeResult::PendingApplication;
+        }
+        if ( !state_store_->MarkComplete( slot_id, CurrentTimeMs() ) )
+        {
+            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
+            release_processing();
+            return FinalizeResult::StorageFailure;
+        }
+        auto complete = state_store_->GetProcess( slot_id );
+        if ( complete && complete.value() )
+        {
+            std::lock_guard lock( restored_state_mutex_ );
+            restored_processes_[slot_id] = complete.value().value();
+        }
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto &slot = slot_states_[slot_id];
+            if ( slot.lifecycle != SlotState::Lifecycle::SafetyViolation )
+                slot.lifecycle = SlotState::Lifecycle::Applied;
+        }
+        release_processing();
+        ClearProposalSlot( normalized.certificate.proposal() );
+        (void) WakePendingDependency( PendingDependencyKey::Certificate( winner_id ) );
+        return FinalizeResult::Applied;
     }
 
     void ConsensusManager::HandleProposal( const Proposal &proposal )
@@ -2492,11 +2647,15 @@ namespace sgns
             auto        subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
             {
-                ConsensusManagerLogger()->debug( "{}: hash {} already certified, clearing proposal_id={}",
+                ConsensusManagerLogger()->debug( "{}: hash {} already certified, finalizing proposal_id={}",
                                                  __func__,
                                                  subject_hash.value().substr( 0, 8 ),
                                                  proposal_id.substr( 0, 8 ) );
-                ClearProposalSlot( proposal );
+                auto authoritative = GetCertificateBySubjectHash( subject_hash.value() );
+                if ( authoritative )
+                {
+                    (void) FinalizeSlot( authoritative.value(), DeliverySource::Recovery );
+                }
                 continue;
             }
 
@@ -2543,11 +2702,10 @@ namespace sgns
             if ( aggregator_role == AggregatorRole::NotInRegistry )
             {
                 ConsensusManagerLogger()->debug(
-                    "{}: local node not in proposal registry; clearing local proposal for hash {} proposal_id={}",
+                    "{}: local node not in proposal registry; retaining local proposal for hash {} proposal_id={}",
                     __func__,
                     GetPrintableSubjectHash( proposal.subject() ),
                     proposal_id.substr( 0, 8 ) );
-                ClearProposalSlot( proposal );
                 continue;
             }
             if ( aggregator_role == AggregatorRole::ActiveButNotAggregator )
@@ -2588,7 +2746,6 @@ namespace sgns
             {
                 continue;
             }
-            ClearProposalSlot( proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
                                              GetPrintableSubjectHash( proposal.subject() ),
@@ -2904,143 +3061,31 @@ namespace sgns
             return;
         }
 
-        auto normalized = NormalizeCertificateStructural( certificate );
-        if ( normalized.check == Check::Reject ||
-             ( normalized.check == Check::Approve &&
-               normalized.deterministic_bytes != std::string( value.toString() ) ) )
-        {
-            ConsensusManagerLogger()->error( "{}: rejecting noncanonical certificate payload key={}",
-                                             __func__,
-                                             key );
-            return;
-        }
-        if ( normalized.check == Check::Stalled )
-        {
-            certificate_work_journal_->MarkStalled( key );
-            return;
-        }
-        certificate = std::move( normalized.certificate );
-
         auto slot_result = GetSlotKey( certificate.proposal() );
-        if ( slot_result.has_error() ||
-             key != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
-        {
-            ConsensusManagerLogger()->critical( "{}: rejecting certificate callback for mismatched slot key={}",
-                                                __func__,
-                                                key );
+        if ( slot_result.has_error() || key != std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot_result.value() )
             return;
-        }
-
-        auto subject_hash_result = GetSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
-                                             __func__,
-                                             certificate.proposal_id().substr( 0, 8 ),
-                                             subject_hash_result.error().message() );
-            return;
-        }
-
-        const auto &proposal            = certificate.proposal();
-        const auto &proposal_id         = certificate.proposal_id();
-        const auto &subject_hash         = subject_hash_result.value();
-        const auto &slot_id              = slot_result.value();
-        auto        digest_bytes         = crypto::sha2_256( normalized.deterministic_bytes.data(),
-                                                             normalized.deterministic_bytes.size() );
-        const auto digest = base::hex_lower(
-            gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
-        ConsensusStateStore::ProcessRecord pending;
-        pending.set_schema_version( 2 );
-        pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
-        pending.set_slot_id( slot_id );
-        pending.set_certificate_digest( digest );
-        pending.set_proposal_id( proposal_id );
-        pending.set_winner_id( subject_hash );
-        pending.set_updated_at_ms( CurrentTimeMs() );
-        if ( !state_store_ || !state_store_->PutPendingProcess( pending ) )
-        {
-            ConsensusManagerLogger()->critical( "{}: unable to retain durable pending work key={}", __func__, key );
-            return;
-        }
-        auto stored_process = state_store_->GetProcess( slot_id );
-        if ( !stored_process || !stored_process.value() )
-        {
-            return;
-        }
-        {
-            std::lock_guard lock( restored_state_mutex_ );
-            restored_processes_[slot_id] = stored_process.value().value();
-        }
-
-        auto registry_result = registry_->OnFinalizedCertificate( certificate );
-        if ( registry_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: registry finalization failed proposal_id={} error={}",
-                                             __func__,
-                                             proposal_id.substr( 0, 8 ),
-                                             registry_result.error().message() );
-            certificate_work_journal_->MarkStalled( key );
-            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
-            return;
-        }
-
-        const auto                type_hash = ParseSubjectTypeHash( proposal.subject() ).value();
-        CertificateSubjectHandler handler;
-        {
-            std::shared_lock lock( certificate_handlers_mutex_ );
-            auto             it = certificate_subject_handlers_.find( type_hash );
-            if ( it != certificate_subject_handlers_.end() )
+            std::lock_guard lock( proposals_mutex_ );
+            auto it = slot_states_.find( slot_result.value() );
+            if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::Finalizing &&
+                 it->second.reserved_finalization_proposal_id == certificate.proposal_id() )
             {
-                handler = it->second;
-            }
-        }
-
-        if ( handler )
-        {
-            auto result = handler( subject_hash, certificate );
-            if ( result.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: certificate handler error proposal_id={} error={}",
-                                                 __func__,
-                                                 proposal_id.substr( 0, 8 ),
-                                                 result.error().message() );
-                certificate_work_journal_->MarkStalled( key );
-                (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
-                return;
-            }
-
-            if ( result.value() == Check::Stalled )
-            {
-                ConsensusManagerLogger()->warn( "{}: certificate handler stalled proposal_id={}",
-                                                __func__,
-                                                proposal_id.substr( 0, 8 ) );
-                certificate_work_journal_->MarkStalled( key );
-                (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
+                (void) certificate_work_journal_->MarkStalled( key );
                 return;
             }
         }
-        else
+        const auto result = FinalizeSlot( certificate, DeliverySource::CRDT );
+        if ( result == FinalizeResult::Applied || result == FinalizeResult::AlreadyFinalized )
         {
-            ConsensusManagerLogger()->warn( "{}: no subject handler for certificate key={}", __func__, key );
+            auto process = state_store_->GetProcess( slot_result.value() );
+            if ( process && process.value() &&
+                 process.value()->state() == ConsensusStateStore::ProcessRecord::COMPLETE )
+                (void) certificate_work_journal_->MarkDone( key );
         }
-
-        if ( !state_store_->MarkComplete( slot_id, CurrentTimeMs() ) )
+        else if ( result == FinalizeResult::PendingApplication )
         {
-            ConsensusManagerLogger()->critical( "{}: failed to durably complete certificate work key={}",
-                                                __func__,
-                                                key );
-            return;
+            (void) certificate_work_journal_->MarkStalled( key );
         }
-        {
-            std::lock_guard lock( restored_state_mutex_ );
-            auto process = state_store_->GetProcess( slot_id );
-            if ( process && process.value() )
-            {
-                restored_processes_[slot_id] = process.value().value();
-            }
-        }
-        (void) certificate_work_journal_->MarkDone( key );
-        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
     }
 
     ConsensusManager::CertificateNormalization ConsensusManager::NormalizeCertificateStructural(
@@ -3324,57 +3369,7 @@ namespace sgns
 
     void ConsensusManager::HandleCertificate( const Certificate &certificate )
     {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
-
-        auto normalized = NormalizeCertificateStructural( certificate );
-        if ( normalized.check != Check::Approve )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return;
-        }
-
-        auto slot_result = GetSlotKey( certificate.proposal() );
-        if ( slot_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-        if ( restored_final_slots_.count( slot_result.value() ) == 0 &&
-             ValidateCertificateForFirstObservation( normalized, CurrentTimeMs() ) != Check::Approve )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: live timestamp horizon proposal_id={}",
-                                             __func__, certificate.proposal_id() );
-            return;
-        }
-
-        ProposalState proposal_state;
-        auto          fetch_proposal_state_ret = FetchProposalState( certificate );
-        if ( fetch_proposal_state_ret.has_value() )
-        {
-            proposal_state = fetch_proposal_state_ret.value();
-            ConsensusManagerLogger()->debug( "{}: fetched proposal state, proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-        }
-        else
-        {
-            ConsensusManagerLogger()->debug( "{}: proposal state not found, creating new one proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            proposal_state = CreateProposalState( certificate, slot_result.value() );
-        }
-
-        if ( !ValidateCertificateBestProposal( proposal_state, certificate ) )
-        {
-            return;
-        }
-
-        ClearProposalSlot( certificate.proposal() );
-        ConsensusManagerLogger()->debug( "{}: success proposal_id={}", __func__, certificate.proposal_id() );
+        (void) FinalizeSlot( certificate, DeliverySource::PubSub );
     }
 
     outcome::result<ConsensusManager::ProposalState> ConsensusManager::FetchProposalState(
@@ -3406,86 +3401,71 @@ namespace sgns
         return new_state;
     }
 
-    bool ConsensusManager::ValidateCertificateBestProposal( const ProposalState &state,
-                                                            const Certificate   &certificate ) const
+    std::vector<ConsensusManager::Vote> ConsensusManager::CollectCertificateVotes(
+        const Certificate &certificate ) const
     {
-        if ( certificate.has_proposal() && certificate.proposal().has_subject() &&
-             DecodeRegistryBatchSubject( certificate.proposal().subject() ).has_value() )
+        std::vector<Vote> votes;
+        votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
+        for ( const auto &vote : certificate.votes() )
         {
-            // Registry-batch subjects can have multiple competing proposals for the same deterministic batch root.
-            // Once a valid certificate exists, accept it even if local best_proposal_id changed due proposal races.
-            return true;
+            ConsensusManagerLogger()->trace( "{}: processing vote voter_id={}", __func__, vote.voter_id() );
+            votes.push_back( vote );
         }
-        std::lock_guard lock( proposals_mutex_ );
-        auto            slot_it = slot_states_.find( state.slot_key );
-        if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != certificate.proposal_id() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: not best proposal proposal_id={}",
-                                             __func__,
-                                             certificate.proposal_id() );
-            return false;
-        }
-        return true;
+        return votes;
     }
 
     void ConsensusManager::ClearProposalSlot( const Proposal &proposal )
     {
-        std::lock_guard lock( proposals_mutex_ );
-
         std::string slot_key;
-        auto        it = proposals_.find( proposal.proposal_id() );
-        if ( it != proposals_.end() )
+        std::vector<Proposal> cleaned_proposals;
         {
-            slot_key = it->second.slot_key;
-        }
-        else
-        {
-            auto slot_result = GetSlotKey( proposal );
-            if ( slot_result.has_error() )
+            std::lock_guard lock( proposals_mutex_ );
+            auto it = proposals_.find( proposal.proposal_id() );
+            if ( it != proposals_.end() )
+                slot_key = it->second.slot_key;
+            else
             {
-                ConsensusManagerLogger()->error( "{}: canonical slot derivation failed proposal_id={}",
-                                                 __func__,
-                                                 proposal.proposal_id().substr( 0, 8 ) );
-                return;
+                auto slot_result = GetSlotKey( proposal );
+                if ( slot_result.has_error() ) return;
+                slot_key = slot_result.value();
             }
-            slot_key = slot_result.value();
-        }
 
-        std::unordered_set<std::string> ids_to_remove;
-        ids_to_remove.insert( proposal.proposal_id() );
-        for ( const auto &kv : proposals_ )
-        {
-            if ( kv.second.slot_key == slot_key )
+            std::unordered_set<std::string> ids_to_remove{ proposal.proposal_id() };
+            for ( const auto &kv : proposals_ )
             {
-                ids_to_remove.insert( kv.first );
+                if ( kv.second.slot_key == slot_key ) ids_to_remove.insert( kv.first );
             }
-        }
 
-        for ( const auto &proposal_id : ids_to_remove )
-        {
-            RemovePendingProposalLocked( proposal_id, "slot-cleanup" );
-            proposals_.erase( proposal_id );
-        }
-
-        auto &slot_state = slot_states_[slot_key];
-        slot_state.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
-        slot_state.reserved_finalization_proposal_id = proposal.proposal_id();
-        restored_final_slots_.insert( slot_key );
-
-        bool has_pending = false;
-        for ( const auto &kv : proposals_ )
-        {
-            if ( kv.second.quorum_reached )
+            for ( const auto &proposal_id : ids_to_remove )
             {
-                has_pending = true;
-                break;
+                auto proposal_it = proposals_.find( proposal_id );
+                if ( proposal_it != proposals_.end() ) cleaned_proposals.push_back( proposal_it->second.proposal );
+                RemovePendingProposalLocked( proposal_id, "slot-cleanup" );
+                pending_votes_.erase( proposal_id );
+                proposals_.erase( proposal_id );
             }
+
+            auto &slot_state = slot_states_[slot_key];
+            if ( slot_state.lifecycle != SlotState::Lifecycle::Applied &&
+                 slot_state.lifecycle != SlotState::Lifecycle::SafetyViolation )
+                slot_state.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+            slot_state.reserved_finalization_proposal_id = proposal.proposal_id();
+            restored_final_slots_.insert( slot_key );
+
+            bool has_pending = false;
+            for ( const auto &kv : proposals_ )
+            {
+                if ( kv.second.quorum_reached )
+                {
+                    has_pending = true;
+                    break;
+                }
+            }
+            certificates_pending_.store( has_pending );
+            if ( !has_pending ) timer_cv_.notify_all();
         }
-        certificates_pending_.store( has_pending );
-        if ( !has_pending )
-        {
-            timer_cv_.notify_all();
-        }
+        if ( cleaned_proposals.empty() ) cleaned_proposals.push_back( proposal );
+        for ( const auto &cleaned : cleaned_proposals ) FireProposalCleanupCallbacks( cleaned );
     }
 
     outcome::result<std::string> ConsensusManager::GetSlotKey( const Proposal &proposal )
@@ -4050,7 +4030,9 @@ namespace sgns
             {
                 continue;
             }
-            CertificateReceived( { entry.key, value.value() }, std::string{} );
+            Certificate certificate;
+            if ( certificate.ParseFromArray( value.value().data(), value.value().size() ) )
+                (void) FinalizeSlot( certificate, DeliverySource::Recovery );
         }
     }
 
@@ -4068,7 +4050,12 @@ namespace sgns
         {
             const auto key = std::string( CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot;
             auto value = db_->Get( { key } );
-            if ( value ) CertificateReceived( { key, value.value() }, std::string{} );
+            if ( value )
+            {
+                Certificate certificate;
+                if ( certificate.ParseFromArray( value.value().data(), value.value().size() ) )
+                    (void) FinalizeSlot( certificate, DeliverySource::Recovery );
+            }
         }
     }
 

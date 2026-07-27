@@ -143,6 +143,24 @@ namespace sgns
             InvalidCertificate,
         };
 
+        enum class DeliverySource : uint8_t
+        {
+            Local,
+            PubSub,
+            CRDT,
+            Recovery,
+        };
+
+        enum class FinalizeResult : uint8_t
+        {
+            Applied,
+            PendingApplication,
+            AlreadyFinalized,
+            Conflict,
+            Invalid,
+            StorageFailure,
+        };
+
         /**
          * @brief Local-only dependency key for deferred subject validation.
          */
@@ -719,6 +737,8 @@ namespace sgns
             uint64_t last_publication_at_ms{ 0 };
             bool last_publication_succeeded{ false };
             std::string reserved_finalization_proposal_id;
+            std::string reserved_finalization_digest;
+            std::string reserved_finalization_winner_id;
             std::vector<std::string> late_candidate_ids;
         };
 
@@ -754,6 +774,10 @@ namespace sgns
          * @param[in] certificate Certificate to process.
          */
         void HandleCertificate( const Certificate &certificate );
+        FinalizeResult FinalizeSlot( const Certificate &certificate, DeliverySource source );
+        FinalizeResult ProcessFinalizedCertificate( const CertificateNormalization &normalized,
+                                                    const std::string              &slot_id,
+                                                    const std::string              &winner_id );
         /**
          * @brief Fires all registered proposal cleanup callbacks for a proposal being cleaned up.
          *        Decodes the NonceSubject payload, extracts tx_hash, and dispatches to all handlers
@@ -822,12 +846,11 @@ namespace sgns
          */
         ProposalState CreateProposalState( const Certificate &certificate, const std::string &slot_key );
         /**
-         * @brief Validates whether certificate points to the best known proposal in slot.
-         * @param[in] state Runtime state of the referenced proposal.
-         * @param[in] certificate Certificate to validate.
-         * @return `true` when certificate references the best proposal.
+         * @brief Extracts certificate votes into normalized vote objects.
+         * @param[in] certificate Certificate to inspect.
+         * @return Vote list collected from certificate.
          */
-        bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
+        std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
         /**
          * @brief Clears local slot bookkeeping for a proposal.
          * @param[in] proposal Proposal whose slot state should be cleared.
@@ -966,6 +989,7 @@ namespace sgns
         std::function<outcome::result<crdt::GlobalDB::Buffer>( const crdt::HierarchicalKey & )>
             certificate_record_reader_; ///< Private/friend-only read seam; defaults to GlobalDB::Get.
         std::function<void()> certificate_publish_observer_; ///< Private/friend-only publish-attempt observer.
+        std::function<void( std::string_view )> finalization_stage_observer_; ///< Private/friend-only stage observer.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         std::unordered_map<base::Hash256, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
@@ -1002,6 +1026,7 @@ namespace sgns
         std::unordered_map<std::string, ConsensusStateStore::ProcessRecord>
             restored_processes_; ///< Restored certificate work keyed by canonical slot.
         mutable std::mutex restored_state_mutex_; ///< Guards restored process state used by recovery callbacks.
+        std::unordered_set<std::string> processing_slots_; ///< In-process leases; callbacks never overlap per slot.
         std::unordered_set<std::string> restored_final_slots_; ///< Slots with authoritative finality.
         std::unordered_set<std::string> restored_safety_slots_; ///< Slots stopped by SafetyViolation.
         static inline std::function<void( std::string_view )> startup_event_observer_;
