@@ -327,6 +327,32 @@ static void cmd_childbalance( const std::vector<std::string> &args, std::shared_
     logger->info( "Child balance: {}", node->GetChildBalance( args[1], token_id ) );
 }
 
+static void cmd_listchildren( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "listchildren <main_address>" ) )
+    {
+        return;
+    }
+
+    auto result = node->GetRegistrationsForMain( args[1] );
+    if ( !result )
+    {
+        logger->error( "Failed to list children for main address '{}': {}", args[1], result.error().message() );
+        return;
+    }
+
+    if ( result.value().empty() )
+    {
+        logger->info( "No children registered to '{}'.", args[1] );
+        return;
+    }
+
+    for ( const auto &entry : result.value() )
+    {
+        logger->info( "Child: {}  Balance: {}", entry.child_addr, node->GetChildBalance( entry.child_addr ) );
+    }
+}
+
 static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
     if ( !check_arg_count( args, 1, "ds" ) )
@@ -423,6 +449,7 @@ static const std::map<std::string, CmdFunc> COMMANDS = {
     { "info", cmd_info },
     { "balance", cmd_balance },
     { "childbalance", cmd_childbalance },
+    { "listchildren", cmd_listchildren },
     { "ds", cmd_ds },
     { "mint", cmd_mint },
     { "transfer", cmd_transfer },
@@ -440,6 +467,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  info                     Display account balance\n"
               << "  balance <token_id>       Display balance for a specific token\n"
               << "  childbalance <addr> [id]  Query a child wallet's balance\n"
+              << "  listchildren <addr>      List children registered to <addr>, with balances\n"
               << "  ds                       Print the data store\n"
               << "  mint <amount>            Mint tokens\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
