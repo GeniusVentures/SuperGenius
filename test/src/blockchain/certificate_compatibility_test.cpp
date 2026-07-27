@@ -243,28 +243,32 @@ namespace sgns::test
         ASSERT_TRUE( certificate.has_value() );
         std::string serialized;
         ASSERT_TRUE( certificate.value().SerializeToString( &serialized ) );
-        bootstrap->Close();
         ASSERT_TRUE(
             PutRaw( db_, "/cert/v2/slot/" + std::string( kOtherCanonicalHash ), serialized ).has_value() );
-        auto manager = MakeManager( registry, db_, pubs_, account );
-        ASSERT_TRUE( manager );
-        ExpectError( manager->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
+        ExpectError( bootstrap->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::IntegrityError );
-        manager->Close();
+        bootstrap->Close();
+
+        // Strict restoration rejects corrupt authority before participation.
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        EXPECT_FALSE( manager );
     }
 
     TEST_F( CertificateCompatibilityTest, SlotLookupRejectsMalformedCertificateAsIntegrityError )
     {
         auto account = MakeAccount( getPathString() );
         auto registry = MakeRegistry( db_, account );
-        ASSERT_TRUE( account && registry );
+        auto bootstrap = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && bootstrap );
         ASSERT_TRUE(
             PutRaw( db_, "/cert/v2/slot/" + std::string( kOtherCanonicalHash ), "not-a-certificate" ).has_value() );
-        auto manager = MakeManager( registry, db_, pubs_, account );
-        ASSERT_TRUE( manager );
-        ExpectError( manager->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
+        ExpectError( bootstrap->GetCertificateBySlotId( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::IntegrityError );
-        manager->Close();
+        bootstrap->Close();
+
+        // Strict restoration rejects corrupt authority before participation.
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        EXPECT_FALSE( manager );
     }
 
     TEST_F( CertificateCompatibilityTest, HashLookupReturnsWinnerThroughVerifiedIndex )

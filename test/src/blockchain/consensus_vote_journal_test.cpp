@@ -199,6 +199,11 @@ namespace sgns
         {
             return manager->restored_safety_slots_.count( slot ) != 0;
         }
+
+        static void RecoverCertificates( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->RecoverPendingCertificateWork();
+        }
     };
 } // namespace sgns
 
@@ -994,6 +999,39 @@ TEST_F( ConsensusVoteJournalHarness, AuthoritativeFinalitySuppressesStoredVoteRe
     ASSERT_TRUE( restarted );
     EXPECT_EQ( counters_.raw_publish.load(), 0 );
     EXPECT_EQ( counters_.signer.load(), 0 );
+}
+
+TEST_F( ConsensusVoteJournalHarness, CRDTCallbackDefersUntilAuthoritativePairIsCommitted )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto record = MakeSignedVoteRecord( manager, registry );
+    std::atomic<uint64_t> handled{ 0 };
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        "sgns.vote-journal.startup.v1",
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+            -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            ++handled;
+            return sgns::ConsensusManager::Check::Approve;
+        } ) );
+
+    // This real CRDT Put synchronously invokes CertificateReceived while its
+    // DAG job is still active.  Returning from Put is the regression proof
+    // that the callback did not recursively publish and wait on a nested job.
+    (void) PersistCertificate( manager, record );
+    EXPECT_EQ( handled.load(), 0U );
+
+    sgns::ConsensusVoteJournalTestAccess::RecoverCertificates( manager );
+    EXPECT_EQ( handled.load(), 1U );
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    auto process = store.GetProcess( record.slot_id() );
+    ASSERT_TRUE( process );
+    ASSERT_TRUE( process.value() );
+    EXPECT_EQ( process.value()->state(), sgns::ConsensusStateStore::ProcessRecord::COMPLETE );
+    manager->Close();
 }
 
 TEST_F( ConsensusVoteJournalHarness, RestoredSafetyViolationSuppressesStoredVoteReplay )

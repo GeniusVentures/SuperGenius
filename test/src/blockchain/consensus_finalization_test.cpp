@@ -132,6 +132,19 @@ namespace sgns
             state.lifecycle = ConsensusManager::SlotState::Lifecycle::SigningPublishing;
             return true;
         }
+
+        static void WaitUntilClosing( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::unique_lock lock( manager->activity_state_->mutex );
+            manager->activity_state_->cv.wait(
+                lock, [&]() { return manager->activity_state_->closing; } );
+        }
+
+        static std::size_t ActiveOperations( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            std::lock_guard lock( manager->activity_state_->mutex );
+            return manager->activity_state_->active;
+        }
     };
 } // namespace sgns
 
@@ -221,6 +234,24 @@ namespace
     private:
         std::thread           worker_;
         DeterministicBarrier &barrier_;
+    };
+
+    class JoiningThread
+    {
+    public:
+        explicit JoiningThread( std::thread worker ) : worker_( std::move( worker ) ) {}
+        JoiningThread( const JoiningThread & ) = delete;
+        JoiningThread &operator=( const JoiningThread & ) = delete;
+        ~JoiningThread()
+        {
+            if ( worker_.joinable() ) worker_.join();
+        }
+        void Join()
+        {
+            if ( worker_.joinable() ) worker_.join();
+        }
+    private:
+        std::thread worker_;
     };
 
     struct FinalizationCounters
@@ -396,6 +427,104 @@ TEST_F( ConsensusFinalizationHarness, ConcurrentBarrierJoinsCleanly )
     EXPECT_TRUE( worker_finished.load() );
     EXPECT_EQ( events_.Snapshot(),
                ( std::vector<std::string>{ "handler-blocked", "handler-released" } ) );
+}
+
+TEST_F( ConsensusFinalizationHarness, CloseWakesFinalizerWaitingForPublicationReservation )
+{
+    auto account = MakeAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeRegistry( account );
+    auto manager = MakeManager( registry, account );
+    ASSERT_TRUE( manager );
+    auto certificate = MakeCertificate(
+        manager, registry, account,
+        "0abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678" );
+    ASSERT_TRUE( certificate );
+    auto slot = sgns::ConsensusFinalizationTestAccess::Slot( certificate.value() );
+    ASSERT_TRUE( slot );
+    sgns::ConsensusFinalizationTestAccess::SetSigningPublishing( manager, slot.value() );
+
+    DeterministicBarrier waiting;
+    sgns::ConsensusFinalizationTestAccess::SetStageObserver(
+        manager,
+        [&]( std::string_view stage )
+        {
+            if ( stage == "waiting-publication" ) waiting.ArriveAndWait();
+        } );
+    std::atomic<bool> finished{ false };
+    ScopedWorker finalizer(
+        std::thread(
+            [&]()
+            {
+                (void) sgns::ConsensusFinalizationTestAccess::Finalize(
+                    manager, certificate.value(), sgns::ConsensusManager::DeliverySource::Recovery );
+                finished.store( true );
+            } ),
+        waiting );
+
+    waiting.WaitUntilArrived();
+    waiting.Release();
+    manager->Close();
+    finalizer.Join();
+    EXPECT_TRUE( finished.load() );
+    EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::ActiveOperations( manager ), 0U );
+}
+
+TEST_F( ConsensusFinalizationHarness, CloseWaitsForBlockedHandlerAndDrainsBeforeDestruction )
+{
+    auto account = MakeAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeRegistry( account );
+    auto manager = MakeManager( registry, account );
+    ASSERT_TRUE( manager );
+    auto certificate = MakeCertificate(
+        manager, registry, account,
+        "1abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678" );
+    ASSERT_TRUE( certificate );
+
+    DeterministicBarrier handler_barrier;
+    ASSERT_TRUE( manager->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+            -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            handler_barrier.ArriveAndWait();
+            ++counters_.handler;
+            return sgns::ConsensusManager::Check::Approve;
+        } ) );
+
+    ScopedWorker finalizer(
+        std::thread(
+            [&]()
+            {
+                (void) sgns::ConsensusFinalizationTestAccess::Finalize(
+                    manager, certificate.value(), sgns::ConsensusManager::DeliverySource::Local );
+            } ),
+        handler_barrier );
+    handler_barrier.WaitUntilArrived();
+
+    std::atomic<bool> close_returned{ false };
+    JoiningThread closer( std::thread(
+        [&]()
+        {
+            manager->Close();
+            close_returned.store( true );
+        } ) );
+    sgns::ConsensusFinalizationTestAccess::WaitUntilClosing( manager );
+    EXPECT_FALSE( close_returned.load() );
+    EXPECT_GE( sgns::ConsensusFinalizationTestAccess::ActiveOperations( manager ), 1U );
+
+    handler_barrier.Release();
+    finalizer.Join();
+    closer.Join();
+    EXPECT_TRUE( close_returned.load() );
+    EXPECT_EQ( counters_.handler.load(), 1U );
+    EXPECT_EQ( sgns::ConsensusFinalizationTestAccess::ActiveOperations( manager ), 0U );
+
+    std::weak_ptr<sgns::ConsensusManager> weak = manager;
+    manager.reset();
+    EXPECT_TRUE( weak.expired() );
+    EXPECT_EQ( counters_.handler.load(), 1U );
 }
 
 TEST_F( ConsensusFinalizationHarness, MissingHandlerLeavesQueryableFinalityAndRegistrationCompletesBeforeCleanup )

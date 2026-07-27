@@ -711,6 +711,7 @@ namespace sgns
          * @brief Starts the background round timer loop.
          */
         void StartRoundTimer();
+        std::shared_ptr<void> BeginActivity();
 
         static constexpr std::string_view CONSENSUS_CHANNEL_PREFIX =
             "consensus-channel-"; ///< Prefix for pubsub consensus channels.
@@ -1098,6 +1099,27 @@ namespace sgns
             certificate_conflict_observer_; ///< Private/friend-only conflict record observer (record, unique pair).
         std::function<void( std::string_view )> finalization_stage_observer_; ///< Private/friend-only stage observer.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
+        /**
+         * Lock order for manager-owned synchronization:
+         * close_mutex_ -> activity_state_->mutex -> timer_mutex_ -> proposals_mutex_
+         * -> restored_state_mutex_ -> handler registries.  The local state
+         * store owns its own lock and is entered only after releasing
+         * proposals_mutex_.  Signers, CRDT writes, PubSub publication, and
+         * subject/certificate/cleanup handlers are always invoked without
+         * proposals_mutex_ or a handler-registry lock held.
+         */
+        struct ActivityState
+        {
+            std::mutex              mutex;
+            std::condition_variable cv;
+            bool                    closing{ false };
+            std::size_t             active{ 0 };
+        };
+
+        std::shared_ptr<ActivityState> activity_state_{ std::make_shared<ActivityState>() };
+        std::mutex                     close_mutex_;
+        bool                           close_complete_{ false };
+
         std::unordered_map<std::string, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
