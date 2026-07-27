@@ -4,14 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
 status: executing
-stopped_at: Completed 10-04-PLAN.md
-last_updated: "2026-07-27T16:48:50.733Z"
+last_updated: "2026-07-27T17:31:35.088Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 20
+  completed_plans: 21
   percent: 25
 ---
 
@@ -31,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-27
 
@@ -71,8 +70,8 @@ Last activity: 2026-07-27
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T16:48:50.663Z
-**Stopped at:** Completed 10-04-PLAN.md
+**Last session:** 2026-07-27T17:31:19.495Z
+**Stopped at:** Completed 10-05-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -99,6 +98,7 @@ Last activity: 2026-07-27
 | Phase 10 P02 | 9 min | 1 tasks | 5 files |
 | Phase 10 P03 | 24 min | 1 tasks | 10 files |
 | Phase 10 P04 | 34 min | 1 tasks | 4 files |
+| Phase 10 P05 | 41 min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -146,3 +146,5 @@ Last activity: 2026-07-27
 - [Phase 10]: SigningPublishing reserves a slot through durable storage and completion of the first raw publish attempt. — Finalization cannot interleave with a partially published irreversible vote.
 - [Phase 10]: PublishingReplay retries exact persisted envelope bytes without re-signing and stops under finality or safety authority. — Durable signature identity remains stable across transport failure.
 - [Phase 10]: Later generations require durable retirement strictly after the acceptance horizon. — Boundary equality remains locked and retirement precedes later signing.
+- [Phase 10]: All certificate ingress sources delegate to one authoritative FinalizeSlot path; adapters do not apply or clean independently.
+- [Phase 10]: Finalization persists the exact Pending marker before one leased handler attempt and durable Complete before cleanup.
