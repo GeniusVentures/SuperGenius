@@ -125,7 +125,7 @@ Each task was committed atomically:
 ## Verification
 
 - `cmake --build build/OSX/Release --target consensus_vote_journal_test network_config_precedence_test -j2` passes.
-- `ctest --output-on-failure -R '(consensus_vote_journal|network_config_precedence)'` passes 2/2 targets.
+- Focused CTest regex `(consensus_vote_journal|network_config_precedence)` passes 2/2 targets.
 - `consensus_vote_journal_test` passes all 24 tests; `network_config_precedence_test` passes all 4 tests.
 - `git diff --check` passes.
 - Cached and committed `GeniusNode.cpp` changes exclude the user's pre-existing Blockchain/ValidatorRegistry logger-level edits.
