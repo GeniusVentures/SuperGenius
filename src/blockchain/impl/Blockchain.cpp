@@ -80,7 +80,8 @@ namespace sgns
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                  std::shared_ptr<GeniusAccount>             account,
                                                  std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                 BlockchainCallback                         callback )
+                                                 BlockchainCallback                         callback,
+                                                 ConsensusConfig                            config )
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
@@ -200,7 +201,16 @@ namespace sgns
                 }
                 return outcome::failure( std::errc::owner_dead );
             },
-            instance->account_->GetAddress() );
+            instance->account_->GetAddress(),
+            "",
+            config );
+
+        if ( !instance->consensus_manager_ )
+        {
+            instance->logger_->critical( "[{}] Failed to restore consensus state",
+                                         instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
+        }
 
         instance->validator_registry_->SetBatchSubjectSubmitter(
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](

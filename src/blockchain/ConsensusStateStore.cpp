@@ -439,6 +439,21 @@ namespace sgns
         return outcome::success();
     }
 
+    outcome::result<void> ConsensusStateStore::RestorePending( const std::string &slot_id, uint64_t updated_at_ms )
+    {
+        std::lock_guard lock( mutex_ );
+        BOOST_OUTCOME_TRY( auto current, ReadProcessUnlocked( slot_id ) );
+        if ( !current || current->state() == ProcessRecord::COMPLETE || updated_at_ms == 0 )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        current->set_state( ProcessRecord::PENDING );
+        current->set_lease_until_ms( 0 );
+        current->set_updated_at_ms( updated_at_ms );
+        BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
+        auto stored = datastore_->put( BufferOf( ProcessKey( slot_id ) ), value );
+        if ( stored.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return outcome::success();
+    }
+
     outcome::result<std::vector<ConsensusStateStore::ConflictRecord>> ConsensusStateStore::ScanConflicts() const
     {
         std::lock_guard lock( mutex_ );

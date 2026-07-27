@@ -80,7 +80,8 @@ namespace sgns
         static std::shared_ptr<Blockchain> New( std::shared_ptr<crdt::GlobalDB>            global_db,
                                                 std::shared_ptr<GeniusAccount>             account,
                                                 std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub,
-                                                BlockchainCallback                         callback );
+                                                BlockchainCallback                         callback,
+                                                ConsensusConfig config = ConsensusConfig{} );
 
         /**
          * @brief Destroys the blockchain instance.
@@ -305,6 +306,7 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class MultiAccountTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class NetworkConfigPrecedenceTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.

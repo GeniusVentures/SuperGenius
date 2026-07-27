@@ -6,9 +6,22 @@
 #include "testutil/wait_condition.hpp"
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem.hpp>
+#include <fstream>
 #include <gtest/gtest.h>
 
 using namespace sgns;
+
+namespace sgns
+{
+    class NetworkConfigPrecedenceTestAccess
+    {
+    public:
+        static std::chrono::milliseconds VoteSelectionWindow( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node->consensus_vote_selection_window_;
+        }
+    };
+} // namespace sgns
 
 namespace
 {
@@ -54,6 +67,29 @@ namespace
         test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
                                       std::chrono::seconds( 50 ),
                                       "network-config test node did not finish initialization" );
+    }
+
+    void WriteRawNetworkConfig( const boost::filesystem::path &base, std::string_view value )
+    {
+        std::ofstream stream( ( base / "network_config.json" ).string(), std::ios::trunc );
+        ASSERT_TRUE( stream.good() );
+        stream << value;
+        ASSERT_TRUE( stream.good() );
+    }
+
+    std::chrono::milliseconds ResolveVoteWindow( const std::string &name, std::string_view json )
+    {
+        UseMemorySecureStorage();
+        auto base = MakeTempDir( name );
+        const auto dev_config = MakeDevConfig( base );
+        WriteRawNetworkConfig( base, json );
+        EXPECT_TRUE( sgns::GeniusNode::WriteSgnsConfig(
+                         dev_config.BaseWritePath, "Full", true, false )
+                         .has_value() );
+        auto node = sgns::GeniusNode::New( dev_config, sgns::FromPrivateKey{ TEST_PRIVATE_KEY } );
+        EXPECT_TRUE( node );
+        return node ? sgns::NetworkConfigPrecedenceTestAccess::VoteSelectionWindow( node )
+                    : std::chrono::milliseconds::zero();
     }
 } // namespace
 
@@ -120,4 +156,28 @@ TEST( NetworkConfigPrecedence, ZeroPortSeedUsesOsAssignedPort )
     EXPECT_GT( node->GetPubsubPort(), 0u );
     EXPECT_EQ( node->GetPubSub()->GetInterfaceAddress().find( "/tcp/0/" ), std::string::npos );
     ASSERT_NO_FATAL_FAILURE( WaitForReady( node ) );
+}
+
+TEST( NetworkConfigPrecedence, ConsensusVoteSelectionWindowValidValueWins )
+{
+    EXPECT_EQ( ResolveVoteWindow( "ncp_vote_window_valid",
+                                  R"({"port_seed":41001,"auto_dht":false,"upnp_enabled":false,"consensus_vote_selection_window_ms":1234})" ),
+               std::chrono::milliseconds( 1234 ) );
+}
+
+TEST( NetworkConfigPrecedence, ConsensusVoteSelectionWindowInvalidValuesUseCompiledDefault )
+{
+    const std::vector<std::pair<std::string, std::string>> cases{
+        { "missing", R"({"port_seed":42001,"auto_dht":false,"upnp_enabled":false})" },
+        { "zero", R"({"port_seed":43001,"auto_dht":false,"upnp_enabled":false,"consensus_vote_selection_window_ms":0})" },
+        { "negative", R"({"port_seed":44001,"auto_dht":false,"upnp_enabled":false,"consensus_vote_selection_window_ms":-1})" },
+        { "fraction", R"({"port_seed":45001,"auto_dht":false,"upnp_enabled":false,"consensus_vote_selection_window_ms":1.5})" },
+        { "excessive", R"({"port_seed":46001,"auto_dht":false,"upnp_enabled":false,"consensus_vote_selection_window_ms":30001})" },
+    };
+    for ( const auto &[name, json] : cases )
+    {
+        EXPECT_EQ( ResolveVoteWindow( "ncp_vote_window_" + name, json ),
+                   sgns::ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW )
+            << name;
+    }
 }
