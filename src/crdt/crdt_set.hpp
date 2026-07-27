@@ -224,14 +224,25 @@ namespace sgns::crdt
 
         /** Sets a value to datastore in batch mode if priority is higher. When equal, it sets if the
         * value is lexicographically higher than the current value.
+        *
+        * IMPORTANT: this overload does NOT invoke putHookFunc_ itself -- the write only lands in
+        * the caller-owned, not-yet-committed `aDataStore` batch. Callers MUST invoke putHookFunc_
+        * themselves (with the same aKey/aValue/aID) AFTER their batch commit succeeds, and only if
+        * this function returns true. Firing the hook before commit was found to cause a real bug:
+        * a callback that re-queries CrdtSet for its own just-written element (e.g.
+        * SecureCrdt::ReadIfQuorum re-deriving quorum from a fresh QueryKeyValues call) would never
+        * see that element as present, since the write was still batched/uncommitted at hook-fire
+        * time (BURN-02 cache-refresh-via-callback investigation, Phase 11).
         * @param aDataStore datastore batch
         * @param aKey key string
         * @param aID tomb key ID
         * @param aValue buffer value to set
         * @param aPriority priority to save
-        * @return priority of the key or outcome::failure on error
+        * @return true if a real value was written (caller should fire the hook post-commit) and
+        *         the write was neither tombstoned nor a stale/duplicate priority; false if the
+        *         write was skipped (caller must NOT fire the hook); outcome::failure on error.
         */
-        outcome::result<void> SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
+        outcome::result<bool> SetValue( const std::unique_ptr<storage::BufferBatch> &aDataStore,
                                         const std::string                           &aKey,
                                         const std::string                           &aID,
                                         const Buffer                                &aValue,

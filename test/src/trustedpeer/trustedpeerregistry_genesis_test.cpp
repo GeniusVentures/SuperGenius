@@ -55,7 +55,7 @@ TEST_F( TrustedPeerRegistryGenesisTest, GenesisPeersVisibleLocallyBeforeConfirma
     const auto artifact =
         sgns::test::trustedpeer::GenerateGenesisCeremonyArtifact( TrustedPeerListPayload( genesis_peers ).SerializeToBytes() );
 
-    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/1 );
+    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/2 );
     ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
     registry_ = new_result.value();
 
@@ -72,7 +72,7 @@ TEST_F( TrustedPeerRegistryGenesisTest, ValidGenesisSeedConfirmsEndToEnd )
     const auto payload  = TrustedPeerListPayload( genesis_peers ).SerializeToBytes();
     const auto artifact = sgns::test::trustedpeer::GenerateGenesisCeremonyArtifact( payload );
 
-    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/1 );
+    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/2 );
     ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
     registry_ = new_result.value();
 
@@ -99,7 +99,7 @@ TEST_F( TrustedPeerRegistryGenesisTest, SignatureOverMismatchedPayloadNeverConfi
     const auto mismatched_payload = TrustedPeerListPayload( different_peers ).SerializeToBytes();
     const auto artifact           = sgns::test::trustedpeer::GenerateGenesisCeremonyArtifact( mismatched_payload );
 
-    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/1 );
+    auto new_result = TrustedPeerRegistry::New( secure_crdt_, genesis_peers, artifact.bootstrapper_address, /*threshold=*/2 );
     ASSERT_TRUE( new_result.has_value() ) << new_result.error().message();
     registry_ = new_result.value();
 

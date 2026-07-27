@@ -29,10 +29,13 @@
 #include "securecrdt/SecureCrdtRegistry.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 
-namespace sgns::account
+namespace sgns
 {
     class GeniusAccount;
+} // namespace sgns
 
+namespace sgns::account
+{
     /**
      * @brief ISignedCRDTData payload type carrying the burn-basis-points
      *        value. Serialization/verification mirrors
@@ -92,7 +95,7 @@ namespace sgns::account
                     std::shared_ptr<sgns::crdt::GlobalDB>                  db,
                     std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
                     uint64_t                                                quorum_threshold,
-                    std::shared_ptr<sgns::account::GeniusAccount>          account,
+                    std::shared_ptr<sgns::GeniusAccount>          account,
                     sgns::crdt::HierarchicalKey                             base_key );
 
         /**
@@ -118,7 +121,7 @@ namespace sgns::account
             std::shared_ptr<sgns::crdt::GlobalDB>                   db,
             std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
             uint64_t                                                 quorum_threshold,
-            std::shared_ptr<sgns::account::GeniusAccount>           account,
+            std::shared_ptr<sgns::GeniusAccount>           account,
             sgns::crdt::HierarchicalKey                              base_key =
                 sgns::crdt::HierarchicalKey( "burn-config" ) );
 
@@ -177,7 +180,7 @@ namespace sgns::account
         std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_;
         uint64_t                                                 quorum_threshold_;
-        std::shared_ptr<sgns::account::GeniusAccount>           account_;
+        std::shared_ptr<sgns::GeniusAccount>           account_;
         sgns::crdt::HierarchicalKey                              base_key_;
 
         std::atomic<uint64_t> cached_basis_points_{ GENESIS_DEFAULT_BASIS_POINTS };

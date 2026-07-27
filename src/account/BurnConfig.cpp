@@ -75,7 +75,7 @@ namespace sgns::account
                             std::shared_ptr<sgns::crdt::GlobalDB>                  db,
                             std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
                             uint64_t                                                quorum_threshold,
-                            std::shared_ptr<sgns::account::GeniusAccount>          account,
+                            std::shared_ptr<sgns::GeniusAccount>          account,
                             sgns::crdt::HierarchicalKey                             base_key ) :
         secure_crdt_( std::move( secure_crdt ) ),
         db_( std::move( db ) ),
@@ -91,7 +91,7 @@ namespace sgns::account
         std::shared_ptr<sgns::crdt::GlobalDB>                   db,
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
         uint64_t                                                 quorum_threshold,
-        std::shared_ptr<sgns::account::GeniusAccount>           account,
+        std::shared_ptr<sgns::GeniusAccount>           account,
         sgns::crdt::HierarchicalKey                              base_key )
     {
         auto validation_result = sgns::securecrdt::ValidateQuorumThreshold(
