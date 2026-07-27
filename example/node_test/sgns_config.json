@@ -12,6 +12,8 @@
         "07b22cde0334a57625318c0662ae7571251642f9dea5ea8b7a2d7ceef2a63eb80d15a092ec410436948108ddce0c2a40ec06696b5b8ab4de154c9020accd3d91"
     ],
     "bootstrapper_node": "06a11bcf9223a46514207b0551ed6460140531e8ec94d97a6a1c6bddd1a52da79e04980db3009325837f97ccbd1b1e3fdf05585a4a79ab3d043b7f19bbbc2c80",
+    "trusted_peer_quorum_threshold": 2,
+    "burn_config_quorum_threshold": 2,
     "ipfs_cache_dir": "ipfs_cache",
     "mirror_results": false,
     "result_retention_hours": 168,

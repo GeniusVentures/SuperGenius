@@ -41,6 +41,9 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/BurnConfig.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
@@ -444,6 +447,30 @@ namespace sgns
             bootstrapper_node_address_ = config_json["bootstrapper_node"].GetString();
             node_logger_->info( "sgns_config.json: loaded bootstrapper_node" );
         }
+        if ( config_json.HasMember( "trusted_peer_quorum_threshold" ) &&
+             config_json["trusted_peer_quorum_threshold"].IsUint64() )
+        {
+            trusted_peer_quorum_threshold_ = config_json["trusted_peer_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: trusted_peer_quorum_threshold={}", trusted_peer_quorum_threshold_ );
+        }
+        if ( config_json.HasMember( "burn_config_quorum_threshold" ) &&
+             config_json["burn_config_quorum_threshold"].IsUint64() )
+        {
+            burn_config_quorum_threshold_ = config_json["burn_config_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
+        }
+        // Unset config never trips D-07's floor rejection: default to the exact majority
+        // floor for the parsed genesis peer count (ceil(0.51*N)).
+        const auto majority_floor =
+            static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        if ( trusted_peer_quorum_threshold_ == 0 )
+        {
+            trusted_peer_quorum_threshold_ = majority_floor;
+        }
+        if ( burn_config_quorum_threshold_ == 0 )
+        {
+            burn_config_quorum_threshold_ = majority_floor;
+        }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
             ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();
@@ -712,6 +739,42 @@ namespace sgns
                     node_logger_->error( "Blockchain not initialized, cannot initialize transactions" );
                     return;
                 }
+
+                // BURN-02/BURN-03: construct SecureCrdt -> TrustedPeerRegistry -> BurnConfig before
+                // TransactionManager, so its cached burn-rate can be seeded from a live quorum-signed
+                // value. Shares the same full-node topic TransactionManager listens on (trusted peers
+                // are full nodes), ensuring proposals/signatures for these quorum-gated values propagate.
+                const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+                tx_globaldb_->AddListenTopic( quorum_topic );
+
+                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
+                secure_crdt_->RegisterFilters();
+
+                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                               trusted_peers_genesis_,
+                                                                               bootstrapper_node_address_,
+                                                                               trusted_peer_quorum_threshold_ );
+                if ( tpr_result.has_error() )
+                {
+                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                         tpr_result.error().message() );
+                    return;
+                }
+                trusted_peer_registry_ = tpr_result.value();
+
+                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                          tx_globaldb_,
+                                                                          trusted_peer_registry_,
+                                                                          burn_config_quorum_threshold_,
+                                                                          account_ );
+                if ( burn_config_result.has_error() )
+                {
+                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                         burn_config_result.error().message() );
+                    return;
+                }
+                burn_config_ = burn_config_result.value();
+
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
