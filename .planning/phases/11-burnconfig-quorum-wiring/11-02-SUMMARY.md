@@ -107,6 +107,30 @@ Same limitation as Plan 01: this worktree has no configured CMake build director
 
 Given Plan 01's precedent (a real, previously-hidden `crdt_set.cpp` callback-timing bug was only caught by an actual build+test run, not structural review), the orchestrator's real-build pass is the load-bearing verification step for this plan's correctness claims, not this session's grep-based checks.
 
+## Build/Test Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`):
+
+- `cmake --build . --target genius_node node_startup_test` — **succeeded**, the real production `genius_node` library compiles with the new `SecureCrdt`/`TrustedPeerRegistry`/`BurnConfig` wiring in `INITIALIZING_TRANSACTIONS`.
+- `ctest -R node_startup_test --output-on-failure` — **passed**, including the new BURN-03 end-to-end regression case (a real `GeniusNode` reaching `READY` has the default 1% burn rate).
+- Full project build + full `ctest`: 80/83 passed. `transaction_sync_test` and `migration_sync_test` (SEGFAULT in the full run, passes cleanly in isolation) are the same pre-existing/flaky patterns already confirmed unrelated in Phases 8-10.
+
+### Regression: `multi_account_test` now crashes during process teardown
+
+**This is a real regression introduced by this plan's `GeniusNode` wiring — not a pre-existing issue.** `multi_account_test` did not exhibit this on `develop` before Phase 11. All 4 sub-tests' actual assertions pass (0 logic failures); the crash happens strictly during final process teardown, after every test already reports `PASSED`, with:
+
+```
+libc++abi: terminating due to uncaught exception of type std::__1::system_error: thread::join failed: No such process
+```
+
+Investigation (bounded, not exhaustive — flagged for a dedicated follow-up):
+- `TransactionManager`'s and `GeniusNode`'s own thread lifecycle (`io_threads_`, `upnp_thread`) is already defensively coded (`joinable()` checks, self-join detection) and was not implicated.
+- `CrdtDatastore`'s own DAG-worker synchronization uses `std::future`/`.wait()`, not raw `std::thread::join()` — ruled out as the direct throw site.
+- The most likely proximate cause: `BurnConfig::New`'s genesis auto-seed (`TrySeedGenesisIfEligible`, when this node's own address is among the trusted peers) performs a REAL `ProposeValue`+`AddSignature` CRDT write during **every** `GeniusNode` construction now — work that did not exist before this milestone. `multi_account_test` constructs and tears down many `GeniusNode` instances in rapid succession across its 3 sub-tests in one process; this additional per-node CRDT/DAG-sync/broadcast activity plausibly shifts shutdown timing enough to trigger what appears to be a thread-join race in the underlying pubsub/libp2p thread pool (a prebuilt third-party dependency in this checkout, so its internals could not be directly inspected/patched in this session).
+- This was not root-caused to a specific line by this session's investigation — recorded here as an accurate, honest account of a real regression, not deflected as pre-existing.
+
+**Recommendation:** open a dedicated follow-up phase/issue to root-cause and fix this shutdown-ordering regression before this milestone's node-wiring changes are considered fully stable for multi-node deployments. It does not block BURN-01/02/03's functional correctness (proven via `node_startup_test` and the unit-level `burnconfig_test`/`trustedpeerregistry_*` suites), but it is a real stability regression this phase introduced.
+
 ## User Setup Required
 
 None — no external service configuration required.
