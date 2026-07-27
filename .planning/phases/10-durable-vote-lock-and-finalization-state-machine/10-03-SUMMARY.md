@@ -68,7 +68,7 @@ completed: 2026-07-27
 - Added exact stored-envelope replay for active unexpired locks, suppressing finalized and safety-stopped slots and preserving the original retryable record plus publication metadata on failure.
 - Propagated an immutable vote selection window from bounded node JSON parsing through `Blockchain::New` into `ConsensusManager::New`, retaining the compiled 500ms default for missing or invalid values.
 - Restored stale Processing records as Pending and made late certificate-handler registration wake pending durable work without falsely completing it.
-- Expanded focused coverage to 24 journal/startup cases and 4 network configuration cases, including corrupt-state zero-side-effect tables and same-database restart behavior.
+- Expanded focused coverage to 24 journal/startup cases and 4 hermetic network configuration cases, including corrupt-state zero-side-effect tables and same-database restart behavior.
 
 ## Task Commits
 
@@ -86,7 +86,7 @@ Each task was committed atomically:
 - `src/blockchain/impl/Blockchain.cpp` — propagates configuration and fails construction when consensus restoration fails.
 - `src/account/GeniusNode.hpp` — stores the resolved pre-construction vote-selection window.
 - `src/account/GeniusNode.cpp` — parses bounded JSON configuration and passes it into blockchain construction while preserving pre-existing logger edits.
-- `test/src/account/network_config_precedence_test.cpp` — verifies valid and invalid timing configuration and explicitly disables UPnP in fixtures.
+- `test/src/account/network_config_precedence_test.cpp` — verifies valid/default/invalid precedence through the same private side-effect-free resolver used by production startup.
 - `test/src/blockchain/consensus_vote_journal_test.cpp` — verifies startup ordering, corruption rejection, exact replay, finality/safety suppression, and pending recovery.
 
 ## Decisions Made
@@ -113,14 +113,21 @@ Each task was committed atomically:
 - **Files modified:** `src/blockchain/Consensus.cpp`
 - **Verification:** The full 24-case journal suite passes, including same-database restart cases.
 
+**3. [Post-wave integration] Decoupled configuration precedence coverage from live transport**
+- **Found during:** Post-wave integration gate
+- **Issue:** The configuration suite constructed a full node solely to observe synchronously resolved values. In an environment without an available host interface, PubSub failed before database or consensus construction, masking valid/default resolver results as null-node zero values.
+- **Fix:** Extracted one private side-effect-free resolver for port seed, Auto-DHT, and bounded vote-window values; `InitNetwork` consumes it in production and the friend-only test observes it directly.
+- **Files modified:** `src/account/GeniusNode.hpp`, `src/account/GeniusNode.cpp`, `test/src/account/network_config_precedence_test.cpp`
+- **Verification:** The exact network-config binary passes 4/4 without network permission, while the strict journal suite remains 24/24 green.
+
 ---
 
-**Total deviations:** 2 auto-fixed (1 missing critical, 1 blocking)
-**Impact on plan:** Both changes were necessary to implement the specified durable restart semantics; no unrelated scope was added.
+**Total deviations:** 2 auto-fixed (1 missing critical, 1 blocking), plus 1 post-wave integration correction.
+**Impact on plan:** The startup-safety changes implement the specified durable restart semantics; the follow-up makes configuration verification deterministic without changing production resolution or weakening strict restoration.
 
 ## Issues Encountered
 
-- Sandboxed runs cannot bind the local PubSub interface. The focused tests were rerun with local-socket permission after every network fixture explicitly disabled UPnP; both CTest targets passed without router mapping activity.
+- The post-wave failure was emitted by `InitNetwork` before `BeginDBInitialization`, `Blockchain::New`, or `ConsensusManager::New`; strict durable restoration was never reached. Configuration precedence now has hermetic coverage through the exact resolver used by startup, while live restoration behavior remains covered by the journal suite.
 
 ## Verification
 
@@ -128,6 +135,7 @@ Each task was committed atomically:
 - Focused CTest regex `(consensus_vote_journal|network_config_precedence)` passes 2/2 targets.
 - `consensus_vote_journal_test` passes all 24 tests; `network_config_precedence_test` passes all 4 tests.
 - `git diff --check` passes.
+- Post-wave repair commit `a04b6b28` passes the exact binaries and focused CTest regex without transport permission.
 - Cached and committed `GeniusNode.cpp` changes exclude the user's pre-existing Blockchain/ValidatorRegistry logger-level edits.
 
 ## User Setup Required
@@ -142,7 +150,7 @@ None.
 
 ## Self-Check: PASSED
 
-- Implementation commit `136f5aaa` exists and all ten implementation/test files are present.
+- Implementation commits `136f5aaa` and `a04b6b28` exist and all ten implementation/test files are present.
 - Every plan acceptance criterion and focused test target passes.
 - Protected pre-existing dirty paths remain unstaged and uncommitted.
 
