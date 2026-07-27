@@ -591,6 +591,7 @@ namespace sgns
         friend class ConsensusSlotKeyTestAccess;
         friend class CertificateFallbackTestAccess;
         friend class ConsensusVoteJournalTestAccess;
+        friend class ConsensusFinalizationTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 
         /**
@@ -612,6 +613,8 @@ namespace sgns
 
         bool RestoreLocalState();
         void ReplayRestoredVotes();
+        void ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now );
+        bool ReplayDurableVote( const std::string &slot_id, uint64_t generation );
         void RecoverRestoredCertificateWork();
         outcome::result<void> PublishSerialized( std::string_view envelope_bytes );
         static uint64_t CurrentTimeMs();
@@ -690,8 +693,33 @@ namespace sgns
          */
         struct SlotState
         {
-            std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
-            std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
+            enum class Lifecycle
+            {
+                Empty,
+                Selecting,
+                SigningPublishing,
+                Voted,
+                PublishingReplay,
+                Retired,
+                Finalizing,
+                FinalizedPendingApplication,
+                Applied,
+                SafetyViolation,
+            };
+
+            Lifecycle lifecycle{ Lifecycle::Empty };
+            uint64_t generation{ 0 };
+            std::chrono::steady_clock::time_point deadline{};
+            std::string best_proposal_id;
+            std::string best_tx_hash;
+            std::string frozen_proposal_id;
+            std::string durable_proposal_id;
+            uint64_t durable_generation{ 0 };
+            uint64_t publication_count{ 0 };
+            uint64_t last_publication_at_ms{ 0 };
+            bool last_publication_succeeded{ false };
+            std::string reserved_finalization_proposal_id;
+            std::vector<std::string> late_candidate_ids;
         };
 
         /**
@@ -888,7 +916,9 @@ namespace sgns
          * Unknown fields and invalid votes are terminally rejected. Registry
          * unavailability is the only condition returned as `Check::Stalled`.
          */
-        CertificateNormalization NormalizeCertificate( const Certificate &certificate ) const;
+        CertificateNormalization NormalizeCertificateStructural( const Certificate &certificate ) const;
+        Check ValidateCertificateForFirstObservation( const CertificateNormalization &normalized,
+                                                      uint64_t system_now_ms ) const;
         /**
          * @brief Computes deterministic proposal identifier.
          * @param[in] proposal Proposal to identify.
@@ -978,6 +1008,12 @@ namespace sgns
         static inline std::function<outcome::result<void>( std::string_view )> raw_publish_override_;
         static inline std::function<outcome::result<storage::rocksdb::QueryResult>( const base::Buffer & )>
             startup_local_query_override_;
+        static inline std::function<outcome::result<void>( const ConsensusStateStore::VoteRecord & )>
+            vote_put_override_;
+        static inline std::function<std::chrono::steady_clock::time_point()> steady_now_override_;
+        static inline std::function<uint64_t()> system_now_override_;
+        static inline std::function<void( std::string_view, const std::string &, uint64_t )>
+            vote_stage_observer_;
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
@@ -996,6 +1032,7 @@ namespace sgns
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
+        std::condition_variable   slot_cv_;                       ///< Wakes finalizers after vote publication reservations.
         std::thread               round_timer_;                   ///< Background thread driving round-based retries.
     };
 }

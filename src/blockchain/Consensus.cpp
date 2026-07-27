@@ -311,6 +311,7 @@ namespace sgns
 
     uint64_t ConsensusManager::CurrentTimeMs()
     {
+        if ( system_now_override_ ) return system_now_override_();
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
@@ -355,7 +356,7 @@ namespace sgns
             Certificate certificate;
             const auto bytes = stored_value.toString();
             if ( !certificate.ParseFromArray( stored_value.data(), stored_value.size() ) ) return false;
-            auto normalized = NormalizeCertificate( certificate );
+            auto normalized = NormalizeCertificateStructural( certificate );
             if ( normalized.check != Check::Approve || normalized.deterministic_bytes != bytes ) return false;
             auto actual_slot = GetSlotKey( normalized.certificate.proposal() );
             auto winner = GetSubjectHash( normalized.certificate.proposal().subject() );
@@ -428,6 +429,30 @@ namespace sgns
                  final->second.proposal_id != record.authoritative_proposal_id() )
                 return false;
             restored_safety_slots_.insert( record.slot_id() );
+        }
+        for ( const auto &record : restored_votes_ )
+        {
+            auto &slot = slot_states_[record.slot_id()];
+            slot.generation = record.generation();
+            slot.durable_generation = record.generation();
+            slot.durable_proposal_id = record.proposal_id();
+            slot.frozen_proposal_id = record.proposal_id();
+            slot.publication_count = record.publication_count();
+            slot.last_publication_at_ms = record.last_publication_at_ms();
+            slot.last_publication_succeeded = record.last_publication_succeeded();
+            if ( restored_safety_slots_.count( record.slot_id() ) != 0 )
+                slot.lifecycle = SlotState::Lifecycle::SafetyViolation;
+            else if ( restored_final_slots_.count( record.slot_id() ) != 0 )
+                slot.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+            else if ( record.state() == ConsensusStateStore::VoteRecord::RETIRED )
+                slot.lifecycle = SlotState::Lifecycle::Retired;
+            else if ( now > record.acceptance_horizon_ms() )
+            {
+                if ( !state_store_->RetireVote( record.validator_id(), record.slot_id(), now ) ) return false;
+                slot.lifecycle = SlotState::Lifecycle::Retired;
+            }
+            else
+                slot.lifecycle = SlotState::Lifecycle::Voted;
         }
         EmitStartupEvent( "restored" );
         return true;
@@ -536,11 +561,38 @@ namespace sgns
         round_timer_ = std::thread(
             [this]()
             {
-                constexpr auto MIN_INTERVAL = std::chrono::milliseconds( 500 );
+                constexpr auto min_interval = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
                     std::unique_lock<std::mutex> lock( timer_mutex_ );
-                    auto                         interval = std::max( round_duration_ / 2, MIN_INTERVAL );
+                    auto                         interval = round_duration_ / 2;
+                    if ( interval.count() <= 0 )
+                    {
+                        interval = DEFAULT_ROUND_DURATION / 2;
+                    }
+                    if ( interval < min_interval )
+                    {
+                        interval = min_interval;
+                    }
+                    {
+                        std::lock_guard slot_lock( proposals_mutex_ );
+                        const auto now = steady_now_override_ ? steady_now_override_()
+                                                              : std::chrono::steady_clock::now();
+                        for ( const auto &[unused_slot, state] : slot_states_ )
+                        {
+                            (void) unused_slot;
+                            if ( state.lifecycle == SlotState::Lifecycle::Selecting && state.deadline > now )
+                            {
+                                interval = std::min(
+                                    interval,
+                                    std::chrono::duration_cast<std::chrono::milliseconds>( state.deadline - now ) );
+                            }
+                            else if ( state.lifecycle == SlotState::Lifecycle::Selecting )
+                            {
+                                interval = std::chrono::milliseconds( 0 );
+                            }
+                        }
+                    }
                     if ( certificates_pending_.load() )
                     {
                         // Work is pending: run on cadence, only interrupt for shutdown.
@@ -558,6 +610,9 @@ namespace sgns
                         return;
                     }
                     lock.unlock();
+                    const auto steady_now = steady_now_override_ ? steady_now_override_()
+                                                                  : std::chrono::steady_clock::now();
+                    ProcessCandidateDeadlines( steady_now );
                     if ( certificates_pending_.load() )
                     {
                         ProcessCertificates();
@@ -766,10 +821,13 @@ namespace sgns
 
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
     {
-        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::system_clock::now().time_since_epoch() )
-                                .count();
-        if ( timestamp_ms == 0 || now_ms < 0 )
+        if ( timestamp_ms == 0 )
+        {
+            return false;
+        }
+        const auto now_ms    = static_cast<int64_t>( CurrentTimeMs() );
+        const auto window_ms = timestamp_window_.count();
+        if ( now_ms < 0 || window_ms < 0 )
         {
             return false;
         }
@@ -889,7 +947,31 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ) );
-        bool should_vote = false;
+        uint64_t retire_generation = 0;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto slot = slot_states_.find( slot_key );
+            if ( slot != slot_states_.end() && slot->second.lifecycle == SlotState::Lifecycle::Voted )
+                retire_generation = slot->second.durable_generation;
+        }
+        if ( retire_generation != 0 )
+        {
+            auto durable = state_store_->GetVote( account_address_, slot_key );
+            const auto now = CurrentTimeMs();
+            if ( durable && durable.value() && durable.value()->state() == ConsensusStateStore::VoteRecord::ACTIVE &&
+                 durable.value()->generation() == retire_generation && now > durable.value()->acceptance_horizon_ms() &&
+                 state_store_->RetireVote( account_address_, slot_key, now ) )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto slot = slot_states_.find( slot_key );
+                if ( slot != slot_states_.end() && slot->second.lifecycle == SlotState::Lifecycle::Voted &&
+                     slot->second.durable_generation == retire_generation )
+                    slot->second.lifecycle = SlotState::Lifecycle::Retired;
+            }
+        }
+
+        bool     replay = false;
+        uint64_t replay_generation = 0;
 
         ConsensusManagerLogger()->debug( "{}: Slot key acquired: hash {}, id {}, slot key {}",
                                          __func__,
@@ -905,15 +987,68 @@ namespace sgns
                 proposal_it->second.slot_key = slot_key;
             }
 
-            auto      &slot_state       = slot_states_[slot_key];
-            auto      &best_proposal_id = slot_state.best_proposal_id;
-            const bool is_better        = best_proposal_id.empty() ||
-                                          IsBetterProposal( proposal, proposals_.at( best_proposal_id ).proposal );
-            if ( is_better )
+            auto &slot_state = slot_states_[slot_key];
+            if ( restored_final_slots_.count( slot_key ) != 0 )
             {
-                best_proposal_id = proposal_id;
+                slot_state.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+                return;
             }
-            should_vote = best_proposal_id == proposal_id && slot_state.voted_proposal_ids.insert( proposal_id ).second;
+            if ( restored_safety_slots_.count( slot_key ) != 0 )
+            {
+                slot_state.lifecycle = SlotState::Lifecycle::SafetyViolation;
+                return;
+            }
+            if ( slot_state.lifecycle == SlotState::Lifecycle::Empty ||
+                 slot_state.lifecycle == SlotState::Lifecycle::Retired )
+            {
+                ++slot_state.generation;
+                slot_state.lifecycle = SlotState::Lifecycle::Selecting;
+                slot_state.best_proposal_id = proposal.proposal_id();
+                const auto steady_now = steady_now_override_ ? steady_now_override_()
+                                                              : std::chrono::steady_clock::now();
+                slot_state.deadline = steady_now + config_.vote_selection_window;
+                auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
+                if ( nonce_payload.has_value() )
+                {
+                    slot_state.best_tx_hash = nonce_payload.value().tx_hash();
+                }
+                timer_cv_.notify_all();
+            }
+            else if ( slot_state.lifecycle == SlotState::Lifecycle::Selecting )
+            {
+                const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
+                ConsensusManagerLogger()->debug(
+                    "{}: Already have a best proposal for hash {}, id={}, slot key {}. Seeing if {} is better ",
+                    __func__,
+                    GetPrintableSubjectHash( current.subject() ),
+                    current.proposal_id().substr( 0, 8 ),
+                    slot_key,
+                    proposal.proposal_id().substr( 0, 8 ) );
+                if ( IsBetterProposal( proposal, current ) )
+                {
+                    ConsensusManagerLogger()->debug( "{}: Better proposal for hash {}, id={}, slot key {}. ",
+                                                     __func__,
+                                                     GetPrintableSubjectHash( proposal.subject() ),
+                                                     proposal.proposal_id().substr( 0, 8 ),
+                                                     slot_key );
+                    slot_state.best_proposal_id = proposal.proposal_id();
+                    auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
+                    if ( nonce_payload.has_value() )
+                    {
+                        slot_state.best_tx_hash = nonce_payload.value().tx_hash();
+                    }
+                }
+            }
+            else if ( slot_state.lifecycle == SlotState::Lifecycle::Voted &&
+                      slot_state.durable_proposal_id == proposal.proposal_id() )
+            {
+                replay = true;
+                replay_generation = slot_state.durable_generation;
+            }
+            else
+            {
+                slot_state.late_candidate_ids.push_back( proposal.proposal_id() );
+            }
         }
 
         std::vector<Vote> pending_votes;
@@ -931,23 +1066,197 @@ namespace sgns
             HandleVote( vote );
         }
 
-        if ( should_vote )
+        if ( replay ) ReplayDurableVote( slot_key, replay_generation );
+    }
+
+    void ConsensusManager::ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now )
+    {
+        struct FrozenCandidate
         {
-            auto vote_result = CreateVote( proposal_id, account_address_, true, signer_ );
-            if ( vote_result.has_value() )
+            std::string slot;
+            Proposal proposal;
+            uint64_t generation;
+        };
+        std::vector<FrozenCandidate> frozen;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto &[slot, state] : slot_states_ )
             {
-                (void) SubmitVote( vote_result.value() );
-            }
-            else
-            {
-                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={}, slot_key={}, error={}",
-                                                 __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal_id.substr( 0, 8 ),
-                                                 slot_key,
-                                                 vote_result.error().message() );
+                if ( state.lifecycle != SlotState::Lifecycle::Selecting || steady_now < state.deadline ||
+                     restored_final_slots_.count( slot ) != 0 || restored_safety_slots_.count( slot ) != 0 )
+                    continue;
+                auto proposal = proposals_.find( state.best_proposal_id );
+                if ( proposal == proposals_.end() ) continue;
+                state.lifecycle = SlotState::Lifecycle::SigningPublishing;
+                state.frozen_proposal_id = state.best_proposal_id;
+                frozen.push_back( { slot, proposal->second.proposal, state.generation } );
             }
         }
+
+        const auto reservation_matches = [this]( const FrozenCandidate &candidate )
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            const auto it = slot_states_.find( candidate.slot );
+            return it != slot_states_.end() &&
+                   it->second.lifecycle == SlotState::Lifecycle::SigningPublishing &&
+                   it->second.generation == candidate.generation &&
+                   it->second.frozen_proposal_id == candidate.proposal.proposal_id() &&
+                   restored_final_slots_.count( candidate.slot ) == 0 &&
+                   restored_safety_slots_.count( candidate.slot ) == 0;
+        };
+
+        for ( const auto &candidate : frozen )
+        {
+            if ( vote_stage_observer_ ) vote_stage_observer_( "sign", candidate.slot, candidate.generation );
+            if ( !reservation_matches( candidate ) ) continue;
+            auto vote_result = CreateVote( candidate.proposal.proposal_id(), account_address_, true, signer_ );
+            if ( !vote_result )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &state = slot_states_[candidate.slot];
+                if ( state.lifecycle == SlotState::Lifecycle::SigningPublishing &&
+                     state.generation == candidate.generation )
+                {
+                    state.lifecycle = SlotState::Lifecycle::Voted;
+                    state.durable_proposal_id = candidate.proposal.proposal_id();
+                    state.durable_generation = candidate.generation;
+                    slot_cv_.notify_all();
+                }
+                continue;
+            }
+
+            ConsensusMessage envelope;
+            *envelope.mutable_vote() = vote_result.value();
+            std::string vote_bytes;
+            std::string proposal_bytes;
+            std::string envelope_bytes;
+            if ( !vote_result.value().SerializeToString( &vote_bytes ) ||
+                 !candidate.proposal.SerializeToString( &proposal_bytes ) ||
+                 !envelope.SerializeToString( &envelope_bytes ) )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &state = slot_states_[candidate.slot];
+                if ( state.lifecycle == SlotState::Lifecycle::SigningPublishing &&
+                     state.generation == candidate.generation )
+                {
+                    state.lifecycle = SlotState::Lifecycle::Voted;
+                    state.durable_proposal_id = candidate.proposal.proposal_id();
+                    state.durable_generation = candidate.generation;
+                    slot_cv_.notify_all();
+                }
+                continue;
+            }
+
+            const auto window = static_cast<uint64_t>( timestamp_window_.count() );
+            const auto upper_bound = [window]( uint64_t timestamp )
+            {
+                return std::numeric_limits<uint64_t>::max() - timestamp < window
+                           ? std::numeric_limits<uint64_t>::max()
+                           : timestamp + window;
+            };
+            ConsensusStateStore::VoteRecord record;
+            record.set_schema_version( 2 );
+            record.set_state( ConsensusStateStore::VoteRecord::ACTIVE );
+            record.set_slot_id( candidate.slot );
+            record.set_proposal_id( candidate.proposal.proposal_id() );
+            record.set_validator_id( account_address_ );
+            record.set_signed_vote_bytes( vote_bytes );
+            record.set_outbound_envelope_bytes( envelope_bytes );
+            record.set_signed_proposal_bytes( proposal_bytes );
+            record.set_registry_cid( candidate.proposal.registry_cid() );
+            record.set_registry_epoch( candidate.proposal.registry_epoch() );
+            record.set_generation( candidate.generation );
+            record.set_created_at_ms( vote_result.value().timestamp() );
+            record.set_acceptance_horizon_ms(
+                std::min( upper_bound( candidate.proposal.timestamp() ),
+                          upper_bound( vote_result.value().timestamp() ) ) );
+
+            if ( !reservation_matches( candidate ) ) continue;
+            if ( vote_stage_observer_ ) vote_stage_observer_( "put", candidate.slot, candidate.generation );
+            auto put = vote_put_override_ ? vote_put_override_( record ) : state_store_->PutActiveVote( record );
+            if ( !put )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &state = slot_states_[candidate.slot];
+                if ( state.lifecycle == SlotState::Lifecycle::SigningPublishing &&
+                     state.generation == candidate.generation )
+                {
+                    state.lifecycle = SlotState::Lifecycle::Voted;
+                    state.durable_proposal_id = candidate.proposal.proposal_id();
+                    state.durable_generation = candidate.generation;
+                    state.last_publication_succeeded = false;
+                    slot_cv_.notify_all();
+                }
+                continue;
+            }
+
+            if ( !reservation_matches( candidate ) ) continue;
+            if ( vote_stage_observer_ ) vote_stage_observer_( "publish", candidate.slot, candidate.generation );
+            auto published = PublishSerialized( record.outbound_envelope_bytes() );
+            const auto publication_time = CurrentTimeMs();
+            if ( !reservation_matches( candidate ) ) continue;
+            (void) state_store_->UpdatePublication( account_address_, candidate.slot, publication_time,
+                                                    published.has_value() );
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &state = slot_states_[candidate.slot];
+                if ( state.lifecycle == SlotState::Lifecycle::SigningPublishing &&
+                     state.generation == candidate.generation )
+                {
+                    state.durable_proposal_id = candidate.proposal.proposal_id();
+                    state.durable_generation = candidate.generation;
+                    ++state.publication_count;
+                    state.last_publication_at_ms = publication_time;
+                    state.last_publication_succeeded = published.has_value();
+                    state.lifecycle = SlotState::Lifecycle::Voted;
+                    slot_cv_.notify_all();
+                }
+            }
+            HandleVote( vote_result.value() );
+        }
+    }
+
+    bool ConsensusManager::ReplayDurableVote( const std::string &slot_id, uint64_t generation )
+    {
+        auto stored = state_store_->GetVote( account_address_, slot_id );
+        if ( !stored || !stored.value() || stored.value()->state() != ConsensusStateStore::VoteRecord::ACTIVE ||
+             stored.value()->generation() != generation )
+            return false;
+        const auto record = stored.value().value();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto it = slot_states_.find( slot_id );
+            if ( it == slot_states_.end() || it->second.lifecycle != SlotState::Lifecycle::Voted ||
+                 it->second.durable_generation != generation || restored_final_slots_.count( slot_id ) != 0 ||
+                 restored_safety_slots_.count( slot_id ) != 0 )
+                return false;
+            it->second.lifecycle = SlotState::Lifecycle::PublishingReplay;
+        }
+        if ( vote_stage_observer_ ) vote_stage_observer_( "replay", slot_id, generation );
+        auto published = PublishSerialized( record.outbound_envelope_bytes() );
+        const auto publication_time = CurrentTimeMs();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto it = slot_states_.find( slot_id );
+            if ( it == slot_states_.end() || it->second.lifecycle != SlotState::Lifecycle::PublishingReplay ||
+                 it->second.durable_generation != generation )
+                return false;
+        }
+        (void) state_store_->UpdatePublication( account_address_, slot_id, publication_time, published.has_value() );
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto it = slot_states_.find( slot_id );
+            if ( it != slot_states_.end() && it->second.lifecycle == SlotState::Lifecycle::PublishingReplay &&
+                 it->second.durable_generation == generation )
+            {
+                ++it->second.publication_count;
+                it->second.last_publication_at_ms = publication_time;
+                it->second.last_publication_succeeded = published.has_value();
+                it->second.lifecycle = SlotState::Lifecycle::Voted;
+                slot_cv_.notify_all();
+            }
+        }
+        return published.has_value();
     }
 
     bool ConsensusManager::AddPendingProposal( const Proposal                       &proposal,
@@ -1373,9 +1682,7 @@ namespace sgns
         proposal.set_proposer_id( proposer_id );
         proposal.set_registry_cid( registry_cid );
         proposal.set_registry_epoch( registry_epoch );
-        proposal.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
+        proposal.set_timestamp( CurrentTimeMs() );
 
         proposal.set_proposal_id( CreateProposalId( proposal ) );
         auto signing_bytes = sgns::ProposalSigningBytes( proposal );
@@ -1409,9 +1716,7 @@ namespace sgns
         vote.set_proposal_id( proposal_id );
         vote.set_voter_id( voter_id );
         vote.set_approve( approve );
-        vote.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
+        vote.set_timestamp( CurrentTimeMs() );
 
         // Phase 6 (D-01): populate slot_N_hash fields before signing so the
         // signature commits to them (T-06-01). No-op when no populator is set.
@@ -1499,7 +1804,7 @@ namespace sgns
         }
         *cert.mutable_proposal() = proposal;
 
-        auto normalized = NormalizeCertificate( cert );
+        auto normalized = NormalizeCertificateStructural( cert );
         if ( normalized.check != Check::Approve )
         {
             return outcome::failure( CertificateStoreError::InvalidCertificate );
@@ -1829,7 +2134,7 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( certificate.proposal().subject() ),
                                          certificate.proposal_id().substr( 0, 8 ) );
-        auto normalized = NormalizeCertificate( certificate );
+        auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check != Check::Approve )
         {
             ConsensusManagerLogger()->error( "{}: rejected invalid certificate proposal_id={}",
@@ -1867,6 +2172,15 @@ namespace sgns
                                              slot_id,
                                              subject_hash );
             return outcome::failure( CertificateStoreError::IntegrityError );
+        }
+
+        auto existing_authority = GetCertificateBySlotId( slot_id );
+        const bool timeless_identical_replay = existing_authority.has_value() &&
+            existing_authority.value().SerializeAsString() == canonical.SerializeAsString();
+        if ( !timeless_identical_replay &&
+             ValidateCertificateForFirstObservation( normalized, CurrentTimeMs() ) != Check::Approve )
+        {
+            return outcome::failure( CertificateStoreError::InvalidCertificate );
         }
 
         const auto &serialized = normalized.deterministic_bytes;
@@ -2514,7 +2828,7 @@ namespace sgns
             return crdt::DeltaFilterResult::Reject();
         }
 
-        auto normalized = NormalizeCertificate( certificate );
+        auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check == Check::Stalled )
         {
             auto dependency = CID::fromString( certificate.registry_cid() );
@@ -2547,7 +2861,7 @@ namespace sgns
             return std::vector<crdt::pb::Element>{};
         }
 
-        auto normalized = NormalizeCertificate( certificate );
+        auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: validation failed, rejecting: {}", __func__, element.key() );
@@ -2590,7 +2904,7 @@ namespace sgns
             return;
         }
 
-        auto normalized = NormalizeCertificate( certificate );
+        auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check == Check::Reject ||
              ( normalized.check == Check::Approve &&
                normalized.deterministic_bytes != std::string( value.toString() ) ) )
@@ -2729,7 +3043,7 @@ namespace sgns
         (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
     }
 
-    ConsensusManager::CertificateNormalization ConsensusManager::NormalizeCertificate(
+    ConsensusManager::CertificateNormalization ConsensusManager::NormalizeCertificateStructural(
         const Certificate &certificate ) const
     {
         CertificateNormalization result;
@@ -2868,7 +3182,27 @@ namespace sgns
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
     {
-        return NormalizeCertificate( certificate ).check;
+        return NormalizeCertificateStructural( certificate ).check;
+    }
+
+    ConsensusManager::Check ConsensusManager::ValidateCertificateForFirstObservation(
+        const CertificateNormalization &normalized, uint64_t system_now_ms ) const
+    {
+        if ( normalized.check != Check::Approve ) return normalized.check;
+        const auto window = static_cast<uint64_t>( timestamp_window_.count() );
+        const auto accepted = [system_now_ms, window]( uint64_t timestamp )
+        {
+            if ( timestamp == 0 ) return false;
+            const auto lower = system_now_ms > window ? system_now_ms - window : 0;
+            const auto upper = std::numeric_limits<uint64_t>::max() - system_now_ms < window
+                                 ? std::numeric_limits<uint64_t>::max()
+                                 : system_now_ms + window;
+            return timestamp >= lower && timestamp <= upper;
+        };
+        if ( !accepted( normalized.certificate.proposal().timestamp() ) ) return Check::Reject;
+        for ( const auto &vote : normalized.certificate.votes() )
+            if ( !accepted( vote.timestamp() ) ) return Check::Reject;
+        return Check::Approve;
     }
 
     void ConsensusManager::HandleVote( const Vote &vote )
@@ -2992,7 +3326,8 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
 
-        if ( ValidateCertificate( certificate ) == Check::Reject )
+        auto normalized = NormalizeCertificateStructural( certificate );
+        if ( normalized.check != Check::Approve )
         {
             ConsensusManagerLogger()->error( "{}: rejected: invalid certificate proposal_id={}",
                                              __func__,
@@ -3006,6 +3341,13 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: rejected: canonical slot derivation failed proposal_id={}",
                                              __func__,
                                              certificate.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+        if ( restored_final_slots_.count( slot_result.value() ) == 0 &&
+             ValidateCertificateForFirstObservation( normalized, CurrentTimeMs() ) != Check::Approve )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: live timestamp horizon proposal_id={}",
+                                             __func__, certificate.proposal_id() );
             return;
         }
 
@@ -3125,7 +3467,10 @@ namespace sgns
             proposals_.erase( proposal_id );
         }
 
-        slot_states_.erase( slot_key );
+        auto &slot_state = slot_states_[slot_key];
+        slot_state.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+        slot_state.reserved_finalization_proposal_id = proposal.proposal_id();
+        restored_final_slots_.insert( slot_key );
 
         bool has_pending = false;
         for ( const auto &kv : proposals_ )
@@ -3736,16 +4081,7 @@ namespace sgns
                  record.acceptance_horizon_ms() < now || restored_final_slots_.count( record.slot_id() ) != 0 ||
                  restored_safety_slots_.count( record.slot_id() ) != 0 )
                 continue;
-            auto published = PublishSerialized( record.outbound_envelope_bytes() );
-            if ( !state_store_->UpdatePublication( record.validator_id(),
-                                                   record.slot_id(),
-                                                   CurrentTimeMs(),
-                                                   published.has_value() ) )
-            {
-                ConsensusManagerLogger()->error( "{}: failed to record replay publication slot={}",
-                                                 __func__,
-                                                 record.slot_id() );
-            }
+            (void) ReplayDurableVote( record.slot_id(), record.generation() );
         }
     }
 
@@ -3823,7 +4159,7 @@ namespace sgns
             return outcome::failure( CertificateStoreError::IntegrityError );
         }
 
-        auto normalized = NormalizeCertificate( certificate );
+        auto normalized = NormalizeCertificateStructural( certificate );
         if ( normalized.check != Check::Approve || normalized.deterministic_bytes != stored_bytes )
         {
             ConsensusManagerLogger()->critical( "{}: noncanonical authoritative certificate payload key={}",

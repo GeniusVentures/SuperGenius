@@ -63,7 +63,10 @@ namespace sgns
             }
             auto slot_it = manager->slot_states_.find( proposal_it->second.slot_key );
             return slot_it != manager->slot_states_.end() &&
-                   slot_it->second.voted_proposal_ids.find( proposal_id ) != slot_it->second.voted_proposal_ids.end();
+                   ( ( slot_it->second.lifecycle == ConsensusManager::SlotState::Lifecycle::Selecting &&
+                       slot_it->second.best_proposal_id == proposal_id ) ||
+                     ( slot_it->second.lifecycle == ConsensusManager::SlotState::Lifecycle::Voted &&
+                       slot_it->second.durable_proposal_id == proposal_id ) );
         }
 
         static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
@@ -226,6 +229,8 @@ namespace sgns
             auto slot_result = ConsensusManager::GetSlotKey( proposal );
             ASSERT_TRUE( slot_result.has_value() );
             manager->ContinueProposalAfterSubject( proposal, slot_result.value() );
+            auto &slot = manager->slot_states_.at( slot_result.value() );
+            manager->ProcessCandidateDeadlines( slot.deadline );
         }
 
         static std::vector<ConsensusManager::Proposal> TakePendingProposals(
@@ -772,4 +777,5 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, ttl_proposal_id ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetainedBytes( manager ), 0U );
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
 }
