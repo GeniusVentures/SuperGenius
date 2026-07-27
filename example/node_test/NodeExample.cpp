@@ -353,6 +353,43 @@ static void cmd_listchildren( const std::vector<std::string> &args, std::shared_
     }
 }
 
+static void cmd_registerchild( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
+{
+    if ( !check_arg_count( args, 2, "registerchild <main_address>" ) )
+    {
+        return;
+    }
+
+    auto one_scale = sgns::TokenAmount::ParseMinions( "1.0" );
+    if ( !one_scale )
+    {
+        logger->error( "Failed to parse peers_cut scale '1.0': {}", one_scale.error().message() );
+        return;
+    }
+
+    auto dev_cut = sgns::TokenAmount::ParseMinions( DEV_CONFIG.Cut );
+    if ( !dev_cut )
+    {
+        logger->error( "Failed to parse DEV_CONFIG.Cut '{}': {}", DEV_CONFIG.Cut, dev_cut.error().message() );
+        return;
+    }
+
+    SGTransaction::RegistrationMetadata metadata;
+    metadata.set_dev_wallet( DEV_CONFIG.Addr );
+    metadata.set_peers_cut( one_scale.value() - dev_cut.value() );
+    metadata.set_game_id( "mock_game_id" );
+    metadata.set_publisher_id( "mock_publisher_id" );
+
+    auto result = node->RegisterChild( args[1], metadata );
+    if ( !result )
+    {
+        logger->error( "Failed to register child under main address '{}': {}", args[1], result.error().message() );
+        return;
+    }
+
+    logger->info( "Registered child under main address '{}'. Transaction hash: {}", args[1], result.value() );
+}
+
 static void cmd_ds( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
     if ( !check_arg_count( args, 1, "ds" ) )
@@ -450,6 +487,7 @@ static const std::map<std::string, CmdFunc> COMMANDS = {
     { "balance", cmd_balance },
     { "childbalance", cmd_childbalance },
     { "listchildren", cmd_listchildren },
+    { "registerchild", cmd_registerchild },
     { "ds", cmd_ds },
     { "mint", cmd_mint },
     { "transfer", cmd_transfer },
@@ -468,6 +506,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  balance <token_id>       Display balance for a specific token\n"
               << "  childbalance <addr> [id]  Query a child wallet's balance\n"
               << "  listchildren <addr>      List children registered to <addr>, with balances\n"
+              << "  registerchild <addr>     Register this node as a child of <addr>\n"
               << "  ds                       Print the data store\n"
               << "  mint <amount>            Mint tokens\n"
               << "  transfer <amt> <addr>    Transfer tokens to an address\n"
