@@ -1,5 +1,6 @@
 add_proto_library(SGBlockchainProto proto/SGBlockchain.proto)
 add_proto_library(ConsensusProto proto/Consensus.proto)
+add_proto_library(ConsensusLocalStateProto proto/ConsensusLocalState.proto)
 add_proto_library(ValidatorRegistryProto proto/ValidatorRegistry.proto)
 
 target_link_libraries(ConsensusProto
@@ -11,6 +12,7 @@ add_library(blockchain_genesis
     Blockchain.cpp
     ../ValidatorRegistry.cpp
     ../Consensus.cpp
+    ../ConsensusStateStore.cpp
 )
 
 target_link_libraries(blockchain_genesis
@@ -27,6 +29,7 @@ target_link_libraries(blockchain_genesis
     multisig
     ValidatorRegistryProto
     ConsensusProto
+    ConsensusLocalStateProto
     PRIVATE
     SGBlockchainProto
 )

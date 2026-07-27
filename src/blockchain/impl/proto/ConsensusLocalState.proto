@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package sgns.local_consensus;
+
+// Private, node-local schema. These records are never part of the consensus
+// wire protocol and are intentionally stored directly in RocksDB.
+message DurableVoteRecord {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+    RETIRED = 2;
+  }
+
+  uint32 schema_version = 1;
+  State state = 2;
+  string slot_id = 3;
+  string proposal_id = 4;
+  string validator_id = 5;
+  bytes signed_vote_bytes = 6;
+  bytes outbound_envelope_bytes = 7;
+  bytes signed_proposal_bytes = 8;
+  string registry_cid = 9;
+  uint64 registry_epoch = 10;
+  uint64 generation = 11;
+  uint64 created_at_ms = 12;
+  uint64 acceptance_horizon_ms = 13;
+  uint64 publication_count = 14;
+  uint64 last_publication_at_ms = 15;
+  bool last_publication_succeeded = 16;
+}
+
+message CertificateProcessingRecord {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    PENDING = 1;
+    PROCESSING = 2;
+    COMPLETE = 3;
+  }
+
+  uint32 schema_version = 1;
+  State state = 2;
+  string slot_id = 3;
+  string certificate_digest = 4;
+  string proposal_id = 5;
+  string winner_id = 6;
+  uint64 attempt_count = 7;
+  uint64 lease_until_ms = 8;
+  uint64 updated_at_ms = 9;
+}
+
+message CertificateConflictRecord {
+  uint32 schema_version = 1;
+  string slot_id = 2;
+  string low_certificate_digest = 3;
+  string high_certificate_digest = 4;
+  string low_proposal_id = 5;
+  string high_proposal_id = 6;
+  uint32 sources_bitset = 7;
+  uint64 first_seen_at_ms = 8;
+  uint64 last_seen_at_ms = 9;
+  uint64 observation_count = 10;
+}
+
+message SlotSafetyRecord {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    SAFE = 1;
+    SAFETY_VIOLATION = 2;
+  }
+
+  uint32 schema_version = 1;
+  State state = 2;
+  string slot_id = 3;
+  string authoritative_certificate_digest = 4;
+  string authoritative_proposal_id = 5;
+  uint64 updated_at_ms = 6;
+}
