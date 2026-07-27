@@ -95,7 +95,21 @@ None - plan executed exactly as written. Task 3's pre-existing uncommitted work 
 
 ## Issues Encountered
 
-None. Note: this session could not run a full `ctest` build/verify pass — no configured CMake build directory (`CMakeCache.txt`) exists in this worktree, and configuring+building this project from scratch was out of scope for a plan-completion pass. Correctness was verified via careful static review: cross-checked `BurnConfig.cpp`'s use of `db_->RegisterNewElementCallback` against `GlobalDB`/`CrdtDatastore`/`CRDTCallbackManager`'s actual `NewDataCallback` signature (`std::function<void(NewDataPair, std::string)>`), confirmed the `burnconfig` CMake library target already exists in `src/account/CMakeLists.txt` (added in Task 2), and confirmed the test CMake wiring mirrors the existing `trustedpeer` test target's library set exactly. The four `ctest -R burnconfig_*` acceptance-criteria commands and the `ctest -R trustedpeer`/`ctest -R burnconfig`/`ctest -R securecrdt` regression suite from `<verification>` should be run in a properly configured build environment before this plan is considered fully verified end-to-end.
+The executor's worktree had no configured build directory and could only verify structurally. The orchestrator's real-build follow-up (below) found and fixed three real bugs.
+
+## Build/Test Verification (orchestrator follow-up)
+
+The orchestrator merged the worktree and ran the real build against the project's configured build (`build/OSX/Release`). This surfaced **three real bugs**:
+
+1. **Namespace bug**: `BurnConfig.hpp` forward-declared and typed `account_` as `sgns::account::GeniusAccount`, but `GeniusAccount` is actually defined in `namespace sgns` (not `sgns::account`) — a permanently-incomplete type. Fixed the forward declaration and all call sites to `sgns::GeniusAccount`.
+2. **Stale test thresholds**: `trustedpeerregistry_genesis_test.cpp` (Phase 10) used `threshold=1` with a 2-peer genesis list — below D-07's new majority floor (`ceil(0.51*2)=2`). Bumped to `threshold=2`.
+3. **Root-cause bug in `src/crdt/impl/crdt_set.cpp`** (foundational, shared CRDT code): `CrdtSet::SetValue`'s batch overload fired the put-hook (which drives `GlobalDB::RegisterNewElementCallback`, the mechanism `BurnConfig` relies on for cache-refresh) **before** the batch committed. Any callback re-querying the store for its own just-written element (exactly what `SecureCrdt::ReadIfQuorum` does per D-04) could never see that element — permanently undercounting the very signature that triggered the callback. This silently broke automatic quorum-confirmation detection entirely (a 2-of-2 threshold could never be satisfied via the callback path). Fixed by having the batch overload report whether a real value was written, and moving hook invocation to fire only after the caller's batch commit succeeds (both the single-key `SetValue` wrapper and `PutElems`).
+
+After all three fixes:
+- `ctest -R "trustedpeer|burnconfig|securecrdt|multisig"` — **11/11 passed**.
+- Full project build + full `ctest`: 81/83 passed. The 2 failures (`transaction_sync_test`, `consensus_pending_lifecycle_test`) are pre-existing/flaky and unrelated — `transaction_sync_test` confirmed unrelated in Phases 8-10's verification; `consensus_pending_lifecycle_test` passes 7/7 in isolation, confirming full-suite resource-contention flakiness, not a regression from the `crdt_set.cpp` change.
+
+BURN-01 (and the underlying cache-refresh-via-callback mechanism all of Phase 11 depends on) is now fully proven by actual compiled/executed tests against a real, previously-broken code path — not just structural verification.
 
 ## User Setup Required
 
@@ -103,7 +117,7 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 - `BurnConfig` is ready to replace `TransactionManager`'s hardcoded `BURN_BASIS_POINTS` constant in Plan 02.
-- Recommend running the full `ctest -R trustedpeer`, `ctest -R burnconfig`, `ctest -R securecrdt` suites in CI/a configured build before merging, since this session could not execute a build.
+- The `crdt_set.cpp` callback-timing fix benefits Plan 02 too, since `TransactionManager`'s own cache-refresh wiring depends on the same `RegisterNewElementCallback` mechanism.
 
 ---
 *Phase: 11-burnconfig-quorum-wiring*

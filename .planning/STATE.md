@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Multi-Signature Secure CRDT Storage
-current_phase: 10
+current_phase: 11
 status: executing
-last_updated: "2026-07-24T16:28:29.218Z"
-last_activity: 2026-07-24 -- Phase 10 execution started
+last_updated: "2026-07-24T18:58:19.372Z"
+last_activity: 2026-07-24 -- Phase 11 execution started
 progress:
   total_phases: 5
   completed_phases: 3
-  total_plans: 5
+  total_plans: 7
   completed_plans: 5
   percent: 60
 ---
@@ -18,21 +18,21 @@ progress:
 
 **Last updated:** 2026-07-20
 **Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
-**Current Phase:** 10
+**Current Phase:** 11
 
 ## Project Reference
 
 See: .planning/PROJECT.md (updated 2026-07-20)
 
 **Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 10 — trustedpeerregistry
+**Current focus:** Phase 11 — burnconfig-quorum-wiring
 
 ## Current Position
 
-Phase: 10 (trustedpeerregistry) — EXECUTING
+Phase: 11 (burnconfig-quorum-wiring) — EXECUTING
 Plan: 1 of 2
-Status: Executing Phase 10
-Last activity: 2026-07-24 -- Phase 10 execution started
+Status: Executing Phase 11
+Last activity: 2026-07-24 -- Phase 11 execution started
 
 ## Roadmap Snapshot
 
