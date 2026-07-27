@@ -54,7 +54,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. `HandleCertificate()` marks the slot finalized before any proposal or vote state is cleared, including when the certificate winner differs from the validator's local vote.
 4. Duplicate certificate paths are idempotent, while a conflicting certificate for the same finalized slot is not applied and emits actionable safety diagnostics.
 
-**Plans:** 6/7 plans executed
+**Plans:** 7/7 plans complete
 
 ### Phase 11: Slot-Owned Bridge Burn Reservations
 
