@@ -780,7 +780,11 @@ namespace sgns
                                                                 account_,
                                                                 blockchain_,
                                                                 is_full_node_,
-                                                                subnet_id_ );
+                                                                subnet_id_,
+                                                                std::chrono::milliseconds( 300000 ),
+                                                                std::chrono::milliseconds( 0 ),
+                                                                burn_config_->GetCachedBasisPoints(),
+                                                                burn_config_ );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
