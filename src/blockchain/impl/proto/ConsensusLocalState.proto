@@ -59,6 +59,13 @@ message CertificateConflictRecord {
   uint64 first_seen_at_ms = 8;
   uint64 last_seen_at_ms = 9;
   uint64 observation_count = 10;
+  // Single-bit DeliverySource value from the first observation. sources_bitset
+  // is the cumulative source summary and may grow on duplicate observations.
+  uint32 first_source = 11;
+  string authoritative_certificate_digest = 12;
+  string authoritative_proposal_id = 13;
+  string incoming_certificate_digest = 14;
+  string incoming_proposal_id = 15;
 }
 
 message SlotSafetyRecord {

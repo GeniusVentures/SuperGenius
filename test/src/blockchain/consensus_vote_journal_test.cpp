@@ -663,6 +663,11 @@ TEST_F( ConsensusVoteJournalHarness, ConflictPairIsSortedDeduplicatedAndBatchedW
     conflict.set_low_proposal_id( HashText( 'd' ) );
     conflict.set_high_proposal_id( HashText( 'c' ) );
     conflict.set_sources_bitset( 1 );
+    conflict.set_first_source( 1 );
+    conflict.set_authoritative_certificate_digest( HashText( 'b' ) );
+    conflict.set_authoritative_proposal_id( HashText( 'd' ) );
+    conflict.set_incoming_certificate_digest( HashText( 'a' ) );
+    conflict.set_incoming_proposal_id( HashText( 'c' ) );
     conflict.set_first_seen_at_ms( 100 );
     conflict.set_last_seen_at_ms( 100 );
     conflict.set_observation_count( 1 );
@@ -1009,6 +1014,11 @@ TEST_F( ConsensusVoteJournalHarness, RestoredSafetyViolationSuppressesStoredVote
     conflict.set_low_proposal_id( record.proposal_id() );
     conflict.set_high_proposal_id( HashText( 'e' ) );
     conflict.set_sources_bitset( 1 );
+    conflict.set_first_source( 1 );
+    conflict.set_authoritative_certificate_digest( digest );
+    conflict.set_authoritative_proposal_id( record.proposal_id() );
+    conflict.set_incoming_certificate_digest( HashText( 'f' ) );
+    conflict.set_incoming_proposal_id( HashText( 'e' ) );
     conflict.set_first_seen_at_ms( 100 );
     conflict.set_last_seen_at_ms( 100 );
     conflict.set_observation_count( 1 );

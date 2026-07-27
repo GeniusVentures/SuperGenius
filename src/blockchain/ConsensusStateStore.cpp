@@ -200,14 +200,33 @@ namespace sgns
              !IsCanonicalHash( record.high_certificate_digest() ) ||
              record.low_certificate_digest() >= record.high_certificate_digest() ||
              !IsCanonicalHash( record.low_proposal_id() ) || !IsCanonicalHash( record.high_proposal_id() ) ||
-             record.sources_bitset() == 0 || record.first_seen_at_ms() == 0 ||
+             record.sources_bitset() == 0 || record.first_source() == 0 ||
+             ( record.first_source() & ( record.first_source() - 1 ) ) != 0 ||
+             ( record.sources_bitset() & record.first_source() ) == 0 || record.first_seen_at_ms() == 0 ||
              record.last_seen_at_ms() < record.first_seen_at_ms() || record.observation_count() == 0 ||
+             !IsCanonicalHash( record.authoritative_certificate_digest() ) ||
+             !IsCanonicalHash( record.authoritative_proposal_id() ) ||
+             !IsCanonicalHash( record.incoming_certificate_digest() ) ||
+             !IsCanonicalHash( record.incoming_proposal_id() ) ||
+             record.authoritative_certificate_digest() == record.incoming_certificate_digest() ||
              key != ConflictKey( record.slot_id(),
                                  record.low_certificate_digest(),
                                  record.high_certificate_digest() ) )
         {
             return outcome::failure( ConsensusStateStoreError::Integrity );
         }
+        const bool authoritative_is_low =
+            record.authoritative_certificate_digest() == record.low_certificate_digest() &&
+            record.authoritative_proposal_id() == record.low_proposal_id() &&
+            record.incoming_certificate_digest() == record.high_certificate_digest() &&
+            record.incoming_proposal_id() == record.high_proposal_id();
+        const bool authoritative_is_high =
+            record.authoritative_certificate_digest() == record.high_certificate_digest() &&
+            record.authoritative_proposal_id() == record.high_proposal_id() &&
+            record.incoming_certificate_digest() == record.low_certificate_digest() &&
+            record.incoming_proposal_id() == record.low_proposal_id();
+        if ( !authoritative_is_low && !authoritative_is_high )
+            return outcome::failure( ConsensusStateStoreError::Integrity );
         return outcome::success();
     }
 
@@ -514,8 +533,8 @@ namespace sgns
         return records;
     }
 
-    outcome::result<void> ConsensusStateStore::RecordConflictAndSafety( ConflictRecord conflict,
-                                                                        SafetyRecord   safety )
+    outcome::result<ConsensusStateStore::ConflictRecord> ConsensusStateStore::RecordConflictAndSafety(
+        ConflictRecord conflict, SafetyRecord safety )
     {
         std::lock_guard lock( mutex_ );
         if ( !datastore_ || conflict.slot_id() != safety.slot_id() )
@@ -545,7 +564,11 @@ namespace sgns
                 return outcome::failure( ConsensusStateStoreError::Integrity );
             BOOST_OUTCOME_TRY( ValidateConflict( prior, conflict_key ) );
             if ( prior.low_proposal_id() != conflict.low_proposal_id() ||
-                 prior.high_proposal_id() != conflict.high_proposal_id() )
+                 prior.high_proposal_id() != conflict.high_proposal_id() ||
+                 prior.authoritative_certificate_digest() != conflict.authoritative_certificate_digest() ||
+                 prior.authoritative_proposal_id() != conflict.authoritative_proposal_id() ||
+                 prior.incoming_certificate_digest() != conflict.incoming_certificate_digest() ||
+                 prior.incoming_proposal_id() != conflict.incoming_proposal_id() )
                 return outcome::failure( ConsensusStateStoreError::Conflict );
             prior.set_sources_bitset( prior.sources_bitset() | conflict.sources_bitset() );
             prior.set_last_seen_at_ms( std::max( prior.last_seen_at_ms(), conflict.last_seen_at_ms() ) );
@@ -581,6 +604,6 @@ namespace sgns
         BOOST_OUTCOME_TRY( batch->put( BufferOf( SafetyKey( safety.slot_id() ) ), safety_value ) );
         auto committed = batch->commit();
         if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
-        return outcome::success();
+        return conflict;
     }
 } // namespace sgns

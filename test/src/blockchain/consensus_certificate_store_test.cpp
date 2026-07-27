@@ -64,6 +64,13 @@ namespace sgns
         {
             manager->certificate_publish_observer_ = std::move( observer );
         }
+
+        static std::vector<ConsensusStateStore::ConflictRecord> Conflicts(
+            const std::shared_ptr<ConsensusManager> &manager )
+        {
+            auto conflicts = manager->state_store_->ScanConflicts();
+            return conflicts ? conflicts.value() : std::vector<ConsensusStateStore::ConflictRecord>{};
+        }
     };
 } // namespace sgns
 
@@ -460,6 +467,42 @@ namespace sgns::test
         ConsensusManager::Certificate parsed;
         ASSERT_TRUE( parsed.ParseFromArray( stored.value().data(), stored.value().size() ) );
         EXPECT_EQ( parsed.proposal_id(), first.value().proposal_id() );
+        manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, CRDTConflictValidatesBeforeRecordingAndRejectsBeforeMerge )
+    {
+        auto voter     = MakeAccount( getPathString() );
+        auto proposer2 = MakeAccount( getPathString(), kPrivateKey2 );
+        auto registry  = MakeRegistry( db_, voter );
+        auto manager   = MakeManager( registry, db_, pubs_, voter );
+        ASSERT_TRUE( voter && proposer2 && registry && manager );
+        auto authoritative = MakeCertificate( manager, registry, voter, voter );
+        ASSERT_TRUE( authoritative );
+        auto incoming = MakeCertificate(
+            manager, registry, voter, proposer2, &authoritative.value().proposal().subject() );
+        ASSERT_TRUE( incoming );
+        ASSERT_TRUE( manager->SubmitCertificate( authoritative.value() ) );
+
+        auto invalid = incoming.value();
+        invalid.mutable_votes( 0 )->set_signature( "invalid" );
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta(
+            manager, MakeCertificatePairDelta( invalid ) ) );
+        EXPECT_TRUE( ConsensusManagerTestAccess::Conflicts( manager ).empty() );
+
+        EXPECT_FALSE( ConsensusManagerTestAccess::FilterDelta(
+            manager, MakeCertificatePairDelta( incoming.value() ) ) );
+        const auto conflicts = ConsensusManagerTestAccess::Conflicts( manager );
+        ASSERT_EQ( conflicts.size(), 1U );
+        EXPECT_EQ( conflicts.front().sources_bitset(), 4U );
+        EXPECT_EQ( conflicts.front().first_source(), 4U );
+        EXPECT_EQ( conflicts.front().authoritative_proposal_id(), authoritative.value().proposal_id() );
+        EXPECT_EQ( conflicts.front().incoming_proposal_id(), incoming.value().proposal_id() );
+
+        const auto slot = ConsensusManagerTestAccess::Slot( authoritative.value() ).value();
+        auto stored = manager->GetCertificateBySlotId( slot );
+        ASSERT_TRUE( stored );
+        EXPECT_EQ( stored.value().proposal_id(), authoritative.value().proposal_id() );
         manager->Close();
     }
 
