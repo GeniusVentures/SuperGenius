@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
 status: executing
-last_updated: "2026-07-27T15:19:50.847Z"
+last_updated: "2026-07-27T15:33:03.595Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 17
+  completed_plans: 18
   percent: 25
 ---
 
@@ -30,7 +30,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 ## Current Position
 
 Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-07-27
 
@@ -70,8 +70,8 @@ Last activity: 2026-07-27
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T15:19:50.843Z
-**Stopped at:** Completed 10-01-PLAN.md
+**Last session:** 2026-07-27T15:32:25.418Z
+**Stopped at:** Completed 10-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -95,6 +95,7 @@ Last activity: 2026-07-27
 | Phase 09 P15 | 22 min | 2 tasks | 4 files |
 | Phase 09 P16 | 13 min | 2 tasks | 7 files |
 | Phase 10 P01 | 5 min | 1 tasks | 3 files |
+| Phase 10 P02 | 9 min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -135,3 +136,6 @@ Last activity: 2026-07-27
 - [Phase 09]: Weighted receipt verification retains one configuration from endpoint lookup through quorum completion. — A blocked RPC call cannot observe endpoints or a factory published after its decision began.
 - [Phase 10]: Wave 0 uses real CRDT and RocksDB dependencies with friend-only test access surfaces. — Later durable-vote hooks remain private while the harness exercises production ownership and persistence.
 - [Phase 10]: Finalization concurrency tests use predicate barriers and RAII release and join ownership. — Deterministic ordering avoids timing sleeps, detached workers, and stranded threads after assertion failures.
+- [Phase 10]: Validator-private consensus state uses only /consensus/local/v2 direct RocksDB keys, with the validator hash included in vote keys. — Private votes and diagnostics must never replicate through CRDT, while key/value identity must remain independently verifiable.
+- [Phase 10]: Only exact RocksDB NOT_FOUND represents absence; all query, decode, canonicalization, identity, and relationship failures return typed errors. — Unreadable or contradictory local state cannot safely unlock a validator for another signature.
+- [Phase 10]: Conflict evidence and SafetyViolation are one batch, and safety authority must identify one member of the canonical digest/proposal pair. — Crash recovery must never expose conflict evidence without the participation stop, or accept mismatched safety authority.
