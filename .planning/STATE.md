@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 10
-status: executing
-last_updated: "2026-07-27T18:13:53.238Z"
+status: verifying
+last_updated: "2026-07-27T20:28:03.424Z"
 last_activity: 2026-07-27
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 23
-  completed_plans: 22
-  percent: 25
+  completed_plans: 23
+  percent: 50
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -29,9 +29,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-22)
 
 ## Current Position
 
-Phase: 10 (Durable Vote Lock and Finalization State Machine) — EXECUTING
+Phase: 10 (Durable Vote Lock and Finalization State Machine) — COMPLETE
 Plan: 7 of 7
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-27
 
 ## Roadmap Snapshot
@@ -70,8 +70,8 @@ Last activity: 2026-07-27
 
 ## Session Continuity
 
-**Last session:** 2026-07-27T18:13:53.233Z
-**Stopped at:** Completed 10-06-PLAN.md
+**Last session:** 2026-07-27T20:28:03.420Z
+**Stopped at:** Completed 10-07-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -100,6 +100,7 @@ Last activity: 2026-07-27
 | Phase 10 P04 | 34 min | 1 tasks | 4 files |
 | Phase 10 P05 | 41 min | 1 tasks | 5 files |
 | Phase 10 P06 | 44 min | 1 tasks | 8 files |
+| Phase 10 P07 | 37 min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -151,3 +152,5 @@ Last activity: 2026-07-27
 - [Phase 10]: Finalization persists the exact Pending marker before one leased handler attempt and durable Complete before cleanup.
 - [Phase 10]: Canonical conflict evidence sorts only its digest-pair key while explicit fields preserve authoritative and incoming direction.
 - [Phase 10]: Restored safety loads both conflict proposal IDs before replay so slot-local vote publication remains suppressed after restart.
+- [Phase 10]: Close rejects new consensus activity and drains leased callbacks, handlers, recovery, and timer work before returning. — The manager lifetime boundary must prevent post-destruction work and strong-owner self-join cycles.
+- [Phase 10]: Synchronous CRDT certificate callbacks journal immediate recovery instead of finalizing before the outer merge commits. — Nested GraphSync persistence on the CRDT processing worker deadlocks its own outer WaitForJob.
