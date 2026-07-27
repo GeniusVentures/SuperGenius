@@ -1376,6 +1376,25 @@ namespace sgns
                         ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW.count() );
                 }
 
+                if ( config_json.HasMember( "consensus_vote_selection_window_ms" ) )
+                {
+                    const auto &value = config_json["consensus_vote_selection_window_ms"];
+                    if ( value.IsUint64() && value.GetUint64() > 0 &&
+                         value.GetUint64() <= static_cast<uint64_t>( ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count() ) )
+                    {
+                        consensus_vote_selection_window_ = std::chrono::milliseconds( value.GetUint64() );
+                        node_logger_->info( "network_config.json: consensus vote selection window overridden to {} ms",
+                                            consensus_vote_selection_window_.count() );
+                    }
+                    else
+                    {
+                        node_logger_->warn(
+                            "network_config.json: consensus_vote_selection_window_ms must be an integer in [1, {}], using compiled default {} ms",
+                            ConsensusConfig::MAX_VOTE_SELECTION_WINDOW.count(),
+                            ConsensusConfig::DEFAULT_VOTE_SELECTION_WINDOW.count() );
+                    }
+                }
+
                 // ── Parse reconnect config ──
                 if ( config_json.HasMember( "bootstrap_reconnect_base_delay_sec" ) &&
                      config_json["bootstrap_reconnect_base_delay_sec"].IsInt() )
