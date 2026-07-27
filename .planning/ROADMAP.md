@@ -449,7 +449,7 @@ Plans:
 - [x] **Phase 9: SecureCRDT Layer** - `ISignedCRDTData` interface + static policy registry + CRDT-transported propose/sign/quorum flow (completed 2026-07-23)
 - [x] **Phase 10: TrustedPeerRegistry** - Genesis-seeded, quorum-updatable trusted-peer set built on SecureCRDT (completed 2026-07-24)
 - [x] **Phase 11: BurnConfig Quorum Wiring** - `BURN_BASIS_POINTS` becomes a TrustedPeerRegistry-quorum-signed CRDT value, cached in `TransactionManager` (completed 2026-07-27)
-- [ ] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved
+- [x] **Phase 12: ValidatorRegistry Migration** - `ValidatorRegistry`'s genesis-path signature verification migrated onto `multisig::VerifyPayloadSignature`, existing behavior/tests preserved (completed 2026-07-27)
 
 ## Phase Details
 
@@ -521,9 +521,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. `VerifyUpdate`'s genesis-path signature check calls `multisig::VerifyPayloadSignature` instead of `GeniusAccount::VerifySignature`; `blockchain_genesis` links `multisig` directly.
   2. All pre-migration `ValidatorRegistry` unit/integration tests pass unchanged, with no behavioral regression in genesis-signature verification, and the D-05 `multi_account_test` exit gate (5-10 consecutive clean runs) is satisfied.
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 12-01-PLAN.md — Migrate genesis-path signature verification onto multisig::VerifyPayloadSignature, wire CMake link, run D-05 exit gate
+- [x] 12-01-PLAN.md — Migrate genesis-path signature verification onto multisig::VerifyPayloadSignature, wire CMake link, run D-05 exit gate
 
 ### Progress Table (v1.1)
 
@@ -533,4 +533,4 @@ Plans:
 | 9. SecureCRDT Layer | 2/2 | Complete   | 2026-07-23 |
 | 10. TrustedPeerRegistry | 2/2 | Complete   | 2026-07-24 |
 | 11. BurnConfig Quorum Wiring | 2/2 | Complete   | 2026-07-27 |
-| 12. ValidatorRegistry Migration | 0/1 | Not started | - |
+| 12. ValidatorRegistry Migration | 1/1 | Complete   | 2026-07-27 |
