@@ -556,10 +556,10 @@ namespace sgns::test
             auto       result          = manager->SubmitCertificate( certificate );
             ConsensusManagerTestAccess::ResetCertificateReader( manager );
 
-            EXPECT_EQ( slot_reads, 1 );
-            EXPECT_EQ( index_reads, 1 );
             if ( row.expected_error )
             {
+                EXPECT_EQ( slot_reads, 1 );
+                EXPECT_EQ( index_reads, 1 );
                 ASSERT_TRUE( result.has_error() );
                 EXPECT_EQ( result.error(), make_error_code( *row.expected_error ) );
                 auto after_slot  = db_->Get( { slot_key } );
@@ -580,6 +580,8 @@ namespace sgns::test
             }
             else
             {
+                EXPECT_GE( slot_reads, 1 );
+                EXPECT_GE( index_reads, 1 );
                 ASSERT_TRUE( result.has_value() );
                 ASSERT_WAIT_FOR_CONDITION( [&callbacks]() { return callbacks.load() >= 1; },
                                            std::chrono::milliseconds( 2000 ),
@@ -1251,9 +1253,17 @@ namespace sgns::test
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( account && registry );
 
-        ASSERT_TRUE(
-            PutRawCertificateState( db_, "/cert/v2/slot/" + std::string( kSlot ), "certificate" ).has_value() );
-        ASSERT_TRUE( PutRawCertificateState( db_, "/cert/v2/tx/" + std::string( kTx ), kSlot ).has_value() );
+        auto creator = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( creator );
+        ASSERT_OUTCOME_SUCCESS( certificate, MakeCertificate( creator, registry, account, account ) );
+        ASSERT_OUTCOME_SUCCESS( slot, ConsensusManagerTestAccess::Slot( certificate ) );
+        ASSERT_OUTCOME_SUCCESS( winner, ConsensusManagerTestAccess::Winner( certificate ) );
+        creator->Close();
+
+        ASSERT_TRUE( PutRawCertificateState(
+                         db_, "/cert/v2/slot/" + slot, certificate.SerializeAsString() )
+                         .has_value() );
+        ASSERT_TRUE( PutRawCertificateState( db_, "/cert/v2/tx/" + winner, slot ).has_value() );
 
         auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );

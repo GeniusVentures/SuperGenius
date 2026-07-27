@@ -448,7 +448,7 @@ TEST( ConsensusPendingLifecycleContractTest, PendingLifecycleConfigDefaultsToThr
     EXPECT_EQ( config.pending_ttl, std::chrono::minutes( 3 ) );
 }
 
-TEST_F( ConsensusPendingLifecycleTest, QuorumCertificateWorkClearsWhenLocalNodeNotInProposalRegistry )
+TEST_F( ConsensusPendingLifecycleTest, QuorumCertificateWorkRetainsStateWhenLocalNodeIsNotAggregator )
 {
     auto registry = MakeRegistry();
     ASSERT_TRUE( registry );
@@ -464,8 +464,8 @@ TEST_F( ConsensusPendingLifecycleTest, QuorumCertificateWorkClearsWhenLocalNodeN
 
     sgns::ConsensusPendingLifecycleTestAccess::ProcessCertificates( observer_manager );
 
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( observer_manager, proposal.proposal_id() ) );
-    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( observer_manager ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( observer_manager, proposal.proposal_id() ) );
+    EXPECT_TRUE( sgns::ConsensusPendingLifecycleTestAccess::CertificatesPending( observer_manager ) );
     sgns::ConsensusPendingLifecycleTestAccess::Close( observer_manager );
 }
 
@@ -746,6 +746,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
                                                                                    scheduled_proposal_id,
                                                                                    "test-reset" ) );
 
+    sgns::ConsensusPendingLifecycleTestAccess::Close( manager );
     int cleanup_count = 0;
     ASSERT_TRUE( manager->RegisterProposalCleanupHandler( sgns::NONCE_SUBJECT_TYPE,
                                                           [&]( const std::string &tx_hash )
