@@ -682,6 +682,7 @@ namespace sgns
         bool RestoreLocalState();
         void ReplayRestoredVotes();
         void ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now );
+        void ReconcileBurnReservations();
         bool ReplayDurableVote( const std::string &slot_id, uint64_t generation );
         void RecoverRestoredCertificateWork();
         outcome::result<void> PublishSerialized( std::string_view envelope_bytes );
@@ -771,6 +772,7 @@ namespace sgns
                 PublishingReplay,
                 Retired,
                 Finalizing,
+                Reconciling,
                 FinalizedPendingApplication,
                 Applied,
                 SafetyViolation,
@@ -1050,6 +1052,8 @@ namespace sgns
         std::function<void( const ConsensusStateStore::ConflictRecord &, bool )>
             certificate_conflict_observer_; ///< Private/friend-only conflict record observer (record, unique pair).
         std::function<void( std::string_view )> finalization_stage_observer_; ///< Private/friend-only stage observer.
+        std::function<void( std::string_view, const std::string & )>
+            burn_reconciliation_stage_observer_; ///< Private/friend-only deterministic reconciliation barrier.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
         /**
          * Lock order for manager-owned synchronization:
@@ -1126,6 +1130,7 @@ namespace sgns
             vote_put_override_;
         static inline std::function<std::chrono::steady_clock::time_point()> steady_now_override_;
         static inline std::function<uint64_t()> system_now_override_;
+        static inline std::atomic<bool> suppress_timer_burn_reconciliation_{ false };
         static inline std::function<void( std::string_view, const std::string &, uint64_t )>
             vote_stage_observer_;
 

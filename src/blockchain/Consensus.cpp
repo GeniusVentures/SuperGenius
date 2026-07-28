@@ -820,6 +820,7 @@ namespace sgns
                     const auto steady_now = self->steady_now_override_ ? self->steady_now_override_()
                                                                         : std::chrono::steady_clock::now();
                     self->ProcessCandidateDeadlines( steady_now );
+                    if ( !self->suppress_timer_burn_reconciliation_ ) self->ReconcileBurnReservations();
                     if ( self->certificates_pending_.load() )
                     {
                         self->ProcessCertificates();
@@ -1421,6 +1422,164 @@ namespace sgns
             return false;
         }
         return true;
+    }
+
+    void ConsensusManager::ReconcileBurnReservations()
+    {
+        auto activity = BeginActivity();
+        if ( !activity || !state_store_ || stop_timer_.load() ) return;
+
+        auto reservations = state_store_->ScanBurnReservations();
+        if ( !reservations )
+        {
+            ConsensusManagerLogger()->critical( "{}: unable to scan durable burn reservations", __func__ );
+            return;
+        }
+
+        const auto now = CurrentTimeMs();
+        for ( const auto &record : reservations.value() )
+        {
+            if ( stop_timer_.load() ) return;
+            if ( record.state() != ConsensusStateStore::BurnReservationRecord::RESERVED ||
+                 now <= record.candidate_acceptance_horizon_ms() )
+                continue;
+
+            SlotState::Lifecycle prior_lifecycle = SlotState::Lifecycle::Empty;
+            uint64_t prior_generation = 0;
+            bool live_candidate_protected = false;
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &slot = slot_states_[record.slot_id()];
+                if ( resource_admissions_inflight_.count( record.slot_id() ) != 0 ||
+                     slot.lifecycle == SlotState::Lifecycle::SigningPublishing ||
+                     slot.lifecycle == SlotState::Lifecycle::PublishingReplay ||
+                     slot.lifecycle == SlotState::Lifecycle::Finalizing ||
+                     slot.lifecycle == SlotState::Lifecycle::Reconciling ||
+                     restored_final_slots_.count( record.slot_id() ) != 0 ||
+                     restored_safety_slots_.count( record.slot_id() ) != 0 )
+                    continue;
+
+                for ( const auto &[unused_id, proposal_state] : proposals_ )
+                {
+                    (void) unused_id;
+                    if ( proposal_state.slot_key != record.slot_id() ) continue;
+                    const auto window = timestamp_window_.count() < 0
+                                          ? 0ULL
+                                          : static_cast<uint64_t>( timestamp_window_.count() );
+                    const auto proposal_horizon =
+                        std::numeric_limits<uint64_t>::max() - proposal_state.proposal.timestamp() < window
+                            ? std::numeric_limits<uint64_t>::max()
+                            : proposal_state.proposal.timestamp() + window;
+                    if ( now <= proposal_horizon )
+                    {
+                        live_candidate_protected = true;
+                        break;
+                    }
+                }
+                if ( live_candidate_protected ) continue;
+                prior_lifecycle = slot.lifecycle;
+                prior_generation = slot.generation;
+                slot.lifecycle = SlotState::Lifecycle::Reconciling;
+                resource_admissions_inflight_.insert( record.slot_id() );
+            }
+
+            const auto release_reconciliation = [&]( bool abandoned )
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                auto &slot = slot_states_[record.slot_id()];
+                if ( slot.lifecycle == SlotState::Lifecycle::Reconciling )
+                {
+                    if ( abandoned )
+                    {
+                        for ( auto it = proposals_.begin(); it != proposals_.end(); )
+                        {
+                            if ( it->second.slot_key == record.slot_id() )
+                            {
+                                pending_votes_.erase( it->first );
+                                it = proposals_.erase( it );
+                            }
+                            else
+                                ++it;
+                        }
+                        slot = SlotState{};
+                        slot.generation = prior_generation + 1;
+                    }
+                    else
+                    {
+                        slot.lifecycle = prior_lifecycle;
+                        slot.generation = prior_generation;
+                    }
+                }
+                resource_admissions_inflight_.erase( record.slot_id() );
+                slot_cv_.notify_all();
+            };
+
+            if ( burn_reconciliation_stage_observer_ )
+                burn_reconciliation_stage_observer_( "reserved", record.slot_id() );
+            if ( stop_timer_.load() )
+            {
+                release_reconciliation( false );
+                return;
+            }
+
+            auto certificate = GetCertificateBySlotId( record.slot_id() );
+            if ( certificate )
+            {
+                release_reconciliation( false );
+                (void) FinalizeSlot( certificate.value(), DeliverySource::Recovery );
+                continue;
+            }
+            if ( certificate.error() != make_error_code( CertificateStoreError::NotFound ) )
+            {
+                release_reconciliation( false );
+                continue;
+            }
+
+            auto vote = state_store_->GetVote( account_address_, record.slot_id() );
+            if ( !vote )
+            {
+                release_reconciliation( false );
+                continue;
+            }
+            if ( vote.value() && vote.value()->state() == ConsensusStateStore::VoteRecord::ACTIVE )
+            {
+                if ( now <= vote.value()->acceptance_horizon_ms() )
+                {
+                    release_reconciliation( false );
+                    continue;
+                }
+                if ( !state_store_->RetireVote( account_address_, record.slot_id(), now ) )
+                {
+                    release_reconciliation( false );
+                    continue;
+                }
+            }
+
+            if ( burn_reconciliation_stage_observer_ )
+                burn_reconciliation_stage_observer_( "before-delete", record.slot_id() );
+            if ( stop_timer_.load() )
+            {
+                release_reconciliation( false );
+                return;
+            }
+
+            // Recheck authoritative finality after every potentially blocking
+            // durable operation. Only exact NotFound authorizes deletion.
+            certificate = GetCertificateBySlotId( record.slot_id() );
+            if ( certificate || certificate.error() != make_error_code( CertificateStoreError::NotFound ) )
+            {
+                release_reconciliation( false );
+                if ( certificate ) (void) FinalizeSlot( certificate.value(), DeliverySource::Recovery );
+                continue;
+            }
+
+            auto deleted = state_store_->DeleteReservedBurnReservation(
+                record.slot_id(), record.generation(), record.candidate_acceptance_horizon_ms() );
+            const bool abandoned = deleted && deleted.value() == ConsensusStateStore::BurnDeleteResult::Deleted;
+            release_reconciliation( abandoned );
+            if ( abandoned && burn_reconciliation_stage_observer_ )
+                burn_reconciliation_stage_observer_( "deleted", record.slot_id() );
+        }
     }
 
     void ConsensusManager::ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now )
@@ -2728,6 +2887,36 @@ namespace sgns
                 rechecked.reserved_finalization_digest = digest;
                 rechecked.reserved_finalization_winner_id = winner_id;
                 break;
+            }
+        }
+        else
+        {
+            std::unique_lock lock( proposals_mutex_ );
+            auto &slot = slot_states_[slot_id];
+            slot_cv_.wait(
+                lock,
+                [this, &slot, &slot_id]()
+                {
+                    return stop_timer_.load() ||
+                           ( resource_admissions_inflight_.count( slot_id ) == 0 &&
+                             slot.lifecycle != SlotState::Lifecycle::SigningPublishing &&
+                             slot.lifecycle != SlotState::Lifecycle::PublishingReplay &&
+                             slot.lifecycle != SlotState::Lifecycle::Finalizing &&
+                             slot.lifecycle != SlotState::Lifecycle::Reconciling );
+                } );
+            if ( stop_timer_.load() ) return FinalizeResult::StorageFailure;
+            // A recorded safety violation is terminal for participation, but
+            // the original authoritative winner may still retry application.
+            // Preserve that lifecycle while allowing the exact retry through.
+            if ( slot.lifecycle != SlotState::Lifecycle::SafetyViolation )
+            {
+                prior_lifecycle = slot.lifecycle;
+                prior_generation = slot.generation;
+                reservation_generation = ++slot.generation;
+                slot.lifecycle = SlotState::Lifecycle::Finalizing;
+                slot.reserved_finalization_proposal_id = normalized.certificate.proposal_id();
+                slot.reserved_finalization_digest = digest;
+                slot.reserved_finalization_winner_id = winner_id;
             }
         }
 

@@ -141,7 +141,8 @@ namespace sgns
             uint64_t now_ms );
         outcome::result<BurnDeleteResult> DeleteReservedBurnReservation(
             const std::string &slot_id,
-            const std::string &expected_generation );
+            const std::string &expected_generation,
+            std::optional<uint64_t> expected_candidate_horizon_ms = std::nullopt );
         outcome::result<void> ApplyFinalizedReservationBatch(
             const FinalizedReservationIdentity &identity,
             const std::shared_ptr<storage::rocksdb> &participant_datastore,

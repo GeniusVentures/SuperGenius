@@ -29,6 +29,7 @@
 #include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "storage/database_error.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 #include "testutil/wait_condition.hpp"
 
@@ -124,6 +125,37 @@ namespace sgns
                                  const ConsensusManager::Proposal &proposal )
         {
             manager->FireProposalCleanupCallbacks( proposal );
+        }
+
+        static void ConfigureReconciliationClock( uint64_t now_ms )
+        {
+            ConsensusManager::system_now_override_ = [now_ms]() { return now_ms; };
+            ConsensusManager::suppress_timer_burn_reconciliation_ = true;
+        }
+
+        static void ResetReconciliationHooks()
+        {
+            ConsensusManager::system_now_override_ = {};
+            ConsensusManager::suppress_timer_burn_reconciliation_ = false;
+        }
+
+        static void Reconcile( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->ReconcileBurnReservations();
+        }
+
+        static void ObserveReconciliation(
+            const std::shared_ptr<ConsensusManager> &manager,
+            std::function<void( std::string_view, const std::string & )> observer )
+        {
+            manager->burn_reconciliation_stage_observer_ = std::move( observer );
+        }
+
+        static void FailCertificateLookup( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            manager->certificate_record_reader_ = []( const crdt::HierarchicalKey & )
+                -> outcome::result<crdt::GlobalDB::Buffer>
+            { return outcome::failure( storage::DatabaseError::IO_ERROR ); };
         }
     };
 } // namespace sgns
@@ -1118,6 +1150,8 @@ TEST_F( ConsensusBurnReservationHarness, RestartCertificateReconcileCreatesFinal
 
 TEST_F( ConsensusBurnReservationHarness, RestartActiveVoteHorizonExtendsReservedProtectionAtEquality )
 {
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
     auto registry = MakeRegistry();
     ASSERT_TRUE( registry );
     auto manager = MakeManager( registry );
@@ -1153,11 +1187,21 @@ TEST_F( ConsensusBurnReservationHarness, RestartActiveVoteHorizonExtendsReserved
     ASSERT_TRUE( store.CreateOrJoinBurnReservation(
         SlotFor( outpoint ), outpoint, record.acceptance_horizon_ms() - 1, vote.value().timestamp() ) );
     ASSERT_TRUE( store.PutActiveVote( record ) );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( record.acceptance_horizon_ms() );
     auto restarted = MakeManager( registry );
     ASSERT_TRUE( restarted );
     auto durable = store.GetBurnReservation( SlotFor( outpoint ) );
     ASSERT_TRUE( durable && durable.value() );
     EXPECT_EQ( durable.value()->candidate_acceptance_horizon_ms(), record.acceptance_horizon_ms() );
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( restarted );
+    EXPECT_TRUE( store.GetBurnReservation( SlotFor( outpoint ) ).value().has_value() );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock(
+        record.acceptance_horizon_ms() + 1 );
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( restarted );
+    EXPECT_FALSE( store.GetBurnReservation( SlotFor( outpoint ) ).value().has_value() );
+    auto retired = store.GetVote( account_->GetAddress(), SlotFor( outpoint ) );
+    ASSERT_TRUE( retired && retired.value() );
+    EXPECT_EQ( retired.value()->state(), sgns::ConsensusStateStore::VoteRecord::RETIRED );
 }
 
 TEST_F( ConsensusBurnReservationHarness, ApplicationHandleRegistrationRejectsOverwrite )
@@ -1352,4 +1396,161 @@ TEST_F( ConsensusBurnReservationHarness, FinalDuplicateIngressSharesOneExactWinn
                               .GetBurnReservation( SlotFor( outpoint ) );
     ASSERT_TRUE( protected_burn && protected_burn.value() );
     EXPECT_EQ( protected_burn.value()->proposal_id(), certificate.value().proposal_id() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, AbandonHorizonEqualityProtectsAndStrictPassageDeletesBothKeys )
+{
+    constexpr uint64_t created_at = 1'750'000'000'000ULL;
+    constexpr uint64_t horizon = created_at + 100;
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto store = sgns::ConsensusBurnReservationTestAccess::Store( manager );
+    const auto outpoint = MakeOutpoint( 81 );
+    const auto slot = SlotFor( outpoint );
+    ASSERT_TRUE( store->CreateOrJoinBurnReservation( slot, outpoint, horizon, created_at ) );
+
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( horizon );
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( manager );
+    ASSERT_TRUE( store->GetBurnReservation( slot ).value().has_value() );
+
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( horizon + 1 );
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( manager );
+    EXPECT_FALSE( store->GetBurnReservation( slot ).value().has_value() );
+    EXPECT_TRUE( InspectRaw( db_->GetDataStore(), sgns::ConsensusStateStore::BurnSlotKey( slot ) ).empty() );
+    EXPECT_TRUE( InspectRaw( db_->GetDataStore(), sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ).empty() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, AbandonLookupStorageErrorFailsClosed )
+{
+    constexpr uint64_t created_at = 1'750'000'000'000ULL;
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto store = sgns::ConsensusBurnReservationTestAccess::Store( manager );
+    const auto outpoint = MakeOutpoint( 82 );
+    const auto slot = SlotFor( outpoint );
+    ASSERT_TRUE( store->CreateOrJoinBurnReservation( slot, outpoint, created_at + 10, created_at ) );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at + 11 );
+    sgns::ConsensusBurnReservationTestAccess::FailCertificateLookup( manager );
+
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( manager );
+    EXPECT_TRUE( store->GetBurnReservation( slot ).value().has_value() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, StaleReleaseAdmissionRacePreservesExtendedGeneration )
+{
+    constexpr uint64_t created_at = 1'750'000'000'000ULL;
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto store = sgns::ConsensusBurnReservationTestAccess::Store( manager );
+    const auto outpoint = MakeOutpoint( 83 );
+    const auto slot = SlotFor( outpoint );
+    auto created = store->CreateOrJoinBurnReservation( slot, outpoint, created_at + 10, created_at );
+    ASSERT_TRUE( created );
+    const auto generation = created.value().record.generation();
+    std::atomic<bool> extended{ false };
+    sgns::ConsensusBurnReservationTestAccess::ObserveReconciliation(
+        manager, [&]( std::string_view stage, const std::string &observed_slot )
+        {
+            if ( stage != "before-delete" || observed_slot != slot ) return;
+            auto joined = store->CreateOrJoinBurnReservation(
+                slot, outpoint, created_at + 1'000, created_at + 11 );
+            ASSERT_TRUE( joined );
+            extended = true;
+        } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at + 11 );
+
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( manager );
+    auto durable = store->GetBurnReservation( slot );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_TRUE( extended.load() );
+    EXPECT_EQ( durable.value()->generation(), generation );
+    EXPECT_EQ( durable.value()->candidate_acceptance_horizon_ms(), created_at + 1'000 );
+}
+
+TEST_F( ConsensusBurnReservationHarness, ReleaseFinalityRaceKeepsFinalizedReservation )
+{
+    constexpr uint64_t created_at = 1'750'000'000'000ULL;
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto store = sgns::ConsensusBurnReservationTestAccess::Store( manager );
+    const auto outpoint = MakeOutpoint( 84 );
+    const auto slot = SlotFor( outpoint );
+    ASSERT_TRUE( store->CreateOrJoinBurnReservation( slot, outpoint, created_at + 10, created_at ) );
+    sgns::ConsensusBurnReservationTestAccess::ObserveReconciliation(
+        manager, [&]( std::string_view stage, const std::string &observed_slot )
+        {
+            if ( stage != "before-delete" || observed_slot != slot ) return;
+            ASSERT_TRUE( store->FinalizeBurnReservation(
+                slot, outpoint, std::string( 64, 'a' ), std::string( 64, 'b' ),
+                std::string( 64, 'c' ), created_at + 11 ) );
+        } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at + 11 );
+
+    sgns::ConsensusBurnReservationTestAccess::Reconcile( manager );
+    auto durable = store->GetBurnReservation( slot );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_EQ( durable.value()->state(),
+               sgns::ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION );
+}
+
+TEST_F( ConsensusBurnReservationHarness, ShutdownPausedReconciliationDrainsWithoutMutation )
+{
+    constexpr uint64_t created_at = 1'750'000'000'000ULL;
+    const ScopedHookReset reset( []()
+        { sgns::ConsensusBurnReservationTestAccess::ResetReconciliationHooks(); } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    auto store = sgns::ConsensusBurnReservationTestAccess::Store( manager );
+    const auto outpoint = MakeOutpoint( 85 );
+    const auto slot = SlotFor( outpoint );
+    ASSERT_TRUE( store->CreateOrJoinBurnReservation( slot, outpoint, created_at + 10, created_at ) );
+    PredicateBarrier paused;
+    sgns::ConsensusBurnReservationTestAccess::ObserveReconciliation(
+        manager, [&]( std::string_view stage, const std::string &observed_slot )
+        {
+            if ( stage == "before-delete" && observed_slot == slot ) paused.ArriveAndWait();
+        } );
+    sgns::ConsensusBurnReservationTestAccess::ConfigureReconciliationClock( created_at + 11 );
+
+    std::thread reconcile_thread( [&]()
+        { sgns::ConsensusBurnReservationTestAccess::Reconcile( manager ); } );
+    paused.WaitUntilArrived();
+    std::atomic<bool> close_started{ false };
+    std::atomic<bool> close_returned{ false };
+    std::thread close_thread( [&]()
+        {
+            close_started = true;
+            manager->Close();
+            close_returned = true;
+        } );
+    while ( !close_started.load() ) std::this_thread::yield();
+    EXPECT_FALSE( close_returned.load() );
+    paused.Release();
+    reconcile_thread.join();
+    close_thread.join();
+    EXPECT_TRUE( close_returned.load() );
+    EXPECT_TRUE( store->GetBurnReservation( slot ).value().has_value() );
 }
