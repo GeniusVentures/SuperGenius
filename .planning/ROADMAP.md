@@ -66,6 +66,23 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 
 **Success Criteria:**
 
+1. Bridge validation remains side-effect-free, and successful consensus admission establishes one reservation owned by the canonical burn slot.
+2. Competing proposals for the same burn share the reservation and may change the pre-vote best candidate without releasing it.
+3. Rejecting or cleaning up a losing proposal cannot release a reservation still protected by another candidate, vote, or certificate.
+4. Certificate observation consumes the burn before proposal cleanup, while full slot abandonment releases it only after all usable votes expire.
+
+**Plans:** 0/9 plans executed
+
+### Phase 12: Consensus Race and Compatibility Verification
+
+**Goal:** Prove the complete v2.0 finality path under the exact race, restart, candidate-ordering, indexing, and ordinary-transaction scenarios that define the safety boundary.
+
+**Depends on:** Phases 9-11
+
+**Requirements:** TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06
+
+**Success Criteria:**
+
 1. The 11-node single-burn race produces one canonical slot certificate and one confirmed mint, with no validator contributing usable signatures to competing certificates.
 2. The original `HandleCertificate()`-before-CRDT interleaving cannot admit a second certificate, and duplicate delivery cannot apply the winner twice.
 3. Restart and proposal-ordering tests prove durable non-equivocation and correct best-candidate behavior before versus after vote publication.
