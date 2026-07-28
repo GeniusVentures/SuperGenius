@@ -28,6 +28,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <openssl/sha.h>
@@ -58,36 +59,36 @@ class BridgeRaceE2ETest : public ::testing::Test
 {
 protected:
     /** @brief Number of GeniusNode instances in the cluster (index 0 = Full node). */
-    static inline constexpr unsigned int kNodeCount = 11u;
+    static constexpr unsigned int kNodeCount = 11u;
 
     /** @brief Developer payout address (DevConfig::Addr) shared by all race-test nodes. */
-    static inline constexpr const char *kDevPayoutAddr = "0xcafe";
+    static constexpr std::string_view kDevPayoutAddr = "0xcafe";
 
     /** @brief Developer cut fraction (DevConfig::Cut) shared by all race-test nodes. */
-    static inline constexpr const char *kDevCutFraction = "0.65";
+    static constexpr std::string_view kDevCutFraction = "0.65";
 
     /** @brief Child-token conversion rate in GNUS (DevConfig::TokenValueInGNUS) shared by all race-test nodes. */
-    static inline constexpr const char *kDevTokenValue = "1.0";
+    static constexpr std::string_view kDevTokenValue = "1.0";
 
     /** @brief Base mint amount per burn (base units). */
-    static inline constexpr unsigned int kMintAmount = 1u;
+    static constexpr unsigned int kMintAmount = 1u;
 
     /** @brief PubSub port base for the race fixture (next free block after catchup suite's 40031-40033). */
-    static inline constexpr unsigned int kNodePortBase = 40041u;
+    static constexpr unsigned int kNodePortBase = 40041u;
 
     /**
      * @brief Node READY timeout (D-15/Pitfall 2 — 11-node startup cost exceeds the
      *        3-node catchup suite's 60000ms; bump initial budget, adjust upward if
      *        measured runs exceed it).
      */
-    static inline constexpr std::chrono::milliseconds kRaceNodeReadyTimeout{ 90000 };
+    static constexpr std::chrono::milliseconds kRaceNodeReadyTimeout{ 90000 };
 
     /**
      * @brief Stability window a test waits after observing the expected mint, to catch
      *        a delayed double-mint on the watcher's next poll cycle (> production poll
      *        interval).
      */
-    static inline constexpr std::chrono::milliseconds kRaceStabilityWindow{ 16000 };
+    static constexpr std::chrono::milliseconds kRaceStabilityWindow{ 16000 };
 
     /**
      * @brief Per-node config — index 0 is the Full node, indices 1-10 are Light nodes.
@@ -107,10 +108,10 @@ protected:
     static inline uint64_t s_pre_burn_block = 0ull;
 
     /** @brief Per-node bridge config filename (must match ResolveBridgeChainsConfigPath priority 1). */
-    static inline constexpr const char *kBridgeChainsConfigFilename = "bridge_chains_config.json";
+    static constexpr std::string_view kBridgeChainsConfigFilename = "bridge_chains_config.json";
 
     /** @brief Content of the per-node bridge_chains_config.json (sepolia-only subset). */
-    static inline constexpr const char *kBridgeChainsConfigTemplate = R"JSON({
+    static constexpr std::string_view kBridgeChainsConfigTemplate = R"JSON({
     "ethereum-sepolia": {
         "chain_id": 11155111,
         "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
@@ -135,7 +136,7 @@ protected:
     static void WriteBridgeChainsConfig( const std::string &base_write_path )
     {
         std::filesystem::create_directories( base_write_path );
-        const std::string config_path = base_write_path + kBridgeChainsConfigFilename;
+        const std::string config_path = base_write_path + std::string( kBridgeChainsConfigFilename );
 
         // Race tests must expose only burns created by the current test run. The
         // scan floor is inclusive, so start one block after the pre-burn baseline.
