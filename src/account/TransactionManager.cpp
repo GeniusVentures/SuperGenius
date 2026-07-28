@@ -165,11 +165,12 @@ namespace sgns
                                                                                      timestamp_tolerance,
                                                                                      mutability_window ) );
 
-        instance->blockchain_->RegisterCertificateHandler(
+        instance->blockchain_->RegisterCertificateApplicationHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string          &subject_hash,
-                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
+                const ConsensusCertificate &certificate )
+                -> outcome::result<ConsensusManager::ApplicationDisposition>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -3240,10 +3241,17 @@ namespace sgns
         // D-10: Entry not in map OR entry status is not VERIFYING → silently skip.
     }
 
-    outcome::result<ConsensusManager::Check> TransactionManager::OnConsensusCertificate(
+    outcome::result<ConsensusManager::ApplicationDisposition> TransactionManager::OnConsensusCertificate(
         const std::string          &tx_hash,
         const ConsensusCertificate &certificate )
     {
+        const auto classify_failure = []( const std::error_code &error )
+        {
+            return error == std::make_error_code( std::errc::state_not_recoverable ) ||
+                           error == std::make_error_code( std::errc::invalid_argument )
+                       ? ConsensusManager::ApplicationDisposition::Irreconcilable
+                       : ConsensusManager::ApplicationDisposition::Retryable;
+        };
         TransactionManagerLogger()->debug( "[{} - full: {}] {}: Consensus certificate arrived for transaction {}",
                                            account_m->GetAddress().substr( 0, 8 ),
                                            full_node_m,
@@ -3266,7 +3274,7 @@ namespace sgns
                     tx_hash );
                 // METRICS-01: Certificate fallback deserialization failure
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::Check::Approve;
+                return ConsensusManager::ApplicationDisposition::Applied;
             }
             const auto &nonce_subject = nonce_subject_result.value();
 
@@ -3279,7 +3287,7 @@ namespace sgns
                     full_node_m,
                     __func__,
                     tx_hash );
-                return ConsensusManager::Check::Approve;
+                return ConsensusManager::ApplicationDisposition::Applied;
             }
 
             auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.transaction() );
@@ -3293,7 +3301,7 @@ namespace sgns
                     __func__,
                     tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::Check::Approve;
+                return ConsensusManager::ApplicationDisposition::Applied;
             }
             tx = tx_result.value();
 
@@ -3307,7 +3315,7 @@ namespace sgns
                                                   __func__,
                                                   tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::Check::Approve;
+                return ConsensusManager::ApplicationDisposition::Applied;
             }
 
             auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
@@ -3321,7 +3329,7 @@ namespace sgns
                     tx_hash,
                     result.error().message() );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return outcome::failure( result.error() );
+                return classify_failure( result.error() );
             }
 
             // METRICS-01: Certificate fallback deserialization and confirmation succeeded
@@ -3350,7 +3358,7 @@ namespace sgns
                         __func__,
                         tx_hash,
                         result.error().message() );
-                    return outcome::failure( result.error() );
+                    return classify_failure( result.error() );
                 }
             }
             TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
@@ -3412,7 +3420,7 @@ namespace sgns
                                 tx_hash,
                                 result.error().message() );
                         }
-                        return outcome::failure( result.error() );
+                        return ConsensusManager::ApplicationDisposition::Irreconcilable;
                     }
                 }
                 else
@@ -3447,7 +3455,7 @@ namespace sgns
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-            return outcome::failure( tx_hash_bin.error() );
+            return ConsensusManager::ApplicationDisposition::Irreconcilable;
         }
 
         auto validator_registry = blockchain_->GetValidatorRegistry();
@@ -3457,7 +3465,7 @@ namespace sgns
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__ );
-            return outcome::failure( std::errc::no_such_device );
+            return ConsensusManager::ApplicationDisposition::Retryable;
         }
 
         const uint64_t registry_epoch = validator_registry->GetRegistryEpoch();
@@ -3483,7 +3491,7 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx_hash );
-        return ConsensusManager::Check::Approve;
+        return ConsensusManager::ApplicationDisposition::Applied;
     }
 
     outcome::result<ConsensusManager::ValidationResult> TransactionManager::HandleNonceConsensusSubject(

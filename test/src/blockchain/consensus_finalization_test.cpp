@@ -352,7 +352,8 @@ namespace
             const std::shared_ptr<sgns::GeniusAccount>     &account,
             std::string                                      winner,
             const sgns::ConsensusManager::Subject           *existing_subject = nullptr,
-            const std::shared_ptr<sgns::GeniusAccount>      &proposer = nullptr )
+            const std::shared_ptr<sgns::GeniusAccount>      &proposer = nullptr,
+            uint64_t                                          nonce = 7 )
         {
             sgns::ConsensusManager::Subject subject;
             if ( existing_subject ) subject = *existing_subject;
@@ -362,7 +363,7 @@ namespace
                 commitment.set_consumed_outpoints_root( std::string( 32, '\x01' ) );
                 commitment.set_produced_outputs_root( std::string( 32, '\x02' ) );
                 BOOST_OUTCOME_TRY( auto created,
-                    sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(), 7, std::move( winner ),
+                    sgns::ConsensusManager::CreateNonceSubject( account->GetAddress(), nonce, std::move( winner ),
                         sgns::EmbeddedTransaction{}, commitment, sgns::UTXOWitness{} ) );
                 subject = std::move( created );
             }
@@ -697,7 +698,8 @@ TEST_F( ConsensusFinalizationHarness, ValidConflictIsCanonicalDurableSlotLocalAn
         incoming.value().proposal(), { incoming.value().votes( 0 ) } ).has_error() );
     auto unrelated = MakeCertificate(
         manager, registry, account,
-        "6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345" );
+        "6789abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345",
+        nullptr, nullptr, 8 );
     ASSERT_TRUE( unrelated );
     EXPECT_TRUE( manager->SubmitProposal( unrelated.value().proposal(), false ) );
 

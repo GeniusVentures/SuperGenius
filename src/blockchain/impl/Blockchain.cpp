@@ -1808,6 +1808,13 @@ namespace sgns
         return consensus_manager_->RegisterCertificateHandler( subject_type, std::move( handler ) );
     }
 
+    bool Blockchain::RegisterCertificateApplicationHandler(
+        std::string_view subject_type,
+        ConsensusManager::CertificateApplicationHandler handler )
+    {
+        return consensus_manager_->RegisterCertificateApplicationHandler( subject_type, std::move( handler ) );
+    }
+
     void Blockchain::UnregisterCertificateHandler( std::string_view subject_type )
     {
         consensus_manager_->UnregisterCertificateHandler( subject_type );

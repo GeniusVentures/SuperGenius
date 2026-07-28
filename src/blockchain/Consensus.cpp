@@ -856,6 +856,20 @@ namespace sgns
         return true;
     }
 
+    bool ConsensusManager::RegisterCertificateApplicationHandler(
+        std::string_view subject_type, CertificateApplicationHandler handler )
+    {
+        if ( !handler ) return false;
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() ) return false;
+        {
+            std::unique_lock lock( certificate_handlers_mutex_ );
+            certificate_application_handlers_[type_hash.value()] = std::move( handler );
+        }
+        RecoverRestoredCertificateWork();
+        return true;
+    }
+
     void ConsensusManager::UnregisterCertificateHandler( std::string_view subject_type )
     {
         ConsensusManagerLogger()->debug( "{}: Removing Certificate handler with subject_type={}",
@@ -868,6 +882,7 @@ namespace sgns
         }
         std::unique_lock lock( certificate_handlers_mutex_ );
         certificate_subject_handlers_.erase( type_hash.value() );
+        certificate_application_handlers_.erase( type_hash.value() );
     }
 
     bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view       subject_type,
@@ -2888,6 +2903,26 @@ namespace sgns
             slot_cv_.notify_all();
         }
 
+        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
+             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+        {
+            auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
+            if ( !nonce ) return FinalizeResult::StorageFailure;
+            if ( nonce.value().transaction().has_mint_v2() )
+            {
+                auto outpoint = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
+                if ( !outpoint ) return FinalizeResult::StorageFailure;
+                auto expected_slot = MintSlotForOutpoint( outpoint.value() );
+                if ( !expected_slot || expected_slot.value() != slot_id || !state_store_ )
+                    return FinalizeResult::StorageFailure;
+                auto finalized_burn = state_store_->FinalizeBurnReservation(
+                    slot_id, outpoint.value(), digest, normalized.certificate.proposal_id(), winner_id,
+                    CurrentTimeMs() );
+                if ( !finalized_burn ) return FinalizeResult::StorageFailure;
+                if ( finalization_stage_observer_ ) finalization_stage_observer_( "burn-finalized" );
+            }
+        }
+
         ConsensusStateStore::ProcessRecord pending;
         pending.set_schema_version( 2 );
         pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
@@ -2954,12 +2989,33 @@ namespace sgns
         }
 
         CertificateSubjectHandler handler;
+        CertificateApplicationHandler application_handler;
         {
             std::shared_lock lock( certificate_handlers_mutex_ );
-            auto it = certificate_subject_handlers_.find(
-                normalized.certificate.proposal().subject().subject_type_hash().hash() );
-            if ( it == certificate_subject_handlers_.end() ) return FinalizeResult::PendingApplication;
-            handler = it->second;
+            const auto &type_hash = normalized.certificate.proposal().subject().subject_type_hash().hash();
+            auto typed = certificate_application_handlers_.find( type_hash );
+            if ( typed != certificate_application_handlers_.end() ) application_handler = typed->second;
+            auto legacy = certificate_subject_handlers_.find( type_hash );
+            if ( legacy != certificate_subject_handlers_.end() ) handler = legacy->second;
+            if ( !application_handler && !handler ) return FinalizeResult::PendingApplication;
+        }
+
+        std::optional<ConsensusStateStore::BurnReservationRecord> burn_reservation;
+        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
+             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+        {
+            auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
+            if ( !nonce ) return FinalizeResult::StorageFailure;
+            if ( nonce.value().transaction().has_mint_v2() )
+            {
+                auto outpoint = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
+                if ( !outpoint ) return FinalizeResult::StorageFailure;
+                auto reservation = state_store_->GetBurnReservation( slot_id );
+                if ( !reservation || !reservation.value() ) return FinalizeResult::StorageFailure;
+                burn_reservation = reservation.value().value();
+                if ( burn_reservation->state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR )
+                    return FinalizeResult::AlreadyFinalized;
+            }
         }
         {
             std::lock_guard lock( restored_state_mutex_ );
@@ -2980,8 +3036,36 @@ namespace sgns
             return FinalizeResult::StorageFailure;
         }
 
-        auto handled = handler( winner_id, normalized.certificate );
-        if ( !handled || handled.value() != Check::Approve )
+        ApplicationDisposition disposition = ApplicationDisposition::Retryable;
+        if ( application_handler )
+        {
+            auto handled = application_handler( winner_id, normalized.certificate );
+            if ( handled ) disposition = handled.value();
+        }
+        else
+        {
+            auto handled = handler( winner_id, normalized.certificate );
+            if ( handled && handled.value() == Check::Approve ) disposition = ApplicationDisposition::Applied;
+        }
+        if ( disposition == ApplicationDisposition::Irreconcilable )
+        {
+            if ( !burn_reservation )
+            {
+                (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
+                release_processing();
+                return FinalizeResult::StorageFailure;
+            }
+            auto safety = state_store_->MarkBurnReservationSafetyError(
+                slot_id, burn_reservation->generation(), digest, normalized.certificate.proposal_id(), winner_id,
+                "irreconcilable exact-winner application state", CurrentTimeMs() );
+            release_processing();
+            if ( !safety ) return FinalizeResult::StorageFailure;
+            ConsensusManagerLogger()->critical(
+                "burn_application_safety_error slot={} proposal_id={} winner_id={} certificate_digest={}",
+                slot_id, normalized.certificate.proposal_id(), winner_id, digest );
+            return FinalizeResult::AlreadyFinalized;
+        }
+        if ( disposition == ApplicationDisposition::Retryable )
         {
             (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
             auto pending = state_store_->GetProcess( slot_id );

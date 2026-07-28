@@ -477,8 +477,8 @@ namespace sgns
          */
         void TickOnce();
 
-        outcome::result<ConsensusManager::Check> OnConsensusCertificate( const std::string          &tx_hash,
-                                                                         const ConsensusCertificate &certificate );
+        outcome::result<ConsensusManager::ApplicationDisposition> OnConsensusCertificate(
+            const std::string &tx_hash, const ConsensusCertificate &certificate );
         /**
          * @brief Handles proposal timeout cleanup for VERIFYING tracking entries.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
