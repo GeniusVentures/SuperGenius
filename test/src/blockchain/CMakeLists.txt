@@ -113,6 +113,16 @@ target_link_libraries(consensus_finalization_test
     base_crdt_test
 )
 
+addtest(consensus_burn_reservation_test
+    consensus_burn_reservation_test.cpp
+)
+target_link_libraries(consensus_burn_reservation_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
+
 addtest(certificate_compatibility_test
     certificate_compatibility_test.cpp
 )
