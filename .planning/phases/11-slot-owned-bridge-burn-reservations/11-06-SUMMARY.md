@@ -61,6 +61,7 @@ completed: 2026-07-28
 ## Task Commits
 
 1. **Task 1: Establish one shared reservation store and immutable application contract** - `fbb95eec` (feat)
+2. **Task 1 acceptance closure: Enforce UTXO shared-datastore identity at handoff** - `f7c27ae1` (fix)
 
 ## Files Created/Modified
 
@@ -69,7 +70,7 @@ completed: 2026-07-28
 - `src/blockchain/ConsensusStateStore.hpp` - Finalized identity, typed identity error, participant gate, and lock-order contract.
 - `src/blockchain/ConsensusStateStore.cpp` - Shared-object identity check and one-lock exact reread/participant batch boundary.
 - `src/account/TransactionManager.hpp` - Finalized handle plumbing toward mint application and friend-only observation seam.
-- `src/account/TransactionManager.cpp` - Weak resource callback, ordinary legacy callback, and end-to-end handle forwarding.
+- `src/account/TransactionManager.cpp` - Weak resource callback, ordinary legacy callback, end-to-end handle forwarding, and UTXO datastore admission through the exact gate.
 - `test/src/blockchain/consensus_burn_reservation_test.cpp` - Shared authority, once-only registration, identity mismatch, and serialization tests.
 - `test/src/account/transaction_manager_pending_lifecycle_test.cpp` - Weak-owner expiry and exact handle arrival at mint application.
 
@@ -98,7 +99,7 @@ None - no external service configuration required.
 
 ## Self-Check: PASSED
 
-- Task commit `fbb95eec` exists and all eight modified files are present.
+- Task commits `fbb95eec` and `f7c27ae1` exist and all eight modified files are present.
 - Guarded `SharedStore|ApplicationHandle|DatastoreIdentity|SerializationGate` slice passed 4/4.
 - Full `transaction_manager_pending_lifecycle_test` passed 17/17.
 - Ownership/source guards, no-sleep/no-detach guard, and `git diff --check` passed.
