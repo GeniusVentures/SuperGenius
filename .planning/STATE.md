@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T21:01:49.517Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn application
+last_updated: "2026-07-28T21:53:44.477Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 08 safe burn abandonment and race closure
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 30
+  completed_plans: 31
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 7 of 9
+Plan: 8 of 9
 Status: Ready to execute
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn application
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 08 safe burn abandonment and race closure
 
 ## Roadmap Snapshot
 
@@ -66,12 +66,12 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn ap
 
 ## Operator Next Steps
 
-- Execute Phase 11 Plan 07 atomic winning mint effects and reservation consumption.
+- Execute Phase 11 Plan 09 requirements and regression audit.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T21:01:20.763Z
-**Stopped at:** Completed 11-07-PLAN.md
+**Last session:** 2026-07-28T21:53:44.472Z
+**Stopped at:** Completed 11-08-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -108,6 +108,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn ap
 | Phase 11 P05 | 27 min | 1 tasks | 8 files |
 | Phase 11 P06 | 18 min | 1 tasks | 8 files |
 | Phase 11 P07 | 19 min | 1 tasks | 8 files |
+| Phase 11 P08 | 51 min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -181,3 +182,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn ap
 - [Phase 11]: The finalized participant observes the durable pre-stage reservation while Consumed is staged invisibly in the same physical batch. — This distinguishes first application from exact replay without a split commit.
 - [Phase 11]: Certificate-only synthetic bridge inputs may be materialized only from certified transaction facts under the exact finalized reservation handle. — Local proposal state cannot invent or mutate authoritative bridge input identity.
 - [Phase 11]: AlreadyApplied requires durable Consumed state plus exact application, output, input-consumption, and winner identity agreement. — Partial or contradictory durable state must fail closed as not recoverable.
+- [Phase 11]: Reservation reconciliation is one owned consensus-timer activity serialized through an explicit Reconciling slot lifecycle. — Admission, signing, finality, and cleanup must not cross the abandonment decision.
+- [Phase 11]: Deletion requires exact certificate NotFound, strict candidate and vote horizon passage, and matching generation plus persisted candidate horizon. — Lookup uncertainty, renewal, finality, and ABA all retain protection.
+- [Phase 11]: Shutdown cancellation restores the prior lifecycle and drains reconciliation before durable deletion. — Manager destruction cannot be followed by reservation mutation.

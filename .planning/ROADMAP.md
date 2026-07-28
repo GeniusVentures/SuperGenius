@@ -71,7 +71,7 @@ Historical phase artifacts from work preceding v2.0 are preserved under `.planni
 3. Rejecting or cleaning up a losing proposal cannot release a reservation still protected by another candidate, vote, or certificate.
 4. Certificate observation consumes the burn before proposal cleanup, while full slot abandonment releases it only after all usable votes expire.
 
-**Plans:** 7/9 plans executed
+**Plans:** 8/9 plans executed
 
 ### Phase 12: Consensus Race and Compatibility Verification
 
