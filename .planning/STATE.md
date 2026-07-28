@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T19:42:44.122Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 03 startup burn-reservation reconciliation
+last_updated: "2026-07-28T20:03:12.198Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn admission
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 26
+  completed_plans: 27
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 3 of 9
+Plan: 4 of 9
 Status: Ready to execute
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 03 startup burn-reservation reconciliation
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn admission
 
 ## Roadmap Snapshot
 
@@ -66,12 +66,12 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 03 startup burn-reservation
 
 ## Operator Next Steps
 
-- Execute Phase 11 Plan 04 post-validation burn admission.
+- Execute Phase 11 Plan 05 certificate-owned burn consumption.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T19:42:44.117Z
-**Stopped at:** Completed 11-03-PLAN.md
+**Last session:** 2026-07-28T20:03:04.636Z
+**Stopped at:** Completed 11-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -104,6 +104,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 03 startup burn-reservation
 | Phase 11 P01 | 32 min | 1 tasks | 2 files |
 | Phase 11 P02 | 18 min | 1 tasks | 4 files |
 | Phase 11 P03 | 17 min | 1 tasks | 5 files |
+| Phase 11 P04 | 17 min | 1 tasks | 9 files |
 
 ## Decisions
 
@@ -165,3 +166,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 03 startup burn-reservation
 - [Phase 11]: Authoritative mint certificates synthesize missing local FinalizedPendingApplication reservations before handler recovery. — Certificate authority must restore burn protection even when no earlier local reservation survived.
 - [Phase 11]: ConsensusManager::New guarantees the built-in nonce/mint resolver before restoration, while Blockchain::New installs it explicitly before manager construction. — Direct consensus-manager callers and full blockchain startup must share the same fresh-process resolver guarantee.
 - [Phase 11]: Slot-key handler registration is insert-only; replacement requires explicit unregistration. — A process-global resolver cannot be silently overwritten by a later registrant.
+- [Phase 11]: Canonical resource descriptors exclude candidate identity; consensus owns durable reservation persistence. — Same-burn contenders must join one reservation generation regardless of proposal identity.
+- [Phase 11]: The per-slot admission barrier spans descriptor extraction and store admission through candidate activation, and finalization waits for it. — This closes the durable-store to active-candidate visibility gap.
+- [Phase 11]: Pending TTL cleanup removes proposal-local state without invoking finality or releasing slot-owned reservations. — Ephemeral proposal expiry is not a finality event and cannot own shared resource lifecycle.
