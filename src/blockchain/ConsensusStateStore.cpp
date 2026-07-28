@@ -8,6 +8,7 @@
 #include "base/hexutil.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "crypto/hasher.hpp"
+#include "libp2p/crypto/random_generator/boost_generator.hpp"
 #include "storage/database_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusStateStoreError, error )
@@ -37,6 +38,8 @@ namespace sgns
         constexpr std::string_view kProcessPrefix = "/consensus/local/v2/process/";
         constexpr std::string_view kConflictPrefix = "/consensus/local/v2/conflict/";
         constexpr std::string_view kSafetyPrefix = "/consensus/local/v2/safety/";
+        constexpr std::string_view kBurnSlotPrefix = "/consensus/local/v2/burn/slot/";
+        constexpr std::string_view kBurnOutpointPrefix = "/consensus/local/v2/burn/outpoint/";
 
         base::Buffer BufferOf( std::string_view value )
         {
@@ -56,6 +59,59 @@ namespace sgns
             return value.size() == 64 &&
                    std::all_of( value.begin(), value.end(), []( unsigned char c )
                                 { return std::isdigit( c ) || ( c >= 'a' && c <= 'f' ); } );
+        }
+
+        bool IsNonzeroCanonicalHash( std::string_view value )
+        {
+            return IsCanonicalHash( value ) && value.find_first_not_of( '0' ) != std::string_view::npos;
+        }
+
+        bool IsCanonicalChain( std::string_view value )
+        {
+            return !value.empty() && ( value == "0" || value.front() != '0' ) &&
+                   std::all_of( value.begin(), value.end(), []( unsigned char c ) { return std::isdigit( c ) != 0; } );
+        }
+
+        std::string HashText( std::string_view value )
+        {
+            const auto hash = crypto::sha2_256( value.data(), value.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        }
+
+        std::string BurnSlotFor( const ConsensusStateStore::BurnOutpoint &outpoint )
+        {
+            return HashText( std::string( "mint-v2:" ) + outpoint.source_chain + ":" + outpoint.burn_hash + ":" +
+                             std::to_string( outpoint.receipt_log_index ) );
+        }
+
+        bool SameOutpoint( const ConsensusStateStore::BurnReservationRecord &record,
+                           const ConsensusStateStore::BurnOutpoint &outpoint )
+        {
+            return record.source_chain() == outpoint.source_chain && record.burn_hash() == outpoint.burn_hash &&
+                   record.receipt_log_index() == outpoint.receipt_log_index;
+        }
+
+        bool SameFinality( const ConsensusStateStore::BurnReservationRecord &record,
+                           const std::string &certificate_digest,
+                           const std::string &proposal_id,
+                           const std::string &winner_id )
+        {
+            return record.certificate_digest() == certificate_digest && record.proposal_id() == proposal_id &&
+                   record.winner_id() == winner_id;
+        }
+
+        outcome::result<std::string> RandomGeneration()
+        {
+            try
+            {
+                libp2p::crypto::random::BoostRandomGenerator random;
+                const auto bytes = random.randomBytes( 32 );
+                return base::hex_lower( gsl::span<const uint8_t>( bytes.data(), bytes.size() ) );
+            }
+            catch ( ... )
+            {
+                return outcome::failure( ConsensusStateStoreError::Storage );
+            }
         }
 
         template <typename Message>
@@ -118,6 +174,7 @@ namespace sgns
         : datastore_( std::move( datastore ) )
     {
         query_ = [this]( const base::Buffer &prefix ) { return datastore_->query( prefix ); };
+        commit_ = []( storage::BufferBatch &batch ) { return batch.commit(); };
     }
 
     std::string ConsensusStateStore::VoteKey( const std::string &validator_id, const std::string &slot_id )
@@ -140,6 +197,16 @@ namespace sgns
     std::string ConsensusStateStore::SafetyKey( const std::string &slot_id )
     {
         return std::string( kSafetyPrefix ) + slot_id;
+    }
+
+    std::string ConsensusStateStore::BurnSlotKey( const std::string &slot_id )
+    {
+        return std::string( kBurnSlotPrefix ) + slot_id;
+    }
+
+    std::string ConsensusStateStore::BurnOutpointKey( const BurnOutpoint &outpoint )
+    {
+        return std::string( kBurnOutpointPrefix ) + BurnSlotFor( outpoint );
     }
 
     outcome::result<void> ConsensusStateStore::ValidateVote( const VoteRecord &record, const std::string &key ) const
@@ -605,5 +672,355 @@ namespace sgns
         auto committed = batch->commit();
         if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
         return conflict;
+    }
+
+    outcome::result<void> ConsensusStateStore::ValidateBurnReservation( const BurnReservationRecord &record,
+                                                                         const std::string &key ) const
+    {
+        const BurnOutpoint outpoint{ record.source_chain(), record.burn_hash(), record.receipt_log_index() };
+        const bool reserved = record.state() == BurnReservationRecord::RESERVED;
+        const bool finalized = record.state() == BurnReservationRecord::FINALIZED_PENDING_APPLICATION ||
+                               record.state() == BurnReservationRecord::CONSUMED ||
+                               record.state() == BurnReservationRecord::SAFETY_ERROR;
+        if ( record.schema_version() != kSchemaVersion || ( !reserved && !finalized ) ||
+             !IsCanonicalHash( record.slot_id() ) || !IsCanonicalChain( record.source_chain() ) ||
+             !IsNonzeroCanonicalHash( record.burn_hash() ) || !IsCanonicalHash( record.generation() ) ||
+             record.slot_id() != BurnSlotFor( outpoint ) || key != BurnSlotKey( record.slot_id() ) ||
+             record.created_at_ms() == 0 || record.updated_at_ms() < record.created_at_ms() ||
+             ( reserved && ( record.candidate_acceptance_horizon_ms() < record.created_at_ms() ||
+                             !record.certificate_digest().empty() || !record.proposal_id().empty() ||
+                             !record.winner_id().empty() || !record.safety_error().empty() ) ) ||
+             ( finalized && ( !IsCanonicalHash( record.certificate_digest() ) ||
+                              !IsCanonicalHash( record.proposal_id() ) || !IsCanonicalHash( record.winner_id() ) ) ) ||
+             ( record.state() == BurnReservationRecord::SAFETY_ERROR ) != !record.safety_error().empty() )
+        {
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<void> ConsensusStateStore::ValidateBurnOutpointIndex( const BurnOutpointIndex &record,
+                                                                          const std::string &key ) const
+    {
+        const BurnOutpoint outpoint{ record.source_chain(), record.burn_hash(), record.receipt_log_index() };
+        if ( record.schema_version() != kSchemaVersion || !IsCanonicalHash( record.slot_id() ) ||
+             !IsCanonicalChain( record.source_chain() ) || !IsNonzeroCanonicalHash( record.burn_hash() ) ||
+             !IsCanonicalHash( record.generation() ) || record.slot_id() != BurnSlotFor( outpoint ) ||
+             key != BurnOutpointKey( outpoint ) )
+        {
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        }
+        return outcome::success();
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnOutpointIndex>>
+    ConsensusStateStore::ReadBurnOutpointIndexUnlocked( const BurnOutpoint &outpoint ) const
+    {
+        if ( !datastore_ ) return outcome::failure( ConsensusStateStoreError::Storage );
+        const auto key = BurnOutpointKey( outpoint );
+        auto raw = datastore_->get( BufferOf( key ) );
+        if ( raw.has_error() )
+        {
+            if ( raw.error() == storage::DatabaseError::NOT_FOUND ) return std::optional<BurnOutpointIndex>{};
+            return outcome::failure( ConsensusStateStoreError::Storage );
+        }
+        BurnOutpointIndex index;
+        if ( !ParseStrict( raw.value().toString(), index ) )
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        BOOST_OUTCOME_TRY( ValidateBurnOutpointIndex( index, key ) );
+        return std::optional<BurnOutpointIndex>{ std::move( index ) };
+    }
+
+    outcome::result<void> ConsensusStateStore::ValidateBurnReciprocalUnlocked(
+        const BurnReservationRecord &record ) const
+    {
+        const BurnOutpoint outpoint{ record.source_chain(), record.burn_hash(), record.receipt_log_index() };
+        BOOST_OUTCOME_TRY( auto index, ReadBurnOutpointIndexUnlocked( outpoint ) );
+        if ( !index || index->slot_id() != record.slot_id() || index->generation() != record.generation() ||
+             index->source_chain() != record.source_chain() || index->burn_hash() != record.burn_hash() ||
+             index->receipt_log_index() != record.receipt_log_index() )
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        return outcome::success();
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
+    ConsensusStateStore::ReadBurnReservationUnlocked( const std::string &slot_id ) const
+    {
+        if ( !datastore_ ) return outcome::failure( ConsensusStateStoreError::Storage );
+        const auto key = BurnSlotKey( slot_id );
+        auto raw = datastore_->get( BufferOf( key ) );
+        if ( raw.has_error() )
+        {
+            if ( raw.error() == storage::DatabaseError::NOT_FOUND ) return std::optional<BurnReservationRecord>{};
+            return outcome::failure( ConsensusStateStoreError::Storage );
+        }
+        BurnReservationRecord record;
+        if ( !ParseStrict( raw.value().toString(), record ) )
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( record, key ) );
+        BOOST_OUTCOME_TRY( ValidateBurnReciprocalUnlocked( record ) );
+        return std::optional<BurnReservationRecord>{ std::move( record ) };
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
+    ConsensusStateStore::GetBurnReservation( const std::string &slot_id ) const
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !IsCanonicalHash( slot_id ) ) return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        return ReadBurnReservationUnlocked( slot_id );
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
+    ConsensusStateStore::GetBurnReservation( const BurnOutpoint &outpoint ) const
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !IsCanonicalChain( outpoint.source_chain ) || !IsNonzeroCanonicalHash( outpoint.burn_hash ) )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        BOOST_OUTCOME_TRY( auto index, ReadBurnOutpointIndexUnlocked( outpoint ) );
+        if ( !index ) return std::optional<BurnReservationRecord>{};
+        BOOST_OUTCOME_TRY( auto record, ReadBurnReservationUnlocked( index->slot_id() ) );
+        if ( !record ) return outcome::failure( ConsensusStateStoreError::Integrity );
+        return record;
+    }
+
+    outcome::result<std::vector<ConsensusStateStore::BurnReservationRecord>>
+    ConsensusStateStore::ScanBurnReservations() const
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !datastore_ ) return outcome::failure( ConsensusStateStoreError::Storage );
+        auto raw_slots = query_( BufferOf( kBurnSlotPrefix ) );
+        auto raw_indexes = query_( BufferOf( kBurnOutpointPrefix ) );
+        if ( raw_slots.has_error() || raw_indexes.has_error() )
+            return outcome::failure( ConsensusStateStoreError::Storage );
+        BOOST_OUTCOME_TRY( auto records,
+                           StrictScan<BurnReservationRecord>( raw_slots.value(), [this]( const auto &r, const auto &k )
+                                                              { return ValidateBurnReservation( r, k ); } ) );
+        BOOST_OUTCOME_TRY( auto indexes,
+                           StrictScan<BurnOutpointIndex>( raw_indexes.value(), [this]( const auto &r, const auto &k )
+                                                         { return ValidateBurnOutpointIndex( r, k ); } ) );
+        if ( records.size() != indexes.size() ) return outcome::failure( ConsensusStateStoreError::Integrity );
+        for ( const auto &record : records )
+        {
+            BOOST_OUTCOME_TRY( ValidateBurnReciprocalUnlocked( record ) );
+        }
+        for ( const auto &index : indexes )
+        {
+            BOOST_OUTCOME_TRY( auto record, ReadBurnReservationUnlocked( index.slot_id() ) );
+            if ( !record || record->generation() != index.generation() )
+                return outcome::failure( ConsensusStateStoreError::Integrity );
+        }
+        return records;
+    }
+
+    outcome::result<ConsensusStateStore::BurnReservationResult>
+    ConsensusStateStore::CreateOrJoinBurnReservation( const std::string &slot_id,
+                                                       const BurnOutpoint &outpoint,
+                                                       uint64_t candidate_acceptance_horizon_ms,
+                                                       uint64_t now_ms )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !datastore_ || !IsCanonicalChain( outpoint.source_chain ) ||
+             !IsNonzeroCanonicalHash( outpoint.burn_hash ) || !IsCanonicalHash( slot_id ) || now_ms == 0 ||
+             candidate_acceptance_horizon_ms < now_ms )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        if ( slot_id != BurnSlotFor( outpoint ) )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
+        BOOST_OUTCOME_TRY( auto indexed, ReadBurnOutpointIndexUnlocked( outpoint ) );
+        if ( current )
+        {
+            if ( !SameOutpoint( *current, outpoint ) || !indexed || indexed->slot_id() != slot_id ||
+                 indexed->generation() != current->generation() )
+                return outcome::failure( ConsensusStateStoreError::Conflict );
+            if ( current->state() != BurnReservationRecord::RESERVED )
+                return outcome::failure( ConsensusStateStoreError::Conflict );
+            if ( candidate_acceptance_horizon_ms > current->candidate_acceptance_horizon_ms() )
+            {
+                current->set_candidate_acceptance_horizon_ms( candidate_acceptance_horizon_ms );
+                current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
+                BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
+                auto stored = datastore_->put( BufferOf( BurnSlotKey( slot_id ) ), value );
+                if ( stored.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+            }
+            return BurnReservationResult{ *current, false };
+        }
+        if ( indexed ) return outcome::failure( ConsensusStateStoreError::Conflict );
+
+        BOOST_OUTCOME_TRY( auto generation, RandomGeneration() );
+        BurnReservationRecord record;
+        record.set_schema_version( kSchemaVersion );
+        record.set_state( BurnReservationRecord::RESERVED );
+        record.set_slot_id( slot_id );
+        record.set_source_chain( outpoint.source_chain );
+        record.set_burn_hash( outpoint.burn_hash );
+        record.set_receipt_log_index( outpoint.receipt_log_index );
+        record.set_generation( generation );
+        record.set_candidate_acceptance_horizon_ms( candidate_acceptance_horizon_ms );
+        record.set_created_at_ms( now_ms );
+        record.set_updated_at_ms( now_ms );
+        BurnOutpointIndex index;
+        index.set_schema_version( kSchemaVersion );
+        index.set_slot_id( slot_id );
+        index.set_source_chain( outpoint.source_chain );
+        index.set_burn_hash( outpoint.burn_hash );
+        index.set_receipt_log_index( outpoint.receipt_log_index );
+        index.set_generation( generation );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( record, BurnSlotKey( slot_id ) ) );
+        BOOST_OUTCOME_TRY( ValidateBurnOutpointIndex( index, BurnOutpointKey( outpoint ) ) );
+        BOOST_OUTCOME_TRY( auto record_value, SerializeStrict( record ) );
+        BOOST_OUTCOME_TRY( auto index_value, SerializeStrict( index ) );
+        auto batch = datastore_->batch();
+        BOOST_OUTCOME_TRY( batch->put( BufferOf( BurnSlotKey( slot_id ) ), record_value ) );
+        BOOST_OUTCOME_TRY( batch->put( BufferOf( BurnOutpointKey( outpoint ) ), index_value ) );
+        auto committed = commit_( *batch );
+        if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return BurnReservationResult{ std::move( record ), true };
+    }
+
+    outcome::result<ConsensusStateStore::BurnReservationRecord> ConsensusStateStore::FinalizeBurnReservation(
+        const std::string &slot_id,
+        const BurnOutpoint &outpoint,
+        const std::string &certificate_digest,
+        const std::string &proposal_id,
+        const std::string &winner_id,
+        uint64_t now_ms )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !datastore_ || !IsCanonicalChain( outpoint.source_chain ) ||
+             !IsNonzeroCanonicalHash( outpoint.burn_hash ) || !IsCanonicalHash( slot_id ) ||
+             !IsCanonicalHash( certificate_digest ) ||
+             !IsCanonicalHash( proposal_id ) || !IsCanonicalHash( winner_id ) || now_ms == 0 )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        if ( slot_id != BurnSlotFor( outpoint ) )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
+        BOOST_OUTCOME_TRY( auto indexed, ReadBurnOutpointIndexUnlocked( outpoint ) );
+        if ( current )
+        {
+            if ( !SameOutpoint( *current, outpoint ) || !indexed || indexed->generation() != current->generation() )
+                return outcome::failure( ConsensusStateStoreError::Conflict );
+            if ( current->state() != BurnReservationRecord::RESERVED )
+            {
+                if ( SameFinality( *current, certificate_digest, proposal_id, winner_id ) ) return *current;
+                return outcome::failure( ConsensusStateStoreError::Conflict );
+            }
+        }
+        else
+        {
+            if ( indexed ) return outcome::failure( ConsensusStateStoreError::Conflict );
+            BOOST_OUTCOME_TRY( auto generation, RandomGeneration() );
+            current.emplace();
+            current->set_schema_version( kSchemaVersion );
+            current->set_slot_id( slot_id );
+            current->set_source_chain( outpoint.source_chain );
+            current->set_burn_hash( outpoint.burn_hash );
+            current->set_receipt_log_index( outpoint.receipt_log_index );
+            current->set_generation( generation );
+            current->set_created_at_ms( now_ms );
+            indexed.emplace();
+            indexed->set_schema_version( kSchemaVersion );
+            indexed->set_slot_id( slot_id );
+            indexed->set_source_chain( outpoint.source_chain );
+            indexed->set_burn_hash( outpoint.burn_hash );
+            indexed->set_receipt_log_index( outpoint.receipt_log_index );
+            indexed->set_generation( generation );
+        }
+        current->set_state( BurnReservationRecord::FINALIZED_PENDING_APPLICATION );
+        current->set_certificate_digest( certificate_digest );
+        current->set_proposal_id( proposal_id );
+        current->set_winner_id( winner_id );
+        current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( slot_id ) ) );
+        BOOST_OUTCOME_TRY( auto record_value, SerializeStrict( *current ) );
+        BOOST_OUTCOME_TRY( auto index_value, SerializeStrict( *indexed ) );
+        auto batch = datastore_->batch();
+        BOOST_OUTCOME_TRY( batch->put( BufferOf( BurnSlotKey( slot_id ) ), record_value ) );
+        BOOST_OUTCOME_TRY( batch->put( BufferOf( BurnOutpointKey( outpoint ) ), index_value ) );
+        auto committed = commit_( *batch );
+        if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return *current;
+    }
+
+    outcome::result<ConsensusStateStore::BurnReservationRecord>
+    ConsensusStateStore::MarkBurnReservationSafetyError( const std::string &slot_id,
+                                                          const std::string &expected_generation,
+                                                          const std::string &certificate_digest,
+                                                          const std::string &proposal_id,
+                                                          const std::string &winner_id,
+                                                          const std::string &diagnostic,
+                                                          uint64_t now_ms )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( diagnostic.empty() || now_ms == 0 ) return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
+        if ( !current || current->generation() != expected_generation ||
+             !SameFinality( *current, certificate_digest, proposal_id, winner_id ) )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        if ( current->state() == BurnReservationRecord::SAFETY_ERROR )
+        {
+            if ( current->safety_error() == diagnostic ) return *current;
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        }
+        if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        current->set_state( BurnReservationRecord::SAFETY_ERROR );
+        current->set_safety_error( diagnostic );
+        current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( slot_id ) ) );
+        BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
+        auto stored = datastore_->put( BufferOf( BurnSlotKey( slot_id ) ), value );
+        if ( stored.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return *current;
+    }
+
+    outcome::result<ConsensusStateStore::BurnReservationRecord>
+    ConsensusStateStore::PrepareConsumedBurnReservation( storage::BufferBatch &batch,
+                                                          const std::string &slot_id,
+                                                          const BurnOutpoint &outpoint,
+                                                          const std::string &expected_generation,
+                                                          const std::string &certificate_digest,
+                                                          const std::string &proposal_id,
+                                                          const std::string &winner_id,
+                                                          uint64_t now_ms )
+    {
+        std::lock_guard lock( mutex_ );
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
+        if ( !current || !SameOutpoint( *current, outpoint ) || current->generation() != expected_generation ||
+             !SameFinality( *current, certificate_digest, proposal_id, winner_id ) )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        if ( current->state() == BurnReservationRecord::CONSUMED ) return *current;
+        if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION || now_ms == 0 )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        current->set_state( BurnReservationRecord::CONSUMED );
+        current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( slot_id ) ) );
+        BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
+        BOOST_OUTCOME_TRY( batch.put( BufferOf( BurnSlotKey( slot_id ) ), value ) );
+        return *current;
+    }
+
+    outcome::result<ConsensusStateStore::BurnDeleteResult>
+    ConsensusStateStore::DeleteReservedBurnReservation( const std::string &slot_id,
+                                                         const std::string &expected_generation )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( !IsCanonicalHash( slot_id ) || !IsCanonicalHash( expected_generation ) )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
+        if ( !current ) return BurnDeleteResult::NotFound;
+        if ( current->generation() != expected_generation ) return BurnDeleteResult::GenerationMismatch;
+        if ( current->state() != BurnReservationRecord::RESERVED )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+        const BurnOutpoint outpoint{ current->source_chain(), current->burn_hash(), current->receipt_log_index() };
+        BOOST_OUTCOME_TRY( auto indexed, ReadBurnOutpointIndexUnlocked( outpoint ) );
+        if ( !indexed || indexed->slot_id() != slot_id || indexed->generation() != expected_generation )
+            return outcome::failure( ConsensusStateStoreError::Integrity );
+        auto batch = datastore_->batch();
+        BOOST_OUTCOME_TRY( batch->remove( BufferOf( BurnSlotKey( slot_id ) ) ) );
+        BOOST_OUTCOME_TRY( batch->remove( BufferOf( BurnOutpointKey( outpoint ) ) ) );
+        auto committed = commit_( *batch );
+        if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return BurnDeleteResult::Deleted;
     }
 } // namespace sgns
