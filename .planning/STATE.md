@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T20:03:12.198Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn admission
+last_updated: "2026-07-28T20:18:21.089Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn finality
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 27
+  completed_plans: 28
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 4 of 9
+Plan: 5 of 9
 Status: Ready to execute
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn admission
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn finality
 
 ## Roadmap Snapshot
 
@@ -66,12 +66,12 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn adm
 
 ## Operator Next Steps
 
-- Execute Phase 11 Plan 05 certificate-owned burn consumption.
+- Execute Phase 11 Plan 06 shared-store application handle contract.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T20:03:04.636Z
-**Stopped at:** Completed 11-04-PLAN.md
+**Last session:** 2026-07-28T20:17:45.935Z
+**Stopped at:** Completed 11-05-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -105,6 +105,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn adm
 | Phase 11 P02 | 18 min | 1 tasks | 4 files |
 | Phase 11 P03 | 17 min | 1 tasks | 5 files |
 | Phase 11 P04 | 17 min | 1 tasks | 9 files |
+| Phase 11 P05 | 27 min | 1 tasks | 8 files |
 
 ## Decisions
 
@@ -169,3 +170,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 04 post-validation burn adm
 - [Phase 11]: Canonical resource descriptors exclude candidate identity; consensus owns durable reservation persistence. — Same-burn contenders must join one reservation generation regardless of proposal identity.
 - [Phase 11]: The per-slot admission barrier spans descriptor extraction and store admission through candidate activation, and finalization waits for it. — This closes the durable-store to active-candidate visibility gap.
 - [Phase 11]: Pending TTL cleanup removes proposal-local state without invoking finality or releasing slot-owned reservations. — Ephemeral proposal expiry is not a finality event and cannot own shared resource lifecycle.
+- [Phase 11]: Resource-bearing certificate handlers use a typed application disposition while legacy certificate handlers retain Check semantics. — Exact mint application must distinguish safe retry from permanent durable-state contradiction without changing normal subject behavior.
+- [Phase 11]: Authoritative mint finalization persists FinalizedPendingApplication before processing markers, handler leases, or cleanup. — Certificate authority must make the shared burn unavailable even on certificate-only nodes and after local candidate state is gone.
+- [Phase 11]: Irreconcilable exact-winner application marks the certificate-bound reservation SafetyError and suppresses later retries and cleanup. — Permanent application contradictions must preserve finality and burn protection without futile remint attempts or reopening the resource.
