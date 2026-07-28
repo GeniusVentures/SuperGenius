@@ -22,6 +22,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusStateStoreError, error )
             return "consensus local-state integrity error";
         case E::Conflict:
             return "consensus local-state conflict";
+        case E::DatastoreIdentity:
+            return "consensus local-state datastore identity mismatch";
         case E::Storage:
             return "consensus local-state storage error";
     }
@@ -1022,5 +1024,34 @@ namespace sgns
         auto committed = commit_( *batch );
         if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
         return BurnDeleteResult::Deleted;
+    }
+
+    outcome::result<void> ConsensusStateStore::ApplyFinalizedReservationBatch(
+        const FinalizedReservationIdentity &identity,
+        const std::shared_ptr<storage::rocksdb> &participant_datastore,
+        FinalizedBatchParticipant participant )
+    {
+        if ( !datastore_ || !participant_datastore || !participant )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+
+        // Shared-object identity is the locking authority. A separately opened
+        // rocksdb object naming the same path is deliberately not equivalent.
+        if ( datastore_ != participant_datastore )
+            return outcome::failure( ConsensusStateStoreError::DatastoreIdentity );
+
+        std::lock_guard lock( mutex_ );
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( identity.slot_id ) );
+        if ( !current ) return outcome::failure( ConsensusStateStoreError::Integrity );
+        if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION ||
+             !SameOutpoint( *current, identity.outpoint ) ||
+             current->generation() != identity.generation ||
+             current->certificate_digest() != identity.certificate_digest ||
+             current->proposal_id() != identity.proposal_id ||
+             current->winner_id() != identity.winner_id )
+            return outcome::failure( ConsensusStateStoreError::Conflict );
+
+        auto batch = datastore_->batch();
+        if ( !batch ) return outcome::failure( ConsensusStateStoreError::Storage );
+        return participant( *batch, *current );
     }
 } // namespace sgns

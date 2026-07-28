@@ -100,6 +100,12 @@ namespace sgns
             FailCommits( *manager->state_store_ );
         }
 
+        static std::shared_ptr<ConsensusStateStore> Store(
+            const std::shared_ptr<ConsensusManager> &manager )
+        {
+            return manager->state_store_;
+        }
+
         static ConsensusManager::FinalizeResult Finalize(
             const std::shared_ptr<ConsensusManager> &manager,
             const ConsensusManager::Certificate &certificate,
@@ -681,6 +687,100 @@ TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreFinalityTransitions
     EXPECT_EQ( conflicting.error(), sgns::ConsensusStateStoreError::Conflict );
 }
 
+TEST_F( ConsensusBurnReservationHarness, DatastoreIdentityRejectsDistinctSharedObjectBeforeParticipantMutation )
+{
+    const auto outpoint = MakeOutpoint( 71 );
+    const auto slot = SlotFor( outpoint );
+    auto storage = db_->GetDataStore();
+    auto store = std::make_shared<sgns::ConsensusStateStore>( storage );
+    auto created = store->CreateOrJoinBurnReservation( slot, outpoint, 1'750'000'010'000ULL,
+                                                       1'750'000'000'000ULL );
+    ASSERT_TRUE( created );
+    auto finalized = store->FinalizeBurnReservation(
+        slot, outpoint, std::string( 64, 'c' ), std::string( 64, 'd' ),
+        std::string( 64, 'e' ), 1'750'000'000'001ULL );
+    ASSERT_TRUE( finalized );
+    sgns::ConsensusStateStore::FinalizedReservationIdentity identity{
+        slot, outpoint, finalized.value().generation(), finalized.value().certificate_digest(),
+        finalized.value().proposal_id(), finalized.value().winner_id() };
+
+    auto distinct = sgns::storage::rocksdb::create( storage->getDB() );
+    ASSERT_TRUE( distinct );
+    std::atomic<uint64_t> mutations{ 0 };
+    auto rejected = store->ApplyFinalizedReservationBatch(
+        identity, distinct.value(),
+        [&]( sgns::storage::BufferBatch &, const auto & ) -> outcome::result<void>
+        { ++mutations; return outcome::success(); } );
+    ASSERT_TRUE( rejected.has_error() );
+    EXPECT_EQ( rejected.error(),
+               sgns::make_error_code( sgns::ConsensusStateStoreError::DatastoreIdentity ) );
+    EXPECT_EQ( mutations.load(), 0U );
+
+    auto accepted = store->ApplyFinalizedReservationBatch(
+        identity, storage,
+        [&]( sgns::storage::BufferBatch &batch, const auto & ) -> outcome::result<void>
+        { ++mutations; return batch.commit(); } );
+    EXPECT_TRUE( accepted );
+    EXPECT_EQ( mutations.load(), 1U );
+}
+
+TEST_F( ConsensusBurnReservationHarness, SerializationGateBlocksReservationWriterAcrossParticipantBatch )
+{
+    const auto outpoint = MakeOutpoint( 72 );
+    const auto slot = SlotFor( outpoint );
+    auto storage = db_->GetDataStore();
+    auto store = std::make_shared<sgns::ConsensusStateStore>( storage );
+    auto created = store->CreateOrJoinBurnReservation( slot, outpoint, 1'750'000'010'000ULL,
+                                                       1'750'000'000'000ULL );
+    ASSERT_TRUE( created );
+    auto finalized = store->FinalizeBurnReservation(
+        slot, outpoint, std::string( 64, 'a' ), std::string( 64, 'b' ),
+        std::string( 64, 'c' ), 1'750'000'000'001ULL );
+    ASSERT_TRUE( finalized );
+    sgns::ConsensusStateStore::FinalizedReservationIdentity identity{
+        slot, outpoint, finalized.value().generation(), finalized.value().certificate_digest(),
+        finalized.value().proposal_id(), finalized.value().winner_id() };
+
+    PredicateBarrier participant;
+    std::atomic<bool> writer_started{ false };
+    std::atomic<bool> writer_finished{ false };
+    std::mutex writer_mutex;
+    std::condition_variable writer_cv;
+    outcome::result<void> batch_result = outcome::success();
+    std::thread batch_worker( [&]()
+    {
+        batch_result = store->ApplyFinalizedReservationBatch(
+            identity, storage,
+            [&]( sgns::storage::BufferBatch &batch, const auto & ) -> outcome::result<void>
+            { participant.ArriveAndWait(); return batch.commit(); } );
+    } );
+    ScopedWorker scoped_batch( std::move( batch_worker ), participant );
+    participant.WaitUntilArrived();
+
+    std::thread writer( [&]()
+    {
+        {
+            std::lock_guard lock( writer_mutex );
+            writer_started = true;
+            writer_cv.notify_all();
+        }
+        (void) store->CreateOrJoinBurnReservation(
+            slot, outpoint, 1'750'000'020'000ULL, 1'750'000'000'002ULL );
+        writer_finished = true;
+        writer_cv.notify_all();
+    } );
+    {
+        std::unique_lock lock( writer_mutex );
+        writer_cv.wait( lock, [&]() { return writer_started.load(); } );
+    }
+    EXPECT_FALSE( writer_finished.load() );
+    participant.Release();
+    scoped_batch.Join();
+    writer.join();
+    EXPECT_TRUE( batch_result );
+    EXPECT_TRUE( writer_finished.load() );
+}
+
 TEST_F( ConsensusBurnReservationHarness, BurnReservationSafetyErrorCannotRegressOrRelease )
 {
     auto datastore = db_->GetDataStore();
@@ -1056,7 +1156,21 @@ TEST_F( ConsensusBurnReservationHarness, RestartActiveVoteHorizonExtendsReserved
     EXPECT_EQ( durable.value()->candidate_acceptance_horizon_ms(), record.acceptance_horizon_ms() );
 }
 
-TEST_F( ConsensusBurnReservationHarness, CertificateOnlyFinalProtectionPrecedesHandlerAndCleanup )
+TEST_F( ConsensusBurnReservationHarness, ApplicationHandleRegistrationRejectsOverwrite )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    const auto handler = []( const std::string &, const sgns::ConsensusManager::Certificate &,
+                             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
+        -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
+    { return sgns::ConsensusManager::ApplicationDisposition::Applied; };
+    EXPECT_TRUE( manager->RegisterCertificateApplicationHandler( sgns::NONCE_SUBJECT_TYPE, handler ) );
+    EXPECT_FALSE( manager->RegisterCertificateApplicationHandler( sgns::NONCE_SUBJECT_TYPE, handler ) );
+}
+
+TEST_F( ConsensusBurnReservationHarness, SharedStoreApplicationHandlePrecedesHandlerAndCleanup )
 {
     auto registry = MakeRegistry();
     ASSERT_TRUE( registry );
@@ -1074,10 +1188,13 @@ TEST_F( ConsensusBurnReservationHarness, CertificateOnlyFinalProtectionPrecedesH
     std::atomic<uint64_t> cleanup_count{ 0 };
     ASSERT_TRUE( manager->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &winner, const sgns::ConsensusManager::Certificate &observed )
+        [&]( const std::string &winner, const sgns::ConsensusManager::Certificate &observed,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle handle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         {
             ++handler_count;
+            EXPECT_EQ( handle.store.get(), sgns::ConsensusBurnReservationTestAccess::Store( manager ).get() );
+            EXPECT_EQ( handle.identity.slot_id, slot );
             auto protected_burn = store.GetBurnReservation( slot );
             EXPECT_TRUE( protected_burn && protected_burn.value() );
             EXPECT_EQ( protected_burn.value()->state(),
@@ -1115,7 +1232,8 @@ TEST_F( ConsensusBurnReservationHarness, FinalReservationWriteFailureInvokesNoHa
     std::atomic<uint64_t> cleanup_count{ 0 };
     ASSERT_TRUE( manager->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate &,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         { ++handler_count; return sgns::ConsensusManager::ApplicationDisposition::Applied; } ) );
     ASSERT_TRUE( manager->RegisterProposalCleanupHandler(
@@ -1143,7 +1261,8 @@ TEST_F( ConsensusBurnReservationHarness, FinalRetryableApplicationRetainsExactWi
     std::atomic<uint64_t> attempts{ 0 };
     ASSERT_TRUE( manager->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate &,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         {
             return ++attempts == 1 ? sgns::ConsensusManager::ApplicationDisposition::Retryable
@@ -1159,7 +1278,8 @@ TEST_F( ConsensusBurnReservationHarness, FinalRetryableApplicationRetainsExactWi
     ASSERT_TRUE( restarted );
     ASSERT_TRUE( restarted->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate &,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         { ++attempts; return sgns::ConsensusManager::ApplicationDisposition::Applied; } ) );
     EXPECT_EQ( attempts.load(), 2U );
@@ -1180,7 +1300,8 @@ TEST_F( ConsensusBurnReservationHarness, FinalIrreconcilableApplicationPersistsS
     std::atomic<uint64_t> attempts{ 0 };
     ASSERT_TRUE( manager->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate &,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         { ++attempts; return sgns::ConsensusManager::ApplicationDisposition::Irreconcilable; } ) );
 
@@ -1207,7 +1328,8 @@ TEST_F( ConsensusBurnReservationHarness, FinalDuplicateIngressSharesOneExactWinn
     std::atomic<uint64_t> attempts{ 0 };
     ASSERT_TRUE( manager->RegisterCertificateApplicationHandler(
         sgns::NONCE_SUBJECT_TYPE,
-        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate &,
+             sgns::ConsensusManager::FinalizedReservationApplicationHandle )
             -> outcome::result<sgns::ConsensusManager::ApplicationDisposition>
         { ++attempts; return sgns::ConsensusManager::ApplicationDisposition::Applied; } ) );
     const std::array sources = {

@@ -331,7 +331,7 @@ namespace sgns
         auto datastore = db_->GetDataStore();
         if ( !datastore || !HasCompatibleCertificateState() ) return false;
 
-        state_store_ = std::make_unique<ConsensusStateStore>( std::move( datastore ) );
+        state_store_ = std::make_shared<ConsensusStateStore>( std::move( datastore ) );
         if ( startup_local_query_override_ ) state_store_->query_ = startup_local_query_override_;
         auto votes = state_store_->ScanVotes();
         auto processes = state_store_->ScanProcesses();
@@ -864,7 +864,9 @@ namespace sgns
         if ( type_hash.has_error() ) return false;
         {
             std::unique_lock lock( certificate_handlers_mutex_ );
-            certificate_application_handlers_[type_hash.value()] = std::move( handler );
+            if ( !certificate_application_handlers_.try_emplace(
+                     type_hash.value(), std::move( handler ) ).second )
+                return false;
         }
         RecoverRestoredCertificateWork();
         return true;
@@ -3037,9 +3039,19 @@ namespace sgns
         }
 
         ApplicationDisposition disposition = ApplicationDisposition::Retryable;
-        if ( application_handler )
+        if ( application_handler && burn_reservation )
         {
-            auto handled = application_handler( winner_id, normalized.certificate );
+            ConsensusStateStore::FinalizedReservationIdentity identity{
+                slot_id,
+                { burn_reservation->source_chain(), burn_reservation->burn_hash(),
+                  burn_reservation->receipt_log_index() },
+                burn_reservation->generation(),
+                digest,
+                normalized.certificate.proposal_id(),
+                winner_id };
+            auto handled = application_handler(
+                winner_id, normalized.certificate,
+                FinalizedReservationApplicationHandle{ state_store_, std::move( identity ) } );
             if ( handled ) disposition = handled.value();
         }
         else

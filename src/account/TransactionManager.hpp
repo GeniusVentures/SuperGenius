@@ -478,7 +478,9 @@ namespace sgns
         void TickOnce();
 
         outcome::result<ConsensusManager::ApplicationDisposition> OnConsensusCertificate(
-            const std::string &tx_hash, const ConsensusCertificate &certificate );
+            const std::string &tx_hash,
+            const ConsensusCertificate &certificate,
+            std::optional<ConsensusManager::FinalizedReservationApplicationHandle> finalized_handle = std::nullopt );
         /**
          * @brief Handles proposal timeout cleanup for VERIFYING tracking entries.
          *        Called via ProposalCleanupHandler from ConsensusManager when a proposal slot is cleaned
@@ -563,7 +565,8 @@ namespace sgns
                                                              const std::string &transaction_hash,
                                                              uint32_t receipt_log_index ) const;
         outcome::result<UTXOManager::AtomicMintEffectResult> ApplyConfirmedMintV2(
-            const std::shared_ptr<MintTransactionV2> &tx );
+            const std::shared_ptr<MintTransactionV2> &tx,
+            const ConsensusManager::FinalizedReservationApplicationHandle *finalized_handle = nullptr );
 
         enum class MintFaultStage : uint8_t
         {
@@ -574,6 +577,9 @@ namespace sgns
         outcome::result<void> InvokeMintFault( MintFaultStage stage ) const;
         void ResetMintFaultCallback();
         mutable std::mutex mint_application_mutex_;
+        static inline std::function<void(
+            const ConsensusManager::FinalizedReservationApplicationHandle * )>
+            finalized_handle_observer_;
         MintFaultCallback mint_fault_callback_;
 
         outcome::result<void> ParseTransferTransaction( const std::shared_ptr<GeniusTransaction> &tx );
@@ -718,7 +724,9 @@ namespace sgns
         bool ValidateUTXOParametersForConsensus( const UTXOTxParameters &params, const std::string &address ) const;
         void SetNonceWindow( uint64_t window );
         outcome::result<void> ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                      TransactionStatus                         new_status );
+                                                      TransactionStatus                         new_status,
+                                                      const ConsensusManager::FinalizedReservationApplicationHandle *
+                                                          finalized_handle = nullptr );
         bool                  HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const;
 
         bool KeyExistsInDB( const std::string &key ) const;
