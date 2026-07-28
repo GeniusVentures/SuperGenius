@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T19:05:16.089Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
+last_updated: "2026-07-28T19:24:55.102Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 02 durable burn reservation store
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 24
+  completed_plans: 25
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 1 of 9
-Status: In progress
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
+Plan: 2 of 9
+Status: Ready to execute
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 02 durable burn reservation store
 
 ## Roadmap Snapshot
 
@@ -66,12 +66,12 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
 
 ## Operator Next Steps
 
-- Execute Phase 11 Plan 02 durable reservation store.
+- Execute Phase 11 Plan 03 startup restore and reconciliation.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T19:04:26.412Z
-**Stopped at:** Completed 11-01-PLAN.md
+**Last session:** 2026-07-28T19:24:25.678Z
+**Stopped at:** Completed 11-02-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -102,6 +102,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
 | Phase 10 P06 | 44 min | 1 tasks | 8 files |
 | Phase 10 P07 | 37 min | 1 tasks | 5 files |
 | Phase 11 P01 | 32 min | 1 tasks | 2 files |
+| Phase 11 P02 | 18 min | 1 tasks | 4 files |
 
 ## Decisions
 
@@ -157,3 +158,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
 - [Phase 10]: Synchronous CRDT certificate callbacks journal immediate recovery instead of finalizing before the outer merge commits. — Nested GraphSync persistence on the CRDT processing worker deadlocks its own outer WaitForJob.
 - [Phase 11]: Wave 0 exercises an existing strict local consensus record so restart durability is real without introducing reservation production behavior early. — Plan 11-01 is test infrastructure only and must preserve the Phase 12 and production-behavior scope boundary.
 - [Phase 11]: Future Phase 11 production hooks remain private and friend-only; the harness adds no public test setters. — Plan 11-01 is test infrastructure only and must preserve the Phase 12 and production-behavior scope boundary.
+- [Phase 11]: Burn reservations use reciprocal direct-local slot and hashed canonical-outpoint records. — Strict two-way identity prevents half-present or aliased burns from becoming available.
+- [Phase 11]: Burn reservation generations are random 256-bit lowercase hexadecimal tokens. — Fresh CSPRNG identity prevents stale cleanup from deleting a recreated lifecycle after abandoned history is removed.
+- [Phase 11]: Consumed reservation state is prepared in a caller-owned batch. — The eventual winning mint effects and reservation consumption must share one physical RocksDB commit boundary.
