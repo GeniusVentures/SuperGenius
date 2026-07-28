@@ -32,6 +32,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <limits>
 #include <optional>
 #include <string>
 #include <system_error>
@@ -211,6 +212,14 @@ namespace sgns
             const GeniusTransaction  &transaction )
         {
             return manager.EvaluateTransactionReplayProtection( transaction ).validation;
+        }
+
+        static outcome::result<std::optional<ConsensusStateStore::BurnOutpoint>> DescribeResource(
+            const TransactionManager &manager,
+            const ConsensusManager::Subject &subject,
+            const std::string &slot_id )
+        {
+            return manager.DescribeConsensusResource( subject, slot_id );
         }
 
         static std::shared_ptr<ConsensusManager> Consensus(
@@ -1251,6 +1260,21 @@ TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreate
     ASSERT_EQ( inputs.size(), 1U );
     EXPECT_EQ( inputs.front().output_idx_, kReceiptIndex );
     EXPECT_EQ( inputs.front().txid_hash_.toReadableString(), burn_hash );
+    EXPECT_EQ( account_->GetUTXOManager().GetOutPointState( inputs.front().txid_hash_, kReceiptIndex ),
+               UTXOManager::UTXOState::UTXO_READY );
+
+    auto embedded = mint->SerializeToEmbeddedTransaction( mint->dag_st );
+    auto subject = ConsensusManager::CreateNonceSubject(
+        account_->GetAddress(), mint->GetNonce(), mint->GetHash(), embedded, std::nullopt, std::nullopt );
+    ASSERT_TRUE( subject );
+    auto slot = mint->GetSlotID();
+    ASSERT_TRUE( slot );
+    auto descriptor = TransactionManagerPendingLifecycleTestAccess::DescribeResource(
+        *manager_, subject.value(), slot.value() );
+    ASSERT_TRUE( descriptor && descriptor.value() );
+    EXPECT_EQ( descriptor.value()->source_chain, "11155111" );
+    EXPECT_EQ( descriptor.value()->burn_hash, burn_hash );
+    EXPECT_EQ( descriptor.value()->receipt_log_index, kReceiptIndex );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,
@@ -1387,6 +1411,26 @@ TEST_F( TransactionManagerPendingLifecycleTest,
         *manager_, "11155111", persisted_hash, kReceiptIndex );
     ASSERT_TRUE( persisted.has_value() );
     EXPECT_EQ( persisted.value(), TransactionManager::BridgeBurnState::Available );
+
+    const std::string durable_hash_text( 64, '2' );
+    auto durable_hash = base::Hash256::fromReadableString( durable_hash_text );
+    ASSERT_TRUE( durable_hash );
+    SGTransaction::DAGStruct dag;
+    dag.set_source_addr( account_->GetAddress() );
+    dag.set_uncle_hash( durable_hash_text );
+    auto durable_mint = MintTransactionV2::New(
+        kAmount, "11155111", kTokenId, dag,
+        { InputUTXOInfo{ durable_hash.value(), kReceiptIndex, {} } }, account_->GetAddress() );
+    auto durable_slot = durable_mint.GetSlotID();
+    ASSERT_TRUE( durable_slot );
+    ConsensusStateStore reservation_store( db_->GetDataStore() );
+    ASSERT_TRUE( reservation_store.CreateOrJoinBurnReservation(
+        durable_slot.value(), { "11155111", durable_hash_text, kReceiptIndex },
+        std::numeric_limits<uint64_t>::max(), 1U ) );
+    auto durable = TransactionManagerPendingLifecycleTestAccess::GetBridgeBurnState(
+        *manager_, "11155111", durable_hash_text, kReceiptIndex );
+    ASSERT_TRUE( durable );
+    EXPECT_EQ( durable.value(), TransactionManager::BridgeBurnState::Reserved );
 
     EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::QueueSize( *manager_ ),
                0U );

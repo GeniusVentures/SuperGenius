@@ -69,6 +69,18 @@ namespace sgns
                        slot_it->second.durable_proposal_id == proposal_id ) );
         }
 
+        static bool IsProposalSlotFinalized( const std::shared_ptr<ConsensusManager> &manager,
+                                             const ConsensusManager::Proposal &proposal )
+        {
+            auto slot = ConsensusManager::GetSlotKey( proposal );
+            if ( !manager || slot.has_error() ) return false;
+            std::lock_guard lock( manager->proposals_mutex_ );
+            auto it = manager->slot_states_.find( slot.value() );
+            return it != manager->slot_states_.end() &&
+                   ( it->second.lifecycle == ConsensusManager::SlotState::Lifecycle::FinalizedPendingApplication ||
+                     it->second.lifecycle == ConsensusManager::SlotState::Lifecycle::Applied );
+        }
+
         static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
                                     const ConsensusManager::Proposal        &proposal )
         {
@@ -257,7 +269,7 @@ namespace
         "D-10 retained-byte admission limit",
         "D-11 local capacity refusal without reject vote",
         "D-12 pending TTL expiry" };
-    const std::string kValidatorId = "validator-pending-lifecycle";
+    const std::string kValidatorId( 128, 'a' );
 
     std::vector<uint8_t> DummySignature( std::vector<uint8_t> )
     {
@@ -776,6 +788,8 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
 
     EXPECT_EQ( cleanup_count, 1 );
     EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasPendingProposal( manager, ttl_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::HasProposal( manager, ttl_proposal_id ) );
+    EXPECT_FALSE( sgns::ConsensusPendingLifecycleTestAccess::IsProposalSlotFinalized( manager, ttl_proposal ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingRetainedBytes( manager ), 0U );
     sgns::ConsensusPendingLifecycleTestAccess::Close( manager );

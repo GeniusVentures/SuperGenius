@@ -269,6 +269,10 @@ namespace sgns
         /// @brief      Alias for a fail-closed canonical slot key handler.
         ///             Takes the raw subject, called from GetSlotKey by subject type hash.
         using SlotKeyHandler = std::function<outcome::result<std::string>( const Subject &subject )>;
+        /// @brief Optional canonical resource descriptor returned after semantic approval.
+        using ResourceAdmissionHandler =
+            std::function<outcome::result<std::optional<ConsensusStateStore::BurnOutpoint>>(
+                const Subject &subject, const std::string &slot_id )>;
 
         /**
          * @brief      Quorum tally structure
@@ -320,6 +324,21 @@ namespace sgns
          * @param[in] subject_type Canonical subject type to remove.
          */
         void UnregisterProposalCleanupHandler( std::string_view subject_type );
+
+        /** Registers one post-validation resource descriptor handler. */
+        bool RegisterResourceAdmissionHandler( std::string_view subject_type, ResourceAdmissionHandler handler );
+        /** Removes the post-validation resource descriptor handler. */
+        void UnregisterResourceAdmissionHandler( std::string_view subject_type );
+
+        /** Strict node-local bridge reservation lookup used by relayer admission. */
+        outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>> GetBurnReservation(
+            const ConsensusStateStore::BurnOutpoint &outpoint ) const;
+
+        /**
+         * @brief Overrides local pending lifecycle limits for deterministic tests/configuration.
+         * @param[in] config Pending lifecycle configuration.
+         */
+        void SetPendingLifecycleConfig( PendingLifecycleConfig config );
 
         /** RegisterSlotKeyHandler also changed to match subject type pattern: */
         /**
@@ -878,6 +897,8 @@ namespace sgns
          * @param[in] slot_key Previously validated canonical slot key.
          */
         void ContinueProposalAfterSubject( const Proposal &proposal, const std::string &slot_key );
+        bool AdmitProposalResources( const Proposal &proposal, const std::string &slot_key );
+        void ReleaseProposalAdmission( const Proposal &proposal, const std::string &slot_key );
         /**
          * @brief Stores proposal pending subject readiness.
          * @param[in] proposal Proposal to queue.
@@ -1032,10 +1053,13 @@ namespace sgns
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
         std::unordered_map<base::Hash256, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
+        std::unordered_map<base::Hash256, ResourceAdmissionHandler>
+            resource_admission_handlers_; ///< Post-validation resource descriptors by subject type hash.
         static inline std::unordered_map<base::Hash256, SlotKeyHandler>
                                         slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
         static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
         mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
+        mutable std::shared_mutex resource_admission_handlers_mutex_; ///< Guards resource admission handlers.
         Signer                          signer_;                     ///< Local signing callback.
         SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
@@ -1052,6 +1076,7 @@ namespace sgns
         PendingLifecycleConfig pending_config_;                              ///< Local pending lifecycle bounds.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
         mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
+        std::unordered_set<std::string> resource_admissions_inflight_; ///< Slots between approval and activation.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
         const ConsensusConfig config_; ///< Immutable settings fixed before factory side effects.
         std::unique_ptr<ConsensusStateStore> state_store_; ///< Strict node-local consensus state owner.

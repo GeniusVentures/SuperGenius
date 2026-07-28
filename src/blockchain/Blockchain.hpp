@@ -196,6 +196,12 @@ namespace sgns
         bool RegisterProposalCleanupHandler( std::string_view                         subject_type,
                                              ConsensusManager::ProposalCleanupHandler handler );
 
+        bool RegisterResourceAdmissionHandler( std::string_view                         subject_type,
+                                               ConsensusManager::ResourceAdmissionHandler handler );
+
+        outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>> GetBurnReservation(
+            const ConsensusStateStore::BurnOutpoint &outpoint ) const;
+
         /**
          * @brief Unregisters all proposal cleanup handlers for a canonical subject type.
          * @param[in] subject_type Canonical subject type to remove.

@@ -201,6 +201,17 @@ namespace sgns
                 }
                 return outcome::failure( std::errc::owner_dead );
             } );
+        instance->blockchain_->RegisterResourceAdmissionHandler(
+            NONCE_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const ConsensusManager::Subject &subject,
+                const std::string &slot_id )
+                -> outcome::result<std::optional<ConsensusStateStore::BurnOutpoint>>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                    return strong->DescribeConsensusResource( subject, slot_id );
+                return outcome::failure( std::errc::owner_dead );
+            } );
         instance->blockchain_->RegisterProposalCleanupHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string &tx_hash )
@@ -724,6 +735,11 @@ namespace sgns
             return BridgeBurnState::AlreadyHandled;
         }
 
+        ConsensusStateStore::BurnOutpoint outpoint{ chainid, transaction_hash, receipt_log_index };
+        auto reservation = blockchain_->GetBurnReservation( outpoint );
+        if ( reservation.has_error() ) return outcome::failure( reservation.error() );
+        if ( reservation.value().has_value() ) return BridgeBurnState::Reserved;
+
         const auto outpoint_state =
             account_m->GetUTXOManager().GetOutPointState( source_hash.value(), receipt_log_index );
         if ( outpoint_state == UTXOManager::UTXOState::UTXO_CONSUMED )
@@ -771,7 +787,7 @@ namespace sgns
         const auto burn_tx_hash =
             base::Hash256::fromReadableString( transaction_hash ).value();
 
-        // D-18/D-19: Insert burn UTXO, then reserve via ReserveUTXOs (sets RESERVED state)
+        // Materialize the synthetic burn input locally; consensus owns its durable reservation.
         GeniusUTXO burn_utxo(
             burn_tx_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
         account_m->GetUTXOManager().PutUTXO( burn_utxo,
@@ -782,14 +798,6 @@ namespace sgns
         source_utxos.emplace_back(
             burn_tx_hash, receipt_log_index, amount, tokenid, account_m->GetAddress() );
         auto mint_inputs = account_m->CreateInputsFromUTXOs( source_utxos );
-
-        // Reserve the burn UTXO — transitions READY → RESERVED (D-18)
-        account_m->GetUTXOManager().ReserveUTXOs( mint_inputs,
-                                                  transaction_hash,
-                                                  sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
-
-        // Capture input info for potential rollback (mint_inputs may be moved below)
-        auto rollback_inputs = mint_inputs;
 
         auto txId = std::string{};
         try
@@ -808,11 +816,8 @@ namespace sgns
         }
         catch ( const std::exception &e )
         {
-            account_m->GetUTXOManager().RollbackUTXOs( rollback_inputs,
-                                                       transaction_hash,
-                                                       sgns::UTXOManager::UTXOType::UTXO_BRIDGE );
             TransactionManagerLogger()->error(
-                "[{} - full: {}] {}: MintFunds failed — rolled back reservation for tx_hash={}: {}",
+                "[{} - full: {}] {}: MintFunds failed for tx_hash={}: {}",
                 account_m->GetAddress().substr( 0, 8 ),
                 full_node_m,
                 __func__,
@@ -2172,7 +2177,7 @@ namespace sgns
             auto params = mint_tx->GetUTXOParameters();
 
             BOOST_OUTCOME_TRY( DeleteProducedUTXOs( *mint_tx ) );
-            if ( !params.first.empty() )
+            if ( !params.first.empty() && mint_tx->GetType() != "mint-v2" )
             {
                 account_m->GetUTXOManager().RollbackUTXOs( params.first, mint_tx->GetHash() );
             }
@@ -3978,6 +3983,31 @@ namespace sgns
         return ConsensusManager::ValidationResult::Approve();
     }
 
+    outcome::result<std::optional<ConsensusStateStore::BurnOutpoint>>
+    TransactionManager::DescribeConsensusResource( const ConsensusManager::Subject &subject,
+                                                   const std::string &slot_id ) const
+    {
+        auto nonce = ConsensusManager::DecodeNonceSubject( subject );
+        if ( nonce.has_error() ) return outcome::failure( std::errc::invalid_argument );
+        if ( nonce.value().transaction().transaction_case() != EmbeddedTransaction::kMintV2 )
+            return std::optional<ConsensusStateStore::BurnOutpoint>{};
+
+        auto tx_result = DeSerializeEmbeddedTransaction( nonce.value().transaction() );
+        if ( tx_result.has_error() ) return outcome::failure( tx_result.error() );
+        auto mint = std::dynamic_pointer_cast<MintTransactionV2>( tx_result.value() );
+        if ( !mint ) return outcome::failure( std::errc::invalid_argument );
+        const auto params = mint->GetUTXOParameters();
+        if ( params.first.size() != 1 || mint->GetUncleHash().empty() ||
+             params.first.front().txid_hash_.toReadableString() != mint->GetUncleHash() )
+            return outcome::failure( std::errc::invalid_argument );
+        auto derived_slot = mint->GetSlotID();
+        if ( derived_slot.has_error() || derived_slot.value() != slot_id )
+            return outcome::failure( std::errc::invalid_argument );
+
+        return std::optional<ConsensusStateStore::BurnOutpoint>{ ConsensusStateStore::BurnOutpoint{
+            mint->GetChainId(), mint->GetUncleHash(), params.first.front().output_idx_ } };
+    }
+
     bool TransactionManager::ValidateUTXOParametersForConsensus( const UTXOTxParameters &params,
                                                                  const std::string      &address ) const
     {
@@ -4960,29 +4990,12 @@ namespace sgns
                 {
                     // Local outgoing tx failed before confirmation: release locally reserved inputs.
                     auto params_opt = tx->GetUTXOParametersOpt();
-                    if ( params_opt.has_value() )
+                    if ( params_opt.has_value() && tx->GetType() != "mint-v2" )
                     {
-                        if ( tx->GetType() == "mint-v2" )
-                        {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first,
-                                                                       tx->dag_st.uncle_hash(),
-                                                                       UTXOManager::UTXOType::UTXO_BRIDGE );
-                        }
-                        else
-                        {
-                            account_m->GetUTXOManager().RollbackUTXOs( params_opt->first, tx->GetHash() );
-                        }
+                        account_m->GetUTXOManager().RollbackUTXOs( params_opt->first, tx->GetHash() );
                     }
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::FAILED, tx->GetNonce() };
-
-                // Clear bridge mint reservation on failure
-                if ( tx->GetType() == "mint-v2" )
-                {
-                    auto mint_tx = std::dynamic_pointer_cast<MintTransactionV2>( tx );
-                    // UTXO consumed automatically via ParseMintTransactionV2's ConsumeUTXOs
-                    (void) mint_tx;
-                }
 
                 // METRICS-01: Tracking fail — entry transitioned to FAILED
                 metrics_tracking_fail_.fetch_add( 1, std::memory_order_relaxed );
