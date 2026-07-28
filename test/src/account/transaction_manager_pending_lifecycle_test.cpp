@@ -227,6 +227,35 @@ namespace sgns
         {
             return blockchain->consensus_manager_;
         }
+
+        static ConsensusManager::CertificateApplicationHandler ApplicationHandler(
+            const std::shared_ptr<ConsensusManager> &consensus )
+        {
+            auto type_hash = ConsensusManager::ComputeSubjectTypeHash( NONCE_SUBJECT_TYPE );
+            if ( !type_hash ) return {};
+            std::shared_lock lock( consensus->certificate_handlers_mutex_ );
+            auto it = consensus->certificate_application_handlers_.find( type_hash.value() );
+            return it == consensus->certificate_application_handlers_.end() ?
+                       ConsensusManager::CertificateApplicationHandler{} : it->second;
+        }
+
+        static std::shared_ptr<ConsensusStateStore> StateStore(
+            const std::shared_ptr<ConsensusManager> &consensus )
+        {
+            return consensus->state_store_;
+        }
+
+        static void ObserveFinalizedHandle(
+            std::function<void(
+                const ConsensusManager::FinalizedReservationApplicationHandle * )> observer )
+        {
+            TransactionManager::finalized_handle_observer_ = std::move( observer );
+        }
+
+        static void ResetFinalizedHandleObserver()
+        {
+            TransactionManager::finalized_handle_observer_ = {};
+        }
     };
 
     class ConsensusManagerTestAccess
@@ -994,6 +1023,26 @@ TEST_F( TransactionManagerRecoveryTest, NonRetryableFailureDoesNotStrandFollowin
                sgns::TransactionManager::TransactionStatus::SENDING );
 }
 
+TEST_F( TransactionManagerPendingLifecycleTest, ApplicationHandleWeakOwnerExpiresSafely )
+{
+    ASSERT_TRUE( consensus_ );
+    auto handler = TransactionManagerPendingLifecycleTestAccess::ApplicationHandler( consensus_ );
+    ASSERT_TRUE( handler );
+    auto store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    ASSERT_TRUE( store );
+    ConsensusStateStore::FinalizedReservationIdentity identity{
+        std::string( 64, '1' ), { "11155111", std::string( 64, '2' ), kReceiptIndex },
+        std::string( 64, '3' ), std::string( 64, '4' ), std::string( 64, '5' ),
+        std::string( 64, '6' ) };
+    manager_.reset();
+
+    auto expired = handler(
+        std::string( 64, '6' ), ConsensusCertificate{},
+        ConsensusManager::FinalizedReservationApplicationHandle{ store, std::move( identity ) } );
+    ASSERT_TRUE( expired.has_error() );
+    EXPECT_EQ( expired.error(), std::make_error_code( std::errc::owner_dead ) );
+}
+
 TEST_F( TransactionManagerRecoveryTest, LocalNonceAheadChecksTrackedTransactions )
 {
     auto transaction = MakeTransaction();
@@ -1275,6 +1324,38 @@ TEST_F( TransactionManagerPendingLifecycleTest, MintFundsCanonicalIdentityCreate
     EXPECT_EQ( descriptor.value()->source_chain, "11155111" );
     EXPECT_EQ( descriptor.value()->burn_hash, burn_hash );
     EXPECT_EQ( descriptor.value()->receipt_log_index, kReceiptIndex );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, SharedStoreApplicationHandleReachesMintApplication )
+{
+    auto mint = PrepareMint( '7' );
+    ASSERT_TRUE( mint );
+    auto handler = TransactionManagerPendingLifecycleTestAccess::ApplicationHandler( consensus_ );
+    ASSERT_TRUE( handler );
+    auto expected_store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    auto expected_slot = mint->GetSlotID();
+    ASSERT_TRUE( expected_store && expected_slot );
+    const auto input = mint->GetUTXOParameters().first.front();
+    ConsensusStateStore::FinalizedReservationIdentity identity{
+        expected_slot.value(),
+        { mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ },
+        std::string( 64, '1' ), std::string( 64, '2' ), std::string( 64, '3' ), mint->GetHash() };
+    std::atomic<uint64_t> observed{ 0 };
+    TransactionManagerPendingLifecycleTestAccess::ObserveFinalizedHandle(
+        [&]( const ConsensusManager::FinalizedReservationApplicationHandle *handle )
+        {
+            ASSERT_NE( handle, nullptr );
+            EXPECT_EQ( handle->store.get(), expected_store.get() );
+            EXPECT_EQ( handle->identity.slot_id, expected_slot.value() );
+            ++observed;
+        } );
+    auto applied = handler(
+        mint->GetHash(), ConsensusCertificate{},
+        ConsensusManager::FinalizedReservationApplicationHandle{ expected_store, std::move( identity ) } );
+    TransactionManagerPendingLifecycleTestAccess::ResetFinalizedHandleObserver();
+    ASSERT_TRUE( applied );
+    EXPECT_EQ( applied.value(), ConsensusManager::ApplicationDisposition::Applied );
+    EXPECT_EQ( observed.load(), 1U );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,

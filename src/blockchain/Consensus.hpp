@@ -269,9 +269,23 @@ namespace sgns
             Retryable,
             Irreconcilable,
         };
+        /** Immutable exact-store authority handed to winning mint application. */
+        struct FinalizedReservationApplicationHandle
+        {
+            FinalizedReservationApplicationHandle(
+                std::shared_ptr<ConsensusStateStore> store_value,
+                ConsensusStateStore::FinalizedReservationIdentity identity_value )
+                : store( std::move( store_value ) ), identity( std::move( identity_value ) )
+            {
+            }
+
+            const std::shared_ptr<ConsensusStateStore> store;
+            const ConsensusStateStore::FinalizedReservationIdentity identity;
+        };
         using CertificateApplicationHandler =
             std::function<outcome::result<ApplicationDisposition>( const std::string &subject_hash,
-                                                                    const Certificate &certificate )>;
+                                                                    const Certificate &certificate,
+                                                                    FinalizedReservationApplicationHandle handle )>;
         /// @brief      Alias for a proposal cleanup handler method type
         ///             Callback invoked when a proposal slot is cleaned up due to timeout.
         ///             Receives the transaction hash so the handler can clean up associated tracking entries.
@@ -645,6 +659,7 @@ namespace sgns
         friend class ConsensusVoteJournalTestAccess;
         friend class ConsensusFinalizationTestAccess;
         friend class ConsensusBurnReservationTestAccess;
+        friend class TransactionManagerPendingLifecycleTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 
         /**
@@ -1093,7 +1108,7 @@ namespace sgns
         std::unordered_set<std::string> resource_admissions_inflight_; ///< Slots between approval and activation.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
         const ConsensusConfig config_; ///< Immutable settings fixed before factory side effects.
-        std::unique_ptr<ConsensusStateStore> state_store_; ///< Strict node-local consensus state owner.
+        std::shared_ptr<ConsensusStateStore> state_store_; ///< One live shared node-local consensus state owner.
         std::vector<ConsensusStateStore::VoteRecord> restored_votes_; ///< Validated durable vote records.
         std::unordered_map<std::string, ConsensusStateStore::ProcessRecord>
             restored_processes_; ///< Restored certificate work keyed by canonical slot.

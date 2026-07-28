@@ -24,6 +24,7 @@ namespace sgns
         InvalidArgument,
         Integrity,
         Conflict,
+        DatastoreIdentity,
         Storage,
     };
 
@@ -56,6 +57,27 @@ namespace sgns
             NotFound,
             GenerationMismatch,
         };
+
+        /** Exact certificate-bound identity required at the finalized batch boundary. */
+        struct FinalizedReservationIdentity
+        {
+            std::string  slot_id;
+            BurnOutpoint outpoint;
+            std::string  generation;
+            std::string  certificate_digest;
+            std::string  proposal_id;
+            std::string  winner_id;
+        };
+
+        /**
+         * The single finalized-reservation serialization gate. Participant lock
+         * order is store gate -> UTXO persistence -> UTXO state. Participants
+         * must not acquire proposal, restored-state, handler-registry, or a
+         * second store gate, and must not invoke external callbacks. The
+         * participant owns staging and committing the supplied batch.
+         */
+        using FinalizedBatchParticipant =
+            std::function<outcome::result<void>( storage::BufferBatch &, const BurnReservationRecord & )>;
 
         explicit ConsensusStateStore( std::shared_ptr<storage::rocksdb> datastore );
 
@@ -120,6 +142,10 @@ namespace sgns
         outcome::result<BurnDeleteResult> DeleteReservedBurnReservation(
             const std::string &slot_id,
             const std::string &expected_generation );
+        outcome::result<void> ApplyFinalizedReservationBatch(
+            const FinalizedReservationIdentity &identity,
+            const std::shared_ptr<storage::rocksdb> &participant_datastore,
+            FinalizedBatchParticipant participant );
 
         static std::string VoteKey( const std::string &validator_id, const std::string &slot_id );
         static std::string ProcessKey( const std::string &slot_id );

@@ -171,16 +171,19 @@ namespace sgns
                                                                                      initial_burn_basis_points,
                                                                                      burn_config ) );
 
-        instance->blockchain_->RegisterCertificateApplicationHandler(
+        const bool resource_application_registered =
+            instance->blockchain_->RegisterCertificateApplicationHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string          &subject_hash,
-                const ConsensusCertificate &certificate )
+                const ConsensusCertificate &certificate,
+                ConsensusManager::FinalizedReservationApplicationHandle handle )
                 -> outcome::result<ConsensusManager::ApplicationDisposition>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    auto process_result = strong->OnConsensusCertificate( subject_hash, certificate );
+                    auto process_result = strong->OnConsensusCertificate(
+                        subject_hash, certificate, std::move( handle ) );
                     if ( process_result.has_error() )
                     {
                         strong->m_logger->error( "Failed to process certificate proposal_id={} error={}",
@@ -188,6 +191,25 @@ namespace sgns
                                                  process_result.error().message() );
                     }
                     return process_result;
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+        if ( !resource_application_registered ) return nullptr;
+        instance->blockchain_->RegisterCertificateHandler(
+            NONCE_SUBJECT_TYPE,
+            [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
+                const std::string &subject_hash,
+                const ConsensusCertificate &certificate )
+                -> outcome::result<ConsensusManager::Check>
+            {
+                if ( auto strong = weak_ptr.lock() )
+                {
+                    auto result = strong->OnConsensusCertificate( subject_hash, certificate );
+                    if ( !result ) return outcome::failure( result.error() );
+                    return result.value() == ConsensusManager::ApplicationDisposition::Applied ||
+                                   result.value() == ConsensusManager::ApplicationDisposition::AlreadyApplied
+                               ? ConsensusManager::Check::Approve
+                               : ConsensusManager::Check::Pending;
                 }
                 return outcome::failure( std::errc::owner_dead );
             } );
@@ -2066,8 +2088,11 @@ namespace sgns
     }
 
     outcome::result<UTXOManager::AtomicMintEffectResult>
-    TransactionManager::ApplyConfirmedMintV2( const std::shared_ptr<MintTransactionV2> &tx )
+    TransactionManager::ApplyConfirmedMintV2(
+        const std::shared_ptr<MintTransactionV2> &tx,
+        const ConsensusManager::FinalizedReservationApplicationHandle *finalized_handle )
     {
+        if ( finalized_handle_observer_ ) finalized_handle_observer_( finalized_handle );
         if ( !tx )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -3519,7 +3544,8 @@ namespace sgns
 
     outcome::result<ConsensusManager::ApplicationDisposition> TransactionManager::OnConsensusCertificate(
         const std::string          &tx_hash,
-        const ConsensusCertificate &certificate )
+        const ConsensusCertificate &certificate,
+        std::optional<ConsensusManager::FinalizedReservationApplicationHandle> finalized_handle )
     {
         const auto classify_failure = []( const std::error_code &error )
         {
@@ -3646,7 +3672,11 @@ namespace sgns
             }
         }
 
-        if ( auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED ); result.has_error() )
+        if ( auto result = ChangeTransactionState(
+                 tx,
+                 TransactionStatus::CONFIRMED,
+                 finalized_handle ? &*finalized_handle : nullptr );
+             result.has_error() )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to confirm certified transaction {}: {}",
                                                account_m->GetAddress().substr( 0, 8 ),
@@ -4800,7 +4830,8 @@ namespace sgns
     }
 
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
-                                                                      TransactionStatus new_status )
+                                                                      TransactionStatus new_status,
+                                                                      const ConsensusManager::FinalizedReservationApplicationHandle *finalized_handle )
     {
         static constexpr std::string_view FUNC = __func__;
         m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
@@ -4902,7 +4933,7 @@ namespace sgns
                             it->second.status == TransactionStatus::CONFIRMED;
                     }
                     BOOST_OUTCOME_TRY( auto application_result,
-                                       ApplyConfirmedMintV2( mint_tx ) );
+                                       ApplyConfirmedMintV2( mint_tx, finalized_handle ) );
                     if ( already_confirmed )
                     {
                         if ( application_result != UTXOManager::AtomicMintEffectResult::AlreadyApplied )
