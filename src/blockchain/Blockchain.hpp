@@ -182,6 +182,9 @@ namespace sgns
          */
         bool RegisterCertificateHandler( std::string_view                            subject_type,
                                          ConsensusManager::CertificateSubjectHandler handler );
+        bool RegisterCertificateApplicationHandler(
+            std::string_view subject_type,
+            ConsensusManager::CertificateApplicationHandler handler );
         /**
          * @brief Unregisters a consensus certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type to remove.

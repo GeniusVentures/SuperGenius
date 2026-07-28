@@ -262,6 +262,16 @@ namespace sgns
         /// @brief      Alias for a certificate handler method type
         using CertificateSubjectHandler =
             std::function<outcome::result<Check>( const std::string &subject_hash, const Certificate &certificate )>;
+        enum class ApplicationDisposition : uint8_t
+        {
+            Applied,
+            AlreadyApplied,
+            Retryable,
+            Irreconcilable,
+        };
+        using CertificateApplicationHandler =
+            std::function<outcome::result<ApplicationDisposition>( const std::string &subject_hash,
+                                                                    const Certificate &certificate )>;
         /// @brief      Alias for a proposal cleanup handler method type
         ///             Callback invoked when a proposal slot is cleaned up due to timeout.
         ///             Receives the transaction hash so the handler can clean up associated tracking entries.
@@ -307,6 +317,8 @@ namespace sgns
          * @return `true` when registered, `false` when input is invalid.
          */
         bool RegisterCertificateHandler( std::string_view subject_type, CertificateSubjectHandler handler );
+        bool RegisterCertificateApplicationHandler( std::string_view subject_type,
+                                                    CertificateApplicationHandler handler );
         /**
          * @brief Unregisters a certificate handler by canonical subject type string.
          * @param[in] subject_type Canonical subject type associated with the handler.
@@ -1050,6 +1062,8 @@ namespace sgns
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
         std::unordered_map<base::Hash256, CertificateSubjectHandler>
                                   certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
+        std::unordered_map<std::string, CertificateApplicationHandler>
+                                  certificate_application_handlers_; ///< Typed application handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
         std::unordered_map<base::Hash256, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
