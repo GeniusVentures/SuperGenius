@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T20:37:43.843Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized application contract
+last_updated: "2026-07-28T21:01:49.517Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn application
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 29
+  completed_plans: 30
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 6 of 9
+Plan: 7 of 9
 Status: Ready to execute
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized application contract
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 07 atomic certified burn application
 
 ## Roadmap Snapshot
 
@@ -70,8 +70,8 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized a
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T20:37:43.839Z
-**Stopped at:** Completed 11-06-PLAN.md
+**Last session:** 2026-07-28T21:01:20.763Z
+**Stopped at:** Completed 11-07-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -107,6 +107,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized a
 | Phase 11 P04 | 17 min | 1 tasks | 9 files |
 | Phase 11 P05 | 27 min | 1 tasks | 8 files |
 | Phase 11 P06 | 18 min | 1 tasks | 8 files |
+| Phase 11 P07 | 19 min | 1 tasks | 8 files |
 
 ## Decisions
 
@@ -177,3 +178,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized a
 - [Phase 11]: Finalized mint application carries the exact live shared ConsensusStateStore and complete certificate-bound reservation identity by immutable value. — Reconstructing or non-owning the store would bypass the node's serialization authority.
 - [Phase 11]: Finalized batch participation requires shared-object datastore identity, not path or underlying database equivalence. — The shared wrapper object is the lock authority and a second wrapper would create split-brain serialization.
 - [Phase 11]: Typed resource-application registration is insert-only while ordinary certificates retain the legacy handler signature. — Overwrite requires explicit removal and weak TransactionManager ownership remains lifecycle-safe.
+- [Phase 11]: The finalized participant observes the durable pre-stage reservation while Consumed is staged invisibly in the same physical batch. — This distinguishes first application from exact replay without a split commit.
+- [Phase 11]: Certificate-only synthetic bridge inputs may be materialized only from certified transaction facts under the exact finalized reservation handle. — Local proposal state cannot invent or mutate authoritative bridge input identity.
+- [Phase 11]: AlreadyApplied requires durable Consumed state plus exact application, output, input-consumption, and winner identity agreement. — Partial or contradictory durable state must fail closed as not recoverable.
