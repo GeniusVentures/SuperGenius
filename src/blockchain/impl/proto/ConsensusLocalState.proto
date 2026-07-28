@@ -82,3 +82,37 @@ message SlotSafetyRecord {
   string authoritative_proposal_id = 5;
   uint64 updated_at_ms = 6;
 }
+
+message BurnReservationRecord {
+  enum State {
+    STATE_UNSPECIFIED = 0;
+    RESERVED = 1;
+    FINALIZED_PENDING_APPLICATION = 2;
+    CONSUMED = 3;
+    SAFETY_ERROR = 4;
+  }
+
+  uint32 schema_version = 1;
+  State state = 2;
+  string slot_id = 3;
+  string source_chain = 4;
+  string burn_hash = 5;
+  uint32 receipt_log_index = 6;
+  string generation = 7;
+  uint64 candidate_acceptance_horizon_ms = 8;
+  uint64 created_at_ms = 9;
+  uint64 updated_at_ms = 10;
+  string certificate_digest = 11;
+  string proposal_id = 12;
+  string winner_id = 13;
+  string safety_error = 14;
+}
+
+message BurnReservationOutpointIndex {
+  uint32 schema_version = 1;
+  string slot_id = 2;
+  string source_chain = 3;
+  string burn_hash = 4;
+  uint32 receipt_log_index = 5;
+  string generation = 6;
+}

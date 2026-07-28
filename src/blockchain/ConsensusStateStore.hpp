@@ -10,11 +10,13 @@
 
 #include "blockchain/impl/proto/ConsensusLocalState.pb.h"
 #include "outcome/outcome.hpp"
+#include "storage/face/write_batch.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 
 namespace sgns
 {
     class ConsensusManager;
+    class ConsensusBurnReservationTestAccess;
     class ConsensusVoteJournalTestAccess;
 
     enum class ConsensusStateStoreError : uint8_t
@@ -32,6 +34,28 @@ namespace sgns
         using ProcessRecord  = local_consensus::CertificateProcessingRecord;
         using ConflictRecord = local_consensus::CertificateConflictRecord;
         using SafetyRecord   = local_consensus::SlotSafetyRecord;
+        using BurnReservationRecord = local_consensus::BurnReservationRecord;
+        using BurnOutpointIndex = local_consensus::BurnReservationOutpointIndex;
+
+        struct BurnOutpoint
+        {
+            std::string source_chain;
+            std::string burn_hash;
+            uint32_t    receipt_log_index{ 0 };
+        };
+
+        struct BurnReservationResult
+        {
+            BurnReservationRecord record;
+            bool                  created{ false };
+        };
+
+        enum class BurnDeleteResult : uint8_t
+        {
+            Deleted,
+            NotFound,
+            GenerationMismatch,
+        };
 
         explicit ConsensusStateStore( std::shared_ptr<storage::rocksdb> datastore );
 
@@ -60,15 +84,55 @@ namespace sgns
         outcome::result<std::vector<SafetyRecord>>   ScanSafety() const;
         outcome::result<ConflictRecord> RecordConflictAndSafety( ConflictRecord conflict, SafetyRecord safety );
 
+        outcome::result<std::optional<BurnReservationRecord>> GetBurnReservation( const std::string &slot_id ) const;
+        outcome::result<std::optional<BurnReservationRecord>> GetBurnReservation(
+            const BurnOutpoint &outpoint ) const;
+        outcome::result<std::vector<BurnReservationRecord>> ScanBurnReservations() const;
+        outcome::result<BurnReservationResult> CreateOrJoinBurnReservation(
+            const std::string &slot_id,
+            const BurnOutpoint &outpoint,
+            uint64_t candidate_acceptance_horizon_ms,
+            uint64_t now_ms );
+        outcome::result<BurnReservationRecord> FinalizeBurnReservation(
+            const std::string &slot_id,
+            const BurnOutpoint &outpoint,
+            const std::string &certificate_digest,
+            const std::string &proposal_id,
+            const std::string &winner_id,
+            uint64_t now_ms );
+        outcome::result<BurnReservationRecord> MarkBurnReservationSafetyError(
+            const std::string &slot_id,
+            const std::string &expected_generation,
+            const std::string &certificate_digest,
+            const std::string &proposal_id,
+            const std::string &winner_id,
+            const std::string &diagnostic,
+            uint64_t now_ms );
+        outcome::result<BurnReservationRecord> PrepareConsumedBurnReservation(
+            storage::BufferBatch &batch,
+            const std::string &slot_id,
+            const BurnOutpoint &outpoint,
+            const std::string &expected_generation,
+            const std::string &certificate_digest,
+            const std::string &proposal_id,
+            const std::string &winner_id,
+            uint64_t now_ms );
+        outcome::result<BurnDeleteResult> DeleteReservedBurnReservation(
+            const std::string &slot_id,
+            const std::string &expected_generation );
+
         static std::string VoteKey( const std::string &validator_id, const std::string &slot_id );
         static std::string ProcessKey( const std::string &slot_id );
         static std::string ConflictKey( const std::string &slot_id,
                                         const std::string &low_digest,
                                         const std::string &high_digest );
         static std::string SafetyKey( const std::string &slot_id );
+        static std::string BurnSlotKey( const std::string &slot_id );
+        static std::string BurnOutpointKey( const BurnOutpoint &outpoint );
 
     private:
         using QueryFn = std::function<outcome::result<storage::rocksdb::QueryResult>( const base::Buffer & )>;
+        using CommitFn = std::function<outcome::result<void>( storage::BufferBatch & )>;
 
         outcome::result<std::optional<VoteRecord>> ReadVoteUnlocked( const std::string &validator_id,
                                                                     const std::string &slot_id ) const;
@@ -77,12 +141,23 @@ namespace sgns
         outcome::result<void> ValidateProcess( const ProcessRecord &record, const std::string &key ) const;
         outcome::result<void> ValidateConflict( const ConflictRecord &record, const std::string &key ) const;
         outcome::result<void> ValidateSafety( const SafetyRecord &record, const std::string &key ) const;
+        outcome::result<std::optional<BurnReservationRecord>> ReadBurnReservationUnlocked(
+            const std::string &slot_id ) const;
+        outcome::result<std::optional<BurnOutpointIndex>> ReadBurnOutpointIndexUnlocked(
+            const BurnOutpoint &outpoint ) const;
+        outcome::result<void> ValidateBurnReservation( const BurnReservationRecord &record,
+                                                       const std::string &key ) const;
+        outcome::result<void> ValidateBurnOutpointIndex( const BurnOutpointIndex &record,
+                                                         const std::string &key ) const;
+        outcome::result<void> ValidateBurnReciprocalUnlocked( const BurnReservationRecord &record ) const;
 
         std::shared_ptr<storage::rocksdb> datastore_;
         mutable std::mutex                mutex_;
         QueryFn                          query_;
+        CommitFn                         commit_;
 
         friend class ConsensusVoteJournalTestAccess;
+        friend class ConsensusBurnReservationTestAccess;
         friend class ConsensusManager;
     };
 } // namespace sgns

@@ -19,7 +19,9 @@
 #include <utility>
 
 #include "base/buffer.hpp"
+#include "base/hexutil.hpp"
 #include "blockchain/ConsensusStateStore.hpp"
+#include "crypto/hasher.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
 
@@ -35,6 +37,14 @@ namespace sgns
         static constexpr std::string_view Scope()
         {
             return "slot-owned bridge burn reservation";
+        }
+
+        static void FailCommits( ConsensusStateStore &store )
+        {
+            store.commit_ = []( storage::BufferBatch & ) -> outcome::result<void>
+            {
+                return outcome::failure( ConsensusStateStoreError::Storage );
+            };
         }
     };
 } // namespace sgns
@@ -69,6 +79,50 @@ namespace
         sgns::base::Buffer buffer;
         buffer.put( value );
         return buffer;
+    }
+
+    sgns::ConsensusStateStore::BurnOutpoint MakeOutpoint( uint32_t index = 7 )
+    {
+        return { "11155111", std::string( 63, '0' ) + "1", index };
+    }
+
+    std::string SlotFor( const sgns::ConsensusStateStore::BurnOutpoint &outpoint )
+    {
+        const auto preimage = std::string( "mint-v2:" ) + outpoint.source_chain + ":" + outpoint.burn_hash + ":" +
+                              std::to_string( outpoint.receipt_log_index );
+        const auto hash = sgns::crypto::sha2_256( preimage.data(), preimage.size() );
+        return sgns::base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+    }
+
+    sgns::ConsensusStateStore::BurnReservationRecord MakeReservedRecord(
+        const sgns::ConsensusStateStore::BurnOutpoint &outpoint,
+        std::string generation = std::string( 64, 'a' ) )
+    {
+        sgns::ConsensusStateStore::BurnReservationRecord record;
+        record.set_schema_version( 2 );
+        record.set_state( sgns::ConsensusStateStore::BurnReservationRecord::RESERVED );
+        record.set_slot_id( SlotFor( outpoint ) );
+        record.set_source_chain( outpoint.source_chain );
+        record.set_burn_hash( outpoint.burn_hash );
+        record.set_receipt_log_index( outpoint.receipt_log_index );
+        record.set_generation( std::move( generation ) );
+        record.set_candidate_acceptance_horizon_ms( 1'750'000'001'000ULL );
+        record.set_created_at_ms( 1'750'000'000'000ULL );
+        record.set_updated_at_ms( 1'750'000'000'000ULL );
+        return record;
+    }
+
+    sgns::ConsensusStateStore::BurnOutpointIndex MakeIndex(
+        const sgns::ConsensusStateStore::BurnReservationRecord &record )
+    {
+        sgns::ConsensusStateStore::BurnOutpointIndex index;
+        index.set_schema_version( 2 );
+        index.set_slot_id( record.slot_id() );
+        index.set_source_chain( record.source_chain() );
+        index.set_burn_hash( record.burn_hash() );
+        index.set_receipt_log_index( record.receipt_log_index() );
+        index.set_generation( record.generation() );
+        return index;
     }
 
     class ScopedHookReset
@@ -261,4 +315,261 @@ TEST_F( ConsensusBurnReservationHarness, PersistentDatabaseAndBarrierReopenClean
     barrier.Release();
     worker.Join();
     EXPECT_TRUE( worker_finished.load() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreCreatesReciprocalAndJoinsOneGeneration )
+{
+    auto datastore = db_->GetDataStore();
+    ASSERT_TRUE( datastore );
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+
+    auto created = store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now );
+    ASSERT_TRUE( created.has_value() );
+    EXPECT_TRUE( created.value().created );
+    EXPECT_EQ( created.value().record.generation().size(), 64U );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnSlotKey( slot ) ).size(), 1U );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ).size(), 1U );
+
+    auto joined = store.CreateOrJoinBurnReservation( slot, outpoint, now + 50, now + 1 );
+    ASSERT_TRUE( joined.has_value() );
+    EXPECT_FALSE( joined.value().created );
+    EXPECT_EQ( joined.value().record.generation(), created.value().record.generation() );
+    EXPECT_EQ( joined.value().record.candidate_acceptance_horizon_ms(), now + 100 );
+
+    auto extended = store.CreateOrJoinBurnReservation( slot, outpoint, now + 500, now + 2 );
+    ASSERT_TRUE( extended.has_value() );
+    EXPECT_EQ( extended.value().record.generation(), created.value().record.generation() );
+    EXPECT_EQ( extended.value().record.candidate_acceptance_horizon_ms(), now + 500 );
+    auto scanned = store.ScanBurnReservations();
+    ASSERT_TRUE( scanned.has_value() );
+    ASSERT_EQ( scanned.value().size(), 1U );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreAtomicCreationFailureLeavesNoReciprocalHalf )
+{
+    auto datastore = db_->GetDataStore();
+    ASSERT_TRUE( datastore );
+    sgns::ConsensusStateStore store( datastore );
+    sgns::ConsensusBurnReservationTestAccess::FailCommits( store );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+
+    auto failed = store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_EQ( failed.error(), sgns::ConsensusStateStoreError::Storage );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnSlotKey( slot ) ).size(), 0U );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ).size(), 0U );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreRejectsIdentityAliasesAndContradictions )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    ASSERT_TRUE( store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now ).has_value() );
+
+    auto other = outpoint;
+    other.receipt_log_index++;
+    auto wrong_slot = store.CreateOrJoinBurnReservation( slot, other, now + 100, now );
+    ASSERT_TRUE( wrong_slot.has_error() );
+    EXPECT_EQ( wrong_slot.error(), sgns::ConsensusStateStoreError::Conflict );
+    auto wrong_outpoint_slot = store.CreateOrJoinBurnReservation( std::string( 64, 'b' ), outpoint, now + 100, now );
+    ASSERT_TRUE( wrong_outpoint_slot.has_error() );
+    EXPECT_EQ( wrong_outpoint_slot.error(), sgns::ConsensusStateStoreError::Conflict );
+
+    auto noncanonical_chain = outpoint;
+    noncanonical_chain.source_chain = "011155111";
+    auto chain_alias = store.CreateOrJoinBurnReservation( SlotFor( noncanonical_chain ), noncanonical_chain,
+                                                          now + 100, now );
+    ASSERT_TRUE( chain_alias.has_error() );
+    EXPECT_EQ( chain_alias.error(), sgns::ConsensusStateStoreError::InvalidArgument );
+    auto zero_burn = outpoint;
+    zero_burn.burn_hash.assign( 64, '0' );
+    auto zero = store.CreateOrJoinBurnReservation( SlotFor( zero_burn ), zero_burn, now + 100, now );
+    ASSERT_TRUE( zero.has_error() );
+    EXPECT_EQ( zero.error(), sgns::ConsensusStateStoreError::InvalidArgument );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreStrictDecodeCorruptionMatrixFailsClosed )
+{
+    auto datastore = db_->GetDataStore();
+    ASSERT_TRUE( datastore );
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    auto record = MakeReservedRecord( outpoint );
+    auto index = MakeIndex( record );
+    const auto slot_key = sgns::ConsensusStateStore::BurnSlotKey( record.slot_id() );
+    const auto index_key = sgns::ConsensusStateStore::BurnOutpointKey( outpoint );
+
+    auto put_pair = [&]( const auto &slot_record, const auto &outpoint_index )
+    {
+        ASSERT_TRUE( datastore->put( BufferOf( slot_key ), BufferOf( slot_record.SerializeAsString() ) ).has_value() );
+        ASSERT_TRUE( datastore->put( BufferOf( index_key ), BufferOf( outpoint_index.SerializeAsString() ) ).has_value() );
+    };
+    auto expect_integrity = [&]()
+    {
+        auto scan = store.ScanBurnReservations();
+        ASSERT_TRUE( scan.has_error() );
+        EXPECT_EQ( scan.error(), sgns::ConsensusStateStoreError::Integrity );
+    };
+
+    put_pair( record, index );
+    ASSERT_EQ( store.ScanBurnReservations().value().size(), 1U );
+
+    auto bad = record;
+    bad.set_schema_version( 3 );
+    put_pair( bad, index );
+    expect_integrity();
+    bad = record;
+    bad.set_state( sgns::ConsensusStateStore::BurnReservationRecord::STATE_UNSPECIFIED );
+    put_pair( bad, index );
+    expect_integrity();
+    bad = record;
+    bad.set_source_chain( "01" );
+    put_pair( bad, index );
+    expect_integrity();
+    bad = record;
+    bad.set_burn_hash( std::string( 64, '0' ) );
+    put_pair( bad, index );
+    expect_integrity();
+    bad = record;
+    bad.set_generation( std::string( 63, 'a' ) + "A" );
+    put_pair( bad, index );
+    expect_integrity();
+    bad = record;
+    bad.set_certificate_digest( std::string( 64, 'b' ) );
+    put_pair( bad, index );
+    expect_integrity();
+
+    put_pair( record, index );
+    auto malformed = record.SerializeAsString();
+    malformed.append( "\x78\x01", 2 );
+    ASSERT_TRUE( datastore->put( BufferOf( slot_key ), BufferOf( malformed ) ).has_value() );
+    expect_integrity();
+    auto noncanonical = record.SerializeAsString();
+    noncanonical.append( "\x08\x02", 2 );
+    ASSERT_TRUE( datastore->put( BufferOf( slot_key ), BufferOf( noncanonical ) ).has_value() );
+    expect_integrity();
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreRejectsMissingOrMismatchedReciprocalHalf )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    auto record = MakeReservedRecord( outpoint );
+    auto index = MakeIndex( record );
+    ASSERT_TRUE( datastore->put( BufferOf( sgns::ConsensusStateStore::BurnSlotKey( record.slot_id() ) ),
+                                 BufferOf( record.SerializeAsString() ) ).has_value() );
+    auto half = store.ScanBurnReservations();
+    ASSERT_TRUE( half.has_error() );
+    EXPECT_EQ( half.error(), sgns::ConsensusStateStoreError::Integrity );
+
+    index.set_generation( std::string( 64, 'b' ) );
+    ASSERT_TRUE( datastore->put( BufferOf( sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ),
+                                 BufferOf( index.SerializeAsString() ) ).has_value() );
+    auto mismatch = store.GetBurnReservation( record.slot_id() );
+    ASSERT_TRUE( mismatch.has_error() );
+    EXPECT_EQ( mismatch.error(), sgns::ConsensusStateStoreError::Integrity );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationStoreFinalityTransitionsAreMonotonic )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    const std::string certificate( 64, 'b' );
+    const std::string proposal( 64, 'c' );
+    const std::string winner( 64, 'd' );
+    auto created = store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now );
+    ASSERT_TRUE( created.has_value() );
+    const auto generation = created.value().record.generation();
+
+    auto finalized = store.FinalizeBurnReservation( slot, outpoint, certificate, proposal, winner, now + 1 );
+    ASSERT_TRUE( finalized.has_value() );
+    EXPECT_EQ( finalized.value().state(), sgns::ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION );
+    auto rejoin = store.CreateOrJoinBurnReservation( slot, outpoint, now + 200, now + 2 );
+    ASSERT_TRUE( rejoin.has_error() );
+    EXPECT_EQ( rejoin.error(), sgns::ConsensusStateStoreError::Conflict );
+    auto release = store.DeleteReservedBurnReservation( slot, generation );
+    ASSERT_TRUE( release.has_error() );
+    EXPECT_EQ( release.error(), sgns::ConsensusStateStoreError::Conflict );
+
+    auto batch = datastore->batch();
+    auto consumed = store.PrepareConsumedBurnReservation( *batch, slot, outpoint, generation,
+                                                           certificate, proposal, winner, now + 2 );
+    ASSERT_TRUE( consumed.has_value() );
+    ASSERT_TRUE( batch->commit().has_value() );
+    auto durable = store.GetBurnReservation( slot );
+    ASSERT_TRUE( durable.has_value() && durable.value().has_value() );
+    EXPECT_EQ( durable.value()->state(), sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    EXPECT_TRUE( store.FinalizeBurnReservation( slot, outpoint, certificate, proposal, winner, now + 3 ).has_value() );
+    auto conflicting = store.FinalizeBurnReservation( slot, outpoint, std::string( 64, 'e' ), proposal, winner, now + 3 );
+    ASSERT_TRUE( conflicting.has_error() );
+    EXPECT_EQ( conflicting.error(), sgns::ConsensusStateStoreError::Conflict );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationSafetyErrorCannotRegressOrRelease )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    const std::string certificate( 64, 'b' );
+    const std::string proposal( 64, 'c' );
+    const std::string winner( 64, 'd' );
+    auto finalized = store.FinalizeBurnReservation( slot, outpoint, certificate, proposal, winner, now );
+    ASSERT_TRUE( finalized.has_value() );
+    auto safety = store.MarkBurnReservationSafetyError( slot, finalized.value().generation(), certificate,
+                                                        proposal, winner, "different durable winner", now + 1 );
+    ASSERT_TRUE( safety.has_value() );
+    EXPECT_EQ( safety.value().state(), sgns::ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR );
+    auto release = store.DeleteReservedBurnReservation( slot, safety.value().generation() );
+    ASSERT_TRUE( release.has_error() );
+    EXPECT_EQ( release.error(), sgns::ConsensusStateStoreError::Conflict );
+    auto consume_batch = datastore->batch();
+    auto consume = store.PrepareConsumedBurnReservation( *consume_batch, slot, outpoint, safety.value().generation(),
+                                                          certificate, proposal, winner, now + 2 );
+    ASSERT_TRUE( consume.has_error() );
+    EXPECT_EQ( consume.error(), sgns::ConsensusStateStoreError::Conflict );
+}
+
+TEST_F( ConsensusBurnReservationHarness, BurnReservationGenerationReleaseIsConditionalAndRecreationIsFresh )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint();
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    auto first = store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now );
+    ASSERT_TRUE( first.has_value() );
+    const auto first_generation = first.value().record.generation();
+
+    auto stale = store.DeleteReservedBurnReservation( slot, std::string( 64, 'f' ) );
+    ASSERT_TRUE( stale.has_value() );
+    EXPECT_EQ( stale.value(), sgns::ConsensusStateStore::BurnDeleteResult::GenerationMismatch );
+    EXPECT_TRUE( store.GetBurnReservation( slot ).value().has_value() );
+    auto released = store.DeleteReservedBurnReservation( slot, first_generation );
+    ASSERT_TRUE( released.has_value() );
+    EXPECT_EQ( released.value(), sgns::ConsensusStateStore::BurnDeleteResult::Deleted );
+    EXPECT_FALSE( store.GetBurnReservation( slot ).value().has_value() );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnSlotKey( slot ) ).size(), 0U );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ).size(), 0U );
+
+    auto second = store.CreateOrJoinBurnReservation( slot, outpoint, now + 300, now + 200 );
+    ASSERT_TRUE( second.has_value() );
+    EXPECT_NE( second.value().record.generation(), first_generation );
+    auto stale_again = store.DeleteReservedBurnReservation( slot, first_generation );
+    ASSERT_TRUE( stale_again.has_value() );
+    EXPECT_EQ( stale_again.value(), sgns::ConsensusStateStore::BurnDeleteResult::GenerationMismatch );
+    EXPECT_TRUE( store.GetBurnReservation( slot ).value().has_value() );
 }
