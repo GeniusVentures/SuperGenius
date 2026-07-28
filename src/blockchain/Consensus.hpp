@@ -333,7 +333,10 @@ namespace sgns
          * @param[in] subject_type Canonical subject type (e.g. "sgns.nonce.v1").
          * @param[in] handler Callback that produces a slot key from the raw subject.
          */
-        static void RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler );
+        static bool RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler );
+
+        /** Installs the built-in nonce/mint resolver when the type is unowned. */
+        static bool EnsureBuiltinSlotKeyHandlers();
 
         /**
          * @brief Unregisters the slot key handler for a canonical subject type.
@@ -663,6 +666,7 @@ namespace sgns
         friend class ConsensusSlotKeyTestAccess;
         friend class ConsensusVoteJournalTestAccess;
         friend class ConsensusFinalizationTestAccess;
+        friend class ConsensusBurnReservationTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 
         /**
