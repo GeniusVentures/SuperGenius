@@ -70,6 +70,10 @@ namespace test
         pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
 
         BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
+        auto future = pubs_->Start( 0, {} );
+        auto result = future.get();
+        BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
+
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
         auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -83,10 +87,6 @@ namespace test
         db_->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
         db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
         db_->Start();
-
-        auto future = pubs_->Start( 0, {} );
-        auto result = future.get();
-        BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
     }
 
     CRDTFixture::~CRDTFixture()
