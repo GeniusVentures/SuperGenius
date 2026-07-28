@@ -2118,6 +2118,15 @@ namespace sgns
         }
 
         auto &utxo_manager = account_m->GetUTXOManager();
+        if ( finalized_handle )
+        {
+            auto admitted = finalized_handle->store->ApplyFinalizedReservationBatch(
+                finalized_handle->identity, utxo_manager.AcquireStorage(),
+                []( storage::BufferBatch &batch,
+                    const ConsensusStateStore::BurnReservationRecord & ) -> outcome::result<void>
+                { return batch.commit(); } );
+            if ( !admitted ) return outcome::failure( admitted.error() );
+        }
         std::string bridge_owner;
         auto existing_application = utxo_manager.GetBridgeApplication(
             tx->GetChainId(), burn_hash.value(), input.output_idx_ );
@@ -3550,7 +3559,8 @@ namespace sgns
         const auto classify_failure = []( const std::error_code &error )
         {
             return error == std::make_error_code( std::errc::state_not_recoverable ) ||
-                           error == std::make_error_code( std::errc::invalid_argument )
+                           error == std::make_error_code( std::errc::invalid_argument ) ||
+                           error == make_error_code( ConsensusStateStoreError::DatastoreIdentity )
                        ? ConsensusManager::ApplicationDisposition::Irreconcilable
                        : ConsensusManager::ApplicationDisposition::Retryable;
         };

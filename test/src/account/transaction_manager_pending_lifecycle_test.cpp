@@ -1336,10 +1336,19 @@ TEST_F( TransactionManagerPendingLifecycleTest, SharedStoreApplicationHandleReac
     auto expected_slot = mint->GetSlotID();
     ASSERT_TRUE( expected_store && expected_slot );
     const auto input = mint->GetUTXOParameters().first.front();
+    ConsensusStateStore::BurnOutpoint outpoint{
+        mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ };
+    auto created = expected_store->CreateOrJoinBurnReservation(
+        expected_slot.value(), outpoint, std::numeric_limits<uint64_t>::max(), 1U );
+    ASSERT_TRUE( created );
+    auto finalized = expected_store->FinalizeBurnReservation(
+        expected_slot.value(), outpoint, std::string( 64, '2' ),
+        std::string( 64, '3' ), mint->GetHash(), 2U );
+    ASSERT_TRUE( finalized );
     ConsensusStateStore::FinalizedReservationIdentity identity{
         expected_slot.value(),
-        { mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ },
-        std::string( 64, '1' ), std::string( 64, '2' ), std::string( 64, '3' ), mint->GetHash() };
+        outpoint, finalized.value().generation(), finalized.value().certificate_digest(),
+        finalized.value().proposal_id(), finalized.value().winner_id() };
     std::atomic<uint64_t> observed{ 0 };
     TransactionManagerPendingLifecycleTestAccess::ObserveFinalizedHandle(
         [&]( const ConsensusManager::FinalizedReservationApplicationHandle *handle )
