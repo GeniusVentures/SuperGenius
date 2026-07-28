@@ -724,7 +724,7 @@ TEST_F( ConsensusBurnReservationHarness, DatastoreIdentityRejectsDistinctSharedO
     EXPECT_EQ( mutations.load(), 1U );
 }
 
-TEST_F( ConsensusBurnReservationHarness, SerializationGateBlocksReservationWriterAcrossParticipantBatch )
+TEST_F( ConsensusBurnReservationHarness, AtomicConsumedCompetingWriterBlocksAtSerializationGate )
 {
     const auto outpoint = MakeOutpoint( 72 );
     const auto slot = SlotFor( outpoint );
@@ -779,6 +779,10 @@ TEST_F( ConsensusBurnReservationHarness, SerializationGateBlocksReservationWrite
     writer.join();
     EXPECT_TRUE( batch_result );
     EXPECT_TRUE( writer_finished.load() );
+    auto durable = store->GetBurnReservation( slot );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_EQ( durable.value()->state(),
+               sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED );
 }
 
 TEST_F( ConsensusBurnReservationHarness, BurnReservationSafetyErrorCannotRegressOrRelease )

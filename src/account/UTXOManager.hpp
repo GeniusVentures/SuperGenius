@@ -13,6 +13,7 @@
 #include "base/logger.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "blockchain/ConsensusStateStore.hpp"
 
 #include <optional>
 #include <functional>
@@ -460,6 +461,12 @@ namespace sgns
             InputUTXOInfo               bridge_input;
             std::string                 bridge_input_owner;
             UTXOType                    bridge_input_type{ UTXOType::UTXO_BRIDGE };
+            GeniusUTXO                  certified_bridge_input;
+            std::string                 slot_id;
+            std::string                 reservation_generation;
+            std::string                 certificate_digest;
+            std::string                 proposal_id;
+            std::string                 winner_id;
         };
 
         struct BridgeApplication
@@ -498,7 +505,9 @@ namespace sgns
         static constexpr std::string_view BRIDGE_APPLICATION_PREFIX = "/bridge/application/v1/";
 
         outcome::result<AtomicMintEffectResult> ApplyMintEffectsAtomically(
-            const AtomicMintEffectRequest &request );
+            const AtomicMintEffectRequest &request,
+            storage::BufferBatch *shared_batch = nullptr,
+            const ConsensusStateStore::BurnReservationRecord *reservation = nullptr );
         outcome::result<std::optional<BridgeApplication>> GetBridgeApplication(
             const std::string &chain_id,
             const base::Hash256 &burn_hash,
@@ -536,7 +545,8 @@ namespace sgns
         VerifySignatureFunc verify_signature_; ///< Verifier method for validating signatures on UTXO spends
         std::shared_ptr<storage::rocksdb> db_; ///< Database handle for persisting UTXO state and checkpoints
 
-        /// Serializes every persistent snapshot. Lock order is persistence_mutex_ then utxos_mutex_.
+        /// Serializes every persistent snapshot. Finalized mint lock order is
+        /// ConsensusStateStore gate -> persistence_mutex_ -> utxos_mutex_.
         mutable std::mutex persistence_mutex_;
         mutable std::shared_mutex utxos_mutex_;       ///< Mutex for UTXO state structures
         UTXOOutPointMap           utxo_outpoints_;    ///< Maps outpoints to their UTXO entries for efficient lookup

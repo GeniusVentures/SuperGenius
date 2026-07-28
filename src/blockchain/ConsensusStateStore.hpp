@@ -176,6 +176,10 @@ namespace sgns
         outcome::result<void> ValidateBurnOutpointIndex( const BurnOutpointIndex &record,
                                                          const std::string &key ) const;
         outcome::result<void> ValidateBurnReciprocalUnlocked( const BurnReservationRecord &record ) const;
+        outcome::result<BurnReservationRecord> PrepareConsumedBurnReservationUnlocked(
+            storage::BufferBatch &batch,
+            const FinalizedReservationIdentity &identity,
+            uint64_t now_ms );
 
         std::shared_ptr<storage::rocksdb> datastore_;
         mutable std::mutex                mutex_;
