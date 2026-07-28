@@ -1019,7 +1019,8 @@ namespace sgns
 
     outcome::result<ConsensusStateStore::BurnDeleteResult>
     ConsensusStateStore::DeleteReservedBurnReservation( const std::string &slot_id,
-                                                         const std::string &expected_generation )
+                                                         const std::string &expected_generation,
+                                                         std::optional<uint64_t> expected_candidate_horizon_ms )
     {
         std::lock_guard lock( mutex_ );
         if ( !IsCanonicalHash( slot_id ) || !IsCanonicalHash( expected_generation ) )
@@ -1029,6 +1030,9 @@ namespace sgns
         if ( current->generation() != expected_generation ) return BurnDeleteResult::GenerationMismatch;
         if ( current->state() != BurnReservationRecord::RESERVED )
             return outcome::failure( ConsensusStateStoreError::Conflict );
+        if ( expected_candidate_horizon_ms.has_value() &&
+             current->candidate_acceptance_horizon_ms() != expected_candidate_horizon_ms.value() )
+            return BurnDeleteResult::GenerationMismatch;
         const BurnOutpoint outpoint{ current->source_chain(), current->burn_hash(), current->receipt_log_index() };
         BOOST_OUTCOME_TRY( auto indexed, ReadBurnOutpointIndexUnlocked( outpoint ) );
         if ( !indexed || indexed->slot_id() != slot_id || indexed->generation() != expected_generation )
