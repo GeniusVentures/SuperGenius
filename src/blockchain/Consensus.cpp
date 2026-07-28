@@ -24,6 +24,7 @@
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "storage/database_error.hpp"
 
@@ -188,7 +189,52 @@ namespace sgns
             }
             return BuiltinSubjectKind::Other;
         }
-    }
+
+        outcome::result<ConsensusStateStore::BurnOutpoint> DecodeMintBurnOutpoint(
+            const ConsensusManager::Subject &subject )
+        {
+            BOOST_OUTCOME_TRY( auto nonce, ConsensusManager::DecodeNonceSubject( subject ) );
+            if ( !nonce.transaction().has_mint_v2() ||
+                 nonce.transaction().mint_v2().utxo_params().inputs_size() != 1 )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            const auto &mint = nonce.transaction().mint_v2();
+            const auto &input = mint.utxo_params().inputs( 0 );
+            ConsensusStateStore::BurnOutpoint outpoint{ mint.chain_id(), input.tx_id_hash(), input.output_index() };
+            const bool canonical_chain = !outpoint.source_chain.empty() &&
+                ( outpoint.source_chain == "0" || outpoint.source_chain.front() != '0' ) &&
+                std::all_of( outpoint.source_chain.begin(), outpoint.source_chain.end(),
+                             []( unsigned char c ) { return c >= '0' && c <= '9'; } );
+            if ( !canonical_chain || !IsCanonicalHash( outpoint.burn_hash ) ||
+                 outpoint.burn_hash == std::string( 64, '0' ) )
+            {
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            return outpoint;
+        }
+
+        outcome::result<std::string> MintSlotForOutpoint(
+            const ConsensusStateStore::BurnOutpoint &outpoint )
+        {
+            return GeniusTransaction::HashSlotPreimage(
+                "mint-v2:" + outpoint.source_chain + ":" + outpoint.burn_hash + ":" +
+                std::to_string( outpoint.receipt_log_index ) );
+        }
+
+        outcome::result<std::string> ResolveBuiltinNonceSlot( const ConsensusManager::Subject &subject )
+        {
+            BOOST_OUTCOME_TRY( auto nonce, ConsensusManager::DecodeNonceSubject( subject ) );
+            if ( nonce.transaction().has_mint_v2() )
+            {
+                BOOST_OUTCOME_TRY( auto outpoint, DecodeMintBurnOutpoint( subject ) );
+                return MintSlotForOutpoint( outpoint );
+            }
+            BOOST_OUTCOME_TRY( auto preimage,
+                               GeniusTransaction::MakeNonceSlotPreimage( subject.account_id(), nonce.nonce() ) );
+            return GeniusTransaction::HashSlotPreimage( preimage );
+        }
+    } // namespace
 
     base::Logger ConsensusManagerLogger()
     {
@@ -228,6 +274,12 @@ namespace sgns
         if ( address.empty() )
         {
             ConsensusManagerLogger()->error( "{}: Failed to create ConsensusManager: address is empty", __func__ );
+            return nullptr;
+        }
+
+        if ( !EnsureBuiltinSlotKeyHandlers() )
+        {
+            ConsensusManagerLogger()->error( "{}: Failed to install built-in slot key handlers", __func__ );
             return nullptr;
         }
 
@@ -335,7 +387,8 @@ namespace sgns
         auto processes = state_store_->ScanProcesses();
         auto conflicts = state_store_->ScanConflicts();
         auto safeties = state_store_->ScanSafety();
-        if ( !votes || !processes || !conflicts || !safeties ) return false;
+        auto reservations = state_store_->ScanBurnReservations();
+        if ( !votes || !processes || !conflicts || !safeties || !reservations ) return false;
         certificate_conflict_unique_pairs_.store( conflicts.value().size(), std::memory_order_relaxed );
         for ( const auto &record : conflicts.value() )
         {
@@ -348,6 +401,7 @@ namespace sgns
             std::string digest;
             std::string proposal_id;
             std::string winner_id;
+            std::optional<ConsensusStateStore::BurnOutpoint> burn_outpoint;
         };
         std::unordered_map<std::string, FinalRecord> finals;
         auto certificate_entries = db_->QueryKeyValues( CERTIFICATE_SLOT_BASE_PATH_KEY );
@@ -372,8 +426,16 @@ namespace sgns
             auto digest_bytes = crypto::sha2_256( bytes.data(), bytes.size() );
             const auto digest = base::hex_lower(
                 gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+            std::optional<ConsensusStateStore::BurnOutpoint> burn_outpoint;
+            if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
+                 SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+            {
+                auto decoded = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
+                if ( decoded.has_value() ) burn_outpoint = decoded.value();
+            }
             if ( !finals.emplace( slot,
-                                  FinalRecord{ digest, normalized.certificate.proposal_id(), winner.value() } )
+                                  FinalRecord{ digest, normalized.certificate.proposal_id(), winner.value(),
+                                               std::move( burn_outpoint ) } )
                       .second )
                 return false;
         }
@@ -396,6 +458,76 @@ namespace sgns
         }
 
         const auto now = CurrentTimeMs();
+
+        std::unordered_map<std::string, ConsensusStateStore::BurnReservationRecord> restored_reservations;
+        for ( auto record : reservations.value() )
+        {
+            const ConsensusStateStore::BurnOutpoint outpoint{
+                record.source_chain(), record.burn_hash(), record.receipt_log_index()
+            };
+            auto canonical_slot = MintSlotForOutpoint( outpoint );
+            if ( !canonical_slot || canonical_slot.value() != record.slot_id() ) return false;
+
+            auto final = finals.find( record.slot_id() );
+            if ( final == finals.end() )
+            {
+                if ( record.state() != ConsensusStateStore::BurnReservationRecord::RESERVED ) return false;
+            }
+            else
+            {
+                if ( !final->second.burn_outpoint.has_value() ||
+                     final->second.burn_outpoint->source_chain != outpoint.source_chain ||
+                     final->second.burn_outpoint->burn_hash != outpoint.burn_hash ||
+                     final->second.burn_outpoint->receipt_log_index != outpoint.receipt_log_index )
+                    return false;
+                if ( record.state() == ConsensusStateStore::BurnReservationRecord::RESERVED )
+                {
+                    auto finalized = state_store_->FinalizeBurnReservation(
+                        record.slot_id(), outpoint, final->second.digest, final->second.proposal_id,
+                        final->second.winner_id, now );
+                    if ( !finalized ) return false;
+                    record = std::move( finalized.value() );
+                }
+                else if ( record.certificate_digest() != final->second.digest ||
+                          record.proposal_id() != final->second.proposal_id ||
+                          record.winner_id() != final->second.winner_id )
+                    return false;
+            }
+            if ( !restored_reservations.emplace( record.slot_id(), std::move( record ) ).second ) return false;
+        }
+
+        // A mint certificate is authoritative even when this node never saw a
+        // candidate: synthesize durable final-pending protection before handler recovery.
+        for ( const auto &[slot, final] : finals )
+        {
+            if ( !final.burn_outpoint.has_value() || restored_reservations.count( slot ) != 0 ) continue;
+            auto finalized = state_store_->FinalizeBurnReservation(
+                slot, *final.burn_outpoint, final.digest, final.proposal_id, final.winner_id, now );
+            if ( !finalized ) return false;
+            restored_reservations.emplace( slot, std::move( finalized.value() ) );
+        }
+
+        // Durable votes need no candidate object after restart.  Their exact
+        // acceptance horizon extends Reserved protection, including equality.
+        for ( const auto &vote : restored_votes_ )
+        {
+            auto reservation = restored_reservations.find( vote.slot_id() );
+            if ( reservation == restored_reservations.end() ||
+                 reservation->second.state() != ConsensusStateStore::BurnReservationRecord::RESERVED )
+                continue;
+            const ConsensusStateStore::BurnOutpoint outpoint{
+                reservation->second.source_chain(), reservation->second.burn_hash(),
+                reservation->second.receipt_log_index()
+            };
+            if ( vote.acceptance_horizon_ms() > reservation->second.candidate_acceptance_horizon_ms() )
+            {
+                auto extended = state_store_->CreateOrJoinBurnReservation(
+                    vote.slot_id(), outpoint, vote.acceptance_horizon_ms(), now );
+                if ( !extended ) return false;
+                reservation->second = std::move( extended.value().record );
+            }
+        }
+
         for ( auto record : processes.value() )
         {
             auto final = finals.find( record.slot_id() );
@@ -819,19 +951,35 @@ namespace sgns
         proposal_cleanup_handlers_.erase( type_hash.value() );
     }
 
-    void ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
+    bool ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
     {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty slot key handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: ignored invalid slot key handler subject_type={}",
                                              __func__,
                                              subject_type );
-            return;
+            return false;
         }
         ConsensusManagerLogger()->debug( "{}: Registering slot key handler subject_type={}", __func__, subject_type );
         std::unique_lock lock( slot_key_handlers_mutex_ );
-        slot_key_handlers_[type_hash.value()] = std::move( handler );
+        return slot_key_handlers_.emplace( type_hash.value(), std::move( handler ) ).second;
+    }
+
+    bool ConsensusManager::EnsureBuiltinSlotKeyHandlers()
+    {
+        auto type_hash = ComputeSubjectTypeHash( NONCE_SUBJECT_TYPE );
+        if ( type_hash.has_error() ) return false;
+        std::unique_lock lock( slot_key_handlers_mutex_ );
+        if ( slot_key_handlers_.find( type_hash.value() ) != slot_key_handlers_.end() ) return true;
+        return slot_key_handlers_.emplace( type_hash.value(), ResolveBuiltinNonceSlot ).second;
     }
 
     void ConsensusManager::UnregisterSlotKeyHandler( std::string_view subject_type )

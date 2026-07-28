@@ -163,6 +163,15 @@ namespace sgns
             return nullptr;
         }
 
+        // Strict consensus restoration resolves certificate and reservation
+        // slots before TransactionManager exists.
+        if ( !ConsensusManager::EnsureBuiltinSlotKeyHandlers() )
+        {
+            instance->logger_->critical( "[{}] Failed to install canonical consensus slot resolver",
+                                         instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
+        }
+
         instance->consensus_manager_ = ConsensusManager::New(
             instance->validator_registry_,
             instance->db_,
@@ -1753,7 +1762,7 @@ namespace sgns
 
     void Blockchain::RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler )
     {
-        ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
+        (void) ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
     }
 
     void Blockchain::UnregisterSlotKeyHandler( std::string_view subject_type )

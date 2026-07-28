@@ -787,10 +787,12 @@ TEST_F( ConsensusVoteJournalHarness, QueryErrorsAreNeverReportedAsEmptyScans )
     auto processes = store.ScanProcesses();
     auto conflicts = store.ScanConflicts();
     auto safety = store.ScanSafety();
+    auto reservations = store.ScanBurnReservations();
     EXPECT_TRUE( votes.has_error() );
     EXPECT_TRUE( processes.has_error() );
     EXPECT_TRUE( conflicts.has_error() );
     EXPECT_TRUE( safety.has_error() );
+    EXPECT_TRUE( reservations.has_error() );
 }
 
 TEST_F( ConsensusVoteJournalHarness, ConfigIsFixedBeforeManagerStartup )

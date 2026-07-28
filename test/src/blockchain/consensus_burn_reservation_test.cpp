@@ -20,10 +20,16 @@
 
 #include "base/buffer.hpp"
 #include "base/hexutil.hpp"
+#include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusStateStore.hpp"
+#include "blockchain/ValidatorRegistry.hpp"
+#include "account/GeniusAccount.hpp"
+#include "account/TokenID.hpp"
 #include "crypto/hasher.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
+#include "testutil/wait_condition.hpp"
 
 namespace sgns
 {
@@ -45,6 +51,26 @@ namespace sgns
             {
                 return outcome::failure( ConsensusStateStoreError::Storage );
             };
+        }
+
+        static void ObserveStartup( std::function<void( std::string_view )> observer )
+        {
+            ConsensusManager::startup_event_observer_ = std::move( observer );
+        }
+
+        static void ResetStartupHooks()
+        {
+            ConsensusManager::startup_event_observer_ = {};
+        }
+
+        static outcome::result<std::string> Slot( const ConsensusManager::Subject &subject )
+        {
+            return ConsensusManager::GetSlotKey( subject );
+        }
+
+        static outcome::result<std::string> Winner( const ConsensusManager::Subject &subject )
+        {
+            return ConsensusManager::GetSubjectHash( subject );
         }
     };
 } // namespace sgns
@@ -232,8 +258,72 @@ namespace
     {
     public:
         ConsensusBurnReservationHarness() : CRDTFixture( "consensus_burn_reservation_test" ) {}
+        ~ConsensusBurnReservationHarness() override { CloseManagers(); }
 
     protected:
+        std::shared_ptr<sgns::ValidatorRegistry> MakeRegistry()
+        {
+            if ( !account_ )
+            {
+                sgns::GeniusAccount::SetSecureStorageFactory(
+                    []( const std::string &identifier ) -> std::shared_ptr<sgns::ISecureStorage>
+                    { return std::make_shared<sgns::MemorySecureStorage>( identifier ); } );
+                account_ = sgns::GeniusAccount::NewFromPrivateKey(
+                    sgns::TokenID::FromBytes( { 0x00 } ),
+                    "d0ffee00d0ffee00d0ffee00d0ffee00d0ffee00d0ffee00d0ffee00d0ffee00",
+                    boost::filesystem::path( db_path_ ) / "burn-reservation-account", false );
+                EXPECT_TRUE( account_ );
+            }
+            sgns::ValidatorRegistry::WeightConfig weights;
+            weights.slot_public_min_group_ = 1;
+            auto registry = sgns::ValidatorRegistry::New(
+                db_, 1, 1, weights, account_->GetAddress(),
+                []( const std::string &, std::function<void( outcome::result<std::string> )> callback )
+                { callback( outcome::failure( std::errc::not_supported ) ); } );
+            EXPECT_TRUE( registry );
+            if ( !registry ) return nullptr;
+            EXPECT_TRUE( registry->StoreGenesisRegistry(
+                { account_->GetAddress() },
+                []( std::vector<uint8_t> payload ) { payload.push_back( 0x10 ); return payload; } ).has_value() );
+            ASSERT_WAIT_FOR_CONDITION(
+                [&registry]() { return registry->LoadCurrentRegistry().has_value() &&
+                                        !registry->GetRegistryCid().empty(); },
+                std::chrono::milliseconds( 2000 ), "burn reservation registry initialized", nullptr );
+            return registry;
+        }
+
+        std::shared_ptr<sgns::ConsensusManager> MakeManager(
+            const std::shared_ptr<sgns::ValidatorRegistry> &registry )
+        {
+            auto manager = sgns::ConsensusManager::New(
+                registry, db_, pubs_,
+                [this]( std::vector<uint8_t> payload ) { return account_->Sign( std::move( payload ) ); },
+                account_->GetAddress() );
+            if ( manager ) managers_.push_back( manager );
+            return manager;
+        }
+
+        sgns::ConsensusManager::Subject MakeMintSubject( const sgns::ConsensusStateStore::BurnOutpoint &outpoint )
+        {
+            sgns::EmbeddedTransaction embedded;
+            auto *mint = embedded.mutable_mint_v2();
+            mint->set_chain_id( outpoint.source_chain );
+            auto *input = mint->mutable_utxo_params()->add_inputs();
+            input->set_tx_id_hash( outpoint.burn_hash );
+            input->set_output_index( outpoint.receipt_log_index );
+            auto subject = sgns::ConsensusManager::CreateNonceSubject(
+                account_->GetAddress(), 7, std::string( 64, '9' ), embedded,
+                std::nullopt, std::nullopt );
+            EXPECT_TRUE( subject );
+            return subject.value();
+        }
+
+        void CloseManagers()
+        {
+            for ( auto &manager : managers_ ) if ( manager ) manager->Close();
+            managers_.clear();
+        }
+
         std::shared_ptr<sgns::storage::rocksdb> CloseOwnersAndReopenSamePath()
         {
             const auto exact_path = db_path_;
@@ -255,6 +345,8 @@ namespace
         }
 
         BurnReservationCounters counters_;
+        std::shared_ptr<sgns::GeniusAccount> account_;
+        std::vector<std::shared_ptr<sgns::ConsensusManager>> managers_;
         const std::chrono::system_clock::time_point system_now_{ kFixedSystemNow };
         const std::chrono::steady_clock::time_point steady_now_{ kFixedSteadyNow };
     };
@@ -572,4 +664,165 @@ TEST_F( ConsensusBurnReservationHarness, BurnReservationGenerationReleaseIsCondi
     ASSERT_TRUE( stale_again.has_value() );
     EXPECT_EQ( stale_again.value(), sgns::ConsensusStateStore::BurnDeleteResult::GenerationMismatch );
     EXPECT_TRUE( store.GetBurnReservation( slot ).value().has_value() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, RestartRestoresReservedBurnBeforeStartupWithoutCandidates )
+{
+    const ScopedHookReset reset( []()
+    {
+        sgns::ConsensusBurnReservationTestAccess::ResetStartupHooks();
+        sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+        EXPECT_TRUE( sgns::ConsensusManager::EnsureBuiltinSlotKeyHandlers() );
+    } );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    const auto outpoint = MakeOutpoint();
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    auto created = store.CreateOrJoinBurnReservation(
+        SlotFor( outpoint ), outpoint, 1'750'000'001'000ULL, 1'750'000'000'000ULL );
+    ASSERT_TRUE( created );
+
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+    std::vector<std::string> events;
+    sgns::ConsensusBurnReservationTestAccess::ObserveStartup(
+        [&]( std::string_view event ) { events.emplace_back( event ); } );
+    auto restarted = MakeManager( registry );
+    ASSERT_TRUE( restarted );
+    ASSERT_FALSE( events.empty() );
+    EXPECT_EQ( events.front(), "restored" );
+    EXPECT_EQ( events.at( 1 ), "subscribe" );
+    auto durable = store.GetBurnReservation( SlotFor( outpoint ) );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_EQ( durable.value()->generation(), created.value().record.generation() );
+    EXPECT_EQ( durable.value()->state(), sgns::ConsensusStateStore::BurnReservationRecord::RESERVED );
+
+    auto subject = MakeMintSubject( outpoint );
+    auto slot = sgns::ConsensusBurnReservationTestAccess::Slot( subject );
+    ASSERT_TRUE( slot );
+    EXPECT_EQ( slot.value(), SlotFor( outpoint ) );
+}
+
+TEST_F( ConsensusBurnReservationHarness, StartupReconcileCorruptReciprocalReservationHasZeroSideEffects )
+{
+    const ScopedHookReset reset( []() { sgns::ConsensusBurnReservationTestAccess::ResetStartupHooks(); } );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto record = MakeReservedRecord( MakeOutpoint() );
+    ASSERT_TRUE( db_->GetDataStore()->put(
+        BufferOf( sgns::ConsensusStateStore::BurnSlotKey( record.slot_id() ) ),
+        BufferOf( record.SerializeAsString() ) ).has_value() );
+    std::vector<std::string> events;
+    sgns::ConsensusBurnReservationTestAccess::ObserveStartup(
+        [&]( std::string_view event ) { events.emplace_back( event ); } );
+    EXPECT_FALSE( MakeManager( registry ) );
+    EXPECT_TRUE( events.empty() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, StartupResolverRegistrationRequiresExplicitRemovalToOverwrite )
+{
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+    ASSERT_TRUE( sgns::ConsensusManager::EnsureBuiltinSlotKeyHandlers() );
+    EXPECT_FALSE( sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject & ) -> outcome::result<std::string>
+        { return std::string( 64, 'f' ); } ) );
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+    EXPECT_TRUE( sgns::ConsensusManager::RegisterSlotKeyHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        []( const sgns::ConsensusManager::Subject & ) -> outcome::result<std::string>
+        { return std::string( 64, 'f' ); } ) );
+    sgns::ConsensusManager::UnregisterSlotKeyHandler( sgns::NONCE_SUBJECT_TYPE );
+    EXPECT_TRUE( sgns::ConsensusManager::EnsureBuiltinSlotKeyHandlers() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, RestartCertificateReconcileCreatesFinalProtectionBeforeHandler )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    manager->SetSlotHashPopulator( []( sgns::ConsensusVote &vote )
+    {
+        vote.set_slot_0_hash( std::string( 32, '\x01' ) );
+        vote.set_slot_1_hash( std::string( 32, '\x02' ) );
+        vote.set_slot_2_hash( std::string( 32, '\x03' ) );
+    } );
+    const auto outpoint = MakeOutpoint();
+    auto subject = MakeMintSubject( outpoint );
+    auto proposal = manager->CreateProposal(
+        subject, account_->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal );
+    auto vote = manager->CreateVote(
+        proposal.value().proposal_id(), account_->GetAddress(), true,
+        [this]( std::vector<uint8_t> bytes ) { return account_->Sign( std::move( bytes ) ); } );
+    ASSERT_TRUE( vote );
+    auto certificate = manager->CreateCertificate( proposal.value(), { vote.value() } );
+    ASSERT_TRUE( certificate );
+    auto winner = sgns::ConsensusBurnReservationTestAccess::Winner( subject );
+    ASSERT_TRUE( winner );
+    std::string bytes;
+    ASSERT_TRUE( certificate.value().SerializeToString( &bytes ) );
+    std::vector<sgns::crdt::GlobalDB::DataPair> records;
+    records.emplace_back( sgns::crdt::HierarchicalKey{ "/cert/v2/slot/" + SlotFor( outpoint ) },
+                          BufferOf( bytes ) );
+    records.emplace_back( sgns::crdt::HierarchicalKey{ "/cert/v2/tx/" + winner.value() },
+                          BufferOf( SlotFor( outpoint ) ) );
+    ASSERT_TRUE( db_->Put( records, {} ).has_value() );
+    CloseManagers();
+
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    auto restarted = MakeManager( registry );
+    ASSERT_TRUE( restarted );
+    auto protected_burn = store.GetBurnReservation( SlotFor( outpoint ) );
+    ASSERT_TRUE( protected_burn && protected_burn.value() );
+    EXPECT_EQ( protected_burn.value()->state(),
+               sgns::ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION );
+    EXPECT_EQ( protected_burn.value()->proposal_id(), proposal.value().proposal_id() );
+    auto process = store.GetProcess( SlotFor( outpoint ) );
+    ASSERT_TRUE( process && process.value() );
+    EXPECT_EQ( process.value()->state(), sgns::ConsensusStateStore::ProcessRecord::PENDING );
+}
+
+TEST_F( ConsensusBurnReservationHarness, RestartActiveVoteHorizonExtendsReservedProtectionAtEquality )
+{
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry );
+    ASSERT_TRUE( manager );
+    const auto outpoint = MakeOutpoint();
+    auto subject = MakeMintSubject( outpoint );
+    auto proposal = manager->CreateProposal(
+        subject, account_->GetAddress(), registry->GetRegistryCid(), registry->GetRegistryEpoch() );
+    ASSERT_TRUE( proposal );
+    auto vote = manager->CreateVote(
+        proposal.value().proposal_id(), account_->GetAddress(), true,
+        [this]( std::vector<uint8_t> bytes ) { return account_->Sign( std::move( bytes ) ); } );
+    ASSERT_TRUE( vote );
+    sgns::ConsensusMessage envelope;
+    *envelope.mutable_vote() = vote.value();
+    sgns::ConsensusStateStore::VoteRecord record;
+    record.set_schema_version( 2 );
+    record.set_state( sgns::ConsensusStateStore::VoteRecord::ACTIVE );
+    record.set_slot_id( SlotFor( outpoint ) );
+    record.set_proposal_id( proposal.value().proposal_id() );
+    record.set_validator_id( account_->GetAddress() );
+    ASSERT_TRUE( vote.value().SerializeToString( record.mutable_signed_vote_bytes() ) );
+    ASSERT_TRUE( proposal.value().SerializeToString( record.mutable_signed_proposal_bytes() ) );
+    ASSERT_TRUE( envelope.SerializeToString( record.mutable_outbound_envelope_bytes() ) );
+    record.set_registry_cid( proposal.value().registry_cid() );
+    record.set_registry_epoch( proposal.value().registry_epoch() );
+    record.set_generation( 1 );
+    record.set_created_at_ms( vote.value().timestamp() );
+    record.set_acceptance_horizon_ms( vote.value().timestamp() + 300'000 );
+    CloseManagers();
+
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    ASSERT_TRUE( store.CreateOrJoinBurnReservation(
+        SlotFor( outpoint ), outpoint, record.acceptance_horizon_ms() - 1, vote.value().timestamp() ) );
+    ASSERT_TRUE( store.PutActiveVote( record ) );
+    auto restarted = MakeManager( registry );
+    ASSERT_TRUE( restarted );
+    auto durable = store.GetBurnReservation( SlotFor( outpoint ) );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_EQ( durable.value()->candidate_acceptance_horizon_ms(), record.acceptance_horizon_ms() );
 }
