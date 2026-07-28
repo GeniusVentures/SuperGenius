@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T20:18:21.089Z"
-last_activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn finality
+last_updated: "2026-07-28T20:37:43.843Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized application contract
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 28
+  completed_plans: 29
   percent: 50
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: 5 of 9
+Plan: 6 of 9
 Status: Ready to execute
-Last activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn finality
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 06 shared-store finalized application contract
 
 ## Roadmap Snapshot
 
@@ -66,12 +66,12 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn f
 
 ## Operator Next Steps
 
-- Execute Phase 11 Plan 06 shared-store application handle contract.
+- Execute Phase 11 Plan 07 atomic winning mint effects and reservation consumption.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T20:17:45.935Z
-**Stopped at:** Completed 11-05-PLAN.md
+**Last session:** 2026-07-28T20:37:43.839Z
+**Stopped at:** Completed 11-06-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -106,6 +106,7 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn f
 | Phase 11 P03 | 17 min | 1 tasks | 5 files |
 | Phase 11 P04 | 17 min | 1 tasks | 9 files |
 | Phase 11 P05 | 27 min | 1 tasks | 8 files |
+| Phase 11 P06 | 18 min | 1 tasks | 8 files |
 
 ## Decisions
 
@@ -173,3 +174,6 @@ Last activity: 2026-07-28 -- Completed Phase 11 Plan 05 certificate-bound burn f
 - [Phase 11]: Resource-bearing certificate handlers use a typed application disposition while legacy certificate handlers retain Check semantics. — Exact mint application must distinguish safe retry from permanent durable-state contradiction without changing normal subject behavior.
 - [Phase 11]: Authoritative mint finalization persists FinalizedPendingApplication before processing markers, handler leases, or cleanup. — Certificate authority must make the shared burn unavailable even on certificate-only nodes and after local candidate state is gone.
 - [Phase 11]: Irreconcilable exact-winner application marks the certificate-bound reservation SafetyError and suppresses later retries and cleanup. — Permanent application contradictions must preserve finality and burn protection without futile remint attempts or reopening the resource.
+- [Phase 11]: Finalized mint application carries the exact live shared ConsensusStateStore and complete certificate-bound reservation identity by immutable value. — Reconstructing or non-owning the store would bypass the node's serialization authority.
+- [Phase 11]: Finalized batch participation requires shared-object datastore identity, not path or underlying database equivalence. — The shared wrapper object is the lock authority and a second wrapper would create split-brain serialization.
+- [Phase 11]: Typed resource-application registration is insert-only while ordinary certificates retain the legacy handler signature. — Overwrite requires explicit removal and weak TransactionManager ownership remains lifecycle-safe.
