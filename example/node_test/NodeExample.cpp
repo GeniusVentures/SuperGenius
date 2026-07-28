@@ -329,21 +329,23 @@ static void cmd_childbalance( const std::vector<std::string> &args, std::shared_
 
 static void cmd_listchildren( const std::vector<std::string> &args, std::shared_ptr<sgns::GeniusNode> node )
 {
-    if ( !check_arg_count( args, 2, "listchildren <main_address>" ) )
+    if ( !check_arg_count_range( args, 1, 2, "listchildren [main_address]" ) )
     {
         return;
     }
 
-    auto result = node->GetRegistrationsForMain( args[1] );
+    std::string main_address = ( args.size() == 2 ) ? args[1] : node->GetAddress();
+
+    auto result = node->GetRegistrationsForMain( main_address );
     if ( !result )
     {
-        logger->error( "Failed to list children for main address '{}': {}", args[1], result.error().message() );
+        logger->error( "Failed to list children for main address '{}': {}", main_address, result.error().message() );
         return;
     }
 
     if ( result.value().empty() )
     {
-        logger->info( "No children registered to '{}'.", args[1] );
+        logger->info( "No children registered to '{}'.", main_address );
         return;
     }
 
@@ -505,7 +507,7 @@ static void cmd_help( const std::vector<std::string> & /*args*/, std::shared_ptr
               << "  info                     Display account balance\n"
               << "  balance <token_id>       Display balance for a specific token\n"
               << "  childbalance <addr> [id]  Query a child wallet's balance\n"
-              << "  listchildren <addr>      List children registered to <addr>, with balances\n"
+              << "  listchildren [addr]      List children registered to <addr> (default: own address), with balances\n"
               << "  registerchild <addr>     Register this node as a child of <addr>\n"
               << "  ds                       Print the data store\n"
               << "  mint <amount>            Mint tokens\n"
