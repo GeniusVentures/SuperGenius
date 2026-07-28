@@ -146,10 +146,7 @@ namespace sgns
             std::chrono::seconds( 20 ),
             "client did not connect to its configured bootstrap full node" ) );
 
-        // Explicitly close the connection from the bootstrap side before tearing it down.
-        // GeniusNode shutdown closes its listener, but libp2p does not synchronously publish
-        // that remote disconnect to an in-process peer.
-        full_node_->GetPubSub()->GetHost()->disconnect( client_node_->GetPubSub()->GetHost()->getId() );
+        full_node_.reset();
 
         ASSERT_NO_FATAL_FAILURE( sgns::test::assertWaitForCondition(
             [&]()
@@ -159,8 +156,6 @@ namespace sgns
             },
             std::chrono::seconds( 20 ),
             "client did not observe the configured bootstrap going offline" ) );
-
-        full_node_.reset();
 
         full_node_ = GeniusNode::New( full_config_, FromPrivateKey{ std::string( FULL_NODE_PRIVATE_KEY ) } );
         ASSERT_TRUE( full_node_ );
