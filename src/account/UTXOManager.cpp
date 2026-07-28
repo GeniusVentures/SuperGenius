@@ -978,7 +978,10 @@ namespace sgns
     }
 
     outcome::result<UTXOManager::AtomicMintEffectResult>
-    UTXOManager::ApplyMintEffectsAtomically( const AtomicMintEffectRequest &request )
+    UTXOManager::ApplyMintEffectsAtomically(
+        const AtomicMintEffectRequest &request,
+        storage::BufferBatch *shared_batch,
+        const ConsensusStateStore::BurnReservationRecord *reservation )
     {
         if ( request.chain_id.empty() || request.burn_hash == base::Hash256{} ||
              request.winning_transaction_hash == base::Hash256{} ||
@@ -986,7 +989,33 @@ namespace sgns
              request.bridge_input.txid_hash_ != request.burn_hash ||
              request.bridge_input.output_idx_ != request.receipt_log_index ||
              request.bridge_input_owner.empty() ||
-             request.bridge_input_type != UTXOType::UTXO_BRIDGE )
+             request.bridge_input_type != UTXOType::UTXO_BRIDGE ||
+             request.certified_bridge_input.GetTxID() != request.burn_hash ||
+             request.certified_bridge_input.GetOutputIdx() != request.receipt_log_index ||
+             request.certified_bridge_input.GetOwnerAddress() != request.bridge_input_owner )
+        {
+            return outcome::failure( std::errc::invalid_argument );
+        }
+        if ( shared_batch )
+        {
+            if ( !reservation || request.slot_id != reservation->slot_id() ||
+                 request.chain_id != reservation->source_chain() ||
+                 request.burn_hash.toReadableString() != reservation->burn_hash() ||
+                 request.receipt_log_index != reservation->receipt_log_index() ||
+                 request.reservation_generation != reservation->generation() ||
+                 request.certificate_digest != reservation->certificate_digest() ||
+                 request.proposal_id != reservation->proposal_id() ||
+                 request.winner_id != reservation->winner_id() ||
+                 request.winning_transaction_hash.toReadableString() != request.winner_id ||
+                 ( reservation->state() !=
+                       ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION &&
+                   reservation->state() != ConsensusStateStore::BurnReservationRecord::CONSUMED ) )
+            {
+                logger_->error( "Atomic finalized mint identity does not match durable reservation" );
+                return outcome::failure( std::errc::state_not_recoverable );
+            }
+        }
+        else if ( reservation )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -1036,6 +1065,9 @@ namespace sgns
         auto existing_application = bridge_application_reader_( db, application_key );
         if ( existing_application.has_value() )
         {
+            if ( reservation &&
+                 reservation->state() != ConsensusStateStore::BurnReservationRecord::CONSUMED )
+                return outcome::failure( std::errc::state_not_recoverable );
             if ( existing_application.value().toString() != application_bytes )
             {
                 return outcome::failure( std::errc::state_not_recoverable );
@@ -1048,7 +1080,8 @@ namespace sgns
                      it->second.type != UTXOType::UTXO_NORMAL ||
                      it->second.utxo.GetOwnerAddress() != output.GetOwnerAddress() ||
                      it->second.utxo.GetAmount() != output.GetAmount() ||
-                     !it->second.utxo.GetTokenID().Equals( output.GetTokenID() ) )
+                     !it->second.utxo.GetTokenID().Equals( output.GetTokenID() ) ||
+                     it->second.utxo.GetOutputIdx() != output.GetOutputIdx() )
                 {
                     return outcome::failure( std::errc::state_not_recoverable );
                 }
@@ -1058,7 +1091,10 @@ namespace sgns
             if ( bridge_it == utxo_outpoints_.end() ||
                  bridge_it->second.state != UTXOState::UTXO_CONSUMED ||
                  bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
-                 bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner )
+                 bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner ||
+                 bridge_it->second.utxo.GetAmount() != request.certified_bridge_input.GetAmount() ||
+                 !bridge_it->second.utxo.GetTokenID().Equals(
+                     request.certified_bridge_input.GetTokenID() ) )
             {
                 return outcome::failure( std::errc::state_not_recoverable );
             }
@@ -1068,6 +1104,9 @@ namespace sgns
         {
             return outcome::failure( existing_application.error() );
         }
+        if ( reservation &&
+             reservation->state() == ConsensusStateStore::BurnReservationRecord::CONSUMED )
+            return outcome::failure( std::errc::state_not_recoverable );
 
         auto candidate_outpoints = utxo_outpoints_;
         auto candidate_addresses = address_outpoints_;
@@ -1090,7 +1129,8 @@ namespace sgns
                      entry.utxo.GetAmount() != output.GetAmount() ||
                      !entry.utxo.GetTokenID().Equals( output.GetTokenID() ) )
                 {
-                    return outcome::failure( std::errc::file_exists );
+                    logger_->error( "Atomic mint output conflicts with live UTXO state" );
+                    return outcome::failure( std::errc::state_not_recoverable );
                 }
             }
             else
@@ -1107,12 +1147,26 @@ namespace sgns
         BOOST_OUTCOME_TRY( InvokeFault( FaultStage::BridgeInputStage ) );
         const OutPoint bridge_outpoint{ request.burn_hash, request.receipt_log_index };
         auto bridge_it = candidate_outpoints.find( bridge_outpoint );
-        if ( bridge_it == candidate_outpoints.end() ||
-             bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
+        if ( bridge_it == candidate_outpoints.end() )
+        {
+            if ( !reservation )
+                return outcome::failure( std::errc::state_not_recoverable );
+            UTXOEntry materialized;
+            materialized.utxo = request.certified_bridge_input;
+            materialized.type = UTXOType::UTXO_BRIDGE;
+            auto inserted = candidate_outpoints.emplace( bridge_outpoint, std::move( materialized ) );
+            bridge_it = inserted.first;
+            candidate_addresses[request.bridge_input_owner].push_back( bridge_outpoint );
+        }
+        if ( bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
              bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner ||
+             bridge_it->second.utxo.GetAmount() != request.certified_bridge_input.GetAmount() ||
+             !bridge_it->second.utxo.GetTokenID().Equals(
+                 request.certified_bridge_input.GetTokenID() ) ||
              ( bridge_it->second.state != UTXOState::UTXO_READY &&
                bridge_it->second.state != UTXOState::UTXO_RESERVED ) )
         {
+            logger_->error( "Atomic mint bridge input conflicts with certified descriptor" );
             return outcome::failure( std::errc::state_not_recoverable );
         }
         bridge_it->second.state = UTXOState::UTXO_CONSUMED;
@@ -1122,7 +1176,9 @@ namespace sgns
             bridge_owner_points.end() );
         affected_owners.insert( request.bridge_input_owner );
 
-        auto batch = db->batch();
+        auto owned_batch = shared_batch ? nullptr : db->batch();
+        auto *batch = shared_batch ? shared_batch : owned_batch.get();
+        if ( !batch ) return outcome::failure( storage::DatabaseError::UNITIALIZED );
         for ( const auto &owner : affected_owners )
         {
             base::Buffer prefix;

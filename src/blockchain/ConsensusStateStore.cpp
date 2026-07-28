@@ -987,18 +987,33 @@ namespace sgns
                                                           uint64_t now_ms )
     {
         std::lock_guard lock( mutex_ );
-        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
-        if ( !current || !SameOutpoint( *current, outpoint ) || current->generation() != expected_generation ||
-             !SameFinality( *current, certificate_digest, proposal_id, winner_id ) )
+        return PrepareConsumedBurnReservationUnlocked(
+            batch,
+            FinalizedReservationIdentity{ slot_id, outpoint, expected_generation,
+                                          certificate_digest, proposal_id, winner_id },
+            now_ms );
+    }
+
+    outcome::result<ConsensusStateStore::BurnReservationRecord>
+    ConsensusStateStore::PrepareConsumedBurnReservationUnlocked(
+        storage::BufferBatch &batch,
+        const FinalizedReservationIdentity &identity,
+        uint64_t now_ms )
+    {
+        BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( identity.slot_id ) );
+        if ( !current || !SameOutpoint( *current, identity.outpoint ) ||
+             current->generation() != identity.generation ||
+             !SameFinality( *current, identity.certificate_digest,
+                            identity.proposal_id, identity.winner_id ) )
             return outcome::failure( ConsensusStateStoreError::Conflict );
         if ( current->state() == BurnReservationRecord::CONSUMED ) return *current;
         if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION || now_ms == 0 )
             return outcome::failure( ConsensusStateStoreError::Conflict );
         current->set_state( BurnReservationRecord::CONSUMED );
         current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
-        BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( slot_id ) ) );
+        BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( identity.slot_id ) ) );
         BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
-        BOOST_OUTCOME_TRY( batch.put( BufferOf( BurnSlotKey( slot_id ) ), value ) );
+        BOOST_OUTCOME_TRY( batch.put( BufferOf( BurnSlotKey( identity.slot_id ) ), value ) );
         return *current;
     }
 
@@ -1042,7 +1057,8 @@ namespace sgns
         std::lock_guard lock( mutex_ );
         BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( identity.slot_id ) );
         if ( !current ) return outcome::failure( ConsensusStateStoreError::Integrity );
-        if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION ||
+        if ( ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION &&
+               current->state() != BurnReservationRecord::CONSUMED ) ||
              !SameOutpoint( *current, identity.outpoint ) ||
              current->generation() != identity.generation ||
              current->certificate_digest() != identity.certificate_digest ||
@@ -1052,6 +1068,11 @@ namespace sgns
 
         auto batch = datastore_->batch();
         if ( !batch ) return outcome::failure( ConsensusStateStoreError::Storage );
-        return participant( *batch, *current );
+        // Preserve the live pre-stage state for replay classification while
+        // staging Consumed into the same participant-owned physical batch.
+        const auto live_state = *current;
+        BOOST_OUTCOME_TRY( PrepareConsumedBurnReservationUnlocked(
+            *batch, identity, current->updated_at_ms() ) );
+        return participant( *batch, live_state );
     }
 } // namespace sgns

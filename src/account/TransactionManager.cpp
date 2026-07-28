@@ -2118,40 +2118,6 @@ namespace sgns
         }
 
         auto &utxo_manager = account_m->GetUTXOManager();
-        if ( finalized_handle )
-        {
-            auto admitted = finalized_handle->store->ApplyFinalizedReservationBatch(
-                finalized_handle->identity, utxo_manager.AcquireStorage(),
-                []( storage::BufferBatch &batch,
-                    const ConsensusStateStore::BurnReservationRecord & ) -> outcome::result<void>
-                { return batch.commit(); } );
-            if ( !admitted ) return outcome::failure( admitted.error() );
-        }
-        std::string bridge_owner;
-        auto existing_application = utxo_manager.GetBridgeApplication(
-            tx->GetChainId(), burn_hash.value(), input.output_idx_ );
-        if ( existing_application.has_error() )
-        {
-            return outcome::failure( existing_application.error() );
-        }
-        if ( existing_application.value() )
-        {
-            if ( existing_application.value()->winning_transaction_hash != winner_hash.value() )
-            {
-                return outcome::failure( std::errc::state_not_recoverable );
-            }
-            bridge_owner = existing_application.value()->bridge_input_owner;
-        }
-        else
-        {
-            auto bridge = utxo_manager.GetUnconsumedUTXO( burn_hash.value(), input.output_idx_ );
-            if ( !bridge )
-            {
-                return outcome::failure( std::errc::state_not_recoverable );
-            }
-            bridge_owner = bridge->GetOwnerAddress();
-        }
-
         UTXOManager::AtomicMintEffectRequest request;
         request.winning_transaction_hash = winner_hash.value();
         request.chain_id = tx->GetChainId();
@@ -2159,9 +2125,33 @@ namespace sgns
         request.receipt_log_index = input.output_idx_;
         request.produced_outputs = std::move( outputs );
         request.bridge_input = input;
-        request.bridge_input_owner = std::move( bridge_owner );
+        request.bridge_input_owner = tx->GetSrcAddress();
         request.bridge_input_type = UTXOManager::UTXOType::UTXO_BRIDGE;
-        return utxo_manager.ApplyMintEffectsAtomically( request );
+        request.certified_bridge_input = GeniusUTXO(
+            burn_hash.value(), input.output_idx_, tx->GetAmount(), tx->GetTokenID(), tx->GetSrcAddress() );
+        if ( !finalized_handle )
+        {
+            return utxo_manager.ApplyMintEffectsAtomically( request );
+        }
+        request.slot_id = finalized_handle->identity.slot_id;
+        request.reservation_generation = finalized_handle->identity.generation;
+        request.certificate_digest = finalized_handle->identity.certificate_digest;
+        request.proposal_id = finalized_handle->identity.proposal_id;
+        request.winner_id = finalized_handle->identity.winner_id;
+        UTXOManager::AtomicMintEffectResult effect = UTXOManager::AtomicMintEffectResult::Applied;
+        auto applied = finalized_handle->store->ApplyFinalizedReservationBatch(
+            finalized_handle->identity, utxo_manager.AcquireStorage(),
+            [&]( storage::BufferBatch &batch,
+                 const ConsensusStateStore::BurnReservationRecord &reservation ) -> outcome::result<void>
+            {
+                BOOST_OUTCOME_TRY( auto result,
+                                   utxo_manager.ApplyMintEffectsAtomically(
+                                       request, &batch, &reservation ) );
+                effect = result;
+                return outcome::success();
+            } );
+        if ( !applied ) return outcome::failure( applied.error() );
+        return effect;
     }
 
     outcome::result<void> TransactionManager::ParseEscrowTransaction( const std::shared_ptr<GeniusTransaction> &tx )

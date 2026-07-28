@@ -1365,6 +1365,15 @@ TEST_F( TransactionManagerPendingLifecycleTest, SharedStoreApplicationHandleReac
     ASSERT_TRUE( applied );
     EXPECT_EQ( applied.value(), ConsensusManager::ApplicationDisposition::Applied );
     EXPECT_EQ( observed.load(), 1U );
+    auto consumed = expected_store->GetBurnReservation( expected_slot.value() );
+    ASSERT_TRUE( consumed && consumed.value() );
+    EXPECT_EQ( consumed.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    auto application = TransactionManagerPendingLifecycleTestAccess::Application(
+        *manager_, mint->GetChainId(), input.txid_hash_, input.output_idx_ );
+    ASSERT_TRUE( application && application.value() );
+    EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        input.txid_hash_, input.output_idx_ ) );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,

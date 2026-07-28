@@ -52,6 +52,8 @@ namespace sgns
             request.bridge_input = InputUTXOInfo{ burn, index, {} };
             request.bridge_input_owner = owner;
             request.bridge_input_type = UTXOManager::UTXOType::UTXO_BRIDGE;
+            request.certified_bridge_input = GeniusUTXO(
+                burn, index, outputs.front().GetAmount(), outputs.front().GetTokenID(), owner );
             return manager.ApplyMintEffectsAtomically( request );
         }
 
@@ -62,6 +64,53 @@ namespace sgns
             uint32_t index )
         {
             return manager.GetBridgeApplication( chain, burn, index );
+        }
+
+        static outcome::result<Result> ApplyFinalized(
+            UTXOManager &manager,
+            const std::shared_ptr<ConsensusStateStore> &store,
+            const ConsensusStateStore::FinalizedReservationIdentity &identity,
+            const base::Hash256 &winner,
+            const std::vector<GeniusUTXO> &outputs,
+            const std::string &owner,
+            uint64_t bridge_amount,
+            const TokenID &bridge_token )
+        {
+            UTXOManager::AtomicMintEffectRequest request;
+            request.winning_transaction_hash = winner;
+            request.chain_id = identity.outpoint.source_chain;
+            auto burn = base::Hash256::fromReadableString( identity.outpoint.burn_hash );
+            if ( !burn ) return outcome::failure( std::errc::invalid_argument );
+            request.burn_hash = burn.value();
+            request.receipt_log_index = identity.outpoint.receipt_log_index;
+            request.produced_outputs = outputs;
+            request.bridge_input = InputUTXOInfo{
+                burn.value(), identity.outpoint.receipt_log_index, {} };
+            request.bridge_input_owner = owner;
+            request.bridge_input_type = UTXOManager::UTXOType::UTXO_BRIDGE;
+            request.certified_bridge_input = GeniusUTXO(
+                burn.value(), identity.outpoint.receipt_log_index,
+                bridge_amount, bridge_token, owner );
+            request.slot_id = identity.slot_id;
+            request.reservation_generation = identity.generation;
+            request.certificate_digest = identity.certificate_digest;
+            request.proposal_id = identity.proposal_id;
+            request.winner_id = identity.winner_id;
+            Result result = Result::Applied;
+            auto applied = store->ApplyFinalizedReservationBatch(
+                identity, manager.AcquireStorage(),
+                [&]( storage::BufferBatch &batch,
+                     const ConsensusStateStore::BurnReservationRecord &reservation )
+                    -> outcome::result<void>
+                {
+                    BOOST_OUTCOME_TRY( auto effect,
+                                       manager.ApplyMintEffectsAtomically(
+                                           request, &batch, &reservation ) );
+                    result = effect;
+                    return outcome::success();
+                } );
+            if ( !applied ) return outcome::failure( applied.error() );
+            return result;
         }
     };
 }
@@ -720,4 +769,138 @@ TEST_F( UTXOManagerTest, AtomicMintApplicationSerializesOverlappingOrdinaryStore
     EXPECT_TRUE( final_reload->IsOutPointConsumed( burn2, 8 ) );
     EXPECT_TRUE( final_reload->GetUnconsumedUTXO( winner2, 0 ).has_value() );
     EXPECT_TRUE( final_reload->GetUnconsumedUTXO( unrelated, 0 ).has_value() );
+}
+
+TEST_F( UTXOManagerTest, AtomicFinalizedMintFailureRetryAndRestartReplayAreExact )
+{
+    using Stage = UTXOManagerTestAccess::Stage;
+    using Result = UTXOManagerTestAccess::Result;
+    const auto burn = crypto::sha2_256( std::vector<uint8_t>{ 0x61 } );
+    const auto winner = crypto::sha2_256( std::vector<uint8_t>{ 0x62 } );
+    const std::string chain = "11155111";
+    const uint32_t index = 17;
+    const std::string owner = "certified-bridge-owner";
+    const std::string destination = "certified-destination";
+    const std::vector<GeniusUTXO> outputs{
+        GeniusUTXO( winner, 0, 700, TOKEN_1, destination )
+    };
+    auto store = std::make_shared<ConsensusStateStore>( db_ );
+    ConsensusStateStore::BurnOutpoint outpoint{ chain, burn.toReadableString(), index };
+    const auto preimage = fmt::format( "mint-v2:{}:{}:{}", chain, burn.toReadableString(), index );
+    const auto slot = crypto::sha2_256(
+        std::vector<uint8_t>( preimage.begin(), preimage.end() ) );
+    auto created = store->CreateOrJoinBurnReservation(
+        slot.toReadableString(), outpoint, 10'000, 1 );
+    ASSERT_TRUE( created );
+    auto finalized = store->FinalizeBurnReservation(
+        slot.toReadableString(), outpoint, std::string( 64, 'a' ),
+        std::string( 64, 'b' ), winner.toReadableString(), 2 );
+    ASSERT_TRUE( finalized );
+    ConsensusStateStore::FinalizedReservationIdentity identity{
+        slot.toReadableString(), outpoint, finalized.value().generation(),
+        finalized.value().certificate_digest(), finalized.value().proposal_id(),
+        finalized.value().winner_id() };
+
+    UTXOManagerTestAccess::SetFault(
+        *utxo_manager,
+        []( Stage stage ) -> outcome::result<void>
+        {
+            if ( stage == Stage::AtomicMintBeforeBatchCommit )
+                return outcome::failure( std::errc::operation_canceled );
+            return outcome::success();
+        } );
+    auto failed = UTXOManagerTestAccess::ApplyFinalized(
+        *utxo_manager, store, identity, winner, outputs, owner, 700, TOKEN_1 );
+    UTXOManagerTestAccess::ResetFault( *utxo_manager );
+    ASSERT_TRUE( failed.has_error() );
+    auto pending = store->GetBurnReservation( identity.slot_id );
+    ASSERT_TRUE( pending && pending.value() );
+    EXPECT_EQ( pending.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION );
+    EXPECT_FALSE( UTXOManagerTestAccess::Application(
+        *utxo_manager, chain, burn, index ).value().has_value() );
+    EXPECT_FALSE( utxo_manager->GetUnconsumedUTXO( winner, 0 ).has_value() );
+    EXPECT_FALSE( utxo_manager->IsOutPointConsumed( burn, index ) );
+
+    auto applied = UTXOManagerTestAccess::ApplyFinalized(
+        *utxo_manager, store, identity, winner, outputs, owner, 700, TOKEN_1 );
+    ASSERT_TRUE( applied ) << applied.error().message();
+    EXPECT_EQ( applied.value(), Result::Applied );
+    auto consumed = store->GetBurnReservation( identity.slot_id );
+    ASSERT_TRUE( consumed && consumed.value() );
+    EXPECT_EQ( consumed.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    EXPECT_TRUE( UTXOManagerTestAccess::Application(
+        *utxo_manager, chain, burn, index ).value().has_value() );
+    EXPECT_TRUE( utxo_manager->IsOutPointConsumed( burn, index ) );
+    EXPECT_TRUE( utxo_manager->GetUnconsumedUTXO( winner, 0 ).has_value() );
+
+    utxo_manager->ReleaseStorage();
+    auto reloaded = std::make_shared<UTXOManager>(
+        std::string( PRIV_KEY ),
+        []( const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return std::vector( hashed.begin(), hashed.end() );
+        },
+        []( const std::string &, const std::vector<uint8_t> &signature,
+            const std::vector<uint8_t> &data )
+        {
+            auto hashed = crypto::sha2_256( data );
+            return signature == std::vector( hashed.begin(), hashed.end() );
+        } );
+    ASSERT_TRUE( reloaded->LoadUTXOs( db_ ) );
+    auto replay = UTXOManagerTestAccess::ApplyFinalized(
+        *reloaded, store, identity, winner, outputs, owner, 700, TOKEN_1 );
+    ASSERT_TRUE( replay );
+    EXPECT_EQ( replay.value(), Result::AlreadyApplied );
+    EXPECT_EQ( reloaded->GetUTXOs( destination ).size(), 1U );
+}
+
+TEST_F( UTXOManagerTest, ConsumedApplicationRejectsDifferentWinnerIdentityAndArtifacts )
+{
+    const auto burn = crypto::sha2_256( std::vector<uint8_t>{ 0x71 } );
+    const auto winner = crypto::sha2_256( std::vector<uint8_t>{ 0x72 } );
+    const auto other_winner = crypto::sha2_256( std::vector<uint8_t>{ 0x73 } );
+    const std::string chain = "11155111";
+    const uint32_t index = 18;
+    const std::string owner = "identity-owner";
+    const std::vector<GeniusUTXO> outputs{
+        GeniusUTXO( winner, 0, 800, TOKEN_1, "identity-destination" )
+    };
+    const auto preimage = fmt::format( "mint-v2:{}:{}:{}", chain, burn.toReadableString(), index );
+    const auto slot = crypto::sha2_256( std::vector<uint8_t>( preimage.begin(), preimage.end() ) );
+    auto store = std::make_shared<ConsensusStateStore>( db_ );
+    ConsensusStateStore::BurnOutpoint outpoint{ chain, burn.toReadableString(), index };
+    ASSERT_TRUE( store->CreateOrJoinBurnReservation(
+        slot.toReadableString(), outpoint, 10'000, 1 ) );
+    auto finalized = store->FinalizeBurnReservation(
+        slot.toReadableString(), outpoint, std::string( 64, 'c' ),
+        std::string( 64, 'd' ), winner.toReadableString(), 2 );
+    ASSERT_TRUE( finalized );
+    ConsensusStateStore::FinalizedReservationIdentity identity{
+        slot.toReadableString(), outpoint, finalized.value().generation(),
+        finalized.value().certificate_digest(), finalized.value().proposal_id(),
+        finalized.value().winner_id() };
+    auto first_apply = UTXOManagerTestAccess::ApplyFinalized(
+        *utxo_manager, store, identity, winner, outputs, owner, 800, TOKEN_1 );
+    ASSERT_TRUE( first_apply ) << first_apply.error().message();
+
+    auto wrong_identity = identity;
+    wrong_identity.winner_id = other_winner.toReadableString();
+    auto identity_error = UTXOManagerTestAccess::ApplyFinalized(
+        *utxo_manager, store, wrong_identity, other_winner,
+        { GeniusUTXO( other_winner, 0, 800, TOKEN_1, "identity-destination" ) },
+        owner, 800, TOKEN_1 );
+    EXPECT_TRUE( identity_error.has_error() );
+
+    auto changed_outputs = outputs;
+    changed_outputs.front() = GeniusUTXO(
+        winner, 0, 801, TOKEN_1, "identity-destination" );
+    auto artifact_error = UTXOManagerTestAccess::ApplyFinalized(
+        *utxo_manager, store, identity, winner, changed_outputs, owner, 800, TOKEN_1 );
+    ASSERT_TRUE( artifact_error.has_error() );
+    EXPECT_EQ( artifact_error.error(),
+               std::make_error_code( std::errc::state_not_recoverable ) );
+    EXPECT_EQ( utxo_manager->GetUnconsumedUTXO( winner, 0 )->GetAmount(), 800U );
 }
