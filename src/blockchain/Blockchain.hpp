@@ -195,6 +195,12 @@ namespace sgns
         bool RegisterProposalCleanupHandler( std::string_view                         subject_type,
                                              ConsensusManager::ProposalCleanupHandler handler );
 
+        bool RegisterResourceAdmissionHandler( std::string_view                         subject_type,
+                                               ConsensusManager::ResourceAdmissionHandler handler );
+
+        outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>> GetBurnReservation(
+            const ConsensusStateStore::BurnOutpoint &outpoint ) const;
+
         /**
          * @brief Registers a slot key handler for a specific embedded transaction oneof case.
          * @param[in] transaction_case EmbeddedTransaction oneof case number (e.g. kMintV2).

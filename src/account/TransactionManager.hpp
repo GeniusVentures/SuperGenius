@@ -698,6 +698,8 @@ namespace sgns
         outcome::result<std::string>                        GetTransactionCID( const std::string &tx_hash ) const;
         outcome::result<ConsensusManager::ValidationResult> HandleNonceConsensusSubject(
             const ConsensusManager::Subject &subject );
+        outcome::result<std::optional<ConsensusStateStore::BurnOutpoint>> DescribeConsensusResource(
+            const ConsensusManager::Subject &subject, const std::string &slot_id ) const;
         ConsensusManager::ValidationResult ValidateTransactionForConsensus(
             const std::shared_ptr<GeniusTransaction> &tx ) const;
         bool                   CheckTransactionWellFormed( const GeniusTransaction &tx ) const;

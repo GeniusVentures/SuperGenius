@@ -906,6 +906,30 @@ namespace sgns
         proposal_cleanup_handlers_.erase( type_hash.value() );
     }
 
+    bool ConsensusManager::RegisterResourceAdmissionHandler( std::string_view subject_type,
+                                                              ResourceAdmissionHandler handler )
+    {
+        if ( !handler ) return false;
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() ) return false;
+        std::unique_lock lock( resource_admission_handlers_mutex_ );
+        return resource_admission_handlers_.emplace( type_hash.value(), std::move( handler ) ).second;
+    }
+
+    void ConsensusManager::UnregisterResourceAdmissionHandler( std::string_view subject_type )
+    {
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() ) return;
+        std::unique_lock lock( resource_admission_handlers_mutex_ );
+        resource_admission_handlers_.erase( type_hash.value() );
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
+    ConsensusManager::GetBurnReservation( const ConsensusStateStore::BurnOutpoint &outpoint ) const
+    {
+        return state_store_->GetBurnReservation( outpoint );
+    }
+
     void ConsensusManager::SetPendingLifecycleConfig( PendingLifecycleConfig config )
     {
         std::lock_guard lock( proposals_mutex_ );
@@ -1216,11 +1240,15 @@ namespace sgns
             if ( restored_final_slots_.count( slot_key ) != 0 )
             {
                 slot_state.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
+                resource_admissions_inflight_.erase( slot_key );
+                slot_cv_.notify_all();
                 return;
             }
             if ( restored_safety_slots_.count( slot_key ) != 0 )
             {
                 slot_state.lifecycle = SlotState::Lifecycle::SafetyViolation;
+                resource_admissions_inflight_.erase( slot_key );
+                slot_cv_.notify_all();
                 return;
             }
             if ( slot_state.lifecycle == SlotState::Lifecycle::Empty ||
@@ -1274,6 +1302,8 @@ namespace sgns
             {
                 slot_state.late_candidate_ids.push_back( proposal.proposal_id() );
             }
+            resource_admissions_inflight_.erase( slot_key );
+            slot_cv_.notify_all();
         }
 
         auto pending_votes = TakePendingVotes( proposal.proposal_id() );
@@ -1283,6 +1313,77 @@ namespace sgns
         }
 
         if ( replay ) ReplayDurableVote( slot_key, replay_generation );
+    }
+
+    void ConsensusManager::ReleaseProposalAdmission( const Proposal &proposal, const std::string &slot_key )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        const auto       slot = slot_states_.find( slot_key );
+        const auto       active = slot != slot_states_.end() &&
+                            ( slot->second.best_proposal_id == proposal.proposal_id() ||
+                              slot->second.frozen_proposal_id == proposal.proposal_id() ||
+                              slot->second.durable_proposal_id == proposal.proposal_id() ||
+                              slot->second.reserved_finalization_proposal_id == proposal.proposal_id() ||
+                              std::find( slot->second.late_candidate_ids.begin(),
+                                         slot->second.late_candidate_ids.end(),
+                                         proposal.proposal_id() ) != slot->second.late_candidate_ids.end() );
+        if ( !active && pending_entries_.count( proposal.proposal_id() ) == 0 )
+        {
+            proposals_.erase( proposal.proposal_id() );
+            pending_votes_.erase( proposal.proposal_id() );
+        }
+        resource_admissions_inflight_.erase( slot_key );
+        slot_cv_.notify_all();
+    }
+
+    bool ConsensusManager::AdmitProposalResources( const Proposal &proposal, const std::string &slot_key )
+    {
+        {
+            std::unique_lock lock( proposals_mutex_ );
+            slot_cv_.wait( lock, [&]() { return resource_admissions_inflight_.count( slot_key ) == 0; } );
+            if ( restored_final_slots_.count( slot_key ) != 0 || restored_safety_slots_.count( slot_key ) != 0 )
+                return false;
+            resource_admissions_inflight_.insert( slot_key );
+        }
+
+        ResourceAdmissionHandler handler;
+        {
+            std::shared_lock lock( resource_admission_handlers_mutex_ );
+            auto it = resource_admission_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            if ( it != resource_admission_handlers_.end() ) handler = it->second;
+        }
+        if ( !handler ) return true;
+
+        auto descriptor = handler( proposal.subject(), slot_key );
+        if ( descriptor.has_error() )
+        {
+            ReleaseProposalAdmission( proposal, slot_key );
+            return false;
+        }
+        if ( !descriptor.value().has_value() ) return true;
+
+        const auto window = timestamp_window_.count() < 0
+                              ? 0ULL
+                              : static_cast<uint64_t>( timestamp_window_.count() );
+        const auto horizon = std::numeric_limits<uint64_t>::max() - proposal.timestamp() < window
+                               ? std::numeric_limits<uint64_t>::max()
+                               : proposal.timestamp() + window;
+        auto admitted = state_store_->CreateOrJoinBurnReservation(
+            slot_key, descriptor.value().value(), horizon, CurrentTimeMs() );
+        if ( admitted.has_error() )
+        {
+            ReleaseProposalAdmission( proposal, slot_key );
+            return false;
+        }
+
+        std::lock_guard lock( proposals_mutex_ );
+        if ( restored_final_slots_.count( slot_key ) != 0 || restored_safety_slots_.count( slot_key ) != 0 )
+        {
+            resource_admissions_inflight_.erase( slot_key );
+            slot_cv_.notify_all();
+            return false;
+        }
+        return true;
     }
 
     void ConsensusManager::ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now )
@@ -1746,6 +1847,7 @@ namespace sgns
             return;
         }
 
+        if ( !AdmitProposalResources( proposal, slot_result.value() ) ) return;
         ContinueProposalAfterSubject( proposal, slot_result.value() );
     }
 
@@ -1861,7 +1963,15 @@ namespace sgns
             }
         }
 
-        for ( const auto &proposal : expired ) ClearProposalSlot( proposal );
+        for ( const auto &proposal : expired )
+        {
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                proposals_.erase( proposal.proposal_id() );
+                pending_votes_.erase( proposal.proposal_id() );
+            }
+            FireProposalCleanupCallbacks( proposal );
+        }
     }
 
     void ConsensusManager::AddPendingVote( const Vote &vote )
@@ -2643,7 +2753,8 @@ namespace sgns
             {
                 std::unique_lock lock( proposals_mutex_ );
                 auto &slot = slot_states_[slot_id];
-                while ( slot.lifecycle == SlotState::Lifecycle::SigningPublishing ||
+                while ( resource_admissions_inflight_.count( slot_id ) != 0 ||
+                        slot.lifecycle == SlotState::Lifecycle::SigningPublishing ||
                         slot.lifecycle == SlotState::Lifecycle::PublishingReplay ||
                         slot.lifecycle == SlotState::Lifecycle::Finalizing )
                 {
@@ -2651,10 +2762,11 @@ namespace sgns
                     if ( finalization_stage_observer_ ) finalization_stage_observer_( "waiting-publication" );
                     slot_cv_.wait(
                         lock,
-                        [this, &slot]()
+                        [this, &slot, &slot_id]()
                         {
                             return stop_timer_.load() ||
-                                   ( slot.lifecycle != SlotState::Lifecycle::SigningPublishing &&
+                                   ( resource_admissions_inflight_.count( slot_id ) == 0 &&
+                                     slot.lifecycle != SlotState::Lifecycle::SigningPublishing &&
                                      slot.lifecycle != SlotState::Lifecycle::PublishingReplay &&
                                      slot.lifecycle != SlotState::Lifecycle::Finalizing );
                         } );
@@ -3089,6 +3201,7 @@ namespace sgns
             return;
         }
 
+        if ( !AdmitProposalResources( proposal, slot_key ) ) return;
         ContinueProposalAfterSubject( proposal, slot_key );
     }
 
@@ -3179,6 +3292,7 @@ namespace sgns
                 continue;
             }
 
+            if ( !AdmitProposalResources( proposal, slot_result.value() ) ) continue;
             ContinueProposalAfterSubject( proposal, slot_result.value() );
         }
         return outcome::success();

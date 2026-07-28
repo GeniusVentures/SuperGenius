@@ -1819,6 +1819,18 @@ namespace sgns
         return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
     }
 
+    bool Blockchain::RegisterResourceAdmissionHandler( std::string_view subject_type,
+                                                       ConsensusManager::ResourceAdmissionHandler handler )
+    {
+        return consensus_manager_->RegisterResourceAdmissionHandler( subject_type, std::move( handler ) );
+    }
+
+    outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
+    Blockchain::GetBurnReservation( const ConsensusStateStore::BurnOutpoint &outpoint ) const
+    {
+        return consensus_manager_->GetBurnReservation( outpoint );
+    }
+
     void Blockchain::RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler )
     {
         (void) ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
