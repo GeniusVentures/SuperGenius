@@ -116,6 +116,8 @@ Reasoning:
 - One concrete lead (hook-under-lock reentrancy in `PutElems`) was investigated, fixed as a genuine improvement, and empirically ruled out as the SOLE cause via 4 fresh test runs post-fix.
 - Recommend: **do not block Phase 12** on this, but **do require a dedicated, tracked follow-up phase/issue** to continue root-causing the remaining instability (a fresh profiling/instrumentation pass on `multi_account_test`'s specific multi-node construction sequence is the logical next step, since the lock-scope lead has now been exhausted).
 
+**Scope update (2026-07-28, during Phase 12 verification):** Phase 12's verifier, while independently re-running tests (not just trusting the executor's single-run claim), found `blockchain_genesis_test` also intermittently aborts (1/3 reruns) — the same class of multi-node CRDT/GlobalDB instability documented above, not a new/separate regression, and not caused by Phase 12's actual code change (a pure signature-verify callee substitution touching neither test's exercised path). Per user decision, this is folded into this same tracked item rather than opened as a separate one — the dedicated follow-up's scope is hereby broadened to cover both `multi_account_test` and `blockchain_genesis_test` as symptoms of one underlying multi-node instability class. Both tests are also independently pre-filed as known-failing on GitHub (`#302` and `#301` respectively, filed 2026-06-01, predating this milestone), consistent with this being a pre-existing, cross-cutting issue rather than something newly introduced.
+
 ---
 
 _Verified: 2026-07-27_
