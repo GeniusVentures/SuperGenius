@@ -98,10 +98,10 @@ namespace sgns::crdt
         }
 
         BOOST_OUTCOME_TRY( host_->listen( listen_to ) );
+        BOOST_OUTCOME_TRY( this->StartSync() );
+        host_->start();
 
-        auto startResult = this->StartSync();
-
-        return startResult;
+        return outcome::success();
     }
 
     outcome::result<ipfs_lite::ipfs::graphsync::Subscription> GraphsyncDAGSyncer::RequestNode(
@@ -485,8 +485,6 @@ namespace sgns::crdt
         {
             return outcome::failure( boost::system::error_code{} );
         }
-        host_->start();
-
         started_ = true;
 
         return outcome::success();
@@ -497,10 +495,6 @@ namespace sgns::crdt
         if ( graphsync_ != nullptr )
         {
             graphsync_->stop();
-        }
-        if ( host_ != nullptr )
-        {
-            host_->stop();
         }
         started_ = false;
     }
