@@ -600,7 +600,7 @@ static void periodic_processing( std::shared_ptr<sgns::GeniusNode> genius_node )
 static std::string generate_eth_private_key()
 {
     std::random_device                      rd;
-    std::mt19937                            gen( 42 );
+    std::mt19937                            gen( rd() );
     std::uniform_int_distribution<uint16_t> dist( 0, 255 );
 
     std::ostringstream oss;
@@ -653,13 +653,26 @@ int main( int argc, char *argv[] )
         logger->info( "Using custom path: {}", path_override );
     }
 
-    std::string eth_private_key = generate_eth_private_key();
-    logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
+    // Check whether an identity already exists on disk (secure_storage_id).
+    // If so, load it; otherwise generate a fresh Ethereum private key and persist it.
+    auto available_accounts = sgns::GeniusAccount::GetAvailableAccounts( DEV_CONFIG.BaseWritePath );
 
-    // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
-    // the shipped network_config.json (both operator-managed, like a real deployment).
-    auto node_instance =
-        sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
+    std::shared_ptr<sgns::GeniusNode> node_instance;
+
+    if ( !available_accounts.empty() )
+    {
+        logger->info( "Found existing account on disk ({} stored), loading...", available_accounts.size() );
+        node_instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::NewAccount{} );
+    }
+    else
+    {
+        std::string eth_private_key = generate_eth_private_key();
+        logger->info( "No existing account found — generated new Ethereum Private Key: {}", eth_private_key );
+
+        // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
+        // the shipped network_config.json (both operator-managed, like a real deployment).
+        node_instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
+    }
 
     std::thread status_thread;
 
