@@ -4,19 +4,19 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-28T17:31:47.735Z"
-last_activity: 2026-07-28 -- Phase 11 planning complete
+last_updated: "2026-07-28T19:05:16.089Z"
+last_activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 32
-  completed_plans: 23
+  completed_plans: 24
   percent: 50
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
 
-**Last updated:** 2026-07-27
+**Last updated:** 2026-07-28
 **Milestone:** v2.0 — Slot-Scoped Consensus Finality
 **Current Phase:** 11
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations)
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-07-28 -- Phase 11 planning complete
+Plan: 1 of 9
+Status: In progress
+Last activity: 2026-07-28 -- Completed Phase 11 Plan 01 deterministic harness
 
 ## Roadmap Snapshot
 
@@ -40,7 +40,7 @@ Last activity: 2026-07-28 -- Phase 11 planning complete
 |-------|------|--------|--------------|
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
-| 11 | Slot-Owned Bridge Burn Reservations | ◆ ready to plan | BURN-01..05 |
+| 11 | Slot-Owned Bridge Burn Reservations | ◆ in progress | BURN-01..05 |
 | 12 | Consensus Race and Compatibility Verification | ○ blocked by 9-11 | TEST-01..06 |
 
 ## Key Decisions
@@ -66,13 +66,13 @@ Last activity: 2026-07-28 -- Phase 11 planning complete
 
 ## Operator Next Steps
 
-- Discuss and plan Phase 11 slot-owned bridge burn reservations.
+- Execute Phase 11 Plan 02 durable reservation store.
 
 ## Session Continuity
 
-**Last session:** 2026-07-28T16:07:58.158Z
-**Stopped at:** Phase 11 context gathered
-**Resume file:** .planning/phases/11-slot-owned-bridge-burn-reservations/11-CONTEXT.md
+**Last session:** 2026-07-28T19:04:26.412Z
+**Stopped at:** Completed 11-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -101,6 +101,7 @@ Last activity: 2026-07-28 -- Phase 11 planning complete
 | Phase 10 P05 | 41 min | 1 tasks | 5 files |
 | Phase 10 P06 | 44 min | 1 tasks | 8 files |
 | Phase 10 P07 | 37 min | 1 tasks | 5 files |
+| Phase 11 P01 | 32 min | 1 tasks | 2 files |
 
 ## Decisions
 
@@ -154,3 +155,5 @@ Last activity: 2026-07-28 -- Phase 11 planning complete
 - [Phase 10]: Restored safety loads both conflict proposal IDs before replay so slot-local vote publication remains suppressed after restart.
 - [Phase 10]: Close rejects new consensus activity and drains leased callbacks, handlers, recovery, and timer work before returning. — The manager lifetime boundary must prevent post-destruction work and strong-owner self-join cycles.
 - [Phase 10]: Synchronous CRDT certificate callbacks journal immediate recovery instead of finalizing before the outer merge commits. — Nested GraphSync persistence on the CRDT processing worker deadlocks its own outer WaitForJob.
+- [Phase 11]: Wave 0 exercises an existing strict local consensus record so restart durability is real without introducing reservation production behavior early. — Plan 11-01 is test infrastructure only and must preserve the Phase 12 and production-behavior scope boundary.
+- [Phase 11]: Future Phase 11 production hooks remain private and friend-only; the harness adds no public test setters. — Plan 11-01 is test infrastructure only and must preserve the Phase 12 and production-behavior scope boundary.

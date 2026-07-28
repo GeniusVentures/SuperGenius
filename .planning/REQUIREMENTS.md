@@ -35,11 +35,11 @@
 
 ### Bridge Reservation Lifecycle
 
-- [ ] **BURN-01**: Bridge proposal validation remains side-effect-free; after a valid mint proposal is admitted to consensus, the node reserves its canonical burn under the slot identity.
-- [ ] **BURN-02**: Valid competing proposals for the same burn share the slot-owned reservation, so selecting a better proposal does not require releasing or reacquiring the burn.
-- [ ] **BURN-03**: Rejecting, failing, or cleaning up one losing proposal cannot release a burn reservation while another candidate or finalized certificate still owns the slot.
-- [ ] **BURN-04**: Observing the slot certificate transitions the burn reservation to consumed for the winning mint before proposal cleanup can admit another spender.
-- [ ] **BURN-05**: A reservation returns to ready only when the entire slot is abandoned, no candidate remains, no certificate exists, and every outstanding vote for the slot is cryptographically expired.
+- [x] **BURN-01**: Bridge proposal validation remains side-effect-free; after a valid mint proposal is admitted to consensus, the node reserves its canonical burn under the slot identity.
+- [x] **BURN-02**: Valid competing proposals for the same burn share the slot-owned reservation, so selecting a better proposal does not require releasing or reacquiring the burn.
+- [x] **BURN-03**: Rejecting, failing, or cleaning up one losing proposal cannot release a burn reservation while another candidate or finalized certificate still owns the slot.
+- [x] **BURN-04**: Observing the slot certificate transitions the burn reservation to consumed for the winning mint before proposal cleanup can admit another spender.
+- [x] **BURN-05**: A reservation returns to ready only when the entire slot is abandoned, no candidate remains, no certificate exists, and every outstanding vote for the slot is cryptographically expired.
 
 ### Compatibility and Verification
 
@@ -93,11 +93,11 @@
 | VOTE-05 | Phase 10 | Complete |
 | VOTE-06 | Phase 10 | Complete |
 | VOTE-07 | Phase 10 | Complete |
-| BURN-01 | Phase 11 | Pending |
-| BURN-02 | Phase 11 | Pending |
-| BURN-03 | Phase 11 | Pending |
-| BURN-04 | Phase 11 | Pending |
-| BURN-05 | Phase 11 | Pending |
+| BURN-01 | Phase 11 | Complete |
+| BURN-02 | Phase 11 | Complete |
+| BURN-03 | Phase 11 | Complete |
+| BURN-04 | Phase 11 | Complete |
+| BURN-05 | Phase 11 | Complete |
 | COMP-01 | Phase 9 | Complete |
 | COMP-02 | Phase 9 | Complete |
 | TEST-01 | Phase 12 | Pending |
