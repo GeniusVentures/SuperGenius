@@ -3228,9 +3228,10 @@ namespace sgns
         }
 
         ApplicationDisposition disposition = ApplicationDisposition::Retryable;
+        std::optional<ConsensusStateStore::FinalizedReservationIdentity> expected_burn_identity;
         if ( application_handler && burn_reservation )
         {
-            ConsensusStateStore::FinalizedReservationIdentity identity{
+            expected_burn_identity = ConsensusStateStore::FinalizedReservationIdentity{
                 slot_id,
                 { burn_reservation->source_chain(), burn_reservation->burn_hash(),
                   burn_reservation->receipt_log_index() },
@@ -3240,13 +3241,60 @@ namespace sgns
                 winner_id };
             auto handled = application_handler(
                 winner_id, normalized.certificate,
-                FinalizedReservationApplicationHandle{ state_store_, std::move( identity ) } );
+                FinalizedReservationApplicationHandle{ state_store_, *expected_burn_identity } );
             if ( handled ) disposition = handled.value();
         }
         else
         {
             auto handled = handler( winner_id, normalized.certificate );
             if ( handled && handled.value() == Check::Approve ) disposition = ApplicationDisposition::Applied;
+        }
+        const auto restore_pending = [&]()
+        {
+            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
+            auto pending = state_store_->GetProcess( slot_id );
+            if ( pending && pending.value() )
+            {
+                std::lock_guard lock( restored_state_mutex_ );
+                restored_processes_[slot_id] = pending.value().value();
+            }
+            release_processing();
+        };
+        if ( expected_burn_identity &&
+             ( disposition == ApplicationDisposition::Applied ||
+               disposition == ApplicationDisposition::AlreadyApplied ) )
+        {
+            auto durable = state_store_->GetBurnReservation( expected_burn_identity->slot_id );
+            if ( !durable || !durable.value() )
+            {
+                restore_pending();
+                return FinalizeResult::PendingApplication;
+            }
+            const auto &current = durable.value().value();
+            const bool exact_identity =
+                current.slot_id() == expected_burn_identity->slot_id &&
+                current.source_chain() == expected_burn_identity->outpoint.source_chain &&
+                current.burn_hash() == expected_burn_identity->outpoint.burn_hash &&
+                current.receipt_log_index() == expected_burn_identity->outpoint.receipt_log_index &&
+                current.generation() == expected_burn_identity->generation &&
+                current.certificate_digest() == expected_burn_identity->certificate_digest &&
+                current.proposal_id() == expected_burn_identity->proposal_id &&
+                current.winner_id() == expected_burn_identity->winner_id;
+            if ( exact_identity &&
+                 current.state() == ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
+            {
+                restore_pending();
+                return FinalizeResult::PendingApplication;
+            }
+            if ( exact_identity &&
+                 current.state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR )
+            {
+                release_processing();
+                return FinalizeResult::AlreadyFinalized;
+            }
+            if ( !exact_identity ||
+                 current.state() != ConsensusStateStore::BurnReservationRecord::CONSUMED )
+                disposition = ApplicationDisposition::Irreconcilable;
         }
         if ( disposition == ApplicationDisposition::Irreconcilable )
         {
@@ -3268,14 +3316,7 @@ namespace sgns
         }
         if ( disposition == ApplicationDisposition::Retryable )
         {
-            (void) state_store_->RestorePending( slot_id, CurrentTimeMs() );
-            auto pending = state_store_->GetProcess( slot_id );
-            if ( pending && pending.value() )
-            {
-                std::lock_guard lock( restored_state_mutex_ );
-                restored_processes_[slot_id] = pending.value().value();
-            }
-            release_processing();
+            restore_pending();
             return FinalizeResult::PendingApplication;
         }
         if ( !state_store_->MarkComplete( slot_id, CurrentTimeMs() ) )
