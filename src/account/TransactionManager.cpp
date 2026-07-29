@@ -3300,7 +3300,9 @@ namespace sgns
                     tx_hash );
                 // METRICS-01: Certificate fallback deserialization failure
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::ApplicationDisposition::Applied;
+                return finalized_handle
+                           ? ConsensusManager::ApplicationDisposition::Irreconcilable
+                           : ConsensusManager::ApplicationDisposition::Applied;
             }
             const auto &nonce_subject = nonce_subject_result.value();
 
@@ -3313,7 +3315,9 @@ namespace sgns
                     full_node_m,
                     __func__,
                     tx_hash );
-                return ConsensusManager::ApplicationDisposition::Applied;
+                return finalized_handle
+                           ? ConsensusManager::ApplicationDisposition::Irreconcilable
+                           : ConsensusManager::ApplicationDisposition::Applied;
             }
 
             auto tx_result = DeSerializeEmbeddedTransaction( nonce_subject.transaction() );
@@ -3327,7 +3331,9 @@ namespace sgns
                     __func__,
                     tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::ApplicationDisposition::Applied;
+                return finalized_handle
+                           ? ConsensusManager::ApplicationDisposition::Irreconcilable
+                           : ConsensusManager::ApplicationDisposition::Applied;
             }
             tx = tx_result.value();
 
@@ -3341,7 +3347,9 @@ namespace sgns
                                                   __func__,
                                                   tx_hash );
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
-                return ConsensusManager::ApplicationDisposition::Applied;
+                return finalized_handle
+                           ? ConsensusManager::ApplicationDisposition::Irreconcilable
+                           : ConsensusManager::ApplicationDisposition::Applied;
             }
 
             auto result = ChangeTransactionState(
