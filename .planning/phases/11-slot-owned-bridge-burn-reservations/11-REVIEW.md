@@ -7,67 +7,64 @@ info: 0
 total: 3
 depth: standard
 phase: 11-slot-owned-bridge-burn-reservations
+reviewed_at: 2026-07-29
 ---
 
 # Phase 11 Code Review
 
-## Scope and result
+## Result
 
-Reviewed the 18 listed production, schema, build, and test files at standard depth. The review traced reservation creation/join, reciprocal RocksDB records, startup restoration, post-validation admission, certificate finalization, shared-store application, one-batch UTXO consumption, abandonment/ABA checks, shutdown draining, and the associated tests.
+The two prior phase-blocking gaps are closed in the current code. Resource-bearing `Applied` and `AlreadyApplied` dispositions now require an exact durable `CONSUMED` reread before completion and cleanup, and an exact post-consumption contradiction can advance monotonically to `CONSUMED_SAFETY_ERROR` while retaining reciprocal protection. The focused post-gap regression slice passed 7/7.
 
-The reciprocal slot/outpoint writes and deletions are batched, admission persists before candidate visibility, finalization persists burn protection before application and cleanup, the finalized application handle owns the exact `ConsensusStateStore`, UTXO/application/reservation consumption shares one physical batch, and reconciliation uses generation plus candidate-horizon checks. Three lifecycle gaps remain.
+Three warnings remain. None currently permits release or reuse of a finalized burn, but one weakens exact terminal identity handling, one leaves same-process handler ownership unrecoverable, and one leaves the promised cross-component corruption recovery path untested.
 
 ## Findings
 
-### WR-01 — `Applied` is trusted without proving the burn reservation was consumed
+### WR-01 — Terminal burn state short-circuits without matching the authoritative certificate identity
 
 **Severity:** Warning
 
 **Evidence:**
 
-- `src/blockchain/Consensus.cpp:3206-3225` accepts the application handler's disposition without rereading the durable reservation.
-- `src/blockchain/Consensus.cpp:3257-3277` marks the certificate process `COMPLETE`, moves the slot to `Applied`, and clears proposals for every non-`Retryable`, non-`Irreconcilable` disposition.
-- `src/account/TransactionManager.cpp:3383-3408` returns `ApplicationDisposition::Applied` when an embedded transaction cannot be deserialized or fails its hash binding, even when a finalized reservation handle is present. No UTXO, application record, or `Consumed` reservation transition occurs on those paths.
-- `test/src/blockchain/consensus_burn_reservation_test.cpp:1237-1267` uses a handler that returns `Applied` without consuming the reservation. The test checks that the reservation is finalized before the handler, but does not assert the required postcondition after finalization.
+- `src/blockchain/Consensus.cpp:3148-3150` verifies the process record against the current certificate, but `src/blockchain/Consensus.cpp:3162-3171` treats any readable `SAFETY_ERROR` or `CONSUMED_SAFETY_ERROR` record at the slot as terminal without comparing its source-chain/outpoint, certificate digest, proposal ID, or winner ID to the current certificate.
+- `src/blockchain/ConsensusStateStore.cpp:679-704` validates each burn record structurally, but does not and cannot cross-check it against the certificate/process record. Startup performs that separate finality comparison at `src/blockchain/Consensus.cpp:421-448`; the live finalization path does not.
+- `test/src/blockchain/consensus_burn_reservation_test.cpp:1685-1704` covers restart and duplicate delivery only for an exactly matching terminal record; there is no live-path mismatch test.
 
-**Impact:** A certified mint can be durably recorded as completely applied and proposal cleanup can run while its reservation remains `FINALIZED_PENDING_APPLICATION` and its mint effects are absent. The burn remains unavailable, so this is fail-closed against reminting, but the exact winner is no longer automatically retried and the durable process/reservation states contradict each other after restart. This violates the successful `FinalizedPendingApplication -> Consumed` lifecycle and the exact-winner retry contract.
+**Impact:** A runtime-corrupted or independently written terminal record for the canonical slot can suppress the exact authoritative winner, mark certificate work done through the caller's `AlreadyFinalized` path, and install `SafetyViolation` without recording the identity contradiction. This remains fail-closed for burn reuse, but violates the phase's exact-winner/identity contract and can permanently hide recoverable authoritative work behind unrelated terminal data.
 
-**Suggested remedy:** Before `MarkComplete`, reread the exact reservation whenever `burn_reservation` is present and require the same generation/finality identity in `CONSUMED`. Treat a missing or still-final-pending postcondition as `Retryable` (or `Irreconcilable` when the handler explicitly reports invalid certified data). In `TransactionManager`, do not return `Applied` for certificate fallback decode/hash failures when `finalized_handle` is present; classify them as `Irreconcilable`. Add an integrated test where the application handler returns `Applied` without calling the shared-batch API and assert that process completion/cleanup is rejected, plus finalized-handle tests for malformed and hash-mismatched embedded mint data.
+**Suggested remedy:** Before the terminal short-circuit, compare the decoded burn outpoint plus certificate digest, proposal ID, and winner ID against the process/certificate identity. Treat any mismatch as an integrity/storage failure or persist a separately defined identity-conflict safety record; do not return `AlreadyFinalized` for a merely same-slot terminal enum. Add a focused live-delivery mismatch test.
 
-### WR-02 — A contradiction discovered after `Consumed` cannot enter durable `SafetyError`
-
-**Severity:** Warning
-
-**Evidence:**
-
-- `src/account/UTXOManager.cpp:1025-1069` correctly returns `state_not_recoverable` when a consumed reservation's application record or exact UTXO artifacts are missing or inconsistent.
-- `src/account/TransactionManager.cpp:3337-3343` maps that error to `ApplicationDisposition::Irreconcilable`.
-- `src/blockchain/Consensus.cpp:3227-3243` then always calls `MarkBurnReservationSafetyError` for an irreconcilable mint.
-- `src/blockchain/ConsensusStateStore.cpp:962-968` only permits that transition from `FINALIZED_PENDING_APPLICATION`; an existing `CONSUMED` reservation returns `Conflict`.
-- `test/src/account/utxo_manager_test.cpp:836-881` verifies detection of a consumed-artifact contradiction only at the UTXO layer. It does not drive the disposition through `ProcessFinalizedCertificate` and verify a durable terminal state.
-
-**Impact:** If restart/replay finds a consumed reservation with missing or conflicting application artifacts, the safety transition fails, `ProcessFinalizedCertificate` returns `StorageFailure`, and the process record remains retryable/processing rather than entering the required durable terminal safety-error state. The burn is still locked by `Consumed`, but the node repeatedly retries an irreconcilable operation and lacks the durable critical diagnostic required by D-13.
-
-**Suggested remedy:** Permit an identity-matched monotonic `CONSUMED -> SAFETY_ERROR` transition (or add a distinct durable terminal contradiction state that preserves consumed/finality facts), updating only the slot record while retaining the reciprocal index. Add an end-to-end restart/replay test that corrupts/removes an applied artifact after consumption, invokes certificate recovery, and asserts durable terminal safety state with no further handler retries.
-
-### WR-03 — Weak callbacks expire safely but permanently occupy handler registrations
+### WR-02 — Expired TransactionManager callbacks permanently occupy the application registration
 
 **Severity:** Warning
 
 **Evidence:**
 
-- `src/account/TransactionManager.cpp:163-186` registers the application handler first and returns `nullptr` if the registration is already occupied.
-- `src/blockchain/Consensus.cpp:836-849` intentionally rejects overwrite with `try_emplace`.
-- `src/account/TransactionManager.cpp:354-389` destroys a manager without unregistering its subject, certificate/application, cleanup, or resource-admission handlers.
-- `src/blockchain/Blockchain.hpp:170-202` exposes unregistering only for subject and certificate handlers; cleanup and resource-admission registrations have no corresponding facade removal API.
-- `test/src/account/transaction_manager_pending_lifecycle_test.cpp:711-729` proves the retained weak callback returns `owner_dead`, but does not attempt to construct a replacement `TransactionManager` against the same live `Blockchain`/`ConsensusManager`.
+- `src/account/TransactionManager.cpp:163-186` requires exclusive certificate-application registration before construction can succeed.
+- `src/blockchain/Consensus.cpp:842-855` uses `try_emplace`, so an existing callback cannot be replaced, while `src/account/TransactionManager.cpp:354-389` destroys the manager without unregistering its consensus callbacks.
+- `src/blockchain/Blockchain.hpp:184-202` exposes application, cleanup, and resource registration but only the combined certificate unregister at line 191; it exposes no cleanup/resource unregister facade. The consensus-layer removals at `src/blockchain/Consensus.cpp:897-925` therefore are not available to `TransactionManager` through `Blockchain`.
+- `test/src/account/transaction_manager_pending_lifecycle_test.cpp:792-809` proves the retained weak callback returns `owner_dead`, but never constructs a replacement manager against the same live blockchain.
 
-**Impact:** Destroying a `TransactionManager` while keeping the blockchain alive leaves an expired application handler in the registry. A replacement manager cannot register and `TransactionManager::New` returns null. Cleanup handlers also accumulate expired lambdas, and resource admission remains bound to an expired owner. This turns safe weak ownership into a same-process restart/lifecycle outage.
+**Impact:** Destroying and recreating `TransactionManager` while retaining `Blockchain` leaves an expired application handler in the registry, so the replacement's required registration fails and `TransactionManager::New` returns null. Cleanup/resource callbacks also remain tied to the expired owner. This is a same-process lifecycle outage, even though the weak capture prevents use-after-free.
 
-**Suggested remedy:** Return ownership tokens from handler registration and unregister only the matching generation/token during teardown, so an old owner cannot erase a newer registration. At minimum, add symmetric cleanup/resource unregister facade methods and have `TransactionManager` unregister every successful registration in reverse order, including rollback of partial construction. Add a test that resets the manager, constructs a replacement on the same blockchain, and verifies exactly one live handler of each kind.
+**Suggested remedy:** Use generation/token-based handler ownership and unregister only the matching owner's complete registration set during teardown and partial-construction rollback. Add a reset-and-recreate test that verifies one live application, subject, resource, and cleanup handler remains.
 
-## Additional observations
+### WR-03 — The consumed-artifact recovery test does not exercise the advertised end-to-end path
 
-- No source or test files were modified by this review.
-- Pre-existing user changes in `src/account/GeniusNode.cpp` and `ProofSystem` were excluded as directed.
-- Existing tests cover reciprocal corruption, creation failure atomicity, finality-before-handler ordering, datastore identity, competing-writer serialization, strict abandonment horizons, finality/admission ABA races, and paused reconciliation shutdown. The findings above are gaps in cross-component postconditions and owner replacement rather than failures of those covered contracts.
+**Severity:** Warning
+
+**Evidence:**
+
+- `test/src/blockchain/consensus_burn_reservation_test.cpp:1653-1666` directly commits only the reservation transition through `ApplyFinalizedReservationBatch` and then has a synthetic handler return `Irreconcilable`; it does not create mint/application/UTXO artifacts, corrupt one, or invoke the production `TransactionManager` handler.
+- `test/src/account/transaction_manager_pending_lifecycle_test.cpp:978-1003` separately proves the production handler maps a mocked missing application read to `Irreconcilable`, but stops before `ProcessFinalizedCertificate`, terminal persistence, close/reopen, and retry suppression.
+- `test/src/account/utxo_manager_test.cpp:961-989` separately covers the four artifact-corruption classifications, but does not drive them through TransactionManager and consensus recovery.
+
+**Impact:** Each component is covered in isolation, but no test proves the critical composed path `UTXOManager -> TransactionManager -> ProcessFinalizedCertificate -> CONSUMED_SAFETY_ERROR -> restart suppression`. A wiring, error-code translation, handle-identity, or restart-order regression between those seams could pass all current tests. This falls short of the explicit Plan 11-11 end-to-end recovery acceptance criterion.
+
+**Suggested remedy:** Build the consensus recovery test with the real TransactionManager application callback, perform a genuine atomic mint, corrupt one persisted artifact, leave the process pending, reopen the same datastore, and assert one production handler attempt followed by durable consumed-terminal safety and zero later retries/cleanup/wakes.
+
+## Verification performed
+
+- Reviewed exactly the 18 requested production, schema, build, and test files at standard depth, plus the requested Phase 11 planning/review/verification context.
+- Ran the seven focused post-gap tests covering false success, exact consumed completion, consumed-terminal transitions/idempotency, and restart suppression; all 7 passed.
+- No source or test files were edited and no commits were created. Pre-existing dirty paths were preserved.
