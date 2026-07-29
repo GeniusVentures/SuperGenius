@@ -1,175 +1,134 @@
 ---
 phase: 11-slot-owned-bridge-burn-reservations
-verified: 2026-07-29T13:31:53Z
+verified: 2026-07-29T18:29:38Z
 status: gaps_found
-score: 8/10 must-haves verified
-overrides_applied: 0
+score: "11/12 must-have truth clusters verified"
+re_verification: true
+requirements:
+  BURN-01: satisfied
+  BURN-02: satisfied
+  BURN-03: satisfied
+  BURN-04: satisfied
+  BURN-05: satisfied
 gaps:
-  - truth: "A successful certified mint cannot complete or clean up until the exact reservation is durably Consumed"
+  - id: terminal-live-identity
+    severity: warning
+    truth: "Only an exact identity-matched terminal reservation may idempotently suppress the authoritative winner"
     status: failed
-    reason: "Consensus trusts ApplicationDisposition::Applied without rereading the reservation, so it can mark the process COMPLETE and run cleanup while the burn remains FinalizedPendingApplication and mint effects are absent."
-    artifacts:
-      - path: src/blockchain/Consensus.cpp
-        issue: "ProcessFinalizedCertificate marks COMPLETE for Applied/AlreadyApplied without proving the exact generation and finality identity reached CONSUMED."
-      - path: src/account/TransactionManager.cpp
-        issue: "Finalized-handle fallback deserialization/hash failures can return Applied without invoking the shared atomic mint batch."
-      - path: test/src/blockchain/consensus_burn_reservation_test.cpp
-        issue: "SharedStoreApplicationHandlePrecedesHandlerAndCleanup deliberately returns Applied without consuming and does not assert a consumed postcondition."
-    missing:
-      - "Reread and verify the exact reservation is CONSUMED before MarkComplete, Applied lifecycle, cleanup, or dependency wake."
-      - "Classify finalized-handle embedded-mint decode/hash failures as Irreconcilable rather than Applied."
-      - "Add integrated tests proving false Applied cannot complete/clean up and malformed/hash-mismatched finalized mints cannot bypass consumption."
-  - truth: "Every irreconcilable exact-winner contradiction reaches durable terminal SafetyError and stops futile retry"
+    reason: "ProcessFinalizedCertificate short-circuits any same-slot SAFETY_ERROR or CONSUMED_SAFETY_ERROR before comparing the reservation's certificate digest, proposal ID, winner ID, and outpoint with the current authoritative certificate."
+  - id: composed-consumed-corruption-evidence
+    severity: warning
+    artifact: test/src/blockchain/consensus_burn_reservation_test.cpp
     status: failed
-    reason: "A contradiction found after CONSUMED maps to Irreconcilable, but MarkBurnReservationSafetyError only accepts FinalizedPendingApplication; the transition fails and certificate work remains retryable instead of terminal."
-    artifacts:
-      - path: src/blockchain/ConsensusStateStore.cpp
-        issue: "MarkBurnReservationSafetyError rejects identity-matched CONSUMED records."
-      - path: src/blockchain/Consensus.cpp
-        issue: "The irreconcilable path treats the rejected terminal transition as StorageFailure."
-      - path: test/src/account/utxo_manager_test.cpp
-        issue: "Consumed artifact contradictions are detected only at the UTXO layer; no end-to-end terminal-state assertion exists."
-    missing:
-      - "Add a monotonic identity-matched CONSUMED-to-terminal-safety transition, or an equivalent durable contradiction state that preserves consumed/finality facts."
-      - "Add restart/recovery coverage proving consumed artifact corruption becomes terminal and is not retried."
+    reason: "The Plan 11-11 recovery test uses a synthetic handler and a reservation-only batch; it does not perform a genuine production mint, corrupt a persisted application/UTXO artifact, and drive UTXOManager -> TransactionManager -> consensus recovery as required."
 ---
 
-# Phase 11: Slot-Owned Bridge Burn Reservations Verification Report
+# Phase 11 Verification: Slot-Owned Bridge Burn Reservations
 
-**Phase Goal:** Align bridge UTXO reservation and consumption with the canonical consensus slot so competing proposals cannot unlock or reuse a burn.
-**Verified:** 2026-07-29T13:31:53Z
-**Status:** gaps_found
-**Re-verification:** No — initial verification
+## Result
+
+Phase 11's five normative BURN requirements are implemented in the current code, including the two prior blockers closed by Plans 11-10 and 11-11. Exact resource-handler success is now gated on a durable identity-matched `CONSUMED` reread, and post-consumption contradictions can advance monotonically to `CONSUMED_SAFETY_ERROR` without release, cleanup, wake, or retry after restart.
+
+The phase nevertheless remains `gaps_found` because one explicit Plan 11-11 truth and one advertised Plan 11-11 artifact/acceptance criterion are not met. The three advisory code-review warnings were checked independently: WR-01 and WR-03 prevent complete must-have verification; WR-02 does not invalidate BURN-01..05 or a Phase 11 must-have.
 
 ## Goal Achievement
 
-### Observable Truths
-
-The roadmap success criteria and all nine PLAN frontmatter contracts were consolidated without reducing scope.
-
-| # | Truth | Status | Evidence |
+| # | Consolidated must-have truth | Status | Current-code evidence |
 |---|---|---|---|
-| 1 | Validation is side-effect-free and semantic approval durably creates/joins the reservation before candidate visibility or voting. | ✓ VERIFIED | `AdmitProposalResources` calls the subject descriptor then `CreateOrJoinBurnReservation` before `ContinueProposalAfterSubject` can activate the candidate (`Consensus.cpp:1333-1380`). `AdmissionPersistsBeforeCandidateVisibility` and `AdmissionStoreFailureLeavesNoCandidateOrReservation` cover ordering/failure. |
-| 2 | Same-burn contenders across proposal/account identity share one canonical slot/outpoint generation. | ✓ VERIFIED | Reciprocal slot/outpoint records and idempotent join live in `ConsensusStateStore.cpp:818-880`; candidate identity is absent from the record schema. `BurnReservationStoreCreatesReciprocalAndJoinsOneGeneration` and `ContendersJoinOneGenerationAcrossCandidateIdentities` pass. |
-| 3 | Rejection, failure, replacement, and losing cleanup cannot release slot-owned protection held by another candidate, vote, or certificate. | ✓ VERIFIED | `ReleaseProposalAdmission` removes only orphaned proposal state (`Consensus.cpp:1312-1331`); reservation deletion exists only in whole-slot reconciliation. `CleanupCallbacksCannotReleaseSharedReservation` and pending-lifecycle regressions pass. |
-| 4 | Reciprocal durable reservations restore and reconcile before live consensus side effects, failing closed on malformed or contradictory state. | ✓ VERIFIED | Startup recomputes slot/outpoint identity, cross-checks certificate finality, synthesizes certificate-only protection, and extends vote horizons (`Consensus.cpp:412-494`). Restart/corruption/startup-order tests pass. |
-| 5 | Authoritative certificate observation durably establishes `FinalizedPendingApplication` before handler invocation or cleanup. | ✓ VERIFIED | `FinalizeSlot` persists `FinalizeBurnReservation` at `Consensus.cpp:3073-3090` before creating process work and invoking `ProcessFinalizedCertificate` at line 3119. `RestartCertificateReconcileCreatesFinalProtectionBeforeHandler`, `SharedStoreApplicationHandlePrecedesHandlerAndCleanup`, and write-failure coverage pass. |
-| 6 | Exact-winner failures retry across restart; every irreconcilable contradiction becomes durable terminal `SafetyError` and stops retry. | ✗ FAILED | Retry and pre-consumption safety-error cases pass, but a consumed-artifact contradiction maps to `Irreconcilable` and then fails because `MarkBurnReservationSafetyError` accepts only `FINALIZED_PENDING_APPLICATION` (`ConsensusStateStore.cpp:947-976`). The process returns `StorageFailure`, not terminal safety. |
-| 7 | Finalized application receives the exact live shared `ConsensusStateStore`; datastore object identity and one serialization gate are enforced. | ✓ VERIFIED | The immutable handle owns `shared_ptr<ConsensusStateStore>` (`Consensus.hpp:272-284`); consensus passes `state_store_` (`Consensus.cpp:3206-3220`). `ApplyFinalizedReservationBatch` rejects a distinct shared datastore object even at the same path and holds the store gate (`ConsensusStateStore.cpp:1048-1080`). Identity and competing-writer tests pass. |
-| 8 | Winner outputs, application record, bridge-input consumption, and reservation `CONSUMED` transition commit in one batch, and consensus only completes after that postcondition. | ✗ FAILED | The normal path is genuinely one-batch (`TransactionManager.cpp:1917-1928`, `ConsensusStateStore.cpp:1073-1080`, `UTXOManager.cpp:1012+`). However, `ProcessFinalizedCertificate` trusts `Applied` and calls `MarkComplete`/cleanup without rereading `CONSUMED` (`Consensus.cpp:3206-3277`); the focused handler test demonstrates this accepted hollow success. |
-| 9 | Uncertified abandonment requires strict passage beyond candidate/vote horizons, exact certificate `NotFound`, current generation/horizon, and reciprocal one-batch deletion; admission/finality/ABA races cannot delete current protection. | ✓ VERIFIED | `ReconcileBurnReservations` enforces strict `now >`, live-candidate/vote checks, two authoritative certificate checks, and expected generation/horizon deletion (`Consensus.cpp:1383-1537`; `ConsensusStateStore.cpp:1020-1045`). Horizon, lookup uncertainty, admission, finality, and fresh-generation tests pass. |
-| 10 | Shutdown wakes and drains owned reconciliation so no reservation mutation occurs after manager destruction. | ✓ VERIFIED | `Close` sets closing/stop flags, wakes timer/slot waiters, joins the timer, and waits for active leases to reach zero (`Consensus.cpp:607-634`). `ShutdownPausedReconciliationDrainsWithoutMutation` passes. |
+| 1 | The focused harness uses real same-path storage, deterministic clocks/barriers, scoped workers, and active CTest registration. | VERIFIED | `consensus_burn_reservation_test` is registered and the current exact nine-target discovery found it once. The focused post-gap slice ran without sleeps or detached workers. |
+| 2 | One strict direct-local reciprocal record binds a canonical slot to one exact burn outpoint and generation; malformed or conflicting state fails closed. | VERIFIED | `ConsensusLocalState.proto:86-111`; strict validation/reciprocal scans in `ConsensusStateStore.cpp:679-817`; atomic create/join and random generation in `ConsensusStateStore.cpp:821-883`. |
+| 3 | Reservation/certificate/vote reconciliation completes before subscriptions, timer, recovery, and vote replay; exact final protection is restored without ephemeral candidates. | VERIFIED | `ConsensusManager::New` calls `EnsureBuiltinSlotKeyHandlers` and `RestoreLocalState` before all live startup events (`Consensus.cpp:230-290`). Restore cross-checks canonical outpoint, certificate, vote horizon, terminal identity, and reciprocal state (`Consensus.cpp:329-505`). |
+| 4 | Semantic validation remains pure and every approved mint persists resource admission before active candidate visibility or voting. | VERIFIED | All initial/retry paths enter `AdmitProposalResources`; it calls `CreateOrJoinBurnReservation` before continuation (`Consensus.cpp:1339-1387`, `2008`, `3527`, `3618`). Pending/rejected and store-failure tests pass. |
+| 5 | Same-burn contenders share one generation and proposal rejection, failure, replacement, timeout, or cleanup cannot release it. | VERIFIED | Candidate-controlled identity is absent from the durable owner. `CreateOrJoinBurnReservation` joins only exact slot/outpoint and monotonically extends the horizon. Reservation deletion exists only in whole-slot reconciliation. Contender and cleanup-isolation tests pass. |
+| 6 | Certificate observation establishes exact `FINALIZED_PENDING_APPLICATION` before process work, handler invocation, or cleanup; transient failure keeps the same winner retryable. | VERIFIED | `FinalizeSlot` calls `FinalizeBurnReservation` before `PutPendingProcess` and `ProcessFinalizedCertificate` (`Consensus.cpp:3070-3125`). Restart synthesis and exact-winner retry are implemented and covered. |
+| 7 | Finalized application carries the exact live shared store, rejects same-path/different-object storage, and serializes through one store gate with store -> persistence -> UTXO-state lock order. | VERIFIED | Immutable shared handle in `Consensus.hpp`; shared-object identity and store-gated participant in `ConsensusStateStore.cpp:1061-1093`; UTXO locks in `UTXOManager.cpp:1037-1040`. |
+| 8 | Winner outputs, canonical application record, physical bridge-input consumption, and reservation `CONSUMED` commit in one batch; exact replay validates every artifact. | VERIFIED | `ApplyFinalizedReservationBatch` stages `CONSUMED` into the participant batch; `ApplyMintEffectsAtomically` stages outputs/input/application and commits that same batch (`ConsensusStateStore.cpp:1061-1093`, `UTXOManager.cpp:941-1180`). Exact replay rejects missing/conflicting artifacts. |
+| 9 | `Applied`/`AlreadyApplied` is advisory until an exact durable `CONSUMED` reread; missing/unreadable/final-pending state cannot complete, clean, wake, or mark work done. | VERIFIED | `ProcessFinalizedCertificate` captures exact slot/outpoint/generation/certificate/proposal/winner identity, rereads at `Consensus.cpp:3254`, restores pending for absence/final-pending, and reaches `MarkComplete`, cleanup, and dependency wake only after exact `CONSUMED` (`Consensus.cpp:3254-3339`). All three Plan 11-10 exact tests pass. |
+| 10 | An exact contradiction after physical consumption advances monotonically to consumed-terminal safety while preserving reciprocal and finality identity; release/reconsume/recreate are rejected. | VERIFIED | Explicit `CONSUMED_SAFETY_ERROR` enum and strict validator; `MarkBurnReservationSafetyError` performs exact generation/finality matching and `CONSUMED -> CONSUMED_SAFETY_ERROR`, preserving the reciprocal key (`ConsensusStateStore.cpp:950-989`). Store transition/idempotency tests pass. |
+| 11 | Terminal replay/suppression is exact-identity matched, and restart recovery has composed production-path evidence from artifact corruption through terminal persistence. | FAILED | The live terminal shortcut at `Consensus.cpp:3162-3171` checks only the enum, not certificate/proposal/winner identity. The named recovery test at `consensus_burn_reservation_test.cpp:1625-1704` uses a synthetic handler and reservation-only commit, not the advertised production corruption path. |
+| 12 | Only a provably abandoned uncertified generation releases after strict candidate/vote horizons and exact certificate absence; finality, ABA races, and shutdown cannot unlock current protection. | VERIFIED | `ReconcileBurnReservations` requires strict `now >`, exact `NotFound`, active-vote retirement, candidate recheck, and current generation/horizon; `DeleteReservedBurnReservation` deletes only exact `RESERVED` reciprocal records (`Consensus.cpp:1389-1548`, `ConsensusStateStore.cpp:1034-1058`). Race and shutdown tests pass. |
 
-**Score:** 8/10 truths verified
+**Score: 11/12 must-have truth clusters verified.**
 
-### Required Artifacts
+## Plans 11-10 and 11-11
 
-| Artifact | Expected | Status | Details |
-|---|---|---|---|
-| `src/blockchain/impl/proto/ConsensusLocalState.proto` | Versioned reciprocal lifecycle records | ✓ VERIFIED | `BurnReservationRecord` and `BurnReservationOutpointIndex` exist at lines 86 and 111 with Reserved, FinalizedPendingApplication, Consumed, and SafetyError states. No schema drift was reported or observed. |
-| `src/blockchain/ConsensusStateStore.hpp/.cpp` | Strict local identity, transitions, shared batch gate, conditional release | ✓ SUBSTANTIVE + WIRED | Used by startup, admission, finality, application, and reconciliation. Reciprocal writes/deletes are atomic and direct local storage. |
-| `src/blockchain/Consensus.hpp/.cpp` | Slot lifecycle orchestration and exact-store application handle | ⚠ PARTIAL | Admission, restart, finality, abandonment, ABA, and shutdown wiring are substantive; completion lacks the `CONSUMED` postcondition and consumed contradictions cannot reach terminal safety. |
-| `src/blockchain/impl/Blockchain.cpp` | Canonical resolver/handler forwarding before consensus restoration | ✓ VERIFIED | Built-in slot handling is installed on the construction path and startup tests cover fresh registration ordering. |
-| `src/account/TransactionManager.hpp/.cpp` | Descriptor extraction and exact certified mint disposition | ⚠ PARTIAL | Normal finalized mint path uses the exact shared handle and batch; finalized-handle fallback failures can incorrectly report `Applied`. |
-| `src/account/UTXOManager.hpp/.cpp` | Atomic certified mint effects and exact replay validation | ✓ VERIFIED | Applies outputs, canonical application record, bridge consumption, and staged reservation consumption under the participant batch; exact replay and contradiction checks are substantive. |
-| `test/src/blockchain/consensus_burn_reservation_test.cpp` | Deterministic store/admission/restart/finality/application/abandonment/race/shutdown evidence | ⚠ PARTIAL | 32 focused tests exist and key tests pass. Missing assertions expose the two cross-component gaps rather than closing them. |
-| Phase 10 compatibility targets | Prior vote/finality/certificate/UTXO behavior remains green | ✓ VERIFIED | Exact eight-target discovery and execution evidence passed 8/8. |
+### Plan 11-10 — durable `CONSUMED` completion gate
 
-### Key Link Verification
+Verified. The post-handler durable reread precedes the only resource-bearing `MarkComplete` path and compares state, slot, source chain, burn hash, receipt index, generation, certificate digest, proposal ID, and winner ID. Missing/unreadable/final-pending restores the process to `PENDING`; readable mismatch becomes irreconcilable. `ClearProposalSlot` and `WakePendingDependency` remain after successful completion only. Finalized-handle decode, missing embedded data, deserialization, and hash-binding failures return `Irreconcilable`, while no-handle legacy behavior remains compatible.
 
-| From | To | Via | Status | Details |
-|---|---|---|---|---|
-| Semantic approval | Durable reservation | Descriptor then `CreateOrJoinBurnReservation` before candidate activation | ✓ WIRED | All initial/retry paths converge on `AdmitProposalResources`. |
-| Canonical slot | Exact burn outpoint | Reciprocal strict records and recomputed mint slot | ✓ WIRED | Conflicts, aliases, corrupt halves, and generation mismatch fail closed. |
-| Certificate authority | Finalized protection | `FinalizeBurnReservation` before process/handler/cleanup | ✓ WIRED | Certificate-only restart synthesis is also wired. |
-| ConsensusManager | TransactionManager | Immutable handle carrying the exact `state_store_` and finality identity | ✓ WIRED | No path-based reconstruction, raw pointer, or weak store authority. |
-| Shared store gate | UTXO atomic effects | Same datastore object and caller batch | ✓ WIRED | Normal application stages `CONSUMED` in the same physical batch. |
-| Handler success | Process COMPLETE and proposal cleanup | `ApplicationDisposition` | ✗ NOT SAFELY WIRED | There is no exact `CONSUMED` reread/postcondition before completion. |
-| Reconciliation | Conditional deletion | Strict horizons, exact `NotFound`, generation/horizon recheck | ✓ WIRED | Admission, finality, ABA, and shutdown interleavings are serialized. |
+### Plan 11-11 — consumed-terminal safety
 
-### Data-Flow Trace
+Partially verified. The store transition itself is monotonic, exact, reciprocal-preserving, non-releasable, and restart-readable. Startup cross-checks terminal reservation identity against the authoritative certificate and excludes terminal slots from restored handler scheduling. Exact matching duplicate ingress also suppresses later handlers, cleanup, wake, release, and remint.
 
-| Flow | Source | Durable sink | Status |
-|---|---|---|---|
-| Admitted proposal burn identity | `TransactionManager` resource descriptor | Reciprocal reservation slot/outpoint records | ✓ FLOWING |
-| Authoritative certificate identity | Normalized certificate digest/proposal/winner | `FinalizedPendingApplication` reservation plus process record | ✓ FLOWING |
-| Certified mint effects | Immutable finalized handle + embedded mint | Outputs/application/input/`CONSUMED` in one RocksDB batch | ✓ FLOWING on normal path |
-| Application completion | Handler disposition | Process COMPLETE / cleanup | ✗ HOLLOW POSTCONDITION — not bound to durable `CONSUMED` |
-| Abandonment evidence | Clock, live candidates, durable vote, certificate lookup | Reciprocal delete batch | ✓ FLOWING |
+Two Plan 11-11 contracts remain open:
+
+1. The live `ProcessFinalizedCertificate` terminal short-circuit accepts a same-slot terminal enum without matching its finality identity to the current certificate/process. It then returns `AlreadyFinalized`, allowing the caller to mark certificate work done. This violates the plan truth that mismatched finality cannot succeed and only exact terminal replay is idempotent. It remains fail-closed for burn reuse, so it does not negate BURN-03.
+2. `ConsumedArtifactContradictionRecoveryPersistsTerminalSafetyAndStopsRetry` does not start from a genuine `UTXOManager` atomic mint or corrupt a stored application/output/input artifact, and it does not invoke the production `TransactionManager` callback. The component tests separately cover UTXO contradiction classification and production-handler mapping, but the explicit composed restart-recovery artifact promised by Plan 11-11 is absent.
+
+## Artifact and Key-Link Audit
+
+| Artifact / key link | Status | Evidence |
+|---|---|---|
+| Protobuf reciprocal reservation schema and consumed-terminal state | VERIFIED | Versioned slot record and reciprocal outpoint index are substantive and used by strict reads/writes. |
+| ConsensusStateStore strict scans, create/join/finalize/consume/safety/delete transitions | VERIFIED | All transitions are wired through the direct local store mutex; reciprocal create/delete is batched; final/safety states cannot release. |
+| Built-in mint slot resolver -> restore-before-live-startup | VERIFIED | Installed before `RestoreLocalState`; startup aborts before subscribe/filter/timer/recovery/replay on strict restore failure. |
+| Post-Approve admission -> durable reservation -> candidate continuation | VERIFIED | All observed initial and retry approval paths converge on `AdmitProposalResources`. |
+| Certificate authority -> finalized reservation -> exact application handle | VERIFIED | Final reservation persistence precedes process/handler; handle carries the exact shared store and full identity. |
+| Shared store gate -> UTXO outputs/application/input -> `CONSUMED` | VERIFIED | One physical participant-owned batch and exact replay checks. |
+| Handler disposition -> exact `CONSUMED` -> process complete/cleanup/wake | VERIFIED | Plan 11-10 postcondition is correctly wired. |
+| `CONSUMED` contradiction -> production handler -> terminal consensus recovery -> restart suppression | NOT VERIFIED | Component links exist, but the required end-to-end test substitutes a synthetic handler and reservation-only commit. |
+| Live terminal record -> authoritative certificate identity | NOT SAFELY WIRED | Startup compares identity, but the live shortcut does not. |
+| Timer/recovery -> strict conditional abandonment | VERIFIED | Exact certificate absence, horizons, live evidence, generation, and reciprocal state gate deletion. |
 
 ## Requirements Coverage
 
-Every BURN ID appears in PLAN frontmatter and in `.planning/REQUIREMENTS.md`; no Phase 11 requirement is orphaned.
+All Phase 11 requirement IDs are present in `.planning/REQUIREMENTS.md`, mapped to Phase 11, and marked Complete there.
 
-| Requirement | Source Plans | Description | Status | Concrete Evidence |
-|---|---|---|---|---|
-| BURN-01 | 11-01, 11-02, 11-03, 11-04, 11-09 | Validation pure; admission reserves under canonical slot | ✓ SATISFIED | `AdmitProposalResources` ordering plus `PendingAndRejectedAdmissionRemainSideEffectFree`, admission persistence/failure tests, and restart restoration. |
-| BURN-02 | 11-01, 11-02, 11-04, 11-08, 11-09 | Competing proposals share slot reservation | ✓ SATISFIED | Reciprocal create/join and monotonic horizon code; same-generation contender and stale-admission race tests. |
-| BURN-03 | 11-01, 11-02, 11-04, 11-06, 11-07, 11-08, 11-09 | Losing proposal cannot release protected burn | ✓ SATISFIED | Proposal cleanup never deletes reservations; terminal states cannot be conditionally deleted; cleanup/finality/ABA tests pass. |
-| BURN-04 | 11-01, 11-02, 11-03, 11-05, 11-06, 11-07, 11-09 | Certificate winner consumes before cleanup/reuse | ✗ BLOCKED | Finalized protection is persisted before cleanup and normal application is atomic, but consensus can mark complete and clean up on `Applied` without proving `CONSUMED`. |
-| BURN-05 | 11-01, 11-02, 11-03, 11-04, 11-08, 11-09 | Ready only after whole-slot abandonment and vote expiry | ✓ SATISFIED | Strict horizons, exact certificate absence, vote retirement, generation/horizon conditional delete, race protection, and shutdown drain are implemented/tested. |
-
-**Coverage:** 4/5 requirements satisfied
-
-## Automated Check Evidence
-
-| Check | Result | Interpretation |
+| Requirement | Status | Concrete evidence |
 |---|---|---|
-| Exact Phase 11 `ctest -N` discovery | `Total Tests: 9` | Guard selects the intended nonzero target set. |
-| Exact Phase 10 compatibility `ctest -N` discovery | `Total Tests: 8` | Guard selects every Phase 11 regression target except the new reservation target. |
-| Supplied guarded Phase 11 execution | 9/9 passed in 145.05 s | Broad implementation/regression evidence is green. |
-| Supplied guarded Phase 10 execution | 8/8 passed in 106.46 s | Compatibility evidence is green. |
-| Independent focused spot-check | 11/11 passed in 11.731 s | Admission, contenders, cleanup, pre-handler finality, exact store identity, atomic serialization, abandonment, ABA/finality races, and shutdown all executed successfully. |
-| Focused test discovery | 32 named tests | Store through shutdown behaviors are registered; no zero-test false green. |
-| Schema check | no drift | Reservation protobuf and code agree; execution evidence reports no drift. |
+| BURN-01 | SATISFIED | Validation has no reservation mutation; approved admission persists before candidate visibility; Pending/rejected/write-failure cases create no usable candidate or vote. |
+| BURN-02 | SATISFIED | Same canonical slot/outpoint joins one unchanged generation independent of candidate/account identity; best-candidate changes do not release/reacquire. |
+| BURN-03 | SATISFIED | Proposal-local failure/cleanup never deletes the reservation; finalized, consumed, safety, and consumed-safety states cannot release; terminal restart/reconciliation remains non-releasable. |
+| BURN-04 | SATISFIED | Certificate observation durably finalizes protection before handler/cleanup; mint artifacts and `CONSUMED` are one batch; consensus completion/cleanup is gated on the exact durable consumed postcondition. |
+| BURN-05 | SATISFIED | Only whole-slot reconciliation deletes an uncertified exact generation after strict candidate/vote horizons and exact certificate absence, with admission/finality/ABA/shutdown protection. |
 
-Passing tests do not close the two gaps: `SharedStoreApplicationHandlePrecedesHandlerAndCleanup` explicitly returns `Applied` without consuming, and consumed-artifact contradiction coverage stops at `UTXOManager` rather than driving the terminal consensus transition.
+The two open gaps concern a stricter explicit Plan 11-11 exact-terminal identity contract and its required composed verification artifact. Neither creates a release/reuse path, but both prevent the phase from receiving a fully passed must-have audit.
 
-## Advisory Review Warning Classification
+## Review Warning Classification
 
-| Warning | Classification | Rationale |
-|---|---|---|
-| WR-01: `Applied` trusted without `Consumed` proof | **Phase-blocking goal gap** | It directly violates BURN-04, the roadmap's consume-before-cleanup criterion, and Plan 11-07's atomic-consumption completion contract. The code and existing focused test demonstrate the missing postcondition. |
-| WR-02: post-`Consumed` contradiction cannot persist `SafetyError` | **Phase-blocking must-have gap** | The burn remains unavailable, so immediate reuse safety fails closed, but Plan 11-05 explicitly requires every irreconcilable winner/application contradiction to become durable terminal SafetyError and stop futile retry. Actual call-path evidence disproves that truth. |
-| WR-03: expired weak callbacks block same-process TransactionManager replacement | **Real deferred/non-goal issue** | Registration occupancy and replacement outage are real, not a false positive. However, Phase 11 required once-only weak-owner registration and `ConsensusManager` reconciliation shutdown drain; it did not require replacing a destroyed `TransactionManager` while retaining the same live blockchain. Track separately without changing this phase score. |
+| Warning | Effect on verification |
+|---|---|
+| WR-01: live terminal short-circuit lacks authoritative identity match | BLOCKS one Plan 11-11 must-have truth and key link. Does not currently release/reuse the burn. |
+| WR-02: expired TransactionManager callbacks occupy registrations | ADVISORY / NON-BLOCKING for Phase 11. The plans explicitly require once-only, weak-owner-safe registration and do not require same-process manager replacement. It is a lifecycle availability issue, not a BURN-01..05 reservation-safety failure. |
+| WR-03: no advertised composed consumed-artifact recovery test | BLOCKS the Plan 11-11 test artifact and acceptance criterion. Component coverage is not equivalent to the required end-to-end path. |
 
-## Anti-Patterns Found
+## Automated Evidence
 
-| File | Pattern | Severity | Impact |
-|---|---|---|---|
-| `src/blockchain/Consensus.cpp` | Success disposition not verified against durable consumed state | 🛑 Blocker | Allows process completion/cleanup without certified mint consumption. |
-| `src/blockchain/ConsensusStateStore.cpp` | Terminal transition excludes consumed contradiction | 🛑 Blocker | Leaves irreconcilable recovery in repeated storage-failure processing. |
-| Phase-modified source/test set | Legacy TODO/sleep/detach matches outside Phase 11 logic | ℹ Info | `git blame` places sampled matches before Phase 11; no Phase-11 reservation test uses sleeps/detached workers, and no reservation replication path was found. |
+| Check | Current result |
+|---|---|
+| Build `consensus_burn_reservation_test`, `transaction_manager_pending_lifecycle_test`, `utxo_manager_test` | PASS |
+| Seven focused Plan 11-10/11 post-gap tests | 7/7 passed in 7.629 s |
+| Exact Phase 11 CTest discovery | `Total Tests: 9` |
+| Exact Phase 11 guarded execution | 9/9 passed in 152.34 s |
+| `git diff --check` | PASS |
 
-## Human Verification Required
+The full gate confirms broad regression health but cannot prove an omitted composed scenario or repair the live identity-check omission.
 
-None — all Phase 11 contracts and both gaps are deterministically verifiable in code/tests. The complete 11-node race is explicitly Phase 12, not a Phase 11 human gate.
+## Gaps to Close
 
-## Gaps Summary
+### Gap 1: require exact terminal identity before live short-circuit
 
-Two material gaps remain. Neither currently unlocks a finalized burn: `FinalizedPendingApplication` and `Consumed` are both non-releasable. However, Phase 11 promises more than fail-closed non-reuse: successful certified application must durably consume before cleanup, and irreconcilable exact-winner state must become terminal rather than retry forever. Both promises are observably false on concrete call paths.
+Before returning `AlreadyFinalized` for `SAFETY_ERROR` or `CONSUMED_SAFETY_ERROR`, compare the durable outpoint, generation/finality fields, certificate digest, proposal ID, and winner ID with the current authoritative process/certificate identity. A mismatch must not be treated as idempotent terminal success or mark certificate work done. Add a live-delivery mismatch test.
 
-### Recommended Gap Plans
+### Gap 2: add the composed consumed-artifact recovery proof
 
-#### 11-10: Bind application completion to durable consumption
+Perform a genuine certified atomic mint through the real TransactionManager handler, leave process work pending, corrupt one durable application/output/input artifact, reopen the same datastore, and drive recovery through `UTXOManager -> TransactionManager -> ProcessFinalizedCertificate`. Assert one contradiction-detection attempt, durable exact `CONSUMED_SAFETY_ERROR`, and zero later handler calls, cleanup, dependency wake, release, remint, or alternate winner across another restart and duplicate ingress.
 
-**Objective:** Prevent a certified mint from reaching process COMPLETE, Applied lifecycle, cleanup, or dependency wake unless its exact reservation generation/finality identity is durably `CONSUMED`.
+## Human Verification
 
-1. After an `Applied`/`AlreadyApplied` resource-handler disposition, reread the exact reservation and require matching slot/outpoint/generation/certificate/proposal/winner plus `CONSUMED`; otherwise restore pending or enter safety based on the disposition/error.
-2. Make finalized-handle embedded-mint decode/deserialization/hash failures return `Irreconcilable`, never `Applied`.
-3. Add integrated false-`Applied`, malformed embedded mint, hash mismatch, retry/restart, and no-cleanup-before-consumed tests; rerun exact 9/8 guarded gates.
-
-#### 11-11: Persist terminal safety after consumed-artifact contradiction
-
-**Objective:** Convert exact-winner contradictions discovered after physical consumption into durable terminal safety state without weakening consumed/finality identity.
-
-1. Add a monotonic identity-matched `CONSUMED -> SAFETY_ERROR` transition or equivalent durable terminal contradiction representation that retains reciprocal protection.
-2. Drive missing/conflicting applied artifacts through `TransactionManager` and `ProcessFinalizedCertificate` during restart/recovery; assert critical terminal state, no cleanup/release, and no further handler retries.
-3. Re-run store transition, atomic application, recovery, and exact Phase 11/Phase 10 compatibility gates.
-
-The weak-callback replacement issue should be tracked as a later lifecycle/ownership task, not folded into these Phase 11 goal-closure plans.
+None required. Both remaining gaps are deterministic code/test issues. The complete 11-node race remains explicitly assigned to Phase 12.
 
 ---
 
-_Verified: 2026-07-29T13:31:53Z_
-_Verifier: the agent (gsd-verifier)_
+_Verified: 2026-07-29T18:29:38Z_
+_Verifier: GSD phase verifier_
