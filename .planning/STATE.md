@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
 status: executing
-last_updated: "2026-07-29T17:01:40.127Z"
-last_activity: 2026-07-29 -- Phase 11 planning complete
+last_updated: "2026-07-29T17:39:32.892Z"
+last_activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 34
-  completed_plans: 32
+  completed_plans: 33
   percent: 50
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 11 — close BURN-04 verification gaps
+**Current focus:** Phase 11 — close the remaining post-Consumed terminal-state gap
 
 ## Current Position
 
-Phase: 11 (Slot-Owned Bridge Burn Reservations) — COMPLETE
-Plan: 9 of 9 complete
+Phase: 11 (Slot-Owned Bridge Burn Reservations) — EXECUTING
+Plan: 10 of 11 complete
 Status: Ready to execute
-Last activity: 2026-07-29 -- Phase 11 planning complete
+Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 
 ## Roadmap Snapshot
 
@@ -40,7 +40,7 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 |-------|------|--------|--------------|
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
-| 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (9/9 plans) | BURN-01..05 |
+| 11 | Slot-Owned Bridge Burn Reservations | ◐ in progress (10/11 plans) | BURN-01..05 |
 | 12 | Consensus Race and Compatibility Verification | ○ ready for planning | TEST-01..06 |
 
 ## Key Decisions
@@ -66,12 +66,12 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 
 ## Operator Next Steps
 
-- Verify Phase 11 or plan Phase 12 consensus race and compatibility work.
+- Execute Plan 11-11, then re-verify Phase 11 before planning Phase 12.
 
 ## Session Continuity
 
-**Last session:** 2026-07-29T13:13:01.650Z
-**Stopped at:** Completed 11-09-PLAN.md
+**Last session:** 2026-07-29T17:39:32.888Z
+**Stopped at:** Completed 11-10-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -110,6 +110,7 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 | Phase 11 P07 | 19 min | 1 tasks | 8 files |
 | Phase 11 P08 | 51 min | 1 tasks | 5 files |
 | Phase 11 P09 | 9 min | 1 tasks | 0 files |
+| Phase 11 P10 | 26 min | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -186,3 +187,6 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 - [Phase 11]: Reservation reconciliation is one owned consensus-timer activity serialized through an explicit Reconciling slot lifecycle. — Admission, signing, finality, and cleanup must not cross the abandonment decision.
 - [Phase 11]: Deletion requires exact certificate NotFound, strict candidate and vote horizon passage, and matching generation plus persisted candidate horizon. — Lookup uncertainty, renewal, finality, and ABA all retain protection.
 - [Phase 11]: Shutdown cancellation restores the prior lifecycle and drains reconciliation before durable deletion. — Manager destruction cannot be followed by reservation mutation.
+- [Phase 11]: Applied and AlreadyApplied are advisory for resource-bearing certificates until an exact live-store reread proves the captured reservation identity is CONSUMED. — Handler claims cannot complete or clean up a certified mint without its durable postcondition.
+- [Phase 11]: Missing, unreadable, or exact FinalizedPendingApplication postconditions restore the exact process to Pending without completion, cleanup, or dependency wake. — Operational uncertainty remains retryable and winner-bound across restart.
+- [Phase 11]: Finalized-handle payload contradictions are irreconcilable while the no-handle legacy fallback retains its established Applied compatibility result. — Certified mint data fails closed without changing legacy non-resource behavior.
