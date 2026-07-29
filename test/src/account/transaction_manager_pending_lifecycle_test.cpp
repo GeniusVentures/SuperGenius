@@ -17,11 +17,13 @@
 #include "account/TransactionManager.hpp"
 #include "account/TransferTransaction.hpp"
 #include "account/UTXOMerkle.hpp"
+#include "base/hexutil.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/atomic_transaction.hpp"
+#include "crypto/hasher.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/database_error.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
@@ -256,6 +258,62 @@ namespace sgns
         {
             TransactionManager::finalized_handle_observer_ = {};
         }
+
+        static outcome::result<ConsensusManager::ApplicationDisposition> OnCertificateWithoutHandle(
+            TransactionManager &manager,
+            const std::string &tx_hash,
+            const ConsensusManager::Certificate &certificate )
+        {
+            return manager.OnConsensusCertificate( tx_hash, certificate, std::nullopt );
+        }
+
+        static void RemoveApplicationHandler( const std::shared_ptr<ConsensusManager> &consensus )
+        {
+            auto type_hash = ConsensusManager::ComputeSubjectTypeHash( NONCE_SUBJECT_TYPE );
+            if ( !type_hash ) return;
+            std::unique_lock lock( consensus->certificate_handlers_mutex_ );
+            consensus->certificate_application_handlers_.erase( type_hash.value() );
+        }
+
+        static ConsensusManager::FinalizeResult DriveFinalizedApplication(
+            const std::shared_ptr<ConsensusManager> &consensus,
+            const ConsensusManager::Certificate &certificate,
+            const ConsensusStateStore::BurnOutpoint &outpoint )
+        {
+            auto slot = ConsensusManager::GetSlotKey( certificate.proposal().subject() );
+            auto winner = ConsensusManager::GetSubjectHash( certificate.proposal().subject() );
+            if ( !slot || !winner ) return ConsensusManager::FinalizeResult::StorageFailure;
+            ConsensusManager::CertificateNormalization normalized;
+            normalized.check = ConsensusManager::Check::Approve;
+            normalized.certificate = certificate;
+            normalized.deterministic_bytes = certificate.SerializeAsString();
+            const auto digest_bytes = crypto::sha2_256(
+                normalized.deterministic_bytes.data(), normalized.deterministic_bytes.size() );
+            const auto digest = base::hex_lower(
+                gsl::span<const uint8_t>( digest_bytes.data(), digest_bytes.size() ) );
+            auto finalized = consensus->state_store_->FinalizeBurnReservation(
+                slot.value(), outpoint, digest, certificate.proposal_id(), winner.value(), 1U );
+            if ( !finalized )
+            {
+                return ConsensusManager::FinalizeResult::StorageFailure;
+            }
+            ConsensusStateStore::ProcessRecord process;
+            process.set_schema_version( 2 );
+            process.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+            process.set_slot_id( slot.value() );
+            process.set_certificate_digest( digest );
+            process.set_proposal_id( certificate.proposal_id() );
+            process.set_winner_id( winner.value() );
+            process.set_updated_at_ms( 1U );
+            auto pending = consensus->state_store_->PutPendingProcess( process );
+            if ( !pending )
+            {
+                return ConsensusManager::FinalizeResult::StorageFailure;
+            }
+            return consensus->ProcessFinalizedCertificate(
+                normalized, slot.value(), winner.value() );
+        }
+
     };
 
     class ConsensusManagerTestAccess
@@ -852,6 +910,29 @@ namespace
             return consensus_->CreateCertificate( proposal, { vote } );
         }
 
+        outcome::result<ConsensusManager::Certificate> MakeCertificateWithEmbedded(
+            const std::string &transaction_hash,
+            uint64_t nonce,
+            EmbeddedTransaction embedded )
+        {
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    account_->GetAddress(), nonce, transaction_hash, std::move( embedded ),
+                    std::nullopt, std::nullopt ) );
+            BOOST_OUTCOME_TRY(
+                auto proposal,
+                ConsensusManager::CreateProposal(
+                    subject, account_->GetAddress(), registry_->GetRegistryCid(),
+                    registry_->GetRegistryEpoch(),
+                    [this]( std::vector<uint8_t> payload )
+                    { return account_->Sign( std::move( payload ) ); } ) );
+            ConsensusManager::Certificate certificate;
+            *certificate.mutable_proposal() = proposal;
+            certificate.set_proposal_id( proposal.proposal_id() );
+            return certificate;
+        }
+
         std::shared_ptr<TransferTransaction> MakeReplayTransaction(
             const std::string &previous_hash,
             uint64_t           nonce ) const
@@ -1374,6 +1455,122 @@ TEST_F( TransactionManagerPendingLifecycleTest, SharedStoreApplicationHandleReac
     ASSERT_TRUE( application && application.value() );
     EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
         input.txid_hash_, input.output_idx_ ) );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, FinalizedHandleMalformedEmbeddedMintIsIrreconcilable )
+{
+    auto mint = PrepareMint( '8' );
+    ASSERT_TRUE( mint );
+    auto authoritative = MakeCertificateWithEmbedded(
+        mint->GetHash(), mint->GetNonce(), mint->SerializeToEmbeddedTransaction( mint->dag_st ) );
+    ASSERT_TRUE( authoritative );
+    const auto input = mint->GetUTXOParameters().first.front();
+    ConsensusStateStore::BurnOutpoint outpoint{
+        mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ };
+    auto production_handler =
+        TransactionManagerPendingLifecycleTestAccess::ApplicationHandler( consensus_ );
+    ASSERT_TRUE( production_handler );
+
+    EmbeddedTransaction malformed_embedded;
+    auto *malformed_mint = malformed_embedded.mutable_mint_v2();
+    malformed_mint->set_chain_id( "11155111" );
+    auto *malformed_input = malformed_mint->mutable_utxo_params()->add_inputs();
+    malformed_input->set_tx_id_hash( std::string( 64, 'x' ) );
+    malformed_input->set_output_index( kReceiptIndex );
+    auto malformed_subject = ConsensusManager::CreateNonceSubject(
+        account_->GetAddress(), 91, std::string( 64, 'd' ), malformed_embedded,
+        std::nullopt, std::nullopt );
+    ASSERT_TRUE( malformed_subject );
+    ConsensusManager::Certificate malformed_certificate;
+    *malformed_certificate.mutable_proposal()->mutable_subject() = malformed_subject.value();
+
+    TransactionManagerPendingLifecycleTestAccess::RemoveApplicationHandler( consensus_ );
+    ASSERT_TRUE( consensus_->RegisterCertificateApplicationHandler(
+        NONCE_SUBJECT_TYPE,
+        [production_handler, malformed_certificate](
+            const std::string &,
+            const ConsensusManager::Certificate &,
+            ConsensusManager::FinalizedReservationApplicationHandle handle ) mutable
+            -> outcome::result<ConsensusManager::ApplicationDisposition>
+        {
+            return production_handler(
+                std::string( 64, 'd' ), malformed_certificate, std::move( handle ) );
+        } ) );
+    std::atomic<uint64_t> cleanup_count{ 0 };
+    ASSERT_TRUE( consensus_->RegisterProposalCleanupHandler(
+        NONCE_SUBJECT_TYPE, [&]( const std::string & ) { ++cleanup_count; } ) );
+
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::DriveFinalizedApplication(
+                   consensus_, authoritative.value(), outpoint ),
+               ConsensusManager::FinalizeResult::AlreadyFinalized );
+    EXPECT_EQ( cleanup_count.load(), 0U );
+    auto slot = mint->GetSlotID();
+    ASSERT_TRUE( slot );
+    auto protected_burn = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ )
+                              ->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( protected_burn && protected_burn.value() );
+    EXPECT_EQ( protected_burn.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, FinalizedHandleHashMismatchIsIrreconcilable )
+{
+    auto mint = PrepareMint( '9' );
+    ASSERT_TRUE( mint );
+    auto authoritative = MakeCertificateWithEmbedded(
+        mint->GetHash(), mint->GetNonce(), mint->SerializeToEmbeddedTransaction( mint->dag_st ) );
+    ASSERT_TRUE( authoritative );
+    const auto input = mint->GetUTXOParameters().first.front();
+    ConsensusStateStore::BurnOutpoint outpoint{
+        mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ };
+    auto production_handler =
+        TransactionManagerPendingLifecycleTestAccess::ApplicationHandler( consensus_ );
+    ASSERT_TRUE( production_handler );
+    const std::string mismatched_hash( 64, 'e' );
+    auto mismatched_subject = ConsensusManager::CreateNonceSubject(
+        account_->GetAddress(), mint->GetNonce(), mismatched_hash,
+        mint->SerializeToEmbeddedTransaction( mint->dag_st ), std::nullopt, std::nullopt );
+    ASSERT_TRUE( mismatched_subject );
+    ConsensusManager::Certificate mismatched_certificate;
+    *mismatched_certificate.mutable_proposal()->mutable_subject() = mismatched_subject.value();
+    TransactionManagerPendingLifecycleTestAccess::RemoveApplicationHandler( consensus_ );
+    ASSERT_TRUE( consensus_->RegisterCertificateApplicationHandler(
+        NONCE_SUBJECT_TYPE,
+        [production_handler, mismatched_certificate, mismatched_hash](
+            const std::string &,
+            const ConsensusManager::Certificate &,
+            ConsensusManager::FinalizedReservationApplicationHandle handle ) mutable
+            -> outcome::result<ConsensusManager::ApplicationDisposition>
+        {
+            return production_handler(
+                mismatched_hash, mismatched_certificate, std::move( handle ) );
+        } ) );
+    std::atomic<uint64_t> cleanup_count{ 0 };
+    ASSERT_TRUE( consensus_->RegisterProposalCleanupHandler(
+        NONCE_SUBJECT_TYPE, [&]( const std::string & ) { ++cleanup_count; } ) );
+
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::DriveFinalizedApplication(
+                   consensus_, authoritative.value(), outpoint ),
+               ConsensusManager::FinalizeResult::AlreadyFinalized );
+    EXPECT_EQ( cleanup_count.load(), 0U );
+    auto slot = mint->GetSlotID();
+    ASSERT_TRUE( slot );
+    auto protected_burn = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ )
+                              ->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( protected_burn && protected_burn.value() );
+    EXPECT_EQ( protected_burn.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest, LegacyFallbackWithoutFinalizedHandleRetainsCompatibility )
+{
+    const std::string legacy_hash( 64, 'f' );
+    auto certificate = MakeCertificate( legacy_hash, 92 );
+    ASSERT_TRUE( certificate );
+    auto disposition = TransactionManagerPendingLifecycleTestAccess::OnCertificateWithoutHandle(
+        *manager_, legacy_hash, certificate.value() );
+    ASSERT_TRUE( disposition );
+    EXPECT_EQ( disposition.value(), ConsensusManager::ApplicationDisposition::Applied );
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest,
