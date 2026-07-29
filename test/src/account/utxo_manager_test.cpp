@@ -10,6 +10,7 @@
 #include "account/UTXOManager.hpp"
 #include "account/GeniusUTXO.hpp"
 #include "account/TokenID.hpp"
+#include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
 #include "testutil/storage/base_rocksdb_test.hpp"
 
@@ -111,6 +112,48 @@ namespace sgns
                 } );
             if ( !applied ) return outcome::failure( applied.error() );
             return result;
+        }
+
+        static outcome::result<void> RemoveApplication(
+            UTXOManager &manager,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index )
+        {
+            base::Buffer key;
+            key.put( UTXOManager::MakeBridgeApplicationKey( chain, burn, index ) );
+            return manager.db_->remove( key );
+        }
+
+        static outcome::result<void> SwapStoredApplicationOutputs(
+            UTXOManager &manager,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index )
+        {
+            base::Buffer key;
+            key.put( UTXOManager::MakeBridgeApplicationKey( chain, burn, index ) );
+            BOOST_OUTCOME_TRY( auto raw, manager.db_->get( key ) );
+            SGTransaction::BridgeApplicationRecord record;
+            if ( !record.ParseFromArray( raw.data(), raw.size() ) || record.produced_outputs_size() != 2 )
+                return outcome::failure( std::errc::bad_message );
+            record.mutable_produced_outputs()->SwapElements( 0, 1 );
+            base::Buffer changed;
+            changed.put( record.SerializeAsString() );
+            return manager.db_->put( key, changed );
+        }
+
+        static void RemoveLiveOutpoint( UTXOManager &manager, const OutPoint &outpoint )
+        {
+            std::unique_lock lock( manager.utxos_mutex_ );
+            manager.utxo_outpoints_.erase( outpoint );
+        }
+
+        static void MarkLiveOutpointReady( UTXOManager &manager, const OutPoint &outpoint )
+        {
+            std::unique_lock lock( manager.utxos_mutex_ );
+            auto it = manager.utxo_outpoints_.find( outpoint );
+            if ( it != manager.utxo_outpoints_.end() ) it->second.state = UTXOManager::UTXOState::UTXO_READY;
         }
     };
 }
@@ -903,4 +946,75 @@ TEST_F( UTXOManagerTest, ConsumedApplicationRejectsDifferentWinnerIdentityAndArt
     EXPECT_EQ( artifact_error.error(),
                std::make_error_code( std::errc::state_not_recoverable ) );
     EXPECT_EQ( utxo_manager->GetUnconsumedUTXO( winner, 0 )->GetAmount(), 800U );
+
+    enum class Corruption : uint8_t
+    {
+        MissingApplication,
+        MissingWinnerOutput,
+        ConflictingOrderedOutput,
+        ConsumedInputInconsistency,
+    };
+    const auto run_corruption = [&]( Corruption corruption, uint8_t seed, uint32_t case_index )
+    {
+        const auto case_burn = crypto::sha2_256( std::vector<uint8_t>{ seed } );
+        const auto case_winner = crypto::sha2_256( std::vector<uint8_t>{ static_cast<uint8_t>( seed + 1 ) } );
+        const std::vector<GeniusUTXO> case_outputs{
+            GeniusUTXO( case_winner, 0, 810, TOKEN_1, "artifact-destination" ),
+            GeniusUTXO( case_winner, 1, 190, TOKEN_1, "artifact-destination" )
+        };
+        const auto case_preimage = fmt::format(
+            "mint-v2:{}:{}:{}", chain, case_burn.toReadableString(), case_index );
+        const auto case_slot = crypto::sha2_256(
+            std::vector<uint8_t>( case_preimage.begin(), case_preimage.end() ) );
+        ConsensusStateStore::BurnOutpoint case_outpoint{
+            chain, case_burn.toReadableString(), case_index };
+        ASSERT_TRUE( store->CreateOrJoinBurnReservation(
+            case_slot.toReadableString(), case_outpoint, 10'000, 1 ) );
+        auto case_finalized = store->FinalizeBurnReservation(
+            case_slot.toReadableString(), case_outpoint, std::string( 64, 'e' ),
+            std::string( 64, 'f' ), case_winner.toReadableString(), 2 );
+        ASSERT_TRUE( case_finalized );
+        ConsensusStateStore::FinalizedReservationIdentity case_identity{
+            case_slot.toReadableString(), case_outpoint, case_finalized.value().generation(),
+            case_finalized.value().certificate_digest(), case_finalized.value().proposal_id(),
+            case_finalized.value().winner_id() };
+        ASSERT_TRUE( UTXOManagerTestAccess::ApplyFinalized(
+            *utxo_manager, store, case_identity, case_winner, case_outputs,
+            owner, 1'000, TOKEN_1 ) );
+
+        switch ( corruption )
+        {
+            case Corruption::MissingApplication:
+                ASSERT_TRUE( UTXOManagerTestAccess::RemoveApplication(
+                    *utxo_manager, chain, case_burn, case_index ) );
+                break;
+            case Corruption::MissingWinnerOutput:
+                UTXOManagerTestAccess::RemoveLiveOutpoint(
+                    *utxo_manager, case_outputs.front().GetOutPoint() );
+                break;
+            case Corruption::ConflictingOrderedOutput:
+                ASSERT_TRUE( UTXOManagerTestAccess::SwapStoredApplicationOutputs(
+                    *utxo_manager, chain, case_burn, case_index ) );
+                break;
+            case Corruption::ConsumedInputInconsistency:
+                UTXOManagerTestAccess::MarkLiveOutpointReady(
+                    *utxo_manager, OutPoint{ case_burn, case_index } );
+                break;
+        }
+
+        auto replay_error = UTXOManagerTestAccess::ApplyFinalized(
+            *utxo_manager, store, case_identity, case_winner, case_outputs,
+            owner, 1'000, TOKEN_1 );
+        ASSERT_TRUE( replay_error.has_error() );
+        EXPECT_EQ( replay_error.error(), std::make_error_code( std::errc::state_not_recoverable ) );
+        auto protected_reservation = store->GetBurnReservation( case_identity.slot_id );
+        ASSERT_TRUE( protected_reservation && protected_reservation.value() );
+        EXPECT_EQ( protected_reservation.value()->state(),
+                   ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    };
+
+    run_corruption( Corruption::MissingApplication, 0x81, 21 );
+    run_corruption( Corruption::MissingWinnerOutput, 0x83, 22 );
+    run_corruption( Corruption::ConflictingOrderedOutput, 0x85, 23 );
+    run_corruption( Corruption::ConsumedInputInconsistency, 0x87, 24 );
 }

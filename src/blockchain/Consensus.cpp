@@ -493,6 +493,9 @@ namespace sgns
                           record.winner_id() != final->second.winner_id )
                     return false;
             }
+            if ( record.state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR ||
+                 record.state() == ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR )
+                restored_safety_slots_.insert( record.slot_id() );
             if ( !restored_reservations.emplace( record.slot_id(), std::move( record ) ).second ) return false;
         }
 
@@ -564,10 +567,13 @@ namespace sgns
             slot_state.reserved_finalization_proposal_id = final.proposal_id;
             slot_state.reserved_finalization_digest = final.digest;
             slot_state.reserved_finalization_winner_id = final.winner_id;
-            slot_state.lifecycle = restored_processes_.at( slot ).state() ==
-                                           ConsensusStateStore::ProcessRecord::COMPLETE
-                                       ? SlotState::Lifecycle::Applied
-                                       : SlotState::Lifecycle::FinalizedPendingApplication;
+            if ( restored_safety_slots_.count( slot ) != 0 )
+                slot_state.lifecycle = SlotState::Lifecycle::SafetyViolation;
+            else
+                slot_state.lifecycle = restored_processes_.at( slot ).state() ==
+                                               ConsensusStateStore::ProcessRecord::COMPLETE
+                                           ? SlotState::Lifecycle::Applied
+                                           : SlotState::Lifecycle::FinalizedPendingApplication;
         }
 
         for ( const auto &record : safeties.value() )
@@ -3072,6 +3078,29 @@ namespace sgns
              record.winner_id() != winner_id || record.certificate_digest() != digest )
             return FinalizeResult::StorageFailure;
 
+        std::optional<ConsensusStateStore::BurnReservationRecord> burn_reservation;
+        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
+             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
+        {
+            auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
+            if ( !nonce ) return FinalizeResult::StorageFailure;
+            if ( nonce.value().transaction().has_mint_v2() )
+            {
+                auto outpoint = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
+                if ( !outpoint ) return FinalizeResult::StorageFailure;
+                auto reservation = state_store_->GetBurnReservation( slot_id );
+                if ( !reservation || !reservation.value() ) return FinalizeResult::StorageFailure;
+                burn_reservation = reservation.value().value();
+                if ( burn_reservation->state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR ||
+                     burn_reservation->state() ==
+                         ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR )
+                {
+                    std::lock_guard lock( proposals_mutex_ );
+                    slot_states_[slot_id].lifecycle = SlotState::Lifecycle::SafetyViolation;
+                    return FinalizeResult::AlreadyFinalized;
+                }
+            }
+        }
         if ( record.state() == ConsensusStateStore::ProcessRecord::COMPLETE )
         {
             {
@@ -3094,24 +3123,6 @@ namespace sgns
             auto legacy = certificate_subject_handlers_.find( type_hash );
             if ( legacy != certificate_subject_handlers_.end() ) handler = legacy->second;
             if ( !application_handler && !handler ) return FinalizeResult::PendingApplication;
-        }
-
-        std::optional<ConsensusStateStore::BurnReservationRecord> burn_reservation;
-        if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
-             SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
-        {
-            auto nonce = DecodeNonceSubject( normalized.certificate.proposal().subject() );
-            if ( !nonce ) return FinalizeResult::StorageFailure;
-            if ( nonce.value().transaction().has_mint_v2() )
-            {
-                auto outpoint = DecodeMintBurnOutpoint( normalized.certificate.proposal().subject() );
-                if ( !outpoint ) return FinalizeResult::StorageFailure;
-                auto reservation = state_store_->GetBurnReservation( slot_id );
-                if ( !reservation || !reservation.value() ) return FinalizeResult::StorageFailure;
-                burn_reservation = reservation.value().value();
-                if ( burn_reservation->state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR )
-                    return FinalizeResult::AlreadyFinalized;
-            }
         }
         {
             std::lock_guard lock( restored_state_mutex_ );
@@ -3192,8 +3203,14 @@ namespace sgns
                 return FinalizeResult::PendingApplication;
             }
             if ( exact_identity &&
-                 current.state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR )
+                 ( current.state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR ||
+                   current.state() ==
+                       ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR ) )
             {
+                {
+                    std::lock_guard lock( proposals_mutex_ );
+                    slot_states_[slot_id].lifecycle = SlotState::Lifecycle::SafetyViolation;
+                }
                 release_processing();
                 return FinalizeResult::AlreadyFinalized;
             }
@@ -3214,6 +3231,10 @@ namespace sgns
                 "irreconcilable exact-winner application state", CurrentTimeMs() );
             release_processing();
             if ( !safety ) return FinalizeResult::StorageFailure;
+            {
+                std::lock_guard lock( proposals_mutex_ );
+                slot_states_[slot_id].lifecycle = SlotState::Lifecycle::SafetyViolation;
+            }
             ConsensusManagerLogger()->critical(
                 "burn_application_safety_error slot={} proposal_id={} winner_id={} certificate_digest={}",
                 slot_id, normalized.certificate.proposal_id(), winner_id, digest );
@@ -4863,7 +4884,9 @@ namespace sgns
             std::lock_guard lock( restored_state_mutex_ );
             for ( const auto &[slot, process] : restored_processes_ )
             {
-                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING ) pending_slots.push_back( slot );
+                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING &&
+                     restored_safety_slots_.count( slot ) == 0 )
+                    pending_slots.push_back( slot );
             }
         }
         for ( const auto &slot : pending_slots )
