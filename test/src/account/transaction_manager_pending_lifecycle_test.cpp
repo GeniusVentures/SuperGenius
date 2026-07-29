@@ -237,7 +237,7 @@ using namespace sgns;
 
 namespace
 {
-    class TransactionManagerRecoveryTest : public test::CRDTFixture
+    class TransactionManagerRecoveryTest : public ::test::CRDTFixture
     {
     public:
         TransactionManagerRecoveryTest() : CRDTFixture( "transaction_manager_recovery_test" )
@@ -476,7 +476,7 @@ namespace
      * @details Avoids GeniusNode network startup and constructs GeniusAccount, Blockchain,
      *          and TransactionManager directly using the certificate fallback fixture pattern.
      */
-    class TransactionManagerPendingLifecycleTest : public test::CRDTFixture
+    class TransactionManagerPendingLifecycleTest : public ::test::CRDTFixture
     {
     public:
         TransactionManagerPendingLifecycleTest()
