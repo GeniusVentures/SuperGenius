@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
-status: executing
-last_updated: "2026-07-29T18:53:35.425Z"
-last_activity: 2026-07-29 -- Phase 11 planning complete
+status: ready
+last_updated: "2026-07-29T20:46:00.000Z"
+last_activity: 2026-07-29 -- Completed Phase 11 Plan 12 exact terminal identity and composed recovery closure
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 35
-  completed_plans: 34
-  percent: 50
+  completed_plans: 35
+  percent: 75
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 11 — verify slot-owned bridge burn reservation closure
+**Current focus:** Phase 12 — Consensus Race and Compatibility Verification
 
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations) — COMPLETE
-Plan: 11 of 11 complete
-Status: Ready to execute
-Last activity: 2026-07-29 -- Phase 11 planning complete
+Plan: 12 of 12 complete
+Status: Ready to plan Phase 12
+Last activity: 2026-07-29 -- Completed 11-12-PLAN.md
 
 ## Roadmap Snapshot
 
@@ -40,7 +40,7 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 |-------|------|--------|--------------|
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
-| 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (11/11 plans) | BURN-01..05 |
+| 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
 | 12 | Consensus Race and Compatibility Verification | ○ ready for planning | TEST-01..06 |
 
 ## Key Decisions
@@ -66,12 +66,12 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 
 ## Operator Next Steps
 
-- Re-verify Phase 11, then discuss and plan Phase 12.
+- Discuss and plan Phase 12.
 
 ## Session Continuity
 
-**Last session:** 2026-07-29T18:15:06.860Z
-**Stopped at:** Completed 11-11-PLAN.md
+**Last session:** 2026-07-29T20:46:00.000Z
+**Stopped at:** Completed 11-12-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -112,6 +112,7 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 | Phase 11 P09 | 9 min | 1 tasks | 0 files |
 | Phase 11 P10 | 26 min | 2 tasks | 4 files |
 | Phase 11 P11 | 30 min | 2 tasks | 6 files |
+| Phase 11 P12 | 20 min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -193,3 +194,5 @@ Last activity: 2026-07-29 -- Phase 11 planning complete
 - [Phase 11]: Finalized-handle payload contradictions are irreconcilable while the no-handle legacy fallback retains its established Applied compatibility result. — Certified mint data fails closed without changing legacy non-resource behavior.
 - [Phase 11]: Post-consumption contradictions use CONSUMED_SAFETY_ERROR instead of overwriting the durable fact of physical consumption with ordinary SafetyError. — Physical consumption, exact finality identity, and non-release protection must remain durable after contradiction.
 - [Phase 11]: Startup installs terminal safety lifecycle before certificate recovery selection, while duplicate ingress short-circuits before handler lookup or cleanup. — Terminal recovery must not invoke application, cleanup, wake, release, or remint side effects.
+- [Phase 11]: Live terminal idempotence requires exact canonical outpoint, reciprocal generation, certificate digest, proposal ID, and winner ID agreement with the authoritative process and normalized certificate. — A readable identity contradiction must remain visible and cannot retire certificate work.
+- [Phase 11]: Composed consumed-artifact recovery is proven with a genuinely certified mint and real TransactionManager registration over the same reopened RocksDB. — Production recovery must transition the contradiction exactly once and permanently suppress retry, release, remint, cleanup, and wake effects.
