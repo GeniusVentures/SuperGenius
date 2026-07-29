@@ -3079,6 +3079,39 @@ namespace sgns
             return FinalizeResult::StorageFailure;
 
         std::optional<ConsensusStateStore::BurnReservationRecord> burn_reservation;
+        std::optional<ConsensusStateStore::FinalizedReservationIdentity> expected_burn_identity;
+        const auto terminal_identity_matches = [&]( const ConsensusStateStore::BurnReservationRecord &current )
+        {
+            return expected_burn_identity &&
+                   current.slot_id() == expected_burn_identity->slot_id &&
+                   current.source_chain() == expected_burn_identity->outpoint.source_chain &&
+                   current.burn_hash() == expected_burn_identity->outpoint.burn_hash &&
+                   current.receipt_log_index() == expected_burn_identity->outpoint.receipt_log_index &&
+                   current.generation() == expected_burn_identity->generation &&
+                   current.certificate_digest() == expected_burn_identity->certificate_digest &&
+                   current.proposal_id() == expected_burn_identity->proposal_id &&
+                   current.winner_id() == expected_burn_identity->winner_id;
+        };
+        const auto reject_terminal_identity_mismatch = [&]( const auto &current )
+        {
+            ConsensusManagerLogger()->critical(
+                "burn_terminal_identity_mismatch slot={} terminal_state={} "
+                "expected_outpoint={}:{}:{} expected_generation={} expected_certificate_digest={} "
+                "expected_proposal_id={} expected_winner_id={} observed_outpoint={}:{}:{} "
+                "observed_generation={} observed_certificate_digest={} observed_proposal_id={} "
+                "observed_winner_id={}",
+                slot_id, static_cast<int>( current.state() ),
+                expected_burn_identity->outpoint.source_chain,
+                expected_burn_identity->outpoint.burn_hash,
+                expected_burn_identity->outpoint.receipt_log_index,
+                expected_burn_identity->generation,
+                expected_burn_identity->certificate_digest,
+                expected_burn_identity->proposal_id,
+                expected_burn_identity->winner_id,
+                current.source_chain(), current.burn_hash(), current.receipt_log_index(),
+                current.generation(), current.certificate_digest(), current.proposal_id(),
+                current.winner_id() );
+        };
         if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
              SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
         {
@@ -3091,10 +3124,22 @@ namespace sgns
                 auto reservation = state_store_->GetBurnReservation( slot_id );
                 if ( !reservation || !reservation.value() ) return FinalizeResult::StorageFailure;
                 burn_reservation = reservation.value().value();
+                expected_burn_identity = ConsensusStateStore::FinalizedReservationIdentity{
+                    slot_id,
+                    outpoint.value(),
+                    burn_reservation->generation(),
+                    digest,
+                    record.proposal_id(),
+                    record.winner_id() };
                 if ( burn_reservation->state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR ||
                      burn_reservation->state() ==
                          ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR )
                 {
+                    if ( !terminal_identity_matches( *burn_reservation ) )
+                    {
+                        reject_terminal_identity_mismatch( *burn_reservation );
+                        return FinalizeResult::StorageFailure;
+                    }
                     std::lock_guard lock( proposals_mutex_ );
                     slot_states_[slot_id].lifecycle = SlotState::Lifecycle::SafetyViolation;
                     return FinalizeResult::AlreadyFinalized;
@@ -3144,17 +3189,8 @@ namespace sgns
         }
 
         ApplicationDisposition disposition = ApplicationDisposition::Retryable;
-        std::optional<ConsensusStateStore::FinalizedReservationIdentity> expected_burn_identity;
         if ( application_handler && burn_reservation )
         {
-            expected_burn_identity = ConsensusStateStore::FinalizedReservationIdentity{
-                slot_id,
-                { burn_reservation->source_chain(), burn_reservation->burn_hash(),
-                  burn_reservation->receipt_log_index() },
-                burn_reservation->generation(),
-                digest,
-                normalized.certificate.proposal_id(),
-                winner_id };
             auto handled = application_handler(
                 winner_id, normalized.certificate,
                 FinalizedReservationApplicationHandle{ state_store_, *expected_burn_identity } );
@@ -3187,15 +3223,7 @@ namespace sgns
                 return FinalizeResult::PendingApplication;
             }
             const auto &current = durable.value().value();
-            const bool exact_identity =
-                current.slot_id() == expected_burn_identity->slot_id &&
-                current.source_chain() == expected_burn_identity->outpoint.source_chain &&
-                current.burn_hash() == expected_burn_identity->outpoint.burn_hash &&
-                current.receipt_log_index() == expected_burn_identity->outpoint.receipt_log_index &&
-                current.generation() == expected_burn_identity->generation &&
-                current.certificate_digest() == expected_burn_identity->certificate_digest &&
-                current.proposal_id() == expected_burn_identity->proposal_id &&
-                current.winner_id() == expected_burn_identity->winner_id;
+            const bool exact_identity = terminal_identity_matches( current );
             if ( exact_identity &&
                  current.state() == ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
             {
@@ -3213,6 +3241,15 @@ namespace sgns
                 }
                 release_processing();
                 return FinalizeResult::AlreadyFinalized;
+            }
+            if ( !exact_identity &&
+                 ( current.state() == ConsensusStateStore::BurnReservationRecord::SAFETY_ERROR ||
+                   current.state() ==
+                       ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR ) )
+            {
+                reject_terminal_identity_mismatch( current );
+                restore_pending();
+                return FinalizeResult::StorageFailure;
             }
             if ( !exact_identity ||
                  current.state() != ConsensusStateStore::BurnReservationRecord::CONSUMED )
