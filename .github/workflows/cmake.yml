@@ -732,7 +732,7 @@ jobs:
       - name: Run tests (OSX)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.target == 'OSX' }}
-        run: ctest . --verbose -j -C ${{ matrix.build-type }}
+        run: ctest . -j -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Save CTest cost data
         if: ${{ (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.build-type == 'Release' && matrix.target == 'Windows')) && (success() || failure()) }}
