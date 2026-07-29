@@ -1682,15 +1682,13 @@ namespace sgns
 
         ShutdownForDestruction();
 
-        // FileManager is process-global. Do not let it retain this node's Bitswap
-        // after the PubSub host and event bus that Bitswap references are destroyed.
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        bitswap_.reset();
-
+        // Signal PubSub to stop, but do not destroy it yet: the io_context threads
+        // below may still be running in-flight asio/libp2p completion handlers that
+        // reference pubsub_/bitswap_. Resetting those objects before the io_context
+        // is stopped and joined is a use-after-free race.
         if ( pubsub_ )
         {
             pubsub_->Stop();
-            pubsub_.reset();
         }
         io_work_guard_.reset();
         if ( io_ )
@@ -1727,6 +1725,13 @@ namespace sgns
                 upnp_thread.join();
             }
         }
+
+        // Now that no io_context thread can still be running, it is safe to
+        // destroy PubSub and release Bitswap from the process-global FileManager.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        bitswap_.reset();
+        pubsub_.reset();
+
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
