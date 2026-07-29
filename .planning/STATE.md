@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
-current_phase: 11
+current_phase: 12
 status: ready_to_plan
 last_updated: 2026-07-29T21:03:19.019Z
 last_activity: 2026-07-29 -- Completed Phase 11 Plan 12 exact terminal identity and composed recovery closure
