@@ -65,14 +65,18 @@ namespace sgns
     class PublicChainInputValidator final : public IInputValidator
     {
     public:
-        /// @brief Registers this validator for @p chain_id in the global registry
-        ///        and records it for self-removal on destruction (compare-and-
-        ///        remove), so the registry never holds a dangling pointer after
-        ///        this validator (and its owning transaction manager) is destroyed.
-        void RegisterForChain( const std::string &chain_id )
+        /// @brief Attempts to claim @p chain_id in the global registry and records
+        ///        successful claims for self-removal on destruction.
+        /// @return True when this validator claimed the chain; false when another
+        ///         validator is already registered for it.
+        bool RegisterForChain( const std::string &chain_id )
         {
-            IInputValidator::Register( chain_id, this );
+            if ( !IInputValidator::Register( chain_id, this ) )
+            {
+                return false;
+            }
             registered_chain_ids_.push_back( chain_id );
+            return true;
         }
 
         ~PublicChainInputValidator() override

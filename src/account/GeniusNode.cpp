@@ -961,16 +961,16 @@ namespace sgns
         // Debug mode
         node_logger_              = ConfigureLogger( "SuperGeniusNode", logdir, spdlog::level::debug );
         auto loggerGeniusNode     = ConfigureLogger( "GeniusNode", logdir, spdlog::level::debug );
-        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::debug );
-        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::debug );
+        auto loggerGlobalDB       = ConfigureLogger( "GlobalDB", logdir, spdlog::level::err );
+        auto loggerDAGSyncer      = ConfigureLogger( "GraphsyncDAGSyncer", logdir, spdlog::level::err );
         auto loggerGraphsync      = ConfigureLogger( "graphsync", logdir, spdlog::level::err );
         auto loggerBroadcaster    = ConfigureLogger( "PubSubBroadcasterExt", logdir, spdlog::level::err );
-        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::debug );
+        auto loggerDataStore      = ConfigureLogger( "CrdtDatastore", logdir, spdlog::level::err );
         auto loggerCRDTHeads      = ConfigureLogger( "CrdtHeads", logdir, spdlog::level::err );
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
-        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::trace );
+        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
         auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
@@ -993,7 +993,7 @@ namespace sgns
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
-        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::trace );
+        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::err );
         auto loggerBitswap          = ConfigureLogger( "Bitswap", logdir, spdlog::level::err );
 
         // AsyncIOManager loggers
@@ -1682,15 +1682,13 @@ namespace sgns
 
         ShutdownForDestruction();
 
-        // FileManager is process-global. Do not let it retain this node's Bitswap
-        // after the PubSub host and event bus that Bitswap references are destroyed.
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        bitswap_.reset();
-
+        // Signal PubSub to stop, but do not destroy it yet: the io_context threads
+        // below may still be running in-flight asio/libp2p completion handlers that
+        // reference pubsub_/bitswap_. Resetting those objects before the io_context
+        // is stopped and joined is a use-after-free race.
         if ( pubsub_ )
         {
             pubsub_->Stop();
-            pubsub_.reset();
         }
         io_work_guard_.reset();
         if ( io_ )
@@ -1727,6 +1725,13 @@ namespace sgns
                 upnp_thread.join();
             }
         }
+
+        // Now that no io_context thread can still be running, it is safe to
+        // destroy PubSub and release Bitswap from the process-global FileManager.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        bitswap_.reset();
+        pubsub_.reset();
+
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
@@ -2965,16 +2970,18 @@ namespace sgns
         chainlist_fetcher_ = std::move( fetcher );
     }
 
-    void GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
+    bool GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
     {
-        if ( !transaction_manager_ )
+        auto transaction_manager = transaction_manager_;
+        if ( !transaction_manager || transaction_manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
-            return;
+            return false;
         }
         const size_t endpoint_count = endpoints.size();
-        transaction_manager_->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        transaction_manager->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
         node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoint_count, chain_id );
+        return true;
     }
 
     std::filesystem::path GeniusNode::ResolveBridgeChainsConfigPath() const

@@ -408,6 +408,23 @@ namespace sgns
          */
         static const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id );
 
+        /**
+         * @brief Re-attempts genesis-registry head-CID discovery when initialization has not
+         *        yet completed (bug fix, D-01/2-of-11-nodes-start-bridge).
+         *
+         * InitializeCache() runs synchronously once, at construction time. If the genesis
+         * registry has not yet synced into this node's local CRDT store at that instant
+         * (the common case for a Light node in a large concurrent cluster), it returns
+         * without requesting anything further and initialization is left to depend solely
+         * on a passive CRDT broadcast (RegistryUpdateReceived) that may never arrive for
+         * every node. Callers that periodically retry a deferred blockchain start (e.g.
+         * Blockchain::Start()) should call this on every such retry so an active,
+         * repeating head-CID request backs up the passive broadcast path.
+         *
+         * No-op once the cache is already initialized.
+         */
+        void RetryInitializationIfNeeded();
+
     protected:
         friend class sgns::Migration3_5_0To3_6_0;
 

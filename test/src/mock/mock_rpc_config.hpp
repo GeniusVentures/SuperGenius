@@ -4,6 +4,7 @@
 #ifndef TEST_MOCK_RPC_CONFIG_HPP
 #define TEST_MOCK_RPC_CONFIG_HPP
 
+#include <array>
 #include <filesystem>
 #include <map>
 #include <string>
@@ -34,6 +35,18 @@ namespace sgns::test
     /// @param config_path Path to mock_rpc_config.json.
     /// @return Vector of endpoint configs, or empty vector if the file doesn't exist or is invalid.
     std::vector<MockEndpointConfig> LoadMockConfig( const std::filesystem::path &config_path );
+
+    /// @brief Build 3 genuinely divergent per-slot RPC endpoint mock configs (DIRECT +
+    ///        2x PUBLIC), each with a distinct URL, for exercising RPC-endpoint
+    ///        disagreement against the >75% weighted quorum rule (D-09).
+    /// @param direct_behavior   Behavior for the "mock://direct" slot (default kSuccess).
+    /// @param public1_behavior  Behavior for the "mock://public1" slot (default kWrongLogs).
+    /// @param public2_behavior  Behavior for the "mock://public2" slot (default kTimeout).
+    /// @return Array of exactly 3 MockEndpointConfig with distinct "mock://" URLs.
+    std::array<MockEndpointConfig, 3> BuildDivergentSlotConfigs(
+        MockBehavior direct_behavior  = MockBehavior::kSuccess,
+        MockBehavior public1_behavior = MockBehavior::kWrongLogs,
+        MockBehavior public2_behavior = MockBehavior::kTimeout );
 
 } // namespace sgns::test
 

@@ -552,6 +552,19 @@ namespace sgns
                 filters_registered_,
                 callbacks_registered_,
                 validator_registry_initialized_.load() );
+
+            // Bug fix (2-of-11-nodes-start-bridge): ValidatorRegistry::InitializeCache()
+            // only ever attempts genesis-registry discovery once, synchronously, at
+            // construction time, and otherwise depends entirely on a passive CRDT
+            // broadcast (RegistryUpdateReceived) that may never reach every node in a
+            // large concurrent cluster. Actively re-attempt head-CID discovery on every
+            // deferred-start retry so a missed/delayed broadcast does not permanently
+            // strand this node.
+            if ( validator_registry_ && !validator_registry_initialized_.load() )
+            {
+                validator_registry_->RetryInitializationIfNeeded();
+            }
+
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
         start_deferred_.store( false );

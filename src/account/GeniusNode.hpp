@@ -705,8 +705,10 @@ namespace sgns
          *
          * @param[in] chain_id  Numeric EVM chain ID as a string (e.g. "11155111" for Sepolia).
          * @param[in] endpoints  Vector of weighted RPC endpoints for the chain.
+         * @return True when the endpoints were configured; false when the transaction
+         *         manager is absent or not READY.
          */
-        void ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
+        bool ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints );
 
         /**
          * @brief Injects a custom chainlist fetcher for RPC endpoint discovery (test injection point).

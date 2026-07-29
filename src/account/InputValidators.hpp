@@ -10,6 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -83,36 +84,60 @@ namespace sgns
 
         using ValidatorPtr = const IInputValidator *;
 
-        static void Register( const std::string &chain_id, ValidatorPtr validator )
+        /**
+         * @brief Register a validator for a chain if the chain is currently unowned.
+         * @return True when the validator was inserted; false when the chain already
+         *         has a validator or @p validator is null.
+         *
+         * Registration is deliberately insert-only. The current owner must remove
+         * itself with UnregisterIf() before another validator can claim the chain.
+         */
+        static bool Register( const std::string &chain_id, ValidatorPtr validator )
         {
-            registry()[chain_id] = validator;
+            if ( validator == nullptr )
+            {
+                return false;
+            }
+
+            auto &state = registryState();
+            std::lock_guard<std::mutex> lock( state.mutex );
+            return state.validators.emplace( chain_id, validator ).second;
         }
 
         /// @brief Remove a chain's registration only if it currently points to
-        ///        @p expected (compare-and-remove). Prevents a stale validator
-        ///        from clobbering a newer account's registration when it is
-        ///        destroyed, and lets a validator self-clean on destruction so
-        ///        the registry never holds a dangling pointer.
+        ///        @p expected (compare-and-remove). This prevents a non-owner
+        ///        from removing the current registration and lets a validator
+        ///        self-clean on destruction.
         static void UnregisterIf( const std::string &chain_id, ValidatorPtr expected )
         {
-            auto it = registry().find( chain_id );
-            if ( it != registry().end() && it->second == expected )
+            auto &state = registryState();
+            std::lock_guard<std::mutex> lock( state.mutex );
+            auto it = state.validators.find( chain_id );
+            if ( it != state.validators.end() && it->second == expected )
             {
-                registry().erase( it );
+                state.validators.erase( it );
             }
         }
 
         static ValidatorPtr Get( const std::string &chain_id )
         {
-            auto it = registry().find( chain_id );
-            return it != registry().end() ? it->second : nullptr;
+            auto &state = registryState();
+            std::lock_guard<std::mutex> lock( state.mutex );
+            auto it = state.validators.find( chain_id );
+            return it != state.validators.end() ? it->second : nullptr;
         }
 
     private:
-        static std::unordered_map<std::string, ValidatorPtr> &registry()
+        struct RegistryState
         {
-            static std::unordered_map<std::string, ValidatorPtr> map;
-            return map;
+            std::mutex                                    mutex;
+            std::unordered_map<std::string, ValidatorPtr> validators;
+        };
+
+        static RegistryState &registryState()
+        {
+            static RegistryState state;
+            return state;
         }
     };
 } // namespace sgns

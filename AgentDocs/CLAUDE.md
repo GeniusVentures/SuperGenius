@@ -305,3 +305,21 @@ ninja
 - Unit tests should be placed in the test/ directory matching source structure
 - Use cmake test framework for unit tests
 - Test names should be descriptive of what they're testing
+
+## Debugging Workflow
+
+When something is not working as expected, follow this order:
+
+1. **Check for existing tests first.** Is there already a unit test covering the function or component that's not working? If so, does the test pass? If the test passes but the code doesn't work in practice, the test has a coverage gap.
+
+2. **Write a test if none exists.** If there is no test for the problematic function, write one *before* attempting any fix. The test must cover both:
+   - **Happy path** — the function working correctly under normal inputs
+   - **Unhappy path** — edge cases, invalid inputs, error conditions
+
+   Use the project's wait-condition templates (no `std::this_thread::sleep_for` in tests). The test IS the specification — it defines what correct behavior looks like.
+
+3. **Trace the code to find the issue.** Only after a test exists (and fails in the expected way), trace through the code — follow call chains, check invariants, verify assumptions — to identify the root cause. Use `spdlog::debug()` for diagnostic output (never `fprintf`/`cout`/`printf`), enabled with `--debug` at runtime.
+
+4. **Fix the root cause, not the symptom.** Once the root cause is identified, make the minimal fix. The test written in step 2 should now pass. If it doesn't, the fix is incomplete or the root cause was misidentified — go back to step 3.
+
+5. **Ask the user for help if stuck.** If tracing doesn't reveal the issue, ask the user to help debug rather than guessing or trying random changes.
