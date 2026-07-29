@@ -1370,6 +1370,55 @@ TEST_F( TransactionManagerPendingLifecycleTest, SharedStoreApplicationHandleReac
         input.txid_hash_, input.output_idx_ ) );
 }
 
+TEST_F( TransactionManagerPendingLifecycleTest,
+        ConsumedArtifactContradictionMapsToIrreconcilableThroughProductionHandler )
+{
+    auto mint = PrepareMint( '6' );
+    ASSERT_TRUE( mint );
+    auto handler = TransactionManagerPendingLifecycleTestAccess::ApplicationHandler( consensus_ );
+    auto store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    auto slot = mint->GetSlotID();
+    ASSERT_TRUE( handler && store && slot );
+    const auto input = mint->GetUTXOParameters().first.front();
+    ConsensusStateStore::BurnOutpoint outpoint{
+        mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ };
+    auto finalized = store->FinalizeBurnReservation(
+        slot.value(), outpoint, std::string( 64, '2' ),
+        std::string( 64, '3' ), mint->GetHash(), 2U );
+    ASSERT_TRUE( finalized );
+    ConsensusStateStore::FinalizedReservationIdentity identity{
+        slot.value(), outpoint, finalized.value().generation(),
+        finalized.value().certificate_digest(), finalized.value().proposal_id(),
+        finalized.value().winner_id() };
+
+    auto applied = handler(
+        mint->GetHash(), ConsensusCertificate{},
+        ConsensusManager::FinalizedReservationApplicationHandle{ store, identity } );
+    ASSERT_TRUE( applied );
+    EXPECT_EQ( applied.value(), ConsensusManager::ApplicationDisposition::Applied );
+    auto consumed = store->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( consumed && consumed.value() );
+    ASSERT_EQ( consumed.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED );
+
+    TransactionManagerPendingLifecycleTestAccess::SetBridgeApplicationReader(
+        *manager_,
+        []( const std::shared_ptr<storage::rocksdb> &,
+            const crdt::GlobalDB::Buffer & ) -> outcome::result<crdt::GlobalDB::Buffer>
+        { return outcome::failure( storage::DatabaseError::NOT_FOUND ); } );
+    auto contradiction = handler(
+        mint->GetHash(), ConsensusCertificate{},
+        ConsensusManager::FinalizedReservationApplicationHandle{ store, identity } );
+    TransactionManagerPendingLifecycleTestAccess::ResetBridgeApplicationReader( *manager_ );
+    ASSERT_TRUE( contradiction );
+    EXPECT_EQ( contradiction.value(),
+               ConsensusManager::ApplicationDisposition::Irreconcilable );
+    auto still_consumed = store->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( still_consumed && still_consumed.value() );
+    EXPECT_EQ( still_consumed.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED );
+}
+
 TEST_F( TransactionManagerPendingLifecycleTest, FinalizedHandleMalformedEmbeddedMintIsIrreconcilable )
 {
     auto mint = PrepareMint( '8' );
