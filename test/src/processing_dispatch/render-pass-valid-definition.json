@@ -1,0 +1,21 @@
+{
+  "name": "render-pass-valid",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "inputs": [
+    {
+      "name": "renderInput",
+      "source_uri_param": "dummy",
+      "type": "buffer"
+    }
+  ],
+  "passes": [
+    {
+      "name": "renderPass",
+      "type": "render",
+      "shader": {
+        "source": "dummy_shader.glsl"
+      }
+    }
+  ]
+}

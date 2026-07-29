@@ -1,0 +1,111 @@
+#include <gtest/gtest.h>
+
+#include <fstream>
+#include <memory>
+#include <iostream>
+#include <boost/dll.hpp>
+#include <boost/asio/io_context.hpp>
+#include "SGNSProcMain.hpp"
+#include "Generators.hpp"
+#include <processingbase/ProcessingManager.hpp>
+
+namespace sgns
+{
+    class ProcessingDispatchTest : public ::testing::Test
+    {
+    protected:
+        static inline std::string binary_path = "";
+
+        static void SetUpTestSuite()
+        {
+        }
+
+        static void TearDownTestSuite()
+        {
+        }
+
+        static std::string LoadJson( const std::string &filename )
+        {
+            std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+            std::string data_path = bin_path + "./processing_dispatch/";
+            std::string file_path = data_path + filename;
+
+            std::ifstream stream( file_path );
+            if ( !stream.is_open() )
+            {
+                return "";
+            }
+            std::string content( ( std::istreambuf_iterator<char>( stream ) ),
+                                 std::istreambuf_iterator<char>() );
+            return content;
+        }
+    };
+
+    TEST_F( ProcessingDispatchTest, RenderPassMissingShaderFailsValidity )
+    {
+        std::string json_data = LoadJson( "render-pass-missing-shader-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load missing-shader fixture";
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_FALSE( result.has_value() )
+            << "ProcessingManager::Create should fail for a render pass with no shader";
+    }
+
+    TEST_F( ProcessingDispatchTest, RenderPassValidPassesCheckProcessValidity )
+    {
+        std::string json_data = LoadJson( "render-pass-valid-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load valid fixture";
+
+        auto result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( result.has_value() )
+            << "ProcessingManager::Create should succeed for a render pass with a shader";
+    }
+
+    TEST_F( ProcessingDispatchTest, RenderPassDispatchesToRenderProcessorNotNoProcessor )
+    {
+        std::string json_data = LoadJson( "render-pass-valid-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load valid fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string> output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( process_result.has_value() )
+            << "Process() should fail with a dummy URI (no real shader data), "
+               "but dispatch resolution should have succeeded";
+
+        auto error = process_result.error();
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::NO_PROCESSOR )
+            << "Dispatch should NOT return NO_PROCESSOR — "
+               "the RenderProcessor factory was registered and the pass-type branch matched";
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::MISSING_INPUT )
+            << "Input resolution should succeed — 'input:renderInput' is in the JSON input map";
+    }
+
+    TEST_F( ProcessingDispatchTest, ModelLessPassParseBlockSizeDoesNotCrash )
+    {
+        std::string json_data = LoadJson( "render-pass-valid-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load valid fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        auto block_size_result = manager->ParseBlockSize();
+        ASSERT_TRUE( block_size_result.has_value() )
+            << "ParseBlockSize() should succeed (model-less passes contribute 0 to block size)";
+        ASSERT_EQ( block_size_result.value(), 0 )
+            << "Model-less pass should contribute 0 to block_total_len";
+    }
+}
