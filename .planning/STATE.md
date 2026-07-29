@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
-status: completed
-last_updated: "2026-07-29T13:15:49.079Z"
-last_activity: 2026-07-29 -- Completed 11-09 requirements and regression audit
+status: verifying
+last_updated: "2026-07-29T13:36:44.398Z"
+last_activity: 2026-07-29 -- Phase 11 verification found 2 blocking gaps
 progress:
   total_phases: 4
   completed_phases: 3
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 11 complete — ready for verification or Phase 12 planning
+**Current focus:** Phase 11 — close BURN-04 verification gaps
 
 ## Current Position
 
 Phase: 11 (Slot-Owned Bridge Burn Reservations) — COMPLETE
 Plan: 9 of 9 complete
-Status: Phase 11 complete
-Last activity: 2026-07-29 -- Completed 11-09 requirements and regression audit
+Status: Needs review — Phase 11 verification gaps found
+Last activity: 2026-07-29 -- Phase 11 verification found 2 blocking gaps
 
 ## Roadmap Snapshot
 
