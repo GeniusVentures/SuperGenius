@@ -40,6 +40,7 @@
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 
 using namespace sgns;
 
@@ -73,19 +74,20 @@ namespace sgns
             return true;
         }
 
-        static bool RemoveRegistryPersistence( const std::shared_ptr<GeniusNode> &node,
-                                               std::vector<uint8_t>               registry_block_key )
+        static std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
         {
-            if ( !node || !node->tx_globaldb_ )
-            {
-                return false;
-            }
+            return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
+        }
 
-            auto datastore = node->tx_globaldb_->GetDataStore();
-            if ( !datastore )
+        static bool RemoveRegistryPersistence( const std::string &database_path,
+                                               std::vector<uint8_t> registry_block_key )
+        {
+            auto datastore_result = storage::rocksdb::create( database_path );
+            if ( datastore_result.has_error() )
             {
                 return false;
             }
+            auto datastore = std::move( datastore_result.value() );
 
             base::Buffer registry_cid_key;
             registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
@@ -277,8 +279,13 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
     ASSERT_TRUE( cid_bytes.has_value() );
 
     const auto client_base_path = GetBaseWritePath( node_client );
-    ASSERT_TRUE(
-        sgns::MultiAccountTestAccess::RemoveRegistryPersistence( node_client, std::move( cid_bytes.value() ) ) );
+    const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
+
+    client_registry.reset();
+    node_client.reset();
+
+    ASSERT_TRUE( sgns::MultiAccountTestAccess::RemoveRegistryPersistence( client_database_path,
+                                                                          std::move( cid_bytes.value() ) ) );
 
     const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
     {
@@ -288,9 +295,6 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
                           "\"bootstrap_addresses\": [\"" << full_address
                        << "\"] }";
     }
-
-    client_registry.reset();
-    node_client.reset();
 
     node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
     ASSERT_TRUE( node_client );
