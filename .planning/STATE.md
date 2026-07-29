@@ -3,20 +3,21 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 11
-status: executing
-last_updated: "2026-07-29T17:39:32.892Z"
-last_activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
+status: verifying
+last_updated: "2026-07-29T18:15:06.868Z"
+last_activity: 2026-07-29 -- Completed 11-11 consumed terminal safety closure
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 34
-  completed_plans: 33
-  percent: 50
+  completed_plans: 34
+  percent: 75
+stopped_at: Completed Phase 11 execution (11/11) -- ready for verification
 ---
 
 # State: SuperGenius — Slot-Scoped Consensus Finality
 
-**Last updated:** 2026-07-28
+**Last updated:** 2026-07-29
 **Milestone:** v2.0 — Slot-Scoped Consensus Finality
 **Current Phase:** 11
 
@@ -25,14 +26,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 11 — close the remaining post-Consumed terminal-state gap
+**Current focus:** Phase 11 — verify slot-owned bridge burn reservation closure
 
 ## Current Position
 
-Phase: 11 (Slot-Owned Bridge Burn Reservations) — EXECUTING
-Plan: 10 of 11 complete
-Status: Ready to execute
-Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
+Phase: 11 (Slot-Owned Bridge Burn Reservations) — COMPLETE
+Plan: 11 of 11 complete
+Status: Phase complete — ready for verification
+Last activity: 2026-07-29 -- Completed 11-11 consumed terminal safety closure
 
 ## Roadmap Snapshot
 
@@ -40,7 +41,7 @@ Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 |-------|------|--------|--------------|
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
-| 11 | Slot-Owned Bridge Burn Reservations | ◐ in progress (10/11 plans) | BURN-01..05 |
+| 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (11/11 plans) | BURN-01..05 |
 | 12 | Consensus Race and Compatibility Verification | ○ ready for planning | TEST-01..06 |
 
 ## Key Decisions
@@ -66,12 +67,12 @@ Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 
 ## Operator Next Steps
 
-- Execute Plan 11-11, then re-verify Phase 11 before planning Phase 12.
+- Re-verify Phase 11, then discuss and plan Phase 12.
 
 ## Session Continuity
 
-**Last session:** 2026-07-29T17:39:32.888Z
-**Stopped at:** Completed 11-10-PLAN.md
+**Last session:** 2026-07-29T18:15:06.860Z
+**Stopped at:** Completed 11-11-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -111,6 +112,7 @@ Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 | Phase 11 P08 | 51 min | 1 tasks | 5 files |
 | Phase 11 P09 | 9 min | 1 tasks | 0 files |
 | Phase 11 P10 | 26 min | 2 tasks | 4 files |
+| Phase 11 P11 | 30 min | 2 tasks | 6 files |
 
 ## Decisions
 
@@ -190,3 +192,5 @@ Last activity: 2026-07-29 -- Completed 11-10 durable mint completion closure
 - [Phase 11]: Applied and AlreadyApplied are advisory for resource-bearing certificates until an exact live-store reread proves the captured reservation identity is CONSUMED. — Handler claims cannot complete or clean up a certified mint without its durable postcondition.
 - [Phase 11]: Missing, unreadable, or exact FinalizedPendingApplication postconditions restore the exact process to Pending without completion, cleanup, or dependency wake. — Operational uncertainty remains retryable and winner-bound across restart.
 - [Phase 11]: Finalized-handle payload contradictions are irreconcilable while the no-handle legacy fallback retains its established Applied compatibility result. — Certified mint data fails closed without changing legacy non-resource behavior.
+- [Phase 11]: Post-consumption contradictions use CONSUMED_SAFETY_ERROR instead of overwriting the durable fact of physical consumption with ordinary SafetyError. — Physical consumption, exact finality identity, and non-release protection must remain durable after contradiction.
+- [Phase 11]: Startup installs terminal safety lifecycle before certificate recovery selection, while duplicate ingress short-circuits before handler lookup or cleanup. — Terminal recovery must not invoke application, cleanup, wake, release, or remint side effects.
