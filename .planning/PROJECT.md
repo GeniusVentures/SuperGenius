@@ -47,12 +47,12 @@ The current milestone hardens consensus finality so competing transactions resol
 - ✓ A validator signs at most one proposal per canonical slot while its signature can still contribute to a valid certificate — **Validated in Phase 10**
 - ✓ Validator vote locks survive restart and transition atomically to finalized slot state when a valid certificate is observed — **Validated in Phase 10**
 - ✓ Competing proposals may replace the current best before voting; a validator never revotes after publishing its slot signature — **Validated in Phase 10**
+- ✓ Bridge burn reservations are owned by the canonical burn slot, survive losing proposals, become atomically consumed at certificate finality, and remain non-releasable across terminal recovery — **Validated in Phase 11**
 
 ### Active
 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
-- [ ] Bridge burn reservations are owned by the canonical burn slot, survive losing proposals, and become consumed at certificate finality
 - [ ] Automated tests reproduce the observed double-certificate race and prove exactly one certificate and one confirmed mint
 
 ### Out of Scope
@@ -74,7 +74,7 @@ The current milestone hardens consensus finality so competing transactions resol
 
 ## Context
 
-**Current state:** Phase 10 completed on 2026-07-27. Canonical slot identities, authoritative slot-keyed certificates, durable one-signature-per-slot vote locking, deterministic pre-vote selection, and finality-before-cleanup are implemented and verified. Slot-owned bridge burn reservations remain Phase 11.
+**Current state:** Phase 11 completed on 2026-07-29. Canonical slot identities, authoritative slot-keyed certificates, durable one-signature-per-slot vote locking, deterministic pre-vote selection, finality-before-cleanup, and slot-owned bridge burn reservation/consumption with terminal recovery are implemented and verified. Phase 12 remains for the complete race and compatibility verification matrix.
 
 **Observed safety failure:** In `log_bridge_race.txt`, transaction `7541b3e2...` and transaction `9a378fd9...` reference the same burn `771780cf...` and resolve to the same mint-v2 slot. Nine validators sign both proposals, allowing both to reach quorum and become confirmed.
 
@@ -110,7 +110,7 @@ The current milestone hardens consensus finality so competing transactions resol
 | Keep vote locks until certificate finality or cryptographic expiry, and persist them before publishing | In-memory or proposal-lifetime locks allow restart and timeout equivocation while old signatures remain usable | Phase 10 ✓ |
 | Finalize the slot in `HandleCertificate()` before clearing proposal state | This is the earliest valid-certificate observation and closes the gap before CRDT transaction application | Phase 10 ✓ |
 | Allow best-proposal replacement only before the validator's one irreversible vote | Published signatures cannot be retracted; a bounded collection window preserves deterministic candidate selection without double-signing | Phase 10 ✓ |
-| Make bridge reservations slot-owned rather than proposal-owned | Competing candidates share one burn resource; losing proposals must not unlock the eventual winner | — Pending |
+| Make bridge reservations slot-owned rather than proposal-owned | Competing candidates share one burn resource; losing proposals must not unlock the eventual winner | Phase 11 ✓ |
 | `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
 | `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`). Factory params still exist (additive) — collapse deferred to Phase 2/3 |
 | Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor. Enum introduced at the boundary now, deep migration later | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
@@ -137,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-27 after completing Phase 10 Durable Vote Lock and Finalization State Machine*
+*Last updated: 2026-07-29 after completing Phase 11 Slot-Owned Bridge Burn Reservations*
