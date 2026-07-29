@@ -314,6 +314,109 @@ namespace sgns
                 normalized, slot.value(), winner.value() );
         }
 
+        static ConsensusManager::FinalizeResult Finalize(
+            const std::shared_ptr<ConsensusManager> &consensus,
+            const ConsensusManager::Certificate &certificate )
+        {
+            return consensus->FinalizeSlot(
+                certificate, ConsensusManager::DeliverySource::Recovery );
+        }
+
+        static outcome::result<void> RemovePersistedBridgeApplication(
+            TransactionManager &manager,
+            const std::string &chain,
+            const base::Hash256 &burn,
+            uint32_t index )
+        {
+            auto &utxo = manager.account_m->GetUTXOManager();
+            std::unique_lock persistence_lock( utxo.persistence_mutex_ );
+            std::unique_lock state_lock( utxo.utxos_mutex_ );
+            if ( !utxo.db_ ) return outcome::failure( storage::DatabaseError::UNITIALIZED );
+            base::Buffer key;
+            key.put( UTXOManager::MakeBridgeApplicationKey( chain, burn, index ) );
+            auto removed = utxo.db_->remove( key );
+            if ( removed.has_error() ) return outcome::failure( removed.error() );
+            return outcome::success();
+        }
+
+        static std::vector<std::pair<std::string, std::string>> RawUTXORecords(
+            const TransactionManager &manager )
+        {
+            auto &utxo = manager.account_m->GetUTXOManager();
+            std::unique_lock persistence_lock( utxo.persistence_mutex_ );
+            std::shared_lock state_lock( utxo.utxos_mutex_ );
+            std::vector<std::pair<std::string, std::string>> records;
+            if ( !utxo.db_ ) return records;
+            base::Buffer prefix;
+            prefix.put( UTXOManager::DB_PREFIX );
+            auto raw = utxo.db_->query( prefix );
+            if ( !raw ) return records;
+            for ( const auto &[key, value] : raw.value() )
+                records.emplace_back( key.toString(), value.toString() );
+            std::sort( records.begin(), records.end() );
+            return records;
+        }
+
+        static bool RestoreCommittedApplicationCrashBoundary(
+            const std::shared_ptr<ConsensusManager> &consensus,
+            const std::shared_ptr<crdt::GlobalDB> &db,
+            const std::string &slot )
+        {
+            auto current = consensus->state_store_->GetProcess( slot );
+            if ( !current || !current.value() ) return false;
+            auto pending = current.value().value();
+            pending.set_state( ConsensusStateStore::ProcessRecord::PENDING );
+            pending.set_lease_until_ms( 0 );
+            pending.set_updated_at_ms( pending.updated_at_ms() + 1 );
+            base::Buffer key;
+            base::Buffer value;
+            key.put( ConsensusStateStore::ProcessKey( slot ) );
+            value.put( pending.SerializeAsString() );
+            if ( db->GetDataStore()->put( key, value ).has_error() ) return false;
+            const auto work_key = std::string( ConsensusManager::CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot;
+            consensus->certificate_work_journal_->MarkSeen( work_key );
+            consensus->certificate_work_journal_->MarkStalled( work_key, std::chrono::milliseconds( 0 ) );
+            return true;
+        }
+
+        static bool HasCertificateWork( const std::shared_ptr<ConsensusManager> &consensus,
+                                        const std::string &slot )
+        {
+            return consensus->certificate_work_journal_->GetEntry(
+                       std::string( ConsensusManager::CERTIFICATE_SLOT_BASE_PATH_KEY ) + slot ).has_value();
+        }
+
+        static void RecoverCertificateWork( const std::shared_ptr<ConsensusManager> &consensus )
+        {
+            consensus->RecoverPendingCertificateWork();
+            consensus->RecoverRestoredCertificateWork();
+        }
+
+        static void ReconcileBurnReservations( const std::shared_ptr<ConsensusManager> &consensus )
+        {
+            consensus->ReconcileBurnReservations();
+        }
+
+        static bool AddCertificateWaiter( const std::shared_ptr<ConsensusManager> &consensus,
+                                          const ConsensusManager::Proposal &proposal,
+                                          const std::string &winner )
+        {
+            return consensus->AddPendingProposal(
+                proposal, "composed-recovery-waiter",
+                ConsensusManager::ValidationResult::Pending(
+                    { ConsensusManager::PendingDependencyKey::Certificate( winner ) } ) );
+        }
+
+        static std::size_t CertificateWaiterCount(
+            const std::shared_ptr<ConsensusManager> &consensus,
+            const std::string &winner )
+        {
+            std::lock_guard lock( consensus->proposals_mutex_ );
+            auto it = consensus->pending_by_dependency_.find(
+                ConsensusManager::PendingDependencyKey::Certificate( winner ) );
+            return it == consensus->pending_by_dependency_.end() ? 0U : it->second.size();
+        }
+
     };
 
     class ConsensusManagerTestAccess
@@ -657,6 +760,17 @@ namespace
                 return;
             }
 
+            const auto *test_info = ::testing::UnitTest::GetInstance()->current_test_info();
+            if ( test_info && std::string_view( test_info->name() ) ==
+                                  "CertifiedMintPersistedArtifactCorruptionRecoversToConsumedSafetyAndNeverRetries" )
+            {
+                secondary_account_ = GeniusAccount::NewFromPrivateKey(
+                    kTokenId,
+                    "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe",
+                    base_path / "secondary-validator", false );
+                EXPECT_NE( secondary_account_, nullptr );
+            }
+
             auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
             EXPECT_TRUE( load_result.has_value() );
 
@@ -672,8 +786,10 @@ namespace
             {
                 return;
             }
+            std::vector<std::string> genesis_validators{ account_->GetAddress() };
+            if ( secondary_account_ ) genesis_validators.push_back( secondary_account_->GetAddress() );
             auto genesis_result = registry_->StoreGenesisRegistry(
-                { account_->GetAddress() },
+                genesis_validators,
                 [this]( std::vector<uint8_t> payload )
                 {
                     return account_->Sign( std::move( payload ) );
@@ -910,6 +1026,22 @@ namespace
             return consensus_->CreateCertificate( proposal, { vote } );
         }
 
+        outcome::result<ConsensusManager::Proposal> MakePendingProposal(
+            const std::string &transaction_hash,
+            uint64_t nonce )
+        {
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    account_->GetAddress(), nonce, transaction_hash,
+                    EmbeddedTransaction{}, std::nullopt, std::nullopt ) );
+            return ConsensusManager::CreateProposal(
+                subject, account_->GetAddress(), registry_->GetRegistryCid(),
+                registry_->GetRegistryEpoch(),
+                [this]( std::vector<uint8_t> payload )
+                { return account_->Sign( std::move( payload ) ); } );
+        }
+
         outcome::result<ConsensusManager::Certificate> MakeCertificateWithEmbedded(
             const std::string &transaction_hash,
             uint64_t nonce,
@@ -932,6 +1064,87 @@ namespace
             certificate.set_proposal_id( proposal.proposal_id() );
             return certificate;
         }
+
+        outcome::result<ConsensusManager::Certificate> MakeCertifiedMintCertificate(
+            const std::shared_ptr<MintTransactionV2> &mint )
+        {
+            if ( !mint ) return outcome::failure( std::errc::invalid_argument );
+            consensus_->SetSlotHashPopulator( []( ConsensusVote &vote )
+            {
+                vote.set_slot_0_hash( std::string( 32, '\x01' ) );
+                vote.set_slot_1_hash( std::string( 32, '\x02' ) );
+                vote.set_slot_2_hash( std::string( 32, '\x03' ) );
+            } );
+            BOOST_OUTCOME_TRY(
+                auto subject,
+                ConsensusManager::CreateNonceSubject(
+                    account_->GetAddress(), mint->GetNonce(), mint->GetHash(),
+                    mint->SerializeToEmbeddedTransaction( mint->dag_st ),
+                    std::nullopt, std::nullopt ) );
+            BOOST_OUTCOME_TRY(
+                auto proposal,
+                ConsensusManager::CreateProposal(
+                    subject, account_->GetAddress(), registry_->GetRegistryCid(),
+                    registry_->GetRegistryEpoch(),
+                    [this]( std::vector<uint8_t> payload )
+                    { return account_->Sign( std::move( payload ) ); } ) );
+            BOOST_OUTCOME_TRY(
+                auto vote,
+                consensus_->CreateVote(
+                    proposal.proposal_id(), account_->GetAddress(), true,
+                    [this]( std::vector<uint8_t> payload )
+                    { return account_->Sign( std::move( payload ) ); } ) );
+            std::vector<ConsensusVote> votes{ vote };
+            if ( secondary_account_ )
+            {
+                BOOST_OUTCOME_TRY(
+                    auto secondary_vote,
+                    consensus_->CreateVote(
+                        proposal.proposal_id(), secondary_account_->GetAddress(), true,
+                        [this]( std::vector<uint8_t> payload )
+                        { return secondary_account_->Sign( std::move( payload ) ); } ) );
+                votes.push_back( std::move( secondary_vote ) );
+            }
+            return consensus_->CreateCertificate( proposal, votes );
+        }
+
+        void RebuildConsensusWithoutTransactionManager()
+        {
+            manager_.reset();
+            if ( consensus_ ) consensus_->Close();
+            consensus_.reset();
+            registry_.reset();
+            blockchain_.reset();
+            if ( account_ ) account_->GetUTXOManager().ReleaseStorage();
+            account_.reset();
+
+            ++restart_count_;
+            account_ = GeniusAccount::NewFromPrivateKey(
+                kTokenId,
+                "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                base_path / ( "account-composed-restart-" + std::to_string( restart_count_ ) ),
+                false );
+            ASSERT_NE( account_, nullptr );
+            ASSERT_TRUE( account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() ) );
+            blockchain_ = Blockchain::New(
+                db_, account_, pubs_, []( outcome::result<void> ) {} );
+            ASSERT_NE( blockchain_, nullptr );
+            registry_ = blockchain_->GetValidatorRegistry();
+            ASSERT_NE( registry_, nullptr );
+            consensus_ = TransactionManagerPendingLifecycleTestAccess::Consensus( blockchain_ );
+            ASSERT_NE( consensus_, nullptr );
+        }
+
+        void CreateProductionTransactionManager()
+        {
+            manager_ = TransactionManager::New(
+                db_, io_, account_, blockchain_, false, 0,
+                std::chrono::milliseconds( 300000 ),
+                std::chrono::milliseconds( 600000 ) );
+            ASSERT_NE( manager_, nullptr );
+            TransactionManagerPendingLifecycleTestAccess::SetReady( *manager_ );
+        }
+
 
         std::shared_ptr<TransferTransaction> MakeReplayTransaction(
             const std::string &previous_hash,
@@ -1061,6 +1274,7 @@ namespace
         }
 
         std::shared_ptr<GeniusAccount>      account_;
+        std::shared_ptr<GeniusAccount>      secondary_account_;
         std::shared_ptr<Blockchain>         blockchain_;
         std::shared_ptr<TransactionManager> manager_;
         std::shared_ptr<ValidatorRegistry>  registry_;
@@ -1504,6 +1718,173 @@ TEST_F( TransactionManagerPendingLifecycleTest,
     ASSERT_TRUE( still_consumed && still_consumed.value() );
     EXPECT_EQ( still_consumed.value()->state(),
                ConsensusStateStore::BurnReservationRecord::CONSUMED );
+}
+
+TEST_F( TransactionManagerPendingLifecycleTest,
+        CertifiedMintPersistedArtifactCorruptionRecoversToConsumedSafetyAndNeverRetries )
+{
+    auto mint = PrepareMint( 'a' );
+    ASSERT_TRUE( mint );
+    auto certificate = MakeCertifiedMintCertificate( mint );
+    ASSERT_TRUE( certificate );
+    const auto input = mint->GetUTXOParameters().first.front();
+    const auto outpoint = ConsensusStateStore::BurnOutpoint{
+        mint->GetChainId(), input.txid_hash_.toReadableString(), input.output_idx_ };
+    auto slot = mint->GetSlotID();
+    ASSERT_TRUE( slot );
+    const auto winner = mint->GetHash();
+    std::atomic<uint64_t> initial_handle_calls{ 0 };
+    std::atomic<uint64_t> recovery_handle_calls{ 0 };
+    std::atomic<uint64_t> cleanup_calls{ 0 };
+    TransactionManagerPendingLifecycleTestAccess::ObserveFinalizedHandle(
+        [&]( const ConsensusManager::FinalizedReservationApplicationHandle *handle )
+        {
+            ASSERT_NE( handle, nullptr );
+            ++initial_handle_calls;
+        } );
+    ASSERT_TRUE( consensus_->RegisterProposalCleanupHandler(
+        NONCE_SUBJECT_TYPE, [&]( const std::string & ) { ++cleanup_calls; } ) );
+
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::Finalize(
+                   consensus_, certificate.value() ),
+               ConsensusManager::FinalizeResult::Applied );
+    EXPECT_EQ( initial_handle_calls.load(), 1U );
+    EXPECT_EQ( cleanup_calls.load(), 1U );
+    auto store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    ASSERT_TRUE( store );
+    auto consumed = store->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( consumed && consumed.value() );
+    ASSERT_EQ( consumed.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    const auto consumed_identity = consumed.value().value();
+    auto reciprocal = store->GetBurnReservation( outpoint );
+    ASSERT_TRUE( reciprocal && reciprocal.value() );
+    EXPECT_EQ( reciprocal.value()->SerializeAsString(),
+               consumed_identity.SerializeAsString() );
+    auto application = TransactionManagerPendingLifecycleTestAccess::Application(
+        *manager_, outpoint.source_chain, input.txid_hash_, input.output_idx_ );
+    ASSERT_TRUE( application && application.value() );
+    const auto application_bytes = application.value()->canonical_bytes;
+    ASSERT_FALSE( application_bytes.empty() );
+    auto winner_hash = base::Hash256::fromReadableString( winner );
+    ASSERT_TRUE( winner_hash );
+    ASSERT_TRUE( account_->GetUTXOManager().GetUnconsumedUTXO(
+        winner_hash.value(), 0 ) );
+    ASSERT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        input.txid_hash_, input.output_idx_ ) );
+    const auto utxo_bytes_after_apply =
+        TransactionManagerPendingLifecycleTestAccess::RawUTXORecords( *manager_ );
+    ASSERT_GE( utxo_bytes_after_apply.size(), 2U );
+    auto complete = store->GetProcess( slot.value() );
+    ASSERT_TRUE( complete && complete.value() );
+    ASSERT_EQ( complete.value()->state(),
+               ConsensusStateStore::ProcessRecord::COMPLETE );
+
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::RemovePersistedBridgeApplication(
+        *manager_, outpoint.source_chain, input.txid_hash_, input.output_idx_ ) );
+    auto removed = TransactionManagerPendingLifecycleTestAccess::Application(
+        *manager_, outpoint.source_chain, input.txid_hash_, input.output_idx_ );
+    ASSERT_TRUE( removed && !removed.value() );
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::RestoreCommittedApplicationCrashBoundary(
+        consensus_, db_, slot.value() ) );
+    EXPECT_TRUE( TransactionManagerPendingLifecycleTestAccess::HasCertificateWork(
+        consensus_, slot.value() ) );
+    TransactionManagerPendingLifecycleTestAccess::ObserveFinalizedHandle(
+        [&]( const ConsensusManager::FinalizedReservationApplicationHandle *handle )
+        {
+            ASSERT_NE( handle, nullptr );
+            ++recovery_handle_calls;
+        } );
+
+    RebuildConsensusWithoutTransactionManager();
+    auto waiter = MakePendingProposal( std::string( 64, 'e' ), 101 );
+    ASSERT_TRUE( waiter );
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::AddCertificateWaiter(
+        consensus_, waiter.value(), winner ) );
+    std::atomic<uint64_t> recovery_cleanup_calls{ 0 };
+    ASSERT_TRUE( consensus_->RegisterProposalCleanupHandler(
+        NONCE_SUBJECT_TYPE, [&]( const std::string & ) { ++recovery_cleanup_calls; } ) );
+    CreateProductionTransactionManager();
+
+    EXPECT_EQ( recovery_handle_calls.load(), 1U );
+    EXPECT_EQ( recovery_cleanup_calls.load(), 0U );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::CertificateWaiterCount(
+                   consensus_, winner ), 1U );
+    store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    auto terminal = store->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( terminal && terminal.value() );
+    ASSERT_EQ( terminal.value()->state(),
+               ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR );
+    const auto terminal_identity = terminal.value().value();
+    EXPECT_EQ( terminal_identity.slot_id(), consumed_identity.slot_id() );
+    EXPECT_EQ( terminal_identity.source_chain(), consumed_identity.source_chain() );
+    EXPECT_EQ( terminal_identity.burn_hash(), consumed_identity.burn_hash() );
+    EXPECT_EQ( terminal_identity.receipt_log_index(), consumed_identity.receipt_log_index() );
+    EXPECT_EQ( terminal_identity.generation(), consumed_identity.generation() );
+    EXPECT_EQ( terminal_identity.certificate_digest(), consumed_identity.certificate_digest() );
+    EXPECT_EQ( terminal_identity.proposal_id(), consumed_identity.proposal_id() );
+    EXPECT_EQ( terminal_identity.winner_id(), consumed_identity.winner_id() );
+    reciprocal = store->GetBurnReservation( outpoint );
+    ASSERT_TRUE( reciprocal && reciprocal.value() );
+    EXPECT_EQ( reciprocal.value()->SerializeAsString(),
+               terminal_identity.SerializeAsString() );
+    auto pending = store->GetProcess( slot.value() );
+    ASSERT_TRUE( pending && pending.value() );
+    EXPECT_NE( pending.value()->state(), ConsensusStateStore::ProcessRecord::COMPLETE );
+    EXPECT_FALSE( TransactionManagerPendingLifecycleTestAccess::HasCertificateWork(
+        consensus_, slot.value() ) );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::RawUTXORecords( *manager_ ),
+               utxo_bytes_after_apply );
+
+    RebuildConsensusWithoutTransactionManager();
+    auto second_waiter = MakePendingProposal( std::string( 64, 'f' ), 102 );
+    ASSERT_TRUE( second_waiter );
+    ASSERT_TRUE( TransactionManagerPendingLifecycleTestAccess::AddCertificateWaiter(
+        consensus_, second_waiter.value(), winner ) );
+    std::atomic<uint64_t> later_cleanup_calls{ 0 };
+    ASSERT_TRUE( consensus_->RegisterProposalCleanupHandler(
+        NONCE_SUBJECT_TYPE, [&]( const std::string & ) { ++later_cleanup_calls; } ) );
+    CreateProductionTransactionManager();
+    TransactionManagerPendingLifecycleTestAccess::RecoverCertificateWork( consensus_ );
+    TransactionManagerPendingLifecycleTestAccess::ReconcileBurnReservations( consensus_ );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::Finalize(
+                   consensus_, certificate.value() ),
+               ConsensusManager::FinalizeResult::AlreadyFinalized );
+
+    EXPECT_EQ( recovery_handle_calls.load(), 1U );
+    EXPECT_EQ( later_cleanup_calls.load(), 0U );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::CertificateWaiterCount(
+                   consensus_, winner ), 1U );
+    store = TransactionManagerPendingLifecycleTestAccess::StateStore( consensus_ );
+    auto after_restart = store->GetBurnReservation( slot.value() );
+    ASSERT_TRUE( after_restart && after_restart.value() );
+    EXPECT_EQ( after_restart.value()->SerializeAsString(),
+               terminal_identity.SerializeAsString() );
+    reciprocal = store->GetBurnReservation( outpoint );
+    ASSERT_TRUE( reciprocal && reciprocal.value() );
+    EXPECT_EQ( reciprocal.value()->SerializeAsString(),
+               terminal_identity.SerializeAsString() );
+    removed = TransactionManagerPendingLifecycleTestAccess::Application(
+        *manager_, outpoint.source_chain, input.txid_hash_, input.output_idx_ );
+    ASSERT_TRUE( removed && !removed.value() );
+    EXPECT_TRUE( account_->GetUTXOManager().GetUnconsumedUTXO(
+        winner_hash.value(), 0 ) );
+    EXPECT_TRUE( account_->GetUTXOManager().IsOutPointConsumed(
+        input.txid_hash_, input.output_idx_ ) );
+    EXPECT_EQ( TransactionManagerPendingLifecycleTestAccess::RawUTXORecords( *manager_ ),
+               utxo_bytes_after_apply );
+    pending = store->GetProcess( slot.value() );
+    ASSERT_TRUE( pending && pending.value() );
+    EXPECT_NE( pending.value()->state(), ConsensusStateStore::ProcessRecord::COMPLETE );
+    EXPECT_TRUE( store->DeleteReservedBurnReservation(
+        slot.value(), terminal_identity.generation() ).has_error() );
+    EXPECT_TRUE( store->CreateOrJoinBurnReservation(
+        slot.value(), outpoint, std::numeric_limits<uint64_t>::max(), 1U ).has_error() );
+    EXPECT_TRUE( store->FinalizeBurnReservation(
+        slot.value(), outpoint, terminal_identity.certificate_digest(),
+        terminal_identity.proposal_id(), std::string( 64, '9' ), 2U ).has_error() );
+    EXPECT_EQ( application_bytes.size(), application.value()->canonical_bytes.size() );
+    TransactionManagerPendingLifecycleTestAccess::ResetFinalizedHandleObserver();
 }
 
 TEST_F( TransactionManagerPendingLifecycleTest, FinalizedHandleMalformedEmbeddedMintIsIrreconcilable )
