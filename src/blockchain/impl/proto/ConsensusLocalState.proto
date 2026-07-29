@@ -90,6 +90,7 @@ message BurnReservationRecord {
     FINALIZED_PENDING_APPLICATION = 2;
     CONSUMED = 3;
     SAFETY_ERROR = 4;
+    CONSUMED_SAFETY_ERROR = 5;
   }
 
   uint32 schema_version = 1;

@@ -871,6 +871,144 @@ TEST_F( ConsensusBurnReservationHarness, BurnReservationSafetyErrorCannotRegress
     EXPECT_EQ( consume.error(), sgns::ConsensusStateStoreError::Conflict );
 }
 
+TEST_F( ConsensusBurnReservationHarness, ConsumedReservationContradictionTransitionsToConsumedTerminalSafety )
+{
+    const auto outpoint = MakeOutpoint( 81 );
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    const std::string certificate( 64, 'b' );
+    const std::string proposal( 64, 'c' );
+    const std::string winner( 64, 'd' );
+    std::string generation;
+    {
+        auto datastore = db_->GetDataStore();
+        sgns::ConsensusStateStore store( datastore );
+        auto finalized = store.FinalizeBurnReservation(
+            slot, outpoint, certificate, proposal, winner, now );
+        ASSERT_TRUE( finalized );
+        generation = finalized.value().generation();
+        auto batch = datastore->batch();
+        ASSERT_TRUE( store.PrepareConsumedBurnReservation(
+            *batch, slot, outpoint, generation, certificate, proposal, winner, now + 1 ) );
+        ASSERT_TRUE( batch->commit() );
+
+        auto terminal = store.MarkBurnReservationSafetyError(
+            slot, generation, certificate, proposal, winner,
+            "missing canonical application artifact", now + 2 );
+        ASSERT_TRUE( terminal );
+        EXPECT_EQ( terminal.value().state(),
+                   sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR );
+        EXPECT_EQ( terminal.value().safety_error(), "missing canonical application artifact" );
+    }
+
+    auto reopened = CloseOwnersAndReopenSamePath();
+    ASSERT_TRUE( reopened );
+    sgns::ConsensusStateStore reopened_store( reopened );
+    auto durable = reopened_store.GetBurnReservation( slot );
+    ASSERT_TRUE( durable && durable.value() );
+    EXPECT_EQ( durable.value()->state(),
+               sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED_SAFETY_ERROR );
+    EXPECT_EQ( durable.value()->generation(), generation );
+    EXPECT_EQ( durable.value()->certificate_digest(), certificate );
+    EXPECT_EQ( durable.value()->proposal_id(), proposal );
+    EXPECT_EQ( durable.value()->winner_id(), winner );
+    auto scanned = reopened_store.ScanBurnReservations();
+    ASSERT_TRUE( scanned );
+    ASSERT_EQ( scanned.value().size(), 1U );
+}
+
+TEST_F( ConsensusBurnReservationHarness, ConsumedTerminalSafetyPreservesReciprocalIdentityAndRejectsRelease )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint( 82 );
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    const std::string certificate( 64, 'b' );
+    const std::string proposal( 64, 'c' );
+    const std::string winner( 64, 'd' );
+    auto finalized = store.FinalizeBurnReservation( slot, outpoint, certificate, proposal, winner, now );
+    ASSERT_TRUE( finalized );
+    const auto generation = finalized.value().generation();
+    auto batch = datastore->batch();
+    ASSERT_TRUE( store.PrepareConsumedBurnReservation(
+        *batch, slot, outpoint, generation, certificate, proposal, winner, now + 1 ) );
+    ASSERT_TRUE( batch->commit() );
+    ASSERT_TRUE( store.MarkBurnReservationSafetyError(
+        slot, generation, certificate, proposal, winner, "conflicting ordered output", now + 2 ) );
+
+    auto by_outpoint = store.GetBurnReservation( outpoint );
+    ASSERT_TRUE( by_outpoint && by_outpoint.value() );
+    EXPECT_EQ( by_outpoint.value()->slot_id(), slot );
+    EXPECT_EQ( by_outpoint.value()->generation(), generation );
+    EXPECT_EQ( InspectRaw( datastore, sgns::ConsensusStateStore::BurnOutpointKey( outpoint ) ).size(), 1U );
+    EXPECT_TRUE( store.DeleteReservedBurnReservation( slot, generation ).has_error() );
+    EXPECT_TRUE( store.CreateOrJoinBurnReservation( slot, outpoint, now + 100, now + 3 ).has_error() );
+    EXPECT_TRUE( store.FinalizeBurnReservation(
+        slot, outpoint, certificate, proposal, winner, now + 3 ) );
+    auto consume_batch = datastore->batch();
+    EXPECT_TRUE( store.PrepareConsumedBurnReservation(
+        *consume_batch, slot, outpoint, generation, certificate, proposal, winner, now + 3 ).has_error() );
+}
+
+TEST_F( ConsensusBurnReservationHarness, ConsumedTerminalSafetyRejectsMismatchedIdentityAndIsExactlyIdempotent )
+{
+    auto datastore = db_->GetDataStore();
+    sgns::ConsensusStateStore store( datastore );
+    const auto outpoint = MakeOutpoint( 83 );
+    const auto slot = SlotFor( outpoint );
+    constexpr uint64_t now = 1'750'000'000'000ULL;
+    const std::string certificate( 64, 'b' );
+    const std::string proposal( 64, 'c' );
+    const std::string winner( 64, 'd' );
+    auto finalized = store.FinalizeBurnReservation( slot, outpoint, certificate, proposal, winner, now );
+    ASSERT_TRUE( finalized );
+    const auto generation = finalized.value().generation();
+    auto batch = datastore->batch();
+    ASSERT_TRUE( store.PrepareConsumedBurnReservation(
+        *batch, slot, outpoint, generation, certificate, proposal, winner, now + 1 ) );
+    ASSERT_TRUE( batch->commit() );
+
+    EXPECT_TRUE( store.MarkBurnReservationSafetyError(
+        slot, std::string( 64, 'e' ), certificate, proposal, winner, "artifact contradiction", now + 2 ).has_error() );
+    EXPECT_TRUE( store.MarkBurnReservationSafetyError(
+        slot, generation, std::string( 64, 'e' ), proposal, winner, "artifact contradiction", now + 2 ).has_error() );
+    auto still_consumed = store.GetBurnReservation( slot );
+    ASSERT_TRUE( still_consumed && still_consumed.value() );
+    EXPECT_EQ( still_consumed.value()->state(), sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED );
+
+    auto terminal = store.MarkBurnReservationSafetyError(
+        slot, generation, certificate, proposal, winner, "artifact contradiction", now + 2 );
+    ASSERT_TRUE( terminal );
+    auto replay = store.MarkBurnReservationSafetyError(
+        slot, generation, certificate, proposal, winner, "artifact contradiction", now + 3 );
+    ASSERT_TRUE( replay );
+    EXPECT_EQ( replay.value().SerializeAsString(), terminal.value().SerializeAsString() );
+    EXPECT_TRUE( store.MarkBurnReservationSafetyError(
+        slot, generation, certificate, proposal, winner, "different diagnostic", now + 3 ).has_error() );
+
+    const auto failed_outpoint = MakeOutpoint( 84 );
+    const auto failed_slot = SlotFor( failed_outpoint );
+    auto failed_finalized = store.FinalizeBurnReservation(
+        failed_slot, failed_outpoint, certificate, proposal, winner, now );
+    ASSERT_TRUE( failed_finalized );
+    auto failed_batch = datastore->batch();
+    ASSERT_TRUE( store.PrepareConsumedBurnReservation(
+        *failed_batch, failed_slot, failed_outpoint, failed_finalized.value().generation(),
+        certificate, proposal, winner, now + 1 ) );
+    ASSERT_TRUE( failed_batch->commit() );
+    sgns::ConsensusBurnReservationTestAccess::FailCommits( store );
+    auto failed = store.MarkBurnReservationSafetyError(
+        failed_slot, failed_finalized.value().generation(), certificate, proposal, winner,
+        "commit must fail", now + 2 );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_EQ( failed.error(), sgns::ConsensusStateStoreError::Storage );
+    auto preserved = store.GetBurnReservation( failed_slot );
+    ASSERT_TRUE( preserved && preserved.value() );
+    EXPECT_EQ( preserved.value()->state(), sgns::ConsensusStateStore::BurnReservationRecord::CONSUMED );
+    EXPECT_TRUE( preserved.value()->safety_error().empty() );
+}
+
 TEST_F( ConsensusBurnReservationHarness, BurnReservationGenerationReleaseIsConditionalAndRecreationIsFresh )
 {
     auto datastore = db_->GetDataStore();

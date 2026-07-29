@@ -683,7 +683,10 @@ namespace sgns
         const bool reserved = record.state() == BurnReservationRecord::RESERVED;
         const bool finalized = record.state() == BurnReservationRecord::FINALIZED_PENDING_APPLICATION ||
                                record.state() == BurnReservationRecord::CONSUMED ||
-                               record.state() == BurnReservationRecord::SAFETY_ERROR;
+                               record.state() == BurnReservationRecord::SAFETY_ERROR ||
+                               record.state() == BurnReservationRecord::CONSUMED_SAFETY_ERROR;
+        const bool safety = record.state() == BurnReservationRecord::SAFETY_ERROR ||
+                            record.state() == BurnReservationRecord::CONSUMED_SAFETY_ERROR;
         if ( record.schema_version() != kSchemaVersion || ( !reserved && !finalized ) ||
              !IsCanonicalHash( record.slot_id() ) || !IsCanonicalChain( record.source_chain() ) ||
              !IsNonzeroCanonicalHash( record.burn_hash() ) || !IsCanonicalHash( record.generation() ) ||
@@ -694,7 +697,7 @@ namespace sgns
                              !record.winner_id().empty() || !record.safety_error().empty() ) ) ||
              ( finalized && ( !IsCanonicalHash( record.certificate_digest() ) ||
                               !IsCanonicalHash( record.proposal_id() ) || !IsCanonicalHash( record.winner_id() ) ) ) ||
-             ( record.state() == BurnReservationRecord::SAFETY_ERROR ) != !record.safety_error().empty() )
+             safety != !record.safety_error().empty() )
         {
             return outcome::failure( ConsensusStateStoreError::Integrity );
         }
@@ -954,25 +957,35 @@ namespace sgns
                                                           uint64_t now_ms )
     {
         std::lock_guard lock( mutex_ );
-        if ( diagnostic.empty() || now_ms == 0 ) return outcome::failure( ConsensusStateStoreError::InvalidArgument );
+        if ( !IsCanonicalHash( slot_id ) || !IsCanonicalHash( expected_generation ) ||
+             !IsCanonicalHash( certificate_digest ) || !IsCanonicalHash( proposal_id ) ||
+             !IsCanonicalHash( winner_id ) || diagnostic.empty() || now_ms == 0 )
+            return outcome::failure( ConsensusStateStoreError::InvalidArgument );
         BOOST_OUTCOME_TRY( auto current, ReadBurnReservationUnlocked( slot_id ) );
         if ( !current || current->generation() != expected_generation ||
              !SameFinality( *current, certificate_digest, proposal_id, winner_id ) )
             return outcome::failure( ConsensusStateStoreError::Conflict );
-        if ( current->state() == BurnReservationRecord::SAFETY_ERROR )
+        if ( current->state() == BurnReservationRecord::SAFETY_ERROR ||
+             current->state() == BurnReservationRecord::CONSUMED_SAFETY_ERROR )
         {
             if ( current->safety_error() == diagnostic ) return *current;
             return outcome::failure( ConsensusStateStoreError::Conflict );
         }
-        if ( current->state() != BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
+        if ( current->state() == BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
+            current->set_state( BurnReservationRecord::SAFETY_ERROR );
+        else if ( current->state() == BurnReservationRecord::CONSUMED )
+            current->set_state( BurnReservationRecord::CONSUMED_SAFETY_ERROR );
+        else
             return outcome::failure( ConsensusStateStoreError::Conflict );
-        current->set_state( BurnReservationRecord::SAFETY_ERROR );
         current->set_safety_error( diagnostic );
         current->set_updated_at_ms( std::max( now_ms, current->updated_at_ms() ) );
         BOOST_OUTCOME_TRY( ValidateBurnReservation( *current, BurnSlotKey( slot_id ) ) );
         BOOST_OUTCOME_TRY( auto value, SerializeStrict( *current ) );
-        auto stored = datastore_->put( BufferOf( BurnSlotKey( slot_id ) ), value );
-        if ( stored.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
+        auto batch = datastore_->batch();
+        if ( !batch ) return outcome::failure( ConsensusStateStoreError::Storage );
+        BOOST_OUTCOME_TRY( batch->put( BufferOf( BurnSlotKey( slot_id ) ), value ) );
+        auto committed = commit_( *batch );
+        if ( committed.has_error() ) return outcome::failure( ConsensusStateStoreError::Storage );
         return *current;
     }
 
