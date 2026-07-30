@@ -1159,7 +1159,6 @@ namespace sgns
             candidate_addresses[request.bridge_input_owner].push_back( bridge_outpoint );
         }
         if ( bridge_it->second.type != UTXOType::UTXO_BRIDGE ||
-             bridge_it->second.utxo.GetOwnerAddress() != request.bridge_input_owner ||
              bridge_it->second.utxo.GetAmount() != request.certified_bridge_input.GetAmount() ||
              !bridge_it->second.utxo.GetTokenID().Equals(
                  request.certified_bridge_input.GetTokenID() ) ||
@@ -1168,6 +1167,26 @@ namespace sgns
         {
             logger_->error( "Atomic mint bridge input conflicts with certified descriptor" );
             return outcome::failure( std::errc::state_not_recoverable );
+        }
+        const auto provisional_owner = bridge_it->second.utxo.GetOwnerAddress();
+        if ( provisional_owner != request.bridge_input_owner )
+        {
+            if ( !reservation ||
+                 reservation->state() !=
+                     ConsensusStateStore::BurnReservationRecord::FINALIZED_PENDING_APPLICATION )
+            {
+                logger_->error( "Atomic mint bridge input owner conflicts without finalized authority" );
+                return outcome::failure( std::errc::state_not_recoverable );
+            }
+            auto &provisional_owner_points = candidate_addresses[provisional_owner];
+            provisional_owner_points.erase(
+                std::remove( provisional_owner_points.begin(),
+                             provisional_owner_points.end(),
+                             bridge_outpoint ),
+                provisional_owner_points.end() );
+            affected_owners.insert( provisional_owner );
+            bridge_it->second.utxo.SetOwnerAddress( request.bridge_input_owner );
+            candidate_addresses[request.bridge_input_owner].push_back( bridge_outpoint );
         }
         bridge_it->second.state = UTXOState::UTXO_CONSUMED;
         auto &bridge_owner_points = candidate_addresses[request.bridge_input_owner];
