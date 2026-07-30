@@ -967,6 +967,9 @@ namespace sgns
             std::chrono::milliseconds( 2000 ) };                             ///< Delay before certificate processing.
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
+        std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
+        bool certificate_filter_registered_   = false;    ///< Owns the CRDT certificate filter.
+        bool certificate_callback_registered_ = false;    ///< Owns the CRDT certificate callback.
         std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.

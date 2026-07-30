@@ -704,6 +704,7 @@ namespace sgns
         size_t                           active_batch_handlers_ = 0; ///< Batch handlers still using GlobalDB.
         std::thread                      persistence_worker_; ///< Owned registry persistence worker.
         std::mutex                       close_mutex_;        ///< Serializes idempotent Close calls.
+        bool                             close_started_ = false; ///< Makes Close one-shot.
 
         InitCallback init_callback_; ///< Optional initialization callback.
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>

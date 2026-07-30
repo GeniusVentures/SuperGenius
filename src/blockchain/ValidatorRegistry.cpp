@@ -126,6 +126,11 @@ namespace sgns
     void ValidatorRegistry::Close()
     {
         std::lock_guard<std::mutex> close_lock( close_mutex_ );
+        if ( close_started_ )
+        {
+            return;
+        }
+        close_started_ = true;
 
         const std::string pattern = "/?" + std::string( RegistryKey() );
         if ( db_ )
