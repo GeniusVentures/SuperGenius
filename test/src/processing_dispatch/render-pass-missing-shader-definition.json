@@ -6,9 +6,13 @@
     {
       "name": "renderInput",
       "source_uri_param": "dummy",
-      "type": "buffer"
+      "type": "buffer",
+      "dimensions": {
+        "width": 1
+      }
     }
   ],
+  "outputs": [],
   "passes": [
     {
       "name": "renderPass",
