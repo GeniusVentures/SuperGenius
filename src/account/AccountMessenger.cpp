@@ -1026,8 +1026,7 @@ namespace sgns
 
     bool AccountMessenger::HasRequestPeers() const
     {
-        std::string topic = requests_topic_;
-        return pubsub_->getPeerCount( topic ) != 0;
+        return pubsub_->getPeerCount( requests_topic_ ) != 0;
     }
 
     outcome::result<uint64_t> AccountMessenger::PerformNonceRequest( uint64_t timeout_ms, uint64_t silent_time_ms )
