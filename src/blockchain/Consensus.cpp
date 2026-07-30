@@ -61,6 +61,12 @@ namespace sgns
                                 { return ( c >= '0' && c <= '9' ) || ( c >= 'a' && c <= 'f' ); } );
         }
 
+        std::string PublicPayloadDigest( std::string_view bytes )
+        {
+            const auto digest = crypto::sha2_256( bytes.data(), bytes.size() );
+            return base::hex_lower( gsl::span<const uint8_t>( digest.data(), digest.size() ) );
+        }
+
         bool HasUnknownFieldsRecursively( const google::protobuf::Message &message )
         {
             const auto *reflection = message.GetReflection();
@@ -802,6 +808,19 @@ namespace sgns
                                          serialized_proto.size() );
 
         return outcome::success();
+    }
+
+    void ConsensusManager::EmitConsensusTrace( ConsensusTraceEvent event ) const noexcept
+    {
+        if ( !consensus_trace_observer_ ) return;
+        try
+        {
+            consensus_trace_observer_( event );
+        }
+        catch ( ... )
+        {
+            ConsensusManagerLogger()->warn( "Consensus trace observer threw; ignoring callback failure" );
+        }
     }
 
     bool ConsensusManager::RegisterSubjectHandler( std::string_view subject_type, SubjectHandler handler )
@@ -1711,6 +1730,18 @@ namespace sgns
                     slot_cv_.notify_all();
                 }
             }
+            if ( published )
+            {
+                auto subject_hash = GetSubjectHash( candidate.proposal.subject() );
+                if ( subject_hash )
+                    EmitConsensusTrace( { ConsensusTraceEvent::Stage::VotePublished,
+                                          record.validator_id(),
+                                          candidate.slot,
+                                          record.proposal_id(),
+                                          subject_hash.value(),
+                                          PublicPayloadDigest( record.outbound_envelope_bytes() ),
+                                          std::nullopt } );
+            }
             HandleVote( vote_result.value() );
         }
     }
@@ -1753,6 +1784,22 @@ namespace sgns
                 it->second.last_publication_succeeded = published.has_value();
                 it->second.lifecycle = SlotState::Lifecycle::Voted;
                 slot_cv_.notify_all();
+            }
+        }
+        if ( published )
+        {
+            Proposal proposal;
+            if ( proposal.ParseFromString( record.signed_proposal_bytes() ) )
+            {
+                auto subject_hash = GetSubjectHash( proposal.subject() );
+                if ( subject_hash )
+                    EmitConsensusTrace( { ConsensusTraceEvent::Stage::VotePublished,
+                                          record.validator_id(),
+                                          slot_id,
+                                          record.proposal_id(),
+                                          subject_hash.value(),
+                                          PublicPayloadDigest( record.outbound_envelope_bytes() ),
+                                          std::nullopt } );
             }
         }
         return published.has_value();
@@ -2691,6 +2738,7 @@ namespace sgns
             return outcome::failure( slot_result.error() );
         }
         const auto &slot_key = slot_result.value();
+        auto subject_hash = GetSubjectHash( proposal.subject() );
         {
             std::lock_guard lock( proposals_mutex_ );
             if ( restored_safety_slots_.count( slot_key ) != 0 )
@@ -2723,6 +2771,19 @@ namespace sgns
                                          __func__,
                                          GetPrintableSubjectHash( proposal.subject() ),
                                          proposal.proposal_id().substr( 0, 8 ) );
+
+        if ( subject_hash )
+        {
+            std::string envelope_bytes;
+            if ( message.SerializeToString( &envelope_bytes ) )
+                EmitConsensusTrace( { ConsensusTraceEvent::Stage::LocalProposalPublished,
+                                      account_address_,
+                                      slot_key,
+                                      proposal.proposal_id(),
+                                      subject_hash.value(),
+                                      PublicPayloadDigest( envelope_bytes ),
+                                      std::nullopt } );
+        }
 
         if ( self_vote )
         {
@@ -3099,6 +3160,14 @@ namespace sgns
             slot.reserved_finalization_winner_id = winner_id;
             slot_cv_.notify_all();
         }
+
+        EmitConsensusTrace( { ConsensusTraceEvent::Stage::AuthorityEstablished,
+                              account_address_,
+                              slot_id,
+                              normalized.certificate.proposal_id(),
+                              winner_id,
+                              digest,
+                              source } );
 
         if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
              SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
@@ -5251,8 +5320,10 @@ namespace sgns
             std::lock_guard lock( restored_state_mutex_ );
             for ( const auto &[slot, process] : restored_processes_ )
             {
-                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING &&
-                     restored_safety_slots_.count( slot ) == 0 )
+                // FinalizeSlot admits only the exact authoritative certificate
+                // through a safety-stopped slot, so pending original-winner
+                // application remains safe and must stay recoverable.
+                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING )
                     pending_slots.push_back( slot );
             }
         }
