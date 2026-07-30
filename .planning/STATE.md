@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
 status: executing
-last_updated: "2026-07-30T16:55:39.826Z"
-last_activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace foundation
+last_updated: "2026-07-30T17:07:26.564Z"
+last_activity: 2026-07-30 -- Completed Plan 12-03 durability and compatibility verification
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 40
-  completed_plans: 36
+  completed_plans: 37
   percent: 75
 ---
 
@@ -32,7 +32,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace foundation
+Last activity: 2026-07-30 -- Completed Plan 12-03 durability and compatibility verification
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace fou
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ executing (1/5 plans complete) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ◐ executing (2/5 plans complete) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -70,8 +70,8 @@ Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace fou
 
 ## Session Continuity
 
-**Last session:** 2026-07-30T16:55:39.822Z
-**Stopped at:** Completed 12-01-PLAN.md
+**Last session:** 2026-07-30T17:07:26.555Z
+**Stopped at:** Completed 12-03-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -114,6 +114,7 @@ Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace fou
 | Phase 11 P11 | 30 min | 2 tasks | 6 files |
 | Phase 11 P12 | 20 min | 2 tasks | 3 files |
 | Phase 12 P01 | 57 min | 2 tasks | 5 files |
+| Phase 12 P03 | 7 min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -200,3 +201,6 @@ Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace fou
 - [Phase 12]: Trace callbacks carry copied public consensus identities and execute after production locks are released. — Observation must not perturb consensus or expose mutable state.
 - [Phase 12]: Exact vote replay identity includes validator, canonical slot, proposal target, and exact envelope digest. — Duplicate transport replay must compare equal while different proposal targets remain distinguishable.
 - [Phase 12]: Safety-stopped slots may recover only their exact authoritative winner application. — Finality blocks competing participation but must not strand the durable winner.
+- [Phase 12]: Restart verification requires proven manager destruction and exact durable replay bytes. — Weak ownership proves the original manager is gone; byte equality and zero signer calls prove replay does not re-sign.
+- [Phase 12]: Certificate corruption verification uses typed status diagnostics and byte-stable authority. — Tests remain useful without binding correctness to exact log wording or permitting malformed index reads to mutate durable authority.
+- [Phase 12]: Existing TransactionManager replay-protection and producer-witness tests are the real certificate-index consumer gates. — They exercise previous-nonce and producer-UTXO behavior through production lookup paths, so no production or fixture bypass is needed.
