@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
 status: executing
-last_updated: "2026-07-30T15:44:56.206Z"
-last_activity: 2026-07-30 -- Phase 12 planning complete
+last_updated: "2026-07-30T16:55:39.826Z"
+last_activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace foundation
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 40
-  completed_plans: 35
+  completed_plans: 36
   percent: 75
 ---
 
@@ -25,14 +25,14 @@ progress:
 See: `.planning/PROJECT.md` (updated 2026-07-27)
 
 **Core value:** At most one valid certificate may finalize a canonical consensus slot.
-**Current focus:** Phase 12 — consensus race and compatibility verification
+**Current focus:** Phase 12 — consensus-race-and-compatibility-verification
 
 ## Current Position
 
-Phase: 12 (Consensus Race and Compatibility Verification)
-Plan: 0 of 5 complete
+Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-30 -- Phase 12 planning complete
+Last activity: 2026-07-30 -- Completed Plan 12-01 structured consensus trace foundation
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-07-30 -- Phase 12 planning complete
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ planned (0/5 plans complete) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ◐ executing (1/5 plans complete) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -70,9 +70,9 @@ Last activity: 2026-07-30 -- Phase 12 planning complete
 
 ## Session Continuity
 
-**Last session:** 2026-07-30T14:56:20.654Z
-**Stopped at:** Phase 12 planned and ready to execute
-**Resume file:** .planning/phases/12-consensus-race-and-compatibility-verification/12-01-PLAN.md
+**Last session:** 2026-07-30T16:55:39.822Z
+**Stopped at:** Completed 12-01-PLAN.md
+**Resume file:** None
 
 ## Performance Metrics
 
@@ -113,6 +113,7 @@ Last activity: 2026-07-30 -- Phase 12 planning complete
 | Phase 11 P10 | 26 min | 2 tasks | 4 files |
 | Phase 11 P11 | 30 min | 2 tasks | 6 files |
 | Phase 11 P12 | 20 min | 2 tasks | 3 files |
+| Phase 12 P01 | 57 min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -196,3 +197,6 @@ Last activity: 2026-07-30 -- Phase 12 planning complete
 - [Phase 11]: Startup installs terminal safety lifecycle before certificate recovery selection, while duplicate ingress short-circuits before handler lookup or cleanup. — Terminal recovery must not invoke application, cleanup, wake, release, or remint side effects.
 - [Phase 11]: Live terminal idempotence requires exact canonical outpoint, reciprocal generation, certificate digest, proposal ID, and winner ID agreement with the authoritative process and normalized certificate. — A readable identity contradiction must remain visible and cannot retire certificate work.
 - [Phase 11]: Composed consumed-artifact recovery is proven with a genuinely certified mint and real TransactionManager registration over the same reopened RocksDB. — Production recovery must transition the contradiction exactly once and permanently suppress retry, release, remint, cleanup, and wake effects.
+- [Phase 12]: Trace callbacks carry copied public consensus identities and execute after production locks are released. — Observation must not perturb consensus or expose mutable state.
+- [Phase 12]: Exact vote replay identity includes validator, canonical slot, proposal target, and exact envelope digest. — Duplicate transport replay must compare equal while different proposal targets remain distinguishable.
+- [Phase 12]: Safety-stopped slots may recover only their exact authoritative winner application. — Finality blocks competing participation but must not strand the durable winner.
