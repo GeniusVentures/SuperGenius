@@ -805,44 +805,80 @@ TEST_F( ConsensusVoteJournalHarness, ConfigIsFixedBeforeManagerStartup )
                std::chrono::milliseconds( 1777 ) );
 }
 
-TEST_F( ConsensusVoteJournalHarness, RestartReplaysExactStoredEnvelopeWithoutSigning )
+TEST_F( ConsensusVoteJournalHarness, RestartedVoteLockRejectsCompetingSameSlotProposalWithoutResigning )
 {
     const ScopedReset reset_hooks( []() { sgns::ConsensusVoteJournalTestAccess::ResetStartupHooks(); } );
+    sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'000ULL );
     auto registry = MakeRegistry();
     ASSERT_TRUE( registry );
-    auto manager = MakeManager( registry );
-    ASSERT_TRUE( manager );
-    auto record = MakeSignedVoteRecord( manager, registry );
-    auto datastore = db_->GetDataStore();
-    ASSERT_TRUE( datastore );
-    sgns::ConsensusStateStore store( datastore );
-    ASSERT_TRUE( store.PutActiveVote( record ).has_value() );
-    manager->Close();
-    manager.reset();
-    counters_.Reset();
+    auto manager_a = MakeManager( registry, sgns::ConsensusConfig{ std::chrono::milliseconds( 25 ) } );
+    ASSERT_TRUE( manager_a );
+    auto subject = sgns::ConsensusManager::CreateGenericSubject(
+        validator_id_, "sgns.vote-journal.restart-lock.v1", { 7, 4, 1 } );
+    ASSERT_TRUE( subject );
+    auto voted_proposal = MakeProposalForSubject( manager_a, registry, subject.value() );
+    sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'001ULL );
+    auto competing_proposal = MakeProposalForSubject( manager_a, registry, subject.value() );
+    auto slot = sgns::ConsensusVoteJournalTestAccess::Slot( voted_proposal );
+    ASSERT_TRUE( slot );
 
-    std::string replayed;
-    bool lock_existed_before_replay = false;
-    std::vector<std::string> events;
-    sgns::ConsensusVoteJournalTestAccess::ObserveStartup(
-        [&]( std::string_view event ) { events.emplace_back( event ); } );
+    std::vector<std::string> initial_publications;
     sgns::ConsensusVoteJournalTestAccess::OverrideRawPublish(
         [&]( std::string_view bytes ) -> outcome::result<void>
         {
-            auto durable = store.GetVote( record.validator_id(), record.slot_id() );
+            initial_publications.emplace_back( bytes );
+            return outcome::success();
+        } );
+    const auto signer_before_vote = counters_.signer.load();
+    sgns::ConsensusVoteJournalTestAccess::Continue( manager_a, voted_proposal );
+    sgns::ConsensusVoteJournalTestAccess::ProcessDeadline(
+        manager_a, sgns::ConsensusVoteJournalTestAccess::Deadline( manager_a, slot.value() ) );
+    ASSERT_EQ( initial_publications.size(), 1U );
+    ASSERT_EQ( counters_.signer.load(), signer_before_vote + 1U );
+
+    auto datastore = db_->GetDataStore();
+    ASSERT_TRUE( datastore );
+    sgns::ConsensusStateStore store( datastore );
+    auto original = store.GetVote( validator_id_, slot.value() );
+    ASSERT_TRUE( original && original.value().has_value() );
+    const auto original_record = original.value().value();
+    ASSERT_EQ( original_record.outbound_envelope_bytes(), initial_publications.front() );
+
+    std::weak_ptr<sgns::ConsensusManager> old_manager = manager_a;
+    manager_a.reset();
+    CloseManagers();
+    ASSERT_TRUE( old_manager.expired() );
+    counters_.Reset();
+
+    std::vector<std::string> restarted_publications;
+    bool lock_existed_before_replay = false;
+    sgns::ConsensusVoteJournalTestAccess::OverrideRawPublish(
+        [&]( std::string_view bytes ) -> outcome::result<void>
+        {
+            auto durable = store.GetVote( validator_id_, slot.value() );
             lock_existed_before_replay = durable && durable.value().has_value();
-            replayed.assign( bytes );
+            restarted_publications.emplace_back( bytes );
             ++counters_.raw_publish;
             return outcome::success();
         } );
-    auto restarted = MakeManager( registry );
-    ASSERT_TRUE( restarted );
+    auto manager_b = MakeManager( registry, sgns::ConsensusConfig{ std::chrono::milliseconds( 25 ) } );
+    ASSERT_TRUE( manager_b );
     EXPECT_TRUE( lock_existed_before_replay );
-    EXPECT_EQ( replayed, record.outbound_envelope_bytes() );
-    EXPECT_EQ( counters_.raw_publish.load(), 1 );
-    EXPECT_EQ( counters_.signer.load(), 0 );
-    EXPECT_EQ( events,
-               ( std::vector<std::string>{ "restored", "subscribe", "certificate-filter", "timer", "publish" } ) );
+    ASSERT_EQ( restarted_publications.size(), 1U );
+    EXPECT_EQ( restarted_publications.front(), original_record.outbound_envelope_bytes() );
+    EXPECT_EQ( counters_.signer.load(), 0U );
+
+    sgns::ConsensusVoteJournalTestAccess::Continue( manager_b, competing_proposal );
+    sgns::ConsensusVoteJournalTestAccess::ProcessDeadline(
+        manager_b, kSteadyClockNow + std::chrono::milliseconds( 25 ) );
+    EXPECT_EQ( counters_.signer.load(), 0U );
+    ASSERT_EQ( restarted_publications.size(), 1U );
+
+    auto unchanged = store.GetVote( validator_id_, slot.value() );
+    ASSERT_TRUE( unchanged && unchanged.value().has_value() );
+    EXPECT_EQ( unchanged.value()->proposal_id(), original_record.proposal_id() );
+    EXPECT_EQ( unchanged.value()->signed_vote_bytes(), original_record.signed_vote_bytes() );
+    EXPECT_EQ( unchanged.value()->outbound_envelope_bytes(), original_record.outbound_envelope_bytes() );
 }
 
 TEST_F( ConsensusVoteJournalHarness, FailedRawReplayKeepsExactActiveRecordRetryable )
@@ -1092,7 +1128,7 @@ TEST_F( ConsensusVoteJournalHarness, RestoredSafetyViolationSuppressesStoredVote
     EXPECT_EQ( counters_.signer.load(), 0 );
 }
 
-TEST_F( ConsensusVoteJournalHarness, FixedDeadlineSelectsComparatorWinnerAndPersistsBeforeExactRawPublish )
+TEST_F( ConsensusVoteJournalHarness, BetterCandidateBeforeDeadlineWinsButAfterPublicationCannotResign )
 {
     const ScopedReset reset( []() { sgns::ConsensusVoteJournalTestAccess::ResetStartupHooks(); } );
     sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'000ULL );
@@ -1106,8 +1142,14 @@ TEST_F( ConsensusVoteJournalHarness, FixedDeadlineSelectsComparatorWinnerAndPers
     auto first = MakeProposalForSubject( manager, registry, subject.value() );
     sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'001ULL );
     auto second = MakeProposalForSubject( manager, registry, subject.value() );
-    auto better = first.proposal_id() < second.proposal_id() ? first : second;
-    auto worse = first.proposal_id() < second.proposal_id() ? second : first;
+    sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'002ULL );
+    auto third = MakeProposalForSubject( manager, registry, subject.value() );
+    std::vector<sgns::ConsensusManager::Proposal> candidates{ first, second, third };
+    std::sort( candidates.begin(), candidates.end(), []( const auto &lhs, const auto &rhs )
+               { return lhs.proposal_id() < rhs.proposal_id(); } );
+    const auto &after_publication_better = candidates[0];
+    const auto &before_deadline_better = candidates[1];
+    const auto &initial_candidate = candidates[2];
     auto slot = sgns::ConsensusVoteJournalTestAccess::Slot( first );
     ASSERT_TRUE( slot );
 
@@ -1129,11 +1171,12 @@ TEST_F( ConsensusVoteJournalHarness, FixedDeadlineSelectsComparatorWinnerAndPers
         } );
 
     const auto signer_before = counters_.signer.load();
-    sgns::ConsensusVoteJournalTestAccess::Continue( manager, worse );
+    sgns::ConsensusVoteJournalTestAccess::Continue( manager, initial_candidate );
     const auto deadline = sgns::ConsensusVoteJournalTestAccess::Deadline( manager, slot.value() );
-    sgns::ConsensusVoteJournalTestAccess::Continue( manager, better );
+    sgns::ConsensusVoteJournalTestAccess::Continue( manager, before_deadline_better );
     EXPECT_EQ( sgns::ConsensusVoteJournalTestAccess::Deadline( manager, slot.value() ), deadline );
-    EXPECT_EQ( sgns::ConsensusVoteJournalTestAccess::Best( manager, slot.value() ), better.proposal_id() );
+    EXPECT_EQ( sgns::ConsensusVoteJournalTestAccess::Best( manager, slot.value() ),
+               before_deadline_better.proposal_id() );
     sgns::ConsensusVoteJournalTestAccess::ProcessDeadline( manager, deadline - std::chrono::milliseconds( 1 ) );
     EXPECT_TRUE( published.empty() );
     sgns::ConsensusVoteJournalTestAccess::ProcessDeadline( manager, deadline );
@@ -1141,16 +1184,23 @@ TEST_F( ConsensusVoteJournalHarness, FixedDeadlineSelectsComparatorWinnerAndPers
     ASSERT_EQ( counters_.signer.load(), signer_before + 1 );
     ASSERT_EQ( published.size(), 1U );
     EXPECT_EQ( sgns::ConsensusVoteJournalTestAccess::DurableProposal( manager, slot.value() ),
-               better.proposal_id() );
+               before_deadline_better.proposal_id() );
     EXPECT_EQ( stages, ( std::vector<std::string>{ "sign", "put", "publish" } ) );
 
-    sgns::ConsensusVoteJournalTestAccess::Continue( manager, better );
-    ASSERT_EQ( published.size(), 2U );
-    EXPECT_EQ( published[0], published[1] );
-    EXPECT_EQ( counters_.signer.load(), signer_before + 1 );
-    sgns::ConsensusVoteJournalTestAccess::Continue( manager, worse );
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    auto durable_before = store.GetVote( validator_id_, slot.value() );
+    ASSERT_TRUE( durable_before && durable_before.value().has_value() );
+    const auto durable_bytes = durable_before.value()->outbound_envelope_bytes();
+    sgns::ConsensusVoteJournalTestAccess::Continue( manager, after_publication_better );
+    sgns::ConsensusVoteJournalTestAccess::ProcessDeadline(
+        manager, deadline + std::chrono::milliseconds( 25 ) );
     EXPECT_EQ( counters_.signer.load(), signer_before + 1 );
     EXPECT_EQ( sgns::ConsensusVoteJournalTestAccess::LateCount( manager, slot.value() ), 1U );
+    ASSERT_EQ( published.size(), 1U );
+    auto durable_after = store.GetVote( validator_id_, slot.value() );
+    ASSERT_TRUE( durable_after && durable_after.value().has_value() );
+    EXPECT_EQ( durable_after.value()->proposal_id(), before_deadline_better.proposal_id() );
+    EXPECT_EQ( durable_after.value()->outbound_envelope_bytes(), durable_bytes );
     EXPECT_TRUE( sgns::ConsensusVoteJournalTestAccess::TryReserveFinalizing( manager, slot.value() ) );
 }
 
