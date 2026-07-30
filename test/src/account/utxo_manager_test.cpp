@@ -843,6 +843,12 @@ TEST_F( UTXOManagerTest, AtomicFinalizedMintFailureRetryAndRestartReplayAreExact
         slot.toReadableString(), outpoint, finalized.value().generation(),
         finalized.value().certificate_digest(), finalized.value().proposal_id(),
         finalized.value().winner_id() };
+    const std::string provisional_owner = "losing-candidate-owner";
+    ASSERT_TRUE( utxo_manager
+                     ->PutUTXO( GeniusUTXO( burn, index, 700, TOKEN_1 ),
+                                provisional_owner,
+                                UTXOManager::UTXOType::UTXO_BRIDGE )
+                     .value() );
 
     UTXOManagerTestAccess::SetFault(
         *utxo_manager,
@@ -877,6 +883,7 @@ TEST_F( UTXOManagerTest, AtomicFinalizedMintFailureRetryAndRestartReplayAreExact
         *utxo_manager, chain, burn, index ).value().has_value() );
     EXPECT_TRUE( utxo_manager->IsOutPointConsumed( burn, index ) );
     EXPECT_TRUE( utxo_manager->GetUnconsumedUTXO( winner, 0 ).has_value() );
+    EXPECT_TRUE( utxo_manager->GetUTXOs( provisional_owner ).empty() );
 
     utxo_manager->ReleaseStorage();
     auto reloaded = std::make_shared<UTXOManager>(
