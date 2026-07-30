@@ -46,7 +46,7 @@
 - [x] **COMP-01**: Previous-nonce validation and producer-UTXO validation continue retrieving new-format certificates by transaction hash through the verified secondary index.
 - [x] **COMP-02**: Nodes fail startup with a clear protocol-state error when legacy certificate state is present, rather than silently mixing transaction-keyed and slot-keyed finality formats.
 - [x] **TEST-01**: The 11-node single-burn race deterministically demonstrates that all competing mints use one canonical slot, at most one validator signature per validator is usable for that slot, exactly one certificate exists, and exactly one mint becomes confirmed.
-- [ ] **TEST-02**: A regression test reproduces the observed ordering where `HandleCertificate()` runs before CRDT certificate application and proves that a second proposal cannot collect a certificate in that gap.
+- [x] **TEST-02**: A regression test reproduces the observed ordering where `HandleCertificate()` runs before CRDT certificate application and proves that a second proposal cannot collect a certificate in that gap.
 - [x] **TEST-03**: A restart test proves that a validator which signed before shutdown restores its vote lock and does not sign a competing proposal after restart.
 - [x] **TEST-04**: Proposal-ordering tests prove that a better candidate arriving before the vote window closes can win, while a better candidate arriving after vote publication cannot trigger a second signature.
 - [x] **TEST-05**: Certificate-index tests cover slot lookup, transaction-hash lookup, mismatched index rejection, duplicate delivery idempotency, and conflicting-certificate diagnostics.
@@ -101,7 +101,7 @@
 | COMP-01 | Phase 9 | Complete |
 | COMP-02 | Phase 9 | Complete |
 | TEST-01 | Phase 12 | Complete |
-| TEST-02 | Phase 12 | Pending |
+| TEST-02 | Phase 12 | Complete |
 | TEST-03 | Phase 12 | Complete |
 | TEST-04 | Phase 12 | Complete |
 | TEST-05 | Phase 12 | Complete |
