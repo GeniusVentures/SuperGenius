@@ -15,6 +15,7 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-valid-definition.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-missing-shader-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/dummy_shader.glsl"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )

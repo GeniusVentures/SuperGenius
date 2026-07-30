@@ -5,7 +5,7 @@
   "inputs": [
     {
       "name": "renderInput",
-      "source_uri_param": "dummy",
+      "source_uri_param": "file://processing_dispatch/missing-render-input.raw",
       "type": "buffer",
       "dimensions": {
         "width": 1
@@ -18,7 +18,7 @@
       "name": "renderPass",
       "type": "render",
       "shader": {
-        "source": "dummy_shader.glsl"
+        "source": "file://processing_dispatch/dummy_shader.glsl"
       }
     }
   ]
