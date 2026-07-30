@@ -75,6 +75,17 @@ public:
         std::string winner_id;
     };
 
+    struct ApplicationOutput
+    {
+        uint64_t    transaction_amount{ 0 };
+        std::string transaction_destination;
+        uint64_t    live_amount{ 0 };
+        std::string live_owner;
+        bool        live_ready{ false };
+        bool        owner_indexed{ false };
+        int         live_state{ -1 };
+    };
+
     static std::shared_ptr<sgns::ConsensusManager> Manager(
         const std::shared_ptr<GeniusNode> &node )
     {
@@ -117,6 +128,17 @@ public:
                process.value()->state() == sgns::ConsensusStateStore::ProcessRecord::COMPLETE;
     }
 
+    static std::size_t ProposalCountForSlot(
+        const std::shared_ptr<ConsensusManager> &manager,
+        const std::string                       &slot )
+    {
+        if ( !manager ) return 0u;
+        std::lock_guard lock( manager->proposals_mutex_ );
+        return static_cast<std::size_t>( std::count_if(
+            manager->proposals_.begin(), manager->proposals_.end(),
+            [&]( const auto &entry ) { return entry.second.slot_key == slot; } ) );
+    }
+
     static uint64_t ConfirmCount( const std::shared_ptr<GeniusNode> &node )
     {
         if ( !node ) return 0;
@@ -124,6 +146,51 @@ public:
         return transaction_manager && transaction_manager.value()
                  ? transaction_manager.value()->metrics_tracking_confirm_.load()
                  : 0;
+    }
+
+    static std::optional<ApplicationOutput> OutputFor(
+        const std::shared_ptr<GeniusNode> &node,
+        const std::string                 &transaction_hash )
+    {
+        if ( !node ) return std::nullopt;
+        auto transaction_manager = node->GetTransactionManager();
+        if ( !transaction_manager || !transaction_manager.value() ) return std::nullopt;
+        auto manager = transaction_manager.value();
+        auto tx = manager->GetTransactionByHash( transaction_hash );
+        if ( !tx ) return std::nullopt;
+        auto params = tx->GetUTXOParametersOpt();
+        if ( !params || params->second.size() != 1u ) return std::nullopt;
+        ApplicationOutput output;
+        output.transaction_amount = params->second.front().encrypted_amount;
+        output.transaction_destination = params->second.front().dest_address;
+        auto hash = base::Hash256::fromReadableString( transaction_hash );
+        if ( !hash ) return output;
+        auto live = manager->account_m->GetUTXOManager().GetUnconsumedUTXO( hash.value(), 0u );
+        if ( live )
+        {
+            output.live_amount = live->GetAmount();
+            output.live_owner = live->GetOwnerAddress();
+            const auto all = manager->account_m->GetUTXOManager().GetAllUTXOs();
+            auto owner = all.find( output.live_owner );
+            if ( owner != all.end() )
+            {
+                for ( const auto &[state, utxo] : owner->second )
+                {
+                    if ( utxo.GetTxID() == hash.value() && utxo.GetOutputIdx() == 0u )
+                    {
+                        output.live_state = static_cast<int>( state );
+                        output.live_ready = state == UTXOManager::UTXOState::UTXO_READY;
+                        break;
+                    }
+                }
+            }
+            const auto indexed = manager->account_m->GetUTXOManager().GetUnconsumedUTXOs(
+                output.live_owner );
+            output.owner_indexed = std::any_of(
+                indexed.begin(), indexed.end(), [&]( const auto &utxo )
+                { return utxo.GetTxID() == hash.value() && utxo.GetOutputIdx() == 0u; } );
+        }
+        return output;
     }
 };
 } // namespace sgns
@@ -334,6 +401,21 @@ public:
                 auto authority = sgns::BridgeRaceConsensusTestAccess::GetAuthority( managers[i], slot );
                 out << " authority=" << ( authority ? Abbrev( authority->winner_id ) : "none" )
                     << " process_complete=" << sgns::BridgeRaceConsensusTestAccess::ProcessComplete( managers[i], slot );
+                if ( authority && i < nodes.size() )
+                {
+                    auto output = sgns::BridgeRaceConsensusTestAccess::OutputFor(
+                        nodes[i], authority->winner_id );
+                    if ( output )
+                        out << " output_amount=" << output->transaction_amount
+                            << " output_dest=" << Abbrev( output->transaction_destination )
+                            << " dest_match=" << ( output->transaction_destination == destination )
+                            << " live_ready=" << output->live_ready
+                            << " live_state=" << output->live_state
+                            << " live_amount=" << output->live_amount
+                            << " live_owner=" << Abbrev( output->live_owner )
+                            << " owner_match=" << ( output->live_owner == destination )
+                            << " owner_indexed=" << output->owner_indexed;
+                }
             }
             out << '\n';
             const std::size_t begin = snapshot[i].events.size() > kRenderedEventsPerNode
@@ -442,7 +524,7 @@ protected:
      *        3-node catchup suite's 60000ms; bump initial budget, adjust upward if
      *        measured runs exceed it).
      */
-    static constexpr std::chrono::milliseconds kRaceNodeReadyTimeout{ 90000 };
+    static constexpr std::chrono::milliseconds kRaceNodeReadyTimeout{ 120000 };
 
     /**
      * @brief Stability window a test waits after observing the expected mint, to catch
@@ -450,6 +532,16 @@ protected:
      *        interval).
      */
     static constexpr std::chrono::milliseconds kRaceStabilityWindow{ 16000 };
+
+    /**
+     * @brief Real configured pre-vote window for the end-to-end participation proof.
+     *
+     * The production watcher polls every 15 seconds. The compiled 500 ms default
+     * lets the first watcher finalize before the other ten can publish, which
+     * cannot exercise D-02. Sixty seconds preserves about 18 seconds of measured
+     * margin over the real mesh's roughly 42-second partition replay.
+     */
+    static inline constexpr std::chrono::milliseconds kRaceVoteSelectionWindow{ 60000 };
 
     /**
      * @brief Per-node config — index 0 is the Full node, indices 1-10 are Light nodes.
@@ -520,6 +612,17 @@ protected:
         out << config_json;
         out.close();
         spdlog::info( "bridge_race: wrote {} (creation_block={})", config_path, creation_block );
+    }
+
+    static void WriteRaceNetworkConfig( const std::string &base_write_path, unsigned int port_seed )
+    {
+        std::filesystem::create_directories( base_write_path );
+        std::ofstream out( base_write_path + "/network_config.json", std::ios::binary | std::ios::trunc );
+        ASSERT_TRUE( out.good() ) << "Could not write bridge-race network_config.json";
+        out << "{ \"port_seed\": " << port_seed
+            << ", \"auto_dht\": true, \"consensus_vote_selection_window_ms\": "
+            << kRaceVoteSelectionWindow.count() << " }";
+        out.close();
     }
 
     /**
@@ -619,6 +722,30 @@ protected:
         s_evidence.reset();
     }
 
+    /** Isolates the real consensus mesh while every watcher publishes locally. */
+    static void DisconnectConsensusMesh()
+    {
+        const auto full_id = s_nodes[0]->GetPubSub()->GetHost()->getId();
+        for ( unsigned int i = 1; i < kNodeCount; ++i )
+        {
+            const auto light_id = s_nodes[i]->GetPubSub()->GetHost()->getId();
+            s_nodes[0]->GetPubSub()->GetHost()->disconnect( light_id );
+            s_nodes[i]->GetPubSub()->GetHost()->disconnect( full_id );
+        }
+    }
+
+    /** Heals the real star mesh through production PubSub peer admission. */
+    static void ConnectConsensusMesh()
+    {
+        const std::string full_address = s_nodes[0]->GetPubSub()->GetLocalAddress();
+        for ( unsigned int i = 1; i < kNodeCount; ++i )
+        {
+            const std::string light_address = s_nodes[i]->GetPubSub()->GetLocalAddress();
+            s_nodes[i]->GetPubSub()->AddPeers( { full_address } );
+            s_nodes[0]->GetPubSub()->AddPeers( { light_address } );
+        }
+    }
+
     /**
      * @brief Starts Anvil, funds account #0, and bootstraps the 11-node cluster.
      *
@@ -672,26 +799,10 @@ protected:
                    kAnvilRpcUrl + R"("],"status":"active"}])";
         };
 
-        // Bootstrap order: create the 10 Light nodes FIRST and register their REAL
-        // addresses via SetAdditionalGenesisValidatorAddresses, THEN create the Full node
-        // LAST and register its REAL address via SetAuthorizedFullNodeAddress immediately
-        // afterward (no other node creation in between).
-        //
-        // Why: a node's true SGNS address is NOT simply EthereumKeyGenerator(private_key)
-        // — GeniusAccount::GenerateGeniusAddress() signs a predefined constant with the
-        // raw key and SHA-256s the signature to derive the actual key seed. Addresses can
-        // only be obtained from a LIVE GeniusNode's GetAddress(), not precomputed from the
-        // key alone. And Blockchain::New() — which bakes GetAuthorizedFullNodeAddress()/
-        // GetAdditionalGenesisValidatorAddresses() into the ValidatorRegistry's
-        // genesis_authority and additional-validator list — runs ASYNCHRONOUSLY per node
-        // (via the INITIALIZING_BLOCKCHAIN state transition, after DB migration), so
-        // registering addresses only after creating ALL 11 nodes races every node's async
-        // blockchain init against the registration call. This ordering removes the race
-        // for both statics: the light-address list is fully known and registered before
-        // the Full node (the only node that ever writes the genesis registry) is even
-        // constructed, and the Full node's own registration follows its creation with no
-        // intervening node-creation work — the same "single node, immediate registration"
-        // timing already proven safe by the existing 3-node bridge_anvil_e2e fixture.
+        // Derive every real SGNS address through GeniusAccount before constructing a
+        // GeniusNode. Blockchain initialization is asynchronous, so registering either
+        // genesis list after node construction leaves a genuine race in which the full
+        // node can try to create the registry before its authority address is available.
         // Proactively remove any stale per-node data directory left over from a PRIOR run
         // that didn't exit cleanly (e.g. a crash/SEGFAULT skips TearDownTestSuite's own
         // remove_all entirely). Without this, a fresh run can start against stale
@@ -714,31 +825,42 @@ protected:
             s_configs[i].BaseWritePath    = base_write_path;
 
             const unsigned int port = kNodePortBase + i;
-            sgns::GeniusNode::WriteNetworkConfig( base_write_path, static_cast<uint16_t>( port ), /*auto_dht=*/true );
+            WriteRaceNetworkConfig( base_write_path, port );
             sgns::GeniusNode::WriteSgnsConfig( base_write_path, node_type, /*is_processor=*/false );
             WriteBridgeChainsConfig( base_write_path );
         };
 
-        std::vector<std::string> light_addresses;
-        light_addresses.reserve( kNodeCount - 1u );
-        for ( unsigned int i = 1u; i < kNodeCount; ++i )
+        write_node_config( 0u, "Full" );
+        for ( unsigned int i = 1u; i < kNodeCount; ++i ) write_node_config( i, "Light" );
+
+        std::array<std::string, kNodeCount> validator_addresses;
+        for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {
-            write_node_config( i, "Light" );
+            const std::string key = DeriveNodeKey( i );
+            auto preview = sgns::GeniusAccount::NewFromPrivateKey(
+                s_configs[i].TokenID,
+                key.c_str(),
+                boost::filesystem::path( s_configs[i].BaseWritePath ),
+                i == 0u );
+            ASSERT_NE( preview, nullptr ) << "Failed to derive validator address " << i;
+            validator_addresses[i] = preview->GetAddress();
+        }
+
+        sgns::Blockchain::SetAuthorizedFullNodeAddress( validator_addresses[0] );
+        const std::vector<std::string> light_addresses(
+            validator_addresses.begin() + 1, validator_addresses.end() );
+        sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
+        spdlog::info( "bridge_race: registered full authority and {} additional genesis validators",
+                      kNodeCount - 1u );
+
+        for ( unsigned int i = 0u; i < kNodeCount; ++i )
+        {
             s_nodes[i] = GeniusNode::New( s_configs[i], sgns::FromPrivateKey{ DeriveNodeKey( i ) } );
             ASSERT_NE( s_nodes[i], nullptr ) << "Failed to create node index " << i;
             s_nodes[i]->SetChainlistFetcher( chainlist_fetcher );
-            light_addresses.push_back( s_nodes[i]->GetAddress() );
+            ASSERT_EQ( s_nodes[i]->GetAddress(), validator_addresses[i] )
+                << "previewed validator address changed for node " << i;
         }
-
-        sgns::Blockchain::SetAdditionalGenesisValidatorAddresses( light_addresses );
-        spdlog::info( "bridge_race: registered {} additional genesis validators", light_addresses.size() );
-
-        write_node_config( 0u, "Full" );
-        s_nodes[0] = GeniusNode::New( s_configs[0], sgns::FromPrivateKey{ DeriveNodeKey( 0u ) } );
-        ASSERT_NE( s_nodes[0], nullptr ) << "Failed to create Full node";
-        s_nodes[0]->SetChainlistFetcher( chainlist_fetcher );
-        sgns::Blockchain::SetAuthorizedFullNodeAddress( s_nodes[0]->GetAddress() );
-        spdlog::info( "bridge_race: authorized full node = {}", s_nodes[0]->GetAddress().substr( 0, 16 ) );
 
         // Star-topology PubSub mesh bootstrap: each Light node peers directly with the
         // Full node (sufficient for CRDT sync; a full 11x11 mesh is unnecessary).
