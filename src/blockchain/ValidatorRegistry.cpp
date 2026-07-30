@@ -114,17 +114,114 @@ namespace sgns
         request_block_by_cid_( std::move( block_request_method ) )
     {
         logger_->trace( "{}: constructed", __func__ );
+        persistence_worker_ = std::thread( [this]() { PersistenceWorkerLoop(); } );
     }
 
     ValidatorRegistry::~ValidatorRegistry()
     {
+        Close();
+        logger_->trace( "{}: destroyed", __func__ );
+    }
+
+    void ValidatorRegistry::Close()
+    {
+        std::lock_guard<std::mutex> close_lock( close_mutex_ );
+
         const std::string pattern = "/?" + std::string( RegistryKey() );
         if ( db_ )
         {
             db_->UnregisterNewElementCallback( pattern );
             db_->UnregisterElementFilter( pattern );
         }
-        logger_->trace( "{}: destroyed", __func__ );
+
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            submit_batch_subject_ = nullptr;
+        }
+        {
+            std::unique_lock<std::mutex> lock( persistence_mutex_ );
+            persistence_stopping_ = true;
+            persistence_cv_.wait( lock, [this]() { return active_batch_handlers_ == 0; } );
+        }
+        persistence_cv_.notify_all();
+
+        if ( persistence_worker_.joinable() )
+        {
+            persistence_worker_.join();
+        }
+    }
+
+    ValidatorRegistry::ActiveBatchHandlerGuard::ActiveBatchHandlerGuard( ValidatorRegistry &registry ) :
+        registry_( registry )
+    {
+        std::lock_guard<std::mutex> lock( registry_.persistence_mutex_ );
+        if ( !registry_.persistence_stopping_ )
+        {
+            ++registry_.active_batch_handlers_;
+            active_ = true;
+        }
+    }
+
+    ValidatorRegistry::ActiveBatchHandlerGuard::~ActiveBatchHandlerGuard()
+    {
+        if ( !active_ )
+        {
+            return;
+        }
+        std::lock_guard<std::mutex> lock( registry_.persistence_mutex_ );
+        --registry_.active_batch_handlers_;
+        registry_.persistence_cv_.notify_all();
+    }
+
+    bool ValidatorRegistry::EnqueueRegistryWrite( std::string subject_hash, RegistryUpdate update )
+    {
+        {
+            std::lock_guard<std::mutex> lock( persistence_mutex_ );
+            if ( persistence_stopping_ )
+            {
+                return false;
+            }
+            persistence_queue_.push_back( { std::move( subject_hash ), std::move( update ) } );
+        }
+        persistence_cv_.notify_one();
+        return true;
+    }
+
+    void ValidatorRegistry::PersistenceWorkerLoop()
+    {
+        while ( true )
+        {
+            PendingRegistryWrite write;
+            {
+                std::unique_lock<std::mutex> lock( persistence_mutex_ );
+                persistence_cv_.wait( lock,
+                                      [this]() { return persistence_stopping_ || !persistence_queue_.empty(); } );
+                if ( persistence_queue_.empty() )
+                {
+                    if ( persistence_stopping_ )
+                    {
+                        return;
+                    }
+                    continue;
+                }
+                write = std::move( persistence_queue_.front() );
+                persistence_queue_.pop_front();
+            }
+
+            auto                        store_result = StoreRegistryUpdate( write.update );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( write.subject_hash );
+            if ( store_result.has_error() )
+            {
+                logger_->error( "{}: failed storing batch registry update subject_hash={} error={}",
+                                __func__,
+                                write.subject_hash.substr( 0, 8 ),
+                                store_result.error().message() );
+                continue;
+            }
+            pending_batch_subject_ids_.erase( write.subject_hash );
+            finalized_batch_subject_ids_.insert( write.subject_hash );
+        }
     }
 
     std::shared_ptr<ValidatorRegistry> ValidatorRegistry::New( std::shared_ptr<crdt::GlobalDB> db,
@@ -1081,6 +1178,12 @@ namespace sgns
         const std::string                &subject_hash,
         const sgns::ConsensusCertificate &certificate )
     {
+        ActiveBatchHandlerGuard active_handler( *this );
+        if ( !active_handler )
+        {
+            return BatchCertificateDecision::Stalled;
+        }
+
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             if ( finalized_batch_subject_ids_.find( subject_hash ) != finalized_batch_subject_ids_.end() ||
@@ -1184,29 +1287,12 @@ namespace sgns
             update.add_batch_certificate_subject_hashes( tx_subject_hash );
         }
 
-        std::thread(
-            [weak_self = weak_from_this(), subject_hash, update = std::move( update )]() mutable
-            {
-                auto self = weak_self.lock();
-                if ( !self )
-                {
-                    return;
-                }
-                auto                        store_result = self->StoreRegistryUpdate( update );
-                std::lock_guard<std::mutex> lock( self->batch_mutex_ );
-                self->applying_batch_subject_ids_.erase( subject_hash );
-                if ( store_result.has_error() )
-                {
-                    self->logger_->error( "{}: failed storing batch registry update subject_hash={} error={}",
-                                          __func__,
-                                          subject_hash.substr( 0, 8 ),
-                                          store_result.error().message() );
-                    return;
-                }
-                self->pending_batch_subject_ids_.erase( subject_hash );
-                self->finalized_batch_subject_ids_.insert( subject_hash );
-            } )
-            .detach();
+        if ( !EnqueueRegistryWrite( subject_hash, std::move( update ) ) )
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return BatchCertificateDecision::Stalled;
+        }
         return BatchCertificateDecision::Approve;
     }
 

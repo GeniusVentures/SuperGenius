@@ -7,7 +7,9 @@
 #ifndef SGNS_VALIDATOR_REGISTRY_HPP
 #define SGNS_VALIDATOR_REGISTRY_HPP
 
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -18,6 +20,7 @@
 #include <unordered_set>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 #include <fmt/format.h>
@@ -139,6 +142,14 @@ namespace sgns
          * @brief Destroys the registry instance.
          */
         ~ValidatorRegistry();
+
+        /**
+         * @brief Stops accepting registry work and waits for queued persistence to finish.
+         *
+         * Must be called before shutting down the backing GlobalDB. Safe to call
+         * multiple times.
+         */
+        void Close();
 
         /**
          * @brief Computes default weight for a validator role.
@@ -638,6 +649,31 @@ namespace sgns
          */
         void RequestHeadCids( const std::set<CID> &cids );
 
+        struct PendingRegistryWrite
+        {
+            std::string    subject_hash;
+            RegistryUpdate update;
+        };
+
+        class ActiveBatchHandlerGuard
+        {
+        public:
+            explicit ActiveBatchHandlerGuard( ValidatorRegistry &registry );
+            ~ActiveBatchHandlerGuard();
+
+            explicit operator bool() const
+            {
+                return active_;
+            }
+
+        private:
+            ValidatorRegistry &registry_;
+            bool               active_ = false;
+        };
+
+        void PersistenceWorkerLoop();
+        bool EnqueueRegistryWrite( std::string subject_hash, RegistryUpdate update );
+
         std::shared_ptr<crdt::GlobalDB> db_;                 ///< Backing GlobalDB instance.
         uint64_t                        quorum_numerator_;   ///< Quorum numerator.
         uint64_t                        quorum_denominator_; ///< Quorum denominator.
@@ -660,6 +696,14 @@ namespace sgns
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
         std::function<outcome::result<void>( const ConsensusSubject &subject )>
             submit_batch_subject_; ///< Callback used to submit batch subjects.
+
+        std::mutex                       persistence_mutex_; ///< Guards the persistence queue and shutdown state.
+        std::condition_variable          persistence_cv_;    ///< Wakes the persistence worker during work/shutdown.
+        std::deque<PendingRegistryWrite> persistence_queue_; ///< Registry updates waiting to be persisted.
+        bool                             persistence_stopping_ = false; ///< Rejects work after Close starts.
+        size_t                           active_batch_handlers_ = 0; ///< Batch handlers still using GlobalDB.
+        std::thread                      persistence_worker_; ///< Owned registry persistence worker.
+        std::mutex                       close_mutex_;        ///< Serializes idempotent Close calls.
 
         InitCallback init_callback_; ///< Optional initialization callback.
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>

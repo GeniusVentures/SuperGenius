@@ -492,10 +492,7 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
-        if ( consensus_manager_ )
-        {
-            consensus_manager_->Close();
-        }
+        (void)Stop();
         if ( db_ )
         {
             const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
@@ -1634,6 +1631,11 @@ namespace sgns
         if ( consensus_manager_ )
         {
             consensus_manager_->Close();
+            consensus_manager_->SetSlotHashPopulator( {} );
+        }
+        if ( validator_registry_ )
+        {
+            validator_registry_->Close();
         }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();

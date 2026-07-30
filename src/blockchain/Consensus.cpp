@@ -1194,9 +1194,14 @@ namespace sgns
 
         // Phase 6 (D-01): populate slot_N_hash fields before signing so the
         // signature commits to them (T-06-01). No-op when no populator is set.
-        if ( slot_hash_populator_ )
+        SlotHashPopulator slot_hash_populator;
         {
-            slot_hash_populator_( vote );
+            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
+            slot_hash_populator = slot_hash_populator_;
+        }
+        if ( slot_hash_populator )
+        {
+            slot_hash_populator( vote );
             ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
                                              __func__,
                                              proposal_id.substr( 0, 8 ) );

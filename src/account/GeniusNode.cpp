@@ -722,17 +722,19 @@ namespace sgns
                 // Single-chain resolution: use the first configured chain id.
 
                 blockchain_->SetSlotHashPopulator(
-                    [this]( sgns::ConsensusVote &vote )
+                    [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                     logger                   = node_logger_]( sgns::ConsensusVote &vote )
                     {
-                        if ( !transaction_manager_ )
+                        auto transaction_manager = weak_transaction_manager.lock();
+                        if ( !transaction_manager )
                         {
                             return;
                         }
-                        auto      &validator = transaction_manager_->GetPublicChainInputValidator();
+                        auto      &validator = transaction_manager->GetPublicChainInputValidator();
                         const auto chain_id  = validator.GetFirstConfiguredChainId();
                         if ( !chain_id.has_value() )
                         {
-                            node_logger_->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                            logger->debug( "SlotHashPopulator: no configured chain; abstaining" );
                             return;
                         }
                         const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
@@ -751,11 +753,11 @@ namespace sgns
                             vote.set_slot_2_hash( slot2.data(), slot2.size() );
                         }
 
-                        node_logger_->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
-                                             chain_id.value(),
-                                             !slot0.empty(),
-                                             !slot1.empty(),
-                                             !slot2.empty() );
+                        logger->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
+                                       chain_id.value(),
+                                       !slot0.empty(),
+                                       !slot1.empty(),
+                                       !slot2.empty() );
                     } );
 
                 // Initialize shared EthWatchService for EVM event detection
@@ -1606,6 +1608,13 @@ namespace sgns
         ++bridge_init_generation_;
         rpc_endpoint_provider_.reset();
 
+        // Stop consensus and drain registry persistence while TransactionManager
+        // and GlobalDB are still alive. Consensus owns callbacks into both.
+        if ( blockchain_ )
+        {
+            BOOST_OUTCOME_TRY( blockchain_->Stop() );
+        }
+
         if ( transaction_manager_ )
         {
             transaction_manager_->Stop();
@@ -1616,10 +1625,6 @@ namespace sgns
 
         eth_watch_service_.reset();
 
-        if ( blockchain_ )
-        {
-            BOOST_OUTCOME_TRY( blockchain_->Stop() );
-        }
         blockchain_.reset();
 
         if ( deconfigure_account && account_ )
