@@ -23,12 +23,19 @@
 
 #include <algorithm>
 #include <array>
+#include <condition_variable>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <set>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <openssl/sha.h>
@@ -47,6 +54,360 @@
 #include "../bridge_e2e/anvil_fixture.hpp"
 
 using sgns::GeniusNode;
+
+/**
+ * @brief Narrow friend-only bridge-race access to the real consensus graph.
+ *
+ * Every returned owner is a copied shared_ptr from the production ownership
+ * graph. No raw lifetime-bearing pointer escapes this accessor.
+ */
+namespace sgns
+{
+class BridgeRaceConsensusTestAccess
+{
+public:
+    using TraceEvent = ConsensusManager::ConsensusTraceEvent;
+
+    struct Authority
+    {
+        std::string bytes;
+        std::string proposal_id;
+        std::string winner_id;
+    };
+
+    static std::shared_ptr<sgns::ConsensusManager> Manager(
+        const std::shared_ptr<GeniusNode> &node )
+    {
+        if ( !node ) return {};
+        auto transaction_manager = node->GetTransactionManager();
+        if ( !transaction_manager || !transaction_manager.value() ) return {};
+        auto blockchain = transaction_manager.value()->blockchain_;
+        return blockchain ? blockchain->consensus_manager_ : nullptr;
+    }
+
+    static void SetObserver(
+        const std::shared_ptr<ConsensusManager> &manager,
+        std::function<void( const TraceEvent & )> observer )
+    {
+        if ( manager ) manager->consensus_trace_observer_ = std::move( observer );
+    }
+
+    static std::optional<Authority> GetAuthority(
+        const std::shared_ptr<ConsensusManager> &manager,
+        const std::string                             &slot )
+    {
+        if ( !manager ) return std::nullopt;
+        auto certificate = manager->GetCertificateBySlotId( slot );
+        if ( !certificate ) return std::nullopt;
+        auto winner = ConsensusManager::GetSubjectHash(
+            certificate.value().proposal().subject() );
+        if ( !winner ) return std::nullopt;
+        return Authority{ certificate.value().SerializeAsString(),
+                          certificate.value().proposal_id(),
+                          winner.value() };
+    }
+
+    static bool ProcessComplete(
+        const std::shared_ptr<ConsensusManager> &manager,
+        const std::string                             &slot )
+    {
+        if ( !manager ) return false;
+        auto process = manager->state_store_->GetProcess( slot );
+        return process && process.value() &&
+               process.value()->state() == sgns::ConsensusStateStore::ProcessRecord::COMPLETE;
+    }
+
+    static uint64_t ConfirmCount( const std::shared_ptr<GeniusNode> &node )
+    {
+        if ( !node ) return 0;
+        auto transaction_manager = node->GetTransactionManager();
+        return transaction_manager && transaction_manager.value()
+                 ? transaction_manager.value()->metrics_tracking_confirm_.load()
+                 : 0;
+    }
+};
+} // namespace sgns
+
+/** Thread-safe, bounded structured evidence for the genuine 11-manager race. */
+class BridgeRaceEvidence
+{
+public:
+    using TraceEvent = sgns::BridgeRaceConsensusTestAccess::TraceEvent;
+    using Clock      = std::chrono::steady_clock;
+
+    struct Event
+    {
+        TraceEvent::Stage stage;
+        std::string       validator_id;
+        std::string       slot_id;
+        std::string       proposal_id;
+        std::string       subject_hash;
+        std::string       payload_digest;
+        std::string       delivery_source;
+        uint64_t          occurrences{ 1 };
+        Clock::time_point first_seen;
+        Clock::time_point last_seen;
+    };
+
+    struct Node
+    {
+        std::optional<bool> endpoint_configured;
+        bool                ready{ false };
+        std::vector<Event>  events;
+    };
+
+    explicit BridgeRaceEvidence( std::size_t node_count ) : nodes_( node_count ) {}
+
+    void Record( std::size_t node_index, const TraceEvent &event )
+    {
+        const auto now = Clock::now();
+        std::lock_guard lock( mutex_ );
+        if ( node_index >= nodes_.size() ) return;
+        auto &events = nodes_[node_index].events;
+        auto existing = std::find_if(
+            events.begin(), events.end(), [&]( const Event &entry )
+            {
+                return entry.stage == event.stage &&
+                       entry.validator_id == event.validator_id &&
+                       entry.slot_id == event.slot_id &&
+                       entry.proposal_id == event.proposal_id &&
+                       entry.subject_hash == event.subject_hash &&
+                       entry.payload_digest == event.payload_digest &&
+                       entry.delivery_source == DeliverySourceName( event.delivery_source );
+            } );
+        if ( existing != events.end() )
+        {
+            ++existing->occurrences;
+            existing->last_seen = now;
+        }
+        else if ( events.size() < kMaxEventsPerNode )
+        {
+            events.push_back( { event.stage,
+                                event.validator_id,
+                                event.slot_id,
+                                event.proposal_id,
+                                event.subject_hash,
+                                event.payload_digest,
+                                DeliverySourceName( event.delivery_source ),
+                                1,
+                                now,
+                                now } );
+        }
+        ++change_counter_;
+        cv_.notify_all();
+    }
+
+    void SetEndpointResult( std::size_t node_index, bool configured )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( node_index < nodes_.size() ) nodes_[node_index].endpoint_configured = configured;
+        ++change_counter_;
+        cv_.notify_all();
+    }
+
+    void SetReady( std::size_t node_index, bool ready )
+    {
+        std::lock_guard lock( mutex_ );
+        if ( node_index < nodes_.size() ) nodes_[node_index].ready = ready;
+        ++change_counter_;
+        cv_.notify_all();
+    }
+
+    template <typename Predicate>
+    bool WaitForSnapshot( Predicate predicate, std::chrono::milliseconds timeout ) const
+    {
+        const auto deadline = Clock::now() + timeout;
+        std::unique_lock lock( mutex_ );
+        return cv_.wait_until( lock, deadline, [&]() { return predicate( nodes_ ); } );
+    }
+
+    template <typename Predicate>
+    bool WaitForExternal( Predicate predicate, std::chrono::milliseconds timeout ) const
+    {
+        const auto deadline = Clock::now() + timeout;
+        while ( Clock::now() < deadline )
+        {
+            if ( predicate() ) return true;
+            std::unique_lock lock( mutex_ );
+            cv_.wait_until( lock, std::min( deadline, Clock::now() + std::chrono::milliseconds( 100 ) ) );
+        }
+        return predicate();
+    }
+
+    bool WaitForStableEvents( std::chrono::milliseconds stable_window,
+                              std::chrono::milliseconds timeout ) const
+    {
+        const auto deadline = Clock::now() + timeout;
+        std::unique_lock lock( mutex_ );
+        auto observed = change_counter_;
+        auto stable_since = Clock::now();
+        while ( Clock::now() < deadline )
+        {
+            const auto stable_deadline = std::min( deadline, stable_since + stable_window );
+            if ( !cv_.wait_until( lock, stable_deadline, [&]() { return change_counter_ != observed; } ) )
+                return Clock::now() >= stable_since + stable_window;
+            observed = change_counter_;
+            stable_since = Clock::now();
+        }
+        return false;
+    }
+
+    std::vector<Node> Snapshot() const
+    {
+        std::lock_guard lock( mutex_ );
+        return nodes_;
+    }
+
+    static bool AllReady( const std::vector<Node> &nodes )
+    {
+        return std::all_of( nodes.begin(), nodes.end(), []( const Node &node )
+        {
+            return node.endpoint_configured.value_or( false ) && node.ready;
+        } );
+    }
+
+    static std::set<std::string> ProposalSlots( const std::vector<Node> &nodes )
+    {
+        std::set<std::string> slots;
+        for ( const auto &node : nodes )
+            for ( const auto &event : node.events )
+                if ( event.stage == TraceEvent::Stage::LocalProposalPublished ) slots.insert( event.slot_id );
+        return slots;
+    }
+
+    static bool AllLocalProposals( const std::vector<Node> &nodes, const std::string &slot )
+    {
+        return std::all_of( nodes.begin(), nodes.end(), [&]( const Node &node )
+        {
+            return std::any_of( node.events.begin(), node.events.end(), [&]( const Event &event )
+            { return event.stage == TraceEvent::Stage::LocalProposalPublished && event.slot_id == slot; } );
+        } );
+    }
+
+    static std::map<std::string, std::set<std::pair<std::string, std::string>>> VoteTargets(
+        const std::vector<Node> &nodes,
+        const std::string       &slot )
+    {
+        std::map<std::string, std::set<std::pair<std::string, std::string>>> targets;
+        for ( const auto &node : nodes )
+            for ( const auto &event : node.events )
+                if ( event.stage == TraceEvent::Stage::VotePublished && event.slot_id == slot )
+                    targets[event.validator_id].emplace( event.proposal_id, event.payload_digest );
+        return targets;
+    }
+
+    static std::set<std::string> ProposalSubjects( const std::vector<Node> &nodes,
+                                                   const std::string       &slot )
+    {
+        std::set<std::string> subjects;
+        for ( const auto &node : nodes )
+            for ( const auto &event : node.events )
+                if ( event.stage == TraceEvent::Stage::LocalProposalPublished && event.slot_id == slot )
+                    subjects.insert( event.subject_hash );
+        return subjects;
+    }
+
+    std::string Render( const std::string                                  &slot,
+                        const std::vector<std::shared_ptr<GeniusNode>>     &nodes,
+                        const std::vector<std::shared_ptr<sgns::ConsensusManager>> &managers,
+                        const std::string                                  &destination ) const
+    {
+        const auto snapshot = Snapshot();
+        const auto subjects = ProposalSubjects( snapshot, slot );
+        std::ostringstream out;
+        out << "\nbridge-race structured evidence slot=" << Abbrev( slot ) << '\n';
+        for ( std::size_t i = 0; i < snapshot.size(); ++i )
+        {
+            out << "node=" << i
+                << " endpoint=" << ( snapshot[i].endpoint_configured ? ( *snapshot[i].endpoint_configured ? "ok" : "failed" ) : "unset" )
+                << " ready=" << snapshot[i].ready;
+            if ( i < nodes.size() && nodes[i] )
+            {
+                out << " balance=" << nodes[i]->GetBalance( destination )
+                    << " confirms=" << sgns::BridgeRaceConsensusTestAccess::ConfirmCount( nodes[i] );
+                for ( const auto &subject : subjects )
+                    out << " tx[" << Abbrev( subject ) << "]="
+                        << StatusName( nodes[i]->GetTransactionStatus( subject ) );
+            }
+            if ( i < managers.size() )
+            {
+                auto authority = sgns::BridgeRaceConsensusTestAccess::GetAuthority( managers[i], slot );
+                out << " authority=" << ( authority ? Abbrev( authority->winner_id ) : "none" )
+                    << " process_complete=" << sgns::BridgeRaceConsensusTestAccess::ProcessComplete( managers[i], slot );
+            }
+            out << '\n';
+            const std::size_t begin = snapshot[i].events.size() > kRenderedEventsPerNode
+                                        ? snapshot[i].events.size() - kRenderedEventsPerNode
+                                        : 0;
+            for ( std::size_t j = begin; j < snapshot[i].events.size(); ++j )
+            {
+                const auto &event = snapshot[i].events[j];
+                out << "  stage=" << StageName( event.stage )
+                    << " validator=" << Abbrev( event.validator_id )
+                    << " proposal=" << Abbrev( event.proposal_id )
+                    << " subject=" << Abbrev( event.subject_hash )
+                    << " digest=" << Abbrev( event.payload_digest )
+                    << " source=" << event.delivery_source
+                    << " occurrences=" << event.occurrences << '\n';
+            }
+        }
+        return out.str();
+    }
+
+private:
+    static constexpr std::size_t kMaxEventsPerNode      = 128;
+    static constexpr std::size_t kRenderedEventsPerNode = 12;
+
+    static std::string DeliverySourceName( const std::optional<sgns::ConsensusManager::DeliverySource> &source )
+    {
+        if ( !source ) return "none";
+        switch ( *source )
+        {
+            case sgns::ConsensusManager::DeliverySource::Local: return "local";
+            case sgns::ConsensusManager::DeliverySource::PubSub: return "pubsub";
+            case sgns::ConsensusManager::DeliverySource::CRDT: return "crdt";
+            case sgns::ConsensusManager::DeliverySource::Recovery: return "recovery";
+        }
+        return "unknown";
+    }
+
+    static const char *StageName( TraceEvent::Stage stage )
+    {
+        switch ( stage )
+        {
+            case TraceEvent::Stage::LocalProposalPublished: return "proposal";
+            case TraceEvent::Stage::VotePublished: return "vote";
+            case TraceEvent::Stage::AuthorityEstablished: return "authority";
+        }
+        return "unknown";
+    }
+
+    static std::string Abbrev( const std::string &value )
+    {
+        return value.size() <= 16 ? value : value.substr( 0, 16 );
+    }
+
+    static const char *StatusName( sgns::TransactionManager::TransactionStatus status )
+    {
+        using Status = sgns::TransactionManager::TransactionStatus;
+        switch ( status )
+        {
+            case Status::CREATED: return "created";
+            case Status::SENDING: return "sending";
+            case Status::CONFIRMED: return "confirmed";
+            case Status::VERIFYING: return "verifying";
+            case Status::UNCONFIRMED: return "unconfirmed";
+            case Status::FAILED: return "failed";
+            case Status::INVALID: return "invalid";
+        }
+        return "unknown";
+    }
+
+    mutable std::mutex              mutex_;
+    mutable std::condition_variable cv_;
+    std::vector<Node>               nodes_;
+    uint64_t                        change_counter_{ 0 };
+};
 
 /**
  * @brief Reusable 11-node (1 Full + 10 Light) fixture for the mint-race e2e suite.
@@ -101,6 +462,10 @@ protected:
 
     /** @brief All 11 node instances (index 0 = Full node, 1-10 = Light nodes). */
     static inline std::array<std::shared_ptr<GeniusNode>, kNodeCount> s_nodes{};
+
+    /** Shared owners and collector installed before the sole burn is triggered. */
+    static inline std::array<std::shared_ptr<sgns::ConsensusManager>, kNodeCount> s_consensus_managers{};
+    static inline std::shared_ptr<BridgeRaceEvidence> s_evidence{};
 
     static inline sgns::test::anvil::AnvilProcess s_anvil{};
 
@@ -225,6 +590,33 @@ protected:
     static std::string DeriveLightDestination( unsigned int light_index )
     {
         return s_nodes[light_index]->GetAddress();
+    }
+
+    static void InstallConsensusObservers()
+    {
+        s_evidence = std::make_shared<BridgeRaceEvidence>( kNodeCount );
+        for ( unsigned int i = 0; i < kNodeCount; ++i )
+        {
+            s_consensus_managers[i] = sgns::BridgeRaceConsensusTestAccess::Manager( s_nodes[i] );
+            ASSERT_NE( s_consensus_managers[i], nullptr ) << "Missing consensus manager for node " << i;
+            std::weak_ptr<BridgeRaceEvidence> weak_evidence = s_evidence;
+            sgns::BridgeRaceConsensusTestAccess::SetObserver(
+                s_consensus_managers[i],
+                [weak_evidence, i]( const sgns::BridgeRaceConsensusTestAccess::TraceEvent &event )
+                {
+                    if ( auto evidence = weak_evidence.lock() ) evidence->Record( i, event );
+                } );
+        }
+    }
+
+    static void ClearConsensusObservers()
+    {
+        for ( auto &manager : s_consensus_managers )
+        {
+            sgns::BridgeRaceConsensusTestAccess::SetObserver( manager, {} );
+            manager.reset();
+        }
+        s_evidence.reset();
     }
 
     /**
@@ -381,6 +773,7 @@ protected:
     static void TearDownTestSuite()
     {
         spdlog::info( "bridge_race: tearing down nodes" );
+        ClearConsensusObservers();
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {
             s_nodes[i].reset();
