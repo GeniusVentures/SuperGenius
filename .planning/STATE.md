@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
 status: executing
-last_updated: "2026-07-30T17:22:02.182Z"
-last_activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race verification
+last_updated: "2026-07-30T19:49:00.000Z"
+last_activity: 2026-07-30 -- Completed Plan 12-04 eleven-validator bridge race verification
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 40
-  completed_plans: 38
+  completed_plans: 39
   percent: 75
 ---
 
@@ -30,9 +30,9 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 ## Current Position
 
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
-Last activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race verification
+Last activity: 2026-07-30 -- Completed Plan 12-04 eleven-validator bridge race verification
 
 ## Roadmap Snapshot
 
@@ -41,7 +41,7 @@ Last activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race ve
 | 9 | Canonical Slot and Certificate Storage | ✓ complete | SLOT-01..04, CERT-01..04, COMP-01..02 |
 | 10 | Durable Vote Lock and Finalization State Machine | ✓ complete | CERT-05..07, VOTE-01..07 |
 | 11 | Slot-Owned Bridge Burn Reservations | ✓ complete (12/12 plans) | BURN-01..05 |
-| 12 | Consensus Race and Compatibility Verification | ◐ executing (3/5 plans complete) | TEST-01..06 |
+| 12 | Consensus Race and Compatibility Verification | ◐ executing (4/5 plans complete) | TEST-01..06 |
 
 ## Key Decisions
 
@@ -58,6 +58,9 @@ Last activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race ve
 - Bridge source validation decodes only the indexed receipt log and compares all event facts before endpoint weight contributes.
 - The authority-established race barrier runs after exact durable authority and finalized lifecycle installation, but before reservation, process, publication, application, or cleanup work.
 - Late competitor traffic may remain observable, but cannot replace authoritative bytes or establish a conflicting certificate.
+- Finalized bridge authority may reconcile only a provisional input owner; every other certified descriptor and lifecycle field remains fail-closed.
+- ABI bytes32 and GeniusAccount public-key coordinates preserve canonical big-endian X||Y ordering.
+- The eleven-node race uses a bounded 60-second operator vote window while the production compiled default remains 500 ms.
 
 ## Notes
 
@@ -72,8 +75,8 @@ Last activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race ve
 
 ## Session Continuity
 
-**Last session:** 2026-07-30T17:21:55.230Z
-**Stopped at:** Completed 12-02-PLAN.md
+**Last session:** 2026-07-30T19:49:00.000Z
+**Stopped at:** Completed 12-04-PLAN.md
 **Resume file:** None
 
 ## Performance Metrics
@@ -118,6 +121,7 @@ Last activity: 2026-07-30 -- Completed Plan 12-02 deterministic finality-race ve
 | Phase 12 P01 | 57 min | 2 tasks | 5 files |
 | Phase 12 P03 | 7 min | 2 tasks | 3 files |
 | Phase 12 P02 | 8 min | 2 tasks | 4 files |
+| Phase 12 P04 | 2h 21m | 2 tasks | 10 files |
 
 ## Decisions
 
