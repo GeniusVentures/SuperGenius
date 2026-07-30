@@ -705,6 +705,7 @@ namespace sgns
         friend class ConsensusSlotKeyTestAccess;
         friend class ConsensusVoteJournalTestAccess;
         friend class ConsensusFinalizationTestAccess;
+        friend class ConsensusFinalityRaceTestAccess;
         friend class BridgeRaceConsensusTestAccess;
         friend class ConsensusBurnReservationTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
