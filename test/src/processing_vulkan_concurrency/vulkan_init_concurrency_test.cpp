@@ -71,6 +71,18 @@ namespace sgns
         }
     };
 
+    // Scope note (Phase 01.1, MIGR-02/COV-01): this test exercises 3 representative
+    // Vulkan-init call sites -- MNN_String, MNN_Volume (texture3d-processing-definition.json),
+    // and RenderProcessor -- as a sample of the full set of callers that now share
+    // sgns::sgprocessing::VulkanInitMutex() after Phase 01.1's CPU-to-Vulkan processor
+    // migration (16 MNN processors, 17 MNN createSession(MNN_FORWARD_VULKAN) call sites --
+    // re-verify via `grep -rc MNN_FORWARD_VULKAN SGProcessingManager/src/processors/*.cpp`,
+    // since this count can drift -- plus RenderProcessor's lazy-init path). This extends the
+    // same shared-accessor generalization argument 01-06-SUMMARY.md already established for
+    // MNN_Image ("correct serialization for 3 distinct callers implies correct serialization
+    // for the 4th", because all callers go through the identical VulkanInitMutex() accessor):
+    // proving representative callers serialize correctly under concurrent load is sufficient
+    // evidence for the full, larger set, without needing a thread per call site.
     TEST_F( VulkanConcurrentInitTest, RepeatedConcurrentInitNoRaceOrCrash )
     {
         constexpr int kIterations = 25;
