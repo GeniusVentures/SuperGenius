@@ -658,6 +658,7 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class ConsensusVoteJournalTestAccess;
         friend class ConsensusFinalizationTestAccess;
+        friend class BridgeRaceConsensusTestAccess;
         friend class ConsensusBurnReservationTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
@@ -680,6 +681,26 @@ namespace sgns
                                    ConsensusConfig                            config );
 
         bool RestoreLocalState();
+
+        struct ConsensusTraceEvent
+        {
+            enum class Stage : uint8_t
+            {
+                LocalProposalPublished,
+                VotePublished,
+                AuthorityEstablished,
+            };
+
+            Stage                         stage{ Stage::LocalProposalPublished };
+            std::string                   validator_id;
+            std::string                   slot_id;
+            std::string                   proposal_id;
+            std::string                   subject_hash;
+            std::string                   payload_digest;
+            std::optional<DeliverySource> delivery_source;
+        };
+
+        void EmitConsensusTrace( ConsensusTraceEvent event ) const noexcept;
         void ReplayRestoredVotes();
         void ProcessCandidateDeadlines( std::chrono::steady_clock::time_point steady_now );
         void ReconcileBurnReservations();
@@ -1052,6 +1073,8 @@ namespace sgns
         std::function<void( const ConsensusStateStore::ConflictRecord &, bool )>
             certificate_conflict_observer_; ///< Private/friend-only conflict record observer (record, unique pair).
         std::function<void( std::string_view )> finalization_stage_observer_; ///< Private/friend-only stage observer.
+        std::function<void( const ConsensusTraceEvent & )>
+            consensus_trace_observer_; ///< Private per-manager observer of public consensus identities.
         std::function<void( std::string_view, const std::string & )>
             burn_reconciliation_stage_observer_; ///< Private/friend-only deterministic reconciliation barrier.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
