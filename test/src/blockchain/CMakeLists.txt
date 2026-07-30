@@ -106,6 +106,16 @@ target_link_libraries(consensus_vote_journal_test
 addtest(consensus_finalization_test
     consensus_finalization_test.cpp
 )
+
+addtest(consensus_finality_race_test
+    consensus_finality_race_test.cpp
+)
+target_link_libraries(consensus_finality_race_test
+    blockchain_genesis
+    genius_node_test
+    rapidjson
+    base_crdt_test
+)
 target_link_libraries(consensus_finalization_test
     blockchain_genesis
     genius_node_test

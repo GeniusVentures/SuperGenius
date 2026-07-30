@@ -3074,6 +3074,13 @@ namespace sgns
                               digest,
                               source } );
 
+        // Test-only deterministic control point.  Authority is now readable and
+        // the local lifecycle blocks signing, while reservation finalization,
+        // process creation, publication, application, and cleanup have not run.
+        // Keep the callback outside every consensus/store/handler lock.
+        if ( finalization_stage_observer_ )
+            finalization_stage_observer_( "authority-established" );
+
         if ( normalized.certificate.proposal().subject().has_subject_type_hash() &&
              SubjectTypeMatches( normalized.certificate.proposal().subject(), NONCE_SUBJECT_TYPE ) )
         {
