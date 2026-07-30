@@ -45,7 +45,7 @@ namespace sgns
     {
         static constexpr std::chrono::milliseconds DEFAULT_VOTE_SELECTION_WINDOW{ 500 };
         /** Operator values above this bound are rejected to prevent unbounded selection delay. */
-        static constexpr std::chrono::milliseconds MAX_VOTE_SELECTION_WINDOW{ 30'000 };
+        static constexpr std::chrono::milliseconds MAX_VOTE_SELECTION_WINDOW{ 60'000 };
 
         explicit constexpr ConsensusConfig(
             std::chrono::milliseconds selection_window = DEFAULT_VOTE_SELECTION_WINDOW ) :

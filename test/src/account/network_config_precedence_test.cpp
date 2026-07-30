@@ -53,6 +53,9 @@ TEST( NetworkConfigPrecedence, ConsensusVoteSelectionWindowValidValueWins )
     EXPECT_EQ( ResolveVoteWindow(
                    R"({"port_seed":41001,"auto_dht":false,"consensus_vote_selection_window_ms":1234})" ),
                std::chrono::milliseconds( 1234 ) );
+    EXPECT_EQ( ResolveVoteWindow(
+                   R"({"consensus_vote_selection_window_ms":60000})" ),
+               std::chrono::milliseconds( 60000 ) );
 }
 
 TEST( NetworkConfigPrecedence, ConsensusVoteSelectionWindowInvalidValuesUseCompiledDefault )
@@ -62,7 +65,7 @@ TEST( NetworkConfigPrecedence, ConsensusVoteSelectionWindowInvalidValuesUseCompi
         { "zero", R"({"consensus_vote_selection_window_ms":0})" },
         { "negative", R"({"consensus_vote_selection_window_ms":-1})" },
         { "fraction", R"({"consensus_vote_selection_window_ms":1.5})" },
-        { "excessive", R"({"consensus_vote_selection_window_ms":30001})" },
+        { "excessive", R"({"consensus_vote_selection_window_ms":60001})" },
     };
     for ( const auto &[name, json] : cases )
     {
