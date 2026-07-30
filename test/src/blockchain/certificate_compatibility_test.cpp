@@ -31,6 +31,13 @@ namespace sgns
         {
             manager->certificate_record_reader_ = std::move( reader );
         }
+
+        static void ResetCertificateReader( const std::shared_ptr<ConsensusManager> &manager )
+        {
+            auto db = manager->db_;
+            manager->certificate_record_reader_ =
+                [db = std::move( db )]( const crdt::HierarchicalKey &key ) { return db->Get( key ); };
+        }
     };
 } // namespace sgns
 
@@ -335,6 +342,55 @@ namespace sgns::test
         ASSERT_TRUE( manager );
         ExpectError( manager->GetCertificateBySubjectHash( std::string( kOtherCanonicalHash ) ),
                      ConsensusManager::CertificateStoreError::IntegrityError );
+        manager->Close();
+    }
+
+    TEST_F( CertificateCompatibilityTest, MalformedIndexReturnsTypedDiagnosticWithoutMutatingAuthority )
+    {
+        auto account = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
+        ASSERT_TRUE( account && registry && manager );
+        auto certificate = MakeCertificate( manager, registry, account );
+        ASSERT_TRUE( certificate.has_value() );
+        ASSERT_TRUE( manager->SubmitCertificate( certificate.value() ).has_value() );
+        auto slot = ConsensusManagerTestAccess::Slot( certificate.value() );
+        auto winner = ConsensusManagerTestAccess::Winner( certificate.value() );
+        ASSERT_TRUE( slot && winner );
+        const auto slot_key = "/cert/v2/slot/" + slot.value();
+        const auto index_key = "/cert/v2/tx/" + winner.value();
+        const auto authoritative_before = db_->Get( { slot_key } );
+        const auto index_before = db_->Get( { index_key } );
+        ASSERT_TRUE( authoritative_before && index_before );
+
+        ConsensusManagerTestAccess::SetCertificateReader(
+            manager,
+            [db = db_, index_key]( const crdt::HierarchicalKey &key )
+                -> outcome::result<crdt::GlobalDB::Buffer>
+            {
+                if ( key.GetKey() == index_key )
+                {
+                    crdt::GlobalDB::Buffer malformed;
+                    malformed.put( "malformed-slot" );
+                    return malformed;
+                }
+                return db->Get( key );
+            } );
+        auto corrupt = manager->GetCertificateBySubjectHash( winner.value() );
+        ASSERT_TRUE( corrupt.has_error() );
+        EXPECT_EQ( corrupt.error(),
+                   make_error_code( ConsensusManager::CertificateStoreError::IntegrityError ) );
+        EXPECT_FALSE( corrupt.error().message().empty() );
+        ConsensusManagerTestAccess::ResetCertificateReader( manager );
+
+        const auto authoritative_after = db_->Get( { slot_key } );
+        const auto index_after = db_->Get( { index_key } );
+        ASSERT_TRUE( authoritative_after && index_after );
+        EXPECT_EQ( authoritative_after.value().toString(), authoritative_before.value().toString() );
+        EXPECT_EQ( index_after.value().toString(), index_before.value().toString() );
+        auto restored = manager->GetCertificateBySubjectHash( winner.value() );
+        ASSERT_TRUE( restored.has_value() );
+        EXPECT_EQ( restored.value().SerializeAsString(), certificate.value().SerializeAsString() );
         manager->Close();
     }
 

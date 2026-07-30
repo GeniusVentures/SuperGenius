@@ -164,16 +164,14 @@ namespace sgns::test
             {
                 return nullptr;
             }
-            for ( int attempt = 0; attempt < 100; ++attempt )
-            {
-                auto loaded = registry->LoadCurrentRegistry();
-                if ( loaded.has_value() && !registry->GetRegistryCid().empty() )
+            const bool initialized = waitForCondition(
+                [&registry]()
                 {
-                    return registry;
-                }
-                std::this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
-            }
-            return nullptr;
+                    auto loaded = registry->LoadCurrentRegistry();
+                    return loaded.has_value() && !registry->GetRegistryCid().empty();
+                },
+                std::chrono::milliseconds( 1000 ) );
+            return initialized ? registry : nullptr;
         }
 
         std::shared_ptr<ValidatorRegistry> MakeRegistry( const std::shared_ptr<crdt::GlobalDB> &db,
@@ -438,7 +436,6 @@ namespace sgns::test
                                    nullptr );
 
         EXPECT_TRUE( manager->SubmitCertificate( certificate.value() ).has_value() );
-        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
         EXPECT_EQ( callbacks.load(), 1 );
         manager->Close();
     }
@@ -605,6 +602,7 @@ namespace sgns::test
                 EXPECT_EQ( index_reads, 1 );
                 ASSERT_TRUE( result.has_error() );
                 EXPECT_EQ( result.error(), make_error_code( *row.expected_error ) );
+                EXPECT_FALSE( result.error().message().empty() );
                 auto after_slot  = db_->Get( { slot_key } );
                 auto after_index = db_->Get( { index_key } );
                 ASSERT_EQ( after_slot.has_value(), before_slot.has_value() );
@@ -617,7 +615,6 @@ namespace sgns::test
                 {
                     EXPECT_EQ( after_index.value().toString(), before_index.value().toString() );
                 }
-                std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
                 EXPECT_EQ( callbacks.load(), before_callback );
                 EXPECT_EQ( publishes.load(), before_publish );
             }
