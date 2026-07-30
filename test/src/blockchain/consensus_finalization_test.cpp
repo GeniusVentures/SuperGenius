@@ -1028,7 +1028,10 @@ TEST_F( ConsensusFinalizationHarness, PublicationReservationCompletesBeforeFinal
 
     EXPECT_TRUE( finished.load() );
     EXPECT_EQ( events.Snapshot(),
-               ( std::vector<std::string>{ "waiting-publication", "publication-complete", "reserved" } ) );
+               ( std::vector<std::string>{ "waiting-publication",
+                                           "publication-complete",
+                                           "reserved",
+                                           "authority-established" } ) );
     manager->Close();
 }
 
