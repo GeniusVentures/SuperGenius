@@ -251,16 +251,12 @@ namespace sgns::test::anvil
      *
      * This is the inverse of the relayer's v2 decompression contract
      * (evmrelay/src/eth/secp256k1_utility.cpp::DecompressXOnlyPubkey). The relayer
-     * consumes the bytes32 sgnsDestination DIRECTLY as contract_x_bytes (LSB-first
-     * in hex), reversing it internally to big-endian before secp256k1 decompression.
-     * node->GetAddress() returns the bare 128-char hex X||Y where both halves are
-     * already LSB-first contract byte order. Therefore the bytes32 passed to
-     * bridgeOut must equal node X in contract (LSB-first) byte order — which is the
-     * first 64 chars of GetAddress() UNCHANGED, with a 0x prefix and NO reversal.
+     * consumes the bytes32 sgnsDestination as the canonical big-endian X
+     * coordinate. node->GetAddress() returns bare big-endian X||Y, so bridgeOut
+     * receives the first 64 chars unchanged, with a 0x prefix.
      *
-     * destinationYOdd is the parity of the Y half. In LSB-first/contract order the
-     * FIRST byte of the Y half is its LSB, so its low bit equals Y mod 2 = true
-     * parity. secp256k1_utility.cpp:190 maps false->0x02 (even Y), true->0x03 (odd Y).
+     * destinationYOdd is the parity of the big-endian Y half, carried by the low
+     * bit of its final byte.
      *
      * @param[in] sgns_address_128  Bare 128-char hex X||Y returned by node->GetAddress().
      * @return { "0x" + X_half_64chars, destination_y_odd }, or { "", false } on invalid input.
@@ -285,18 +281,18 @@ namespace sgns::test::anvil
         }
         const std::string x_half         = sgns_address_128.substr( 0, kHalfLen );
         const std::string y_half         = sgns_address_128.substr( kHalfLen, kHalfLen );
-        const std::string y_first_byte_hex = y_half.substr( 0, kByteHexChars );
+        const std::string y_last_byte_hex = y_half.substr( kHalfLen - kByteHexChars, kByteHexChars );
 
-        unsigned int y_first_byte = 0u;
+        unsigned int y_last_byte = 0u;
         try
         {
-            y_first_byte = static_cast<unsigned int>( std::stoul( y_first_byte_hex, nullptr, 16 ) );
+            y_last_byte = static_cast<unsigned int>( std::stoul( y_last_byte_hex, nullptr, 16 ) );
         }
         catch ( ... )
         {
             return { "", false };
         }
-        const bool destination_y_odd = ( y_first_byte & 1u ) != 0u;
+        const bool destination_y_odd = ( y_last_byte & 1u ) != 0u;
         return { "0x" + x_half, destination_y_odd };
     }
 
