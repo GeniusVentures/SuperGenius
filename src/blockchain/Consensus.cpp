@@ -4990,8 +4990,10 @@ namespace sgns
             std::lock_guard lock( restored_state_mutex_ );
             for ( const auto &[slot, process] : restored_processes_ )
             {
-                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING &&
-                     restored_safety_slots_.count( slot ) == 0 )
+                // A safety stop blocks new participation, but FinalizeSlot
+                // still admits the exact authoritative winner so its pending
+                // application can recover without reopening consensus.
+                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING )
                     pending_slots.push_back( slot );
             }
         }
