@@ -5320,10 +5320,8 @@ namespace sgns
             std::lock_guard lock( restored_state_mutex_ );
             for ( const auto &[slot, process] : restored_processes_ )
             {
-                // FinalizeSlot admits only the exact authoritative certificate
-                // through a safety-stopped slot, so pending original-winner
-                // application remains safe and must stay recoverable.
-                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING )
+                if ( process.state() == ConsensusStateStore::ProcessRecord::PENDING &&
+                     restored_safety_slots_.count( slot ) == 0 )
                     pending_slots.push_back( slot );
             }
         }
