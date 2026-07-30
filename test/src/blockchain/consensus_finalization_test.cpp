@@ -10,10 +10,16 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <utility>
 #include <vector>
+
+#include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
+#include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/basic/scheduler/scheduler_impl.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Consensus.hpp"
@@ -28,6 +34,8 @@ namespace sgns
     class ConsensusFinalizationTestAccess
     {
     public:
+        using TraceEvent = ConsensusManager::ConsensusTraceEvent;
+
         static constexpr std::string_view Scope()
         {
             return "consensus finalization state machine";
@@ -97,6 +105,69 @@ namespace sgns
                                       std::function<void( std::string_view )> observer )
         {
             manager->finalization_stage_observer_ = std::move( observer );
+        }
+
+        static void SetTraceObserver( const std::shared_ptr<ConsensusManager> &manager,
+                                      std::function<void( const TraceEvent & )> observer )
+        {
+            manager->consensus_trace_observer_ = std::move( observer );
+        }
+
+        static outcome::result<std::string> SubjectHash( const ConsensusManager::Proposal &proposal )
+        {
+            return ConsensusManager::GetSubjectHash( proposal.subject() );
+        }
+
+        static bool InstallAndReplayVote( const std::shared_ptr<ConsensusManager> &manager,
+                                          const ConsensusManager::Certificate     &certificate,
+                                          uint64_t                                  generation )
+        {
+            const auto &proposal = certificate.proposal();
+            const auto &vote = certificate.votes( 0 );
+            auto slot = ConsensusManager::GetSlotKey( proposal );
+            if ( !slot ) return false;
+
+            ConsensusMessage envelope;
+            *envelope.mutable_vote() = vote;
+            std::string vote_bytes;
+            std::string proposal_bytes;
+            std::string envelope_bytes;
+            if ( !vote.SerializeToString( &vote_bytes ) ||
+                 !proposal.SerializeToString( &proposal_bytes ) ||
+                 !envelope.SerializeToString( &envelope_bytes ) )
+                return false;
+
+            ConsensusStateStore::VoteRecord record;
+            record.set_schema_version( 2 );
+            record.set_state( ConsensusStateStore::VoteRecord::ACTIVE );
+            record.set_slot_id( slot.value() );
+            record.set_proposal_id( proposal.proposal_id() );
+            record.set_validator_id( vote.voter_id() );
+            record.set_signed_vote_bytes( vote_bytes );
+            record.set_outbound_envelope_bytes( envelope_bytes );
+            record.set_signed_proposal_bytes( proposal_bytes );
+            record.set_registry_cid( proposal.registry_cid() );
+            record.set_registry_epoch( proposal.registry_epoch() );
+            record.set_generation( generation );
+            record.set_created_at_ms( vote.timestamp() );
+            record.set_acceptance_horizon_ms( vote.timestamp() + 300'000 );
+            if ( !manager->state_store_->PutActiveVote( record ) ) return false;
+            {
+                std::lock_guard lock( manager->proposals_mutex_ );
+                auto &state = manager->slot_states_[slot.value()];
+                state.lifecycle = ConsensusManager::SlotState::Lifecycle::Voted;
+                state.generation = generation;
+                state.durable_generation = generation;
+                state.durable_proposal_id = proposal.proposal_id();
+            }
+            return manager->ReplayDurableVote( slot.value(), generation );
+        }
+
+        static bool ReplayVote( const std::shared_ptr<ConsensusManager> &manager,
+                                const std::string                       &slot,
+                                uint64_t                                  generation )
+        {
+            return manager->ReplayDurableVote( slot, generation );
         }
 
         static void SetSigningPublishing( const std::shared_ptr<ConsensusManager> &manager,
@@ -346,6 +417,25 @@ namespace
             return registry;
         }
 
+        std::shared_ptr<sgns::crdt::GlobalDB> MakeIsolatedDatabase( const std::string &path )
+        {
+            auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>(
+                std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
+                libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } );
+            auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
+            auto network = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::Network>(
+                pubs_->GetHost(), scheduler );
+            auto created = sgns::crdt::GlobalDB::New(
+                io_, path, pubs_, sgns::crdt::CrdtOptions::DefaultOptions(), network, scheduler, generator );
+            EXPECT_TRUE( created );
+            if ( !created ) return nullptr;
+            auto database = created.value();
+            database->AddListenTopic( "consensus-finalization-isolated" );
+            database->AddBroadcastTopic( "consensus-finalization-isolated" );
+            database->Start();
+            return database;
+        }
+
         outcome::result<sgns::ConsensusManager::Certificate> MakeCertificate(
             const std::shared_ptr<sgns::ConsensusManager>  &manager,
             const std::shared_ptr<sgns::ValidatorRegistry> &registry,
@@ -381,9 +471,10 @@ namespace
 
         std::shared_ptr<sgns::ConsensusManager> MakeManager(
             const std::shared_ptr<sgns::ValidatorRegistry> &registry,
-            const std::shared_ptr<sgns::GeniusAccount>     &account )
+            const std::shared_ptr<sgns::GeniusAccount>     &account,
+            const std::shared_ptr<sgns::crdt::GlobalDB>    &database = nullptr )
         {
-            return sgns::ConsensusManager::New( registry, db_, pubs_,
+            return sgns::ConsensusManager::New( registry, database ? database : db_, pubs_,
                 [account]( std::vector<uint8_t> bytes ) { return account->Sign( std::move( bytes ) ); },
                 account->GetAddress() );
         }
@@ -428,6 +519,176 @@ TEST_F( ConsensusFinalizationHarness, ConcurrentBarrierJoinsCleanly )
     EXPECT_TRUE( worker_finished.load() );
     EXPECT_EQ( events_.Snapshot(),
                ( std::vector<std::string>{ "handler-blocked", "handler-released" } ) );
+}
+
+TEST_F( ConsensusFinalizationHarness, StructuredTraceIsPerManagerAndBehaviorNeutral )
+{
+    using Access = sgns::ConsensusFinalizationTestAccess;
+    using Event = Access::TraceEvent;
+    auto account = MakeAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeRegistry( account );
+    ASSERT_TRUE( registry );
+    const auto isolated_path = db_path_ + ".trace-isolated";
+    auto isolated_db = MakeIsolatedDatabase( isolated_path );
+    ASSERT_TRUE( isolated_db );
+    auto first = MakeManager( registry, account );
+    auto second = MakeManager( registry, account, isolated_db );
+    ASSERT_TRUE( first );
+    ASSERT_TRUE( second );
+    const ScopedReset close_managers(
+        [&]()
+        {
+            Access::SetTraceObserver( first, {} );
+            Access::SetTraceObserver( second, {} );
+            first->Close();
+            second->Close();
+            isolated_db->ShutdownNow();
+            boost::filesystem::remove_all( isolated_path );
+        } );
+
+    auto first_certificate = MakeCertificate(
+        first, registry, account,
+        "789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456", nullptr, nullptr, 21 );
+    auto second_certificate = MakeCertificate(
+        second, registry, account,
+        "89abcdef0123456789abcdef0123456789abcdef0123456789abcdef01234567", nullptr, nullptr, 22 );
+    ASSERT_TRUE( first_certificate );
+    ASSERT_TRUE( second_certificate );
+
+    std::vector<Event> first_events;
+    std::vector<Event> second_events;
+    Access::SetTraceObserver( first, [&]( const Event &event ) { first_events.push_back( event ); } );
+    Access::SetTraceObserver( second, [&]( const Event &event ) { second_events.push_back( event ); } );
+    ASSERT_TRUE( first->SubmitProposal( first_certificate.value().proposal(), false ) );
+    ASSERT_TRUE( second->SubmitProposal( second_certificate.value().proposal(), false ) );
+    ASSERT_EQ( first_events.size(), 1U );
+    ASSERT_EQ( second_events.size(), 1U );
+    EXPECT_EQ( first_events.front().stage, Event::Stage::LocalProposalPublished );
+    EXPECT_EQ( second_events.front().stage, Event::Stage::LocalProposalPublished );
+    EXPECT_EQ( first_events.front().proposal_id, first_certificate.value().proposal_id() );
+    EXPECT_EQ( second_events.front().proposal_id, second_certificate.value().proposal_id() );
+    EXPECT_NE( first_events.front().proposal_id, second_events.front().proposal_id );
+    Access::SetTraceObserver( first, {} );
+    Access::SetTraceObserver( second, {} );
+
+    std::atomic<uint64_t> first_applications{ 0 };
+    std::atomic<uint64_t> second_applications{ 0 };
+    ASSERT_TRUE( first->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+            -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            ++first_applications;
+            return sgns::ConsensusManager::Check::Approve;
+        } ) );
+    ASSERT_TRUE( second->RegisterCertificateHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&]( const std::string &, const sgns::ConsensusManager::Certificate & )
+            -> outcome::result<sgns::ConsensusManager::Check>
+        {
+            ++second_applications;
+            return sgns::ConsensusManager::Check::Approve;
+        } ) );
+    const auto without_observer = Access::Finalize(
+        first, first_certificate.value(), sgns::ConsensusManager::DeliverySource::Local );
+    ASSERT_EQ( without_observer, sgns::ConsensusManager::FinalizeResult::Applied );
+    auto first_slot = Access::Slot( first_certificate.value() );
+    ASSERT_TRUE( first_slot );
+    auto authority_without = first->GetCertificateBySlotId( first_slot.value() );
+    ASSERT_TRUE( authority_without );
+    EXPECT_EQ( authority_without.value().SerializeAsString(), first_certificate.value().SerializeAsString() );
+    auto process_without = Access::Process( first, first_slot.value() );
+    ASSERT_TRUE( process_without );
+    EXPECT_EQ( process_without->state(), sgns::ConsensusStateStore::ProcessRecord::COMPLETE );
+    EXPECT_EQ( first_applications.load(), 1U );
+
+    bool reentrant_read_saw_authority = false;
+    Access::SetTraceObserver(
+        second,
+        [&]( const Event &event )
+        {
+            if ( event.stage != Event::Stage::AuthorityEstablished ) return;
+            auto authority = second->GetCertificateBySlotId( event.slot_id );
+            reentrant_read_saw_authority = authority &&
+                authority.value().proposal_id() == event.proposal_id;
+        } );
+    const auto with_observer = Access::Finalize(
+        second, second_certificate.value(), sgns::ConsensusManager::DeliverySource::Recovery );
+    ASSERT_EQ( with_observer, sgns::ConsensusManager::FinalizeResult::Applied );
+    EXPECT_EQ( with_observer, without_observer );
+    auto second_slot = Access::Slot( second_certificate.value() );
+    ASSERT_TRUE( second_slot );
+    auto authority_with = second->GetCertificateBySlotId( second_slot.value() );
+    ASSERT_TRUE( authority_with );
+    EXPECT_EQ( authority_with.value().SerializeAsString(), second_certificate.value().SerializeAsString() );
+    auto process_with = Access::Process( second, second_slot.value() );
+    ASSERT_TRUE( process_with );
+    EXPECT_EQ( process_with->state(), process_without->state() );
+    EXPECT_TRUE( reentrant_read_saw_authority );
+    EXPECT_EQ( second_applications.load(), 1U );
+
+    Access::SetTraceObserver( second, []( const Event & ) { throw std::runtime_error( "ignored" ); } );
+    EXPECT_EQ( Access::Finalize(
+                   second, second_certificate.value(), sgns::ConsensusManager::DeliverySource::Recovery ),
+               sgns::ConsensusManager::FinalizeResult::AlreadyFinalized );
+    EXPECT_EQ( second_applications.load(), 1U );
+    auto authority_after_throw = second->GetCertificateBySlotId( second_slot.value() );
+    ASSERT_TRUE( authority_after_throw );
+    EXPECT_EQ( authority_after_throw.value().SerializeAsString(), second_certificate.value().SerializeAsString() );
+}
+
+TEST_F( ConsensusFinalizationHarness, StructuredTraceUsesStableIdentityForExactReplay )
+{
+    using Access = sgns::ConsensusFinalizationTestAccess;
+    using Event = Access::TraceEvent;
+    auto account = MakeAccount();
+    ASSERT_TRUE( account );
+    auto registry = MakeRegistry( account );
+    ASSERT_TRUE( registry );
+    auto manager = MakeManager( registry, account );
+    ASSERT_TRUE( manager );
+    const ScopedReset close_manager(
+        [&]()
+        {
+            Access::SetTraceObserver( manager, {} );
+            manager->Close();
+        } );
+    auto certificate = MakeCertificate(
+        manager, registry, account,
+        "9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678", nullptr, nullptr, 31 );
+    ASSERT_TRUE( certificate );
+    auto competitor = MakeCertificate(
+        manager, registry, account,
+        "9abcdef0123456789abcdef0123456789abcdef0123456789abcdef012345678",
+        &certificate.value().proposal().subject(), nullptr, 31 );
+    ASSERT_TRUE( competitor );
+
+    std::vector<Event> votes;
+    Access::SetTraceObserver(
+        manager,
+        [&]( const Event &event )
+        {
+            if ( event.stage == Event::Stage::VotePublished ) votes.push_back( event );
+        } );
+    ASSERT_TRUE( Access::InstallAndReplayVote( manager, certificate.value(), 1 ) );
+    auto slot = Access::Slot( certificate.value() );
+    ASSERT_TRUE( slot );
+    ASSERT_TRUE( Access::ReplayVote( manager, slot.value(), 1 ) );
+    ASSERT_EQ( votes.size(), 2U );
+
+    const auto identity = []( const Event &event )
+    {
+        return std::make_tuple( event.validator_id, event.slot_id, event.proposal_id, event.payload_digest );
+    };
+    EXPECT_EQ( identity( votes[0] ), identity( votes[1] ) );
+    EXPECT_EQ( votes[0].slot_id, slot.value() );
+    EXPECT_EQ( votes[0].proposal_id, certificate.value().proposal_id() );
+    EXPECT_EQ( votes[0].subject_hash,
+               Access::SubjectHash( certificate.value().proposal() ).value() );
+    auto different_target = identity( votes[0] );
+    std::get<2>( different_target ) = competitor.value().proposal_id();
+    EXPECT_NE( different_target, identity( votes[0] ) );
 }
 
 TEST_F( ConsensusFinalizationHarness, CloseWakesFinalizerWaitingForPublicationReservation )

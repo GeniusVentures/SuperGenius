@@ -325,6 +325,7 @@ namespace sgns
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
+        friend class BridgeRaceConsensusTestAccess;
 
         /**
          * @brief Migrates blockchain-related CIDs between GlobalDB instances.
