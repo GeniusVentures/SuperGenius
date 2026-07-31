@@ -194,6 +194,40 @@ namespace sgns
             << "Invalid direct SPIR-V must be rejected with SPIRV_VALIDATION_FAILED";
     }
 
+    TEST_F( ProcessingDispatchTest, RenderPassStillFailsCleanlyOnMissingRenderInputAfterFullWiring )
+    {
+        std::string json_data = LoadJson( "render-pass-valid-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load valid fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( process_result.has_value() )
+            << "Process() should still fail (renderInput's data URI is bogus), confirming plan "
+               "03-05's now-fully-wired StartProcessing() is never reached for this fixture";
+
+        auto error = process_result.error();
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::PROCESSING_FAILED )
+            << "Failure must NOT be PROCESSING_FAILED (which would mean StartProcessing() was "
+               "reached and failed) -- it must still surface as the pre-existing fetch-level "
+               "INPUT_UNAVAIL failure from GetCidForProc(), confirming this plan's new "
+               "fully-wired StartProcessing() introduces no regression to the existing "
+               "fetch-level failure path plans 03-01/03-02 already cover";
+        ASSERT_EQ( error, sgns::sgprocessing::ProcessingManager::Error::INPUT_UNAVAIL )
+            << "Failure must specifically be INPUT_UNAVAIL (missing render input data)";
+    }
+
     TEST_F( ProcessingDispatchTest, LegacyHlslShaderTypeFailsCleanlyNotCrash )
     {
         std::string json_data = LoadJson( "render-pass-legacy-hlsl-definition.json" );
