@@ -143,6 +143,12 @@ namespace sgns
             {
                 return true;
             }
+            // Chain zero is reserved for test-only validators. It keeps mint
+            // identities canonical without requiring bridge RPC slot quorum.
+            if ( chain_id == "0" )
+            {
+                return false;
+            }
             return std::all_of( chain_id.begin(),
                                 chain_id.end(),
                                 []( unsigned char c ) { return c >= '0' && c <= '9'; } );
@@ -2599,15 +2605,6 @@ namespace sgns
                 return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
-            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
-            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
-            {
-                ConsensusManagerLogger()->error( "{}: failed: voter is not an active registry validator voter_id={}",
-                                                 __func__,
-                                                 vote.voter_id() );
-                return outcome::failure( CertificateStoreError::InvalidCertificate );
-            }
-
             auto signing_bytes = VoteSigningBytes( vote );
             if ( signing_bytes.has_error() )
             {
@@ -2628,6 +2625,25 @@ namespace sgns
                                              vote.voter_id().substr( 0, 8 ),
                                              vote.approve() );
             verified_votes.push_back( vote );
+
+            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
+            if ( !validator )
+            {
+                // Signed, unregistered votes are retained as promotion input,
+                // but never contribute weight toward certificate quorum.
+                ConsensusManagerLogger()->debug(
+                    "{}: Retaining unregistered vote without quorum weight voter_id={}",
+                    __func__,
+                    vote.voter_id().substr( 0, 8 ) );
+                continue;
+            }
+            if ( validator->status() != ValidatorRegistry::Status::ACTIVE )
+            {
+                ConsensusManagerLogger()->error( "{}: failed: voter is not active voter_id={}",
+                                                 __func__,
+                                                 vote.voter_id() );
+                return outcome::failure( CertificateStoreError::InvalidCertificate );
+            }
             if ( vote.approve() )
             {
                 ConsensusManagerLogger()->debug( "{}: Adding weight for hash {}: voter_id={} weight={}",

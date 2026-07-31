@@ -129,7 +129,7 @@ namespace sgns
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
                                               sgns::test::NextMintSourceHash(),
-                                              "test", 0u,
+                                              sgns::test::kTestMintChainId, 0u,
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",
                                               std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );

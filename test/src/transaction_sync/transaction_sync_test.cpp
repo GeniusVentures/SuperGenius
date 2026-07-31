@@ -190,7 +190,7 @@ TEST_F( TransactionSyncTest, TransactionSimpleTransfer )
     auto balance_2_before = node_proc2->GetBalance();
     auto mint_result      = node_proc1->MintTokens( 10000000000,
                                                     sgns::test::NextMintSourceHash(),
-                                                    "test", 0u,
+                                                    sgns::test::kTestMintChainId, 0u,
                                                     sgns::TokenID::FromBytes( { 0x00 } ),
                                                     "",
                                                     std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -249,7 +249,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     {
         auto mint_result = node_proc1->MintTokens( amount,
                                                    sgns::test::NextMintSourceHash(),
-                                                   "test", 0u,
+                                                   sgns::test::kTestMintChainId, 0u,
                                                    sgns::TokenID::FromBytes( { 0x00 } ),
                                                    "",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -262,7 +262,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
     // Mint tokens on node_proc2
     auto mint_result1 = node_proc2->MintTokens( 10000000000,
                                                 sgns::test::NextMintSourceHash(),
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 "",
                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -270,7 +270,7 @@ TEST_F( TransactionSyncTest, TransactionMintSync )
 
     auto mint_result2 = node_proc2->MintTokens( 20000000000,
                                                 sgns::test::NextMintSourceHash(),
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 "",
                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -308,7 +308,7 @@ TEST_F( TransactionSyncTest, TransactionTransferSync )
 {
     auto mint_result = node_proc1->MintTokens( 67000000000,
                                                sgns::test::NextMintSourceHash(),
-                                               "test", 0u,
+                                               sgns::test::kTestMintChainId, 0u,
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -397,14 +397,14 @@ TEST_F( TransactionSyncTest, InvalidTransactionTest )
     // Mint tokens with timeout
     auto mint_result = node_proc1->MintTokens( 10000000000,
                                                sgns::test::NextMintSourceHash(),
-                                               "test", 0u,
+                                               sgns::test::kTestMintChainId, 0u,
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
     mint_result = node_proc1->MintTokens( 10000000000,
                                           sgns::test::NextMintSourceHash(),
-                                          "test", 0u,
+                                          sgns::test::kTestMintChainId, 0u,
                                           sgns::TokenID::FromBytes( { 0x00 } ),
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -482,7 +482,7 @@ TEST_F( TransactionSyncTest, InvalidPreviousHashTest )
     // Mint tokens to ensure sufficient balance
     auto mint_result = node_proc1->MintTokens( 20000000000,
                                                sgns::test::NextMintSourceHash(),
-                                               "test", 0u,
+                                               sgns::test::kTestMintChainId, 0u,
                                                TokenID::FromBytes( { 0x00 } ),
                                                "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );

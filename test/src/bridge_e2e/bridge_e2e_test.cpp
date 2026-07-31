@@ -465,7 +465,7 @@ TEST_F( BridgeE2ETest, BurnToMintPipeline )
     EXPECT_OUTCOME_TRUE( mint_result,
                          node_main->MintTokens( kMintAmount,
                                                 tx_hash,
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 dest_addr,
                                                 kMintTimeout ) );
@@ -523,7 +523,7 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     EXPECT_OUTCOME_TRUE( mint_result_1,
                          node_main->MintTokens( kSlotMintAmount,
                                                 burn_hash_1,
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 dest_addr,
                                                 kSlotKeyTimeout ) );
@@ -546,7 +546,7 @@ TEST_F( BridgeE2ETest, SlotKeyCollisionResistance )
     EXPECT_OUTCOME_TRUE( mint_result_2,
                          node_main->MintTokens( kSlotMintAmount,
                                                 burn_hash_2,
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 dest_addr,
                                                 kSlotKeyTimeout ) );
@@ -588,7 +588,7 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     EXPECT_OUTCOME_TRUE( first_result,
                          node_main->MintTokens( kMintAmount,
                                                 burn_tx_hash,
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 dest_addr,
                                                 kReplayTimeout ) );
@@ -604,7 +604,7 @@ TEST_F( BridgeE2ETest, ReplayRejection )
     // Step 4: Second mint with the same burn tx hash should be rejected
     auto second_result = node_main->MintTokens( kMintAmount,
                                                 burn_tx_hash,
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 sgns::TokenID::FromBytes( { 0x00 } ),
                                                 dest_addr,
                                                 kReplayTimeout );
