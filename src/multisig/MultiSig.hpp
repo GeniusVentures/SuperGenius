@@ -11,12 +11,14 @@
 
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace sgns::multisig
 {
+    using SignatureBytes      = std::vector<uint8_t>;
+    using CollectedSignatures = std::vector<std::pair<std::string, SignatureBytes>>;
+
     /**
      * @brief       Verifies a signature over an arbitrary raw-byte payload.
      *              Delegates entirely to `GeniusAccount::VerifySignature`; no
@@ -31,7 +33,7 @@ namespace sgns::multisig
      *              incorrectly sized signature).
      */
     bool VerifyPayloadSignature( const std::string          &address,
-                                 std::string_view            signature,
+                                 const SignatureBytes       &signature,
                                  const std::vector<uint8_t> &payload );
 
     /**
@@ -63,10 +65,10 @@ namespace sgns::multisig
      * @param[in]   payload Raw payload bytes the signatures are claimed to cover.
      * @return      QuorumResult with has_quorum and valid_unique_count populated.
      */
-    QuorumResult EvaluateQuorum( const std::vector<std::string>                         &signer_set,
-                                 uint64_t                                                threshold,
-                                 const std::vector<std::pair<std::string, std::string>> &collected_signatures,
-                                 const std::vector<uint8_t>                             &payload );
+    QuorumResult EvaluateQuorum( const std::vector<std::string> &signer_set,
+                                 uint64_t                        threshold,
+                                 const CollectedSignatures      &collected_signatures,
+                                 const std::vector<uint8_t>     &payload );
 } // namespace sgns::multisig
 
 #endif // SGNS_MULTISIG_MULTISIG_HPP

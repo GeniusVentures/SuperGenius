@@ -13,16 +13,16 @@
 namespace sgns::multisig
 {
     bool VerifyPayloadSignature( const std::string          &address,
-                                 std::string_view            signature,
+                                 const SignatureBytes       &signature,
                                  const std::vector<uint8_t> &payload )
     {
         return sgns::GeniusAccount::VerifySignature( address, signature, payload );
     }
 
-    QuorumResult EvaluateQuorum( const std::vector<std::string>                         &signer_set,
-                                 uint64_t                                                threshold,
-                                 const std::vector<std::pair<std::string, std::string>> &collected_signatures,
-                                 const std::vector<uint8_t>                             &payload )
+    QuorumResult EvaluateQuorum( const std::vector<std::string> &signer_set,
+                                 uint64_t                        threshold,
+                                 const CollectedSignatures      &collected_signatures,
+                                 const std::vector<uint8_t>     &payload )
     {
         const std::unordered_set<std::string> signer_lookup( signer_set.begin(), signer_set.end() );
         std::unordered_set<std::string>       valid_unique_signers;
