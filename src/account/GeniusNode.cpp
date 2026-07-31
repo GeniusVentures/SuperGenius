@@ -39,6 +39,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "base/sgns_version.hpp"
+#include "base/soralog_shutdown.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
@@ -1899,6 +1900,11 @@ namespace sgns
         // InitNetwork). Implicit destruction cannot reach it, so drop that copy here
         // or the service outlives this node.
         FileManager::GetInstance().clearBitswap( bitswap_ );
+
+        // Get every queued libp2p record onto disk while this node still owns
+        // its logging system and after all log-producing services have stopped.
+        // The capacity mirrors the file sink configured by GetLoggingSystem().
+        logging::DrainBoundedSinkForShutdown( logging_system_, "file", 1000u );
 
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
     }

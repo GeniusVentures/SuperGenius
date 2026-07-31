@@ -92,6 +92,7 @@ constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
 namespace sgns
 {
     class MigrationManager;
+    class BridgeRaceConsensusTestAccess;
 
     namespace evmwatcher
     {
@@ -780,6 +781,8 @@ namespace sgns
         std::string write_base_path_; ///< Base path for node databases, logs, and account storage.
 
     private:
+        friend class BridgeRaceConsensusTestAccess;
+
         friend class GeniusNodeCatchupTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 
