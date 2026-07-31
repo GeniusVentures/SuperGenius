@@ -76,6 +76,7 @@ constexpr uint64_t kDefaultTimestampToleranceMs = 300000; // ±5 minutes
 namespace sgns
 {
     class MigrationManager;
+    class BridgeRaceConsensusTestAccess;
 
     namespace evmwatcher
     {
@@ -765,6 +766,8 @@ namespace sgns
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
 
     private:
+        friend class BridgeRaceConsensusTestAccess;
+
         friend class GeniusNodeCatchupTestAccess;
         friend class NetworkConfigPrecedenceTestAccess;
 

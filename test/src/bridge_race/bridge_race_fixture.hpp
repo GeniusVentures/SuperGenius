@@ -148,6 +148,11 @@ public:
                  : 0;
     }
 
+    static void ShutdownNode( const std::shared_ptr<GeniusNode> &node )
+    {
+        if ( node ) node->ShutdownForDestruction();
+    }
+
     static std::optional<ApplicationOutput> OutputFor(
         const std::shared_ptr<GeniusNode> &node,
         const std::string                 &transaction_hash )
@@ -896,11 +901,43 @@ protected:
     {
         spdlog::info( "bridge_race: tearing down nodes" );
         ClearConsensusObservers();
-        for ( unsigned int i = 0u; i < kNodeCount; ++i )
+
+        // Shut down while the fixture still owns every node. This prevents a
+        // watcher or mesh callback from becoming the last shared owner and
+        // running GeniusNode destruction on its own worker. Tear down light
+        // nodes first so the full-node hub remains available until every leaf
+        // has stopped its watcher, transaction manager, consensus manager, and
+        // CRDT services.
+        for ( unsigned int offset = 0u; offset < kNodeCount; ++offset )
         {
-            s_nodes[i].reset();
+            const unsigned int i = kNodeCount - 1u - offset;
+            const auto start = std::chrono::steady_clock::now();
+            spdlog::info( "bridge_race: teardown node={} phase=shutdown-start", i );
+            sgns::BridgeRaceConsensusTestAccess::ShutdownNode( s_nodes[i] );
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - start );
+            spdlog::info( "bridge_race: teardown node={} phase=shutdown-complete elapsed_ms={}",
+                          i,
+                          elapsed.count() );
         }
+
+        for ( unsigned int offset = 0u; offset < kNodeCount; ++offset )
+        {
+            const unsigned int i = kNodeCount - 1u - offset;
+            const auto start = std::chrono::steady_clock::now();
+            spdlog::info( "bridge_race: teardown node={} phase=destroy-start use_count={}",
+                          i,
+                          s_nodes[i] ? s_nodes[i].use_count() : 0 );
+            s_nodes[i].reset();
+            const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - start );
+            spdlog::info( "bridge_race: teardown node={} phase=destroy-complete elapsed_ms={}",
+                          i,
+                          elapsed.count() );
+        }
+        spdlog::info( "bridge_race: teardown phase=nodes-complete" );
         s_anvil.Stop();
+        spdlog::info( "bridge_race: teardown phase=anvil-complete" );
         std::error_code ec;
         for ( unsigned int i = 0u; i < kNodeCount; ++i )
         {

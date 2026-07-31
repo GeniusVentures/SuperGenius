@@ -24,12 +24,17 @@
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
 
+#include <libp2p/log/logger.hpp>
+#include <soralog/impl/configurator_from_yaml.hpp>
+#include <soralog/logging_system.hpp>
+
 #include "account/BridgeRelayer.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/PublicChainInputValidator.hpp"
 #include "account/TokenID.hpp"
 #include "base/parse_utility.hpp"
+#include "base/soralog_shutdown.hpp"
 #include "eth/abi_decoder.hpp"
 #include "eth/rpc_receipt_source.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
@@ -37,6 +42,41 @@
 namespace fs = std::filesystem;
 
 using namespace sgns;
+
+TEST( StartupWiringTest, DrainedGlobalFileLoggerExitsWithoutWaitingPerQueuedEvent )
+{
+    constexpr std::size_t kCapacity = 64u;
+    const auto log_path = fs::temp_directory_path() / "supergenius_soralog_shutdown_test.log";
+    const std::string yaml =
+        "sinks:\n"
+        "  - name: file\n"
+        "    type: file\n"
+        "    capacity: 64\n"
+        "    latency: 1000\n"
+        "    path: " + log_path.string() + "\n"
+        "groups:\n"
+        "  - name: libp2p\n"
+        "    sink: file\n"
+        "    level: trace\n";
+
+    auto logging_system = std::make_shared<soralog::LoggingSystem>(
+        std::make_shared<soralog::ConfiguratorFromYAML>( yaml ) );
+    const auto configuration = logging_system->configure();
+    ASSERT_FALSE( configuration.has_error ) << configuration.message;
+
+    libp2p::log::setLoggingSystem( logging_system );
+    const auto logger = logging_system->getLogger( "shutdown-regression", "libp2p" );
+    for ( std::size_t i = 0; i < kCapacity; ++i )
+    {
+        logger->info( "queued record {}", i );
+    }
+
+    logging::DrainBoundedSinkForShutdown( logging_system, "file", kCapacity );
+
+    // libp2p deliberately remains the final owner. CTest verifies that its
+    // process-global destructor joins the file worker without a timeout.
+    logging_system.reset();
+}
 
 class PublicChainInputValidatorTestAccess
 {
