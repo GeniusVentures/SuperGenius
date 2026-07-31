@@ -193,4 +193,20 @@ namespace sgns
         ASSERT_EQ( process_result.error(), sgns::sgprocessing::ProcessingManager::Error::SPIRV_VALIDATION_FAILED )
             << "Invalid direct SPIR-V must be rejected with SPIRV_VALIDATION_FAILED";
     }
+
+    TEST_F( ProcessingDispatchTest, LegacyHlslShaderTypeFailsCleanlyNotCrash )
+    {
+        std::string json_data = LoadJson( "render-pass-legacy-hlsl-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load legacy-hlsl fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+
+        ASSERT_FALSE( mgr_result.has_value() )
+            << "Create() must reject a legacy shader_stage.type: \"hlsl\" value (removed from the "
+               "schema enum per D-10) cleanly, not silently accept it";
+        ASSERT_EQ( mgr_result.error(), sgns::sgprocessing::ProcessingManager::Error::INVALID_JSON )
+            << "A schema-invalid enum value must surface as INVALID_JSON, not propagate an "
+               "uncaught exception (this is the previously-live crash vector Init()'s broadened "
+               "catch(const std::exception&) is meant to close)";
+    }
 }

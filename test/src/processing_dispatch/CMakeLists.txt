@@ -21,6 +21,7 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/invalid_spirv_bytes.spv"
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-malformed-glsl-definition.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-invalid-spirv-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-legacy-hlsl-definition.json"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )

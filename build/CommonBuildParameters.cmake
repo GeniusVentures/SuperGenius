@@ -106,6 +106,29 @@ endif()
 set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
 find_package(vk-bootstrap CONFIG REQUIRED)
 
+# SPIRV-Tools — installs a CMake package config (verified in the real installed tree at
+# SPIRV-Tools/SPIRV-Tools/cmake/SPIRV-ToolsConfig.cmake, not the lib/cmake/<name> layout most
+# other deps here use), exporting the bare, non-namespaced SPIRV-Tools-static target (confirmed:
+# only the static variant is built, per SPIRV_SKIP_TESTS/SPIRV_SKIP_EXECUTABLES cache args in
+# thirdparty/build/CommonTargets.cmake — no shared lib). Alias to the namespaced name this
+# project's code expects.
+set(SPIRV-Tools_DIR "${_THIRDPARTY_BUILD_DIR}/SPIRV-Tools/SPIRV-Tools/cmake")
+find_package(SPIRV-Tools CONFIG REQUIRED)
+if(NOT TARGET SPIRV-Tools::SPIRV-Tools)
+    add_library(SPIRV-Tools::SPIRV-Tools ALIAS SPIRV-Tools-static)
+endif()
+
+# shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
+# github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
+# IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
+if(NOT TARGET shaderc::shaderc)
+    add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
+    set_target_properties(shaderc::shaderc PROPERTIES
+        IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
+    )
+endif()
+
 # OpenSSL
 set(OpenSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/lib/cmake/OpenSSL" CACHE PATH "Path to OpenSSL install folder")
 set(OPENSSL_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build" CACHE PATH "Path to OpenSSL install root folder")
