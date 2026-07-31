@@ -108,4 +108,89 @@ namespace sgns
         ASSERT_EQ( block_size_result.value(), 0 )
             << "Model-less pass should contribute 0 to block_total_len";
     }
+
+    TEST_F( ProcessingDispatchTest, RenderPassValidGlslShadersCompileAndValidateEndToEnd )
+    {
+        std::string json_data = LoadJson( "render-pass-valid-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load valid fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( process_result.has_value() )
+            << "Process() should still fail (renderInput's data URI is bogus), "
+               "but both real GLSL stages should have compiled+validated successfully first";
+
+        auto error = process_result.error();
+        ASSERT_EQ( error, sgns::sgprocessing::ProcessingManager::Error::INPUT_UNAVAIL )
+            << "Failure must be specifically INPUT_UNAVAIL (missing render input data), "
+               "NOT a shader-compile/validation/dispatch failure — proving the two valid "
+               "GLSL stages compiled and validated successfully before dispatch reached the "
+               "genuinely-missing render input";
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::SHADER_COMPILE_FAILED );
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::SPIRV_VALIDATION_FAILED );
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::NO_PROCESSOR );
+        ASSERT_NE( error, sgns::sgprocessing::ProcessingManager::Error::MISSING_INPUT );
+    }
+
+    TEST_F( ProcessingDispatchTest, RenderPassMalformedGlslShaderFailsCompileNotCrash )
+    {
+        std::string json_data = LoadJson( "render-pass-malformed-glsl-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load malformed-GLSL fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( process_result.has_value() )
+            << "Process() must fail cleanly (not crash) on malformed GLSL";
+        ASSERT_EQ( process_result.error(), sgns::sgprocessing::ProcessingManager::Error::SHADER_COMPILE_FAILED )
+            << "Malformed GLSL must be rejected with SHADER_COMPILE_FAILED";
+    }
+
+    TEST_F( ProcessingDispatchTest, RenderPassInvalidDirectSpirvFailsValidationNotCrash )
+    {
+        std::string json_data = LoadJson( "render-pass-invalid-spirv-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load invalid-direct-SPIR-V fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() );
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_FALSE( process_result.has_value() )
+            << "Process() must fail cleanly (not crash) on invalid direct SPIR-V bytes";
+        ASSERT_EQ( process_result.error(), sgns::sgprocessing::ProcessingManager::Error::SPIRV_VALIDATION_FAILED )
+            << "Invalid direct SPIR-V must be rejected with SPIRV_VALIDATION_FAILED";
+    }
 }

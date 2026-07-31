@@ -16,6 +16,11 @@ add_custom_command(TARGET processing_dispatch_test POST_BUILD
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-valid-definition.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-missing-shader-definition.json"
     "${CMAKE_CURRENT_SOURCE_DIR}/dummy_shader.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/dummy_fragment_shader.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/malformed_vertex_shader.glsl"
+    "${CMAKE_CURRENT_SOURCE_DIR}/invalid_spirv_bytes.spv"
+    "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-malformed-glsl-definition.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/render-pass-invalid-spirv-definition.json"
     "$<TARGET_FILE_DIR:processing_dispatch_test>/processing_dispatch/"
     COMMENT "Copying dispatch test fixtures"
 )

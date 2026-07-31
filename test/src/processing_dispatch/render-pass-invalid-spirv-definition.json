@@ -1,5 +1,5 @@
 {
-  "name": "render-pass-valid",
+  "name": "render-pass-invalid-spirv",
   "version": "1.0.0",
   "gnus_spec_version": 1.0,
   "inputs": [
@@ -21,8 +21,8 @@
         "stages": [
           {
             "stage": "vertex",
-            "type": "glsl",
-            "source": "file://processing_dispatch/dummy_shader.glsl",
+            "type": "spirv",
+            "source": "file://processing_dispatch/invalid_spirv_bytes.spv",
             "entry_point": "main"
           },
           {
