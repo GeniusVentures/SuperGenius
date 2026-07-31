@@ -173,8 +173,18 @@ namespace sgns::securecrdt
         }
         const auto &snapshot = signer_set_result.value();
 
-        const auto quorum_result = multisig::EvaluateQuorum( snapshot.signer_set, snapshot.threshold,
-                                                             collected_signatures, payload );
+        const multisig::MultiSig quorum( snapshot.signer_set, snapshot.required_signatures );
+        if ( !quorum.IsValid() )
+        {
+            logger_->error( "{}: invalid quorum configuration key={} required={} authorized={}",
+                            __func__,
+                            base_key.GetKey(),
+                            quorum.RequiredSignatures(),
+                            quorum.AuthorizedSignerCount() );
+            return outcome::success( std::optional<sgns::base::Buffer>{} );
+        }
+
+        const auto quorum_result = quorum.EvaluateQuorum( collected_signatures, payload );
         if ( !quorum_result.has_quorum )
         {
             logger_->debug( "{}: quorum not met key={} valid_unique_count={}", __func__, base_key.GetKey(),

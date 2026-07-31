@@ -97,7 +97,7 @@ namespace sgns::securecrdt
                                             const std::vector<uint8_t>        &signature );
 
         /**
-         * @brief Returns the current value at base_key only once threshold
+         * @brief Returns the current value at base_key only once the required number of
          *        valid unique signatures from the registered signer set are
          *        present (D-04 quorum re-derivation); returns std::nullopt if
          *        quorum is not yet met.

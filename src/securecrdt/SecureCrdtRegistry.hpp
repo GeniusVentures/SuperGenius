@@ -1,7 +1,7 @@
 /**
  * @file       SecureCrdtRegistry.hpp
  * @brief      Static registry mapping a base_key pattern to {signer-set source,
- *             quorum threshold, ISignedCRDTData factory}, resolvable at
+ *             required signature count, ISignedCRDTData factory}, resolvable at
  *             startup/runtime by key. Header-only, mirrors IInputValidator's
  *             static Register/UnregisterIf/Get idiom.
  * @date       2026-07-23
@@ -24,13 +24,13 @@
 namespace sgns::securecrdt
 {
     /**
-     * @brief Snapshot of an authorized signer set and the quorum threshold
-     *        required over it, as produced by an injected SignerSetSource.
+     * @brief Snapshot of an authorized signer set and its required signature count,
+     *        as produced by an injected SignerSetSource.
      */
     struct SignerSetSnapshot
     {
         std::vector<std::string> signer_set;
-        uint64_t                 threshold = 0;
+        uint64_t                 required_signatures = 0;
     };
 
     /**

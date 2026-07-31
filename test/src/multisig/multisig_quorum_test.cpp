@@ -64,7 +64,11 @@ TEST_F( MultiSigQuorumTest, ExactlyThresholdOfFiveHasQuorum )
         collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    const multisig::MultiSig quorum( signer_set_, 3 );
+    auto                     result = quorum.EvaluateQuorum( collected, payload_ );
+    EXPECT_TRUE( quorum.IsValid() );
+    EXPECT_EQ( quorum.RequiredSignatures(), 3u );
+    EXPECT_EQ( quorum.AuthorizedSignerCount(), 5u );
     EXPECT_TRUE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 3u );
 }
@@ -77,7 +81,8 @@ TEST_F( MultiSigQuorumTest, OneBelowThresholdNoQuorum )
         collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    const multisig::MultiSig quorum( signer_set_, 3 );
+    auto                     result = quorum.EvaluateQuorum( collected, payload_ );
     EXPECT_FALSE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 2u );
 }
@@ -90,7 +95,8 @@ TEST_F( MultiSigQuorumTest, AllFiveSignersHasQuorum )
         collected.emplace_back( signer->GetAddress(), signer->Sign( payload_ ) );
     }
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    const multisig::MultiSig quorum( signer_set_, 3 );
+    auto                     result = quorum.EvaluateQuorum( collected, payload_ );
     EXPECT_TRUE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 5u );
 }
@@ -106,7 +112,8 @@ TEST_F( MultiSigQuorumTest, DuplicateSignerWithGarbageDoesNotFlipQuorum )
     // run before verification so this never gets a chance to invalidate the earlier count.
     collected.emplace_back( signers_[0]->GetAddress(), std::vector<uint8_t>( 64, 0 ) );
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    const multisig::MultiSig quorum( signer_set_, 3 );
+    auto                     result = quorum.EvaluateQuorum( collected, payload_ );
     EXPECT_TRUE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 3u );
 }
@@ -121,16 +128,40 @@ TEST_F( MultiSigQuorumTest, UnauthorizedSignerNotCounted )
     // Outsider signs validly, but is not in signer_set_ — must not count toward quorum.
     collected.emplace_back( outsider_->GetAddress(), outsider_->Sign( payload_ ) );
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
+    const multisig::MultiSig quorum( signer_set_, 3 );
+    auto                     result = quorum.EvaluateQuorum( collected, payload_ );
     EXPECT_FALSE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 2u );
 }
 
-TEST_F( MultiSigQuorumTest, ZeroThresholdWithEmptyCollectedHasQuorum )
+TEST_F( MultiSigQuorumTest, ZeroRequiredSignaturesIsInvalidAndFailsClosed )
 {
     multisig::CollectedSignatures collected;
+    const multisig::MultiSig      quorum( signer_set_, 0 );
 
-    auto result = multisig::EvaluateQuorum( signer_set_, 0, collected, payload_ );
-    EXPECT_TRUE( result.has_quorum );
+    auto result = quorum.EvaluateQuorum( collected, payload_ );
+    EXPECT_FALSE( quorum.IsValid() );
+    EXPECT_FALSE( result.has_quorum );
     EXPECT_EQ( result.valid_unique_count, 0u );
+}
+
+TEST_F( MultiSigQuorumTest, RequiredSignaturesAboveSignerCountIsInvalidAndFailsClosed )
+{
+    const multisig::MultiSig quorum( signer_set_, 6 );
+
+    EXPECT_FALSE( quorum.IsValid() );
+    EXPECT_EQ( quorum.RequiredSignatures(), 6u );
+    EXPECT_EQ( quorum.AuthorizedSignerCount(), 5u );
+    EXPECT_FALSE( quorum.EvaluateQuorum( {}, payload_ ).has_quorum );
+}
+
+TEST_F( MultiSigQuorumTest, DuplicateAuthorizedAddressesCountOnceTowardM )
+{
+    auto signer_set_with_duplicate = signer_set_;
+    signer_set_with_duplicate.push_back( signer_set_.front() );
+
+    const multisig::MultiSig quorum( signer_set_with_duplicate, 5 );
+
+    EXPECT_TRUE( quorum.IsValid() );
+    EXPECT_EQ( quorum.AuthorizedSignerCount(), 5u );
 }

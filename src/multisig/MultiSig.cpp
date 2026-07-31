@@ -6,8 +6,6 @@
  */
 #include "multisig/MultiSig.hpp"
 
-#include <unordered_set>
-
 #include "account/GeniusAccount.hpp"
 
 namespace sgns::multisig
@@ -19,13 +17,36 @@ namespace sgns::multisig
         return sgns::GeniusAccount::VerifySignature( address, signature, payload );
     }
 
-    QuorumResult EvaluateQuorum( const std::vector<std::string> &signer_set,
-                                 uint64_t                        threshold,
-                                 const CollectedSignatures      &collected_signatures,
-                                 const std::vector<uint8_t>     &payload )
+    MultiSig::MultiSig( const std::vector<std::string> &signer_set, uint64_t required_signatures ) :
+        signer_set_( signer_set.begin(), signer_set.end() ), required_signatures_( required_signatures )
     {
-        const std::unordered_set<std::string> signer_lookup( signer_set.begin(), signer_set.end() );
-        std::unordered_set<std::string>       valid_unique_signers;
+    }
+
+    bool MultiSig::IsValid() const
+    {
+        return required_signatures_ > 0 && required_signatures_ <= signer_set_.size();
+    }
+
+    uint64_t MultiSig::RequiredSignatures() const
+    {
+        return required_signatures_;
+    }
+
+    size_t MultiSig::AuthorizedSignerCount() const
+    {
+        return signer_set_.size();
+    }
+
+    QuorumResult MultiSig::EvaluateQuorum( const CollectedSignatures  &collected_signatures,
+                                           const std::vector<uint8_t> &payload ) const
+    {
+        QuorumResult result;
+        if ( !IsValid() )
+        {
+            return result;
+        }
+
+        std::unordered_set<std::string> valid_unique_signers;
 
         for ( const auto &[address, signature] : collected_signatures )
         {
@@ -33,7 +54,7 @@ namespace sgns::multisig
             {
                 continue; // dedup-first: already counted this signer, skip before verification
             }
-            if ( signer_lookup.count( address ) == 0 )
+            if ( signer_set_.count( address ) == 0 )
             {
                 continue; // unauthorized signer
             }
@@ -44,9 +65,8 @@ namespace sgns::multisig
             valid_unique_signers.insert( address );
         }
 
-        QuorumResult result;
         result.valid_unique_count = valid_unique_signers.size();
-        result.has_quorum         = valid_unique_signers.size() >= threshold;
+        result.has_quorum         = valid_unique_signers.size() >= required_signatures_;
         return result;
     }
 } // namespace sgns::multisig

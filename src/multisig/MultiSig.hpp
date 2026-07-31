@@ -9,8 +9,10 @@
 #ifndef SGNS_MULTISIG_MULTISIG_HPP
 #define SGNS_MULTISIG_MULTISIG_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -41,34 +43,44 @@ namespace sgns::multisig
      */
     struct QuorumResult
     {
-        bool     has_quorum         = false; ///< True when valid_unique_count >= threshold
+        bool     has_quorum         = false; ///< True when valid_unique_count >= required signatures
         uint64_t valid_unique_count = 0;      ///< Count of distinct authorized signers with a valid signature
     };
 
     /**
-     * @brief       Evaluates N-of-M quorum for a signer set + threshold + collected signatures.
+     * @brief Configured N-of-M signature evaluator.
      *
-     *              For each (address, signature) pair in `collected_signatures`, in order:
-     *              - skip if `address` has already been counted (dedup-first, before verification)
-     *              - skip if `address` is not present in `signer_set` (unauthorized)
-     *              - skip if `VerifyPayloadSignature` fails for that (address, signature, payload)
-     *              Otherwise the address is counted as a valid unique signer.
-     *
-     *              This dedup-before-verify ordering guarantees a signer contributes at most
-     *              one unit toward `valid_unique_count` regardless of how many entries for
-     *              that signer appear in `collected_signatures`, even if one of the duplicate
-     *              entries carries a garbage/invalid signature.
-     *
-     * @param[in]   signer_set Authorized signer addresses (the "M" in N-of-M).
-     * @param[in]   threshold Minimum number of distinct valid signers required for quorum (the "N").
-     * @param[in]   collected_signatures (address, signature) pairs collected from callers/peers.
-     * @param[in]   payload Raw payload bytes the signatures are claimed to cover.
-     * @return      QuorumResult with has_quorum and valid_unique_count populated.
+     * The constructor fixes the quorum policy for the evaluator's lifetime:
+     * `required_signatures` is N and the number of unique addresses in
+     * `signer_set` is M. A configuration is valid only when 1 <= N <= M.
      */
-    QuorumResult EvaluateQuorum( const std::vector<std::string> &signer_set,
-                                 uint64_t                        threshold,
-                                 const CollectedSignatures      &collected_signatures,
-                                 const std::vector<uint8_t>     &payload );
+    class MultiSig
+    {
+    public:
+        MultiSig( const std::vector<std::string> &signer_set, uint64_t required_signatures );
+
+        [[nodiscard]] bool IsValid() const;
+        [[nodiscard]] uint64_t RequiredSignatures() const;
+        [[nodiscard]] size_t AuthorizedSignerCount() const;
+
+        /**
+         * @brief Evaluates collected signatures against this instance's N-of-M policy.
+         *
+         * For each (address, signature) pair, in order:
+         * - skip an address already counted
+         * - skip an address outside the configured signer set
+         * - skip an invalid signature
+         * - otherwise count the address as one valid unique signer
+         *
+         * Invalid N-of-M configurations always fail closed with `has_quorum == false`.
+         */
+        QuorumResult EvaluateQuorum( const CollectedSignatures  &collected_signatures,
+                                     const std::vector<uint8_t> &payload ) const;
+
+    private:
+        std::unordered_set<std::string> signer_set_;
+        uint64_t                        required_signatures_ = 0;
+    };
 } // namespace sgns::multisig
 
 #endif // SGNS_MULTISIG_MULTISIG_HPP
