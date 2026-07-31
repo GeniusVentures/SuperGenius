@@ -23,11 +23,6 @@ namespace
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eac1",
     };
 
-    std::string SignatureAsString( const std::vector<uint8_t> &signature )
-    {
-        return std::string( signature.begin(), signature.end() );
-    }
-
     class TestSignedData : public ISignedCRDTData
     {
     public:
@@ -125,7 +120,7 @@ TEST_F( SecureCrdtProposeSignQuorumTest, FullProposeSignQuorumSequenceReturnsVal
     auto propose_result = secure_crdt_->ProposeValue( base_key, payload );
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
-    auto sig1 = SignatureAsString( signers_[0]->Sign( payload ) );
+    auto sig1 = signers_[0]->Sign( payload );
     auto add1 = secure_crdt_->AddSignature( base_key, signers_[0]->GetAddress(), sig1 );
     ASSERT_FALSE( add1.has_error() ) << add1.error().message();
 
@@ -133,7 +128,7 @@ TEST_F( SecureCrdtProposeSignQuorumTest, FullProposeSignQuorumSequenceReturnsVal
     ASSERT_FALSE( read_after_one.has_error() );
     EXPECT_FALSE( read_after_one.value().has_value() ) << "1 signature < threshold 2 must never report quorum met";
 
-    auto sig2 = SignatureAsString( signers_[1]->Sign( payload ) );
+    auto sig2 = signers_[1]->Sign( payload );
     auto add2 = secure_crdt_->AddSignature( base_key, signers_[1]->GetAddress(), sig2 );
     ASSERT_FALSE( add2.has_error() ) << add2.error().message();
 

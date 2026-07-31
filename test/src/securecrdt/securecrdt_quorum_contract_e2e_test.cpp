@@ -24,11 +24,6 @@ namespace
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05ead1",
     };
 
-    std::string SignatureAsString( const std::vector<uint8_t> &signature )
-    {
-        return std::string( signature.begin(), signature.end() );
-    }
-
     /// @brief Test-local ISignedCRDTData implementer with a visible side
     ///        effect flag set only by Apply() -- proves the full downstream
     ///        DeserializeFromBytes/Verify/Apply chain, not just that
@@ -130,10 +125,10 @@ TEST_F( SecureCrdtQuorumContractE2ETest, ReadIfQuorumHandoffContractWorksEndToEn
     auto propose_result = secure_crdt_->ProposeValue( base_key, payload );
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
-    auto sig1 = SignatureAsString( signers_[0]->Sign( payload ) );
+    auto sig1 = signers_[0]->Sign( payload );
     ASSERT_FALSE( secure_crdt_->AddSignature( base_key, signers_[0]->GetAddress(), sig1 ).has_error() );
 
-    auto sig2 = SignatureAsString( signers_[1]->Sign( payload ) );
+    auto sig2 = signers_[1]->Sign( payload );
     ASSERT_FALSE( secure_crdt_->AddSignature( base_key, signers_[1]->GetAddress(), sig2 ).has_error() );
 
     auto read_result = secure_crdt_->ReadIfQuorum( base_key );

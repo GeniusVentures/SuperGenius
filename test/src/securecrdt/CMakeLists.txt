@@ -16,6 +16,7 @@ set(SECURECRDT_TEST_NODE_LIBS
     securecrdt
     crdt_globaldb
     multisig
+    sgns_genius_account
     json_secure_storage
 )
 

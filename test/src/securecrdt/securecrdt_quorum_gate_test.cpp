@@ -24,11 +24,6 @@ namespace
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eab2",
     };
 
-    std::string SignatureAsString( const std::vector<uint8_t> &signature )
-    {
-        return std::string( signature.begin(), signature.end() );
-    }
-
     /// @brief Mirrors securecrdt_interface_test.cpp's TestSignedData: empty
     ///        bytes are the malformed-input sentinel.
     class TestSignedData : public ISignedCRDTData
@@ -142,7 +137,7 @@ TEST_F( SecureCrdtQuorumGateTest, UnderSignedWriteNeverReportsQuorum )
     ASSERT_FALSE( read1.has_error() );
     EXPECT_FALSE( read1.value().has_value() );
 
-    auto sig1 = SignatureAsString( signers_[0]->Sign( payload ) );
+    auto sig1 = signers_[0]->Sign( payload );
     auto add1 = secure_crdt_->AddSignature( base_key, signers_[0]->GetAddress(), sig1 );
     ASSERT_FALSE( add1.has_error() ) << add1.error().message();
 
@@ -150,7 +145,8 @@ TEST_F( SecureCrdtQuorumGateTest, UnderSignedWriteNeverReportsQuorum )
     ASSERT_FALSE( read2.has_error() );
     EXPECT_FALSE( read2.value().has_value() ) << "1 signature < threshold 2 must never report quorum met";
 
-    auto add2 = secure_crdt_->AddSignature( base_key, signers_[1]->GetAddress(), "garbage-tampered-signature" );
+    const std::vector<uint8_t> invalid_signature = { 'g', 'a', 'r', 'b', 'a', 'g', 'e' };
+    auto add2 = secure_crdt_->AddSignature( base_key, signers_[1]->GetAddress(), invalid_signature );
     EXPECT_TRUE( add2.has_error() );
     EXPECT_EQ( add2.error(), SecureCrdt::Error::INVALID_SIGNATURE );
 

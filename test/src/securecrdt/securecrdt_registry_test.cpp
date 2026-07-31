@@ -65,6 +65,9 @@ TEST( SecureCrdtRegistryTest, RegisterAndResolveRoundTrip )
     ASSERT_NE( resolved_child, nullptr );
     EXPECT_EQ( resolved_child->key_pattern, kTestKeyPattern );
 
+    EXPECT_EQ( SecureCrdtRegistry::Resolve( std::string( kTestKeyPattern ) + "/sig/" ), nullptr );
+    EXPECT_EQ( SecureCrdtRegistry::Resolve( std::string( kTestKeyPattern ) + "/sig/addr1/extra" ), nullptr );
+
     // An unregistered key never resolves.
     EXPECT_EQ( SecureCrdtRegistry::Resolve( "gnus-other-key" ), nullptr );
 

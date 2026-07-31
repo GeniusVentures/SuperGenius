@@ -92,7 +92,7 @@ namespace sgns::securecrdt
 
     outcome::result<void> SecureCrdt::AddSignature( const sgns::crdt::HierarchicalKey &base_key,
                                                     const std::string                 &signer_address,
-                                                    std::string_view                   signature )
+                                                    const std::vector<uint8_t>        &signature )
     {
         logger_->trace( "{}: entry key={} signer={}", __func__, base_key.GetKey(), signer_address );
         const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
@@ -117,9 +117,8 @@ namespace sgns::securecrdt
             return outcome::failure( Error::INVALID_SIGNATURE );
         }
 
-        const std::vector<uint8_t> signature_bytes( signature.begin(), signature.end() );
         auto put_result = db_->Put( base_key.ChildString( "sig" ).ChildString( signer_address ),
-                                    sgns::base::Buffer( signature_bytes ), { topic_ } );
+                                    sgns::base::Buffer( signature ), { topic_ } );
         if ( put_result.has_error() )
         {
             logger_->error( "{}: Put failed key={} error={}", __func__, base_key.GetKey(),
@@ -151,7 +150,7 @@ namespace sgns::securecrdt
         const std::vector<uint8_t> payload = current_value.value().toVector();
 
         auto sig_query = db_->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
-        std::vector<std::pair<std::string, std::string>> collected_signatures;
+        multisig::CollectedSignatures collected_signatures;
         if ( !sig_query.has_error() )
         {
             for ( const auto &[key_buffer, value_buffer] : sig_query.value() )
@@ -162,8 +161,7 @@ namespace sgns::securecrdt
                 {
                     continue;
                 }
-                const auto sig_bytes = value_buffer.toVector();
-                collected_signatures.emplace_back( address, std::string( sig_bytes.begin(), sig_bytes.end() ) );
+                collected_signatures.emplace_back( address, value_buffer.toVector() );
             }
         }
 
@@ -197,7 +195,7 @@ namespace sgns::securecrdt
         const auto   entries        = SecureCrdtRegistry::AllEntries();
         for ( const auto &entry : entries )
         {
-            const std::string  pattern     = "/?" + entry.key_pattern + "(/sig/.*)?";
+            const std::string  pattern     = "/?" + entry.key_pattern + "(/sig/[^/]+)?";
             sgns::crdt::HierarchicalKey base_key( entry.key_pattern );
             const bool registered = db_->RegisterElementFilter(
                 pattern,
@@ -218,43 +216,41 @@ namespace sgns::securecrdt
     }
 
     std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterSecureCrdtUpdate(
-        const sgns::crdt::HierarchicalKey &base_key, const SecureCrdtRegistryEntry &entry,
-        const sgns::crdt::pb::Element &element )
+        const sgns::crdt::HierarchicalKey &base_key,
+        const SecureCrdtRegistryEntry     &entry,
+        const sgns::crdt::pb::Element     &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
-        const std::string address = LastKeySegment( element.key() );
-        const bool        is_signature_element = element.key() != base_key.GetKey() &&
-                                                  element.key() != ( "/" + base_key.GetKey() );
+        std::vector<uint8_t>              element_bytes( element.value().begin(), element.value().end() );
+        const sgns::crdt::HierarchicalKey element_key( element.key() );
 
-        std::vector<uint8_t> element_bytes( element.value().begin(), element.value().end() );
-
-        if ( is_signature_element )
+        if ( element_key == base_key )
         {
-            auto current_value = db_->Get( base_key );
-            if ( current_value.has_error() )
+            auto instance = entry.make_instance();
+            if ( !instance || !instance->DeserializeFromBytes( element_bytes ) || !instance->Verify( element_bytes ) )
             {
-                logger_->error( "{}: no base value yet, rejecting signature key={}", __func__, element.key() );
+                logger_->error( "{}: malformed/invalid remote value rejected key={}", __func__, element.key() );
                 return std::vector<sgns::crdt::pb::Element>{};
             }
-            const std::vector<uint8_t> payload = current_value.value().toVector();
-            const std::string          signature( element_bytes.begin(), element_bytes.end() );
-            if ( address.empty() || !multisig::VerifyPayloadSignature( address, signature, payload ) )
-            {
-                logger_->error( "{}: invalid remote signature rejected key={}", __func__, element.key() );
-                return std::vector<sgns::crdt::pb::Element>{};
-            }
-            logger_->debug( "{}: remote signature accepted key={}", __func__, element.key() );
+
+            logger_->debug( "{}: remote value accepted key={}", __func__, element.key() );
             return std::nullopt;
         }
 
-        auto instance = entry.make_instance();
-        if ( !instance || !instance->DeserializeFromBytes( element_bytes ) || !instance->Verify( element_bytes ) )
+        const std::string address       = element_key.GetList().back();
+        auto              current_value = db_->Get( base_key );
+        if ( current_value.has_error() )
         {
-            logger_->error( "{}: malformed/invalid remote value rejected key={}", __func__, element.key() );
+            logger_->error( "{}: no base value yet, rejecting signature key={}", __func__, element.key() );
             return std::vector<sgns::crdt::pb::Element>{};
         }
-
-        logger_->debug( "{}: remote value accepted key={}", __func__, element.key() );
+        const std::vector<uint8_t> payload = current_value.value().toVector();
+        if ( !multisig::VerifyPayloadSignature( address, element_bytes, payload ) )
+        {
+            logger_->error( "{}: invalid remote signature rejected key={}", __func__, element.key() );
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+        logger_->debug( "{}: remote signature accepted key={}", __func__, element.key() );
         return std::nullopt;
     }
 } // namespace sgns::securecrdt

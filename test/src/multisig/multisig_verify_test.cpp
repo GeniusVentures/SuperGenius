@@ -12,11 +12,6 @@ namespace
 
     constexpr char PRIVATE_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
-    std::string_view AsStringView( const std::vector<uint8_t> &signature )
-    {
-        return { reinterpret_cast<const char *>( signature.data() ), signature.size() };
-    }
-
     class MultiSigVerifyTest : public ::testing::Test
     {
     protected:
@@ -46,8 +41,7 @@ TEST_F( MultiSigVerifyTest, ValidSignatureVerifiesTrue )
     const std::vector<uint8_t> payload = { 'p', 'a', 'y', 'l', 'o', 'a', 'd' };
     const auto                 signature = account->Sign( payload );
 
-    EXPECT_TRUE(
-        multisig::VerifyPayloadSignature( account->GetAddress(), AsStringView( signature ), payload ) );
+    EXPECT_TRUE( multisig::VerifyPayloadSignature( account->GetAddress(), signature, payload ) );
 }
 
 TEST_F( MultiSigVerifyTest, TamperedPayloadVerifiesFalse )
@@ -59,8 +53,7 @@ TEST_F( MultiSigVerifyTest, TamperedPayloadVerifiesFalse )
     const std::vector<uint8_t> tampered_payload  = { 'p', 'a', 'y', 'l', 'o', 'a', 'X' };
     const auto                 signature        = account->Sign( payload );
 
-    EXPECT_FALSE( multisig::VerifyPayloadSignature(
-        account->GetAddress(), AsStringView( signature ), tampered_payload ) );
+    EXPECT_FALSE( multisig::VerifyPayloadSignature( account->GetAddress(), signature, tampered_payload ) );
 }
 
 TEST_F( MultiSigVerifyTest, TamperedSignatureVerifiesFalse )
@@ -72,8 +65,7 @@ TEST_F( MultiSigVerifyTest, TamperedSignatureVerifiesFalse )
     auto                        signature = account->Sign( payload );
     signature.front() ^= 1;
 
-    EXPECT_FALSE(
-        multisig::VerifyPayloadSignature( account->GetAddress(), AsStringView( signature ), payload ) );
+    EXPECT_FALSE( multisig::VerifyPayloadSignature( account->GetAddress(), signature, payload ) );
 }
 
 TEST_F( MultiSigVerifyTest, WrongSizeSignatureVerifiesFalse )
@@ -83,5 +75,6 @@ TEST_F( MultiSigVerifyTest, WrongSizeSignatureVerifiesFalse )
 
     const std::vector<uint8_t> payload = { 'p', 'a', 'y', 'l', 'o', 'a', 'd' };
 
-    EXPECT_FALSE( multisig::VerifyPayloadSignature( account->GetAddress(), "short", payload ) );
+    EXPECT_FALSE( multisig::VerifyPayloadSignature(
+        account->GetAddress(), std::vector<uint8_t>{ 's', 'h', 'o', 'r', 't' }, payload ) );
 }

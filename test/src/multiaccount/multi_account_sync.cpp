@@ -74,7 +74,7 @@ namespace sgns
             return true;
         }
 
-        static std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
+        static inline std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
         {
             return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
         }

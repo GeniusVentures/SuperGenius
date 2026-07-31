@@ -22,11 +22,6 @@ namespace
     constexpr char OUTSIDER_PRIVATE_KEY[] =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaf";
 
-    std::string SignatureAsString( const std::vector<uint8_t> &signature )
-    {
-        return std::string( signature.begin(), signature.end() );
-    }
-
     class MultiSigQuorumTest : public ::testing::Test
     {
     protected:
@@ -63,10 +58,10 @@ namespace
 
 TEST_F( MultiSigQuorumTest, ExactlyThresholdOfFiveHasQuorum )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
     for ( size_t i = 0; i < 3; ++i )
     {
-        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+        collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
 
     auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
@@ -76,10 +71,10 @@ TEST_F( MultiSigQuorumTest, ExactlyThresholdOfFiveHasQuorum )
 
 TEST_F( MultiSigQuorumTest, OneBelowThresholdNoQuorum )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
     for ( size_t i = 0; i < 2; ++i )
     {
-        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+        collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
 
     auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
@@ -89,10 +84,10 @@ TEST_F( MultiSigQuorumTest, OneBelowThresholdNoQuorum )
 
 TEST_F( MultiSigQuorumTest, AllFiveSignersHasQuorum )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
     for ( auto &signer : signers_ )
     {
-        collected.emplace_back( signer->GetAddress(), SignatureAsString( signer->Sign( payload_ ) ) );
+        collected.emplace_back( signer->GetAddress(), signer->Sign( payload_ ) );
     }
 
     auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
@@ -102,14 +97,14 @@ TEST_F( MultiSigQuorumTest, AllFiveSignersHasQuorum )
 
 TEST_F( MultiSigQuorumTest, DuplicateSignerWithGarbageDoesNotFlipQuorum )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
     for ( size_t i = 0; i < 3; ++i )
     {
-        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+        collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
     // Same signer as signers_[0], but with a garbage signature this time — dedup must
     // run before verification so this never gets a chance to invalidate the earlier count.
-    collected.emplace_back( signers_[0]->GetAddress(), std::string( 64, '\0' ) );
+    collected.emplace_back( signers_[0]->GetAddress(), std::vector<uint8_t>( 64, 0 ) );
 
     auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
     EXPECT_TRUE( result.has_quorum );
@@ -118,13 +113,13 @@ TEST_F( MultiSigQuorumTest, DuplicateSignerWithGarbageDoesNotFlipQuorum )
 
 TEST_F( MultiSigQuorumTest, UnauthorizedSignerNotCounted )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
     for ( size_t i = 0; i < 2; ++i )
     {
-        collected.emplace_back( signers_[i]->GetAddress(), SignatureAsString( signers_[i]->Sign( payload_ ) ) );
+        collected.emplace_back( signers_[i]->GetAddress(), signers_[i]->Sign( payload_ ) );
     }
     // Outsider signs validly, but is not in signer_set_ — must not count toward quorum.
-    collected.emplace_back( outsider_->GetAddress(), SignatureAsString( outsider_->Sign( payload_ ) ) );
+    collected.emplace_back( outsider_->GetAddress(), outsider_->Sign( payload_ ) );
 
     auto result = multisig::EvaluateQuorum( signer_set_, 3, collected, payload_ );
     EXPECT_FALSE( result.has_quorum );
@@ -133,7 +128,7 @@ TEST_F( MultiSigQuorumTest, UnauthorizedSignerNotCounted )
 
 TEST_F( MultiSigQuorumTest, ZeroThresholdWithEmptyCollectedHasQuorum )
 {
-    std::vector<std::pair<std::string, std::string>> collected;
+    multisig::CollectedSignatures collected;
 
     auto result = multisig::EvaluateQuorum( signer_set_, 0, collected, payload_ );
     EXPECT_TRUE( result.has_quorum );

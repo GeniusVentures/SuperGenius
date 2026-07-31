@@ -94,7 +94,7 @@ namespace sgns::securecrdt
          */
         outcome::result<void> AddSignature( const sgns::crdt::HierarchicalKey &base_key,
                                             const std::string                 &signer_address,
-                                            std::string_view                   signature );
+                                            const std::vector<uint8_t>        &signature );
 
         /**
          * @brief Returns the current value at base_key only once threshold
