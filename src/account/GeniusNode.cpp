@@ -1596,9 +1596,13 @@ namespace sgns
         return logger;
     }
 
-    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account )
+    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account,
+                                                                    bool release_members )
     {
-        ResetProcessingMembers();
+        if ( processing_service_ )
+        {
+            processing_service_->StopProcessing();
+        }
 
         // Invalidate any in-flight async bridge init and drop its observer
         // registrations BEFORE bridge_relayer_ is destroyed. The posted init
@@ -1619,13 +1623,15 @@ namespace sgns
         {
             transaction_manager_->Stop();
         }
-        transaction_manager_.reset();
 
-        bridge_relayer_.reset();
-
-        eth_watch_service_.reset();
-
-        blockchain_.reset();
+        if ( release_members )
+        {
+            ResetProcessingMembers();
+            transaction_manager_.reset();
+            bridge_relayer_.reset();
+            eth_watch_service_.reset();
+            blockchain_.reset();
+        }
 
         if ( deconfigure_account && account_ )
         {
@@ -1633,6 +1639,53 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
+    {
+        // The timer's completion handler captures a scheduling closure associated
+        // with this node. Destroy it while the io_context is still alive.
+        if ( gc_timer_ )
+        {
+            boost::system::error_code ignored;
+            gc_timer_->cancel( ignored );
+            gc_timer_.reset();
+        }
+
+        // Account-bound services depend on GlobalDB, which in turn depends on
+        // GraphSync, the scheduler, PubSub, and the io_context.
+        ResetProcessingMembers();
+        transaction_manager_.reset();
+        bridge_relayer_.reset();
+        eth_watch_service_.reset();
+        blockchain_.reset();
+
+        {
+            std::lock_guard<std::mutex> lock( migration_mutex_ );
+            migration_manager_.reset();
+        }
+
+        if ( job_globaldb_ )
+        {
+            job_globaldb_->ShutdownNow();
+        }
+        job_globaldb_.reset();
+        tx_globaldb_.reset();
+
+        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
+        // PubSub host and scheduler. Release dependents before their providers.
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        bitswap_.reset();
+        bitswap_event_bus_.reset();
+        graphsyncnetwork_.reset();
+        generator_.reset();
+        scheduler_.reset();
+
+        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
+        // account_ is declared before io_, so relying on implicit destruction
+        // would otherwise destroy its messenger after the io_context.
+        account_.reset();
+        pubsub_.reset();
     }
 
     void GeniusNode::ShutdownForDestruction()
@@ -1659,6 +1712,12 @@ namespace sgns
             health_check_handle_.reset();
         }
 
+        if ( gc_timer_ )
+        {
+            boost::system::error_code ignored;
+            gc_timer_->cancel( ignored );
+        }
+
         // Unsubscribe from bootstrap disconnect events
         if ( bootstrap_disconnect_subscription_ )
         {
@@ -1666,7 +1725,9 @@ namespace sgns
             bootstrap_disconnect_subscription_.reset();
         }
 
-        auto services_shutdown = ShutdownAccountBoundServices( true );
+        // Stop and unregister account-bound work, but retain the owning objects
+        // until the io_context has been stopped and all handlers have drained.
+        auto services_shutdown = ShutdownAccountBoundServices( true, false );
         if ( services_shutdown.has_error() )
         {
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
@@ -1731,11 +1792,10 @@ namespace sgns
             }
         }
 
-        // Now that no io_context thread can still be running, it is safe to
-        // destroy PubSub and release Bitswap from the process-global FileManager.
-        FileManager::GetInstance().clearBitswap( bitswap_ );
-        bitswap_.reset();
-        pubsub_.reset();
+        // Destroy the complete runtime graph in dependency order while io_ is
+        // still alive. This also tears down AccountMessenger subscriptions before
+        // the io_context is implicitly destroyed with the remaining members.
+        ReleaseRuntimeMembersAfterIoStopped();
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
