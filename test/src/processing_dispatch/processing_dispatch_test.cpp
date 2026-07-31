@@ -8,6 +8,7 @@
 #include "SGNSProcMain.hpp"
 #include "Generators.hpp"
 #include <processingbase/ProcessingManager.hpp>
+#include <processors/vulkan_gpu_probe.hpp>
 
 namespace sgns
 {
@@ -264,6 +265,12 @@ namespace sgns
 
     TEST_F( ProcessingDispatchTest, RenderPassSameNodeRepeatedExecutionProducesBitExactHash )
     {
+        if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+        {
+            GTEST_SKIP() << "No usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) found on this "
+                            "host; skipping this GPU-dependent test, not failing it.";
+        }
+
         WriteHappyPathVertexData();
 
         std::string json_data = LoadJson( "render-pass-happy-path-definition.json" );
@@ -303,5 +310,49 @@ namespace sgns
                 << "Iteration " << i << "'s hash diverged from iteration 0's hash -- DETV-01's "
                    "bit-exact same-node repeat-run claim does not hold for this render pass";
         }
+    }
+
+    /// E2E-01: proves a real render-pass job definition executes end-to-end through the
+    /// actual ProcessingManager/RenderProcessor code path and produces a verified output
+    /// hash. Single-run only -- kept conceptually distinct from
+    /// RenderPassSameNodeRepeatedExecutionProducesBitExactHash's DETV-01 bit-exact-repeat
+    /// concern (10x loop), even though both reuse the same happy-path fixture (D-35).
+    TEST_F( ProcessingDispatchTest, RenderPassEndToEndProducesVerifiedOutputHash )
+    {
+        if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+        {
+            GTEST_SKIP() << "No usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) found on this "
+                            "host; skipping this GPU-dependent test, not failing it.";
+        }
+
+        WriteHappyPathVertexData();
+
+        std::string json_data = LoadJson( "render-pass-happy-path-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load happy-path fixture";
+
+        auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+        ASSERT_TRUE( mgr_result.has_value() ) << "ProcessingManager::Create failed";
+
+        auto manager = mgr_result.value();
+
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:renderInput" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+        ASSERT_TRUE( process_result.has_value() )
+            << "Process() failed: "
+            << ( process_result ? "" : process_result.error().message() )
+            << " -- a real Vulkan-capable GPU is a hard prerequisite for this test";
+
+        const std::vector<uint8_t> &hash = process_result.value();
+
+        ASSERT_EQ( hash.size(), 32u ) << "Output hash must be a 32-byte SHA-256 digest";
+        ASSERT_NE( hash, std::vector<uint8_t>( 32, 0 ) )
+            << "Output hash must not be RenderProcessor::MakeError's all-zero sentinel vector";
     }
 }
