@@ -1,6 +1,6 @@
 /**
  * @file       TestMintInputValidator.hpp
- * @brief      Test-only input validator that accepts mint transactions for chain_id="test"
+ * @brief      Test-only input validator that accepts synthetic mint transactions
  *             without requiring RPC burn verification.
  * @date       2026-06-09
  */
@@ -11,14 +11,16 @@
 
 namespace sgns::test
 {
+    /// Canonical numeric chain id reserved by tests for RPC-free synthetic mints.
+    inline constexpr char kTestMintChainId[] = "0";
+
     class TestMintInputValidator final : public IInputValidator
     {
     public:
         static bool RegisterTestValidator()
         {
             static TestMintInputValidator instance;
-            IInputValidator::Register( "test", &instance );
-            IInputValidator::Register( "0", &instance );
+            IInputValidator::Register( kTestMintChainId, &instance );
             return true;
         }
 

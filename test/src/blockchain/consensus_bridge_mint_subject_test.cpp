@@ -76,6 +76,14 @@ namespace
         EXPECT_FALSE( ConsensusManager::IsBridgeMintSubject( proposal ) );
     }
 
+    // Chain zero is the canonical numeric identity used by test-only mint
+    // validators and must retain single-pool quorum without RPC slot votes.
+    TEST( ConsensusBridgeMintSubjectTest, MintV2WithCanonicalTestChainIdIsNotBridgeMint )
+    {
+        const auto proposal = MakeProposalWithTx( MakeMintV2Tx( "0" ) );
+        EXPECT_FALSE( ConsensusManager::IsBridgeMintSubject( proposal ) );
+    }
+
     // A MintV2 with an EMPTY chain_id is NOT a bridge mint -- it is a native
     // mint and uses single-pool quorum.
     TEST( ConsensusBridgeMintSubjectTest, MintV2WithEmptyChainIdIsNotBridgeMint )

@@ -84,7 +84,7 @@ TEST_F( AccountManagement, CanSelectAccountThatWasAdded )
 TEST_F( AccountManagement, TransferAccount )
 {
     ASSERT_TRUE(
-        node_->MintTokens( 200, sgns::test::NextMintSourceHash(), "test", 0u, TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
+        node_->MintTokens( 200, sgns::test::NextMintSourceHash(), sgns::test::kTestMintChainId, 0u, TOKEN_ID, "", GeniusNode::TIMEOUT_MINT )
             .has_value() );
     auto balance               = node_->GetBalance();
     auto other_account_address = GeniusAccount::NewFromRandomMnemonic( TOKEN_ID, path, true ).first->GetAddress();
@@ -311,7 +311,7 @@ TEST_F( AccountManagement, SetPayoutAddress )
 
     auto mint_result = node_requester->MintTokens( 50000000000,
                                                    sgns::test::NextMintSourceHash(),
-                                                   "test", 0u,
+                                                   sgns::test::kTestMintChainId, 0u,
                                                    TOKEN_ID,
                                                    "",
                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
