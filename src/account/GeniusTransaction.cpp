@@ -1,9 +1,6 @@
 #include "GeniusTransaction.hpp"
 
-#include <algorithm>
-#include <cctype>
-
-#include "base/hexutil.hpp"
+#include "blockchain/ConsensusSlot.hpp"
 #include "crypto/hasher.hpp"
 
 namespace sgns
@@ -122,28 +119,12 @@ namespace sgns
     outcome::result<std::string> GeniusTransaction::MakeNonceSlotPreimage( std::string_view source_address,
                                                                            uint64_t         nonce )
     {
-        if ( source_address.size() != 128 ||
-             !std::all_of(
-                 source_address.begin(),
-                 source_address.end(),
-                 []( unsigned char c )
-                 {
-                     return std::isdigit( c ) != 0 || ( c >= 'a' && c <= 'f' );
-                 } ) )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        std::string preimage( source_address );
-        preimage += ":";
-        preimage += std::to_string( nonce );
-        return preimage;
+        return consensus_slot::MakeNoncePreimage( source_address, nonce );
     }
 
     std::string GeniusTransaction::HashSlotPreimage( std::string_view preimage )
     {
-        const auto hash = crypto::sha2_256( preimage.data(), preimage.size() );
-        return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        return consensus_slot::HashPreimage( preimage );
     }
 
     outcome::result<std::string> GeniusTransaction::GetSlotPreimage() const

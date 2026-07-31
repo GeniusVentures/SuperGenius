@@ -24,8 +24,8 @@
 #include "base/sgns_version.hpp"
 #include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
-#include "account/GeniusTransaction.hpp"
 #include "blockchain/ConsensusAuth.hpp"
+#include "blockchain/ConsensusSlot.hpp"
 #include "storage/database_error.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, ConsensusManager::CertificateStoreError, error )
@@ -223,7 +223,7 @@ namespace sgns
         outcome::result<std::string> MintSlotForOutpoint(
             const ConsensusStateStore::BurnOutpoint &outpoint )
         {
-            return GeniusTransaction::HashSlotPreimage(
+            return consensus_slot::HashPreimage(
                 "mint-v2:" + outpoint.source_chain + ":" + outpoint.burn_hash + ":" +
                 std::to_string( outpoint.receipt_log_index ) );
         }
@@ -237,8 +237,8 @@ namespace sgns
                 return MintSlotForOutpoint( outpoint );
             }
             BOOST_OUTCOME_TRY( auto preimage,
-                               GeniusTransaction::MakeNonceSlotPreimage( subject.account_id(), nonce.nonce() ) );
-            return GeniusTransaction::HashSlotPreimage( preimage );
+                               consensus_slot::MakeNoncePreimage( subject.account_id(), nonce.nonce() ) );
+            return consensus_slot::HashPreimage( preimage );
         }
     } // namespace
 
