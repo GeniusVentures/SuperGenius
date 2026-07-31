@@ -39,6 +39,24 @@ namespace sgns
                                  std::istreambuf_iterator<char>() );
             return content;
         }
+
+        /// Writes the happy-path fixture's vertex data (3 scalar floats, matching
+        /// vertex_layout's single FLOAT32 entry's auto-computed 4-byte stride) as a real
+        /// binary file at the path "file://processing_dispatch/happy-path-vertex-data.raw"
+        /// resolves to -- following LoadJson's exact path-construction convention so the
+        /// file lands where FileManager's "file" scheme actually looks for it.
+        static void WriteHappyPathVertexData()
+        {
+            std::string bin_path  = boost::dll::program_location().parent_path().string() + "/";
+            std::string data_path = bin_path + "./processing_dispatch/";
+            std::string file_path = data_path + "happy-path-vertex-data.raw";
+
+            float values[3] = { -0.5f, 0.0f, 0.5f };
+
+            std::ofstream stream( file_path, std::ios::binary );
+            stream.write( reinterpret_cast<const char *>( values ), sizeof( values ) );
+            stream.close();
+        }
     };
 
     TEST_F( ProcessingDispatchTest, RenderPassMissingShaderFailsValidity )
@@ -242,5 +260,48 @@ namespace sgns
             << "A schema-invalid enum value must surface as INVALID_JSON, not propagate an "
                "uncaught exception (this is the previously-live crash vector Init()'s broadened "
                "catch(const std::exception&) is meant to close)";
+    }
+
+    TEST_F( ProcessingDispatchTest, RenderPassSameNodeRepeatedExecutionProducesBitExactHash )
+    {
+        WriteHappyPathVertexData();
+
+        std::string json_data = LoadJson( "render-pass-happy-path-definition.json" );
+        ASSERT_FALSE( json_data.empty() ) << "Could not load happy-path fixture";
+
+        std::vector<std::vector<uint8_t>> allHashes;
+
+        for ( int i = 0; i < 10; ++i )
+        {
+            auto mgr_result = sgns::sgprocessing::ProcessingManager::Create( json_data );
+            ASSERT_TRUE( mgr_result.has_value() ) << "Iteration " << i << ": ProcessingManager::Create failed";
+
+            auto manager = mgr_result.value();
+
+            sgns::ModelNode model_node;
+            model_node.set_source( std::string( "input:renderInput" ) );
+
+            auto                               ioc = std::make_shared<boost::asio::io_context>();
+            std::vector<std::vector<uint8_t>> chunkhashes;
+            std::vector<std::string>          output_locations;
+
+            auto process_result = manager->Process( ioc, chunkhashes, model_node, output_locations );
+
+            ASSERT_TRUE( process_result.has_value() )
+                << "Iteration " << i << " failed: "
+                << ( process_result ? "" : process_result.error().message() )
+                << " -- a real Vulkan-capable GPU is a hard prerequisite for this test; this failure "
+                   "is either a real determinism/implementation bug or an environment without a "
+                   "usable Vulkan device (no software fallback exists in this codebase)";
+
+            allHashes.push_back( process_result.value() );
+        }
+
+        for ( size_t i = 1; i < allHashes.size(); ++i )
+        {
+            ASSERT_EQ( allHashes[i], allHashes[0] )
+                << "Iteration " << i << "'s hash diverged from iteration 0's hash -- DETV-01's "
+                   "bit-exact same-node repeat-run claim does not hold for this render pass";
+        }
     }
 }
