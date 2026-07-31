@@ -22,9 +22,6 @@ namespace sgns::securecrdt
     class ISignedCRDTData
     {
     public:
-        /**
-         * @brief Destroys the signed CRDT data instance.
-         */
         virtual ~ISignedCRDTData() = default;
 
         /**
