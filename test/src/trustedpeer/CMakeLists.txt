@@ -5,6 +5,7 @@ set(TRUSTEDPEER_TEST_NODE_LIBS
     multisig
     json_secure_storage
     libsecp256k1::secp256k1
+    sgns_genius_account
 )
 
 addtest(trustedpeerregistry_genesis_test
