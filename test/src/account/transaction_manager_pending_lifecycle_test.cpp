@@ -50,6 +50,13 @@ namespace sgns
         {
             manager.TickOnce();
         }
+
+        static outcome::result<void> ChangeTransactionState( TransactionManager                       &manager,
+                                                             const std::shared_ptr<GeniusTransaction> &transaction,
+                                                             TransactionManager::TransactionStatus     status )
+        {
+            return manager.ChangeTransactionState( transaction, status );
+        }
     };
 } // namespace sgns
 
@@ -338,6 +345,85 @@ TEST_F( TransactionManagerRecoveryTest, LocalNonceAheadChecksTrackedTransactions
     EXPECT_EQ( manager_->GetState(), sgns::TransactionManager::State::SYNCING );
     EXPECT_EQ( manager_->GetTransactionStatusByTxId( transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::CONFIRMED );
+}
+
+TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitCompletesOnTerminalState )
+{
+    auto transaction = MakeTransaction();
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+
+    std::optional<sgns::TransactionManager::TransactionCompletion> completion;
+    manager_->AsyncWaitForTransactionOutgoing( transaction->GetHash(),
+                                               std::chrono::seconds( 5 ),
+                                               [&]( sgns::TransactionManager::TransactionCompletion result )
+                                               { completion = std::move( result ); } );
+
+    ASSERT_TRUE( sgns::TransactionManagerPendingLifecycleTestAccess::ChangeTransactionState(
+                     *manager_,
+                     transaction,
+                     sgns::TransactionManager::TransactionStatus::FAILED )
+                     .has_value() );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            io_->restart();
+            io_->poll();
+            return completion.has_value();
+        },
+        std::chrono::seconds( 1 ),
+        "asynchronous transaction completion was not delivered" );
+
+    ASSERT_TRUE( completion.has_value() );
+    EXPECT_EQ( completion->transaction_id, transaction->GetHash() );
+    EXPECT_EQ( completion->status, sgns::TransactionManager::TransactionStatus::FAILED );
+    EXPECT_FALSE( completion->error );
+}
+
+TEST_F( TransactionManagerRecoveryTest, StopCancelsPendingOutgoingWait )
+{
+    auto transaction = MakeTransaction();
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+
+    std::optional<sgns::TransactionManager::TransactionCompletion> completion;
+    manager_->AsyncWaitForTransactionOutgoing( transaction->GetHash(),
+                                               std::chrono::seconds( 30 ),
+                                               [&]( sgns::TransactionManager::TransactionCompletion result )
+                                               { completion = std::move( result ); } );
+
+    manager_->Stop();
+
+    ASSERT_TRUE( completion.has_value() );
+    EXPECT_EQ( completion->transaction_id, transaction->GetHash() );
+    EXPECT_EQ( completion->status, sgns::TransactionManager::TransactionStatus::INVALID );
+    EXPECT_EQ( completion->error, boost::asio::error::operation_aborted );
+}
+
+TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitTimesOutWithoutPollingThread )
+{
+    auto transaction = MakeTransaction();
+    sgns::TransactionManagerPendingLifecycleTestAccess::Enqueue( *manager_, transaction, db_->BeginTransaction() );
+
+    std::optional<sgns::TransactionManager::TransactionCompletion> completion;
+    manager_->AsyncWaitForTransactionOutgoing(
+        transaction->GetHash(),
+        std::chrono::milliseconds( 10 ),
+        [&]( sgns::TransactionManager::TransactionCompletion result ) { completion = std::move( result ); } );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            io_->restart();
+            io_->poll();
+            return completion.has_value();
+        },
+        std::chrono::seconds( 1 ),
+        "asynchronous transaction timeout was not delivered" );
+
+    ASSERT_TRUE( completion.has_value() );
+    EXPECT_EQ( completion->transaction_id, transaction->GetHash() );
+    EXPECT_EQ( completion->status, sgns::TransactionManager::TransactionStatus::CREATED );
+    EXPECT_EQ( completion->error, boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
 }
 
 TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPreviousTransactionIsNotTracked )

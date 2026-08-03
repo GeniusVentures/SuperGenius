@@ -2597,36 +2597,6 @@ namespace sgns
         return std::nullopt;
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(
-        const std::string                       &escrow_path,
-        const SGProcessing::TaskResult          &taskresult,
-        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
-        std::chrono::milliseconds                timeout )
-    {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
-        {
-            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
-        }
-        auto start_time = std::chrono::steady_clock::now();
-
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
-
-        auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( payescrow_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "Pay escrow transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
-
-        node_logger_->debug( "Pay escrow transaction {} completed in {} ms", tx_id, duration );
-        return std::make_pair( tx_id, duration );
-    }
-
     uint64_t GeniusNode::GetBalance()
     {
         return account_->GetUTXOManager().GetBalance();
@@ -2649,78 +2619,85 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        static constexpr std::string_view FUNC = __func__;
-        boost::asio::post( boost::asio::system_executor{},
-                           [weak_self( weak_from_this() ), task_id, taskresult]()
-                           {
-                               if ( auto strong = weak_self.lock() )
-                               {
-                                   strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC,
-                                                               task_id );
+        static constexpr std::string_view FUNC        = __func__;
+        const auto                        account_tag = account_->GetAddress().substr( 0, 8 );
+        node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
-                                   if ( strong->task_queue_->IsTaskCompleted( task_id ) )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Task Already completed!",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC );
-                                       return;
-                                   }
-                                   if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC );
-                                       return;
-                                   }
-                                   strong->node_logger_->info( "[{}]{}: Transactions READY",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC );
+        if ( task_queue_->IsTaskCompleted( task_id ) )
+        {
+            node_logger_->info( "[{}]{}: Task Already completed!", account_tag, FUNC );
+            return;
+        }
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->info( "[{}]{}: Transactions are not ready", account_tag, FUNC );
+            return;
+        }
 
-                                   auto maybe_task = strong->task_queue_->GetTask( task_id );
-                                   if ( maybe_task.has_failure() )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC,
-                                                                   task_id );
-                                       return;
-                                   }
+        auto maybe_task = task_queue_->GetTask( task_id );
+        if ( maybe_task.has_failure() )
+        {
+            node_logger_->info( "[{}]{}: Task id {} not found in DB", account_tag, FUNC, task_id );
+            return;
+        }
 
-                                   auto escrow_path          = maybe_task.value().escrow_path();
-                                   auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
-                                   if ( complete_task_result.has_failure() )
-                                   {
-                                       strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
-                                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                                    FUNC,
-                                                                    task_id );
-                                       return;
-                                   }
+        auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
+        if ( complete_task_result.has_failure() )
+        {
+            node_logger_->error( "[{}]{}: Unable to complete task: {} ", account_tag, FUNC, task_id );
+            return;
+        }
 
-                                   strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC );
+        auto manager_result = GetTransactionManager();
+        if ( manager_result.has_failure() )
+        {
+            node_logger_->error( "[{}]{}: Unable to access transaction manager for task: {}",
+                                 account_tag,
+                                 FUNC,
+                                 task_id );
+            return;
+        }
 
-                                   auto pay_result = strong->PayEscrow( escrow_path,
-                                                                        taskresult,
-                                                                        std::move( complete_task_result.value() ) );
-                                   if ( pay_result.has_failure() )
-                                   {
-                                       strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
-                                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                                    FUNC,
-                                                                    task_id );
-                                       return;
-                                   }
+        node_logger_->info( "[{}]{}: Creating the payout transaction", account_tag, FUNC );
+        manager_result.value()->AsyncPayEscrow(
+            maybe_task.value().escrow_path(),
+            taskresult,
+            std::move( complete_task_result.value() ),
+            TIMEOUT_ESCROW_PAY,
+            [logger = node_logger_, account_tag, task_id]( TransactionManager::TransactionCompletion completion )
+            {
+                if ( completion.error == boost::asio::error::operation_aborted )
+                {
+                    logger->debug( "[{}]ProcessingDone: Escrow payout cancelled during shutdown for task {}",
+                                   account_tag,
+                                   task_id );
+                    return;
+                }
+                if ( completion.error )
+                {
+                    logger->error( "[{}]ProcessingDone: Escrow payout failed for task {} after {} ms: {}",
+                                   account_tag,
+                                   task_id,
+                                   completion.elapsed.count(),
+                                   completion.error.message() );
+                    return;
+                }
+                if ( completion.status != TransactionManager::TransactionStatus::CONFIRMED )
+                {
+                    logger->error( "[{}]ProcessingDone: Escrow payout transaction {} ended in state {} for task {}",
+                                   account_tag,
+                                   completion.transaction_id,
+                                   static_cast<int>( completion.status ),
+                                   task_id );
+                    return;
+                }
 
-                                   strong->node_logger_->info( "[{}]{}: Paid for task: {}",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC,
-                                                               task_id );
-                               }
-                           } );
+                logger->info( "[{}]ProcessingDone: Paid for task {} with transaction {} in {} ms",
+                              account_tag,
+                              task_id,
+                              completion.transaction_id,
+                              completion.elapsed.count() );
+            } );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )

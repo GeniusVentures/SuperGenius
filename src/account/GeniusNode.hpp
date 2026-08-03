@@ -1091,20 +1091,6 @@ namespace sgns
         crdt::GlobalDB::BackupOptions crdt_backup_config_{ true, 15, 12, true };
 
         /**
-         * @brief Submits an escrow payout transaction and waits for confirmation.
-         * @param[in] escrow_path Escrow address/path associated with the completed task.
-         * @param[in] taskresult Processing task result that defines payout recipients.
-         * @param[in] crdt_transaction Atomic CRDT transaction that marks task completion.
-         * @param[in] timeout Maximum time to wait for escrow payout confirmation.
-         * @return Pair of payout transaction hash and elapsed milliseconds, or a payout/timeout error.
-         */
-        outcome::result<std::pair<std::string, uint64_t>> PayEscrow(
-            const std::string                       &escrow_path,
-            const SGProcessing::TaskResult          &taskresult,
-            std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
-            std::chrono::milliseconds                timeout = std::chrono::milliseconds( TIMEOUT_ESCROW_PAY ) );
-
-        /**
          * @brief Handles successful processing completion and triggers escrow payout.
          * @param[in] task_id Completed task identifier.
          * @param[in] taskresult Processing task result to persist and pay out.
