@@ -4,6 +4,7 @@ addtest(shader_compiler_test
 
 target_link_libraries(shader_compiler_test
     SGShaderCompiler
+    Boost::filesystem
 )
 
 add_custom_command(TARGET shader_compiler_test POST_BUILD

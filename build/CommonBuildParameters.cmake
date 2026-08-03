@@ -106,26 +106,22 @@ endif()
 set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
 find_package(vk-bootstrap CONFIG REQUIRED)
 
-# SPIRV-Tools — installs a CMake package config (verified in the real installed tree at
-# SPIRV-Tools/SPIRV-Tools/cmake/SPIRV-ToolsConfig.cmake, not the lib/cmake/<name> layout most
-# other deps here use), exporting the bare, non-namespaced SPIRV-Tools-static target (confirmed:
-# only the static variant is built, per SPIRV_SKIP_TESTS/SPIRV_SKIP_EXECUTABLES cache args in
-# thirdparty/build/CommonTargets.cmake — no shared lib). Alias to the namespaced name this
-# project's code expects.
-set(SPIRV-Tools_DIR "${_THIRDPARTY_BUILD_DIR}/SPIRV-Tools/SPIRV-Tools/cmake")
-find_package(SPIRV-Tools CONFIG REQUIRED)
-if(NOT TARGET SPIRV-Tools::SPIRV-Tools)
-    add_library(SPIRV-Tools::SPIRV-Tools ALIAS SPIRV-Tools-static)
-endif()
+# SPIRV-Tools — no longer a standalone build.  libshaderc_combined (linked via
+# shaderc::shaderc below) statically bundles the exact same SPIRV-Tools code at the
+# exact same pinned commit (v2024.3 DEPS).  The spirv-tools include path is folded into
+# shaderc::shaderc's INTERFACE_INCLUDE_DIRECTORIES so <spirv-tools/libspirv.hpp> resolves.
 
 # shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
 # github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
 # IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
+# libshaderc_combined statically bundles glslang+SPIRV-Tools — the spirv-tools include
+# path is added here so <spirv-tools/libspirv.hpp> resolves for consumers that call
+# spvtools::SpirvTools::Validate() directly (SHADER-02 spirv-val gate).
 if(NOT TARGET shaderc::shaderc)
     add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
     set_target_properties(shaderc::shaderc PROPERTIES
         IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include;${_THIRDPARTY_BUILD_DIR}/../../../../shaderc/third_party/spirv-tools/include"
     )
 endif()
 
@@ -283,6 +279,17 @@ if(NOT TARGET Vulkan::Vulkan)
     endif()
 
     find_package(Vulkan REQUIRED)
+endif()
+
+# On Android, override Vulkan::Vulkan to use our vendored Vulkan-Headers
+# instead of the NDK's system headers.  The NDK ships v1.3 headers but
+# vk-bootstrap was built against our v1.4 Vulkan-Headers; mixing versions
+# causes unknown-type errors in VkBootstrapDispatch.h (*LegacyNV renames,
+# DepthClampRangeEXT -> DepthClampEnableEXT, etc.).
+if(ANDROID)
+    set_target_properties(Vulkan::Vulkan PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
+    )
 endif()
 
 # ipfs-lite-cpp
