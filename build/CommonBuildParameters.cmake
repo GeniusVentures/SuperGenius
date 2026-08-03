@@ -281,16 +281,13 @@ if(NOT TARGET Vulkan::Vulkan)
     find_package(Vulkan REQUIRED)
 endif()
 
-# On Android, override Vulkan::Vulkan to use our vendored Vulkan-Headers
-# instead of the NDK's system headers.  The NDK ships v1.3 headers but
-# vk-bootstrap was built against our v1.4 Vulkan-Headers; mixing versions
-# causes unknown-type errors in VkBootstrapDispatch.h (*LegacyNV renames,
-# DepthClampRangeEXT -> DepthClampEnableEXT, etc.).
-if(ANDROID)
-    set_target_properties(Vulkan::Vulkan PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
-    )
-endif()
+# Override Vulkan::Vulkan to use our vendored Vulkan-Headers on all platforms.
+# vk-bootstrap was built against our headers (v1.4); mixing with system/NDK
+# headers (v1.3 or other versions) causes unknown-type errors in
+# VkBootstrapDispatch.h and VkBootstrapFeatureChain.h.
+set_target_properties(Vulkan::Vulkan PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
+)
 
 # ipfs-lite-cpp
 set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
