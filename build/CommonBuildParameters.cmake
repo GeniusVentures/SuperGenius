@@ -114,14 +114,14 @@ find_package(vk-bootstrap CONFIG REQUIRED)
 # shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
 # github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
 # IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
-# libshaderc_combined statically bundles glslang+SPIRV-Tools — the spirv-tools include
-# path is added here so <spirv-tools/libspirv.hpp> resolves for consumers that call
-# spvtools::SpirvTools::Validate() directly (SHADER-02 spirv-val gate).
+# libshaderc_combined statically bundles glslang+SPIRV-Tools and installs spirv-tools
+# headers into <prefix>/include/spirv-tools/, so <spirv-tools/libspirv.hpp> resolves
+# for consumers that call spvtools::SpirvTools::Validate() directly (SHADER-02).
 if(NOT TARGET shaderc::shaderc)
     add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
     set_target_properties(shaderc::shaderc PROPERTIES
         IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include;${_THIRDPARTY_BUILD_DIR}/../../../../shaderc/third_party/spirv-tools/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
     )
 endif()
 
