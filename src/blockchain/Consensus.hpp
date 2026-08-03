@@ -347,6 +347,7 @@ namespace sgns
          */
         void SetSlotHashPopulator( SlotHashPopulator populator )
         {
+            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
             slot_hash_populator_ = std::move( populator );
         }
 
@@ -941,6 +942,7 @@ namespace sgns
         mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
         Signer                    signer_;                            ///< Local signing callback.
         SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
+        mutable std::mutex        slot_hash_populator_mutex_;         ///< Guards callback replacement/copy at shutdown.
         std::string               account_address_;                   ///< Local validator/account id.
         std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
@@ -965,6 +967,9 @@ namespace sgns
             std::chrono::milliseconds( 2000 ) };                             ///< Delay before certificate processing.
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
+        std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
+        bool certificate_filter_registered_   = false;    ///< Owns the CRDT certificate filter.
+        bool certificate_callback_registered_ = false;    ///< Owns the CRDT certificate callback.
         std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.

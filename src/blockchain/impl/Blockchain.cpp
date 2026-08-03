@@ -492,19 +492,7 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
-        if ( consensus_manager_ )
-        {
-            consensus_manager_->Close();
-        }
-        if ( db_ )
-        {
-            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
-            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
-            db_->UnregisterNewElementCallback( genesis_pattern );
-            db_->UnregisterElementFilter( genesis_pattern );
-            db_->UnregisterNewElementCallback( account_pattern );
-            db_->UnregisterElementFilter( account_pattern );
-        }
+        (void)Stop();
         account_->ClearGetBlockChainCIDMethod();
         account_->ClearGetValidatorWeightMethod();
     }
@@ -1630,10 +1618,30 @@ namespace sgns
 
     outcome::result<void> Blockchain::Stop()
     {
+        bool expected = false;
+        if ( !stop_started_.compare_exchange_strong( expected, true ) )
+        {
+            return outcome::success();
+        }
+
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
         if ( consensus_manager_ )
         {
+            consensus_manager_->SetSlotHashPopulator( {} );
             consensus_manager_->Close();
+        }
+        if ( validator_registry_ )
+        {
+            validator_registry_->Close();
+        }
+        if ( db_ )
+        {
+            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
+            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
+            db_->UnregisterNewElementCallback( genesis_pattern );
+            db_->UnregisterElementFilter( genesis_pattern );
+            db_->UnregisterNewElementCallback( account_pattern );
+            db_->UnregisterElementFilter( account_pattern );
         }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();

@@ -766,9 +766,7 @@ namespace sgns
             [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
             []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
             {
-                return GeniusAccount::VerifySignature( address,
-                                                       std::string( signature.begin(), signature.end() ),
-                                                       data );
+                return GeniusAccount::VerifySignature( address, signature, data );
             } ),
         nonce_request_in_progress_( false ),
         cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
@@ -840,6 +838,17 @@ namespace sgns
             nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
 
         return secp256k1_ecdsa_verify( context, &signature, message_hash.data(), &public_key ) == 1;
+    }
+
+    bool GeniusAccount::VerifySignature( const std::string          &address,
+                                         const std::vector<uint8_t> &sig,
+                                         const std::vector<uint8_t> &data )
+    {
+        const std::string_view signature_view = sig.empty()
+                                                    ? std::string_view{}
+                                                    : std::string_view(
+                                                          reinterpret_cast<const char *>( sig.data() ), sig.size() );
+        return VerifySignature( address, signature_view, data );
     }
 
     std::vector<uint8_t> GeniusAccount::Sign( const std::vector<uint8_t> &data ) const

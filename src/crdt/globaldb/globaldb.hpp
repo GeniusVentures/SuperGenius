@@ -1,6 +1,7 @@
 #ifndef SUPERGENIUS_CRDT_GLOBALDB_HPP
 #define SUPERGENIUS_CRDT_GLOBALDB_HPP
 
+#include <mutex>
 #include <unordered_set>
 
 #include <boost/asio/io_context.hpp>
@@ -306,6 +307,10 @@ namespace sgns::crdt
         int obsAddrRetries = 0;
 
         std::shared_ptr<CrdtDatastore> m_crdtDatastore;
+        mutable std::mutex             lifecycle_mutex_; ///< Guards service pointers during shutdown.
+
+        std::shared_ptr<CrdtDatastore> ActiveCRDTDataStore() const;
+        std::shared_ptr<PubSubBroadcasterExt> ActiveBroadcaster() const;
 
         /** @brief Resolves the backup directory path based on the database path. */
         std::string ResolveBackupDirectory( const std::string &databasePathAbsolute ) const;

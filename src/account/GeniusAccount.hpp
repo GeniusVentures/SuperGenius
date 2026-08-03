@@ -209,6 +209,17 @@ namespace sgns
                                      const std::vector<uint8_t> &data );
 
         /**
+         * @brief       Verify a byte-vector signature using the Genius account's public key.
+         * @param[in]   address public address to verify the signature
+         * @param[in]   sig signature bytes to be verified
+         * @param[in]   data data to be verified
+         * @return      true if the signature is valid, false otherwise
+         */
+        static bool VerifySignature( const std::string          &address,
+                                     const std::vector<uint8_t> &sig,
+                                     const std::vector<uint8_t> &data );
+
+        /**
          * @brief       Sign data using the Genius account's private key
          * @param[in]   data data to be signed
          * @return      the signature as a vector of bytes

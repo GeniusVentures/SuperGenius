@@ -146,6 +146,31 @@ namespace sgns
 
     void ConsensusManager::Close()
     {
+        bool expected = false;
+        if ( !close_started_.compare_exchange_strong( expected, true ) )
+        {
+            return;
+        }
+
+        // Account switches reuse GlobalDB. Remove this manager's registrations
+        // before a replacement ConsensusManager registers the same pattern.
+        // The one-shot guard also prevents a delayed destructor from removing
+        // registrations that belong to the replacement manager.
+        const std::string pattern = std::string( CERT_KEY_PATTERN );
+        if ( db_ )
+        {
+            if ( certificate_callback_registered_ )
+            {
+                db_->UnregisterNewElementCallback( pattern );
+                certificate_callback_registered_ = false;
+            }
+            if ( certificate_filter_registered_ )
+            {
+                db_->UnregisterElementFilter( pattern );
+                certificate_filter_registered_ = false;
+            }
+        }
+
         stop_timer_.store( true );
         timer_cv_.notify_all();
         if ( round_timer_.joinable() )
@@ -1194,9 +1219,14 @@ namespace sgns
 
         // Phase 6 (D-01): populate slot_N_hash fields before signing so the
         // signature commits to them (T-06-01). No-op when no populator is set.
-        if ( slot_hash_populator_ )
+        SlotHashPopulator slot_hash_populator;
         {
-            slot_hash_populator_( vote );
+            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
+            slot_hash_populator = slot_hash_populator_;
+        }
+        if ( slot_hash_populator )
+        {
+            slot_hash_populator( vote );
             ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
                                              __func__,
                                              proposal_id.substr( 0, 8 ) );
@@ -2107,7 +2137,7 @@ namespace sgns
         const std::string pattern = std::string( CERT_KEY_PATTERN );
 
         auto       weak_self         = weak_from_this();
-        const bool filter_registered = db_->RegisterElementFilter(
+        certificate_filter_registered_ = db_->RegisterElementFilter(
             pattern,
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
@@ -2118,7 +2148,7 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        const bool callback_registered = db_->RegisterNewElementCallback(
+        certificate_callback_registered_ = db_->RegisterNewElementCallback(
             pattern,
             [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
             {
@@ -2130,7 +2160,7 @@ namespace sgns
 
         db_->AddListenTopic( consensus_datastore_topic_ );
 
-        return filter_registered && callback_registered;
+        return certificate_filter_registered_ && certificate_callback_registered_;
     }
 
     std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(

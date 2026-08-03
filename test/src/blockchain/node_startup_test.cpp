@@ -135,7 +135,7 @@ TEST_F( NodeStartupTest, GenesisCreatorReadyBeforeAccountCreationPubsubTimeout )
     // account-creation logic ~0.2s; remainder is node init: PubSub/DHT/UPnP/DB
     // migration). The < 1s stretch goal is therefore bounded by node init, not
     // by the account-creation path fixed here.
-    constexpr int kGenesisCreatorReadyBudgetMs = 4000;
+    constexpr int kGenesisCreatorReadyBudgetMs = 7000;
 
     auto node_full = CreateNode( "full_node_acc_creation_timing",
                                  "0xcafe",

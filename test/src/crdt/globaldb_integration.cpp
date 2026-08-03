@@ -216,6 +216,28 @@ public:
     }
 };
 
+TEST_F( GlobalDBIntegrationTest, OperationsAreRejectedAfterShutdown )
+{
+    auto testNodes = std::make_unique<TestNodeCollection>();
+    testNodes->addNode( "globaldb_shutdown_node" );
+    ASSERT_EQ( testNodes->getNodes().size(), 1 );
+
+    auto db = testNodes->getNodes().front().db;
+    ASSERT_NE( db, nullptr );
+    db->ShutdownNow();
+
+    sgns::base::Buffer value;
+    value.put( "value" );
+    const sgns::crdt::HierarchicalKey key( "/shutdown/rejected" );
+
+    EXPECT_TRUE( db->Put( key, value, {} ).has_error() );
+    EXPECT_TRUE( db->Get( key ).has_error() );
+    EXPECT_TRUE( db->QueryKeyValues( "/shutdown" ).has_error() );
+    EXPECT_EQ( db->BeginTransaction(), nullptr );
+    EXPECT_EQ( db->GetCRDTDataStore(), nullptr );
+    EXPECT_EQ( db->GetBroadcaster(), nullptr );
+}
+
 TEST_F( GlobalDBIntegrationTest, ReplicationWithoutTopicSuccessfulTest )
 {
     auto testNodes = std::make_unique<TestNodeCollection>();

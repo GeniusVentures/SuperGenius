@@ -984,8 +984,18 @@ namespace sgns
         /**
          * @brief Stops account-bound runtime services in dependency order.
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
+         * @param[in] release_members Whether to release service owners immediately after stopping them.
          */
-        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account );
+        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account,
+                                                            bool release_members = true );
+
+        /**
+         * @brief Releases the runtime object graph after all node I/O threads have stopped.
+         *
+         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
+         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         */
+        void ReleaseRuntimeMembersAfterIoStopped();
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,

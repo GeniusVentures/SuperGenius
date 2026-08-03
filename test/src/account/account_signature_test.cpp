@@ -16,11 +16,6 @@ namespace
 
     constexpr char PRIVATE_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
 
-    std::string_view AsStringView( const std::vector<uint8_t> &signature )
-    {
-        return { reinterpret_cast<const char *>( signature.data() ), signature.size() };
-    }
-
     std::vector<uint8_t> SignWithCrypto3( const ethereum::EthereumKeyGenerator &key,
                                           const std::vector<uint8_t>           &data )
     {
@@ -82,16 +77,10 @@ TEST_F( GeniusAccountSignatureTest, VerifiesExistingSignatureFormat )
     const std::vector<uint8_t> message = { 'S', 'u', 'p', 'e', 'r', 'G', 'e', 'n', 'i', 'u', 's' };
     auto                       signature = account->Sign( message );
 
-    ASSERT_TRUE( GeniusAccount::VerifySignature(
-        account->GetAddress(),
-        AsStringView( signature ),
-        message ) );
+    ASSERT_TRUE( GeniusAccount::VerifySignature( account->GetAddress(), signature, message ) );
 
     signature.front() ^= 1;
-    EXPECT_FALSE( GeniusAccount::VerifySignature(
-        account->GetAddress(),
-        AsStringView( signature ),
-        message ) );
+    EXPECT_FALSE( GeniusAccount::VerifySignature( account->GetAddress(), signature, message ) );
     EXPECT_FALSE( GeniusAccount::VerifySignature( account->GetAddress(), "short", message ) );
     EXPECT_FALSE( GeniusAccount::VerifySignature( "not a public key", std::string( 64, '\0' ), message ) );
 }
@@ -102,8 +91,7 @@ TEST_F( GeniusAccountSignatureTest, Crypto3AndLibsecp256k1AreCompatible )
 
     const ethereum::EthereumKeyGenerator crypto3_key( PRIVATE_KEY );
     const auto                            crypto3_signature = SignWithCrypto3( crypto3_key, message );
-    EXPECT_TRUE( GeniusAccount::VerifySignature(
-        crypto3_key.GetEntirePubValue(), AsStringView( crypto3_signature ), message ) );
+    EXPECT_TRUE( GeniusAccount::VerifySignature( crypto3_key.GetEntirePubValue(), crypto3_signature, message ) );
 
     const auto account = GeniusAccount::NewFromPrivateKey( TokenID::FromBytes( { 0x00 } ), PRIVATE_KEY, path_ );
     ASSERT_NE( account, nullptr );
