@@ -15,7 +15,6 @@
 #include <memory>
 #include <shared_mutex>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "base/logger.hpp"
@@ -125,7 +124,7 @@ namespace sgns::trustedpeer
          *         SecureCrdt call's error.
          */
         outcome::result<void> SeedGenesis( const std::vector<std::string> &genesis_peers,
-                                            std::string_view                ephemeral_signature );
+                                            const std::vector<uint8_t>     &ephemeral_signature );
 
         /**
          * @brief Proposes a membership-change value (new full peer list).
@@ -140,8 +139,8 @@ namespace sgns::trustedpeer
          * @param[in] signature Raw signature bytes.
          * @return outcome::success on success, or the failing SecureCrdt call's error.
          */
-        outcome::result<void> SignMembershipChange( const std::string &signer_address,
-                                                     std::string_view   signature );
+        outcome::result<void> SignMembershipChange( const std::string          &signer_address,
+                                                     const std::vector<uint8_t> &signature );
 
         /**
          * @brief Attempts to confirm the currently-proposed value against

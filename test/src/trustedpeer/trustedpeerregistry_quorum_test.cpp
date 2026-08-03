@@ -46,11 +46,6 @@ namespace
     constexpr const char *NON_MEMBER_PRIVATE_KEY =
         "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eac5";
 
-    std::string SignatureAsString( const std::vector<uint8_t> &signature )
-    {
-        return std::string( signature.begin(), signature.end() );
-    }
-
     class TrustedPeerRegistryQuorumTest : public ::testing::Test
     {
     protected:
@@ -130,7 +125,7 @@ TEST_F( TrustedPeerRegistryQuorumTest, SubQuorumSignatureNeverMutatesPeersThenQu
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
     // 1st signature from a CURRENT genesis signer -- sub-quorum (threshold 2).
-    auto sig0 = SignatureAsString( signers_[0]->Sign( new_payload ) );
+    auto sig0 = signers_[0]->Sign( new_payload );
     auto sign0_result = registry_->SignMembershipChange( signers_[0]->GetAddress(), sig0 );
     ASSERT_FALSE( sign0_result.has_error() ) << sign0_result.error().message();
 
@@ -140,7 +135,7 @@ TEST_F( TrustedPeerRegistryQuorumTest, SubQuorumSignatureNeverMutatesPeersThenQu
     EXPECT_EQ( registry_->GetCurrentPeers(), genesis_peers_ ) << "sub-quorum must leave old genesis list untouched";
 
     // 2nd signature from a DIFFERENT current genesis signer -- quorum met.
-    auto sig1 = SignatureAsString( signers_[1]->Sign( new_payload ) );
+    auto sig1 = signers_[1]->Sign( new_payload );
     auto sign1_result = registry_->SignMembershipChange( signers_[1]->GetAddress(), sig1 );
     ASSERT_FALSE( sign1_result.has_error() ) << sign1_result.error().message();
 
@@ -161,7 +156,7 @@ TEST_F( TrustedPeerRegistryQuorumTest, SignatureFromNonMemberAddressNeverCountsT
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
     // Cryptographically VALID signature, but from an address NOT in the current genesis set.
-    auto non_member_sig = SignatureAsString( non_member_->Sign( new_payload ) );
+    auto non_member_sig = non_member_->Sign( new_payload );
     auto sign_result     = registry_->SignMembershipChange( non_member_->GetAddress(), non_member_sig );
     ASSERT_FALSE( sign_result.has_error() ) << sign_result.error().message();
 
@@ -172,7 +167,7 @@ TEST_F( TrustedPeerRegistryQuorumTest, SignatureFromNonMemberAddressNeverCountsT
     EXPECT_EQ( registry_->GetCurrentPeers(), genesis_peers_ );
 
     // A 2nd genuine genesis-signer signature is still required to actually meet quorum.
-    auto sig0 = SignatureAsString( signers_[0]->Sign( new_payload ) );
+    auto sig0 = signers_[0]->Sign( new_payload );
     auto sign0_result = registry_->SignMembershipChange( signers_[0]->GetAddress(), sig0 );
     ASSERT_FALSE( sign0_result.has_error() ) << sign0_result.error().message();
 

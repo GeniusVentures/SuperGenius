@@ -192,7 +192,7 @@ namespace sgns::trustedpeer
     }
 
     outcome::result<void> TrustedPeerRegistry::SeedGenesis( const std::vector<std::string> &genesis_peers,
-                                                             std::string_view                ephemeral_signature )
+                                                             const std::vector<uint8_t>     &ephemeral_signature )
     {
         logger_->info( "{}: seeding genesis trusted-peer list ({} peers)", __func__, genesis_peers.size() );
 
@@ -221,8 +221,8 @@ namespace sgns::trustedpeer
         return secure_crdt_->ProposeValue( base_key_, payload.SerializeToBytes() );
     }
 
-    outcome::result<void> TrustedPeerRegistry::SignMembershipChange( const std::string &signer_address,
-                                                                      std::string_view   signature )
+    outcome::result<void> TrustedPeerRegistry::SignMembershipChange( const std::string          &signer_address,
+                                                                      const std::vector<uint8_t> &signature )
     {
         logger_->info( "{}: signing membership change (signer={})", __func__, signer_address );
         return secure_crdt_->AddSignature( base_key_, signer_address, signature );

@@ -33,8 +33,8 @@ namespace sgns::test::trustedpeer
     /// @brief Result of a single ephemeral genesis-ceremony signing operation.
     struct GenesisCeremonyArtifact
     {
-        std::string bootstrapper_address; ///< 128-lowercase-hex ephemeral public address.
-        std::string signature;            ///< 64-byte signature (as a raw std::string), matching GeniusAccount::Sign's encoding.
+        std::string          bootstrapper_address; ///< 128-lowercase-hex ephemeral public address.
+        std::vector<uint8_t> signature;             ///< 64-byte signature, matching GeniusAccount::Sign's encoding.
     };
 
     /// @brief Generates a fresh, in-memory-only ephemeral keypair, derives its
@@ -77,7 +77,7 @@ namespace sgns::test::trustedpeer
         std::reverse_copy( compact_signature.begin(), compact_signature.begin() + 32, signed_vector.begin() );
         std::reverse_copy( compact_signature.begin() + 32, compact_signature.end(), signed_vector.begin() + 32 );
 
-        artifact.signature = std::string( signed_vector.begin(), signed_vector.end() );
+        artifact.signature = std::move( signed_vector );
         return artifact;
     }
 } // namespace sgns::test::trustedpeer
