@@ -326,6 +326,12 @@ namespace sgns
             return; // idempotent
         }
 
+        // Let an escrow transaction that already entered its short submission section
+        // finish before account/CRDT dependencies are torn down.
+        {
+            std::lock_guard submission_lock( payout_submission_mutex_ );
+        }
+        CancelPendingTransactionWaits();
         cv_.notify_all();
     }
 
@@ -862,6 +868,214 @@ namespace sgns
         EnqueueTransaction( TransactionItem{ TransactionBatch{ { transfer_transaction, std::nullopt } },
                                              std::move( crdt_transaction ) } );
         return transfer_transaction->GetHash();
+    }
+
+    void TransactionManager::AsyncPayEscrow( std::string                              escrow_path,
+                                             SGProcessing::TaskResult                 task_result,
+                                             std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
+                                             std::chrono::milliseconds                timeout,
+                                             TransactionCompletionCallback            callback )
+    {
+        if ( !callback )
+        {
+            return;
+        }
+
+        const auto started_at = std::chrono::steady_clock::now();
+        std::unique_lock submission_lock( payout_submission_mutex_ );
+        if ( stopped_.load() )
+        {
+            submission_lock.unlock();
+            callback( TransactionCompletion{ {},
+                                             TransactionStatus::INVALID,
+                                             {},
+                                             boost::asio::error::operation_aborted } );
+            return;
+        }
+
+        auto payout = PayEscrow( escrow_path, task_result, std::move( crdt_transaction ) );
+        submission_lock.unlock();
+        if ( payout.has_error() )
+        {
+            callback( TransactionCompletion{ {},
+                                             TransactionStatus::INVALID,
+                                             std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                 std::chrono::steady_clock::now() - started_at ),
+                                             payout.error() } );
+            return;
+        }
+
+        AsyncWaitForTransactionOutgoing( std::move( payout.value() ), timeout, std::move( callback ) );
+    }
+
+    void TransactionManager::AsyncWaitForTransactionOutgoing( std::string                   tx_id,
+                                                              std::chrono::milliseconds     timeout,
+                                                              TransactionCompletionCallback callback )
+    {
+        if ( !callback )
+        {
+            return;
+        }
+
+        auto wait = std::make_shared<PendingTransactionWait>( *ctx_m,
+                                                              std::move( tx_id ),
+                                                              std::move( callback ),
+                                                              std::chrono::steady_clock::now() );
+        wait->timer.expires_after( timeout );
+
+        {
+            std::lock_guard lock( transaction_waits_mutex_ );
+            if ( stopped_.load() )
+            {
+                wait->completed.store( true );
+            }
+            else
+            {
+                transaction_waits_[wait->tx_id].push_back( wait );
+            }
+        }
+
+        if ( wait->completed.load() )
+        {
+            auto completion_callback = std::move( wait->callback );
+            completion_callback( TransactionCompletion{ wait->tx_id,
+                                                        TransactionStatus::INVALID,
+                                                        {},
+                                                        boost::asio::error::operation_aborted } );
+            return;
+        }
+
+        wait->timer.async_wait(
+            [weak_self = weak_from_this(),
+             weak_wait = std::weak_ptr<PendingTransactionWait>( wait )]( const boost::system::error_code &error )
+            {
+                if ( error == boost::asio::error::operation_aborted )
+                {
+                    return;
+                }
+                if ( auto manager = weak_self.lock() )
+                {
+                    if ( auto pending_wait = weak_wait.lock() )
+                    {
+                        manager->CompleteTransactionWait(
+                            pending_wait,
+                            manager->GetOutgoingStatusByTxId( pending_wait->tx_id ),
+                            boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
+                    }
+                }
+            } );
+
+        const auto status = GetOutgoingStatusByTxId( wait->tx_id );
+        if ( IsTerminalTransactionStatus( status ) )
+        {
+            CompleteTransactionWait( wait, status );
+        }
+    }
+
+    bool TransactionManager::IsTerminalTransactionStatus( TransactionStatus status )
+    {
+        return status == TransactionStatus::CONFIRMED || status == TransactionStatus::UNCONFIRMED ||
+               status == TransactionStatus::FAILED;
+    }
+
+    void TransactionManager::NotifyTransactionStatusChanged( const std::string &tx_id )
+    {
+        std::vector<std::shared_ptr<PendingTransactionWait>> waits;
+        {
+            std::lock_guard lock( transaction_waits_mutex_ );
+            if ( auto it = transaction_waits_.find( tx_id ); it != transaction_waits_.end() )
+            {
+                waits = it->second;
+            }
+        }
+        if ( waits.empty() )
+        {
+            return;
+        }
+
+        const auto status = GetOutgoingStatusByTxId( tx_id );
+        if ( !IsTerminalTransactionStatus( status ) )
+        {
+            return;
+        }
+
+        for ( const auto &wait : waits )
+        {
+            CompleteTransactionWait( wait, status );
+        }
+    }
+
+    void TransactionManager::CompleteTransactionWait( const std::shared_ptr<PendingTransactionWait> &wait,
+                                                      TransactionStatus                              status,
+                                                      boost::system::error_code                      error )
+    {
+        if ( wait->completed.exchange( true ) )
+        {
+            return;
+        }
+
+        boost::system::error_code ignored;
+        wait->timer.cancel( ignored );
+        {
+            std::lock_guard lock( transaction_waits_mutex_ );
+            auto            it = transaction_waits_.find( wait->tx_id );
+            if ( it != transaction_waits_.end() )
+            {
+                auto &waits = it->second;
+                waits.erase( std::remove( waits.begin(), waits.end(), wait ), waits.end() );
+                if ( waits.empty() )
+                {
+                    transaction_waits_.erase( it );
+                }
+            }
+        }
+
+        auto callback = std::move( wait->callback );
+        if ( !callback )
+        {
+            return;
+        }
+
+        TransactionCompletion completion{ wait->tx_id,
+                                          status,
+                                          std::chrono::duration_cast<std::chrono::milliseconds>(
+                                              std::chrono::steady_clock::now() - wait->started_at ),
+                                          error };
+        boost::asio::post( *ctx_m,
+                           [callback = std::move( callback ), completion = std::move( completion )]() mutable
+                           { callback( std::move( completion ) ); } );
+    }
+
+    void TransactionManager::CancelPendingTransactionWaits()
+    {
+        std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> waits;
+        {
+            std::lock_guard lock( transaction_waits_mutex_ );
+            waits.swap( transaction_waits_ );
+        }
+
+        for ( auto &[_, transaction_waits] : waits )
+        {
+            for ( auto &wait : transaction_waits )
+            {
+                if ( wait->completed.exchange( true ) )
+                {
+                    continue;
+                }
+
+                boost::system::error_code ignored;
+                wait->timer.cancel( ignored );
+                auto callback = std::move( wait->callback );
+                if ( callback )
+                {
+                    callback( TransactionCompletion{ wait->tx_id,
+                                                     TransactionStatus::INVALID,
+                                                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                         std::chrono::steady_clock::now() - wait->started_at ),
+                                                     boost::asio::error::operation_aborted } );
+                }
+            }
+        }
     }
 
     void TransactionManager::EnqueueTransaction( TransactionItem element )
@@ -4395,8 +4609,9 @@ namespace sgns
     outcome::result<void> TransactionManager::ChangeTransactionState( const std::shared_ptr<GeniusTransaction> &tx,
                                                                       TransactionStatus new_status )
     {
+        static constexpr std::string_view FUNC = __func__;
         m_logger->debug( "{}: Changing transaction state to {} for transaction {}",
-                         __func__,
+                         FUNC,
                          static_cast<int>( new_status ),
                          tx->GetHash() );
         const auto key = GetTransactionPath( *tx );
@@ -4408,19 +4623,17 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it != tx_processed_m.end() )
                 {
-                    m_logger->error( "{}: Trying to CREATE a transaction that already exists {}",
-                                     __func__,
-                                     tx->GetHash() );
+                    m_logger->error( "{}: Trying to CREATE a transaction that already exists {}", FUNC, tx->GetHash() );
                     return outcome::failure( std::errc::file_exists );
                 }
-                m_logger->debug( "{}: Set status of CREATE to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Set status of CREATE to transaction {}", FUNC, tx->GetHash() );
                 tx_processed_m.emplace( key, TrackedTx{ tx, TransactionStatus::CREATED, tx->GetNonce() } );
                 // METRICS-01: Tracking insert — temp entry created in tx_processed_m
                 metrics_tracking_insert_.fetch_add( 1, std::memory_order_relaxed );
                 TransactionManagerLogger()->info( "[{} - full: {}] {}: Temp tracking entry created tx={}",
                                                   account_m->GetAddress().substr( 0, 8 ),
                                                   full_node_m,
-                                                  __func__,
+                                                  FUNC,
                                                   tx->GetHash() );
             }
             break;
@@ -4430,20 +4643,18 @@ namespace sgns
                 auto             it = tx_processed_m.find( key );
                 if ( it == tx_processed_m.end() )
                 {
-                    m_logger->error( "{}: Trying to SEND a transaction that doesn't exist {}",
-                                     __func__,
-                                     tx->GetHash() );
+                    m_logger->error( "{}: Trying to SEND a transaction that doesn't exist {}", FUNC, tx->GetHash() );
                     return outcome::failure( std::errc::no_such_file_or_directory );
                 }
                 if ( it->second.status != TransactionStatus::CREATED )
                 {
                     m_logger->error( "{}: Trying to SEND a transaction that is not in CREATED status {}",
-                                     __func__,
+                                     FUNC,
                                      tx->GetHash() );
                     return outcome::failure( std::errc::invalid_argument );
                 }
                 it->second.status = TransactionStatus::SENDING;
-                m_logger->debug( "{}: Set status of SENDING to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Set status of SENDING to transaction {}", FUNC, tx->GetHash() );
             }
             break;
             case TransactionStatus::VERIFYING:
@@ -4454,13 +4665,13 @@ namespace sgns
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::VERIFYING )
                 {
                     m_logger->error( "{}: Trying to VERIFY a transaction that is already in VERIFY {}",
-                                     __func__,
+                                     FUNC,
                                      tx->GetHash() );
                     break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    m_logger->warn( "{}: Unconfirming transaction {} and verifying it again", __func__, tx->GetHash() );
+                    m_logger->warn( "{}: Unconfirming transaction {} and verifying it again", FUNC, tx->GetHash() );
                     BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
@@ -4468,13 +4679,13 @@ namespace sgns
                     account_m->RollBackPeerConfirmedNonce( it->second.cached_nonce, tx->GetSrcAddress() );
                 }
                 tx_processed_m[key] = TrackedTx{ tx, TransactionStatus::VERIFYING, tx->GetNonce() };
-                m_logger->debug( "{}: Set status of VERIFYING to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Set status of VERIFYING to transaction {}", FUNC, tx->GetHash() );
                 m_logger->debug( "{}: Attempting to resume the proposal handling to transaction {}",
-                                 __func__,
+                                 FUNC,
                                  tx->GetHash() );
                 tx_lock.unlock();
                 BOOST_OUTCOME_TRY( blockchain_->TryResumeProposal( tx->GetHash() ) );
-                m_logger->debug( "{}: Resumed the proposal handling to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Resumed the proposal handling to transaction {}", FUNC, tx->GetHash() );
             }
 
             break;
@@ -4485,7 +4696,7 @@ namespace sgns
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
                     m_logger->error( "{}: Trying to CONFIRM a transaction that is already CONFIRMED {}",
-                                     __func__,
+                                     FUNC,
                                      tx->GetHash() );
                     break;
                 }
@@ -4514,7 +4725,7 @@ namespace sgns
                                     "[{} - full: {}] {}: Failed to persist executed bridge mint for {}",
                                     account_m->GetAddress().substr( 0, 8 ),
                                     full_node_m,
-                                    __func__,
+                                    FUNC,
                                     reservation_key );
                             }
                         }
@@ -4526,15 +4737,23 @@ namespace sgns
                 TransactionManagerLogger()->info( "[{} - full: {}] {}: Tracking entry confirmed tx={}",
                                                   account_m->GetAddress().substr( 0, 8 ),
                                                   full_node_m,
-                                                  __func__,
+                                                  FUNC,
                                                   tx->GetHash() );
 
                 TransactionManagerLogger()->debug( "[{} - full: {}] {}: Set status of CONFIRMED to transaction {}",
                                                    account_m->GetAddress().substr( 0, 8 ),
                                                    full_node_m,
-                                                   __func__,
+                                                   FUNC,
                                                    tx->GetHash() );
-                BOOST_OUTCOME_TRY( ParseTransaction( tx ) );
+                auto parse_result = ParseTransaction( tx );
+                if ( parse_result.has_error() )
+                {
+                    // The tracked state was already promoted. Wake observers even when
+                    // applying its account-side effects fails.
+                    tx_lock.unlock();
+                    NotifyTransactionStatusChanged( tx->GetHash() );
+                    return outcome::failure( parse_result.error() );
+                }
                 account_m->SetPeerConfirmedNonce( tx->GetNonce(), tx->GetSrcAddress(), tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
@@ -4554,7 +4773,7 @@ namespace sgns
                         "[{} - full: {}] {}: Keeping CONFIRMED transaction from becoming UNCONFIRMED {}",
                         account_m->GetAddress().substr( 0, 8 ),
                         full_node_m,
-                        __func__,
+                        FUNC,
                         tx->GetHash() );
                     break;
                 }
@@ -4567,7 +4786,7 @@ namespace sgns
                     "[{} - full: {}] {}: Tracking entry unconfirmed after inconclusive expiry tx={}",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
-                    __func__,
+                    FUNC,
                     tx->GetHash() );
             }
 
@@ -4580,13 +4799,13 @@ namespace sgns
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::FAILED )
                 {
                     m_logger->error( "{}: Trying to FAIL a transaction that is already FAILED {}",
-                                     __func__,
+                                     FUNC,
                                      tx->GetHash() );
                     break;
                 }
                 if ( it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED )
                 {
-                    m_logger->debug( "{}: Unconfirming transaction {}", __func__, tx->GetHash() );
+                    m_logger->debug( "{}: Unconfirming transaction {}", FUNC, tx->GetHash() );
                     BOOST_OUTCOME_TRY( RevertTransaction( tx ) );
 
                     BOOST_OUTCOME_TRY( DeleteTransaction( key, tx->GetTopics() ) );
@@ -4626,12 +4845,12 @@ namespace sgns
                 TransactionManagerLogger()->info( "[{} - full: {}] {}: Tracking entry failed tx={}",
                                                   account_m->GetAddress().substr( 0, 8 ),
                                                   full_node_m,
-                                                  __func__,
+                                                  FUNC,
                                                   tx->GetHash() );
 
                 account_m->ReleaseNonce( tx->GetNonce() );
 
-                m_logger->debug( "{}: Set status of FAILED to transaction {}", __func__, tx->GetHash() );
+                m_logger->debug( "{}: Set status of FAILED to transaction {}", FUNC, tx->GetHash() );
                 {
                     std::lock_guard missing_lock( missing_tx_mutex_ );
                     missing_tx_hashes_.erase( tx->GetHash() );
@@ -4641,16 +4860,19 @@ namespace sgns
             break;
             default:
                 m_logger->error( "{}: Invalid transaction status {} for transaction {}",
-                                 __func__,
+                                 FUNC,
                                  static_cast<int>( new_status ),
                                  tx->GetHash() );
                 return outcome::failure( std::errc::invalid_argument );
         }
 
+        // Notify after every lock local to the transition has been released. Querying
+        // the tracked value also avoids reporting a requested transition that was rejected.
         m_logger->debug( "{}: Transaction {} state changed to {}",
-                         __func__,
+                         FUNC,
                          tx->GetHash(),
                          static_cast<int>( new_status ) );
+        NotifyTransactionStatusChanged( tx->GetHash() );
         return outcome::success();
     }
 
