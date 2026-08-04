@@ -102,29 +102,6 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     get_target_property(MNN_LIB_PATH MNN::MNN IMPORTED_LOCATION_RELWITHDEBINFO)
 endif()
 
-# vk-bootstrap
-set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
-find_package(vk-bootstrap CONFIG REQUIRED)
-
-# SPIRV-Tools — no longer a standalone build.  libshaderc_combined (linked via
-# shaderc::shaderc below) statically bundles the exact same SPIRV-Tools code at the
-# exact same pinned commit (v2024.3 DEPS).  The spirv-tools include path is folded into
-# shaderc::shaderc's INTERFACE_INCLUDE_DIRECTORIES so <spirv-tools/libspirv.hpp> resolves.
-
-# shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
-# github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
-# IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
-# libshaderc_combined statically bundles glslang+SPIRV-Tools and installs spirv-tools
-# headers into <prefix>/include/spirv-tools/, so <spirv-tools/libspirv.hpp> resolves
-# for consumers that call spvtools::SpirvTools::Validate() directly (SHADER-02).
-if(NOT TARGET shaderc::shaderc)
-    add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
-    set_target_properties(shaderc::shaderc PROPERTIES
-        IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
-        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
-    )
-endif()
-
 # OpenSSL
 set(OpenSSL_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build/lib/cmake/OpenSSL" CACHE PATH "Path to OpenSSL install folder")
 set(OPENSSL_ROOT_DIR "${_THIRDPARTY_BUILD_DIR}/openssl/build" CACHE PATH "Path to OpenSSL install root folder")
@@ -270,10 +247,14 @@ endif()
 
 include_directories(${c-ares_INCLUDE_DIR})
 
+# VulkanHeaders
+set(VulkanHeaders_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/share/cmake/VulkanHeaders" CACHE PATH "Path to Vulkan-Headers install folder")
+find_package(VulkanHeaders CONFIG REQUIRED)
 # Vulkan
 find_package(Vulkan)
 
 if(NOT TARGET Vulkan::Vulkan)
+    set(Vulkan_INCLUDE_DIR "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include")
     if(NOT DEFINED $ENV{VULKAN_SDK})
         set(ENV{VULKAN_SDK} "${_THIRDPARTY_BUILD_DIR}/Vulkan-Loader")
     endif()
@@ -288,6 +269,29 @@ endif()
 set_target_properties(Vulkan::Vulkan PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
 )
+
+# vk-bootstrap
+set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
+find_package(vk-bootstrap CONFIG REQUIRED)
+
+# SPIRV-Tools — no longer a standalone build.  libshaderc_combined (linked via
+# shaderc::shaderc below) statically bundles the exact same SPIRV-Tools code at the
+# exact same pinned commit (v2024.3 DEPS).  The spirv-tools include path is folded into
+# shaderc::shaderc's INTERFACE_INCLUDE_DIRECTORIES so <spirv-tools/libspirv.hpp> resolves.
+
+# shaderc — installs no CMake package config (confirmed in 02-02-RESEARCH.md against
+# github.com/google/shaderc/issues/1369 and github.com/microsoft/vcpkg/issues/23208); hand-written
+# IMPORTED target required, mirroring thirdparty/build/CommonTargets.cmake's own target.
+# libshaderc_combined statically bundles glslang+SPIRV-Tools and installs spirv-tools
+# headers into <prefix>/include/spirv-tools/, so <spirv-tools/libspirv.hpp> resolves
+# for consumers that call spvtools::SpirvTools::Validate() directly (SHADER-02).
+if(NOT TARGET shaderc::shaderc)
+    add_library(shaderc::shaderc STATIC IMPORTED GLOBAL)
+    set_target_properties(shaderc::shaderc PROPERTIES
+        IMPORTED_LOCATION "${_THIRDPARTY_BUILD_DIR}/shaderc/lib/${CMAKE_STATIC_LIBRARY_PREFIX}shaderc_combined${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/shaderc/include"
+    )
+endif()
 
 # ipfs-lite-cpp
 set(ipfs-lite-cpp_DIR "${_THIRDPARTY_BUILD_DIR}/ipfs-lite-cpp/lib/cmake/ipfs-lite-cpp")
