@@ -421,69 +421,6 @@ namespace sgns
         {
             manager->certificate_record_reader_ = std::move( reader );
         }
-
-        static void SetReady( TransactionManager &manager )
-        {
-            manager.state_m = TransactionManager::State::READY;
-        }
-
-        static outcome::result<std::string> MintFunds( TransactionManager &manager,
-                                                       uint64_t            amount,
-                                                       std::string         transaction_hash,
-                                                       std::string         chain_id,
-                                                       uint32_t            receipt_log_index,
-                                                       TokenID             token_id,
-                                                       std::string         destination )
-        {
-            return manager.MintFunds( amount,
-                                      std::move( transaction_hash ),
-                                      std::move( chain_id ),
-                                      receipt_log_index,
-                                      std::move( token_id ),
-                                      std::move( destination ) );
-        }
-
-        static size_t QueueSize( TransactionManager &manager )
-        {
-            std::lock_guard lock( manager.mutex_m );
-            return manager.tx_queue_m.size();
-        }
-
-        static std::shared_ptr<MintTransactionV2> LastQueuedMint( TransactionManager &manager )
-        {
-            std::lock_guard lock( manager.mutex_m );
-            if ( manager.tx_queue_m.empty() || manager.tx_queue_m.back().first.empty() )
-            {
-                return nullptr;
-            }
-            return std::dynamic_pointer_cast<MintTransactionV2>(
-                manager.tx_queue_m.back().first.back().first );
-        }
-
-        static ConsensusManager::ValidationResult EvaluateReplayProtection(
-            const TransactionManager &manager,
-            const GeniusTransaction  &transaction )
-        {
-            return manager.EvaluateTransactionReplayProtection( transaction ).validation;
-        }
-
-        static std::shared_ptr<ConsensusManager> Consensus(
-            const std::shared_ptr<Blockchain> &blockchain )
-        {
-            return blockchain->consensus_manager_;
-        }
-    };
-
-    class ConsensusManagerTestAccess
-    {
-    public:
-        static void SetCertificateReader(
-            const std::shared_ptr<ConsensusManager> &manager,
-            std::function<outcome::result<crdt::GlobalDB::Buffer>(
-                const crdt::HierarchicalKey & )> reader )
-        {
-            manager->certificate_record_reader_ = std::move( reader );
-        }
     };
 } // namespace sgns
 
