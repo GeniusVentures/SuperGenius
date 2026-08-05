@@ -449,8 +449,6 @@ namespace sgns
          */
         struct CertificateVotes
         {
-            std::unordered_set<std::string>       approved;           ///< Validators that approved the certificate.
-            std::unordered_set<std::string>       unregistered;       ///< Unregistered voters observed in certificate.
             std::unordered_map<std::string, bool> registered_votes;   ///< Vote decisions by registered validators.
             std::unordered_map<std::string, bool> unregistered_votes; ///< Vote decisions by unregistered validators.
         };
@@ -538,14 +536,12 @@ namespace sgns
         /**
          * @brief Builds next registry snapshot from aggregated vote maps.
          * @param[in] current_registry Current registry snapshot.
-         * @param[in] registered_votes Vote decisions from registered validators.
-         * @param[in] unregistered_votes Vote decisions from unregistered validators.
+         * @param[in] votes Partitioned vote decisions.
          * @return Derived registry snapshot.
          */
         Registry BuildRegistryFromAggregatedVotes(
-            const Registry                              &current_registry,
-            const std::unordered_map<std::string, bool> &registered_votes,
-            const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+            const Registry         &current_registry,
+            const CertificateVotes &votes ) const;
         /**
          * @brief Builds the next registry by aggregating a batch of finalized certificates.
          * @param[in] current_registry Registry against which votes are evaluated.

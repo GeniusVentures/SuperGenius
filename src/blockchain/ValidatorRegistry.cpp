@@ -787,9 +787,7 @@ namespace sgns
 
         RegistryUpdate update;
         update.set_prev_registry_hash( current_cid );
-        *update.mutable_registry() = BuildRegistryFromAggregatedVotes( current_registry,
-                                                                       votes.registered_votes,
-                                                                       votes.unregistered_votes );
+        *update.mutable_registry() = BuildRegistryFromAggregatedVotes( current_registry, votes );
 
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
@@ -1431,7 +1429,7 @@ namespace sgns
         if ( batch_payload.has_error() )
         {
             BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, base_registry ) );
-            return BuildRegistryFromAggregatedVotes( base_registry, votes.registered_votes, votes.unregistered_votes );
+            return BuildRegistryFromAggregatedVotes( base_registry, votes );
         }
 
         const auto &payload = batch_payload.value();
@@ -1574,7 +1572,6 @@ namespace sgns
             const auto *validator = FindValidator( current_registry, vote.voter_id() );
             if ( !validator )
             {
-                result.unregistered.insert( vote.voter_id() );
                 result.unregistered_votes[vote.voter_id()] = vote.approve();
                 continue;
             }
@@ -1584,7 +1581,6 @@ namespace sgns
             if ( vote.approve() && validator->status() == Status::ACTIVE )
             {
                 approved_weight += validator->weight();
-                result.approved.insert( vote.voter_id() );
             }
         }
 
@@ -1599,14 +1595,13 @@ namespace sgns
     }
 
     ValidatorRegistry::Registry ValidatorRegistry::BuildRegistryFromAggregatedVotes(
-        const Registry                              &current_registry,
-        const std::unordered_map<std::string, bool> &registered_votes,
-        const std::unordered_map<std::string, bool> &unregistered_votes ) const
+        const Registry         &current_registry,
+        const CertificateVotes &votes ) const
     {
         Registry next = current_registry;
         next.set_epoch( current_registry.epoch() + 1 );
 
-        InsertNewValidators( next, unregistered_votes );
+        InsertNewValidators( next, votes.unregistered_votes );
 
         std::vector<ValidatorEntry> entries;
         entries.reserve( static_cast<size_t>( next.validators_size() ) );
@@ -1615,14 +1610,14 @@ namespace sgns
             entries.push_back( entry );
         }
 
-        ApplyVoteEffects( entries, registered_votes );
+        ApplyVoteEffects( entries, votes.registered_votes );
         std::unordered_set<std::string> participants;
-        participants.reserve( registered_votes.size() + unregistered_votes.size() );
-        for ( const auto &pair : registered_votes )
+        participants.reserve( votes.registered_votes.size() + votes.unregistered_votes.size() );
+        for ( const auto &pair : votes.registered_votes )
         {
             participants.insert( pair.first );
         }
-        for ( const auto &pair : unregistered_votes )
+        for ( const auto &pair : votes.unregistered_votes )
         {
             participants.insert( pair.first );
         }
@@ -1675,17 +1670,16 @@ namespace sgns
             }
         }
 
-        std::unordered_map<std::string, bool> registered_votes;
-        std::unordered_map<std::string, bool> unregistered_votes;
+        CertificateVotes votes;
         for ( const auto &[validator_id, score] : registered_scores )
         {
-            registered_votes[validator_id] = score >= 0;
+            votes.registered_votes[validator_id] = score >= 0;
         }
         for ( const auto &[validator_id, score] : unregistered_scores )
         {
-            unregistered_votes[validator_id] = score >= 0;
+            votes.unregistered_votes[validator_id] = score >= 0;
         }
-        return BuildRegistryFromAggregatedVotes( current_registry, registered_votes, unregistered_votes );
+        return BuildRegistryFromAggregatedVotes( current_registry, votes );
     }
 
     void ValidatorRegistry::InsertNewValidators( Registry                                    &registry,
