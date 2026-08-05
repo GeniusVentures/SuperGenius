@@ -1281,7 +1281,7 @@ namespace sgns
             return false;
         }
 
-        const std::string&       prev_registry_cid = update.prev_registry_hash();
+        const std::string      &prev_registry_cid = update.prev_registry_hash();
         std::optional<Registry> base_registry_snapshot;
         std::string             current_id;
         {
@@ -1368,8 +1368,16 @@ namespace sgns
 
             Registry provided = update.registry();
             Registry expected = expected_result.value();
-            NormalizeRegistry( provided );
-            NormalizeRegistry( expected );
+            const auto sort_validators = []( Registry &registry )
+            {
+                auto *validators = registry.mutable_validators();
+                std::sort( validators->begin(),
+                           validators->end(),
+                           []( const ValidatorEntry &a, const ValidatorEntry &b )
+                           { return a.validator_id() < b.validator_id(); } );
+            };
+            sort_validators( provided );
+            sort_validators( expected );
 
             if ( provided.SerializeAsString() != expected.SerializeAsString() )
             {
@@ -1751,7 +1759,7 @@ namespace sgns
                 }
                 if ( entry.status() == Status::BLACKLISTED )
                 {
-                    penalty = std::min( penalty, cap );
+                    penalty  = std::min( penalty, cap );
                     penalty += std::min( weight_config_.blacklist_bump_, cap - penalty );
                 }
                 entry.set_penalty_score( penalty );
@@ -1817,7 +1825,7 @@ namespace sgns
             {
                 continue;
             }
-            uint32_t missed = static_cast<uint32_t>( entry.missed_epochs() );
+            uint32_t missed = entry.missed_epochs();
             if ( missed < std::numeric_limits<uint32_t>::max() )
             {
                 missed += 1;
@@ -1918,27 +1926,6 @@ namespace sgns
                             __func__,
                             entries[active_idx].validator_id().substr( 0, 8 ),
                             entries[active_idx].weight() );
-        }
-    }
-
-    void ValidatorRegistry::NormalizeRegistry( Registry &registry )
-    {
-        std::vector<ValidatorEntry> entries;
-        entries.reserve( static_cast<size_t>( registry.validators_size() ) );
-        for ( const auto &entry : registry.validators() )
-        {
-            entries.push_back( entry );
-        }
-
-        std::sort( entries.begin(),
-                   entries.end(),
-                   []( const ValidatorEntry &a, const ValidatorEntry &b )
-                   { return a.validator_id() < b.validator_id(); } );
-
-        registry.clear_validators();
-        for ( const auto &entry : entries )
-        {
-            *registry.add_validators() = entry;
         }
     }
 

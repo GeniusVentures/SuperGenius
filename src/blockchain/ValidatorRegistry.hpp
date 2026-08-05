@@ -586,12 +586,6 @@ namespace sgns
          */
         void ApplyTotalWeightCap( std::vector<ValidatorEntry> &entries ) const;
         /**
-         * @brief Sorts and normalizes registry structure deterministically.
-         * @param[in,out] registry Registry to normalize.
-         */
-        static void NormalizeRegistry( Registry &registry );
-
-        /**
          * @brief Initializes local cache from persistent storage.
          */
         void InitializeCache();
