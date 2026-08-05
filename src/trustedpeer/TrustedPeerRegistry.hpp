@@ -62,7 +62,6 @@ namespace sgns::trustedpeer
 
     private:
         std::vector<std::string> peers_;
-        bool                      applied_ = false;
     };
 
     /**

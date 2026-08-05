@@ -130,7 +130,6 @@ namespace sgns::trustedpeer
 
     void TrustedPeerListPayload::Apply()
     {
-        applied_ = true;
     }
 
     TrustedPeerRegistry::TrustedPeerRegistry( std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
