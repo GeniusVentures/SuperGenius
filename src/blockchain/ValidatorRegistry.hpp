@@ -362,7 +362,6 @@ namespace sgns
         {
             Approve, ///< Certificate is accepted.
             Reject,  ///< Certificate is rejected.
-            Pending, ///< Decision is deferred due to missing prerequisites.
             Stalled  ///< Processing is stalled and should be retried later.
         };
         /**
@@ -548,6 +547,17 @@ namespace sgns
             const Registry                              &current_registry,
             const std::unordered_map<std::string, bool> &registered_votes,
             const std::unordered_map<std::string, bool> &unregistered_votes ) const;
+        /**
+         * @brief Builds the next registry by aggregating a batch of finalized certificates.
+         * @param[in] current_registry Registry against which votes are evaluated.
+         * @param[in] payload Batch metadata constraining the certificates.
+         * @param[in] subject_hashes Subject hashes of the certificates to aggregate.
+         * @return Derived registry snapshot or an error.
+         */
+        outcome::result<Registry> BuildRegistryFromBatchCertificates(
+            const Registry                 &current_registry,
+            const RegistryBatchSubject     &payload,
+            const std::vector<std::string> &subject_hashes ) const;
         /**
          * @brief Inserts eligible unregistered validators into registry.
          * @param[in,out] registry Registry being updated.

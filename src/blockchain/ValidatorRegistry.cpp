@@ -1099,18 +1099,16 @@ namespace sgns
             return stop_applying( BatchCertificateDecision::Reject );
         }
 
-        std::vector<sgns::ConsensusCertificate> certificates;
-        certificates.reserve( selected_result.value().size() );
-        for ( const auto &tx_subject_hash : selected_result.value() )
+        auto registry_result =
+            BuildRegistryFromBatchCertificates( base_registry_result.value(), payload, selected_result.value() );
+        if ( registry_result.has_error() )
         {
             return stop_applying( BatchCertificateDecision::Reject );
         }
 
         RegistryUpdate update;
         update.set_prev_registry_hash( payload.base_registry_cid() );
-        *update.mutable_registry() = BuildRegistryFromAggregatedVotes( base_registry_result.value(),
-                                                                       registered_votes,
-                                                                       unregistered_votes );
+        *update.mutable_registry() = registry_result.value();
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
         {
@@ -1401,47 +1399,12 @@ namespace sgns
                     return false;
                 }
 
-                std::unordered_map<std::string, int64_t> registered_scores;
-                std::unordered_map<std::string, int64_t> unregistered_scores;
-                for ( const auto &subject_hash : subject_hashes )
+                auto expected_result = BuildRegistryFromBatchCertificates( *base_registry, payload, subject_hashes );
+                if ( expected_result.has_error() )
                 {
-                    auto certificate_result = LoadCertificateBySubjectHash( subject_hash );
-                    if ( certificate_result.has_error() )
-                    {
-                        logger_->error( "{}: missing certificate for batch hash={}",
-                                        __func__,
-                                        subject_hash.substr( 0, 8 ) );
-                        return false;
-                    }
-                    const auto &tx_cert = certificate_result.value();
-                    if ( tx_cert.registry_cid() != payload.base_registry_cid() ||
-                         tx_cert.registry_epoch() != payload.base_registry_epoch() )
-                    {
-                        logger_->error( "{}: batch certificate registry mismatch", __func__ );
-                        return false;
-                    }
-                    auto votes = ExtractCertificateVotes( tx_cert, *base_registry );
-                    for ( const auto &[validator_id, approve] : votes.registered_votes )
-                    {
-                        registered_scores[validator_id] += approve ? 1 : -1;
-                    }
-                    for ( const auto &[validator_id, approve] : votes.unregistered_votes )
-                    {
-                        unregistered_scores[validator_id] += approve ? 1 : -1;
-                    }
+                    return false;
                 }
-
-                std::unordered_map<std::string, bool> registered_votes;
-                std::unordered_map<std::string, bool> unregistered_votes;
-                for ( const auto &[validator_id, score] : registered_scores )
-                {
-                    registered_votes[validator_id] = score >= 0;
-                }
-                for ( const auto &[validator_id, score] : unregistered_scores )
-                {
-                    unregistered_votes[validator_id] = score >= 0;
-                }
-                expected = BuildRegistryFromAggregatedVotes( *base_registry, registered_votes, unregistered_votes );
+                expected = expected_result.value();
             }
             else
             {
@@ -1783,6 +1746,52 @@ namespace sgns
             *next.add_validators() = entry;
         }
         return next;
+    }
+
+    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::BuildRegistryFromBatchCertificates(
+        const Registry                 &current_registry,
+        const RegistryBatchSubject     &payload,
+        const std::vector<std::string> &subject_hashes ) const
+    {
+        std::unordered_map<std::string, int64_t> registered_scores;
+        std::unordered_map<std::string, int64_t> unregistered_scores;
+        for ( const auto &subject_hash : subject_hashes )
+        {
+            auto certificate_result = LoadCertificateBySubjectHash( subject_hash );
+            if ( certificate_result.has_error() )
+            {
+                logger_->error( "{}: missing certificate for batch hash={}", __func__, subject_hash.substr( 0, 8 ) );
+                return outcome::failure( certificate_result.error() );
+            }
+            const auto &certificate = certificate_result.value();
+            if ( certificate.registry_cid() != payload.base_registry_cid() ||
+                 certificate.registry_epoch() != payload.base_registry_epoch() )
+            {
+                logger_->error( "{}: batch certificate registry mismatch", __func__ );
+                return outcome::failure( std::errc::invalid_argument );
+            }
+            auto votes = ExtractCertificateVotes( certificate, current_registry );
+            for ( const auto &[validator_id, approve] : votes.registered_votes )
+            {
+                registered_scores[validator_id] += approve ? 1 : -1;
+            }
+            for ( const auto &[validator_id, approve] : votes.unregistered_votes )
+            {
+                unregistered_scores[validator_id] += approve ? 1 : -1;
+            }
+        }
+
+        std::unordered_map<std::string, bool> registered_votes;
+        std::unordered_map<std::string, bool> unregistered_votes;
+        for ( const auto &[validator_id, score] : registered_scores )
+        {
+            registered_votes[validator_id] = score >= 0;
+        }
+        for ( const auto &[validator_id, score] : unregistered_scores )
+        {
+            unregistered_votes[validator_id] = score >= 0;
+        }
+        return BuildRegistryFromAggregatedVotes( current_registry, registered_votes, unregistered_votes );
     }
 
     void ValidatorRegistry::InsertNewValidators( Registry                                    &registry,

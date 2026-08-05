@@ -267,12 +267,9 @@ namespace sgns
                     {
                         case ValidatorRegistry::BatchCertificateDecision::Approve:
                             return ConsensusManager::Check::Approve;
-                        case ValidatorRegistry::BatchCertificateDecision::Pending:
-                            return ConsensusManager::Check::Pending;
                         case ValidatorRegistry::BatchCertificateDecision::Stalled:
                             return ConsensusManager::Check::Stalled;
                         case ValidatorRegistry::BatchCertificateDecision::Reject:
-                        default:
                             return ConsensusManager::Check::Reject;
                     }
                 }
