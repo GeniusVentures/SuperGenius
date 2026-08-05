@@ -1948,24 +1948,15 @@ namespace sgns
     void ValidatorRegistry::InitializeCache()
     {
         logger_->trace( "{}: entry", __func__ );
-        std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
-        if ( cache_initialized_ )
-        {
-            logger_->error( "{}: cache already initialized", __func__ );
-            return;
-        }
-        logger_->trace( "{}: grabbing validator registry from CRDT", __func__ );
 
-        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
-        auto                  registry_get    = db_->Get( registry_key );
-        bool                  content_present = registry_get.has_value();
-        if ( !content_present )
+        auto registry_get = db_->Get( crdt::HierarchicalKey{ std::string( RegistryKey() ) } );
+        if ( !registry_get.has_value() )
         {
             logger_->error( "{}: registry content not found during cache init", __func__ );
             return;
         }
-        const auto &buffer  = registry_get.value();
-        auto        decoded = DeserializeRegistryUpdate( buffer.toVector() );
+
+        auto decoded = DeserializeRegistryUpdate( registry_get.value().toVector() );
         if ( !decoded.has_value() )
         {
             logger_->error( "{}: failed to parse registry content during cache init", __func__ );
@@ -1976,45 +1967,20 @@ namespace sgns
         cached_registry_ = decoded.value().registry();
         logger_->debug( "{}: cache populated validators={}", __func__, cached_registry_->validators().size() );
 
-        cache_initialized_ = true;
-
         sgns::crdt::GlobalDB::Buffer registry_cid_key;
         registry_cid_key.put( std::string( RegistryCidKey() ) );
         auto registry_cid = db_->GetDataStore()->get( registry_cid_key );
-        if ( registry_cid.has_value() )
+        if ( !registry_cid.has_value() )
         {
-            cached_registry_id_ = registry_cid.value().toString();
-            logger_->info( "{}: cache initialized with CID {}", __func__, cached_registry_id_ );
-            NotifyInitialized( true );
+            logger_->error( "{}: registry content found but CID missing", __func__ );
+            RetryInitializationIfNeeded();
             return;
         }
 
-        std::set<CID> heads_to_request;
-
-        logger_->error( "{}: registry content found but CID missing, requesting heads", __func__ );
-
-        auto heads_result = db_->GetCRDTHeadList();
-        if ( heads_result.has_value() )
-        {
-            const auto &heads_map = heads_result.value().first;
-            auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
-            if ( it != heads_map.end() )
-            {
-                heads_to_request = it->second;
-            }
-        }
-        logger_->debug( "{}: heads to request={}", __func__, heads_to_request.size() );
-
-        lock.unlock();
-
-        if ( !heads_to_request.empty() )
-        {
-            RequestHeadCids( heads_to_request );
-        }
-        else
-        {
-            logger_->error( "{}: no heads available to request", __func__ );
-        }
+        cached_registry_id_ = registry_cid.value().toString();
+        cache_initialized_  = true;
+        logger_->info( "{}: cache initialized with CID {}", __func__, cached_registry_id_ );
+        NotifyInitialized( true );
     }
 
     void ValidatorRegistry::RetryInitializationIfNeeded()
