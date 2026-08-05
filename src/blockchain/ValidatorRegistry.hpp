@@ -505,10 +505,9 @@ namespace sgns
          * @param[in] base_registry Registry to which the certificate applies.
          * @return Expected next registry, or an error when batch metadata is invalid.
          */
-        outcome::result<Registry> BuildExpectedRegistryFromCertificate(
-            const RegistryUpdate                &update,
-            const sgns::ConsensusCertificate    &certificate,
-            const Registry                      &base_registry ) const;
+        outcome::result<Registry> BuildExpectedRegistryFromCertificate( const RegistryUpdate             &update,
+                                                                        const sgns::ConsensusCertificate &certificate,
+                                                                        const Registry &base_registry ) const;
         /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
@@ -517,7 +516,7 @@ namespace sgns
          */
         bool ValidateCertificate( const sgns::ConsensusCertificate &certificate,
                                   const Registry                   &current_registry,
-                                  std::string_view                  expected_registry_cid = {} ) const;
+                                  std::string_view                  expected_registry_cid ) const;
         /**
          * @brief Validates certificate suitability for generating a registry update.
          * @param[in] certificate Certificate to validate.
@@ -526,15 +525,16 @@ namespace sgns
          */
         bool ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
                                            const Registry                   &current_registry,
-                                           std::string_view                  expected_registry_cid = {} ) const;
+                                           std::string_view                  expected_registry_cid ) const;
         /**
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
          * @param[in] current_registry Current registry snapshot.
-         * @return Partitioned vote representation.
+         * @return Partitioned votes, or an error when the certificate has no quorum.
          */
-        CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
-                                                  const Registry                   &current_registry ) const;
+        outcome::result<CertificateVotes> ExtractCertificateVotes(
+            const sgns::ConsensusCertificate &certificate,
+            const Registry                   &current_registry ) const;
         /**
          * @brief Builds next registry snapshot from aggregated vote maps.
          * @param[in] current_registry Current registry snapshot.

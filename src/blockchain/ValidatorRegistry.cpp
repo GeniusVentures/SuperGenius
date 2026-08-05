@@ -775,20 +775,21 @@ namespace sgns
             return outcome::failure( registry_result.error() );
         }
 
-        auto current_registry = registry_result.value();
-        if ( !ValidateCertificateForUpdate( certificate, current_registry ) )
+        auto       current_registry = registry_result.value();
+        const auto current_cid      = GetRegistryCid();
+        if ( !ValidateCertificateForUpdate( certificate, current_registry, current_cid ) )
         {
             logger_->error( "{}: invalid certificate", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto votes = ExtractCertificateVotes( certificate, current_registry );
+        BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, current_registry ) );
 
         RegistryUpdate update;
-        update.set_prev_registry_hash( GetRegistryCid() );
+        update.set_prev_registry_hash( current_cid );
         *update.mutable_registry() = BuildRegistryFromAggregatedVotes( current_registry,
-                                                                      votes.registered_votes,
-                                                                      votes.unregistered_votes );
+                                                                       votes.registered_votes,
+                                                                       votes.unregistered_votes );
 
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
@@ -878,7 +879,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::invalid_argument );
         }
-        std::string payload(subject_hashes[0]);
+        std::string payload( subject_hashes[0] );
         for ( size_t i = 1; i < subject_hashes.size(); ++i )
         {
             payload.push_back( '\n' );
@@ -1098,8 +1099,9 @@ namespace sgns
             return stop_applying( BatchCertificateDecision::Reject );
         }
 
-        auto registry_result =
-            BuildRegistryFromBatchCertificates( base_registry_result.value(), payload, selected_result.value() );
+        auto registry_result = BuildRegistryFromBatchCertificates( base_registry_result.value(),
+                                                                   payload,
+                                                                   selected_result.value() );
         if ( registry_result.has_error() )
         {
             return stop_applying( BatchCertificateDecision::Reject );
@@ -1168,7 +1170,7 @@ namespace sgns
             } );
         const bool callback_registered = db_->RegisterNewElementCallback(
             pattern,
-            [weak_self]( const crdt::CRDTCallbackManager::NewDataPair& new_data, const std::string &cid )
+            [weak_self]( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid )
             {
                 if ( auto strong = weak_self.lock() )
                 {
@@ -1352,9 +1354,11 @@ namespace sgns
                 return false;
             }
 
-            const bool certificate_valid =
-                enforce_time_window ? ValidateCertificateForUpdate( certificate, base_registry, prev_registry_cid )
-                                    : ValidateCertificate( certificate, base_registry, prev_registry_cid );
+            const bool certificate_valid = enforce_time_window
+                                               ? ValidateCertificateForUpdate( certificate,
+                                                                               base_registry,
+                                                                               prev_registry_cid )
+                                               : ValidateCertificate( certificate, base_registry, prev_registry_cid );
             if ( !certificate_valid )
             {
                 logger_->error( "{}: certificate verification failed", __func__ );
@@ -1426,10 +1430,8 @@ namespace sgns
         auto batch_payload = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
         if ( batch_payload.has_error() )
         {
-            auto votes = ExtractCertificateVotes( certificate, base_registry );
-            return BuildRegistryFromAggregatedVotes( base_registry,
-                                                     votes.registered_votes,
-                                                     votes.unregistered_votes );
+            BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, base_registry ) );
+            return BuildRegistryFromAggregatedVotes( base_registry, votes.registered_votes, votes.unregistered_votes );
         }
 
         const auto &payload = batch_payload.value();
@@ -1499,14 +1501,13 @@ namespace sgns
             return false;
         }
 
-        const std::string current_id = expected_registry_cid.empty() ? GetRegistryCid()
-                                                                     : std::string( expected_registry_cid );
-        if ( !current_id.empty() && !proposal.registry_cid().empty() && proposal.registry_cid() != current_id )
+        if ( !expected_registry_cid.empty() && !proposal.registry_cid().empty() &&
+             proposal.registry_cid() != expected_registry_cid )
         {
             logger_->error( "{}: registry CID mismatch cert={} registry={}",
                             __func__,
                             proposal.registry_cid(),
-                            current_id );
+                            expected_registry_cid );
             return false;
         }
 
@@ -1540,7 +1541,7 @@ namespace sgns
         return ValidateCertificate( certificate, current_registry, expected_registry_cid );
     }
 
-    ValidatorRegistry::CertificateVotes ValidatorRegistry::ExtractCertificateVotes(
+    outcome::result<ValidatorRegistry::CertificateVotes> ValidatorRegistry::ExtractCertificateVotes(
         const sgns::ConsensusCertificate &certificate,
         const Registry                   &current_registry ) const
     {
@@ -1590,7 +1591,7 @@ namespace sgns
         if ( !IsQuorum( approved_weight, total_weight ) )
         {
             logger_->error( "{}: quorum not reached approved={} total={}", __func__, approved_weight, total_weight );
-            return {};
+            return outcome::failure( std::errc::invalid_argument );
         }
 
         logger_->debug( "{}: quorum verified approved={} total={}", __func__, approved_weight, total_weight );
@@ -1663,7 +1664,7 @@ namespace sgns
                 logger_->error( "{}: batch certificate registry mismatch", __func__ );
                 return outcome::failure( std::errc::invalid_argument );
             }
-            auto votes = ExtractCertificateVotes( certificate, current_registry );
+            BOOST_OUTCOME_TRY( auto votes, ExtractCertificateVotes( certificate, current_registry ) );
             for ( const auto &[validator_id, approve] : votes.registered_votes )
             {
                 registered_scores[validator_id] += approve ? 1 : -1;
