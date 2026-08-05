@@ -568,6 +568,12 @@ namespace sgns
         void ApplyVoteEffects( std::vector<ValidatorEntry>                 &entries,
                                const std::unordered_map<std::string, bool> &registered_votes ) const;
         /**
+         * @brief Returns the configured maximum weight for a validator role.
+         * @param[in] role Validator role.
+         * @return Maximum weight associated with the role.
+         */
+        uint64_t MaxWeight( Role role ) const;
+        /**
          * @brief Applies inactivity decay to validators absent from participants.
          * @param[in,out] entries Validator entries to mutate.
          * @param[in] participants Validators observed in current activity set.

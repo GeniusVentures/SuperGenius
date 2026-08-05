@@ -13,6 +13,7 @@
 #include <boost/format.hpp>
 
 #include <gsl/span>
+#include <utility>
 
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
@@ -84,8 +85,8 @@ namespace sgns
                                                                                  std::move( db ),
                                                                                  std::move( pubsub ),
                                                                                  std::move( signer ),
-                                                                                 address,
-                                                                                 consensus_topic ) );
+                                                                                 std::move( address ),
+                                                                                 std::move( consensus_topic ) ) );
         instance->certificate_work_journal_ = instance->db_->GetWorkJournal();
 
         if ( !instance->certificate_work_journal_ )
@@ -131,7 +132,7 @@ namespace sgns
         db_( std::move( db ) ),             //
         pubsub_( std::move( pubsub ) ),     //
         signer_( std::move( signer ) ),     //
-        account_address_( address ),        //
+        account_address_( std::move(address) ),        //
         consensus_messages_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
                                    consensus_topic ),
         consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )

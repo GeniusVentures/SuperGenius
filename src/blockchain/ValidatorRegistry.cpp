@@ -356,21 +356,17 @@ namespace sgns
     {
         logger_->trace( "{}: entry role={}", __func__, static_cast<int>( role ) );
         uint64_t weight = weight_config_.regular_weight_;
-        uint64_t cap    = weight_config_.regular_max_weight_;
 
         switch ( role )
         {
             case Role::GENESIS:
                 weight = weight_config_.genesis_weight_;
-                cap    = weight_config_.genesis_max_weight_;
                 break;
             case Role::FULL:
                 weight = weight_config_.full_weight_;
-                cap    = weight_config_.full_max_weight_;
                 break;
             case Role::SHARDED:
                 weight = weight_config_.sharded_weight_;
-                cap    = weight_config_.sharded_max_weight_;
                 break;
             case Role::REGULAR:
             default:
@@ -383,6 +379,7 @@ namespace sgns
             return 0;
         }
 
+        const uint64_t cap = MaxWeight( role );
         if ( weight > cap )
         {
             logger_->debug( "{}: weight clamped to max {}", __func__, cap );
@@ -1284,7 +1281,7 @@ namespace sgns
             return false;
         }
 
-        const std::string       prev_registry_cid = update.prev_registry_hash();
+        const std::string&       prev_registry_cid = update.prev_registry_hash();
         std::optional<Registry> base_registry_snapshot;
         std::string             current_id;
         {
@@ -1729,117 +1726,81 @@ namespace sgns
     {
         for ( auto &entry : entries )
         {
-            auto vote_it = registered_votes.find( entry.validator_id() );
+            const auto vote_it = registered_votes.find( entry.validator_id() );
             if ( vote_it == registered_votes.end() )
             {
                 continue;
             }
 
-            const bool     approve     = vote_it->second;
-            uint32_t       penalty     = static_cast<uint32_t>( entry.penalty_score() );
-            const uint32_t cap         = weight_config_.penalty_cap_;
-            const uint64_t old_weight  = entry.weight();
-            const uint32_t old_penalty = penalty;
-            const auto     old_status  = entry.status();
-            const auto     old_role    = entry.role();
             entry.set_missed_epochs( 0 );
+            uint32_t penalty = entry.penalty_score();
 
-            if ( approve )
+            if ( const bool reject = !vote_it->second; reject )
             {
-                if ( penalty > 0 )
-                {
-                    penalty -= 1;
-                }
-                entry.set_penalty_score( penalty );
-
-                if ( entry.status() == Status::ACTIVE )
-                {
-                    const uint64_t increment = weight_config_.approval_increment_;
-                    if ( increment > 0 )
-                    {
-                        uint64_t role_cap = weight_config_.regular_max_weight_;
-                        switch ( entry.role() )
-                        {
-                            case Role::GENESIS:
-                                role_cap = weight_config_.genesis_max_weight_;
-                                break;
-                            case Role::FULL:
-                                role_cap = weight_config_.full_max_weight_;
-                                break;
-                            case Role::SHARDED:
-                                role_cap = weight_config_.sharded_max_weight_;
-                                break;
-                            case Role::REGULAR:
-                            default:
-                                role_cap = weight_config_.regular_max_weight_;
-                                break;
-                        }
-                        const uint64_t clamped = std::min( entry.weight() + increment, role_cap );
-                        entry.set_weight( clamped );
-                    }
-
-                    // D-08: REGULAR -> FULL promotion. Promoted FULL nodes accumulate
-                    // weight up to full_max_weight_, which flows into EvaluateSlotQuorum
-                    // via validator.weight() with no tally-side special case. The
-                    // promotion operates on the just-clamped weight and just-updated
-                    // penalty_score; it only changes the role, never the weight.
-                    if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
-                    {
-                        entry.set_role( Role::FULL );
-                    }
-                }
-                else if ( penalty == 0 )
-                {
-                    entry.set_status( Status::ACTIVE );
-                }
-            }
-            else
-            {
-                if ( entry.status() == Status::BLACKLISTED )
-                {
-                    const uint32_t bumped = std::min(
-                        cap,
-                        static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
-                    penalty = bumped;
-                }
-                else
+                const uint32_t cap = weight_config_.penalty_cap_;
+                if ( entry.status() != Status::BLACKLISTED )
                 {
                     if ( penalty < cap )
                     {
-                        penalty += 1;
+                        ++penalty;
                     }
                     if ( penalty >= weight_config_.penalty_threshold_ )
                     {
                         entry.set_status( Status::BLACKLISTED );
-                        const uint32_t bumped = std::min(
-                            cap,
-                            static_cast<uint32_t>( penalty + weight_config_.blacklist_bump_ ) );
-                        penalty = bumped;
                     }
                 }
+                if ( entry.status() == Status::BLACKLISTED )
+                {
+                    penalty = std::min( penalty, cap );
+                    penalty += std::min( weight_config_.blacklist_bump_, cap - penalty );
+                }
                 entry.set_penalty_score( penalty );
+                continue;
             }
 
-            logger_->debug( "{}: vote effect id={} approve={} weight {}->{} penalty {}->{} status {}->{}",
-                            __func__,
-                            entry.validator_id().substr( 0, 8 ),
-                            approve,
-                            old_weight,
-                            entry.weight(),
-                            old_penalty,
-                            entry.penalty_score(),
-                            static_cast<int>( old_status ),
-                            static_cast<int>( entry.status() ) );
-            // D-08: surface the REGULAR -> FULL promotion only when the role
-            // actually changed, so the common no-promotion path stays quiet.
-            if ( entry.role() != old_role )
+            if ( penalty > 0 )
             {
-                logger_->debug( "{}: role promotion id={} role {}->{}",
-                                __func__,
-                                entry.validator_id().substr( 0, 8 ),
-                                static_cast<int>( old_role ),
-                                static_cast<int>( entry.role() ) );
+                --penalty;
             }
+            entry.set_penalty_score( penalty );
+
+            if ( entry.status() != Status::ACTIVE )
+            {
+                if ( penalty == 0 )
+                {
+                    entry.set_status( Status::ACTIVE );
+                }
+                continue;
+            }
+
+            const uint64_t increment = weight_config_.approval_increment_;
+            if ( increment > 0 )
+            {
+                const uint64_t cap    = MaxWeight( entry.role() );
+                const uint64_t weight = std::min( entry.weight(), cap );
+                entry.set_weight( weight + std::min( increment, cap - weight ) );
+            }
+
+            if ( EvaluateRegularPromotionStatic( entry, weight_config_ ) )
+            {
+                entry.set_role( Role::FULL );
+            }
+        }
+    }
+
+    uint64_t ValidatorRegistry::MaxWeight( Role role ) const
+    {
+        switch ( role )
+        {
+            case Role::GENESIS:
+                return weight_config_.genesis_max_weight_;
+            case Role::FULL:
+                return weight_config_.full_max_weight_;
+            case Role::SHARDED:
+                return weight_config_.sharded_max_weight_;
+            case Role::REGULAR:
+            default:
+                return weight_config_.regular_max_weight_;
         }
     }
 
