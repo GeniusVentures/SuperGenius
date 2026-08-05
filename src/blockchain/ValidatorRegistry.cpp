@@ -199,8 +199,7 @@ namespace sgns
             PendingRegistryWrite write;
             {
                 std::unique_lock<std::mutex> lock( persistence_mutex_ );
-                persistence_cv_.wait( lock,
-                                      [this]() { return persistence_stopping_ || !persistence_queue_.empty(); } );
+                persistence_cv_.wait( lock, [this]() { return persistence_stopping_ || !persistence_queue_.empty(); } );
                 if ( persistence_queue_.empty() )
                 {
                     if ( persistence_stopping_ )
@@ -437,7 +436,7 @@ namespace sgns
 
     ValidatorRegistry::SlotQuorumResult ValidatorRegistry::EvaluateSlotQuorum(
         const std::vector<sgns::ConsensusVote> &votes,
-        const Registry                        &registry ) const
+        const Registry                         &registry ) const
     {
         return EvaluateSlotQuorumStatic( votes, registry, weight_config_ );
     }
@@ -448,35 +447,41 @@ namespace sgns
     // throughout -- no floating point -- to guarantee cross-platform determinism.
     ValidatorRegistry::SlotQuorumResult ValidatorRegistry::EvaluateSlotQuorumStatic(
         const std::vector<sgns::ConsensusVote> &votes,
-        const Registry                        &registry,
-        const WeightConfig                    &weight_config )
+        const Registry                         &registry,
+        const WeightConfig                     &weight_config )
     {
         ValidatorRegistryLogger()->trace( "{}: entry votes={}", __func__, votes.size() );
 
-        // Step 1: collect qualifying approve voters. One vote per validator
-        // (dedup by voter_id, keep first). Voter must be ACTIVE in the registry.
-        struct QualifyingVoter
+        struct PublicHashGroup
         {
-            std::string voter_id;
-            uint64_t    weight;
-            std::string slot_0_hash;
-            std::string slot_1_hash;
-            std::string slot_2_hash;
+            size_t   voter_count  = 0;
+            uint64_t total_weight = 0;
         };
-        std::vector<QualifyingVoter>    voters;
+
+        using PublicHashGroups = std::unordered_map<std::string, PublicHashGroup>;
+
+        SlotQuorumResult                result;
         std::unordered_set<std::string> seen_voters;
+        PublicHashGroups                slot1_groups;
+        PublicHashGroups                slot2_groups;
+        uint64_t                        slot0_contribution = 0;
+
+        const auto add_public_vote = []( PublicHashGroups &groups, const std::string &hash, uint64_t weight )
+        {
+            if ( hash.empty() )
+            {
+                return;
+            }
+            auto &group = groups[hash];
+            ++group.voter_count;
+            group.total_weight += weight;
+        };
 
         for ( const auto &vote : votes )
         {
-            if ( !vote.approve() )
+            // Only the first approval from each active validator participates.
+            if ( !vote.approve() || !seen_voters.insert( vote.voter_id() ).second )
             {
-                // Non-approve votes are skipped entirely (D-05 fail-closed):
-                // they do NOT count toward total_voting_reputation.
-                continue;
-            }
-            if ( !seen_voters.insert( vote.voter_id() ).second )
-            {
-                // Duplicate voter -- keep first only.
                 continue;
             }
             const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
@@ -484,99 +489,50 @@ namespace sgns
             {
                 continue;
             }
-            QualifyingVoter v;
-            v.voter_id     = vote.voter_id();
-            v.weight       = validator->weight();
-            v.slot_0_hash  = vote.slot_0_hash();
-            v.slot_1_hash  = vote.slot_1_hash();
-            v.slot_2_hash  = vote.slot_2_hash();
-            voters.push_back( std::move( v ) );
+
+            const uint64_t weight           = validator->weight();
+            result.total_voting_reputation += weight;
+
+            if ( !vote.slot_0_hash().empty() && weight_config.slot_direct_denominator_ > 0 )
+            {
+                slot0_contribution += ( weight * weight_config.slot_direct_numerator_ ) /
+                                      weight_config.slot_direct_denominator_;
+            }
+            add_public_vote( slot1_groups, vote.slot_1_hash(), weight );
+            add_public_vote( slot2_groups, vote.slot_2_hash(), weight );
         }
 
-        SlotQuorumResult result;
-
-        // Step 2: total_voting_reputation = sum(weight) over qualifying voters.
-        for ( const auto &v : voters )
-        {
-            result.total_voting_reputation += v.weight;
-        }
-
-        // Step 3: threshold = ceil(total * quorum_num / quorum_den) using the
-        // same ceil-division idiom as QuorumThreshold.
         if ( result.total_voting_reputation > 0 && weight_config.slot_quorum_denominator_ > 0 )
         {
             const uint64_t numerator = result.total_voting_reputation * weight_config.slot_quorum_numerator_;
-            result.threshold         = ( numerator + weight_config.slot_quorum_denominator_ - 1 )
-                               / weight_config.slot_quorum_denominator_;
+            result.threshold         = ( numerator + weight_config.slot_quorum_denominator_ - 1 ) /
+                                       weight_config.slot_quorum_denominator_;
         }
 
-        uint64_t slot0_contribution = 0;
-        uint64_t slot1_contribution = 0;
-        uint64_t slot2_contribution = 0;
-
-        // Step 4 (D-02): slot 0 -- each voter with non-empty slot_0_hash
-        // contributes weight * direct_num / direct_den. Multiply before divide.
-        if ( weight_config.slot_direct_denominator_ > 0 )
+        const auto public_contribution = [&]( const PublicHashGroups &groups )
         {
-            for ( const auto &v : voters )
-            {
-                if ( !v.slot_0_hash.empty() )
-                {
-                    slot0_contribution += ( v.weight * weight_config.slot_direct_numerator_ )
-                                          / weight_config.slot_direct_denominator_;
-                }
-            }
-        }
-
-        // Step 5 (D-03): slots 1 and 2 -- group voters by slot_N_hash, keep only
-        // groups with >= slot_public_min_group_ distinct validators, sum their
-        // weight, multiply by public_num / public_den.
-        auto compute_public_slot = [&]( const size_t slot_index ) -> uint64_t {
             if ( weight_config.slot_public_denominator_ == 0 )
             {
-                return 0;
-            }
-            // group: hash -> set of distinct voter_ids in that hash group.
-            std::unordered_map<std::string, std::unordered_set<std::string>> groups;
-            for ( const auto &v : voters )
-            {
-                const std::string &hash = ( slot_index == 1 ) ? v.slot_1_hash : v.slot_2_hash;
-                if ( hash.empty() )
-                {
-                    continue;
-                }
-                groups[hash].insert( v.voter_id );
+                return uint64_t{ 0 };
             }
             uint64_t contribution = 0;
-            for ( const auto &kv : groups )
+            for ( const auto &entry : groups )
             {
-                if ( kv.second.size() >= weight_config.slot_public_min_group_ )
+                const auto &group = entry.second;
+                if ( group.voter_count >= weight_config.slot_public_min_group_ )
                 {
-                    // Sum the weight of voters in this qualifying group.
-                    uint64_t group_weight = 0;
-                    for ( const auto &v : voters )
-                    {
-                        const std::string &hash = ( slot_index == 1 ) ? v.slot_1_hash : v.slot_2_hash;
-                        if ( hash == kv.first )
-                        {
-                            group_weight += v.weight;
-                        }
-                    }
-                    contribution += ( group_weight * weight_config.slot_public_numerator_ )
-                                    / weight_config.slot_public_denominator_;
+                    contribution += ( group.total_weight * weight_config.slot_public_numerator_ ) /
+                                    weight_config.slot_public_denominator_;
                 }
-                // Solo / sub-min groups contribute zero (D-03).
             }
             return contribution;
         };
 
-        slot1_contribution = compute_public_slot( 1 );
-        slot2_contribution = compute_public_slot( 2 );
+        const uint64_t slot1_contribution = public_contribution( slot1_groups );
+        const uint64_t slot2_contribution = public_contribution( slot2_groups );
 
         result.qualified_sum = slot0_contribution + slot1_contribution + slot2_contribution;
-
-        // Step 6 (D-06): certificate iff qualified_sum STRICTLY exceeds threshold.
-        result.has_quorum = result.qualified_sum > result.threshold;
+        result.has_quorum    = result.qualified_sum > result.threshold;
 
         ValidatorRegistryLogger()->debug(
             "{}: slot0={} slot1={} slot2={} qualified_sum={} total_voting_rep={} threshold={} has_quorum={}",

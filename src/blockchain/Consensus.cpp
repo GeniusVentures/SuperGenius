@@ -95,7 +95,7 @@ namespace sgns
             return nullptr;
         }
 
-        instance->consensus_subs_future_ = std::move( instance->pubsub_->Subscribe(
+        instance->consensus_subs_future_ = instance->pubsub_->Subscribe(
             instance->consensus_messages_topic_,
             [weakptr( std::weak_ptr<ConsensusManager>( instance ) )](
                 boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message )
@@ -107,7 +107,7 @@ namespace sgns
                                                      self->consensus_messages_topic_ );
                     self->OnConsensusMessage( message );
                 }
-            } ) );
+            } );
         ConsensusManagerLogger()->debug( "{}: Subscribed to Consensus topic {}",
                                          __func__,
                                          instance->consensus_messages_topic_ );
@@ -214,10 +214,9 @@ namespace sgns
                     else
                     {
                         // No pending work: wait up to interval, but wake immediately when new work appears.
-                        timer_cv_.wait_for(
-                            lock,
-                            interval,
-                            [this]() { return stop_timer_.load() || certificates_pending_.load(); } );
+                        timer_cv_.wait_for( lock,
+                                            interval,
+                                            [this]() { return stop_timer_.load() || certificates_pending_.load(); } );
                     }
                     if ( stop_timer_.load() )
                     {
@@ -561,8 +560,8 @@ namespace sgns
             return AggregatorRole::NotInRegistry;
         }
 
-        auto hash = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
-        uint64_t                 base_index = 0;
+        auto     hash       = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
+        uint64_t base_index = 0;
         for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
         {
             base_index = ( base_index << 8 ) | hash[i];
@@ -1389,22 +1388,21 @@ namespace sgns
             tally.has_quorum       = slot_result.has_quorum;
             tally.qualified_sum    = slot_result.qualified_sum;
             tally.slot_threshold   = slot_result.threshold;
-            ConsensusManagerLogger()->debug(
-                "{}: bridge-mint slot tally hash {} proposal_id={} qualified_sum={} "
-                "threshold={} total_voting_rep={} has_quorum={}",
-                __func__,
-                GetPrintableSubjectHash( proposal.subject() ),
-                proposal.proposal_id().substr( 0, 8 ),
-                slot_result.qualified_sum,
-                slot_result.threshold,
-                slot_result.total_voting_reputation,
-                slot_result.has_quorum );
+            ConsensusManagerLogger()->debug( "{}: bridge-mint slot tally hash {} proposal_id={} qualified_sum={} "
+                                             "threshold={} total_voting_rep={} has_quorum={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             slot_result.qualified_sum,
+                                             slot_result.threshold,
+                                             slot_result.total_voting_reputation,
+                                             slot_result.has_quorum );
             return tally;
         }
 
         // Non-bridge subject: unchanged single-pool IsQuorum path.
-        const uint64_t total_weight = ValidatorRegistry::TotalWeight( registry );
-        uint64_t       approved_weight = 0;
+        const uint64_t                  total_weight    = ValidatorRegistry::TotalWeight( registry );
+        uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
         for ( const auto &vote : votes )
         {
@@ -2136,7 +2134,7 @@ namespace sgns
     {
         const std::string pattern = std::string( CERT_KEY_PATTERN );
 
-        auto       weak_self         = weak_from_this();
+        auto weak_self                 = weak_from_this();
         certificate_filter_registered_ = db_->RegisterElementFilter(
             pattern,
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
@@ -2819,13 +2817,9 @@ namespace sgns
 
     outcome::result<NonceSubject> ConsensusManager::DecodeNonceSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, NONCE_SUBJECT_TYPE );
-        if ( raw_payload.has_error() )
-        {
-            return outcome::failure( raw_payload.error() );
-        }
+        BOOST_OUTCOME_TRY( auto raw_payload, ExtractBuiltinPayload( subject, NONCE_SUBJECT_TYPE ) );
         NonceSubject payload;
-        if ( !payload.ParseFromString( raw_payload.value() ) )
+        if ( !payload.ParseFromString( raw_payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -3005,8 +2999,8 @@ namespace sgns
             return {};
         }
 
-        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
-        auto                     proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        auto hash        = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
         ConsensusManagerLogger()->debug( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
         return proposal_id;
     }

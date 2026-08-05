@@ -60,7 +60,7 @@ namespace sgns
         using Subject     = ConsensusSubject;     ///< Alias for Consensus Subject protobuf type
 
         /// @brief      Alias for a signer method type
-        using Signer = std::function<outcome::result<std::vector<uint8_t>>( std::vector<uint8_t> payload )>;
+        using Signer = std::function<outcome::result<std::vector<uint8_t>>( const std::vector<uint8_t> &payload )>;
 
         /**
          * @brief      Callback invoked during CreateVote to populate slot_N_hash
@@ -231,8 +231,8 @@ namespace sgns
             bool     has_quorum      = false; ///< Flag indicating if quorum was reached
             // Phase 6 (D-06): populated only for bridge-mint subjects; zero for
             // non-bridge subjects (observability -- the slot-tally result).
-            uint64_t qualified_sum  = 0;      ///< Slot-weighted qualified contribution.
-            uint64_t slot_threshold = 0;      ///< total_voting_reputation * 0.75 (D-06).
+            uint64_t qualified_sum  = 0; ///< Slot-weighted qualified contribution.
+            uint64_t slot_threshold = 0; ///< total_voting_reputation * 0.75 (D-06).
         };
 
         /**
@@ -937,15 +937,15 @@ namespace sgns
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
-                                  slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
-        static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
-        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
-        Signer                    signer_;                            ///< Local signing callback.
-        SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
-        mutable std::mutex        slot_hash_populator_mutex_;         ///< Guards callback replacement/copy at shutdown.
-        std::string               account_address_;                   ///< Local validator/account id.
-        std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
-        std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
+                                        slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
+        static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
+        mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
+        Signer                          signer_;                     ///< Local signing callback.
+        SlotHashPopulator               slot_hash_populator_;        ///< Optional slot-hash populator (Phase 6, D-01).
+        mutable std::mutex              slot_hash_populator_mutex_;  ///< Guards callback replacement/copy at shutdown.
+        std::string                     account_address_;            ///< Local validator/account id.
+        std::unordered_map<std::string, ProposalState> proposals_;   ///< Proposal state map keyed by proposal id.
+        std::unordered_map<std::string, SlotState>     slot_states_; ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
         std::unordered_map<PendingDependencyKey, std::unordered_set<std::string>, PendingDependencyKeyHash>
@@ -968,9 +968,9 @@ namespace sgns
         std::chrono::milliseconds round_duration_{ DEFAULT_ROUND_DURATION }; ///< Consensus round duration.
         std::chrono::milliseconds round_skew_{ DEFAULT_ROUND_SKEW };         ///< Round skew tolerance.
         std::atomic<bool>         close_started_{ false }; ///< Makes Close one-shot across Stop/destruction.
-        bool certificate_filter_registered_   = false;    ///< Owns the CRDT certificate filter.
-        bool certificate_callback_registered_ = false;    ///< Owns the CRDT certificate callback.
-        std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
+        bool                      certificate_filter_registered_   = false; ///< Owns the CRDT certificate filter.
+        bool                      certificate_callback_registered_ = false; ///< Owns the CRDT certificate callback.
+        std::atomic<bool>         stop_timer_{ false };                     ///< Signals the round timer thread to stop.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
         std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
         std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
