@@ -1,0 +1,85 @@
+{
+  "name": "regression-a-index-mismatch",
+  "version": "1.0.0",
+  "gnus_spec_version": 1.0,
+  "description": "Regression Bug A: index mismatch in pass/input indexing — multi-pass job where input bindings reference pass indices that shift after insertions",
+  "inputs": [
+    {
+      "name": "inputA",
+      "source_uri_param": "file://processing_datatypes/float_input.bin",
+      "type": "tensor",
+      "format": "FLOAT32"
+    },
+    {
+      "name": "inputB",
+      "source_uri_param": "file://processing_datatypes/buffer_input.raw",
+      "type": "buffer",
+      "dimensions": { "width": 16, "block_len": 16, "chunk_stride": 16 },
+      "format": "INT8"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "outputA",
+      "source_uri_param": "file://processing_datatypes/regression_a_output.raw",
+      "type": "tensor"
+    },
+    {
+      "name": "outputB",
+      "source_uri_param": "file://processing_datatypes/regression_a_output2.raw",
+      "type": "tensor"
+    }
+  ],
+  "passes": [
+    {
+      "name": "pass_A",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/float_model.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputA",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:outputA",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    },
+    {
+      "name": "pass_B",
+      "type": "inference",
+      "model": {
+        "source_uri_param": "file://processing_datatypes/buffer_tiny.mnn",
+        "format": "MNN",
+        "batch_size": 1,
+        "input_nodes": [
+          {
+            "name": "input",
+            "type": "tensor",
+            "source": "input:inputB",
+            "shape": [1, 16]
+          }
+        ],
+        "output_nodes": [
+          {
+            "name": "output",
+            "type": "tensor",
+            "target": "output:outputB",
+            "shape": [1, 16]
+          }
+        ]
+      }
+    }
+  ]
+}
