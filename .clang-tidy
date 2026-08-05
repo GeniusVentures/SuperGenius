@@ -46,109 +46,80 @@
 #   CLAUDE.md → modernize-use-noexcept
 
 Checks: >
-  -*,
+  boost-*,
+  -boost-use-ranges,
+
   bugprone-*,
   -bugprone-easily-swappable-parameters,
-  cert-*,
-  -cert-err58-cpp,
-  cppcoreguidelines-avoid-magic-numbers,
-  cppcoreguidelines-init-variables,
-  cppcoreguidelines-pro-type-member-init,
-  cppcoreguidelines-avoid-goto,
+  -bugprone-reserved-identifier,
+
+  concurrency-*,
+
+  cppcoreguidelines-*,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-special-member-functions,
+
+  google-build-explicit-make-pair,
+  google-build-namespaces,
+  google-default-arguments,
+  google-global-names-in-headers,
+  google-readability-avoid-underscore-in-googletest-name,
   google-readability-casting,
-  modernize-use-nullptr,
-  modernize-use-override,
-  misc-non-private-member-variables-in-classes,
-  readability-implicit-bool-conversion,
-  readability-braces-around-statements,
-  readability-delete-null-pointer,
-  readability-container-size-empty,
-  cppcoreguidelines-prefer-member-initializer,
-  cppcoreguidelines-special-member-functions,
-  readability-make-member-function-const,
-  readability-redundant-member-init,
-  readability-avoid-const-params-in-decls,
-  misc-unused-parameters,
-  modernize-use-using,
-  modernize-use-emplace,
-  modernize-avoid-bind,
-  modernize-use-noexcept,
-  readability-else-after-return,
-  readability-redundant-string-cstr,
-  readability-simplify-boolean-expr,
-  readability-simplify-subscript-expr,
-  readability-static-accessed-through-instance,
-  readability-const-return-type,
-  readability-use-anyofallof,
+  google-runtime-int,
+  google-runtime-operator,
+  google-upgrade-googletest-case,
+
+  misc-*,
+  -misc-include-cleaner,
+  -misc-non-private-member-variables-in-classes,
+
+  modernize-*,
+  -modernize-use-default-member-init,
+  -modernize-use-trailing-return-type,
+
   performance-*,
-  misc-misleading-bidirectional,
-  misc-const-correctness,
-  misc-static-assert,
-  readability-identifier-naming
+
+  portability-*,
+
+  readability-*,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-math-missing-parentheses,
+  -readability-named-parameter,
+  -readability-qualified-auto
 
 CheckOptions:
-  # ─── Naming: SuperGenius conventions ──────────────────────────
-  #   CLAUDE.md overrides the Handbook where noted.
-  #   See: documentation/.../c++-coding-standards.md §5
+  readability-function-cognitive-complexity.Threshold: 40
 
-  # Types: PascalCase (Handbook Standard 39)
-  #   In clang-tidy, CamelCase = PascalCase-like (UpperCamelCase)
-  - key:   readability-identifier-naming.ClassCase
-    value: CamelCase
-  - key:   readability-identifier-naming.StructCase
-    value: CamelCase
-  - key:   readability-identifier-naming.EnumCase
-    value: CamelCase
+  readability-identifier-naming.DefaultCase: lower_case
 
-  # Enum constants: UPPER_CASE (Handbook Standard 14)
-  #   Some newer scoped enums use PascalCase — warnings expected.
-  - key:   readability-identifier-naming.EnumConstantCase
-    value: UPPER_CASE
+  readability-identifier-naming.NamespaceCase: lower_case
 
-  # Functions / methods: PascalCase (Handbook Standard 42, Guideline 18)
-  #   Some free functions use camelBack (e.g. createLogger); warnings expected.
-  #   In clang-tidy, CamelCase = UpperCamelCase / PascalCase
-  - key:   readability-identifier-naming.FunctionCase
-    value: CamelCase
-  - key:   readability-identifier-naming.MethodCase
-    value: CamelCase
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.TypeAliasCase: CamelCase
+  readability-identifier-naming.EnumCase: CamelCase
 
-  # Variables / parameters: camelCase (lowerCamelCase)
-  #   CLAUDE.md explicitly drops the Handbook 'a' prefix for args/locals.
-  #   In clang-tidy, camelBack = lowerCamelCase
-  - key:   readability-identifier-naming.VariableCase
-    value: camelBack
-  - key:   readability-identifier-naming.LocalVariableCase
-    value: camelBack
-  - key:   readability-identifier-naming.ParameterCase
-    value: camelBack
+  readability-identifier-naming.EnumConstantCase: UPPER_CASE
 
-  # Members: m_ prefix + camelCase (Handbook Standard 40)
-  #   Some files use trailing _ instead — warnings expected.
-  #   In clang-tidy, camelBack = lowerCamelCase
-  - key:   readability-identifier-naming.MemberCase
-    value: camelBack
-  - key:   readability-identifier-naming.MemberPrefix
-    value: 'm_'
-  - key:   readability-identifier-naming.PrivateMemberPrefix
-    value: 'm_'
-  - key:   readability-identifier-naming.ProtectedMemberPrefix
-    value: 'm_'
+  readability-identifier-naming.FunctionCase: CamelCase
+  readability-identifier-naming.MethodCase: CamelCase
 
-  # Compile-time constants: k prefix + PascalCase
-  #   CLAUDE.md override: kPascalCase instead of Handbook UPPER_CASE.
-  #   In clang-tidy, CamelCase = UpperCamelCase / PascalCase
-  - key:   readability-identifier-naming.ConstantCase
-    value: CamelCase
-  - key:   readability-identifier-naming.ConstantPrefix
-    value: 'k'
-  - key:   readability-identifier-naming.GlobalConstantCase
-    value: CamelCase
-  - key:   readability-identifier-naming.GlobalConstantPrefix
-    value: 'k'
+  readability-identifier-naming.VariableCase: snake_case
+  readability-identifier-naming.LocalVariableCase: snake_case
+  readability-identifier-naming.ParameterCase: snake_case
 
-  # ─── Magic numbers: allowed values ────────────────────────────
-  #   Per CLAUDE.md: 0, 1, -1 are always allowed in trivial contexts.
-  #   2 is also commonly used (binary, pair operations).
-  - key:   cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues
-    value: '0;1;-1;2'
+  readability-identifier-naming.MemberCase: snake_case
+  readability-identifier-naming.MemberSuffix: '_'
+
+  readability-identifier-naming.GlobalVariableCase: UPPER_CASE
+  readability-identifier-naming.StaticVariableCase: UPPER_CASE
+  readability-identifier-naming.ClassConstantCase: UPPER_CASE
+  readability-identifier-naming.GlobalConstantCase: UPPER_CASE
+  readability-identifier-naming.StaticConstantCase: UPPER_CASE
+  readability-identifier-naming.ConstexprVariableCase: UPPER_CASE
+  readability-identifier-naming.ClassConstexprCase: UPPER_CASE
