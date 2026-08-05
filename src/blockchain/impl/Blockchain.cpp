@@ -238,7 +238,7 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    BOOST_OUTCOME_TRY( auto decision, strong->validator_registry_->EvaluateBatchSubject( subject ) );
+                    const auto decision = strong->validator_registry_->EvaluateBatchSubject( subject );
                     switch ( decision )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
@@ -261,9 +261,8 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    BOOST_OUTCOME_TRY(
-                        auto decision,
-                        strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate ) );
+                    const auto decision =
+                        strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
                     switch ( decision )
                     {
                         case ValidatorRegistry::BatchCertificateDecision::Approve:

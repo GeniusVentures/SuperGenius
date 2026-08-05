@@ -368,18 +368,17 @@ namespace sgns
         /**
          * @brief Evaluates a registry-batch subject payload.
          * @param[in] subject Subject to evaluate.
-         * @return Subject decision or an error.
+         * @return Subject decision.
          */
-        outcome::result<BatchSubjectDecision> EvaluateBatchSubject( const ConsensusSubject &subject );
+        BatchSubjectDecision EvaluateBatchSubject( const ConsensusSubject &subject );
         /**
          * @brief Handles certificate associated with a registry-batch subject.
          * @param[in] subject_hash Subject hash key.
          * @param[in] certificate Certificate to process.
-         * @return Certificate handling decision or an error.
+         * @return Certificate handling decision.
          */
-        outcome::result<BatchCertificateDecision> HandleBatchCertificate(
-            const std::string                &subject_hash,
-            const sgns::ConsensusCertificate &certificate );
+        BatchCertificateDecision HandleBatchCertificate( const std::string                &subject_hash,
+                                                         const sgns::ConsensusCertificate &certificate );
 
         /**
          * @brief Registry object key used in datastore.

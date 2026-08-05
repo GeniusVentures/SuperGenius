@@ -1010,13 +1010,12 @@ namespace sgns
         return submitter( subject );
     }
 
-    outcome::result<ValidatorRegistry::BatchSubjectDecision> ValidatorRegistry::EvaluateBatchSubject(
-        const ConsensusSubject &subject )
+    ValidatorRegistry::BatchSubjectDecision ValidatorRegistry::EvaluateBatchSubject( const ConsensusSubject &subject )
     {
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( subject );
         if ( payload_result.has_error() )
         {
-            return outcome::success( BatchSubjectDecision::Reject );
+            return BatchSubjectDecision::Reject;
         }
 
         const auto &payload         = payload_result.value();
@@ -1028,26 +1027,26 @@ namespace sgns
         {
             if ( selected_result.error() == std::errc::resource_unavailable_try_again )
             {
-                return outcome::success( BatchSubjectDecision::Pending );
+                return BatchSubjectDecision::Pending;
             }
-            return outcome::success( BatchSubjectDecision::Reject );
+            return BatchSubjectDecision::Reject;
         }
 
         auto registry_result = LoadRegistryByCid( payload.base_registry_cid() );
         if ( registry_result.has_error() )
         {
-            return outcome::success( BatchSubjectDecision::Pending );
+            return BatchSubjectDecision::Pending;
         }
 
         if ( registry_result.value().epoch() != payload.base_registry_epoch() )
         {
-            return outcome::success( BatchSubjectDecision::Reject );
+            return BatchSubjectDecision::Reject;
         }
 
-        return outcome::success( BatchSubjectDecision::Approve );
+        return BatchSubjectDecision::Approve;
     }
 
-    outcome::result<ValidatorRegistry::BatchCertificateDecision> ValidatorRegistry::HandleBatchCertificate(
+    ValidatorRegistry::BatchCertificateDecision ValidatorRegistry::HandleBatchCertificate(
         const std::string                &subject_hash,
         const sgns::ConsensusCertificate &certificate )
     {
