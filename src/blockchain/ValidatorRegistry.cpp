@@ -1065,29 +1065,29 @@ namespace sgns
             }
             applying_batch_subject_ids_.insert( subject_hash );
         }
+        const auto stop_applying = [this, &subject_hash]( BatchCertificateDecision decision )
+        {
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            applying_batch_subject_ids_.erase( subject_hash );
+            return decision;
+        };
 
         auto payload_result = ConsensusManager::DecodeRegistryBatchSubject( certificate.proposal().subject() );
         if ( payload_result.has_error() )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
+            return stop_applying( BatchCertificateDecision::Reject );
         }
 
         const auto &payload              = payload_result.value();
         auto        base_registry_result = LoadRegistryByCid( payload.base_registry_cid() );
         if ( base_registry_result.has_error() )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Stalled;
+            return stop_applying( BatchCertificateDecision::Stalled );
         }
         if ( base_registry_result.value().epoch() != payload.base_registry_epoch() ||
              !ValidateCertificate( certificate, base_registry_result.value(), payload.base_registry_cid() ) )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
+            return stop_applying( BatchCertificateDecision::Reject );
         }
 
         auto selected_result = SelectBatchSubjects( payload.base_registry_cid(),
@@ -1096,49 +1096,14 @@ namespace sgns
                                                     std::string( payload.batch_root() ) );
         if ( selected_result.has_error() )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Reject;
+            return stop_applying( BatchCertificateDecision::Reject );
         }
 
         std::vector<sgns::ConsensusCertificate> certificates;
         certificates.reserve( selected_result.value().size() );
         for ( const auto &tx_subject_hash : selected_result.value() )
         {
-            auto cert_result = LoadCertificateBySubjectHash( tx_subject_hash );
-            if ( cert_result.has_error() )
-            {
-                std::lock_guard<std::mutex> lock( batch_mutex_ );
-                applying_batch_subject_ids_.erase( subject_hash );
-                return BatchCertificateDecision::Reject;
-            }
-            certificates.push_back( cert_result.value() );
-        }
-
-        std::unordered_map<std::string, int64_t> registered_scores;
-        std::unordered_map<std::string, int64_t> unregistered_scores;
-        for ( const auto &tx_cert : certificates )
-        {
-            auto votes = ExtractCertificateVotes( tx_cert, base_registry_result.value() );
-            for ( const auto &[validator_id, approve] : votes.registered_votes )
-            {
-                registered_scores[validator_id] += approve ? 1 : -1;
-            }
-            for ( const auto &[validator_id, approve] : votes.unregistered_votes )
-            {
-                unregistered_scores[validator_id] += approve ? 1 : -1;
-            }
-        }
-
-        std::unordered_map<std::string, bool> registered_votes;
-        std::unordered_map<std::string, bool> unregistered_votes;
-        for ( const auto &[validator_id, score] : registered_scores )
-        {
-            registered_votes[validator_id] = score >= 0;
-        }
-        for ( const auto &[validator_id, score] : unregistered_scores )
-        {
-            unregistered_votes[validator_id] = score >= 0;
+            return stop_applying( BatchCertificateDecision::Reject );
         }
 
         RegistryUpdate update;
@@ -1149,9 +1114,8 @@ namespace sgns
         std::string serialized_cert;
         if ( !certificate.SerializeToString( &serialized_cert ) )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return outcome::failure( std::errc::invalid_argument );
+            logger_->error( "{}: failed to serialize certificate", __func__ );
+            return stop_applying( BatchCertificateDecision::Reject );
         }
         update.set_certificate( serialized_cert );
         for ( const auto &tx_subject_hash : selected_result.value() )
@@ -1161,9 +1125,7 @@ namespace sgns
 
         if ( !EnqueueRegistryWrite( subject_hash, std::move( update ) ) )
         {
-            std::lock_guard<std::mutex> lock( batch_mutex_ );
-            applying_batch_subject_ids_.erase( subject_hash );
-            return BatchCertificateDecision::Stalled;
+            return stop_applying( BatchCertificateDecision::Stalled );
         }
         return BatchCertificateDecision::Approve;
     }
