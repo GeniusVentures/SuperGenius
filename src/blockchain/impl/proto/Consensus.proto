@@ -12,7 +12,15 @@ message HashOfAString {
   bytes hash = 1;
 }
 
+// The typed operation or data that validators are asked to agree on.
+// A subject is wrapped in a ConsensusProposal, voted on by validators, and,
+// after reaching quorum, represented by a ConsensusCertificate.
+//
+// The consensus layer uses subject_type_hash to dispatch the canonical payload
+// to its type-specific validation handler. Examples include transactions, task
+// results, and validator-registry batches.
 message ConsensusSubject {
+  // Public address of the account associated with or originating the subject.
   string account_id = 3;
   // Hash of the canonical subject type string for table/switch dispatch.
   HashOfAString subject_type_hash = 4;
