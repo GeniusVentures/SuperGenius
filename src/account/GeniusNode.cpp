@@ -1775,7 +1775,9 @@ namespace sgns
         ResetQuorumMembers();
         bridge_relayer_.reset();
         eth_watch_service_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
         blockchain_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
 
         {
             std::lock_guard<std::mutex> lock( migration_mutex_ );
