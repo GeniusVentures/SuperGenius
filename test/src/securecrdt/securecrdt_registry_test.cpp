@@ -132,7 +132,7 @@ TEST( SecureCrdtRegistryTest, ConcurrentAccessUsesStableSnapshots )
     for ( size_t thread_index = 0; thread_index < thread_count; ++thread_index )
     {
         threads.emplace_back(
-            [thread_index, &owner_tokens, &failed]()
+            [thread_index, &owner_tokens, &failed, iterations]()
             {
                 const std::string key = "gnus-concurrent-key-" + std::to_string( thread_index );
                 for ( size_t iteration = 0; iteration < iterations; ++iteration )
