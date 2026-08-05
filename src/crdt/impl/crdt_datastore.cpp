@@ -1065,7 +1065,7 @@ namespace sgns::crdt
         return bCastHeads;
     }
 
-    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::set<CID> &heads )
+    outcome::result<CrdtDatastore::Buffer> CrdtDatastore::EncodeBroadcast( const std::unordered_set<CID> &heads )
     {
         CRDTBroadcast bcastData;
 
@@ -1338,7 +1338,7 @@ namespace sgns::crdt
         return newCID;
     }
 
-    outcome::result<void> CrdtDatastore::Broadcast( const std::set<CID>                    &cids,
+    outcome::result<void> CrdtDatastore::Broadcast( const std::unordered_set<CID>          &cids,
                                                     const std::string                      &topic,
                                                     boost::optional<libp2p::peer::PeerInfo> peerInfo )
     {
@@ -1439,9 +1439,9 @@ namespace sgns::crdt
 
         for ( const auto &[topic_name, cid_set] : head_map )
         {
-            for ( const auto &cid : cid_set )
+            if ( !cid_set.empty() )
             {
-                headsWithTopics.emplace_back( cid, topic_name );
+                headsWithTopics.emplace_back( *std::min_element( cid_set.begin(), cid_set.end() ), topic_name );
             }
         }
 

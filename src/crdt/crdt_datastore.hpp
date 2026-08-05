@@ -360,7 +360,7 @@ namespace sgns::crdt
          * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID>                    &cids,
+        outcome::result<void> Broadcast( const std::unordered_set<CID>          &cids,
                                          const std::string                      &topic,
                                          boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
@@ -368,7 +368,7 @@ namespace sgns::crdt
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
-        outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+        outcome::result<Buffer> EncodeBroadcast( const std::unordered_set<CID> &heads );
 
         /** EncodeBroadcastStatic encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs
