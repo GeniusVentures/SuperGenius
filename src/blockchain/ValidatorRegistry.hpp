@@ -648,7 +648,7 @@ namespace sgns
          * @brief Requests head blocks for the provided CIDs.
          * @param[in] cids Set of CIDs to request.
          */
-        void RequestHeadCids( const std::set<CID> &cids );
+        void RequestHeadCids( const std::unordered_set<CID> &cids );
 
         struct PendingRegistryWrite
         {

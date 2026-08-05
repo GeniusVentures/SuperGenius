@@ -1995,27 +1995,23 @@ namespace sgns
 
         logger_->debug( "{}: cache not yet initialized, retrying head-CID discovery", __func__ );
 
-        std::set<CID> heads_to_request;
-        auto          heads_result = db_->GetCRDTHeadList();
-        if ( heads_result.has_value() )
-        {
-            const auto &heads_map = heads_result.value().first;
-            auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
-            if ( it != heads_map.end() )
-            {
-                heads_to_request = it->second;
-            }
-        }
-
-        if ( !heads_to_request.empty() )
-        {
-            logger_->debug( "{}: retry found {} head(s) to request", __func__, heads_to_request.size() );
-            RequestHeadCids( heads_to_request );
-        }
-        else
+        auto heads_result = db_->GetCRDTHeadList();
+        if ( !heads_result.has_value() )
         {
             logger_->debug( "{}: retry found no heads yet available", __func__ );
+            return;
         }
+
+        const auto &heads_map = heads_result.value().first;
+        auto        it        = heads_map.find( std::string( ValidatorTopic() ) );
+        if ( it == heads_map.end() || it->second.empty() )
+        {
+            logger_->debug( "{}: retry found no heads yet available", __func__ );
+            return;
+        }
+
+        logger_->debug( "{}: retry found {} head(s) to request", __func__, it->second.size() );
+        RequestHeadCids( it->second );
     }
 
     void ValidatorRegistry::PersistLocalState( const std::string &cid ) const
@@ -2029,15 +2025,9 @@ namespace sgns
         logger_->debug( "{}: persisted CID", __func__ );
     }
 
-    void ValidatorRegistry::RequestHeadCids( const std::set<CID> &cids )
+    void ValidatorRegistry::RequestHeadCids( const std::unordered_set<CID> &cids )
     {
         logger_->trace( "{}: entry count={}", __func__, cids.size() );
-        const char *func = __func__;
-        if ( cids.empty() )
-        {
-            logger_->error( "{}: empty CID set", __func__ );
-            return;
-        }
 
         struct RequestState
         {
@@ -2050,6 +2040,21 @@ namespace sgns
         };
 
         auto state = std::make_shared<RequestState>( cids.size() );
+        auto complete = [weak_self = weak_from_this(), state]( bool success )
+        {
+            if ( auto self = weak_self.lock() )
+            {
+                if ( success && !state->success_reported.exchange( true ) )
+                {
+                    self->NotifyInitialized( true );
+                }
+
+                if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
+                {
+                    self->NotifyInitialized( false );
+                }
+            }
+        };
 
         for ( const auto &cid : cids )
         {
@@ -2057,36 +2062,14 @@ namespace sgns
             if ( !cid_string.has_value() )
             {
                 logger_->error( "{}: failed to convert CID to string", __func__ );
-                if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
-                {
-                    NotifyInitialized( false );
-                }
+                complete( false );
                 continue;
             }
 
             logger_->debug( "{}: requesting CID {}", __func__, cid_string.value() );
             request_block_by_cid_(
                 cid_string.value(),
-                [weak_self = weak_from_this(), state, func]( outcome::result<std::string> result )
-                {
-                    if ( auto self = weak_self.lock() )
-                    {
-                        if ( !result.has_error() )
-                        {
-                            if ( !state->success_reported.exchange( true ) )
-                            {
-                                self->logger_->info( "{}: head request succeeded", func );
-                                self->NotifyInitialized( true );
-                            }
-                        }
-
-                        if ( state->remaining.fetch_sub( 1 ) == 1 && !state->success_reported.load() )
-                        {
-                            self->logger_->error( "{}: all head requests failed", func );
-                            self->NotifyInitialized( false );
-                        }
-                    }
-                } );
+                [complete]( outcome::result<std::string> result ) { complete( result.has_value() ); } );
         }
     }
 
