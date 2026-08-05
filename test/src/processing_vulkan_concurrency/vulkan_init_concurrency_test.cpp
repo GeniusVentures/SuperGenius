@@ -148,7 +148,8 @@ namespace sgns
                 std::vector<char> imageData;
                 std::vector<char> modelFile;
                 sgns::IoDeclaration proc{};
-                rp.StartProcessing( chunkhashes, proc, imageData, modelFile, nullptr );
+                sgns::sgprocessing::ExecutionContext execCtx;
+                rp.StartProcessing( chunkhashes, proc, imageData, modelFile, nullptr, execCtx );
             } );
 
             releaseGate.set_value();
