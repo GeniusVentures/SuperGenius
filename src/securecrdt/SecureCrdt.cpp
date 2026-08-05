@@ -60,7 +60,7 @@ namespace sgns::securecrdt
                                                     const std::vector<uint8_t>        &payload )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -97,7 +97,7 @@ namespace sgns::securecrdt
                                                     const std::vector<uint8_t>        &signature )
     {
         logger_->trace( "{}: entry key={} signer={}", __func__, base_key.GetKey(), signer_address );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -136,7 +136,7 @@ namespace sgns::securecrdt
         const sgns::crdt::HierarchicalKey &base_key )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );

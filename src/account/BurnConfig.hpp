@@ -98,6 +98,8 @@ namespace sgns::account
                     std::shared_ptr<sgns::GeniusAccount>          account,
                     sgns::crdt::HierarchicalKey                             base_key );
 
+        ~BurnConfig();
+
         /**
          * @brief Constructs a BurnConfig, registers its signer-set-source and
          *        CRDT change-callback, and auto-seeds the genesis default

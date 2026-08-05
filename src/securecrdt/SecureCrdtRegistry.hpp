@@ -13,7 +13,10 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <regex>
+#include <shared_mutex>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -76,6 +79,7 @@ namespace sgns::securecrdt
         {
             entry.key_pattern     = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
+            std::unique_lock<std::shared_mutex> lock( registryMutex() );
             registry()[key_pattern] = std::move( entry );
         }
 
@@ -90,6 +94,7 @@ namespace sgns::securecrdt
          */
         static void UnregisterIf( const std::string &key_pattern, const void *expected_token )
         {
+            std::unique_lock<std::shared_mutex> lock( registryMutex() );
             auto it = registry().find( key_pattern );
             if ( it != registry().end() && it->second.owner_token == expected_token )
             {
@@ -101,18 +106,19 @@ namespace sgns::securecrdt
          * @brief Resolves `key` against all registered patterns, returning the
          *        first matching entry (base_key or any `sig/<addr>` child).
          * @param[in] key CRDT key to resolve.
-         * @return Pointer to the matching entry, or nullptr if unregistered.
+         * @return Snapshot of the matching entry, or std::nullopt if unregistered.
          */
-        static const SecureCrdtRegistryEntry *Resolve( const std::string &key )
+        static std::optional<SecureCrdtRegistryEntry> Resolve( const std::string &key )
         {
+            std::shared_lock<std::shared_mutex> lock( registryMutex() );
             for ( const auto &[pattern, entry] : registry() )
             {
                 if ( std::regex_match( key, entry.compiled_pattern ) )
                 {
-                    return &entry;
+                    return entry;
                 }
             }
-            return nullptr;
+            return std::nullopt;
         }
 
         /**
@@ -123,6 +129,7 @@ namespace sgns::securecrdt
          */
         static std::vector<SecureCrdtRegistryEntry> AllEntries()
         {
+            std::shared_lock<std::shared_mutex> lock( registryMutex() );
             std::vector<SecureCrdtRegistryEntry> entries;
             entries.reserve( registry().size() );
             for ( const auto &[pattern, entry] : registry() )
@@ -137,6 +144,12 @@ namespace sgns::securecrdt
         {
             static std::unordered_map<std::string, SecureCrdtRegistryEntry> map;
             return map;
+        }
+
+        static std::shared_mutex &registryMutex()
+        {
+            static std::shared_mutex mutex;
+            return mutex;
         }
     };
 } // namespace sgns::securecrdt

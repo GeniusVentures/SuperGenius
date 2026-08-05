@@ -86,6 +86,11 @@ namespace sgns::account
     {
     }
 
+    BurnConfig::~BurnConfig()
+    {
+        Unregister();
+    }
+
     outcome::result<std::shared_ptr<BurnConfig>> BurnConfig::New(
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
         std::shared_ptr<sgns::crdt::GlobalDB>                   db,

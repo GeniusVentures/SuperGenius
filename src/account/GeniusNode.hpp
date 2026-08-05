@@ -1015,6 +1015,11 @@ namespace sgns
                                                             bool release_members = true );
 
         /**
+         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         */
+        void ResetQuorumMembers();
+
+        /**
          * @brief Releases the runtime object graph after all node I/O threads have stopped.
          *
          * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,

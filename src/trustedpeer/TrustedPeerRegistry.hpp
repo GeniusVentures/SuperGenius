@@ -92,6 +92,8 @@ namespace sgns::trustedpeer
                              uint64_t                                      quorum_threshold,
                              sgns::crdt::HierarchicalKey                   base_key );
 
+        ~TrustedPeerRegistry();
+
         /**
          * @brief Constructs a TrustedPeerRegistry and registers its
          *        signer-set-source with SecureCrdtRegistry.

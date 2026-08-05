@@ -8,14 +8,15 @@
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 
 #include <cctype>
-#include <set>
 #include <system_error>
+#include <unordered_set>
 
 #include "securecrdt/QuorumThresholdValidation.hpp"
 
 namespace
 {
-    constexpr size_t kTrustedPeerAddressHexLength = 128; ///< Mirrors GeniusAccount::PUBLIC_KEY_HEX_LENGTH (src/account/GeniusAccount.cpp:38).
+    constexpr size_t kTrustedPeerAddressHexLength =
+        128; ///< Mirrors GeniusAccount::PUBLIC_KEY_HEX_LENGTH (src/account/GeniusAccount.cpp:38).
 
     bool IsHexAddress( const std::string &address )
     {
@@ -111,7 +112,7 @@ namespace sgns::trustedpeer
             return false;
         }
 
-        std::set<std::string> unique_entries;
+        std::unordered_set<std::string> unique_entries;
         for ( const auto &entry : entries )
         {
             if ( !IsHexAddress( entry ) )
@@ -133,10 +134,10 @@ namespace sgns::trustedpeer
     }
 
     TrustedPeerRegistry::TrustedPeerRegistry( std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
-                                               std::vector<std::string>                      genesis_peers,
-                                               std::string                                   bootstrapper_address,
-                                               uint64_t                                       quorum_threshold,
-                                               sgns::crdt::HierarchicalKey                    base_key ) :
+                                              std::vector<std::string>                      genesis_peers,
+                                              std::string                                   bootstrapper_address,
+                                              uint64_t                                      quorum_threshold,
+                                              sgns::crdt::HierarchicalKey                   base_key ) :
         secure_crdt_( std::move( secure_crdt ) ),
         base_key_( std::move( base_key ) ),
         bootstrapper_address_( std::move( bootstrapper_address ) ),
@@ -145,25 +146,29 @@ namespace sgns::trustedpeer
     {
     }
 
+    TrustedPeerRegistry::~TrustedPeerRegistry()
+    {
+        Unregister();
+    }
+
     outcome::result<std::shared_ptr<TrustedPeerRegistry>> TrustedPeerRegistry::New(
         std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
         std::vector<std::string>                      genesis_peers,
-        std::string                                    bootstrapper_address,
-        uint64_t                                        quorum_threshold,
-        sgns::crdt::HierarchicalKey                     base_key )
+        std::string                                   bootstrapper_address,
+        uint64_t                                      quorum_threshold,
+        sgns::crdt::HierarchicalKey                   base_key )
     {
-        auto validation_result =
-            sgns::securecrdt::ValidateQuorumThreshold( quorum_threshold, genesis_peers.size() );
+        auto validation_result = sgns::securecrdt::ValidateQuorumThreshold( quorum_threshold, genesis_peers.size() );
         if ( validation_result.has_error() )
         {
             return validation_result.error();
         }
 
         auto instance = std::make_shared<TrustedPeerRegistry>( std::move( secure_crdt ),
-                                                                 std::move( genesis_peers ),
-                                                                 std::move( bootstrapper_address ),
-                                                                 quorum_threshold,
-                                                                 std::move( base_key ) );
+                                                               std::move( genesis_peers ),
+                                                               std::move( bootstrapper_address ),
+                                                               quorum_threshold,
+                                                               std::move( base_key ) );
         instance->RegisterSignerSetSource();
         return instance;
     }
@@ -171,8 +176,8 @@ namespace sgns::trustedpeer
     void TrustedPeerRegistry::RegisterSignerSetSource()
     {
         sgns::securecrdt::SecureCrdtRegistryEntry entry;
-        entry.signer_set_source =
-            [weak_self = weak_from_this()]( const std::string & ) -> outcome::result<sgns::securecrdt::SignerSetSnapshot>
+        entry.signer_set_source = [weak_self = weak_from_this()](
+                                      const std::string & ) -> outcome::result<sgns::securecrdt::SignerSetSnapshot>
         {
             auto self = weak_self.lock();
             if ( !self )
@@ -182,9 +187,7 @@ namespace sgns::trustedpeer
             return self->ResolveSignerSet();
         };
         entry.make_instance = []() -> std::shared_ptr<sgns::securecrdt::ISignedCRDTData>
-        {
-            return std::make_shared<TrustedPeerListPayload>();
-        };
+        { return std::make_shared<TrustedPeerListPayload>(); };
         entry.owner_token = &registry_token_;
 
         sgns::securecrdt::SecureCrdtRegistry::Register( base_key_.GetKey(), entry );
@@ -201,12 +204,12 @@ namespace sgns::trustedpeer
     }
 
     outcome::result<void> TrustedPeerRegistry::SeedGenesis( const std::vector<std::string> &genesis_peers,
-                                                             const std::vector<uint8_t>     &ephemeral_signature )
+                                                            const std::vector<uint8_t>     &ephemeral_signature )
     {
         logger_->info( "{}: seeding genesis trusted-peer list ({} peers)", __func__, genesis_peers.size() );
 
         TrustedPeerListPayload payload( genesis_peers );
-        auto propose_result = secure_crdt_->ProposeValue( base_key_, payload.SerializeToBytes() );
+        auto                   propose_result = secure_crdt_->ProposeValue( base_key_, payload.SerializeToBytes() );
         if ( propose_result.has_error() )
         {
             logger_->error( "{}: ProposeValue failed", __func__ );
@@ -231,7 +234,7 @@ namespace sgns::trustedpeer
     }
 
     outcome::result<void> TrustedPeerRegistry::SignMembershipChange( const std::string          &signer_address,
-                                                                      const std::vector<uint8_t> &signature )
+                                                                     const std::vector<uint8_t> &signature )
     {
         logger_->info( "{}: signing membership change (signer={})", __func__, signer_address );
         return secure_crdt_->AddSignature( base_key_, signer_address, signature );
@@ -251,7 +254,7 @@ namespace sgns::trustedpeer
         }
 
         TrustedPeerListPayload payload;
-        const auto              bytes = read_result.value()->toVector();
+        const auto             bytes = read_result.value()->toVector();
         if ( !payload.DeserializeFromBytes( bytes ) )
         {
             logger_->error( "{}: confirmed value failed to deserialize", __func__ );

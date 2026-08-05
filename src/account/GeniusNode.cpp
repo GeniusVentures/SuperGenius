@@ -748,7 +748,6 @@ namespace sgns
                 tx_globaldb_->AddListenTopic( quorum_topic );
 
                 secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
-                secure_crdt_->RegisterFilters();
 
                 auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
                                                                                trusted_peers_genesis_,
@@ -758,6 +757,7 @@ namespace sgns
                 {
                     node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
                                          tpr_result.error().message() );
+                    secure_crdt_.reset();
                     return;
                 }
                 trusted_peer_registry_ = tpr_result.value();
@@ -771,9 +771,19 @@ namespace sgns
                 {
                     node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
                                          burn_config_result.error().message() );
+                    ResetQuorumMembers();
                     return;
                 }
                 burn_config_ = burn_config_result.value();
+
+                // Register only after both policy owners have populated SecureCrdtRegistry;
+                // otherwise a new node can start without filters for either runtime key.
+                if ( !secure_crdt_->RegisterFilters() )
+                {
+                    node_logger_->error( "SecureCrdt filter registration failed" );
+                    ResetQuorumMembers();
+                    return;
+                }
 
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
@@ -1713,6 +1723,7 @@ namespace sgns
         {
             ResetProcessingMembers();
             transaction_manager_.reset();
+            ResetQuorumMembers();
             bridge_relayer_.reset();
             eth_watch_service_.reset();
             blockchain_.reset();
@@ -1724,6 +1735,26 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    void GeniusNode::ResetQuorumMembers()
+    {
+        // Unregister while the policy owners and their owner tokens are still alive.
+        // Their destructors repeat this defensively, so partial initialization is safe.
+        if ( burn_config_ )
+        {
+            burn_config_->Unregister();
+        }
+        if ( trusted_peer_registry_ )
+        {
+            trusted_peer_registry_->Unregister();
+        }
+
+        // BurnConfig retains GlobalDB, TrustedPeerRegistry, SecureCrdt, and the
+        // account. Release it first so those dependencies can actually drain.
+        burn_config_.reset();
+        trusted_peer_registry_.reset();
+        secure_crdt_.reset();
     }
 
     void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
@@ -1741,6 +1772,7 @@ namespace sgns
         // GraphSync, the scheduler, PubSub, and the io_context.
         ResetProcessingMembers();
         transaction_manager_.reset();
+        ResetQuorumMembers();
         bridge_relayer_.reset();
         eth_watch_service_.reset();
         blockchain_.reset();
