@@ -136,18 +136,16 @@ TEST_F( BurnConfigTest, BurnconfigCacheRefresh )
     auto propose_result = secure_crdt_->ProposeValue( sgns::crdt::HierarchicalKey( "burn-config" ), serialized );
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
-    const auto        signature_bytes = self_account_->Sign( serialized );
-    const std::string signature( signature_bytes.begin(), signature_bytes.end() );
+    const auto signature_bytes = self_account_->Sign( serialized );
     auto sign_result = secure_crdt_->AddSignature( sgns::crdt::HierarchicalKey( "burn-config" ),
-                                                   self_account_->GetAddress(), signature );
+                                                   self_account_->GetAddress(), signature_bytes );
     ASSERT_FALSE( sign_result.has_error() ) << sign_result.error().message();
 
     EXPECT_EQ( refresh_count, 0 ) << "quorum (2) not yet met with only 1/2 signatures -- refresh must not fire early";
 
-    const auto        other_signature_bytes = other_account_->Sign( serialized );
-    const std::string other_signature( other_signature_bytes.begin(), other_signature_bytes.end() );
-    auto              other_sign_result = secure_crdt_->AddSignature(
-        sgns::crdt::HierarchicalKey( "burn-config" ), other_account_->GetAddress(), other_signature );
+    const auto other_signature_bytes = other_account_->Sign( serialized );
+    auto       other_sign_result     = secure_crdt_->AddSignature(
+        sgns::crdt::HierarchicalKey( "burn-config" ), other_account_->GetAddress(), other_signature_bytes );
     ASSERT_FALSE( other_sign_result.has_error() ) << other_sign_result.error().message();
 
     EXPECT_EQ( refresh_count, 1 ) << "the refresh callback must fire exactly once, once quorum (2/2) is met";

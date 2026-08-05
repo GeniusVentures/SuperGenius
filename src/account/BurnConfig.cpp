@@ -220,8 +220,7 @@ namespace sgns::account
         }
 
         const auto signature_bytes = account_->Sign( serialized );
-        const std::string signature( signature_bytes.begin(), signature_bytes.end() );
-        auto sign_result = secure_crdt_->AddSignature( base_key_, self_address, signature );
+        auto sign_result = secure_crdt_->AddSignature( base_key_, self_address, signature_bytes );
         if ( sign_result.has_error() )
         {
             logger_->error( "{}: AddSignature failed", __func__ );
