@@ -144,6 +144,13 @@ namespace sgns
         ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
+    ConsensusManager::DestructionProbe::~DestructionProbe()
+    {
+        ConsensusManagerLogger()->debug( "~ConsensusManager owner={} teardown checkpoint: {}",
+                                         static_cast<const void *>( owner_ ),
+                                         checkpoint_ );
+    }
+
     void ConsensusManager::Close()
     {
         bool expected = false;

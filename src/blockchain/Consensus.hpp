@@ -607,6 +607,27 @@ namespace sgns
         friend class ConsensusSlotKeyTestAccess;
 
         /**
+         * @brief Temporary CI diagnostic emitted as adjacent members are destroyed.
+         *
+         * A probe declared immediately before a member is destroyed immediately
+         * after that member because C++ tears members down in reverse order.
+         */
+        class DestructionProbe
+        {
+        public:
+            DestructionProbe( const ConsensusManager *owner, const char *checkpoint ) :
+                owner_( owner ), checkpoint_( checkpoint )
+            {
+            }
+
+            ~DestructionProbe();
+
+        private:
+            const ConsensusManager *owner_;
+            const char             *checkpoint_;
+        };
+
+        /**
          * @brief Constructs a consensus manager.
          * @param[in] registry Validator registry dependency.
          * @param[in] db GlobalDB dependency.
@@ -924,27 +945,35 @@ namespace sgns
          * @param[in] subject Subject to format.
          * @return Printable hash string.
          */
-        static std::string                     GetPrintableSubjectHash( const Subject &subject );
-        std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
-        std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
+        static std::string                 GetPrintableSubjectHash( const Subject &subject );
+        DestructionProbe                  probe_after_registry_{ this, "registry_ destroyed" };
+        std::shared_ptr<ValidatorRegistry> registry_; ///< Validator registry dependency.
+        DestructionProbe                  probe_after_db_{ this, "db_ destroyed" };
+        std::shared_ptr<crdt::GlobalDB>    db_; ///< GlobalDB dependency for persistence and CRDT operations.
+        DestructionProbe                  probe_after_work_journal_{ this, "certificate_work_journal_ destroyed" };
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
+        DestructionProbe probe_after_subject_handlers_{ this, "subject_handlers_ destroyed" };
         std::unordered_map<std::string, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
+        DestructionProbe probe_after_certificate_handlers_{ this, "certificate_subject_handlers_ destroyed" };
         std::unordered_map<std::string, CertificateSubjectHandler>
                                   certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
+        DestructionProbe probe_after_cleanup_handlers_{ this, "proposal_cleanup_handlers_ destroyed" };
         std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
         static inline std::unordered_map<std::string, SlotKeyHandler>
                                   slot_key_handlers_;                 ///< Slot key handlers keyed by subject type hash.
         static inline std::shared_mutex slot_key_handlers_mutex_;     ///< Guards `slot_key_handlers_`.
-        mutable std::shared_mutex cleanup_handlers_mutex_;            ///< Guards `proposal_cleanup_handlers_`.
-        Signer                    signer_;                            ///< Local signing callback.
+        mutable std::shared_mutex cleanup_handlers_mutex_; ///< Guards `proposal_cleanup_handlers_`.
+        DestructionProbe          probe_after_signer_{ this, "signer_ destroyed" };
+        Signer                    signer_; ///< Local signing callback.
         SlotHashPopulator         slot_hash_populator_;               ///< Optional slot-hash populator (Phase 6, D-01).
         mutable std::mutex        slot_hash_populator_mutex_;         ///< Guards callback replacement/copy at shutdown.
-        std::string               account_address_;                   ///< Local validator/account id.
-        std::unordered_map<std::string, ProposalState> proposals_;    ///< Proposal state map keyed by proposal id.
+        std::string      account_address_; ///< Local validator/account id.
+        DestructionProbe probe_after_proposal_state_{ this, "proposal and pending state destroyed" };
+        std::unordered_map<std::string, ProposalState> proposals_; ///< Proposal state map keyed by proposal id.
         std::unordered_map<std::string, SlotState>     slot_states_;  ///< Slot arbitration state keyed by slot key.
         std::unordered_map<std::string, PendingProposalEntry>
             pending_entries_; ///< Canonical pending proposals keyed by proposal id.
@@ -955,11 +984,13 @@ namespace sgns
         std::size_t            pending_retained_bytes_ = 0;                  ///< Total retained pending proposal bytes.
         PendingLifecycleConfig pending_config_;                              ///< Local pending lifecycle bounds.
         std::unordered_map<std::string, std::vector<Vote>> pending_votes_;   ///< Pending votes keyed by proposal id.
-        mutable std::mutex                                 proposals_mutex_; ///< Guards proposal and pending maps.
-        std::shared_ptr<ipfs_pubsub::GossipPubSub>         pubsub_;          ///< PubSub transport dependency.
+        mutable std::mutex proposals_mutex_; ///< Guards proposal and pending maps.
+        DestructionProbe  probe_after_pubsub_{ this, "pubsub_ destroyed" };
+        std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub_; ///< PubSub transport dependency.
 
         std::string consensus_messages_topic_;  ///< PubSub topic for live consensus messages.
         std::string consensus_datastore_topic_; ///< Datastore namespace/topic for persisted data.
+        DestructionProbe probe_after_subscription_{ this, "consensus_subs_future_ destroyed" };
         std::shared_future<std::shared_ptr<ipfs_pubsub::GossipPubSub::Subscription>>
                                   consensus_subs_future_;                        ///< Async subscription handle.
         std::chrono::milliseconds timestamp_window_{ DEFAULT_TIMESTAMP_WINDOW }; ///< Accepted timestamp window.
@@ -972,9 +1003,11 @@ namespace sgns
         bool certificate_callback_registered_ = false;    ///< Owns the CRDT certificate callback.
         std::atomic<bool>         stop_timer_{ false };           ///< Signals the round timer thread to stop.
         std::atomic<bool>         certificates_pending_{ false }; ///< Indicates pending certificate processing.
-        std::condition_variable   timer_cv_;                      ///< Condition variable used by the round timer.
-        std::mutex                timer_mutex_;                   ///< Mutex paired with `timer_cv_`.
-        std::thread               round_timer_;                   ///< Background thread driving round-based retries.
+        std::condition_variable timer_cv_; ///< Condition variable used by the round timer.
+        std::mutex              timer_mutex_; ///< Mutex paired with `timer_cv_`.
+        DestructionProbe        probe_after_round_timer_{ this, "round_timer_ destroyed" };
+        std::thread             round_timer_; ///< Background thread driving round-based retries.
+        DestructionProbe        probe_implicit_teardown_begin_{ this, "implicit member destruction begins" };
     };
 }
 
