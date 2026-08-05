@@ -879,8 +879,7 @@ namespace sgns
         {
             return outcome::failure( std::errc::invalid_argument );
         }
-        std::string payload;
-        payload += subject_hashes[0];
+        std::string payload(subject_hashes[0]);
         for ( size_t i = 1; i < subject_hashes.size(); ++i )
         {
             payload.push_back( '\n' );
@@ -1186,6 +1185,12 @@ namespace sgns
         }
 
         return outcome::success( std::optional<uint64_t>{ validator->weight() } );
+    }
+
+    bool ValidatorRegistry::IsActiveValidator( const std::string &validator_id ) const
+    {
+        auto weight = GetValidatorWeight( validator_id );
+        return weight.has_value() && weight.value().has_value();
     }
 
     bool ValidatorRegistry::RegisterFilter()

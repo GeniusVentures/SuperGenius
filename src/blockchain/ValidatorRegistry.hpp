@@ -282,8 +282,14 @@ namespace sgns
          * @brief Looks up validator weight by validator id.
          * @param[in] validator_id Validator identifier.
          * @return Optional weight when validator exists, or an error.
-         */
+        */
         outcome::result<std::optional<uint64_t>> GetValidatorWeight( const std::string &validator_id ) const;
+        /**
+         * @brief Checks whether a validator is active in the current registry.
+         * @param[in] validator_id Validator identifier.
+         * @return `true` when the registry is available and the validator is active.
+         */
+        bool IsActiveValidator( const std::string &validator_id ) const;
         /**
          * @brief Registers CRDT filter/callbacks for registry updates.
          * @return `true` when registration succeeds.

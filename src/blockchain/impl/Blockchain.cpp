@@ -208,10 +208,7 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    BOOST_OUTCOME_TRY(
-                        auto weight,
-                        strong->validator_registry_->GetValidatorWeight( strong->account_->GetAddress() ) );
-                    if ( !weight.has_value() )
+                    if ( !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
                     {
                         return outcome::success();
                     }
