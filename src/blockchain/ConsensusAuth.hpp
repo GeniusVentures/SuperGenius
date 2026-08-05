@@ -99,13 +99,9 @@ namespace sgns
     {
         ConsensusProposal copy = proposal;
         copy.clear_proposal_id();
-        auto signing_bytes = ProposalSigningBytes( copy );
-        if ( signing_bytes.has_error() )
-        {
-            return outcome::failure( signing_bytes.error() );
-        }
+        BOOST_OUTCOME_TRY( auto signing_bytes, ProposalSigningBytes( copy ) );
 
-        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.data(), signing_bytes.size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 

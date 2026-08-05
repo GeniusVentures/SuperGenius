@@ -928,14 +928,10 @@ namespace sgns
         const std::string &subject_hash ) const
     {
         const auto cert_key = std::string( "/cert/" ) + subject_hash;
-        auto       cert_get = db_->Get( crdt::HierarchicalKey( cert_key ) );
-        if ( cert_get.has_error() )
-        {
-            return outcome::failure( cert_get.error() );
-        }
+        BOOST_OUTCOME_TRY( auto cert_get, db_->Get( crdt::HierarchicalKey( cert_key ) ) );
 
         sgns::ConsensusCertificate certificate;
-        if ( !certificate.ParseFromString( cert_get.value().toString() ) )
+        if ( !certificate.ParseFromString( cert_get.toString() ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -980,57 +976,39 @@ namespace sgns
             return outcome::success();
         }
 
-        auto base_registry_result = LoadRegistryByCid( base_registry_cid );
-        if ( base_registry_result.has_error() )
-        {
-            return outcome::failure( base_registry_result.error() );
-        }
-        if ( base_registry_result.value().epoch() != base_registry_epoch )
+        BOOST_OUTCOME_TRY( auto base_registry, LoadRegistryByCid( base_registry_cid ) );
+        if ( base_registry.epoch() != base_registry_epoch )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto selected_result = SelectBatchSubjects( base_registry_cid,
-                                                    base_registry_epoch,
-                                                    static_cast<uint32_t>( threshold ),
-                                                    std::nullopt );
-        if ( selected_result.has_error() )
-        {
-            return outcome::failure( selected_result.error() );
-        }
+        BOOST_OUTCOME_TRY( auto selected,
+                           SelectBatchSubjects( base_registry_cid,
+                                                base_registry_epoch,
+                                                static_cast<uint32_t>( threshold ),
+                                                std::nullopt ) );
 
-        auto root_result = ComputeBatchRoot( selected_result.value() );
-        if ( root_result.has_error() )
-        {
-            return outcome::failure( root_result.error() );
-        }
+        BOOST_OUTCOME_TRY( auto root, ComputeBatchRoot( selected ) );
 
-        auto subject_result = ConsensusManager::CreateRegistryBatchSubject( genesis_authority_,
-                                                                            base_registry_cid,
-                                                                            base_registry_epoch,
-                                                                            base_registry_epoch + 1,
-                                                                            static_cast<uint32_t>( threshold ),
-                                                                            root_result.value() );
-        if ( subject_result.has_error() )
-        {
-            return outcome::failure( subject_result.error() );
-        }
+        BOOST_OUTCOME_TRY( auto subject,
+                           ConsensusManager::CreateRegistryBatchSubject( genesis_authority_,
+                                                                         base_registry_cid,
+                                                                         base_registry_epoch,
+                                                                         base_registry_epoch + 1,
+                                                                         static_cast<uint32_t>( threshold ),
+                                                                         root ) );
 
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
-            auto                        batch_hash_result = ExtractConsensusSubjectHash( subject_result.value() );
-            if ( batch_hash_result.has_error() )
-            {
-                return outcome::failure( batch_hash_result.error() );
-            }
-            if ( pending_batch_subject_ids_.find( batch_hash_result.value() ) != pending_batch_subject_ids_.end() )
+            BOOST_OUTCOME_TRY( auto batch_hash, ExtractConsensusSubjectHash( subject ) );
+            if ( pending_batch_subject_ids_.find( batch_hash ) != pending_batch_subject_ids_.end() )
             {
                 return outcome::success();
             }
-            pending_batch_subject_ids_.insert( batch_hash_result.value() );
+            pending_batch_subject_ids_.insert( batch_hash );
         }
 
-        return submitter( subject_result.value() );
+        return submitter( subject );
     }
 
     outcome::result<ValidatorRegistry::BatchSubjectDecision> ValidatorRegistry::EvaluateBatchSubject(

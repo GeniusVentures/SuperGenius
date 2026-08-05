@@ -616,26 +616,22 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
 
     std::unordered_map<std::string, int>                                                            handler_attempts;
     std::unordered_map<std::string, std::function<sgns::ConsensusManager::ValidationResult( int )>> handler_scripts;
-    ASSERT_TRUE( manager->RegisterSubjectHandler( sgns::NONCE_SUBJECT_TYPE,
-                                                  [&]( const sgns::ConsensusManager::Subject &subject )
-                                                      -> outcome::result<sgns::ConsensusManager::ValidationResult>
-                                                  {
-                                                      auto nonce_subject = sgns::ConsensusManager::DecodeNonceSubject(
-                                                          subject );
-                                                      if ( nonce_subject.has_error() )
-                                                      {
-                                                          return outcome::failure( nonce_subject.error() );
-                                                      }
-                                                      const auto &tx_hash = nonce_subject.value().tx_hash();
-                                                      auto       &attempt = handler_attempts[tx_hash];
-                                                      ++attempt;
-                                                      auto script_it = handler_scripts.find( tx_hash );
-                                                      if ( script_it == handler_scripts.end() )
-                                                      {
-                                                          return sgns::ConsensusManager::ValidationResult::Approve();
-                                                      }
-                                                      return script_it->second( attempt );
-                                                  } ) );
+    ASSERT_TRUE( manager->RegisterSubjectHandler(
+        sgns::NONCE_SUBJECT_TYPE,
+        [&]( const sgns::ConsensusManager::Subject &subject )
+            -> outcome::result<sgns::ConsensusManager::ValidationResult>
+        {
+            BOOST_OUTCOME_TRY( auto nonce_subject, sgns::ConsensusManager::DecodeNonceSubject( subject ) );
+            const auto &tx_hash = nonce_subject.tx_hash();
+            auto       &attempt = handler_attempts[tx_hash];
+            ++attempt;
+            auto script_it = handler_scripts.find( tx_hash );
+            if ( script_it == handler_scripts.end() )
+            {
+                return sgns::ConsensusManager::ValidationResult::Approve();
+            }
+            return script_it->second( attempt );
+        } ) );
 
     auto       dependency_proposal    = MakeProposal( manager, registry, 51, "0xdependency-tx2" );
     auto       dependency_proposal_id = dependency_proposal.proposal_id();

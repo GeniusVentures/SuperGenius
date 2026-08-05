@@ -2828,13 +2828,9 @@ namespace sgns
 
     outcome::result<TaskResultSubject> ConsensusManager::DecodeTaskResultSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, TASK_RESULT_SUBJECT_TYPE );
-        if ( raw_payload.has_error() )
-        {
-            return outcome::failure( raw_payload.error() );
-        }
+        BOOST_OUTCOME_TRY( auto raw_payload, ExtractBuiltinPayload( subject, TASK_RESULT_SUBJECT_TYPE ) );
         TaskResultSubject payload;
-        if ( !payload.ParseFromString( raw_payload.value() ) )
+        if ( !payload.ParseFromString( raw_payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -2843,13 +2839,9 @@ namespace sgns
 
     outcome::result<RegistryBatchSubject> ConsensusManager::DecodeRegistryBatchSubject( const Subject &subject )
     {
-        auto raw_payload = ExtractBuiltinPayload( subject, REGISTRY_BATCH_SUBJECT_TYPE );
-        if ( raw_payload.has_error() )
-        {
-            return outcome::failure( raw_payload.error() );
-        }
+        BOOST_OUTCOME_TRY( auto raw_payload, ExtractBuiltinPayload( subject, REGISTRY_BATCH_SUBJECT_TYPE ) );
         RegistryBatchSubject payload;
-        if ( !payload.ParseFromString( raw_payload.value() ) )
+        if ( !payload.ParseFromString( raw_payload ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -3296,17 +3288,13 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto current_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( current_hash.has_error() )
-        {
-            return outcome::failure( current_hash.error() );
-        }
-        if ( current_hash.value() != subject_hash )
+        BOOST_OUTCOME_TRY( auto current_hash, GetSubjectHash( certificate.proposal().subject() ) );
+        if ( current_hash != subject_hash )
         {
             ConsensusManagerLogger()->error( "{}: certificate subject hash mismatch expected={} actual={}",
                                              __func__,
                                              subject_hash,
-                                             current_hash.value() );
+                                             current_hash );
             return outcome::failure( std::errc::invalid_argument );
         }
         return certificate;

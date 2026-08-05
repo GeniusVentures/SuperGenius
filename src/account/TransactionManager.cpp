@@ -3148,11 +3148,7 @@ namespace sgns
         crdt::GlobalDB::Buffer value_buffer;
         value_buffer.put( cid );
 
-        auto put_result = datastore->put( key_buffer, value_buffer );
-        if ( put_result.has_error() )
-        {
-            return outcome::failure( put_result.error() );
-        }
+        BOOST_OUTCOME_TRY( datastore->put( key_buffer, value_buffer ) );
 
         return outcome::success();
     }

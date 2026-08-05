@@ -208,13 +208,10 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    auto weight_result = strong->validator_registry_->GetValidatorWeight(
-                        strong->account_->GetAddress() );
-                    if ( weight_result.has_error() )
-                    {
-                        return outcome::failure( weight_result.error() );
-                    }
-                    if ( !weight_result.value().has_value() )
+                    BOOST_OUTCOME_TRY(
+                        auto weight,
+                        strong->validator_registry_->GetValidatorWeight( strong->account_->GetAddress() ) );
+                    if ( !weight.has_value() )
                     {
                         return outcome::success();
                     }
@@ -227,15 +224,12 @@ namespace sgns
                         registry_cid   = batch_payload.value().base_registry_cid();
                         registry_epoch = batch_payload.value().base_registry_epoch();
                     }
-                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
-                                                                                       strong->account_->GetAddress(),
-                                                                                       registry_cid,
-                                                                                       registry_epoch );
-                    if ( proposal_result.has_error() )
-                    {
-                        return outcome::failure( proposal_result.error() );
-                    }
-                    return strong->consensus_manager_->SubmitProposal( proposal_result.value(), true );
+                    BOOST_OUTCOME_TRY( auto proposal,
+                                       strong->consensus_manager_->CreateProposal( subject,
+                                                                                   strong->account_->GetAddress(),
+                                                                                   registry_cid,
+                                                                                   registry_epoch ) );
+                    return strong->consensus_manager_->SubmitProposal( proposal, true );
                 }
                 return outcome::failure( std::errc::owner_dead );
             } );
@@ -247,12 +241,8 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    auto decision_result = strong->validator_registry_->EvaluateBatchSubject( subject );
-                    if ( decision_result.has_error() )
-                    {
-                        return outcome::failure( decision_result.error() );
-                    }
-                    switch ( decision_result.value() )
+                    BOOST_OUTCOME_TRY( auto decision, strong->validator_registry_->EvaluateBatchSubject( subject ) );
+                    switch ( decision )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
                             return ConsensusManager::ValidationResult::Approve();
@@ -274,12 +264,10 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    auto decision = strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
-                    if ( decision.has_error() )
-                    {
-                        return outcome::failure( decision.error() );
-                    }
-                    switch ( decision.value() )
+                    BOOST_OUTCOME_TRY(
+                        auto decision,
+                        strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate ) );
+                    switch ( decision )
                     {
                         case ValidatorRegistry::BatchCertificateDecision::Approve:
                             return ConsensusManager::Check::Approve;

@@ -384,13 +384,8 @@ namespace sgns::crdt
         }
 
         // Otherwise, do the long check.
-        auto inElemsNotTombstonedResult = this->InElemsNotTombstoned( aKey );
-        if ( inElemsNotTombstonedResult.has_error() )
-        {
-            return outcome::failure( inElemsNotTombstonedResult.error() );
-        }
-
-        return inElemsNotTombstonedResult.value();
+        BOOST_OUTCOME_TRY( auto inElemsNotTombstoned, this->InElemsNotTombstoned( aKey ) );
+        return inElemsNotTombstoned;
     }
 
     outcome::result<bool> CrdtSet::InElemsNotTombstoned( const std::string &aKey ) const
