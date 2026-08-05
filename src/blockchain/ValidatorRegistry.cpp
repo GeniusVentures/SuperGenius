@@ -515,6 +515,7 @@ namespace sgns
             {
                 return uint64_t{ 0 };
             }
+
             uint64_t contribution = 0;
             for ( const auto &entry : groups )
             {
@@ -553,9 +554,8 @@ namespace sgns
     // identical promotion decision. ApplyVoteEffects delegates here after the
     // approve-branch weight clamp so the just-clamped weight and just-updated
     // penalty_score are considered.
-    bool ValidatorRegistry::EvaluateRegularPromotionStatic(
-        const ValidatorEntry &entry,
-        const WeightConfig   &weight_config )
+    bool ValidatorRegistry::EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
+                                                            const WeightConfig   &weight_config )
     {
         // GENESIS is never demoted to FULL; SHARDED is not promoted by this rule;
         // an already-FULL entry is not re-promoted (idempotent).
@@ -565,8 +565,8 @@ namespace sgns
         }
         // Weight must reach the promotion threshold AND penalty must be strictly
         // below the threshold (a penalized node must earn back reputation).
-        return entry.weight() >= weight_config.full_promotion_weight_
-            && entry.penalty_score() < weight_config.penalty_threshold_;
+        return entry.weight() >= weight_config.full_promotion_weight_ &&
+               entry.penalty_score() < weight_config.penalty_threshold_;
     }
 
     ValidatorRegistry::Registry ValidatorRegistry::CreateGenesisRegistry(
@@ -584,36 +584,12 @@ namespace sgns
             entry->set_weight( ComputeWeight( entry->role() ) );
             entry->set_penalty_score( 0 );
             entry->set_missed_epochs( 0 );
-            logger_->debug( "{}: registered genesis validator id={} weight={}", __func__, id.substr( 0, 8 ), entry->weight() );
+            logger_->debug( "{}: registered genesis validator id={} weight={}",
+                            __func__,
+                            id.substr( 0, 8 ),
+                            entry->weight() );
         }
         return registry;
-    }
-
-    outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistry( const Registry &registry ) const
-    {
-        logger_->trace( "{}: entry validators={}", __func__, registry.validators().size() );
-        std::string serialized;
-        if ( !registry.SerializeToString( &serialized ) )
-        {
-            logger_->error( "{}: serialization failed", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        logger_->debug( "{}: serialized size={}", __func__, serialized.size() );
-        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
-    }
-
-    outcome::result<ValidatorRegistry::Registry> ValidatorRegistry::DeserializeRegistry(
-        const std::vector<uint8_t> &buffer ) const
-    {
-        logger_->trace( "{}: entry size={}", __func__, buffer.size() );
-        Registry proto;
-        if ( !proto.ParseFromArray( buffer.data(), static_cast<int>( buffer.size() ) ) )
-        {
-            logger_->error( "{}: parse failed", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        logger_->debug( "{}: parsed validators={}", __func__, proto.validators().size() );
-        return proto;
     }
 
     outcome::result<std::vector<uint8_t>> ValidatorRegistry::SerializeRegistryUpdate(
@@ -645,7 +621,7 @@ namespace sgns
     }
 
     outcome::result<void> ValidatorRegistry::StoreGenesisRegistry(
-        const std::vector<std::string>                              &genesis_validator_ids,
+        const std::vector<std::string>                             &genesis_validator_ids,
         std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign )
     {
         logger_->trace( "{}: entry count={}", __func__, genesis_validator_ids.size() );
@@ -857,45 +833,6 @@ namespace sgns
 
         logger_->info( "{}: success", __func__ );
         return outcome::success();
-    }
-
-    outcome::result<std::shared_ptr<crdt::AtomicTransaction>> ValidatorRegistry::BeginRegistryUpdateTransaction(
-        const RegistryUpdate &update )
-    {
-        logger_->trace( "{}: entry epoch={}", __func__, update.registry().epoch() );
-        auto serialized_update = SerializeRegistryUpdate( update );
-        if ( serialized_update.has_error() )
-        {
-            logger_->error( "{}: failed to serialize registry update", __func__ );
-            return outcome::failure( serialized_update.error() );
-        }
-
-        base::Buffer update_buffer(
-            gsl::span<const uint8_t>( serialized_update.value().data(), serialized_update.value().size() ) );
-
-        auto tx = db_->BeginTransaction();
-        if ( !tx )
-        {
-            logger_->error( "{}: failed to begin atomic transaction", __func__ );
-            return outcome::failure( std::errc::not_enough_memory );
-        }
-
-        crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
-        auto                  registry_put = tx->Put( registry_key, update_buffer );
-        if ( registry_put.has_error() )
-        {
-            logger_->error( "{}: failed to stage registry update in transaction", __func__ );
-            return outcome::failure( registry_put.error() );
-        }
-
-        logger_->debug( "{}: staged registry update in transaction", __func__ );
-        return tx;
-    }
-
-    void ValidatorRegistry::SetMaxNewValidatorsPerUpdate( size_t max_new )
-    {
-        logger_->trace( "{}: entry max_new={}", __func__, max_new );
-        max_new_validators_per_update_ = max_new;
     }
 
     std::string ValidatorRegistry::GetRegistryCid() const

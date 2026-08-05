@@ -286,31 +286,6 @@ namespace sgns
          */
         outcome::result<void> StoreRegistryUpdate( const RegistryUpdate &update );
         /**
-         * @brief Starts an atomic transaction to apply a registry update.
-         * @param[in] update Registry update being applied.
-         * @return Transaction handle or an error.
-         */
-        outcome::result<std::shared_ptr<crdt::AtomicTransaction>> BeginRegistryUpdateTransaction(
-            const RegistryUpdate &update );
-        /**
-         * @brief Sets the maximum number of unregistered validators added per update.
-         * @param[in] max_new New cap value.
-         */
-        void SetMaxNewValidatorsPerUpdate( size_t max_new );
-
-        /**
-         * @brief Serializes a registry protobuf.
-         * @param[in] registry Registry to serialize.
-         * @return Serialized bytes or an error.
-         */
-        outcome::result<std::vector<uint8_t>> SerializeRegistry( const Registry &registry ) const;
-        /**
-         * @brief Deserializes a registry protobuf.
-         * @param[in] buffer Serialized registry bytes.
-         * @return Parsed registry or an error.
-         */
-        outcome::result<Registry> DeserializeRegistry( const std::vector<uint8_t> &buffer ) const;
-        /**
          * @brief Serializes a registry update protobuf.
          * @param[in] update Registry update to serialize.
          * @return Serialized bytes or an error.
@@ -700,11 +675,11 @@ namespace sgns
         std::mutex                       persistence_mutex_; ///< Guards the persistence queue and shutdown state.
         std::condition_variable          persistence_cv_;    ///< Wakes the persistence worker during work/shutdown.
         std::deque<PendingRegistryWrite> persistence_queue_; ///< Registry updates waiting to be persisted.
-        bool                             persistence_stopping_ = false; ///< Rejects work after Close starts.
-        size_t                           active_batch_handlers_ = 0; ///< Batch handlers still using GlobalDB.
-        std::thread                      persistence_worker_; ///< Owned registry persistence worker.
-        std::mutex                       close_mutex_;        ///< Serializes idempotent Close calls.
-        bool                             close_started_ = false; ///< Makes Close one-shot.
+        bool                             persistence_stopping_  = false; ///< Rejects work after Close starts.
+        size_t                           active_batch_handlers_ = 0;     ///< Batch handlers still using GlobalDB.
+        std::thread                      persistence_worker_;            ///< Owned registry persistence worker.
+        std::mutex                       close_mutex_;                   ///< Serializes idempotent Close calls.
+        bool                             close_started_ = false;         ///< Makes Close one-shot.
 
         InitCallback init_callback_; ///< Optional initialization callback.
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
