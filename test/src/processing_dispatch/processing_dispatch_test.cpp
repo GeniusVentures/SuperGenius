@@ -301,7 +301,7 @@ namespace sgns
                    "is either a real determinism/implementation bug or an environment without a "
                    "usable Vulkan device (no software fallback exists in this codebase)";
 
-            allHashes.push_back( process_result.value() );
+            allHashes.push_back( process_result.value().combinedHash );
         }
 
         for ( size_t i = 1; i < allHashes.size(); ++i )
@@ -349,7 +349,7 @@ namespace sgns
             << ( process_result ? "" : process_result.error().message() )
             << " -- a real Vulkan-capable GPU is a hard prerequisite for this test";
 
-        const std::vector<uint8_t> &hash = process_result.value();
+        const auto &hash = process_result.value().combinedHash;
 
         ASSERT_EQ( hash.size(), 32u ) << "Output hash must be a 32-byte SHA-256 digest";
         ASSERT_NE( hash, std::vector<uint8_t>( 32, 0 ) )
