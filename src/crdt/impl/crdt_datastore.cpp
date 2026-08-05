@@ -1964,14 +1964,14 @@ namespace sgns::crdt
         return heads_->Add( aCid, priority, topic );
     }
 
-    void CrdtDatastore::AddTopicName( const std::string &topic )
+    void CrdtDatastore::AddTopicName( std::string topic )
     {
         if ( topic == "SuperGNUSNode.TestNet.FullNode" )
         {
             has_full_node_topic_ = true;
         }
         std::lock_guard lock( topicNamesMutex_ );
-        topicNames_.emplace( topic );
+        topicNames_.emplace( std::move(topic) );
     }
 
     std::unordered_set<std::string> CrdtDatastore::GetTopicNames() const

@@ -649,7 +649,7 @@ namespace sgns::crdt
         return broadcaster->AddBroadcastTopic( topicName );
     }
 
-    void GlobalDB::AddTopicName( const std::string &topicName )
+    void GlobalDB::AddTopicName( std::string topicName )
     {
         if ( auto crdt_datastore = ActiveCRDTDataStore() )
         {
@@ -657,14 +657,14 @@ namespace sgns::crdt
         }
     }
 
-    void GlobalDB::AddListenTopic( const std::string &topicName )
+    void GlobalDB::AddListenTopic( std::string topicName )
     {
         auto broadcaster    = ActiveBroadcaster();
         auto crdt_datastore = ActiveCRDTDataStore();
         if ( broadcaster && crdt_datastore )
         {
             broadcaster->AddListenTopic( topicName );
-            crdt_datastore->AddTopicName( topicName );
+            crdt_datastore->AddTopicName( std::move(topicName) );
         }
     }
 

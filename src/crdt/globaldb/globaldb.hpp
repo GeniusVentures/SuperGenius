@@ -151,8 +151,8 @@ namespace sgns::crdt
         std::shared_ptr<AtomicTransaction> BeginTransaction();
 
         outcome::result<void> AddBroadcastTopic( const std::string &topicName );
-        void                  AddTopicName( const std::string &topicName );
-        void                  AddListenTopic( const std::string &topicName );
+        void                  AddTopicName( std::string topicName );
+        void                  AddListenTopic( std::string topicName );
 
         void PrintDataStore();
 

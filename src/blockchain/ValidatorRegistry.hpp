@@ -499,6 +499,17 @@ namespace sgns
          */
         bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
         /**
+         * @brief Derives the registry committed to by a certificate-backed update.
+         * @param[in] update Registry update carrying certificate metadata.
+         * @param[in] certificate Certificate authorizing the update.
+         * @param[in] base_registry Registry to which the certificate applies.
+         * @return Expected next registry, or an error when batch metadata is invalid.
+         */
+        outcome::result<Registry> BuildExpectedRegistryFromCertificate(
+            const RegistryUpdate                &update,
+            const sgns::ConsensusCertificate    &certificate,
+            const Registry                      &base_registry ) const;
+        /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
          * @param[in] current_registry Current registry snapshot.
@@ -524,18 +535,6 @@ namespace sgns
          */
         CertificateVotes ExtractCertificateVotes( const sgns::ConsensusCertificate &certificate,
                                                   const Registry                   &current_registry ) const;
-        /**
-         * @brief Builds next registry snapshot using a certificate-derived vote set.
-         * @param[in] current_registry Current registry snapshot.
-         * @param[in] certificate Certificate being applied.
-         * @param[in] registered_votes Vote decisions from registered validators.
-         * @param[in] unregistered_votes Vote decisions from unregistered validators.
-         * @return Derived registry snapshot.
-         */
-        Registry BuildRegistryFromCertificate( const Registry                              &current_registry,
-                                               const sgns::ConsensusCertificate            &certificate,
-                                               const std::unordered_map<std::string, bool> &registered_votes,
-                                               const std::unordered_map<std::string, bool> &unregistered_votes ) const;
         /**
          * @brief Builds next registry snapshot from aggregated vote maps.
          * @param[in] current_registry Current registry snapshot.

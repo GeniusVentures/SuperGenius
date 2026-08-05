@@ -236,7 +236,7 @@ namespace sgns::crdt
          *   The topic name to use when filtering links. Only links whose
          *   `IPLDLinkImpl::getName()` equals this string will be processed.
          */
-        void AddTopicName( const std::string &topic );
+        void AddTopicName( std::string topic );
 
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
