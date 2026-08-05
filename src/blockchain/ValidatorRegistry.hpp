@@ -45,9 +45,20 @@ namespace sgns
     /**
      * @brief Maintains validator registry state and applies certificate-driven updates.
      *
-     * This component stores the active validator set in GlobalDB/CRDT, computes
-     * quorum thresholds, validates registry updates, and derives next registry
-     * snapshots from consensus certificates.
+     * Here, a certificate is a finalized `ConsensusCertificate`: the signed
+     * proposal together with the validators' signed votes and the registry
+     * CID/epoch against which their voting weight and quorum are evaluated.
+     * It is consensus evidence that the proposal was approved, not a TLS/X.509
+     * identity certificate.
+     *
+     * The active validator set is the subset of entries in the current registry
+     * snapshot whose status is `ACTIVE`. Each entry identifies a validator and
+     * its role and voting weight; only active entries contribute to quorum.
+     * Suspended and blacklisted entries remain in the registry but are excluded.
+     *
+     * This component stores the registry in GlobalDB/CRDT, computes quorum
+     * thresholds, validates registry updates, and derives next registry snapshots
+     * from consensus certificates.
      */
     class ValidatorRegistry : public std::enable_shared_from_this<ValidatorRegistry>
     {
@@ -101,7 +112,7 @@ namespace sgns
             // promoted to Role::FULL. The promoted node's weight then accumulates
             // up to full_max_weight_, flowing into EvaluateSlotQuorum via
             // validator.weight() with no tally-side special case. Equal to regular_max_weight_ so the approve-branch clamp
-			// does not prevent reaching the threshold.
+            // does not prevent reaching the threshold.
             uint64_t full_promotion_weight_ = 100; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
         };
 
@@ -195,7 +206,7 @@ namespace sgns
          * @return Slot tally result.
          */
         SlotQuorumResult EvaluateSlotQuorum( const std::vector<sgns::ConsensusVote> &votes,
-                                             const Registry                        &registry ) const;
+                                             const Registry                         &registry ) const;
 
         /**
          * @brief Pure (stateless) slot-quorum tally for deterministic unit testing.
@@ -210,8 +221,8 @@ namespace sgns
          * @return Slot tally result.
          */
         static SlotQuorumResult EvaluateSlotQuorumStatic( const std::vector<sgns::ConsensusVote> &votes,
-                                                          const Registry                        &registry,
-                                                          const WeightConfig                    &weight_config );
+                                                          const Registry                         &registry,
+                                                          const WeightConfig                     &weight_config );
 
         /**
          * @brief Pure (stateless) REGULAR -> FULL promotion decision (D-08).
@@ -229,8 +240,7 @@ namespace sgns
          * @param[in] weight_config Weight policy supplying thresholds.
          * @return true if the entry should be promoted from REGULAR to FULL.
          */
-        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
-                                                    const WeightConfig   &weight_config );
+        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry, const WeightConfig &weight_config );
 
         /**
          * @brief Creates an in-memory genesis registry snapshot.
@@ -253,6 +263,12 @@ namespace sgns
         outcome::result<Registry> LoadCurrentRegistry() const;
         /**
          * @brief Loads a registry by CID.
+         *
+         * Each registry CRDT element contains a complete serialized
+         * RegistryUpdate snapshot, so this reads the element from the identified
+         * delta directly; reconstructing the registry does not require replaying
+         * or merging ancestor deltas.
+         *
          * @param[in] cid Registry CID.
          * @return Registry snapshot or an error.
          */

@@ -1980,7 +1980,7 @@ namespace sgns::crdt
         return topicNames_;
     }
 
-    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetILPDNodeContent(
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> CrdtDatastore::GetLocalDeltaKeyValues(
         const std::string &cid_string )
     {
         BOOST_OUTCOME_TRY( auto cid, CID::fromString( cid_string ) );

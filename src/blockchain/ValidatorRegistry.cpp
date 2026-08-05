@@ -715,13 +715,16 @@ namespace sgns
     {
         ValidatorRegistryLogger()->trace( "{}: entry cid={}", __func__, cid );
 
-        BOOST_OUTCOME_TRY( auto cid_content, db_->GetCIDContent( cid ) );
-        ValidatorRegistryLogger()->trace( "{}: Got CID content with {} entries ", __func__, cid_content.size() );
+        // A registry write stores the complete RegistryUpdate as one CRDT element
+        // value. The delta at this CID therefore contains the requested snapshot;
+        // ancestor deltas are not needed to reconstruct it.
+        BOOST_OUTCOME_TRY( auto delta_key_values, db_->GetLocalDeltaKeyValues( cid ) );
+        ValidatorRegistryLogger()->trace( "{}: Got local delta with {} entries ", __func__, delta_key_values.size() );
 
         crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };
-        for ( auto &[key, registry_content] : cid_content )
+        for ( const auto &[key, registry_update_buffer] : delta_key_values )
         {
-            ValidatorRegistryLogger()->trace( "{}: Processing CID content key={}", __func__, key );
+            ValidatorRegistryLogger()->trace( "{}: Processing delta element key={}", __func__, key );
             if ( key != registry_key.GetKey() )
             {
                 ValidatorRegistryLogger()->debug( "{}: Skipping non-registry content key={}, registry_key={}",
@@ -730,16 +733,16 @@ namespace sgns
                                                   registry_key.GetKey() );
                 continue;
             }
-            std::vector<uint8_t> bytes( registry_content.begin(), registry_content.end() );
-            auto                 decoded = DeserializeRegistryUpdate( bytes );
-            if ( decoded.has_error() )
+            std::vector<uint8_t> serialized_update( registry_update_buffer.begin(), registry_update_buffer.end() );
+            auto                 update = DeserializeRegistryUpdate( serialized_update );
+            if ( update.has_error() )
             {
                 ValidatorRegistryLogger()->error( "{}: failed to parse registry update ", __func__ );
                 continue;
             }
 
             ValidatorRegistryLogger()->debug( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
-            return decoded.value().registry();
+            return update.value().registry();
         }
 
         return outcome::failure( std::errc::no_such_file_or_directory );
@@ -913,12 +916,8 @@ namespace sgns
         {
             selected.resize( certificate_count );
         }
-        auto root_result = ComputeBatchRoot( selected );
-        if ( root_result.has_error() )
-        {
-            return outcome::failure( root_result.error() );
-        }
-        if ( expected_root.has_value() && root_result.value() != expected_root.value() )
+        BOOST_OUTCOME_TRY( auto root_result, ComputeBatchRoot( selected ) );
+        if ( expected_root.has_value() && root_result != expected_root.value() )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -936,8 +935,7 @@ namespace sgns
         }
 
         sgns::ConsensusCertificate certificate;
-        std::string                serialized = std::string( cert_get.value().toString() );
-        if ( !certificate.ParseFromString( serialized ) )
+        if ( !certificate.ParseFromString( cert_get.value().toString() ) )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
@@ -1345,7 +1343,7 @@ namespace sgns
             return false;
         }
 
-        const std::string prev_registry_cid = update.prev_registry_hash();
+        const std::string       prev_registry_cid = update.prev_registry_hash();
         std::optional<Registry> base_registry_snapshot;
         std::string             current_id;
         {
@@ -1356,7 +1354,7 @@ namespace sgns
 
         const Registry *base_registry = base_registry_snapshot ? &base_registry_snapshot.value() : nullptr;
         bool needs_to_fetch_registry  = !base_registry || current_id.empty() || prev_registry_cid != current_id;
-        if ( !prev_registry_cid.empty() && ( needs_to_fetch_registry ) )
+        if ( !prev_registry_cid.empty() && needs_to_fetch_registry )
         {
             auto base_registry_result = LoadRegistryByCid( prev_registry_cid );
             if ( base_registry_result.has_error() )

@@ -1,6 +1,6 @@
 /**
  * @file       crdt_datastore.hpp
- * @brief      CRDT datastore class source file 
+ * @brief      CRDT datastore class source file
  * @date       2025-04-04
  * @author     devcareer0
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -251,7 +251,6 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
-
         /**
          * @brief Query whether outgoing head broadcasts are enabled.
          * @return true when broadcasts are enabled.
@@ -260,7 +259,7 @@ namespace sgns::crdt
 
         std::unordered_set<std::string> GetTopicNames() const;
 
-        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetILPDNodeContent(
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
     protected:

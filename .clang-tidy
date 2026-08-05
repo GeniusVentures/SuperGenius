@@ -48,6 +48,7 @@
 Checks: >
   -*,
   bugprone-*,
+  -bugprone-easily-swappable-parameters,
   cert-*,
   -cert-err58-cpp,
   cppcoreguidelines-avoid-magic-numbers,
