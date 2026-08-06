@@ -30,7 +30,12 @@ namespace sgns
                 {
                     "name": "testInput",
                     "source_uri_param": "file://processing_datatypes/float_input.bin",
-                    "type": "tensor",
+                    "type": "float",
+                    "dimensions": {
+                        "width": 16,
+                        "block_len": 16,
+                        "chunk_stride": 16
+                    },
                     "format": "FLOAT32"
                 }
             ],
@@ -90,7 +95,7 @@ namespace sgns
                     "name": "vertexData",
                     "source_uri_param": "file://processing_datatypes/float_input.bin",
                     "type": "buffer",
-                    "format": "FLOAT32"
+                    "dimensions": { "width": 1 }
                 }
             ],
             "outputs": [
@@ -104,23 +109,33 @@ namespace sgns
                 {
                     "name": "cap_render",
                     "type": "render",
-                    "shader_pipeline": {
-                        "vertex": {
-                            "source_uri_param": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
-                            "entry_point": "main"
-                        },
-                        "fragment": {
-                            "source_uri_param": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
-                            "entry_point": "main"
-                        }
+                    "render_shader": {
+                        "stages": [
+                            {
+                                "stage": "vertex",
+                                "type": "spirv",
+                                "source": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
+                                "entry_point": "main"
+                            },
+                            {
+                                "stage": "fragment",
+                                "type": "spirv",
+                                "source": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
+                                "entry_point": "main"
+                            }
+                        ]
                     },
-                    "framebuffer": { "width": 64, "height": 64, "format": "RGBA8" },
-                    "vertex_buffers": [
-                        {
-                            "binding": 0,
-                            "source_uri_param": "file://processing_datatypes/float_input.bin",
-                            "stride": 12
-                        }
+                    "render_target": {
+                        "color_format": "RGBA8",
+                        "depth_format": "D32_SFLOAT",
+                        "width": 64,
+                        "height": 64,
+                        "clear_color": [0.0, 0.0, 0.0, 1.0],
+                        "clear_depth": 1.0
+                    },
+                    "vertex_buffer": { "source": "input:vertexData" },
+                    "vertex_layout": [
+                        { "name": "inPosition", "format": "FLOAT32", "offset": 0 }
                     ]
                 }
             ]
