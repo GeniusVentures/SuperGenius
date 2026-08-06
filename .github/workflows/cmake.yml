@@ -434,6 +434,7 @@ jobs:
             IS_TAG=false
           else
             CURRENT_BRANCH=${{ github.ref_name }}
+            CURRENT_BRANCH=${{ github.ref_name }}
             IS_TAG=false
           fi
           echo "Identified current branch/tag as ${CURRENT_BRANCH}"
