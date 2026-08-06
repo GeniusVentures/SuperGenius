@@ -9,6 +9,7 @@ add_library(sgns_genius_account
     UTXOStructs.cpp
     UTXOManager.cpp
     MigrationAllowList.cpp
+    GeniusSigner.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp
 )

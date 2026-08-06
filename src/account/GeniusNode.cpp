@@ -1080,6 +1080,7 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::debug );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
@@ -1141,6 +1142,7 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );

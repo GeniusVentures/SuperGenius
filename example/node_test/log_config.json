@@ -24,6 +24,7 @@
         "GossipPubSub":                     "err",
         "AccountMessenger":                 "err",
         "GeniusAccount":                    "err",
+        "GeniusSigner":                     "err",
         "KeyPairFileStorage":               "err",
         "Blockchain":                       "err",
         "ValidatorRegistry":                "err",
