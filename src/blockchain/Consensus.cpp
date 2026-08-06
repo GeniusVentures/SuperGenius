@@ -2067,9 +2067,9 @@ namespace sgns
 
             state.quorum_reached       = true;
             state.quorum_reached_ts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                              std::chrono::system_clock::now().time_since_epoch() )
-                                              .count();
-            reached_quorum = true;
+                                             std::chrono::system_clock::now().time_since_epoch() )
+                                             .count();
+            reached_quorum             = true;
         }
 
         if ( reached_quorum )
@@ -2167,19 +2167,6 @@ namespace sgns
         return true;
     }
 
-    std::vector<ConsensusManager::Vote> ConsensusManager::CollectCertificateVotes(
-        const Certificate &certificate ) const
-    {
-        std::vector<Vote> votes;
-        votes.reserve( static_cast<size_t>( certificate.votes_size() ) );
-        for ( const auto &vote : certificate.votes() )
-        {
-            ConsensusManagerLogger()->trace( "{}: processing vote voter_id={}", __func__, vote.voter_id() );
-            votes.push_back( vote );
-        }
-        return votes;
-    }
-
     void ConsensusManager::ClearProposalSlot( const Proposal &proposal )
     {
         std::lock_guard lock( proposals_mutex_ );
@@ -2265,15 +2252,10 @@ namespace sgns
             {
                 return candidate.proposal_id() < current.proposal_id();
             }
-            return BestHash( curr_hash, cand_hash ) == cand_hash;
+            return cand_hash < curr_hash;
         }
 
         return candidate.proposal_id() < current.proposal_id();
-    }
-
-    const std::string &ConsensusManager::BestHash( const std::string &a, const std::string &b )
-    {
-        return ( a <= b ) ? a : b;
     }
 
     outcome::result<std::string> ConsensusManager::ComputeSubjectId( const Subject &subject )
@@ -2352,13 +2334,6 @@ namespace sgns
         }
 
         return sgns::crypto::sha2_256( subject_type.data(), subject_type.size() );
-    }
-
-    bool ConsensusManager::SubjectTypeMatches( const Subject &subject, std::string_view subject_type )
-    {
-        auto expected = ComputeSubjectTypeHash( subject_type );
-        auto actual   = ParseSubjectTypeHash( subject );
-        return expected.has_value() && actual.has_value() && actual.value() == expected.value();
     }
 
     outcome::result<NonceSubject> ConsensusManager::DecodeNonceSubject( const Subject &subject )

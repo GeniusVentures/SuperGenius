@@ -423,7 +423,6 @@ namespace sgns
         static outcome::result<NonceSubject>         DecodeNonceSubject( const Subject &subject );
         static outcome::result<TaskResultSubject>    DecodeTaskResultSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
-        static bool SubjectTypeMatches( const Subject &subject, std::string_view subject_type );
         /**
          * @brief Creates a nonce subject.
          * @param[in] account_id Account identifier bound to the subject.
@@ -479,13 +478,6 @@ namespace sgns
         static outcome::result<Subject> CreateGenericSubject( const std::string          &account_id,
                                                               std::string_view            subject_type,
                                                               const std::vector<uint8_t> &payload );
-        /**
-         * @brief Returns the lexicographically better hash among two values.
-         * @param[in] a First hash candidate.
-         * @param[in] b Second hash candidate.
-         * @return Reference to the selected hash string.
-         */
-        static const std::string &BestHash( const std::string &a, const std::string &b );
         /**
          * @brief Submits a proposal for local handling and broadcast.
          * @param[in] proposal Proposal to submit.
@@ -709,12 +701,6 @@ namespace sgns
          */
         bool ValidateCertificateBestProposal( const ProposalState &state, const Certificate &certificate ) const;
         /**
-         * @brief Extracts certificate votes into normalized vote objects.
-         * @param[in] certificate Certificate to inspect.
-         * @return Vote list collected from certificate.
-         */
-        std::vector<Vote> CollectCertificateVotes( const Certificate &certificate ) const;
-        /**
          * @brief Clears local slot bookkeeping for a proposal.
          * @param[in] proposal Proposal whose slot state should be cleared.
          */
@@ -793,12 +779,6 @@ namespace sgns
          * @return Proposal identifier string.
          */
         static std::string CreateProposalId( const Proposal &proposal );
-        /**
-         * @brief Checks if a subject has a valid type hash.
-         * @param[in,out] subject Subject to check
-         * @return `true` if the subject has a valid type hash, otherwise `false`.
-         */
-        static bool SubjectHasValidTypeHash( Subject *subject );
         /**
          * @brief Performs basic subject sanity validation.
          * @param[in] subject Subject to validate.

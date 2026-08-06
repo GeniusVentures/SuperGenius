@@ -1261,10 +1261,10 @@ namespace sgns
                     continue;
                 }
 
-                if ( selected_hash.empty() ||
-                     blockchain_->BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
+                const auto candidate_hash = candidate->GetHash();
+                if ( selected_hash.empty() || candidate_hash < selected_hash )
                 {
-                    selected_hash = candidate->GetHash();
+                    selected_hash = candidate_hash;
                 }
             }
         }
@@ -2915,7 +2915,7 @@ namespace sgns
                          new_tx.GetHash(),
                          existing_tx.GetHash() );
 
-        return blockchain_->BestHash( existing_tx.GetHash(), new_tx.GetHash() ) == new_tx.GetHash();
+        return new_tx.GetHash() < existing_tx.GetHash();
     }
 
     uint64_t TransactionManager::GetCurrentTimestamp()
