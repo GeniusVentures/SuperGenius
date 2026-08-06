@@ -902,15 +902,13 @@ namespace sgns
             return;
         }
 
-        const auto started_at = std::chrono::steady_clock::now();
+        const auto       started_at = std::chrono::steady_clock::now();
         std::unique_lock submission_lock( payout_submission_mutex_ );
         if ( stopped_.load() )
         {
             submission_lock.unlock();
-            callback( TransactionCompletion{ {},
-                                             TransactionStatus::INVALID,
-                                             {},
-                                             boost::asio::error::operation_aborted } );
+            callback(
+                TransactionCompletion{ {}, TransactionStatus::INVALID, {}, boost::asio::error::operation_aborted } );
             return;
         }
 
@@ -918,11 +916,11 @@ namespace sgns
         submission_lock.unlock();
         if ( payout.has_error() )
         {
-            callback( TransactionCompletion{ {},
-                                             TransactionStatus::INVALID,
-                                             std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                 std::chrono::steady_clock::now() - started_at ),
-                                             payout.error() } );
+            callback( TransactionCompletion{
+                {},
+                TransactionStatus::INVALID,
+                std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - started_at ),
+                payout.error() } );
             return;
         }
 
@@ -2358,7 +2356,6 @@ namespace sgns
                 }
             }
         }
-
     }
 
     void TransactionManager::InitTransactions()
@@ -2420,13 +2417,11 @@ namespace sgns
     {
         // Genesis-creating full node — no peers, no prior UTXOs, nonce is trivially zero.
         // The PubSub broadcast would just time out (pre-consensus legacy path).
-        if ( full_node_m &&
-             account_m->GetAddress() == Blockchain::GetAuthorizedFullNodeAddress() )
+        if ( full_node_m && account_m->GetAddress() == Blockchain::GetAuthorizedFullNodeAddress() )
         {
-            TransactionManagerLogger()->debug(
-                "[{} - full: {}] Genesis full node — skipping network nonce check",
-                account_m->GetAddress().substr( 0, 8 ),
-                full_node_m );
+            TransactionManagerLogger()->debug( "[{} - full: {}] Genesis full node — skipping network nonce check",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m );
             return true;
         }
 
