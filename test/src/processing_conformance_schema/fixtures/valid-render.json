@@ -7,7 +7,9 @@
       "name": "vertexData",
       "source_uri_param": "file://processing_datatypes/float_input.bin",
       "type": "buffer",
-      "format": "FLOAT32"
+      "dimensions": {
+        "width": 1
+      }
     }
   ],
   "outputs": [
@@ -21,26 +23,38 @@
     {
       "name": "valid_render",
       "type": "render",
-      "shader_pipeline": {
-        "vertex": {
-          "source_uri_param": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
-          "entry_point": "main"
-        },
-        "fragment": {
-          "source_uri_param": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
-          "entry_point": "main"
-        }
+      "render_shader": {
+        "stages": [
+          {
+            "stage": "vertex",
+            "type": "spirv",
+            "source": "file://processing_conformance_regression/fixtures/passthrough.vert.spv",
+            "entry_point": "main"
+          },
+          {
+            "stage": "fragment",
+            "type": "spirv",
+            "source": "file://processing_conformance_regression/fixtures/passthrough.frag.spv",
+            "entry_point": "main"
+          }
+        ]
       },
-      "framebuffer": {
+      "render_target": {
+        "color_format": "RGBA8",
+        "depth_format": "D32_SFLOAT",
         "width": 64,
         "height": 64,
-        "format": "RGBA8"
+        "clear_color": [0.0, 0.0, 0.0, 1.0],
+        "clear_depth": 1.0
       },
-      "vertex_buffers": [
+      "vertex_buffer": {
+        "source": "input:vertexData"
+      },
+      "vertex_layout": [
         {
-          "binding": 0,
-          "source_uri_param": "file://processing_datatypes/float_input.bin",
-          "stride": 12
+          "name": "inPosition",
+          "format": "FLOAT32",
+          "offset": 0
         }
       ]
     }

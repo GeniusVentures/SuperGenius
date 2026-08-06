@@ -6,7 +6,12 @@
     {
       "name": "testInput",
       "source_uri_param": "file://processing_datatypes/float_input.bin",
-      "type": "tensor",
+      "type": "float",
+      "dimensions": {
+        "width": 16,
+        "block_len": 16,
+        "chunk_stride": 16
+      },
       "format": "FLOAT32"
     }
   ],
