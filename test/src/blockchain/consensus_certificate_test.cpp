@@ -34,13 +34,14 @@ namespace sgns
             return manager && manager->pending_entries_.find( proposal_id ) != manager->pending_entries_.end();
         }
 
-        static bool HasSubjectHandler( const std::shared_ptr<ConsensusManager> &manager, const std::string &type_hash )
+        static bool HasSubjectHandler( const std::shared_ptr<ConsensusManager> &manager,
+                                       const base::Hash256                     &type_hash )
         {
             return manager && manager->subject_handlers_.find( type_hash ) != manager->subject_handlers_.end();
         }
 
         static bool HasCertificateSubjectHandler( const std::shared_ptr<ConsensusManager> &manager,
-                                                  const std::string                       &type_hash )
+                                                  const base::Hash256                     &type_hash )
         {
             return manager && manager->certificate_subject_handlers_.find( type_hash ) !=
                                   manager->certificate_subject_handlers_.end();
@@ -424,7 +425,7 @@ namespace sgns::test
         ASSERT_TRUE( subject_result.value().has_subject_type_hash() );
         auto type_hash = ConsensusManager::ComputeSubjectTypeHash( TASK_RESULT_SUBJECT_TYPE );
         ASSERT_TRUE( type_hash.has_value() );
-        EXPECT_EQ( type_hash.value(), subject_result.value().subject_type_hash().hash() );
+        EXPECT_EQ( type_hash.value().toString(), subject_result.value().subject_type_hash().hash() );
 
         auto computed = ConsensusManager::ComputeSubjectId( subject_result.value() );
         ASSERT_TRUE( computed.has_value() );

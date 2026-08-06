@@ -25,7 +25,7 @@ namespace sgns
 {
     namespace
     {
-        bool IsPublicChainMintChainId( const std::string &chain_id )
+        bool IsPublicChainMintChainId( std::string_view chain_id )
         {
             if ( chain_id.empty() )
             {
@@ -39,7 +39,17 @@ namespace sgns
                                 chain_id.end(),
                                 []( unsigned char c ) { return c >= '0' && c <= '9'; } );
         }
-    } // namespace
+
+        std::optional<base::Hash256> ParseSubjectTypeHash( const ConsensusSubject &subject )
+        {
+            if ( !subject.has_subject_type_hash() )
+            {
+                return std::nullopt;
+            }
+            auto hash = base::Hash256::fromString( subject.subject_type_hash().hash() );
+            return hash.has_value() ? std::optional<base::Hash256>{ hash.value() } : std::nullopt;
+        }
+    }
 
     base::Logger ConsensusManagerLogger()
     {
@@ -128,13 +138,15 @@ namespace sgns
                                         Signer                                     signer,
                                         std::string                                address,
                                         std::string                                consensus_topic ) :
-        registry_( std::move( registry ) ), //
-        db_( std::move( db ) ),             //
-        pubsub_( std::move( pubsub ) ),     //
-        signer_( std::move( signer ) ),     //
-        account_address_( std::move(address) ),        //
-        consensus_messages_topic_( std::string( CONSENSUS_CHANNEL_PREFIX ) + sgns::version::GetNetAndVersionAppendix() +
-                                   consensus_topic ),
+        registry_( std::move( registry ) ),       //
+        db_( std::move( db ) ),                   //
+        pubsub_( std::move( pubsub ) ),           //
+        signer_( std::move( signer ) ),           //
+        account_address_( std::move( address ) ), //
+        consensus_messages_topic_( fmt::format( "{}{}{}",
+                                                CONSENSUS_CHANNEL_PREFIX,
+                                                sgns::version::GetNetAndVersionAppendix(),
+                                                consensus_topic ) ),
         consensus_datastore_topic_( consensus_messages_topic_ + "#datastore" )
     {
     }
@@ -194,19 +206,11 @@ namespace sgns
         round_timer_ = std::thread(
             [this]()
             {
-                constexpr auto min_interval = std::chrono::milliseconds( 500 );
+                constexpr auto MIN_INTERVAL = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
                     std::unique_lock<std::mutex> lock( timer_mutex_ );
-                    auto                         interval = round_duration_ / 2;
-                    if ( interval.count() <= 0 )
-                    {
-                        interval = DEFAULT_ROUND_DURATION / 2;
-                    }
-                    if ( interval < min_interval )
-                    {
-                        interval = min_interval;
-                    }
+                    auto                         interval = std::max( round_duration_ / 2, MIN_INTERVAL );
                     if ( certificates_pending_.load() )
                     {
                         // Work is pending: run on cadence, only interrupt for shutdown.
@@ -257,11 +261,6 @@ namespace sgns
 
     bool ConsensusManager::RegisterSubjectHandler( std::string_view subject_type, SubjectHandler handler )
     {
-        if ( !handler )
-        {
-            ConsensusManagerLogger()->error( "{}: ignored empty handler subject_type={}", __func__, subject_type );
-            return false;
-        }
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
@@ -419,11 +418,16 @@ namespace sgns
         {
             return;
         }
+        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+        if ( !type_hash )
+        {
+            return;
+        }
 
         std::vector<ProposalCleanupHandler> handlers_copy;
         {
             std::shared_lock lock( cleanup_handlers_mutex_ );
-            auto             it = proposal_cleanup_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            auto             it = proposal_cleanup_handlers_.find( type_hash.value() );
             if ( it != proposal_cleanup_handlers_.end() )
             {
                 handlers_copy = it->second;
@@ -918,10 +922,16 @@ namespace sgns
                                                  std::size_t                           scheduled_retry_count,
                                                  std::chrono::steady_clock::time_point last_retry_at )
     {
+        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+        if ( !type_hash )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash reason={}", __func__, reason );
+            return;
+        }
         SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
-            auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            auto             handler_it = subject_handlers_.find( type_hash.value() );
             if ( handler_it == subject_handlers_.end() )
             {
                 ConsensusManagerLogger()->error(
@@ -1823,10 +1833,17 @@ namespace sgns
             return;
         }
 
+        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+        if ( !type_hash )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash", __func__ );
+            return;
+        }
+
         SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
-            auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            auto             handler_it = subject_handlers_.find( type_hash.value() );
             if ( handler_it == subject_handlers_.end() )
             {
                 ConsensusManagerLogger()->error(
@@ -1906,10 +1923,16 @@ namespace sgns
 
         for ( const auto &proposal : to_process )
         {
+            auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+            if ( !type_hash )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash", __func__ );
+                continue;
+            }
             SubjectHandler subject_handler;
             {
                 std::shared_lock lock( subject_handlers_mutex_ );
-                auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
+                auto             handler_it = subject_handlers_.find( type_hash.value() );
                 if ( handler_it == subject_handlers_.end() )
                 {
                     ConsensusManagerLogger()->error(
@@ -2231,10 +2254,12 @@ namespace sgns
 
         registry_->OnFinalizedCertificate( certificate );
 
+        auto                      type_hash = ParseSubjectTypeHash( certificate.proposal().subject() );
         CertificateSubjectHandler handler;
         {
             std::shared_lock lock( certificate_handlers_mutex_ );
-            auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
+            auto             it = type_hash ? certificate_subject_handlers_.find( type_hash.value() )
+                                            : certificate_subject_handlers_.end();
             if ( it == certificate_subject_handlers_.end() )
             {
                 (void) certificate_work_journal_->MarkDone( key );
@@ -2683,16 +2708,16 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
 
-        if ( !proposal.subject().has_subject_type_hash() )
+        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
+        if ( !type_hash )
         {
             return proposal.proposal_id();
         }
         const auto &subject = proposal.subject();
-        const auto &hash    = subject.subject_type_hash().hash();
 
         {
             std::shared_lock lock( slot_key_handlers_mutex_ );
-            auto             it = slot_key_handlers_.find( hash );
+            auto             it = slot_key_handlers_.find( type_hash.value() );
             if ( it != slot_key_handlers_.end() )
             {
                 return it->second( subject );
@@ -2760,10 +2785,10 @@ namespace sgns
         }
 
         bool SetSubjectPayload( ConsensusSubject                    *subject,
-                                const std::string                   &subject_type_hash,
+                                const base::Hash256                 &subject_type_hash,
                                 const google::protobuf::MessageLite &payload )
         {
-            if ( subject == nullptr || subject_type_hash.size() != kSubjectTypeHashSize )
+            if ( subject == nullptr )
             {
                 return false;
             }
@@ -2772,7 +2797,7 @@ namespace sgns
             {
                 return false;
             }
-            std::string canonical_payload = subject_type_hash + serialized;
+            std::string canonical_payload = subject_type_hash.toString() + serialized;
             auto        payload_hash      = ComputePayloadHash( canonical_payload );
             if ( payload_hash.has_error() )
             {
@@ -2786,11 +2811,11 @@ namespace sgns
         outcome::result<std::string> ExtractBuiltinPayload( const ConsensusSubject &subject,
                                                             std::string_view        subject_type )
         {
-            auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
-            if ( expected.has_error() || !subject.has_subject_type_hash() ||
-                 subject.subject_type_hash().hash() != expected.value() ||
-                 subject.payload().size() <= kSubjectTypeHashSize || expected.value().size() != kSubjectTypeHashSize ||
-                 subject.payload().compare( 0, kSubjectTypeHashSize, expected.value() ) != 0 )
+            BOOST_OUTCOME_TRY( auto expected, ConsensusManager::ComputeSubjectTypeHash( subject_type ) );
+            const auto expected_bytes = expected.toString();
+            if ( !subject.has_subject_type_hash() || subject.subject_type_hash().hash() != expected_bytes ||
+                 subject.payload().size() <= kSubjectTypeHashSize ||
+                 subject.payload().compare( 0, kSubjectTypeHashSize, expected_bytes ) != 0 )
             {
                 return outcome::failure( std::errc::invalid_argument );
             }
@@ -2798,22 +2823,21 @@ namespace sgns
         }
     }
 
-    outcome::result<std::string> ConsensusManager::ComputeSubjectTypeHash( std::string_view subject_type )
+    outcome::result<base::Hash256> ConsensusManager::ComputeSubjectTypeHash( std::string_view subject_type )
     {
         if ( subject_type.empty() )
         {
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto hash = sgns::crypto::sha2_256( subject_type.data(), subject_type.size() );
-        return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
+        return sgns::crypto::sha2_256( subject_type.data(), subject_type.size() );
     }
 
     bool ConsensusManager::SubjectTypeMatches( const Subject &subject, std::string_view subject_type )
     {
         auto expected = ComputeSubjectTypeHash( subject_type );
-        return expected.has_value() && subject.has_subject_type_hash() &&
-               subject.subject_type_hash().hash() == expected.value();
+        auto actual   = ParseSubjectTypeHash( subject );
+        return expected.has_value() && actual.has_value() && actual.value() == expected.value();
     }
 
     outcome::result<NonceSubject> ConsensusManager::DecodeNonceSubject( const Subject &subject )
@@ -2851,7 +2875,7 @@ namespace sgns
 
     bool ConsensusManager::SubjectHasValidTypeHash( Subject *subject )
     {
-        return subject != nullptr && subject->has_subject_type_hash() && !subject->subject_type_hash().hash().empty();
+        return subject != nullptr && ParseSubjectTypeHash( *subject ).has_value();
     }
 
     outcome::result<ConsensusManager::Subject> ConsensusManager::CreateNonceSubject(
@@ -3005,7 +3029,7 @@ namespace sgns
         {
             return false;
         }
-        if ( !subject.has_subject_type_hash() || subject.subject_type_hash().hash().empty() )
+        if ( !ParseSubjectTypeHash( subject ) )
         {
             return false;
         }
@@ -3102,9 +3126,9 @@ namespace sgns
             return false;
         }
 
-        if ( !subject.has_subject_type_hash() || subject.subject_type_hash().hash().empty() )
+        if ( !ParseSubjectTypeHash( subject ) )
         {
-            ConsensusManagerLogger()->error( "{}: subject subject_type_hash is empty", __func__ );
+            ConsensusManagerLogger()->error( "{}: subject subject_type_hash is invalid", __func__ );
             return false;
         }
         if ( subject.payload().empty() )

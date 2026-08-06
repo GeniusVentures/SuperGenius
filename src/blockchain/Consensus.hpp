@@ -26,6 +26,7 @@
 
 #include "blockchain/ValidatorRegistry.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
+#include "base/blob.hpp"
 #include "crdt/globaldb/crdt_work_journal.hpp"
 #include "crdt/globaldb/globaldb.hpp"
 #include "crdt/proto/delta.pb.h"
@@ -454,9 +455,9 @@ namespace sgns
         /**
          * @brief Computes deterministic bytes for a canonical subject type string.
          * @param[in] subject_type Canonical subject type, e.g. "gnus.bridge_event.v1".
-         * @return 32-byte subject type hash on success, otherwise an error.
+         * @return Fixed-size SHA-256 subject type hash on success, otherwise an error.
          */
-        static outcome::result<std::string>          ComputeSubjectTypeHash( std::string_view subject_type );
+        static outcome::result<base::Hash256>        ComputeSubjectTypeHash( std::string_view subject_type );
         static outcome::result<NonceSubject>         DecodeNonceSubject( const Subject &subject );
         static outcome::result<TaskResultSubject>    DecodeTaskResultSubject( const Subject &subject );
         static outcome::result<RegistryBatchSubject> DecodeRegistryBatchSubject( const Subject &subject );
@@ -928,15 +929,15 @@ namespace sgns
         std::shared_ptr<ValidatorRegistry>     registry_; ///< Validator registry dependency.
         std::shared_ptr<crdt::GlobalDB>        db_;       ///< GlobalDB dependency for persistence and CRDT operations.
         std::shared_ptr<crdt::CRDTWorkJournal> certificate_work_journal_; ///< Work journal for certificate processing.
-        std::unordered_map<std::string, SubjectHandler>
+        std::unordered_map<base::Hash256, SubjectHandler>
                                   subject_handlers_;       ///< Subject handlers keyed by subject type hash.
         mutable std::shared_mutex subject_handlers_mutex_; ///< Guards `subject_handlers_`.
-        std::unordered_map<std::string, CertificateSubjectHandler>
+        std::unordered_map<base::Hash256, CertificateSubjectHandler>
                                   certificate_subject_handlers_; ///< Certificate handlers by subject type hash.
         mutable std::shared_mutex certificate_handlers_mutex_;   ///< Guards `certificate_subject_handlers_`.
-        std::unordered_map<std::string, std::vector<ProposalCleanupHandler>>
+        std::unordered_map<base::Hash256, std::vector<ProposalCleanupHandler>>
             proposal_cleanup_handlers_; ///< Proposal cleanup handlers by subject type hash.
-        static inline std::unordered_map<std::string, SlotKeyHandler>
+        static inline std::unordered_map<base::Hash256, SlotKeyHandler>
                                         slot_key_handlers_;          ///< Slot key handlers keyed by subject type hash.
         static inline std::shared_mutex slot_key_handlers_mutex_;    ///< Guards `slot_key_handlers_`.
         mutable std::shared_mutex       cleanup_handlers_mutex_;     ///< Guards `proposal_cleanup_handlers_`.
