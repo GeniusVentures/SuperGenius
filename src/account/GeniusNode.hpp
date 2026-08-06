@@ -778,7 +778,6 @@ namespace sgns
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
                                                      io_work_guard_;     ///< Keeps @ref io_ alive.
         std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>              job_globaldb_;      ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.

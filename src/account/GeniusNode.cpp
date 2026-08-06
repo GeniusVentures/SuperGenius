@@ -1788,16 +1788,6 @@ namespace sgns
             migration_manager_.reset();
         }
 
-        if ( job_globaldb_ )
-        {
-            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: shutting down job_globaldb_ (refs={})",
-                                 job_globaldb_.use_count() );
-            job_globaldb_->ShutdownNow();
-            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: job_globaldb_ shutdown complete" );
-        }
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing job_globaldb_ (refs={})",
-                             job_globaldb_.use_count() );
-        job_globaldb_.reset();
         node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
                              tx_globaldb_.use_count() );
         tx_globaldb_.reset();
@@ -1879,9 +1869,21 @@ namespace sgns
                                  services_shutdown.error().message() );
         }
 
+        // Stop every GraphSync user while PubSub's host and reactor are still
+        // running. Keep the owning objects alive until the io_context threads
+        // are joined below, but make the eventual Network destructor inert by
+        // closing its peer streams now rather than after PubSub::Stop().
+
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();
+        }
+
+        if ( graphsyncnetwork_ )
+        {
+            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
+            graphsyncnetwork_->stop( nullptr );
+            node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
 
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
