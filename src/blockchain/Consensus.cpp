@@ -1602,105 +1602,95 @@ namespace sgns
         std::vector<ProposalState> to_process;
         {
             std::lock_guard lock( proposals_mutex_ );
-            for ( auto &kv : proposals_ )
+            for ( const auto &[_, state] : proposals_ )
             {
-                auto &state = kv.second;
-                if ( !state.quorum_reached )
+                if ( state.quorum_reached )
                 {
-                    ConsensusManagerLogger()->debug(
-                        "{}: Found proposal without quorum reached for hash {} proposal_id={}",
-                        __func__,
-                        GetPrintableSubjectHash( state.proposal.subject() ),
-                        state.proposal.proposal_id().substr( 0, 8 ) );
-
-                    continue;
+                    to_process.push_back( state );
                 }
-                to_process.push_back( state );
             }
         }
 
-        for ( auto &state : to_process )
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+        for ( const auto &state : to_process )
         {
-            auto subject_hash = GetSubjectHash( state.proposal.subject() );
+            const auto &proposal     = state.proposal;
+            const auto &proposal_id  = proposal.proposal_id();
+            auto        subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
             {
                 ConsensusManagerLogger()->debug( "{}: hash {} already certified, clearing proposal_id={}",
                                                  __func__,
                                                  subject_hash.value().substr( 0, 8 ),
-                                                 state.proposal.proposal_id().substr( 0, 8 ) );
-                ClearProposalSlot( state.proposal );
+                                                 proposal_id.substr( 0, 8 ) );
+                ClearProposalSlot( proposal );
                 continue;
             }
-            ConsensusManagerLogger()->debug( "{}: Processing proposal with quorum reached for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( state.proposal.subject() ),
-                                             state.proposal.proposal_id().substr( 0, 8 ) );
-            const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                    std::chrono::system_clock::now().time_since_epoch() )
-                                    .count();
-            if ( state.quorum_reached_ts_ms != 0 && certificate_delay_.count() > 0 )
+
+            const bool certificate_delay_elapsed = state.quorum_reached_ts_ms == 0 ||
+                                                   std::chrono::milliseconds(
+                                                       now_ms - static_cast<int64_t>( state.quorum_reached_ts_ms ) ) >=
+                                                       certificate_delay_;
+            if ( !certificate_delay_elapsed )
             {
-                const auto elapsed_ms = static_cast<int64_t>( now_ms ) -
-                                        static_cast<int64_t>( state.quorum_reached_ts_ms );
-                if ( elapsed_ms < static_cast<int64_t>( certificate_delay_.count() ) )
-                {
-                    continue;
-                }
+                continue;
             }
 
-            const auto round = GetCurrentRound( state.proposal.timestamp() );
-            if ( state.last_attempt_round != NO_ROUND && round == state.last_attempt_round )
+            const auto round = GetCurrentRound( proposal.timestamp() );
+            if ( round == state.last_attempt_round )
             {
                 ConsensusManagerLogger()->debug(
                     "{}: proposal already attempted in round for hash {} proposal_id={} round={}",
                     __func__,
-                    GetPrintableSubjectHash( state.proposal.subject() ),
-                    state.proposal.proposal_id().substr( 0, 8 ),
+                    GetPrintableSubjectHash( proposal.subject() ),
+                    proposal_id.substr( 0, 8 ),
                     round );
                 continue;
             }
-            auto proposal_registry_result = registry_->LoadRegistryByCid( state.proposal.registry_cid() );
+
+            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry load error={} proposal_id={}",
                                                  __func__,
                                                  proposal_registry_result.error().message(),
-                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                                                 proposal_id.substr( 0, 8 ) );
                 continue;
             }
             const auto &proposal_registry = proposal_registry_result.value();
-            if ( state.proposal.registry_epoch() != proposal_registry.epoch() )
+            if ( proposal.registry_epoch() != proposal_registry.epoch() )
             {
                 ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry epoch mismatch proposal_id={}",
                                                  __func__,
-                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                                                 proposal_id.substr( 0, 8 ) );
                 continue;
             }
 
-            const auto aggregator_role = GetAggregatorRole( state.proposal, proposal_registry );
+            const auto aggregator_role = GetAggregatorRole( proposal, proposal_registry );
             if ( aggregator_role == AggregatorRole::NotInRegistry )
             {
                 ConsensusManagerLogger()->debug(
                     "{}: local node not in proposal registry; clearing local proposal for hash {} proposal_id={}",
                     __func__,
-                    GetPrintableSubjectHash( state.proposal.subject() ),
-                    state.proposal.proposal_id().substr( 0, 8 ) );
-                ClearProposalSlot( state.proposal );
+                    GetPrintableSubjectHash( proposal.subject() ),
+                    proposal_id.substr( 0, 8 ) );
+                ClearProposalSlot( proposal );
                 continue;
             }
-
             if ( aggregator_role == AggregatorRole::ActiveButNotAggregator )
             {
                 ConsensusManagerLogger()->debug( "{}: not aggregator for proposal for hash {} proposal_id={}",
                                                  __func__,
-                                                 GetPrintableSubjectHash( state.proposal.subject() ),
-                                                 state.proposal.proposal_id().substr( 0, 8 ) );
+                                                 GetPrintableSubjectHash( proposal.subject() ),
+                                                 proposal_id.substr( 0, 8 ) );
                 continue;
             }
 
             {
                 std::lock_guard lock( proposals_mutex_ );
-                auto            it = proposals_.find( state.proposal.proposal_id() );
+                auto            it = proposals_.find( proposal_id );
                 if ( it != proposals_.end() )
                 {
                     it->second.last_attempt_round = round;
@@ -1708,23 +1698,26 @@ namespace sgns
             }
             ConsensusManagerLogger()->debug( "{}: Attempting to create certificate for hash {} proposal_id={} round={}",
                                              __func__,
-                                             GetPrintableSubjectHash( state.proposal.subject() ),
-                                             state.proposal.proposal_id().substr( 0, 8 ),
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal_id.substr( 0, 8 ),
                                              round );
-            auto certificate_result = CreateCertificate( state.proposal, state.votes );
+            auto certificate_result = CreateCertificate( proposal, state.votes );
             if ( certificate_result.has_error() )
             {
                 ConsensusManagerLogger()->error(
                     "{}: failed: certificate creation error for hash {} proposal_id {}: {}",
                     __func__,
-                    GetPrintableSubjectHash( state.proposal.subject() ),
-                    state.proposal.proposal_id().substr( 0, 8 ),
+                    GetPrintableSubjectHash( proposal.subject() ),
+                    proposal_id.substr( 0, 8 ),
                     certificate_result.error().message() );
                 continue;
             }
 
-            (void) SubmitCertificate( certificate_result.value() );
-            ClearProposalSlot( state.proposal );
+            if ( SubmitCertificate( certificate_result.value() ).has_error() )
+            {
+                continue;
+            }
+            ClearProposalSlot( proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
                                              GetPrintableSubjectHash( proposal.subject() ),
@@ -1790,11 +1783,9 @@ namespace sgns
         return std::nullopt;
     }
 
-    void ConsensusManager::CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                const std::string                     &cid )
+    void ConsensusManager::CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string & )
     {
-        auto [key, value] = new_data;
-        (void) cid;
+        const auto &[key, value] = new_data;
         Certificate certificate;
         if ( !certificate.ParseFromArray( value.data(), value.size() ) )
         {
@@ -1802,18 +1793,7 @@ namespace sgns
             return;
         }
 
-        auto subject_hash = GetSubjectHash( certificate.proposal().subject() );
-        if ( subject_hash.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
-                                             __func__,
-                                             certificate.proposal_id().substr( 0, 8 ),
-                                             subject_hash.error().message() );
-            return;
-        }
-
-        auto certificate_check = ValidateCertificate( certificate );
-
+        const auto certificate_check = ValidateCertificate( certificate );
         if ( certificate_check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
@@ -1830,47 +1810,69 @@ namespace sgns
             return;
         }
 
-        registry_->OnFinalizedCertificate( certificate );
-
-        auto                      type_hash = ParseSubjectTypeHash( certificate.proposal().subject() );
-        CertificateSubjectHandler handler;
+        const auto &proposal            = certificate.proposal();
+        const auto &proposal_id         = certificate.proposal_id();
+        auto        subject_hash_result = GetSubjectHash( proposal.subject() );
+        if ( subject_hash_result.has_error() )
         {
-            std::shared_lock lock( certificate_handlers_mutex_ );
-            auto             it = type_hash ? certificate_subject_handlers_.find( type_hash.value() )
-                                            : certificate_subject_handlers_.end();
-            if ( it == certificate_subject_handlers_.end() )
-            {
-                (void) certificate_work_journal_->MarkDone( key );
-                ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
-                (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
-                return;
-            }
-            handler = it->second;
-        }
-
-        auto certificate_handler_result = handler( subject_hash.value(), certificate );
-
-        if ( certificate_handler_result.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: certificate handler error proposal_id={} error={}",
+            ConsensusManagerLogger()->error( "{}: failed getting subject hash proposal_id={} error={}",
                                              __func__,
-                                             certificate.proposal_id().substr( 0, 8 ),
-                                             certificate_handler_result.error().message() );
+                                             proposal_id.substr( 0, 8 ),
+                                             subject_hash_result.error().message() );
             return;
         }
-        auto certificate_result = certificate_handler_result.value();
+        const auto &subject_hash = subject_hash_result.value();
 
-        if ( certificate_result == Check::Stalled )
+        auto registry_result = registry_->OnFinalizedCertificate( certificate );
+        if ( registry_result.has_error() )
         {
-            ConsensusManagerLogger()->error( "{}: certificate rejected by handler proposal_id={}",
+            ConsensusManagerLogger()->error( "{}: registry finalization failed proposal_id={} error={}",
                                              __func__,
-                                             certificate.proposal_id().substr( 0, 8 ) );
-            ConsensusManagerLogger()->debug( "{}: Key {} is not Done yet", __func__, key );
+                                             proposal_id.substr( 0, 8 ),
+                                             registry_result.error().message() );
             certificate_work_journal_->MarkStalled( key );
             return;
         }
+
+        const auto                type_hash = ParseSubjectTypeHash( proposal.subject() ).value();
+        CertificateSubjectHandler handler;
+        {
+            std::shared_lock lock( certificate_handlers_mutex_ );
+            auto             it = certificate_subject_handlers_.find( type_hash );
+            if ( it != certificate_subject_handlers_.end() )
+            {
+                handler = it->second;
+            }
+        }
+
+        if ( handler )
+        {
+            auto result = handler( subject_hash, certificate );
+            if ( result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: certificate handler error proposal_id={} error={}",
+                                                 __func__,
+                                                 proposal_id.substr( 0, 8 ),
+                                                 result.error().message() );
+                return;
+            }
+
+            if ( result.value() == Check::Stalled )
+            {
+                ConsensusManagerLogger()->warn( "{}: certificate handler stalled proposal_id={}",
+                                                __func__,
+                                                proposal_id.substr( 0, 8 ) );
+                certificate_work_journal_->MarkStalled( key );
+                return;
+            }
+        }
+        else
+        {
+            ConsensusManagerLogger()->warn( "{}: no subject handler for certificate key={}", __func__, key );
+        }
+
         (void) certificate_work_journal_->MarkDone( key );
-        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
+        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash ) );
     }
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
