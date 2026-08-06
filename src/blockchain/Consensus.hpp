@@ -594,8 +594,6 @@ namespace sgns
             Proposal                        proposal;                        ///< Proposal currently tracked.
             std::vector<Vote>               votes;                           ///< Votes accepted for the proposal.
             std::string                     slot_key;                        ///< Slot key grouping competing proposals.
-            uint64_t                        total_weight    = 0;             ///< Total eligible weight for tally.
-            uint64_t                        approved_weight = 0;             ///< Approved weight accumulated so far.
             std::unordered_set<std::string> seen_voters;                     ///< Voter ids already counted.
             bool                            quorum_reached       = false;    ///< Whether quorum has been reached.
             uint64_t                        quorum_reached_ts_ms = 0;        ///< Timestamp when quorum was reached.

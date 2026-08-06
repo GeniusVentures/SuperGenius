@@ -1963,24 +1963,14 @@ namespace sgns
 
     void ConsensusManager::HandleVote( const Vote &vote )
     {
-        ConsensusManagerLogger()->trace( "{}: called. Vote by {} on proposal_id={} ",
-                                         __func__,
-                                         vote.voter_id().substr( 0, 8 ),
-                                         vote.proposal_id().substr( 0, 8 ) );
+        const auto &proposal_id = vote.proposal_id();
+        const auto &voter_id    = vote.voter_id();
         if ( !CheckVote( vote ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: Invalid vote proposal_id={} voter_id={}",
-                                             __func__,
-                                             vote.proposal_id(),
-                                             vote.voter_id() );
             return;
         }
         if ( !vote.approve() )
         {
-            ConsensusManagerLogger()->debug( "{}: ignored: vote not approved voter_id={}",
-                                             __func__,
-                                             vote.voter_id().substr( 0, 8 ) );
-            //TODO - maybe see reputation?
             return;
         }
 
@@ -1992,123 +1982,97 @@ namespace sgns
                                              signing_bytes.error().message() );
             return;
         }
-        if ( !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), signing_bytes.value() ) )
+        if ( !GeniusAccount::VerifySignature( voter_id, vote.signature(), signing_bytes.value() ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: signature verification failed voter_id={}",
                                              __func__,
-                                             vote.voter_id().substr( 0, 8 ) );
+                                             voter_id.substr( 0, 8 ) );
             return;
         }
 
-        bool has_quorum = false;
+        bool reached_quorum = false;
         {
             std::lock_guard lock( proposals_mutex_ );
-            auto            it = proposals_.find( vote.proposal_id() );
+            auto            it = proposals_.find( proposal_id );
             if ( it == proposals_.end() )
             {
-                pending_votes_[vote.proposal_id()].push_back( vote );
-                ConsensusManagerLogger()->debug( "{}: queued pending vote proposal_id={}",
-                                                 __func__,
-                                                 vote.proposal_id().substr( 0, 8 ) );
+                pending_votes_[proposal_id].push_back( vote );
                 return;
             }
-            auto &proposal_state = it->second;
-            auto  subject_hash   = GetSubjectHash( proposal_state.proposal.subject() );
+
+            auto       &state        = it->second;
+            const auto &proposal     = state.proposal;
+            auto        subject_hash = GetSubjectHash( proposal.subject() );
             if ( subject_hash.has_value() && CheckCertificateForSubject( subject_hash.value() ) )
             {
-                ConsensusManagerLogger()->debug( "{}: ignored: vote for already certified hash {} proposal_id={}",
-                                                 __func__,
-                                                 subject_hash.value().substr( 0, 8 ),
-                                                 vote.proposal_id().substr( 0, 8 ) );
-                pending_votes_.erase( vote.proposal_id() );
-                return;
-            }
-            auto slot_it = slot_states_.find( proposal_state.slot_key );
-            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != vote.proposal_id() )
-            {
-                ConsensusManagerLogger()->error( "{}: ignored: not best proposal proposal_id={}",
-                                                 __func__,
-                                                 vote.proposal_id().substr( 0, 8 ) );
+                pending_votes_.erase( proposal_id );
                 return;
             }
 
-            if ( proposal_state.seen_voters.find( vote.voter_id() ) != proposal_state.seen_voters.end() )
+            auto slot_it = slot_states_.find( state.slot_key );
+            if ( slot_it != slot_states_.end() && slot_it->second.best_proposal_id != proposal_id )
             {
-                ConsensusManagerLogger()->trace( "{}: ignored: duplicate vote voter_id={}",
-                                                 __func__,
-                                                 vote.voter_id().substr( 0, 8 ) );
+                return;
+            }
+            if ( state.quorum_reached || state.seen_voters.find( voter_id ) != state.seen_voters.end() )
+            {
                 return;
             }
 
-            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal_state.proposal.registry_cid() );
+            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->warn( "{}: deferred vote: registry load error={} proposal_id={}",
                                                 __func__,
                                                 proposal_registry_result.error().message(),
-                                                vote.proposal_id().substr( 0, 8 ) );
-                pending_votes_[vote.proposal_id()].push_back( vote );
+                                                proposal_id.substr( 0, 8 ) );
+                pending_votes_[proposal_id].push_back( vote );
                 return;
             }
             const auto &proposal_registry = proposal_registry_result.value();
-            if ( proposal_state.proposal.registry_epoch() != proposal_registry.epoch() )
+            if ( proposal.registry_epoch() != proposal_registry.epoch() )
             {
                 ConsensusManagerLogger()->error( "{}: rejected: registry mismatch proposal_id={}",
                                                  __func__,
-                                                 vote.proposal_id().substr( 0, 8 ) );
+                                                 proposal_id.substr( 0, 8 ) );
                 return;
             }
 
-            const auto *validator           = registry_->FindValidator( proposal_registry, vote.voter_id() );
-            const bool  is_active_validator = validator && validator->status() == ValidatorRegistry::Status::ACTIVE;
-
-            if ( it->second.total_weight == 0 )
+            const auto *validator = registry_->FindValidator( proposal_registry, voter_id );
+            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
             {
-                it->second.total_weight = registry_->TotalWeight( proposal_registry );
-            }
-
-            it->second.votes.push_back( vote );
-            it->second.seen_voters.insert( vote.voter_id() );
-            if ( is_active_validator )
-            {
-                it->second.approved_weight += validator->weight();
-                // Phase 6 (D-06): for bridge-mint subjects, recompute has_quorum
-                // via the shared EvaluateQuorum dispatcher over the accumulated
-                // vote vector so the incremental tally agrees with TallyVotes
-                // (RESEARCH Pitfall 1 / T-06-10). For non-bridge subjects, keep
-                // the existing fast-path incremental IsQuorum call.
-                if ( IsBridgeMintSubject( proposal_state.proposal ) )
-                {
-                    auto slot_tally = EvaluateQuorum( proposal_state.proposal, it->second.votes, proposal_registry );
-                    has_quorum      = !slot_tally.has_error() && slot_tally.value().has_quorum;
-                }
-                else
-                {
-                    has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
-                }
-                if ( has_quorum )
-                {
-                    if ( !it->second.quorum_reached )
-                    {
-                        it->second.quorum_reached       = true;
-                        it->second.quorum_reached_ts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                                              std::chrono::system_clock::now().time_since_epoch() )
-                                                              .count();
-                    }
-                    ConsensusManagerLogger()->debug(
-                        "{}: quorum reached; certificate will be created by timer proposal_id={}",
-                        __func__,
-                        vote.proposal_id() );
-                }
-            }
-            else
-            {
-                ConsensusManagerLogger()->debug( "{}: accepted vote from non-validator voter_id={}",
+                ConsensusManagerLogger()->debug( "{}: ignored vote from inactive validator voter_id={}",
                                                  __func__,
-                                                 vote.voter_id().substr( 0, 8 ) );
+                                                 voter_id.substr( 0, 8 ) );
+                return;
             }
+
+            state.votes.push_back( vote );
+            state.seen_voters.insert( voter_id );
+            // ponytail: recomputing the tally makes admission O(votes^2); restore an incremental tally if validator
+            // sets grow enough for this to matter.
+            auto tally = EvaluateQuorum( proposal, state.votes, proposal_registry );
+            if ( tally.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: quorum evaluation failed proposal_id={} error={}",
+                                                 __func__,
+                                                 proposal_id.substr( 0, 8 ),
+                                                 tally.error().message() );
+                return;
+            }
+            if ( !tally.value().has_quorum )
+            {
+                return;
+            }
+
+            state.quorum_reached       = true;
+            state.quorum_reached_ts_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                              std::chrono::system_clock::now().time_since_epoch() )
+                                              .count();
+            reached_quorum = true;
         }
-        if ( has_quorum )
+
+        if ( reached_quorum )
         {
             certificates_pending_.store( true );
             timer_cv_.notify_all();
