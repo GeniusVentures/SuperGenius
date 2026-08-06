@@ -493,7 +493,6 @@ namespace sgns
         {
             proposal_seed = ( proposal_seed << 8 ) | proposal_hash[i];
         }
-        base_index = base_index % ordered.size();
 
         const auto validator_count = ordered.size();
         const auto starting_index  = proposal_seed % validator_count;
@@ -538,90 +537,31 @@ namespace sgns
 
     void ConsensusManager::ContinueProposalAfterSubject( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->debug( "{}: Continuing proposal: hash {}, id {}",
-                                         __func__,
-                                         GetPrintableSubjectHash( proposal.subject() ),
-                                         proposal.proposal_id().substr( 0, 8 ) );
-        const auto slot_key    = GetSlotKey( proposal );
-        bool       should_vote = false;
-
-        ConsensusManagerLogger()->debug( "{}: Slot key acquired: hash {}, id {}, slot key {}",
-                                         __func__,
-                                         GetPrintableSubjectHash( proposal.subject() ),
-                                         proposal.proposal_id().substr( 0, 8 ),
-                                         slot_key );
+        const auto &proposal_id = proposal.proposal_id();
+        const auto  slot_key    = GetSlotKey( proposal );
+        bool        should_vote = false;
         {
             std::lock_guard lock( proposals_mutex_ );
-            if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
+            auto [proposal_it, inserted] = proposals_.try_emplace( proposal_id );
+            if ( inserted )
             {
-                ConsensusManagerLogger()->debug(
-                    "{}: No proposal state found. Creating... : hash {}, id {}, slot key {}",
-                    __func__,
-                    GetPrintableSubjectHash( proposal.subject() ),
-                    proposal.proposal_id().substr( 0, 8 ),
-                    slot_key );
-                ProposalState state;
-                state.proposal = proposal;
-                state.slot_key = slot_key;
-                proposals_.emplace( proposal.proposal_id(), std::move( state ) );
+                proposal_it->second.proposal = proposal;
+                proposal_it->second.slot_key = slot_key;
             }
 
-            auto &slot_state = slot_states_[slot_key];
-            if ( slot_state.best_proposal_id.empty() )
+            auto      &slot_state       = slot_states_[slot_key];
+            auto      &best_proposal_id = slot_state.best_proposal_id;
+            const bool is_better =
+                best_proposal_id.empty() || IsBetterProposal( proposal, proposals_.at( best_proposal_id ).proposal );
+            if ( is_better )
             {
-                ConsensusManagerLogger()->debug( "{}: Configuring best proposal for hash {}, id={}, slot key {}",
-                                                 __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key );
-                slot_state.best_proposal_id = proposal.proposal_id();
-                auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
-                if ( nonce_payload.has_value() )
-                {
-                    slot_state.best_tx_hash = nonce_payload.value().tx_hash();
-                }
+                best_proposal_id = proposal_id;
             }
-            else
-            {
-                const auto &current = proposals_.at( slot_state.best_proposal_id ).proposal;
-                ConsensusManagerLogger()->debug(
-                    "{}: Already have a best proposal for hash {}, id={}, slot key {}. Seeing if {} is better ",
-                    __func__,
-                    GetPrintableSubjectHash( current.subject() ),
-                    current.proposal_id().substr( 0, 8 ),
-                    slot_key,
-                    proposal.proposal_id().substr( 0, 8 ) );
-                if ( IsBetterProposal( proposal, current ) )
-                {
-                    ConsensusManagerLogger()->debug( "{}: Better proposal for hash {}, id={}, slot key {}. ",
-                                                     __func__,
-                                                     GetPrintableSubjectHash( proposal.subject() ),
-                                                     proposal.proposal_id().substr( 0, 8 ),
-                                                     slot_key );
-                    slot_state.best_proposal_id = proposal.proposal_id();
-                    auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
-                    if ( nonce_payload.has_value() )
-                    {
-                        slot_state.best_tx_hash = nonce_payload.value().tx_hash();
-                    }
-                }
-            }
-
-            if ( slot_state.best_proposal_id == proposal.proposal_id() &&
-                 slot_state.voted_proposal_ids.find( proposal.proposal_id() ) == slot_state.voted_proposal_ids.end() )
-            {
-                ConsensusManagerLogger()->debug(
-                    "{}: My proposal for hash {}, id={}, slot key {} is better so let's vote on it. ",
-                    __func__,
-                    GetPrintableSubjectHash( proposal.subject() ),
-                    proposal.proposal_id().substr( 0, 8 ),
-                    slot_key );
-                slot_state.voted_proposal_ids.insert( proposal.proposal_id() );
-                should_vote = true;
-            }
+            should_vote =
+                best_proposal_id == proposal_id && slot_state.voted_proposal_ids.insert( proposal_id ).second;
         }
 
-        auto pending_votes = TakePendingVotes( proposal.proposal_id() );
+        auto pending_votes = TakePendingVotes( proposal_id );
         for ( const auto &vote : pending_votes )
         {
             HandleVote( vote );
@@ -629,23 +569,17 @@ namespace sgns
 
         if ( should_vote )
         {
-            auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
+            auto vote_result = CreateVote( proposal_id, account_address_, true, signer_ );
             if ( vote_result.has_value() )
             {
                 (void) SubmitVote( vote_result.value() );
-                ConsensusManagerLogger()->debug( "{}: self-vote submitted for hash {}, id={}, slot key {}",
-                                                 __func__,
-                                                 GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key );
             }
             else
             {
-                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={}, slot key {} error={}",
+                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={} error={}",
                                                  __func__,
                                                  GetPrintableSubjectHash( proposal.subject() ),
-                                                 proposal.proposal_id().substr( 0, 8 ),
-                                                 slot_key,
+                                                 proposal_id.substr( 0, 8 ),
                                                  vote_result.error().message() );
             }
         }
@@ -2534,11 +2468,6 @@ namespace sgns
         if ( slot_state.best_proposal_id.empty() )
         {
             slot_state.best_proposal_id = new_state.proposal.proposal_id();
-            auto nonce_payload          = DecodeNonceSubject( new_state.proposal.subject() );
-            if ( nonce_payload.has_value() )
-            {
-                slot_state.best_tx_hash = nonce_payload.value().tx_hash();
-            }
         }
 
         return new_state;
@@ -2654,10 +2583,6 @@ namespace sgns
 
     bool ConsensusManager::IsBetterProposal( const Proposal &candidate, const Proposal &current ) const
     {
-        ConsensusManagerLogger()->trace( "{}: called candidate={} current={}",
-                                         __func__,
-                                         candidate.proposal_id(),
-                                         current.proposal_id() );
         auto candidate_nonce = DecodeNonceSubject( candidate.subject() );
         auto current_nonce   = DecodeNonceSubject( current.subject() );
         if ( candidate_nonce.has_value() && current_nonce.has_value() )
