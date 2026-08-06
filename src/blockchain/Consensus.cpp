@@ -551,17 +551,25 @@ namespace sgns
 
             auto      &slot_state       = slot_states_[slot_key];
             auto      &best_proposal_id = slot_state.best_proposal_id;
-            const bool is_better =
-                best_proposal_id.empty() || IsBetterProposal( proposal, proposals_.at( best_proposal_id ).proposal );
+            const bool is_better        = best_proposal_id.empty() ||
+                                          IsBetterProposal( proposal, proposals_.at( best_proposal_id ).proposal );
             if ( is_better )
             {
                 best_proposal_id = proposal_id;
             }
-            should_vote =
-                best_proposal_id == proposal_id && slot_state.voted_proposal_ids.insert( proposal_id ).second;
+            should_vote = best_proposal_id == proposal_id && slot_state.voted_proposal_ids.insert( proposal_id ).second;
         }
 
-        auto pending_votes = TakePendingVotes( proposal_id );
+        std::vector<Vote> pending_votes;
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            it = pending_votes_.find( proposal_id );
+            if ( it != pending_votes_.end() )
+            {
+                pending_votes = std::move( it->second );
+                pending_votes_.erase( it );
+            }
+        }
         for ( const auto &vote : pending_votes )
         {
             HandleVote( vote );
@@ -585,10 +593,20 @@ namespace sgns
         }
     }
 
-    bool ConsensusManager::CanAdmitPendingProposalLocked( const Proposal    &proposal,
-                                                          std::size_t        retained_bytes,
-                                                          const std::string &proposer_id ) const
+    bool ConsensusManager::AddPendingProposal( const Proposal                       &proposal,
+                                               const std::string                    &subject_hash,
+                                               const ValidationResult               &validation_result,
+                                               std::size_t                           scheduled_retry_count,
+                                               std::chrono::steady_clock::time_point last_retry_at )
     {
+        std::lock_guard lock( proposals_mutex_ );
+        if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
+        {
+            RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
+        }
+
+        const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
+        const auto &proposer_id    = proposal.proposer_id();
         if ( pending_entries_.size() >= pending_config_.max_pending_proposals )
         {
             ConsensusManagerLogger()->warn( "{}: pending admission refused: global limit reached proposal_id={}",
@@ -614,62 +632,28 @@ namespace sgns
                                             proposal.proposal_id().substr( 0, 8 ) );
             return false;
         }
-        return true;
-    }
 
-    std::vector<ConsensusManager::PendingDependencyKey> ConsensusManager::NormalizePendingDependencies(
-        const std::string      &subject_hash,
-        const ValidationResult &validation_result ) const
-    {
-        if ( !validation_result.dependencies.empty() )
+        auto dependencies = validation_result.dependencies;
+        if ( dependencies.empty() )
         {
-            return validation_result.dependencies;
-        }
-        return { PendingDependencyKey::Certificate( subject_hash ) };
-    }
-
-    std::chrono::milliseconds ConsensusManager::NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const
-    {
-        if ( entry.retry_after.has_value() )
-        {
-            return entry.retry_after.value();
-        }
-        if ( pending_config_.scheduled_retry_delays.empty() )
-        {
-            return std::chrono::seconds( 10 );
-        }
-        const auto index = std::min( entry.scheduled_retry_count, pending_config_.scheduled_retry_delays.size() - 1 );
-        return pending_config_.scheduled_retry_delays[index];
-    }
-
-    bool ConsensusManager::AddPendingProposal( const Proposal                       &proposal,
-                                               const std::string                    &subject_hash,
-                                               const ValidationResult               &validation_result,
-                                               std::size_t                           scheduled_retry_count,
-                                               std::chrono::steady_clock::time_point last_retry_at )
-    {
-        std::lock_guard lock( proposals_mutex_ );
-        if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
-        {
-            RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
+            dependencies.emplace_back( PendingDependencyKey::Certificate( subject_hash ) );
         }
 
-        const auto  dependencies   = NormalizePendingDependencies( subject_hash, validation_result );
-        const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
-        const auto &proposer_id    = proposal.proposer_id();
-        if ( !CanAdmitPendingProposalLocked( proposal, retained_bytes, proposer_id ) )
-        {
-            return false;
-        }
         ConsensusManagerLogger()->debug( "{}: Adding pending proposal for {}: proposal with id {}",
                                          __func__,
                                          subject_hash.substr( 0, 8 ),
                                          proposal.proposal_id().substr( 0, 8 ) );
-        const auto now = std::chrono::steady_clock::now();
+        const auto now         = std::chrono::steady_clock::now();
+        auto       retry_delay = validation_result.retry_after.value_or( std::chrono::seconds( 10 ) );
+        if ( !validation_result.retry_after && !pending_config_.scheduled_retry_delays.empty() )
+        {
+            const auto index = std::min( scheduled_retry_count, pending_config_.scheduled_retry_delays.size() - 1 );
+            retry_delay      = pending_config_.scheduled_retry_delays[index];
+        }
 
         PendingProposalEntry entry;
         entry.proposal              = proposal;
-        entry.dependencies          = dependencies;
+        entry.dependencies          = std::move( dependencies );
         entry.admitted_at           = now;
         entry.expires_at            = now + pending_config_.pending_ttl;
         entry.last_retry_at         = last_retry_at;
@@ -677,11 +661,11 @@ namespace sgns
         entry.retained_bytes        = retained_bytes;
         entry.proposer_id           = proposer_id;
         entry.scheduled_retry_count = scheduled_retry_count;
-        entry.next_retry_at         = now + NextPendingRetryDelayLocked( entry );
+        entry.next_retry_at         = now + retry_delay;
 
         pending_retained_bytes_                 += retained_bytes;
         pending_count_by_proposer_[proposer_id] += 1;
-        for ( const auto &dependency : dependencies )
+        for ( const auto &dependency : entry.dependencies )
         {
             pending_by_dependency_[dependency].insert( proposal.proposal_id() );
         }
@@ -701,7 +685,8 @@ namespace sgns
             ConsensusManagerLogger()->trace( "{}: No pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
             return result;
         }
-        const std::vector<std::string> proposal_ids( it->second.begin(), it->second.end() );
+        auto proposal_ids = std::move( it->second );
+        pending_by_dependency_.erase( it );
         for ( const auto &proposal_id : proposal_ids )
         {
             auto prop_it = pending_entries_.find( proposal_id );
@@ -723,24 +708,18 @@ namespace sgns
 
     bool ConsensusManager::RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason )
     {
+        pending_votes_.erase( proposal_id );
+
         auto entry_it = pending_entries_.find( proposal_id );
         if ( entry_it == pending_entries_.end() )
         {
-            pending_votes_.erase( proposal_id );
             return false;
         }
 
-        const auto retained_bytes = entry_it->second.retained_bytes;
-        if ( pending_retained_bytes_ >= retained_bytes )
-        {
-            pending_retained_bytes_ -= retained_bytes;
-        }
-        else
-        {
-            pending_retained_bytes_ = 0;
-        }
+        const auto &entry = entry_it->second;
+        pending_retained_bytes_ -= std::min( pending_retained_bytes_, entry.retained_bytes );
 
-        auto proposer_it = pending_count_by_proposer_.find( entry_it->second.proposer_id );
+        auto proposer_it = pending_count_by_proposer_.find( entry.proposer_id );
         if ( proposer_it != pending_count_by_proposer_.end() )
         {
             if ( proposer_it->second > 1 )
@@ -753,21 +732,21 @@ namespace sgns
             }
         }
 
-        for ( const auto &dependency : entry_it->second.dependencies )
+        for ( const auto &dependency : entry.dependencies )
         {
             auto dep_it = pending_by_dependency_.find( dependency );
-            if ( dep_it != pending_by_dependency_.end() )
+            if ( dep_it == pending_by_dependency_.end() )
             {
-                dep_it->second.erase( proposal_id );
-                if ( dep_it->second.empty() )
-                {
-                    pending_by_dependency_.erase( dep_it );
-                }
+                continue;
+            }
+            dep_it->second.erase( proposal_id );
+            if ( dep_it->second.empty() )
+            {
+                pending_by_dependency_.erase( dep_it );
             }
         }
 
         pending_entries_.erase( entry_it );
-        pending_votes_.erase( proposal_id );
         ConsensusManagerLogger()->debug( "{}: removed pending proposal_id={} reason={}",
                                          __func__,
                                          proposal_id.substr( 0, 8 ),
@@ -973,26 +952,6 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::AddPendingVote( const Vote &vote )
-    {
-        std::lock_guard lock( proposals_mutex_ );
-        pending_votes_[vote.proposal_id()].push_back( vote );
-    }
-
-    std::vector<ConsensusManager::Vote> ConsensusManager::TakePendingVotes( const std::string &proposal_id )
-    {
-        std::vector<Vote> result;
-        std::lock_guard   lock( proposals_mutex_ );
-        auto              it = pending_votes_.find( proposal_id );
-        if ( it == pending_votes_.end() )
-        {
-            return result;
-        }
-        result = std::move( it->second );
-        pending_votes_.erase( it );
-        return result;
-    }
-
     outcome::result<ConsensusManager::Proposal> ConsensusManager::CreateProposal( const Subject     &subject,
                                                                                   const std::string &proposer_id,
                                                                                   const std::string &registry_cid,
@@ -1013,13 +972,6 @@ namespace sgns
                                          GetPrintableSubjectHash( subject ),
                                          registry_cid,
                                          registry_epoch );
-        if ( !sign )
-        {
-            ConsensusManagerLogger()->error( "{}: failed for hash {}: signer is empty",
-                                             __func__,
-                                             GetPrintableSubjectHash( subject ) );
-            return outcome::failure( std::errc::invalid_argument );
-        }
 
         if ( !ValidateSubject( subject ) )
         {
@@ -1039,7 +991,7 @@ namespace sgns
                 .count() );
 
         proposal.set_proposal_id( CreateProposalId( proposal ) );
-        auto signing_bytes = ProposalSigningBytes( proposal );
+        auto signing_bytes = sgns::ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
@@ -1066,17 +1018,6 @@ namespace sgns
                                                                           bool               approve,
                                                                           Signer             sign )
     {
-        ConsensusManagerLogger()->trace( "{}: called by {}: proposal_id={} approve={}",
-                                         __func__,
-                                         voter_id.substr( 0, 8 ),
-                                         proposal_id.substr( 0, 8 ),
-                                         approve );
-        if ( !sign )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
         Vote vote;
         vote.set_proposal_id( proposal_id );
         vote.set_voter_id( voter_id );
@@ -1100,7 +1041,7 @@ namespace sgns
                                              proposal_id.substr( 0, 8 ) );
         }
 
-        auto signing_bytes = VoteSigningBytes( vote );
+        auto signing_bytes = sgns::VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
@@ -1146,7 +1087,7 @@ namespace sgns
             *bundle.add_votes() = vote;
         }
 
-        auto signing_bytes = VoteBundleSigningBytes( bundle );
+        auto signing_bytes = sgns::VoteBundleSigningBytes( bundle );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
@@ -1358,7 +1299,7 @@ namespace sgns
                 continue;
             }
 
-            auto signing_bytes = VoteSigningBytes( vote );
+            auto signing_bytes = sgns::VoteSigningBytes( vote );
             if ( signing_bytes.has_error() )
             {
                 continue;
@@ -1439,33 +1380,6 @@ namespace sgns
             return outcome::failure( registry_result.error() );
         }
         return TallyVotes( proposal, votes, registry_result.value(), proposal.registry_cid() );
-    }
-
-    outcome::result<std::vector<uint8_t>> ConsensusManager::ProposalSigningBytes( const Proposal &proposal )
-    {
-        ConsensusManagerLogger()->trace( "{}: called for hash {} proposal_id={}",
-                                         __func__,
-                                         GetPrintableSubjectHash( proposal.subject() ),
-                                         proposal.proposal_id().substr( 0, 8 ) );
-        return sgns::ProposalSigningBytes( proposal );
-    }
-
-    outcome::result<std::vector<uint8_t>> ConsensusManager::VoteSigningBytes( const Vote &vote )
-    {
-        ConsensusManagerLogger()->trace( "{}: called with voter address {} proposal_id={}",
-                                         __func__,
-                                         vote.voter_id().substr( 0, 8 ),
-                                         vote.proposal_id() );
-        return sgns::VoteSigningBytes( vote );
-    }
-
-    outcome::result<std::vector<uint8_t>> ConsensusManager::VoteBundleSigningBytes( const VoteBundle &bundle )
-    {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
-                                         __func__,
-                                         bundle.proposal_id().substr( 0, 8 ),
-                                         bundle.votes_size() );
-        return sgns::VoteBundleSigningBytes( bundle );
     }
 
     outcome::result<void> ConsensusManager::SubmitProposal( const Proposal &proposal, bool self_vote )
@@ -2262,7 +2176,7 @@ namespace sgns
             return;
         }
 
-        auto signing_bytes = VoteSigningBytes( vote );
+        auto signing_bytes = sgns::VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",
@@ -2856,7 +2770,7 @@ namespace sgns
         // Proposal ID must be derived from the proposal contents excluding the proposal_id itself.
         Proposal copy = proposal;
         copy.clear_proposal_id();
-        auto signing_bytes = ProposalSigningBytes( copy );
+        auto signing_bytes = sgns::ProposalSigningBytes( copy );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed, no proposal ID created: signing bytes error={}",
@@ -3078,7 +2992,7 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: Proposal without subject ", __func__ );
             return false;
         }
-        auto signing_bytes = ProposalSigningBytes( proposal );
+        auto signing_bytes = sgns::ProposalSigningBytes( proposal );
         if ( signing_bytes.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: signing bytes error={}",

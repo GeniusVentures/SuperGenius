@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
@@ -400,15 +401,15 @@ namespace sgns::test
         ASSERT_TRUE( bundle_result.has_value() );
         EXPECT_EQ( bundle_result.value().votes_size(), 1 );
 
-        auto proposal_bytes = ConsensusManager::ProposalSigningBytes( proposal_result.value() );
+        auto proposal_bytes = sgns::ProposalSigningBytes( proposal_result.value() );
         ASSERT_TRUE( proposal_bytes.has_value() );
         EXPECT_FALSE( proposal_bytes.value().empty() );
 
-        auto vote_bytes = ConsensusManager::VoteSigningBytes( vote_result.value() );
+        auto vote_bytes = sgns::VoteSigningBytes( vote_result.value() );
         ASSERT_TRUE( vote_bytes.has_value() );
         EXPECT_FALSE( vote_bytes.value().empty() );
 
-        auto bundle_bytes = ConsensusManager::VoteBundleSigningBytes( bundle_result.value() );
+        auto bundle_bytes = sgns::VoteBundleSigningBytes( bundle_result.value() );
         ASSERT_TRUE( bundle_bytes.has_value() );
         EXPECT_FALSE( bundle_bytes.value().empty() );
     }

@@ -423,24 +423,6 @@ namespace sgns
                                                      const ValidatorRegistry::Registry &registry ) const;
 
         /**
-         * @brief Computes canonical bytes to sign a proposal.
-         * @param[in] proposal Proposal to encode.
-         * @return Signing bytes on success, otherwise an error.
-         */
-        static outcome::result<std::vector<uint8_t>> ProposalSigningBytes( const Proposal &proposal );
-        /**
-         * @brief Computes canonical bytes to sign a vote.
-         * @param[in] vote Vote to encode.
-         * @return Signing bytes on success, otherwise an error.
-         */
-        static outcome::result<std::vector<uint8_t>> VoteSigningBytes( const Vote &vote );
-        /**
-         * @brief Computes canonical bytes to sign a vote bundle.
-         * @param[in] bundle Vote bundle to encode.
-         * @return Signing bytes on success, otherwise an error.
-         */
-        static outcome::result<std::vector<uint8_t>> VoteBundleSigningBytes( const VoteBundle &bundle );
-        /**
          * @brief Computes deterministic subject id/hash.
          * @param[in] subject Subject to hash.
          * @return Subject identifier on success, otherwise an error.
@@ -793,30 +775,12 @@ namespace sgns
          */
         std::vector<Proposal> TakePendingProposals( const std::string &subject_hash );
         bool                  RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason );
-        bool                  CanAdmitPendingProposalLocked( const Proposal    &proposal,
-                                                             std::size_t        retained_bytes,
-                                                             const std::string &proposer_id ) const;
-        std::vector<PendingDependencyKey> NormalizePendingDependencies(
-            const std::string      &subject_hash,
-            const ValidationResult &validation_result ) const;
-        std::chrono::milliseconds NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const;
-        void                      RetryPendingProposal( const Proposal                       &proposal,
-                                                        std::string_view                      reason,
-                                                        std::size_t                           scheduled_retry_count = 0,
-                                                        std::chrono::steady_clock::time_point last_retry_at = {} );
-        void                      ProcessDuePendingRetries();
-        void                      ExpirePendingProposals();
-        /**
-         * @brief Stores vote pending proposal availability.
-         * @param[in] vote Vote to queue.
-         */
-        void AddPendingVote( const Vote &vote );
-        /**
-         * @brief Removes and returns pending votes for a proposal id.
-         * @param[in] proposal_id Proposal identifier.
-         * @return Pending votes for the proposal.
-         */
-        std::vector<Vote> TakePendingVotes( const std::string &proposal_id );
+        void                  RetryPendingProposal( const Proposal                       &proposal,
+                                                    std::string_view                      reason,
+                                                    std::size_t                           scheduled_retry_count = 0,
+                                                    std::chrono::steady_clock::time_point last_retry_at         = {} );
+        void                  ProcessDuePendingRetries();
+        void                  ExpirePendingProposals();
         /**
          * @brief Registers CRDT filter used for certificate keys.
          * @return `true` on successful registration.
