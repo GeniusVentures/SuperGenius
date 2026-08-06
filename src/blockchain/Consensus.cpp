@@ -1060,54 +1060,6 @@ namespace sgns
         return vote;
     }
 
-    outcome::result<ConsensusManager::VoteBundle> ConsensusManager::CreateVoteBundle( const std::string &proposal_id,
-                                                                                      const std::string &aggregator_id,
-                                                                                      const std::vector<Vote> &votes,
-                                                                                      Signer                   sign )
-    {
-        ConsensusManagerLogger()->trace( "{}: called by {}: proposal_id={} votes={}",
-                                         __func__,
-                                         aggregator_id.substr( 0, 8 ),
-                                         proposal_id.substr( 0, 8 ),
-                                         votes.size() );
-        if ( !sign )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: signer is empty", __func__ );
-            return outcome::failure( std::errc::invalid_argument );
-        }
-
-        VoteBundle bundle;
-        bundle.set_proposal_id( proposal_id );
-        bundle.set_aggregator_id( aggregator_id );
-        bundle.set_timestamp(
-            std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
-                .count() );
-        for ( const auto &vote : votes )
-        {
-            *bundle.add_votes() = vote;
-        }
-
-        auto signing_bytes = sgns::VoteBundleSigningBytes( bundle );
-        if ( signing_bytes.has_error() )
-        {
-            ConsensusManagerLogger()->error( "{}: failed: signing bytes error={}",
-                                             __func__,
-                                             signing_bytes.error().message() );
-            return outcome::failure( signing_bytes.error() );
-        }
-
-        BOOST_OUTCOME_TRY( auto &&signature, sign( signing_bytes.value() ) );
-        bundle.set_signature( signature.data(), signature.size() );
-
-        ConsensusManagerLogger()->debug(
-            "{}: Vote bundle created successfully by {}: proposal_id={} number of votes={}",
-            __func__,
-            aggregator_id.substr( 0, 8 ),
-            proposal_id.substr( 0, 8 ),
-            votes.size() );
-        return bundle;
-    }
-
     outcome::result<ConsensusManager::Certificate> ConsensusManager::CreateCertificate( const Proposal &proposal,
                                                                                         const std::vector<Vote> &votes )
     {
@@ -2307,20 +2259,6 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::HandleVoteBundle( const VoteBundle &bundle )
-    {
-        ConsensusManagerLogger()->trace( "{}: called proposal_id={} votes={}",
-                                         __func__,
-                                         bundle.proposal_id().substr( 0, 8 ),
-                                         bundle.votes_size() );
-
-        for ( const auto &vote : bundle.votes() )
-        {
-            ConsensusManagerLogger()->trace( "{}: processing voter_id={}", __func__, vote.voter_id().substr( 0, 8 ) );
-            HandleVote( vote );
-        }
-    }
-
     void ConsensusManager::HandleCertificate( const Certificate &certificate )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, certificate.proposal_id() );
@@ -2864,12 +2802,6 @@ namespace sgns
         {
             ConsensusManagerLogger()->debug( "{}: decoded vote", __func__ );
             HandleVote( decoded.vote() );
-            return;
-        }
-        if ( decoded.has_vote_bundle() )
-        {
-            ConsensusManagerLogger()->debug( "{}: decoded vote bundle", __func__ );
-            HandleVoteBundle( decoded.vote_bundle() );
             return;
         }
         if ( decoded.has_certificate() )

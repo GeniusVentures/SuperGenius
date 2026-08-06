@@ -145,14 +145,6 @@ message ConsensusVote {
   bytes slot_2_hash = 8;
 }
 
-message ConsensusVoteBundle {
-  string proposal_id = 1;
-  string aggregator_id = 2;
-  uint64 timestamp = 3;
-  repeated ConsensusVote votes = 4;
-  bytes signature = 5;
-}
-
 message ConsensusCertificate {
   string proposal_id = 1;
   string registry_cid = 2;
@@ -165,10 +157,12 @@ message ConsensusCertificate {
 }
 
 message ConsensusMessage {
+  reserved 3;
+  reserved "vote_bundle";
+
   oneof payload {
     ConsensusProposal proposal = 1;
     ConsensusVote vote = 2;
-    ConsensusVoteBundle vote_bundle = 3;
     ConsensusCertificate certificate = 4;
   }
 }

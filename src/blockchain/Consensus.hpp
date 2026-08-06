@@ -56,7 +56,6 @@ namespace sgns
     public:
         using Proposal    = ConsensusProposal;    ///< Alias for Consensus Proposal protobuf type
         using Vote        = ConsensusVote;        ///< Alias for Consensus Vote protobuf type
-        using VoteBundle  = ConsensusVoteBundle;  ///< Alias for Consensus Vote Bundle protobuf type
         using Certificate = ConsensusCertificate; ///< Alias for Consensus Certificate protobuf type
         using Subject     = ConsensusSubject;     ///< Alias for Consensus Subject protobuf type
 
@@ -345,19 +344,6 @@ namespace sgns
             std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
             slot_hash_populator_ = std::move( populator );
         }
-
-        /**
-         * @brief Builds and signs an aggregated vote bundle.
-         * @param[in] proposal_id Proposal identifier associated with the votes.
-         * @param[in] aggregator_id Validator identifier of the aggregator.
-         * @param[in] votes Votes to aggregate in the bundle.
-         * @param[in] sign Signing callback.
-         * @return Signed vote bundle on success, otherwise an error.
-         */
-        outcome::result<VoteBundle> CreateVoteBundle( const std::string       &proposal_id,
-                                                      const std::string       &aggregator_id,
-                                                      const std::vector<Vote> &votes,
-                                                      Signer                   sign );
 
         /**
          * @brief Creates a certificate from a proposal and votes.
@@ -652,11 +638,6 @@ namespace sgns
          * @param[in] vote Vote to process.
          */
         void HandleVote( const Vote &vote );
-        /**
-         * @brief Handles an incoming vote bundle.
-         * @param[in] bundle Vote bundle to process.
-         */
-        void HandleVoteBundle( const VoteBundle &bundle );
         /**
          * @brief Handles an incoming certificate.
          * @param[in] certificate Certificate to process.

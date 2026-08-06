@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
 
 #include "blockchain/Consensus.hpp"
-#include "blockchain/ConsensusAuth.hpp"
-
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "testutil/storage/base_crdt_test.hpp"
@@ -360,58 +358,6 @@ namespace sgns::test
         manager->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
         EXPECT_FALSE( ConsensusManagerTestAccess::HasSubjectHandler( manager, type_hash.value() ) );
         EXPECT_FALSE( ConsensusManagerTestAccess::HasCertificateSubjectHandler( manager, type_hash.value() ) );
-    }
-
-    TEST_F( ConsensusCertificateTest, CreateVoteBundleAndSigningBytes )
-    {
-        auto account = MakeAccount( getPathString() );
-        ASSERT_TRUE( account );
-        auto registry = MakeRegistry( db_, account );
-        ASSERT_TRUE( registry );
-        auto manager = MakeManager( registry, db_, pubs_, account );
-        ASSERT_TRUE( manager );
-
-        auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
-                                                                    2,
-                                                                    "0x0a0b0c",
-                                                                    std::string{},
-                                                                    std::vector<uint8_t>{},
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
-        ASSERT_TRUE( subject_result.has_value() );
-
-        auto proposal_result = manager->CreateProposal( subject_result.value(),
-                                                        account->GetAddress(),
-                                                        registry->GetRegistryCid(),
-                                                        registry->GetRegistryEpoch() );
-        ASSERT_TRUE( proposal_result.has_value() );
-
-        auto vote_result = manager->CreateVote( proposal_result.value().proposal_id(),
-                                                account->GetAddress(),
-                                                true,
-                                                [account]( std::vector<uint8_t> payload )
-                                                { return account->Sign( std::move( payload ) ); } );
-        ASSERT_TRUE( vote_result.has_value() );
-
-        auto bundle_result = manager->CreateVoteBundle( proposal_result.value().proposal_id(),
-                                                        account->GetAddress(),
-                                                        { vote_result.value() },
-                                                        [account]( std::vector<uint8_t> payload )
-                                                        { return account->Sign( std::move( payload ) ); } );
-        ASSERT_TRUE( bundle_result.has_value() );
-        EXPECT_EQ( bundle_result.value().votes_size(), 1 );
-
-        auto proposal_bytes = sgns::ProposalSigningBytes( proposal_result.value() );
-        ASSERT_TRUE( proposal_bytes.has_value() );
-        EXPECT_FALSE( proposal_bytes.value().empty() );
-
-        auto vote_bytes = sgns::VoteSigningBytes( vote_result.value() );
-        ASSERT_TRUE( vote_bytes.has_value() );
-        EXPECT_FALSE( vote_bytes.value().empty() );
-
-        auto bundle_bytes = sgns::VoteBundleSigningBytes( bundle_result.value() );
-        ASSERT_TRUE( bundle_bytes.has_value() );
-        EXPECT_FALSE( bundle_bytes.value().empty() );
     }
 
     TEST_F( ConsensusCertificateTest, CreateTaskResultSubjectAndComputeSubjectId )
