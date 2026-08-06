@@ -2,7 +2,7 @@
  * @file       SecureCrdt.hpp
  * @brief      Mandatory wrapper (D-03) for writing to a registered CRDT key and
  *             the reader-side logic (D-04) that always re-derives trust from
- *             base_key + sig/<addr> children rather than trusting any "final"
+ *             `base_key` + `sig/<addr>` children rather than trusting any "final"
  *             marker. This is the ONLY sanctioned write entry point for keys
  *             registered via SecureCrdtRegistry.
  * @date       2026-07-23
@@ -141,7 +141,7 @@ namespace sgns::securecrdt
          *        signature/value, accepts (returns std::nullopt) otherwise.
          * @param[in] base_key Registered base key this entry was registered under.
          * @param[in] entry Resolved SecureCrdtRegistry entry for base_key.
-         * @param[in] element Incoming CRDT element (base_key value or sig/<addr> child).
+         * @param[in] element Incoming CRDT element (`base_key` value or `sig/<addr>` child).
          * @return std::nullopt to accept, or an (empty) vector to reject.
          */
         std::optional<std::vector<sgns::crdt::pb::Element>> FilterSecureCrdtUpdate(
