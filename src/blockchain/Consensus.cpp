@@ -231,7 +231,6 @@ namespace sgns
                     if ( certificates_pending_.load() )
                     {
                         ProcessCertificates();
-                        UpdateCertificatesPending();
                     }
                     ExpirePendingProposals();
                     ProcessDuePendingRetries();
@@ -1728,29 +1727,8 @@ namespace sgns
             ClearProposalSlot( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
-                                             GetPrintableSubjectHash( state.proposal.subject() ),
-                                             state.proposal.proposal_id().substr( 0, 8 ) );
-        }
-    }
-
-    void ConsensusManager::UpdateCertificatesPending()
-    {
-        bool has_pending = false;
-        {
-            std::lock_guard lock( proposals_mutex_ );
-            for ( const auto &kv : proposals_ )
-            {
-                if ( kv.second.quorum_reached )
-                {
-                    has_pending = true;
-                    break;
-                }
-            }
-        }
-        certificates_pending_.store( has_pending );
-        if ( !has_pending )
-        {
-            timer_cv_.notify_all();
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal_id.substr( 0, 8 ) );
         }
     }
 

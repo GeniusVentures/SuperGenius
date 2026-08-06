@@ -814,10 +814,6 @@ namespace sgns
          */
         void OnConsensusMessage( boost::optional<const ipfs_pubsub::GossipPubSub::Message &> message );
         /**
-         * @brief Recomputes local pending-certificate flag.
-         */
-        void UpdateCertificatesPending();
-        /**
          * @brief Performs lightweight subject checks.
          * @param[in] subject Subject to validate.
          * @return `true` when valid.
