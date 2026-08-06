@@ -46,6 +46,22 @@ namespace
     };
 } // namespace
 
+TEST( TrustedPeerListPayloadTest, FromBytesReturnsDecodedPayload )
+{
+    const std::vector<std::string> peers = { "peer-1", "peer-2" };
+    const auto                     bytes = TrustedPeerListPayload( peers ).SerializeToBytes();
+
+    const auto payload = TrustedPeerListPayload::FromBytes( bytes );
+
+    ASSERT_TRUE( payload.has_value() );
+    EXPECT_EQ( payload->GetPeers(), peers );
+}
+
+TEST( TrustedPeerListPayloadTest, FromBytesRejectsEmptyInput )
+{
+    EXPECT_FALSE( TrustedPeerListPayload::FromBytes( {} ).has_value() );
+}
+
 TEST_F( TrustedPeerRegistryGenesisTest, GenesisPeersVisibleLocallyBeforeConfirmation )
 {
     const std::vector<std::string> genesis_peers = {

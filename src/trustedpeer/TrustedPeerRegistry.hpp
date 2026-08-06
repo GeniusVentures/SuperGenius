@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <shared_mutex>
 #include <string>
 #include <vector>
@@ -46,10 +47,19 @@ namespace sgns::trustedpeer
          */
         explicit TrustedPeerListPayload( std::vector<std::string> peers );
 
+        /**
+         * @brief Decodes a trusted-peer list into a fully-constructed payload.
+         * @param[in] bytes Raw newline-delimited peer-list bytes.
+         * @return The decoded payload, or std::nullopt if `bytes` is malformed.
+         */
+        static std::optional<TrustedPeerListPayload> FromBytes( const std::vector<uint8_t> &bytes );
+
         std::vector<uint8_t> SerializeToBytes() const override;
-        bool                 DeserializeFromBytes( const std::vector<uint8_t> &bytes ) override;
-        bool                 Verify( const std::vector<uint8_t> &payload ) const override;
-        void                 Apply() override;
+        /// @note Prefer FromBytes() in concrete TrustedPeerListPayload call sites.
+        ///       This mutating override remains for ISignedCRDTData consumers.
+        bool DeserializeFromBytes( const std::vector<uint8_t> &bytes ) override;
+        bool Verify( const std::vector<uint8_t> &payload ) const override;
+        void Apply() override;
 
         /**
          * @brief Returns the decoded/constructed peer list.

@@ -59,11 +59,11 @@ namespace sgns::trustedpeer
         return std::vector<uint8_t>( joined.begin(), joined.end() );
     }
 
-    bool TrustedPeerListPayload::DeserializeFromBytes( const std::vector<uint8_t> &bytes )
+    std::optional<TrustedPeerListPayload> TrustedPeerListPayload::FromBytes( const std::vector<uint8_t> &bytes )
     {
         if ( bytes.empty() )
         {
-            return false;
+            return std::nullopt;
         }
 
         std::string              raw( bytes.begin(), bytes.end() );
@@ -81,7 +81,18 @@ namespace sgns::trustedpeer
             start = pos + 1;
         }
 
-        peers_ = std::move( parsed );
+        return TrustedPeerListPayload( std::move( parsed ) );
+    }
+
+    bool TrustedPeerListPayload::DeserializeFromBytes( const std::vector<uint8_t> &bytes )
+    {
+        auto payload = FromBytes( bytes );
+        if ( !payload )
+        {
+            return false;
+        }
+
+        peers_ = std::move( payload->peers_ );
         return true;
     }
 
@@ -252,27 +263,27 @@ namespace sgns::trustedpeer
             return outcome::success( false );
         }
 
-        TrustedPeerListPayload payload;
-        const auto             bytes = read_result.value()->toVector();
-        if ( !payload.DeserializeFromBytes( bytes ) )
+        const auto bytes   = read_result.value()->toVector();
+        auto       payload = TrustedPeerListPayload::FromBytes( bytes );
+        if ( !payload )
         {
             logger_->error( "{}: confirmed value failed to deserialize", __func__ );
             return outcome::failure( std::errc::bad_message );
         }
-        if ( !payload.Verify( bytes ) )
+        if ( !payload->Verify( bytes ) )
         {
             logger_->error( "{}: confirmed value failed structural verification", __func__ );
             return outcome::failure( std::errc::bad_message );
         }
-        payload.Apply();
+        payload->Apply();
 
         {
             std::unique_lock<std::shared_mutex> lock( cache_mutex_ );
-            cached_peers_      = payload.GetPeers();
+            cached_peers_      = payload->GetPeers();
             genesis_confirmed_ = true;
         }
 
-        logger_->info( "{}: confirmed trusted-peer set ({} peers)", __func__, payload.GetPeers().size() );
+        logger_->info( "{}: confirmed trusted-peer set ({} peers)", __func__, payload->GetPeers().size() );
         return outcome::success( true );
     }
 
