@@ -604,6 +604,12 @@ namespace sgns
         {
             RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
         }
+        auto [proposal_it, inserted] = proposals_.try_emplace( proposal.proposal_id() );
+        if ( inserted )
+        {
+            proposal_it->second.proposal = proposal;
+            proposal_it->second.slot_key = GetSlotKey( proposal );
+        }
 
         const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
         const auto &proposer_id    = proposal.proposer_id();
@@ -716,7 +722,7 @@ namespace sgns
             return false;
         }
 
-        const auto &entry = entry_it->second;
+        const auto &entry        = entry_it->second;
         pending_retained_bytes_ -= std::min( pending_retained_bytes_, entry.retained_bytes );
 
         auto proposer_it = pending_count_by_proposer_.find( entry.proposer_id );
@@ -1088,10 +1094,7 @@ namespace sgns
         uint64_t max_vote_ts = 0;
         for ( const auto &vote : votes )
         {
-            if ( vote.timestamp() > max_vote_ts )
-            {
-                max_vote_ts = vote.timestamp();
-            }
+            max_vote_ts = std::max( vote.timestamp(), max_vote_ts );
         }
         if ( max_vote_ts == 0 )
         {
@@ -1462,46 +1465,31 @@ namespace sgns
 
     void ConsensusManager::HandleProposal( const Proposal &proposal )
     {
-        ConsensusManagerLogger()->trace( "{}: called for hash {} proposal_id={}",
-                                         __func__,
-                                         GetPrintableSubjectHash( proposal.subject() ),
-                                         proposal.proposal_id().substr( 0, 8 ) );
-
         if ( !CheckProposal( proposal ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: Invalid proposal for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
+        const auto &subject     = proposal.subject();
+        const auto &proposal_id = proposal.proposal_id();
         if ( !IsTimestampSane( proposal.timestamp() ) )
         {
             ConsensusManagerLogger()->error( "{}: rejected: timestamp out of bounds for hash {} proposal_id={}",
                                              __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
+                                             GetPrintableSubjectHash( subject ),
+                                             proposal_id.substr( 0, 8 ) );
             return;
         }
 
-        if ( proposal.registry_cid().empty() )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: proposal registry CID missing for hash {}. proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-
-        auto subject_hash = GetSubjectHash( proposal.subject() );
-        if ( subject_hash.has_error() )
+        auto subject_hash_result = GetSubjectHash( subject );
+        if ( subject_hash_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
                                              __func__,
-                                             proposal.proposal_id().substr( 0, 8 ) );
+                                             proposal_id.substr( 0, 8 ) );
             return;
         }
+        const auto &subject_hash = subject_hash_result.value();
 
         auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
@@ -1511,21 +1499,9 @@ namespace sgns
                 __func__,
                 proposal_registry_result.error().message(),
                 proposal.registry_cid(),
-                proposal.proposal_id().substr( 0, 8 ),
-                subject_hash.value().substr( 0, 8 ) );
-
-            {
-                std::lock_guard lock( proposals_mutex_ );
-                if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
-                {
-                    ProposalState state;
-                    state.proposal = proposal;
-                    state.slot_key = GetSlotKey( proposal );
-                    proposals_.emplace( proposal.proposal_id(), std::move( state ) );
-                }
-            }
-
-            AddPendingProposal( proposal, subject_hash.value() );
+                proposal_id.substr( 0, 8 ),
+                subject_hash.substr( 0, 8 ) );
+            AddPendingProposal( proposal, subject_hash );
             return;
         }
         if ( proposal.registry_epoch() != proposal_registry_result.value().epoch() )
@@ -1537,100 +1513,72 @@ namespace sgns
             return;
         }
 
-        if ( !CheckSubject( proposal.subject() ) )
+        if ( !CheckSubject( subject ) )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
-        if ( CheckCertificateForSubject( subject_hash.value() ) )
+        if ( CheckCertificateForSubject( subject_hash ) )
         {
             ConsensusManagerLogger()->debug( "{}: ignored: subject already certified hash={} proposal_id={}",
                                              __func__,
-                                             subject_hash.value().substr( 0, 8 ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
+                                             subject_hash.substr( 0, 8 ),
+                                             proposal_id.substr( 0, 8 ) );
             std::lock_guard lock( proposals_mutex_ );
-            RemovePendingProposalLocked( proposal.proposal_id(), "already-certified" );
+            RemovePendingProposalLocked( proposal_id, "already-certified" );
             return;
         }
 
-        auto type_hash = ParseSubjectTypeHash( proposal.subject() );
-        if ( !type_hash )
-        {
-            ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash", __func__ );
-            return;
-        }
-
+        const auto     type_hash = ParseSubjectTypeHash( subject ).value();
         SubjectHandler subject_handler;
         {
             std::shared_lock lock( subject_handlers_mutex_ );
-            auto             handler_it = subject_handlers_.find( type_hash.value() );
+            auto             handler_it = subject_handlers_.find( type_hash );
             if ( handler_it == subject_handlers_.end() )
             {
                 ConsensusManagerLogger()->error(
                     "{}: rejected: subject handler missing type_hash={}",
                     __func__,
                     base::hex_lower( gsl::span<const uint8_t>(
-                        reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
-                        proposal.subject().subject_type_hash().hash().size() ) ) );
+                        reinterpret_cast<const uint8_t *>( subject.subject_type_hash().hash().data() ),
+                        subject.subject_type_hash().hash().size() ) ) );
                 return;
             }
             subject_handler = handler_it->second;
         }
 
-        auto subject_result = subject_handler( proposal.subject() );
+        auto subject_result = subject_handler( subject );
         if ( subject_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: subject handler error for hash {} proposal_id={}",
                                              __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
+                                             subject_hash.substr( 0, 8 ),
+                                             proposal_id.substr( 0, 8 ) );
             return;
         }
 
         const auto &validation_result = subject_result.value();
-        if ( validation_result.check == Check::Reject )
+        switch ( validation_result.check )
         {
-            ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            return;
+            case Check::Reject:
+                ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
+                                                 __func__,
+                                                 subject_hash.substr( 0, 8 ),
+                                                 proposal_id.substr( 0, 8 ) );
+                return;
+            case Check::Stalled:
+                ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
+                                                __func__,
+                                                subject_hash.substr( 0, 8 ),
+                                                proposal_id.substr( 0, 8 ) );
+                return;
+            case Check::Pending:
+                AddPendingProposal( proposal, subject_hash, validation_result );
+                return;
+            case Check::Approve:
+                ContinueProposalAfterSubject( proposal );
+                return;
         }
-
-        if ( validation_result.check == Check::Stalled )
-        {
-            ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
-                                            __func__,
-                                            GetPrintableSubjectHash( proposal.subject() ),
-                                            proposal.proposal_id().substr( 0, 8 ) );
-            return;
-        }
-
-        if ( validation_result.check == Check::Pending )
-        {
-            {
-                std::lock_guard lock( proposals_mutex_ );
-                if ( proposals_.find( proposal.proposal_id() ) == proposals_.end() )
-                {
-                    ProposalState state;
-                    state.proposal = proposal;
-                    state.slot_key = GetSlotKey( proposal );
-                    proposals_.emplace( proposal.proposal_id(), std::move( state ) );
-                }
-            }
-            ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
-                                             __func__,
-                                             GetPrintableSubjectHash( proposal.subject() ),
-                                             proposal.proposal_id().substr( 0, 8 ) );
-            AddPendingProposal( proposal, subject_hash.value(), validation_result );
-            return;
-        }
-
-        ContinueProposalAfterSubject( proposal );
     }
 
     outcome::result<void> ConsensusManager::ResumeProposalHandling( const std::string &subject_hash )
@@ -1643,81 +1591,9 @@ namespace sgns
                                          __func__,
                                          subject_hash.substr( 0, 8 ) );
 
-        auto to_process = TakePendingProposals( subject_hash );
-
-        for ( const auto &proposal : to_process )
+        for ( const auto &proposal : TakePendingProposals( subject_hash ) )
         {
-            auto type_hash = ParseSubjectTypeHash( proposal.subject() );
-            if ( !type_hash )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: invalid subject type hash", __func__ );
-                continue;
-            }
-            SubjectHandler subject_handler;
-            {
-                std::shared_lock lock( subject_handlers_mutex_ );
-                auto             handler_it = subject_handlers_.find( type_hash.value() );
-                if ( handler_it == subject_handlers_.end() )
-                {
-                    ConsensusManagerLogger()->error(
-                        "{}: rejected: subject handler missing type_hash={}",
-                        __func__,
-                        base::hex_lower( gsl::span<const uint8_t>(
-                            reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
-                            proposal.subject().subject_type_hash().hash().size() ) ) );
-                    continue;
-                }
-                subject_handler = handler_it->second;
-            }
-
-            auto subject_result = subject_handler( proposal.subject() );
-            if ( subject_result.has_error() )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: subject handler error for hash {} proposal_id={}",
-                                                 __func__,
-                                                 subject_hash.substr( 0, 8 ),
-                                                 proposal.proposal_id().substr( 0, 8 ) );
-                continue;
-            }
-
-            const auto &validation_result = subject_result.value();
-            if ( validation_result.check == Check::Reject )
-            {
-                ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
-                                                 __func__,
-                                                 subject_hash.substr( 0, 8 ),
-                                                 proposal.proposal_id().substr( 0, 8 ) );
-                continue;
-            }
-
-            if ( validation_result.check == Check::Stalled )
-            {
-                ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
-                                                __func__,
-                                                subject_hash.substr( 0, 8 ),
-                                                proposal.proposal_id().substr( 0, 8 ) );
-                continue;
-            }
-
-            if ( validation_result.check == Check::Pending )
-            {
-                auto subject_hash_result = GetSubjectHash( proposal.subject() );
-                if ( subject_hash_result.has_error() )
-                {
-                    ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={}",
-                                                     __func__,
-                                                     proposal.proposal_id() );
-                    continue;
-                }
-                ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
-                                                 __func__,
-                                                 subject_hash.substr( 0, 8 ),
-                                                 proposal.proposal_id().substr( 0, 8 ) );
-                AddPendingProposal( proposal, subject_hash_result.value(), validation_result );
-                continue;
-            }
-
-            ContinueProposalAfterSubject( proposal );
+            RetryPendingProposal( proposal, "subject-resume" );
         }
         return outcome::success();
     }
