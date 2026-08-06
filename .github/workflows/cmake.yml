@@ -434,7 +434,6 @@ jobs:
             IS_TAG=false
           else
             CURRENT_BRANCH=${{ github.ref_name }}
-            CURRENT_BRANCH=${{ github.ref_name }}
             IS_TAG=false
           fi
           echo "Identified current branch/tag as ${CURRENT_BRANCH}"
@@ -733,7 +732,9 @@ jobs:
       - name: Run tests (OSX)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.target == 'OSX' }}
-        run: ctest . -j -C ${{ matrix.build-type }} --output-on-failure
+        # Network-heavy integration tests create several threaded nodes each.
+        # Keep macOS runner pressure bounded while teardown races are exercised.
+        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Save CTest cost data
         if: ${{ (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.build-type == 'Release' && matrix.target == 'Windows')) && (success() || failure()) }}
