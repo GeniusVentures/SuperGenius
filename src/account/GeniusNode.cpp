@@ -1781,30 +1781,54 @@ namespace sgns
 
         {
             std::lock_guard<std::mutex> lock( migration_mutex_ );
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
+                                 migration_manager_.use_count() );
             migration_manager_.reset();
         }
 
         if ( job_globaldb_ )
         {
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: shutting down job_globaldb_ (refs={})",
+                                 job_globaldb_.use_count() );
             job_globaldb_->ShutdownNow();
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: job_globaldb_ shutdown complete" );
         }
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing job_globaldb_ (refs={})",
+                             job_globaldb_.use_count() );
         job_globaldb_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
+                             tx_globaldb_.use_count() );
         tx_globaldb_.reset();
 
         // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
         // PubSub host and scheduler. Release dependents before their providers.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
+                             bitswap_.use_count() );
         FileManager::GetInstance().clearBitswap( bitswap_ );
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
+                             bitswap_.use_count() );
         bitswap_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
+                             bitswap_event_bus_.use_count() );
         bitswap_event_bus_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
+                             graphsyncnetwork_.use_count() );
         graphsyncnetwork_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
+                             generator_.use_count() );
         generator_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
+                             scheduler_.use_count() );
         scheduler_.reset();
 
         // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
         // account_ is declared before io_, so relying on implicit destruction
         // would otherwise destroy its messenger after the io_context.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
         account_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
         pubsub_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
     }
 
     void GeniusNode::ShutdownForDestruction()
