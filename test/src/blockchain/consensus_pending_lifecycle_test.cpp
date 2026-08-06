@@ -90,7 +90,15 @@ namespace sgns
         static ConsensusManager::PendingLifecycleConfig PendingConfig(
             const std::shared_ptr<ConsensusManager> &manager )
         {
+            std::lock_guard lock( manager->proposals_mutex_ );
             return manager->pending_config_;
+        }
+
+        static void SetPendingConfig( const std::shared_ptr<ConsensusManager> &manager,
+                                      ConsensusManager::PendingLifecycleConfig config )
+        {
+            std::lock_guard lock( manager->proposals_mutex_ );
+            manager->pending_config_ = std::move( config );
         }
 
         static std::size_t PendingEntryCount( const std::shared_ptr<ConsensusManager> &manager )
@@ -471,7 +479,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
 
     sgns::ConsensusManager::PendingLifecycleConfig config;
     config.pending_ttl = std::chrono::seconds( 10 );
-    manager->SetPendingLifecycleConfig( config );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
 
     auto       proposal    = MakeProposal( manager, registry, 11, "0xpending-index" );
     auto       proposal_id = proposal.proposal_id();
@@ -501,7 +509,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     config.max_pending_proposals    = 1;
     config.max_pending_per_proposer = 1;
     config.pending_ttl              = std::chrono::seconds( 10 );
-    manager->SetPendingLifecycleConfig( config );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
 
     auto first  = MakeProposal( manager, registry, 21, "0xcapacity-first" );
     auto second = MakeProposal( manager, registry, 22, "0xcapacity-second" );
@@ -530,7 +538,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     config.max_pending_proposals    = 2;
     config.max_pending_per_proposer = 1;
     config.pending_ttl              = std::chrono::seconds( 10 );
-    manager->SetPendingLifecycleConfig( config );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
 
     auto remove_first  = MakeProposal( manager, registry, 31, "0xremove-first" );
     auto remove_second = MakeProposal( manager, registry, 32, "0xremove-second" );
@@ -583,7 +591,9 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
                                                                                    "test-reset" ) );
     EXPECT_EQ( sgns::ConsensusPendingLifecycleTestAccess::PendingEntryCount( manager ), 0U );
 
-    manager->SetPendingLifecycleConfig( sgns::ConsensusManager::PendingLifecycleConfig{} );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig(
+        manager,
+        sgns::ConsensusManager::PendingLifecycleConfig{} );
 
     auto retry_proposal    = MakeProposal( manager, registry, 41, "0xpending-retry" );
     auto retry_proposal_id = retry_proposal.proposal_id();
@@ -612,7 +622,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
     config                               = sgns::ConsensusManager::PendingLifecycleConfig{};
     config.pending_ttl                   = std::chrono::seconds( 10 );
     config.min_dependency_retry_interval = std::chrono::milliseconds( 0 );
-    manager->SetPendingLifecycleConfig( config );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
 
     std::unordered_map<std::string, int>                                                            handler_attempts;
     std::unordered_map<std::string, std::function<sgns::ConsensusManager::ValidationResult( int )>> handler_scripts;
@@ -689,7 +699,7 @@ TEST_F( ConsensusPendingLifecycleTest, BoundedPendingPoolIndexesDependenciesAndC
                                              std::chrono::seconds( 2 ),
                                              std::chrono::seconds( 5 ),
                                              std::chrono::seconds( 10 ) };
-    manager->SetPendingLifecycleConfig( config );
+    sgns::ConsensusPendingLifecycleTestAccess::SetPendingConfig( manager, config );
 
     auto       scheduled_proposal    = MakeProposal( manager, registry, 53, "0xscheduled" );
     auto       scheduled_proposal_id = scheduled_proposal.proposal_id();

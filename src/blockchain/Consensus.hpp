@@ -273,12 +273,6 @@ namespace sgns
          */
         void UnregisterProposalCleanupHandler( std::string_view subject_type );
 
-        /**
-         * @brief Overrides local pending lifecycle limits for deterministic tests/configuration.
-         * @param[in] config Pending lifecycle configuration.
-         */
-        void SetPendingLifecycleConfig( PendingLifecycleConfig config );
-
         /** RegisterSlotKeyHandler also changed to match subject type pattern: */
         /**
          * @brief Registers a slot key handler for a canonical subject type.
@@ -585,23 +579,6 @@ namespace sgns
          */
         bool CheckCertificateForSubject( const Subject &subject ) const;
 
-    protected:
-        /**
-         * @brief Sets timestamp validation window for received objects.
-         * @param[in] window Allowed timestamp drift window.
-         */
-        void ConfigureTimestampWindow( std::chrono::milliseconds window );
-        /**
-         * @brief Sets consensus round duration.
-         * @param[in] duration Round duration.
-         */
-        void ConfigureRoundDuration( std::chrono::milliseconds duration );
-        /**
-         * @brief Sets allowable round skew tolerance.
-         * @param[in] skew Allowed round skew.
-         */
-        void ConfigureRoundSkew( std::chrono::milliseconds skew );
-
     private:
         friend class ConsensusManagerTestAccess;
         friend class ConsensusPendingLifecycleTestAccess;
@@ -663,7 +640,6 @@ namespace sgns
         struct SlotState
         {
             std::string                     best_proposal_id;   ///< Current best proposal id in the slot.
-            std::string                     best_tx_hash;       ///< Hash used for deterministic tie-breaking.
             std::unordered_set<std::string> voted_proposal_ids; ///< Local proposal ids already voted for.
         };
 
@@ -746,12 +722,6 @@ namespace sgns
          * @return Local aggregation role relative to the proposal registry and current round.
          */
         AggregatorRole GetAggregatorRole( const Proposal &proposal, const ValidatorRegistry::Registry &registry ) const;
-        /**
-         * @brief Returns active validators in deterministic ordering.
-         * @param[in] registry Validator registry snapshot.
-         * @return Ordered list of validator identifiers.
-         */
-        std::vector<std::string> GetOrderedActiveValidators( const ValidatorRegistry::Registry &registry ) const;
         /**
          * @brief Computes current round number relative to proposal timestamp.
          * @param[in] proposal_ts_ms Proposal timestamp in Unix milliseconds.

@@ -288,13 +288,6 @@ namespace sgns
     bool ConsensusManager::RegisterCertificateHandler( std::string_view          subject_type,
                                                        CertificateSubjectHandler handler )
     {
-        if ( !handler )
-        {
-            ConsensusManagerLogger()->error( "{}: ignored empty certificate handler subject_type={}",
-                                             __func__,
-                                             subject_type );
-            return false;
-        }
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
@@ -328,13 +321,6 @@ namespace sgns
     bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view       subject_type,
                                                            ProposalCleanupHandler handler )
     {
-        if ( !handler )
-        {
-            ConsensusManagerLogger()->error( "{}: ignored empty cleanup handler subject_type={}",
-                                             __func__,
-                                             subject_type );
-            return false;
-        }
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
@@ -361,21 +347,8 @@ namespace sgns
         proposal_cleanup_handlers_.erase( type_hash.value() );
     }
 
-    void ConsensusManager::SetPendingLifecycleConfig( PendingLifecycleConfig config )
-    {
-        std::lock_guard lock( proposals_mutex_ );
-        pending_config_ = config;
-    }
-
     void ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
     {
-        if ( !handler )
-        {
-            ConsensusManagerLogger()->error( "{}: ignored empty slot key handler subject_type={}",
-                                             __func__,
-                                             subject_type );
-            return;
-        }
         auto type_hash = ComputeSubjectTypeHash( subject_type );
         if ( type_hash.has_error() )
         {
@@ -439,39 +412,6 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
-    {
-        if ( window.count() <= 0 )
-        {
-            ConsensusManagerLogger()->warn( "{}: using default window", __func__ );
-            timestamp_window_ = DEFAULT_TIMESTAMP_WINDOW;
-            return;
-        }
-        timestamp_window_ = window;
-    }
-
-    void ConsensusManager::ConfigureRoundDuration( std::chrono::milliseconds duration )
-    {
-        if ( duration.count() <= 0 )
-        {
-            ConsensusManagerLogger()->warn( "{}: using default round duration", __func__ );
-            round_duration_ = DEFAULT_ROUND_DURATION;
-            return;
-        }
-        round_duration_ = duration;
-    }
-
-    void ConsensusManager::ConfigureRoundSkew( std::chrono::milliseconds skew )
-    {
-        if ( skew.count() < 0 )
-        {
-            ConsensusManagerLogger()->warn( "{}: using default round skew", __func__ );
-            round_skew_ = DEFAULT_ROUND_SKEW;
-            return;
-        }
-        round_skew_ = skew;
-    }
-
     void ConsensusManager::ConfigureCertificateDelay( std::chrono::milliseconds delay )
     {
         if ( delay.count() < 0 )
@@ -485,68 +425,38 @@ namespace sgns
 
     bool ConsensusManager::IsTimestampSane( uint64_t timestamp_ms ) const
     {
-        if ( timestamp_ms == 0 )
-        {
-            return false;
-        }
-        const auto now_ms    = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                   std::chrono::system_clock::now().time_since_epoch() )
-                                   .count();
-        const auto window_ms = timestamp_window_.count();
-        if ( now_ms < 0 || window_ms < 0 )
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+        if ( timestamp_ms == 0 || now_ms < 0 )
         {
             return false;
         }
 
-        const auto now_u64    = static_cast<uint64_t>( now_ms );
-        const auto window_u64 = static_cast<uint64_t>( window_ms );
-        const auto min_ts     = ( now_u64 > window_u64 ) ? ( now_u64 - window_u64 ) : 0ULL;
-        const auto max_ts     = ( std::numeric_limits<uint64_t>::max() - now_u64 < window_u64 )
-                                    ? std::numeric_limits<uint64_t>::max()
-                                    : now_u64 + window_u64;
-        return ( timestamp_ms >= min_ts ) && ( timestamp_ms <= max_ts );
+        const auto now        = static_cast<uint64_t>( now_ms );
+        const auto difference = timestamp_ms > now ? timestamp_ms - now : now - timestamp_ms;
+        return difference <= static_cast<uint64_t>( timestamp_window_.count() );
     }
 
     uint64_t ConsensusManager::GetCurrentRound( uint64_t proposal_ts_ms ) const
     {
-        if ( proposal_ts_ms == 0 || round_duration_.count() <= 0 )
+        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                std::chrono::system_clock::now().time_since_epoch() )
+                                .count();
+        if ( proposal_ts_ms == 0 || now_ms <= 0 )
         {
             return 0;
         }
-        const auto now_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                 std::chrono::system_clock::now().time_since_epoch() )
-                                 .count();
-        const auto elapsed = static_cast<int64_t>( now_ms ) - static_cast<int64_t>( proposal_ts_ms );
-        if ( elapsed <= 0 )
-        {
-            return 0;
-        }
-        const auto skew_ms = static_cast<int64_t>( round_skew_.count() );
-        if ( elapsed <= skew_ms )
-        {
-            return 0;
-        }
-        const auto round_ms = static_cast<int64_t>( round_duration_.count() );
-        auto       round    = static_cast<uint64_t>( ( elapsed - skew_ms ) / round_ms );
-        ConsensusManagerLogger()->debug( "{}: Returning round={}", __func__, round );
-        return round;
-    }
 
-    std::vector<std::string> ConsensusManager::GetOrderedActiveValidators(
-        const ValidatorRegistry::Registry &registry ) const
-    {
-        std::vector<std::string> validators;
-        validators.reserve( registry.validators_size() );
-        for ( const auto &entry : registry.validators() )
+        const auto now = static_cast<uint64_t>( now_ms );
+        if ( proposal_ts_ms >= now )
         {
-            if ( entry.status() == ValidatorRegistry::Status::ACTIVE )
-            {
-                validators.push_back( entry.validator_id() );
-            }
+            return 0;
         }
-        std::sort( validators.begin(), validators.end() );
-        ConsensusManagerLogger()->trace( "{}: Returning validators with size ={}", __func__, validators.size() );
-        return validators;
+
+        const auto elapsed = now - proposal_ts_ms;
+        const auto skew    = static_cast<uint64_t>( round_skew_.count() );
+        return elapsed > skew ? ( elapsed - skew ) / static_cast<uint64_t>( round_duration_.count() ) : 0;
     }
 
     ConsensusManager::AggregatorRole ConsensusManager::GetAggregatorRole(
