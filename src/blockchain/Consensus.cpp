@@ -464,7 +464,18 @@ namespace sgns
         const ValidatorRegistry::Registry &registry ) const
     {
         ConsensusManagerLogger()->trace( "{}: Checking local aggregator role for proposal", __func__ );
-        auto ordered = GetOrderedActiveValidators( registry );
+
+        std::vector<std::string> ordered;
+        ordered.reserve( registry.validators_size() );
+        for ( const auto &entry : registry.validators() )
+        {
+            if ( entry.status() == ValidatorRegistry::Status::ACTIVE )
+            {
+                ordered.push_back( entry.validator_id() );
+            }
+        }
+        std::sort( ordered.begin(), ordered.end() );
+
         if ( ordered.empty() )
         {
             return AggregatorRole::NotInRegistry;
@@ -475,19 +486,22 @@ namespace sgns
             return AggregatorRole::NotInRegistry;
         }
 
-        auto     hash       = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
-        uint64_t base_index = 0;
-        for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
+        const auto proposal_hash = sgns::crypto::sha2_256( proposal.proposal_id().data(),
+                                                           proposal.proposal_id().size() );
+        uint64_t   proposal_seed = 0;
+        for ( size_t i = 0; i < sizeof( proposal_seed ); ++i )
         {
-            base_index = ( base_index << 8 ) | hash[i];
+            proposal_seed = ( proposal_seed << 8 ) | proposal_hash[i];
         }
         base_index = base_index % ordered.size();
 
-        const auto round = GetCurrentRound( proposal.timestamp() );
-        const auto index = ( base_index + round ) % ordered.size();
+        const auto validator_count = ordered.size();
+        const auto starting_index  = proposal_seed % validator_count;
+        const auto round_offset    = GetCurrentRound( proposal.timestamp() ) % validator_count;
+        const auto selected_index  = ( starting_index + round_offset ) % validator_count;
 
-        return ordered[index] == account_address_ ? AggregatorRole::CurrentAggregator
-                                                  : AggregatorRole::ActiveButNotAggregator;
+        return ordered[selected_index] == account_address_ ? AggregatorRole::CurrentAggregator
+                                                           : AggregatorRole::ActiveButNotAggregator;
     }
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
