@@ -12,7 +12,13 @@
       }
     }
   ],
-  "outputs": [],
+  "outputs": [
+    {
+      "name": "renderOutput",
+      "source_uri_param": "file://processing_dispatch/happy-path-render-output.raw",
+      "type": "image"
+    }
+  ],
   "passes": [
     {
       "name": "renderPass",

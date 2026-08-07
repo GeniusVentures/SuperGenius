@@ -301,7 +301,14 @@ namespace sgns
                    "is either a real determinism/implementation bug or an environment without a "
                    "usable Vulkan device (no software fallback exists in this codebase)";
 
-            allHashes.push_back( process_result.value().combinedHash );
+            const auto &iterHash = process_result.value().combinedHash;
+
+            ASSERT_EQ( iterHash.size(), 32u )
+                << "Iteration " << i << "'s combinedHash is not a real 32-byte digest -- a "
+                   "hash-equality-only comparison across iterations can pass vacuously if "
+                   "combinedHash is silently empty on every iteration";
+
+            allHashes.push_back( iterHash );
         }
 
         for ( size_t i = 1; i < allHashes.size(); ++i )
