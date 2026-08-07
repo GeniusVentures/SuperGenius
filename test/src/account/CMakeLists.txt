@@ -67,6 +67,22 @@ target_link_libraries(account_signature_test
     json_secure_storage
 )
 
+addtest(burnconfig_test
+    burnconfig_test.cpp
+)
+
+target_link_libraries(burnconfig_test
+    burnconfig
+    trustedpeer
+    securecrdt
+    multisig
+    crdt_globaldb
+    sgns_genius_account
+    json_secure_storage
+    libsecp256k1::secp256k1
+)
+target_include_directories(burnconfig_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
 )

@@ -1,117 +1,106 @@
-# Requirements: SuperGenius — Slot-Scoped Consensus Finality
+# Requirements
 
-**Defined:** 2026-07-22
-**Core Value:** At most one valid certificate may finalize a canonical consensus slot.
-**Protocol boundary:** v2.0 requires fresh certificate state; legacy transaction-hash-keyed certificate stores are not migrated or dual-read.
+## Milestone v1.1: Multi-Signature Secure CRDT Storage
 
-## v2.0 Requirements
+### Active
 
-### Canonical Slots
+**MultiSig — decoupled multi-signature primitive**
+- [ ] **MSIG-01:** A component computes canonical signing-bytes for an arbitrary payload and verifies signatures against it, reusing `ConsensusAuth`'s SHA-256/`VerifySignature` primitives
+- [ ] **MSIG-02:** The component supports N-of-M quorum evaluation given a signer set and a required threshold (no hardcoded N)
+- [ ] **MSIG-03:** The component is usable independently of CRDT (importable/testable without a running node)
 
-- [ ] **SLOT-01**: Every consensus proposal resolves to one deterministic canonical slot key, and proposal arbitration, vote locking, certificate lookup, and finalized-state checks use that same key.
-- [ ] **SLOT-02**: A normal transaction's canonical slot remains its source address plus nonce, so competing transactions from the same account and nonce share one finality domain.
-- [ ] **SLOT-03**: A bridge mint's canonical slot is derived from the external burn identity (source chain plus burn transaction hash and canonical event/outpoint index) and is independent of the proposing validator's address and nonce.
-- [ ] **SLOT-04**: Two mint proposals referencing the same canonical burn resolve to the same slot even when their transaction hashes, proposers, nonces, amounts, destinations, or other candidate-controlled fields differ.
+**SecureCRDT — secure CRDT storage layer**
+- [ ] **SCRDT-01:** An `ISignedCRDTData` interface exists: implementers provide payload codec, `Verify()`, `Apply()`
+- [ ] **SCRDT-02:** A static registry maps a topic/key pattern to {signer-set source, quorum rule, `ISignedCRDTData` type}, declared in code at startup
+- [ ] **SCRDT-03:** Writing/updating a registered CRDT key requires quorum-verified signatures; unsigned or under-signed writes are rejected locally before being applied
+- [ ] **SCRDT-04:** Propose/sign/quorum flow works entirely via CRDT puts + filter callbacks (pending-value + signature entries) — no new networking/RPC
 
-### Certificates
+**TrustedPeerRegistry — new component**
+- [ ] **TPR-01:** Genesis node seeds an initial trusted-peer set from a hardcoded genesis config entry
+- [ ] **TPR-02:** Adding/removing/replacing a member requires a configurable N-of-M quorum of signatures from the CURRENT trusted-peer set
+- [ ] **TPR-03:** `TrustedPeerRegistry` is implemented via `ISignedCRDTData`/SecureCRDT (SCRDT-01..04), not bespoke logic
 
-- [ ] **CERT-01**: A certificate continues to cryptographically bind the complete winning proposal, including its subject, proposer/account identity, nonce, transaction hash, embedded transaction, registry, and votes.
-- [ ] **CERT-02**: The authoritative certificate is persisted under a stable hash of the canonical slot key, and a slot can expose at most one authoritative certificate.
-- [ ] **CERT-03**: A successful certificate write creates a transaction-hash-to-slot secondary index for the winning transaction without making the transaction hash the finality key.
-- [ ] **CERT-04**: `GetCertificateBySubjectHash(tx_hash)` resolves through the secondary index and verifies that the loaded slot certificate contains the requested transaction hash before returning it.
-- [ ] **CERT-05**: On first observing a valid certificate, a node atomically marks the slot finalized before clearing proposal candidates, pending votes, or temporary vote-lock state.
-- [ ] **CERT-06**: Pubsub certificate handling, local certificate submission, and CRDT certificate delivery are idempotent views of the same finalized slot and cannot apply the winning transaction more than once.
-- [ ] **CERT-07**: A different certificate received for an already-finalized slot is treated as a consensus-safety violation, is never applied as a second winner, and produces actionable diagnostics identifying both proposals and the slot.
+**BurnConfig — applying it to BURN_BASIS_POINTS**
+- [ ] **BURN-01:** `BURN_BASIS_POINTS` becomes a `TrustedPeerRegistry`-quorum-signed CRDT value instead of a compile-time constant
+- [ ] **BURN-02:** `TransactionManager` caches the current value and refreshes it via a CRDT-change callback (no CRDT read per `PayEscrow` call)
+- [ ] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
 
-### Validator Vote Safety
+**Migration**
+- [ ] **MIG-05:** `ValidatorRegistry` is migrated onto the `ISignedCRDTData` interface (reusing SecureCRDT, not just `BURN_BASIS_POINTS`)
+- [ ] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
 
-- [ ] **VOTE-01**: Before publishing an approval signature, a validator durably records the canonical slot and proposal ID in a local vote journal.
-- [ ] **VOTE-02**: While a recorded signature can still contribute to a valid certificate, the validator may reproduce the same proposal's vote idempotently but cannot sign a different proposal in that slot.
-- [ ] **VOTE-03**: Validator restart restores outstanding slot vote locks before proposal processing or vote publication begins.
-- [ ] **VOTE-04**: Before its first signature, a validator may collect valid competing proposals for a bounded selection window and deterministically choose the best candidate using the existing proposal-ordering rule.
-- [ ] **VOTE-05**: Once the validator publishes its slot vote, a later better proposal may be tracked but cannot cause the validator to retract, replace, or publish another vote for that slot.
-- [ ] **VOTE-06**: A valid certificate finalizes its winner even when the validator locally voted for a different proposal, transitioning the local slot from voted to finalized without applying multiple winners.
-- [ ] **VOTE-07**: An uncertified vote lock may expire only after the recorded proposal and signature can no longer participate in a certificate accepted by current validation rules.
+### Out of Scope
 
-### Bridge Reservation Lifecycle
+- `ConsensusManager` changes / pluggable voter sources — CRDT itself carries propose/sign/quorum messages
+- Any new pubsub/RPC transport — reuse existing CRDT put/filter-callback machinery
+- Unrelated consensus refactors
 
-- [ ] **BURN-01**: Bridge proposal validation remains side-effect-free; after a valid mint proposal is admitted to consensus, the node reserves its canonical burn under the slot identity.
-- [ ] **BURN-02**: Valid competing proposals for the same burn share the slot-owned reservation, so selecting a better proposal does not require releasing or reacquiring the burn.
-- [ ] **BURN-03**: Rejecting, failing, or cleaning up one losing proposal cannot release a burn reservation while another candidate or finalized certificate still owns the slot.
-- [ ] **BURN-04**: Observing the slot certificate transitions the burn reservation to consumed for the winning mint before proposal cleanup can admit another spender.
-- [ ] **BURN-05**: A reservation returns to ready only when the entire slot is abandoned, no candidate remains, no certificate exists, and every outstanding vote for the slot is cryptographically expired.
-
-### Compatibility and Verification
-
-- [ ] **COMP-01**: Previous-nonce validation and producer-UTXO validation continue retrieving new-format certificates by transaction hash through the verified secondary index.
-- [ ] **COMP-02**: Nodes fail startup with a clear protocol-state error when legacy certificate state is present, rather than silently mixing transaction-keyed and slot-keyed finality formats.
-- [ ] **TEST-01**: The 11-node single-burn race deterministically demonstrates that all competing mints use one canonical slot, at most one validator signature per validator is usable for that slot, exactly one certificate exists, and exactly one mint becomes confirmed.
-- [ ] **TEST-02**: A regression test reproduces the observed ordering where `HandleCertificate()` runs before CRDT certificate application and proves that a second proposal cannot collect a certificate in that gap.
-- [ ] **TEST-03**: A restart test proves that a validator which signed before shutdown restores its vote lock and does not sign a competing proposal after restart.
-- [ ] **TEST-04**: Proposal-ordering tests prove that a better candidate arriving before the vote window closes can win, while a better candidate arriving after vote publication cannot trigger a second signature.
-- [ ] **TEST-05**: Certificate-index tests cover slot lookup, transaction-hash lookup, mismatched index rejection, duplicate delivery idempotency, and conflicting-certificate diagnostics.
-- [ ] **TEST-06**: Existing normal-transaction nonce-chain and Genius UTXO producer-certificate tests pass against the new slot-keyed certificate store.
-
-## Future Requirements
-
-### Broader Bridge Robustness
-
-- **FUTR-01**: Exercise slot finality during node termination at each burn-to-mint lifecycle boundary.
-- **FUTR-02**: Exercise slot finality under disagreeing RPC endpoint quorums and pubsub partitions/healing.
-- **FUTR-03**: Fuzz bridge event parsing, configuration parsing, and transaction deserialization.
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| Legacy certificate migration or dual-read compatibility | v2.0 is an explicit clean state break selected for this milestone |
-| Changing certificate signatures to cover only a slot ID | The certificate must continue proving the exact winning proposal |
-| Validator quorum-weight or reputation redesign | Existing quorum policy remains; this milestone enforces non-equivocation within it |
-| Rejecting a valid certificate because it differs from the local vote | Consensus finality overrides local candidate preference |
-| Node-kill, RPC-disagreement, and pubsub-partition fault suites | Archived with the broader Phase 8 work and deferred to a later milestone |
-| Bridge parser/configuration fuzzing | Archived and deferred; not needed to close the certificate-safety defect |
-
-## Traceability
+### Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SLOT-01 | Phase 9 | Pending |
-| SLOT-02 | Phase 9 | Pending |
-| SLOT-03 | Phase 9 | Pending |
-| SLOT-04 | Phase 9 | Pending |
-| CERT-01 | Phase 9 | Pending |
-| CERT-02 | Phase 9 | Pending |
-| CERT-03 | Phase 9 | Pending |
-| CERT-04 | Phase 9 | Pending |
-| CERT-05 | Phase 10 | Pending |
-| CERT-06 | Phase 10 | Pending |
-| CERT-07 | Phase 10 | Pending |
-| VOTE-01 | Phase 10 | Pending |
-| VOTE-02 | Phase 10 | Pending |
-| VOTE-03 | Phase 10 | Pending |
-| VOTE-04 | Phase 10 | Pending |
-| VOTE-05 | Phase 10 | Pending |
-| VOTE-06 | Phase 10 | Pending |
-| VOTE-07 | Phase 10 | Pending |
+| MSIG-01 | Phase 8 | Pending |
+| MSIG-02 | Phase 8 | Pending |
+| MSIG-03 | Phase 8 | Pending |
+| SCRDT-01 | Phase 9 | Pending |
+| SCRDT-02 | Phase 9 | Pending |
+| SCRDT-03 | Phase 9 | Pending |
+| SCRDT-04 | Phase 9 | Pending |
+| TPR-01 | Phase 10 | Pending |
+| TPR-02 | Phase 10 | Pending |
+| TPR-03 | Phase 10 | Pending |
 | BURN-01 | Phase 11 | Pending |
 | BURN-02 | Phase 11 | Pending |
 | BURN-03 | Phase 11 | Pending |
-| BURN-04 | Phase 11 | Pending |
-| BURN-05 | Phase 11 | Pending |
-| COMP-01 | Phase 9 | Pending |
-| COMP-02 | Phase 9 | Pending |
-| TEST-01 | Phase 12 | Pending |
-| TEST-02 | Phase 12 | Pending |
-| TEST-03 | Phase 12 | Pending |
-| TEST-04 | Phase 12 | Pending |
-| TEST-05 | Phase 12 | Pending |
-| TEST-06 | Phase 12 | Pending |
+| MIG-05 | Phase 12 | Pending |
+| MIG-06 | Phase 12 | Pending |
 
-**Coverage:**
-- v2.0 requirements: 31 total
-- Mapped to phases: 31
-- Unmapped: 0 ✓
+Coverage: 15/15 v1.1 requirements mapped.
 
----
-*Requirements defined: 2026-07-22*
-*Last updated: 2026-07-22 after roadmap creation*
+## Slot-Based Network Voting (Phase 6)
+
+### Active
+
+- [ ] **REQ-SLOT-01 — Proto extension:** `ConsensusVote` extended with 3 `bytes32` fields (`slot_0_hash`, `slot_1_hash`, `slot_2_hash`) using unused field tags 6/7/8 per D-01.
+- [ ] **REQ-SLOT-02 — Slot 0 (DIRECT_API):** Only validators with a paid/API-key RPC endpoint fill slot 0. 1 valid hash contributes `voter.weight × 0.50` to qualified_sum per D-02.
+- [ ] **REQ-SLOT-03 — Slots 1-2 (PUBLIC) hash deduplication:** Hash groups with ≥2 distinct validators contribute `voter.weight × 0.25`. Solo hashes (1 validator) contribute zero per D-03.
+- [ ] **REQ-SLOT-04 — Cumulative >75% quorum:** Certificate produced iff `qualified_sum > total_voting_reputation × 0.75` where qualified_sum is the cumulative slot-weighted sum across all 3 slots per D-06.
+- [ ] **REQ-SLOT-05 — Both tally sites agree:** Shared `EvaluateQuorum` helper dispatches both `TallyVotes` (certificate) and `HandleVote` (incremental) for bridge-mint subjects; non-bridge subjects use unchanged single-pool `IsQuorum` per D-06, RESEARCH Pitfall 1.
+- [ ] **REQ-SLOT-06 — Abstention:** A validator that cannot produce any valid RPC hash marks the transaction seen/invalid and does not vote; all three slot hashes empty contributes full weight to total_voting_reputation but zero to qualified_sum (raising the threshold without helping meet it) per D-05.
+- [ ] **REQ-REPUT-01 — Role::FULL promotion:** REGULAR validator with weight ≥ `full_promotion_weight_` and penalty_score < `penalty_threshold_` is promoted to Role::FULL inside `ApplyVoteEffects` per D-07, D-08.
+- [ ] **REQ-DETERM-01 — Deterministic:** Given the same vote set and registry snapshot, every peer computes identical qualified_sum and threshold; slot tally is a pure function of votes + registry state per D-06, D-07.
+
+## Pending Proposal Lifecycle
+
+### Active
+
+- [ ] **PEND-01 — Structured deferred validation:** Subject validation can return `Pending` with zero
+  or more dependency keys while preserving distinct `Approve`, terminal `Reject`, and local
+  infrastructure `Stalled` outcomes.
+- [ ] **PEND-02 — Local-only Pending:** Pending outcomes are retained locally and never broadcast as
+  votes or counted toward quorum. Approval remains the only broadcast voting outcome in this phase.
+- [ ] **PEND-03 — Dependency-triggered retry:** Consensus indexes pending proposals by their missing
+  dependency keys and retries validation immediately when a dependency becomes available. A
+  predecessor certificate arrival must resume every proposal waiting on that certificate hash.
+- [ ] **PEND-04 — Scheduled transient retry:** Pending outcomes without an explicit dependency event
+  are retried using bounded scheduling and backoff so transient RPC, datastore, or similar local
+  failures can recover.
+- [ ] **PEND-05 — Bounded lifetime:** Pending proposals expire after a compile-time default TTL of
+  three minutes. `ConsensusManager` permits TTL injection/configuration for deterministic tests,
+  which normally use ten seconds.
+- [ ] **PEND-06 — Resource bounds and cleanup:** Consensus enforces pending proposal count and retained
+  byte limits. Certification, terminal rejection, or expiry removes proposal state, dependency
+  indexes, queued votes, retry metadata, and temporary transaction tracking.
+- [ ] **PEND-07 — Retry-safe validation:** Retrying the same proposal is idempotent and cannot cast
+  duplicate votes, double-count validator weight, or corrupt transaction state.
+- [ ] **TXSTATE-01 — Inconclusive transaction state:** Consensus timeout/TTL expiry uses a distinct
+  `EXPIRED` or `UNCONFIRMED` transaction state. `FAILED` is reserved for transactions proven invalid
+  by local validation.
+
+### Out of Scope
+
+- Broadcasting Pending decisions.
+- Signed Reject votes, rejection certificates, or negative-quorum rules.
+- Validator reputation rewards or penalties based on negative votes.
+- Penalizing validators when a proposal merely expires without a conclusive outcome.
+

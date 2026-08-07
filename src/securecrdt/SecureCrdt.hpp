@@ -50,6 +50,7 @@ namespace sgns::securecrdt
             NO_VALUE_PROPOSED,    ///< AddSignature/ReadIfQuorum called before any ProposeValue
             INVALID_SIGNATURE,    ///< signature failed VerifyPayloadSignature against the current value
             MALFORMED_VALUE,      ///< payload failed DeserializeFromBytes/Verify (codec/semantic check)
+            QUORUM_THRESHOLD_BELOW_FLOOR, ///< configured quorum_threshold below ceil(0.51*signer_set_size)
         };
 
         /**

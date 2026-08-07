@@ -53,6 +53,22 @@ namespace sgns::ipfs_bitswap
     class Bitswap;
 }
 
+// Forward declarations for BURN-02/BURN-03 quorum-wiring types (full includes live in GeniusNode.cpp).
+namespace sgns::securecrdt
+{
+    class SecureCrdt;
+}
+
+namespace sgns::trustedpeer
+{
+    class TrustedPeerRegistry;
+}
+
+namespace sgns::account
+{
+    class BurnConfig;
+}
+
 /**
  * @brief Runtime configuration values used to bootstrap a Genius node instance.
  */
@@ -344,7 +360,7 @@ namespace sgns
          */
         static constexpr uint64_t GetBurnBasisPoints()
         {
-            return TransactionManager::BURN_BASIS_POINTS;
+            return TransactionManager::BURN_BASIS_POINTS_DEFAULT;
         }
 
         /**
@@ -764,7 +780,6 @@ namespace sgns
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
                                                      io_work_guard_;     ///< Keeps @ref io_ alive.
         std::shared_ptr<crdt::GlobalDB>              tx_globaldb_;       ///< Transaction/global state CRDT DB.
-        std::shared_ptr<crdt::GlobalDB>              job_globaldb_;      ///< Reserved job CRDT DB handle.
         std::shared_ptr<ipfs_pubsub::GossipPubSub>   pubsub_;            ///< PubSub networking service.
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
@@ -816,14 +831,25 @@ namespace sgns
         /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
         bool rpc_catchup_ = true;
 
-        std::vector<std::string>                 bootstrap_peers_;
-        std::vector<std::string>                 bootstrap_fullnodes_;
+        std::vector<std::string> bootstrap_peers_;
+        std::vector<std::string> bootstrap_fullnodes_;
+        std::vector<std::string> trusted_peers_genesis_;     ///< Genesis trusted-peer list (BURN-02/BURN-03).
+        std::string              bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
+        /// Quorum threshold for TrustedPeerRegistry membership changes; 0 = unset (defaulted to the
+        /// majority floor for the parsed genesis peer count in LoadSgnsConfig()).
+        uint64_t trusted_peer_quorum_threshold_ = 0;
+        /// Quorum threshold for BurnConfig updates; 0 = unset (defaulted the same way).
+        uint64_t                                 burn_config_quorum_threshold_ = 0;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_fullnode_ids_;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
+
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
+        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
 
         std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
@@ -986,8 +1012,12 @@ namespace sgns
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
          * @param[in] release_members Whether to release service owners immediately after stopping them.
          */
-        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account,
-                                                            bool release_members = true );
+        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
+
+        /**
+         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         */
+        void ResetQuorumMembers();
 
         /**
          * @brief Releases the runtime object graph after all node I/O threads have stopped.
@@ -1060,8 +1090,8 @@ namespace sgns
         static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;        ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false }; ///< UPnP thread stop flag.
+        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
+        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
         std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.

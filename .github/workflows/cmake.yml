@@ -730,10 +730,89 @@ jobs:
             eval $(printf "\n" | gnome-keyring-daemon --unlock --components=secrets) && \
             ctest . -j -C ${{ matrix.build-type }} --output-on-failure'
 
+      - name: Mark macOS diagnostic start
+        if: ${{ matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/macos-crash-reports"
+          touch "$RUNNER_TEMP/macos-tests-started"
+
       - name: Run tests (OSX)
         working-directory: ${{ github.workspace }}/SuperGenius/${{ env.BUILD_DIRECTORY }}
         if: ${{ matrix.target == 'OSX' }}
-        run: ctest . -j -C ${{ matrix.build-type }} --output-on-failure
+        # Network-heavy integration tests create several threaded nodes each.
+        # Keep macOS runner pressure bounded while teardown races are exercised.
+        run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
+
+      - name: Collect macOS crash diagnostics
+        if: ${{ failure() && matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        shell: bash
+        run: |
+          marker="$RUNNER_TEMP/macos-tests-started"
+          output_dir="$RUNNER_TEMP/macos-crash-reports"
+          report_list="$RUNNER_TEMP/macos-crash-report-list.txt"
+
+          if [ ! -f "$marker" ]; then
+            echo "CTest did not start; no diagnostic marker exists."
+            exit 0
+          fi
+
+          find_reports() {
+            for report_dir in \
+              "$HOME/Library/Logs/DiagnosticReports" \
+              "/Library/Logs/DiagnosticReports"
+            do
+              [ -d "$report_dir" ] || continue
+
+              find "$report_dir" \
+                -type f \
+                -newer "$marker" \
+                \( \
+                  -name 'blockchain_genesis_test*.ips' -o \
+                  -name 'blockchain_genesis_test*.crash' -o \
+                  -name 'multi_account_test*.ips' -o \
+                  -name 'multi_account_test*.crash' \
+                \) \
+                -print \
+                2>/dev/null || true
+            done
+          }
+
+          # ReportCrash/osanalyticshelper may write the file asynchronously.
+          for attempt in $(seq 1 30); do
+            find_reports > "$report_list"
+            [ -s "$report_list" ] && break
+            sleep 1
+          done
+
+          if [ ! -s "$report_list" ]; then
+            echo "::warning::No macOS crash report appeared within 30 seconds."
+            echo "Recent ReportCrash activity:"
+            /usr/bin/log show \
+              --last 5m \
+              --style compact \
+              --predicate 'process == "ReportCrash" OR process == "osanalyticshelper"' \
+              || true
+            exit 0
+          fi
+
+          while IFS= read -r report; do
+            report_name="$(basename "$report")"
+            cp "$report" "$output_dir/$report_name"
+
+            echo "::group::macOS crash report: $report_name"
+            cat "$report"
+            echo "::endgroup::"
+          done < "$report_list"
+
+      - name: Upload macOS crash diagnostics
+        if: ${{ failure() && matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-debug-crash-reports-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/macos-crash-reports/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Save CTest cost data
         if: ${{ (matrix.target == 'Linux' || matrix.target == 'OSX' || (matrix.build-type == 'Release' && matrix.target == 'Windows')) && (success() || failure()) }}

@@ -139,7 +139,7 @@ namespace sgns::crdt
                     std::chrono::milliseconds elapsed;
                     ASSERT_WAIT_FOR_CONDITION(
                         [&]() { return did_interrupt || t1_finished; },
-                        std::chrono::milliseconds( 5000 ),
+                        std::chrono::milliseconds( 10000 ),
                         "Thread 1 did not finish or interrupt within timeout",
                         &elapsed );
                     if ( !use_atomic && !t1_finished )

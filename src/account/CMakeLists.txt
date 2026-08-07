@@ -9,6 +9,7 @@ add_library(sgns_genius_account
     UTXOStructs.cpp
     UTXOManager.cpp
     MigrationAllowList.cpp
+    GeniusSigner.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp
 )
@@ -53,6 +54,19 @@ if(MSVC)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
+
+# BurnConfig: genesis-seeded, quorum-signed BURN_BASIS_POINTS value (BURN-01,
+# BURN-02, BURN-03), built on top of SecureCrdt/TrustedPeerRegistry/GeniusAccount.
+add_library(burnconfig
+    BurnConfig.cpp
+)
+target_link_libraries(burnconfig
+    PUBLIC
+    trustedpeer
+    securecrdt
+    sgns_genius_account
+)
+supergenius_install(burnconfig)
 
 set(GENIUS_NODE_SOURCES
     GeniusTransaction.cpp
@@ -117,6 +131,8 @@ set(GENIUS_NODE_LIBS
     migration
     evm_watcher_service
     sgns_genius_account
+    trustedpeer
+    burnconfig
 )
 
 

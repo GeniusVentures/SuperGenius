@@ -22,6 +22,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
             return "signature verification failed against the current value";
         case Error::MALFORMED_VALUE:
             return "payload failed DeserializeFromBytes/Verify (codec/semantic check)";
+        case Error::QUORUM_THRESHOLD_BELOW_FLOOR:
+            return "configured quorum_threshold is below the majority-safety floor (ceil(0.51*signer_set_size))";
     }
     return "unknown SecureCrdt::Error";
 }
@@ -58,7 +60,7 @@ namespace sgns::securecrdt
                                                     const std::vector<uint8_t>        &payload )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -95,7 +97,7 @@ namespace sgns::securecrdt
                                                     const std::vector<uint8_t>        &signature )
     {
         logger_->trace( "{}: entry key={} signer={}", __func__, base_key.GetKey(), signer_address );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -134,7 +136,7 @@ namespace sgns::securecrdt
         const sgns::crdt::HierarchicalKey &base_key )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto *entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );

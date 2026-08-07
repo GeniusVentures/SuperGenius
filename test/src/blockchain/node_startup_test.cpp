@@ -209,3 +209,35 @@ TEST_F( NodeStartupTest, RegularNodeReadyQuicklyAfterGenesisReady )
 
     std::cout << "=== Regular Node Ready Quickly After Genesis Ready Test Completed ===" << std::endl;
 }
+
+// ---------------------------------------------------------------------------
+// 3. DEFAULT BURN RATE END-TO-END REGRESSION (BURN-03)
+// ---------------------------------------------------------------------------
+
+// Exercises the real INITIALIZING_TRANSACTIONS construction path end-to-end
+// (SecureCrdt -> TrustedPeerRegistry -> BurnConfig -> TransactionManager, wired
+// in Phase 11 Plan 02) via an actual running GeniusNode reaching READY, and
+// confirms a freshly-seeded genesis node's default burn rate is unchanged: 1%
+// (100 basis points out of 10000), matching pre-milestone behavior.
+TEST_F( NodeStartupTest, GenesisNodeDefaultBurnRateIsOnePercent )
+{
+    std::cout << "=== Starting Genesis Node Default Burn Rate Is One Percent Test ===" << std::endl;
+
+    auto node_full = CreateNode( "full_node_burn_rate_default",
+                                 "0xcafe",
+                                 "1.0",
+                                 TokenID::FromBytes( { 0x00 } ),
+                                 true );
+    Blockchain::SetAuthorizedFullNodeAddress( node_full->GetAddress() );
+
+    test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( kReadyPollTimeoutMs ),
+                                  "genesis node never reached READY" );
+
+    ASSERT_EQ( sgns::GeniusNode::GetBurnBasisPoints(), 100u )
+        << "Genesis node's default burn rate must remain 1% (100 basis points) until a "
+        << "quorum-signed BurnConfig update changes it (BURN-03 regression).";
+    ASSERT_EQ( sgns::GeniusNode::GetBasisPointsTotal(), 10000u );
+
+    std::cout << "=== Genesis Node Default Burn Rate Is One Percent Test Completed ===" << std::endl;
+}

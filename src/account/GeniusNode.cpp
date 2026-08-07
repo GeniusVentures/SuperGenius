@@ -41,6 +41,9 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/BurnConfig.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
 #include "migration/MigrationManager.hpp"
@@ -426,6 +429,48 @@ namespace sgns
             node_logger_->info( "sgns_config.json: setting authorized_full_node" );
             Blockchain::SetAuthorizedFullNodeAddress( addr );
         }
+        // Parse-only: trusted_peers/bootstrapper_node are stored for a future phase's live
+        // wiring, no live signer-set/genesis behavior is activated in this phase.
+        if ( config_json.HasMember( "trusted_peers" ) && config_json["trusted_peers"].IsArray() )
+        {
+            for ( auto &v : config_json["trusted_peers"].GetArray() )
+            {
+                if ( v.IsString() )
+                {
+                    trusted_peers_genesis_.push_back( v.GetString() );
+                }
+            }
+            node_logger_->info( "sgns_config.json: loaded {} trusted peers", trusted_peers_genesis_.size() );
+        }
+        if ( config_json.HasMember( "bootstrapper_node" ) && config_json["bootstrapper_node"].IsString() )
+        {
+            bootstrapper_node_address_ = config_json["bootstrapper_node"].GetString();
+            node_logger_->info( "sgns_config.json: loaded bootstrapper_node" );
+        }
+        if ( config_json.HasMember( "trusted_peer_quorum_threshold" ) &&
+             config_json["trusted_peer_quorum_threshold"].IsUint64() )
+        {
+            trusted_peer_quorum_threshold_ = config_json["trusted_peer_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: trusted_peer_quorum_threshold={}", trusted_peer_quorum_threshold_ );
+        }
+        if ( config_json.HasMember( "burn_config_quorum_threshold" ) &&
+             config_json["burn_config_quorum_threshold"].IsUint64() )
+        {
+            burn_config_quorum_threshold_ = config_json["burn_config_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
+        }
+        // Unset config never trips D-07's floor rejection: default to the exact majority
+        // floor for the parsed genesis peer count (ceil(0.51*N)).
+        const auto majority_floor =
+            static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        if ( trusted_peer_quorum_threshold_ == 0 )
+        {
+            trusted_peer_quorum_threshold_ = majority_floor;
+        }
+        if ( burn_config_quorum_threshold_ == 0 )
+        {
+            burn_config_quorum_threshold_ = majority_floor;
+        }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
             ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();
@@ -694,12 +739,62 @@ namespace sgns
                     node_logger_->error( "Blockchain not initialized, cannot initialize transactions" );
                     return;
                 }
+
+                // BURN-02/BURN-03: construct SecureCrdt -> TrustedPeerRegistry -> BurnConfig before
+                // TransactionManager, so its cached burn-rate can be seeded from a live quorum-signed
+                // value. Shares the same full-node topic TransactionManager listens on (trusted peers
+                // are full nodes), ensuring proposals/signatures for these quorum-gated values propagate.
+                const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+                tx_globaldb_->AddListenTopic( quorum_topic );
+
+                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
+
+                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                               trusted_peers_genesis_,
+                                                                               bootstrapper_node_address_,
+                                                                               trusted_peer_quorum_threshold_ );
+                if ( tpr_result.has_error() )
+                {
+                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                         tpr_result.error().message() );
+                    secure_crdt_.reset();
+                    return;
+                }
+                trusted_peer_registry_ = tpr_result.value();
+
+                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                          tx_globaldb_,
+                                                                          trusted_peer_registry_,
+                                                                          burn_config_quorum_threshold_,
+                                                                          account_ );
+                if ( burn_config_result.has_error() )
+                {
+                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                         burn_config_result.error().message() );
+                    ResetQuorumMembers();
+                    return;
+                }
+                burn_config_ = burn_config_result.value();
+
+                // Register only after both policy owners have populated SecureCrdtRegistry;
+                // otherwise a new node can start without filters for either runtime key.
+                if ( !secure_crdt_->RegisterFilters() )
+                {
+                    node_logger_->error( "SecureCrdt filter registration failed" );
+                    ResetQuorumMembers();
+                    return;
+                }
+
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
                                                                 blockchain_,
                                                                 is_full_node_,
-                                                                subnet_id_ );
+                                                                subnet_id_,
+                                                                std::chrono::milliseconds( 300000 ),
+                                                                std::chrono::milliseconds( 0 ),
+                                                                burn_config_->GetCachedBasisPoints(),
+                                                                burn_config_ );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -985,6 +1080,7 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::debug );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
@@ -1046,6 +1142,7 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
@@ -1628,6 +1725,7 @@ namespace sgns
         {
             ResetProcessingMembers();
             transaction_manager_.reset();
+            ResetQuorumMembers();
             bridge_relayer_.reset();
             eth_watch_service_.reset();
             blockchain_.reset();
@@ -1639,6 +1737,26 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    void GeniusNode::ResetQuorumMembers()
+    {
+        // Unregister while the policy owners and their owner tokens are still alive.
+        // Their destructors repeat this defensively, so partial initialization is safe.
+        if ( burn_config_ )
+        {
+            burn_config_->Unregister();
+        }
+        if ( trusted_peer_registry_ )
+        {
+            trusted_peer_registry_->Unregister();
+        }
+
+        // BurnConfig retains GlobalDB, TrustedPeerRegistry, SecureCrdt, and the
+        // account. Release it first so those dependencies can actually drain.
+        burn_config_.reset();
+        trusted_peer_registry_.reset();
+        secure_crdt_.reset();
     }
 
     void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
@@ -1656,36 +1774,53 @@ namespace sgns
         // GraphSync, the scheduler, PubSub, and the io_context.
         ResetProcessingMembers();
         transaction_manager_.reset();
+        ResetQuorumMembers();
         bridge_relayer_.reset();
         eth_watch_service_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
         blockchain_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
 
         {
             std::lock_guard<std::mutex> lock( migration_mutex_ );
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
+                                 migration_manager_.use_count() );
             migration_manager_.reset();
         }
 
-        if ( job_globaldb_ )
-        {
-            job_globaldb_->ShutdownNow();
-        }
-        job_globaldb_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
+                             tx_globaldb_.use_count() );
         tx_globaldb_.reset();
 
         // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
         // PubSub host and scheduler. Release dependents before their providers.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
+                             bitswap_.use_count() );
         FileManager::GetInstance().clearBitswap( bitswap_ );
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
+                             bitswap_.use_count() );
         bitswap_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
+                             bitswap_event_bus_.use_count() );
         bitswap_event_bus_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
+                             graphsyncnetwork_.use_count() );
         graphsyncnetwork_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
+                             generator_.use_count() );
         generator_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
+                             scheduler_.use_count() );
         scheduler_.reset();
 
         // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
         // account_ is declared before io_, so relying on implicit destruction
         // would otherwise destroy its messenger after the io_context.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
         account_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
         pubsub_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
     }
 
     void GeniusNode::ShutdownForDestruction()
@@ -1733,10 +1868,16 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
-
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();
+        }
+
+        if ( graphsyncnetwork_ )
+        {
+            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
+            graphsyncnetwork_->stop( nullptr );
+            node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
 
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
@@ -1747,6 +1888,16 @@ namespace sgns
         node_logger_->debug( "~GeniusNode CALLED" );
 
         ShutdownForDestruction();
+
+        // GraphSync retains PubSub's libp2p host, whose sockets are backed by
+        // PubSub's io_context. GossipPubSub::Stop() releases its own references
+        // to both objects, so keep the context alive until GraphSync releases
+        // the last host reference and destroys those sockets.
+        std::shared_ptr<boost::asio::io_context> pubsub_context_keepalive;
+        if ( pubsub_ )
+        {
+            pubsub_context_keepalive = pubsub_->GetAsioContext();
+        }
 
         // Signal PubSub to stop, but do not destroy it yet: the io_context threads
         // below may still be running in-flight asio/libp2p completion handlers that
@@ -1796,6 +1947,7 @@ namespace sgns
         // still alive. This also tears down AccountMessenger subscriptions before
         // the io_context is implicitly destroyed with the remaining members.
         ReleaseRuntimeMembersAfterIoStopped();
+        pubsub_context_keepalive.reset();
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
