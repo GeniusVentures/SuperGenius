@@ -976,13 +976,20 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        BOOST_OUTCOME_TRY( auto selected,
-                           SelectBatchSubjects( base_registry_cid,
-                                                base_registry_epoch,
-                                                static_cast<uint32_t>( threshold ),
-                                                std::nullopt ) );
+        auto selected = SelectBatchSubjects( base_registry_cid,
+                                             base_registry_epoch,
+                                             static_cast<uint32_t>( threshold ),
+                                             std::nullopt );
+        if ( selected.has_error() )
+        {
+            if ( selected.error() == std::errc::resource_unavailable_try_again )
+            {
+                return outcome::success();
+            }
+            return outcome::failure( selected.error() );
+        }
 
-        BOOST_OUTCOME_TRY( auto root, ComputeBatchRoot( selected ) );
+        BOOST_OUTCOME_TRY( auto root, ComputeBatchRoot( selected.value() ) );
 
         BOOST_OUTCOME_TRY( auto subject,
                            ConsensusManager::CreateRegistryBatchSubject( genesis_authority_,
