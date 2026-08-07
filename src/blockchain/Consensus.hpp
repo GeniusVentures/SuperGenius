@@ -762,7 +762,7 @@ namespace sgns
          * @param[in] new_data New key-value pair.
          * @param[in] cid CID associated with the CRDT update.
          */
-        void CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid );
+        void CertificateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid );
         /**
          * @brief Recovers unfinished certificate-processing work from journal.
          */

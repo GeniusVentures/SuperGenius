@@ -287,6 +287,7 @@ namespace sgns
          */
         outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
             const std::string &subject_hash ) const;
+
     protected:
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;
@@ -548,11 +549,12 @@ namespace sgns
 
         base::Logger logger_ = base::createLogger( "Blockchain" ); ///< Logger instance
 
-        std::atomic<bool> stop_started_{ false }; ///< Makes account-bound teardown one-shot.
+        std::atomic<bool> stop_started_{ false };                   ///< Makes account-bound teardown one-shot.
         std::atomic<bool> validator_registry_initialized_{ false }; ///< Signals registry initialization completion.
-        std::atomic<bool> start_deferred_{ false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
-        bool              genesis_ready_          = false;          ///< Indicates genesis block is ready.
-        bool              account_creation_ready_ = false;          ///< Indicates account-creation block is ready.
+        std::atomic<bool> start_deferred_{
+            false }; ///< Start() returned BLOCKCHAIN_NOT_INITIALIZED; retry once the registry is ready.
+        bool genesis_ready_          = false; ///< Indicates genesis block is ready.
+        bool account_creation_ready_ = false; ///< Indicates account-creation block is ready.
 
         std::shared_ptr<ConsensusManager> consensus_manager_; ///< Consensus manager used for proposals/certificates.
     };

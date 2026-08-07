@@ -1825,7 +1825,8 @@ namespace sgns
         return std::nullopt;
     }
 
-    void ConsensusManager::CertificateReceived( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string & )
+    void ConsensusManager::CertificateReceived( const crdt::CRDTCallbackManager::NewDataPair &new_data,
+                                                const std::string & )
     {
         const auto &[key, value] = new_data;
         Certificate certificate;
@@ -2588,7 +2589,6 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: Failed to decode consensus message", __func__ );
             return;
         }
-
         if ( decoded.has_proposal() )
         {
             ConsensusManagerLogger()->debug( "{}: decoded proposal", __func__ );
@@ -2617,7 +2617,6 @@ namespace sgns
             ConsensusManagerLogger()->error( "{}: subject account_id is empty", __func__ );
             return false;
         }
-
         if ( !ParseSubjectTypeHash( subject ) )
         {
             ConsensusManagerLogger()->error( "{}: subject subject_type_hash is invalid", __func__ );
@@ -2759,14 +2758,14 @@ namespace sgns
 
     void ConsensusManager::RecoverPendingCertificateWork()
     {
-        auto recovered = certificate_work_journal_->RecoverStaleProcessing( CERT_KEY_PATTERN,
-                                                                            std::chrono::seconds( 15 ) );
+        static std::regex PATTERN{ CERT_KEY_PATTERN.data(), CERT_KEY_PATTERN.size() };
+        auto recovered = certificate_work_journal_->RecoverStaleProcessing( PATTERN, std::chrono::seconds( 15 ) );
         if ( recovered > 0 )
         {
             ConsensusManagerLogger()->info( "{}: recovered {} stale certificate work items", __func__, recovered );
         }
 
-        auto       unfinished = certificate_work_journal_->ListUnfinished( CERT_KEY_PATTERN );
+        auto       unfinished = certificate_work_journal_->ListUnfinished( PATTERN );
         const auto now_ms     = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
