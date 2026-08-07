@@ -91,11 +91,11 @@ namespace sgns::account
 
         using RefreshCallback = std::function<void( uint64_t )>;
 
-        BurnConfig( std::shared_ptr<sgns::securecrdt::SecureCrdt>          secure_crdt,
-                    std::shared_ptr<sgns::crdt::GlobalDB>                  db,
+        BurnConfig( std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
+                    std::shared_ptr<sgns::crdt::GlobalDB>                   db,
                     std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
                     uint64_t                                                quorum_threshold,
-                    std::shared_ptr<sgns::GeniusAccount>          account,
+                    std::shared_ptr<sgns::GeniusAccount>                    account,
                     sgns::crdt::HierarchicalKey                             base_key );
 
         ~BurnConfig();
@@ -122,10 +122,9 @@ namespace sgns::account
             std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
             std::shared_ptr<sgns::crdt::GlobalDB>                   db,
             std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
-            uint64_t                                                 quorum_threshold,
-            std::shared_ptr<sgns::GeniusAccount>           account,
-            sgns::crdt::HierarchicalKey                              base_key =
-                sgns::crdt::HierarchicalKey( "burn-config" ) );
+            uint64_t                                                quorum_threshold,
+            std::shared_ptr<sgns::GeniusAccount>                    account,
+            sgns::crdt::HierarchicalKey base_key = sgns::crdt::HierarchicalKey( "burn-config" ) );
 
         /**
          * @brief Returns the currently-cached, quorum-confirmed basis-points
@@ -181,14 +180,14 @@ namespace sgns::account
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
         std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_;
-        uint64_t                                                 quorum_threshold_;
-        std::shared_ptr<sgns::GeniusAccount>           account_;
-        sgns::crdt::HierarchicalKey                              base_key_;
+        uint64_t                                                quorum_threshold_;
+        std::shared_ptr<sgns::GeniusAccount>                    account_;
+        sgns::crdt::HierarchicalKey                             base_key_;
 
         std::atomic<uint64_t> cached_basis_points_{ GENESIS_DEFAULT_BASIS_POINTS };
 
-        std::mutex                     refresh_callbacks_mutex_;
-        std::vector<RefreshCallback>   refresh_callbacks_;
+        std::mutex                   refresh_callbacks_mutex_;
+        std::vector<RefreshCallback> refresh_callbacks_;
 
         int registry_token_ = 0;
 
