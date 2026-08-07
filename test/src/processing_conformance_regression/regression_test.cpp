@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <processingbase/ProcessingManager.hpp>
+#include <processors/vulkan_gpu_probe.hpp>
 #include "testutil/processing_conformance_fixture.hpp"
 
 namespace sgns
@@ -155,11 +156,13 @@ namespace sgns
             binary_path = boost::dll::program_location().parent_path().string() + "/";
             data_path   = binary_path + "fixtures/";
 
-            // GPU probe: skip entire suite if no Vulkan device
-            // This is a placeholder — the actual probe depends on the
-            // Vulkan GPU probe API available in the processing library.
-            // For now, we attempt to create a render pass and if it fails
-            // due to missing GPU, individual tests will SKIP.
+            // GPU probe (D-05): skip the entire suite if no usable Vulkan device is present.
+            // GTEST_SKIP() inside a static SetUpTestSuite() skips every TEST_F in this class.
+            if ( !sgns::sgprocessing::HasUsableVulkanDevice() )
+            {
+                GTEST_SKIP() << "No usable Vulkan device (DISCRETE_GPU/INTEGRATED_GPU) found on "
+                                "this host; skipping RenderConformanceTest, not failing it.";
+            }
         }
     };
 
@@ -184,7 +187,7 @@ namespace sgns
 
     TEST_F( RenderConformanceTest, RenderPassFullPipeline )
     {
-        // Run full pipeline with pass-through shaders — verify output
+        // Run full pipeline with pass-through shaders — verify a real rendered-output hash.
         const std::string &json_str = PatchedJson( "regression-b-parseblocksize-model-only.json" );
         ASSERT_FALSE( json_str.empty() );
 
@@ -197,57 +200,106 @@ namespace sgns
         const auto &passes = p.get_passes();
         ASSERT_EQ( passes.size(), 1 );
 
-        // For a render pass, we may not have model-based input nodes.
-        // The ProcessingManager handles render passes via the pipeline.
-        // Skip the full pipeline test if no GPU available.
-        std::cout << "RenderPassFullPipeline: render pass definition accepted"
-                  << " (full GPU pipeline test requires Vulkan device)" << std::endl;
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:vertexData" ) );
+
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
+
+        auto pr = manager->Process( ioc, chunkhashes, model_node, output_locations );
+        ASSERT_TRUE( pr.has_value() ) << pr.error().message();
+        ASSERT_EQ( pr.value().combinedHash.size(), 32u )
+            << "Process() must produce a 32-byte SHA-256 rendered-output hash";
+
+        std::cout << "RenderPassFullPipeline: Process() executed the real Vulkan pipeline, "
+                     "combinedHash size="
+                  << pr.value().combinedHash.size() << std::endl;
     }
 
     TEST_F( RenderConformanceTest, RenderPassOutputHashDeterministic )
     {
-        // Create same render pass twice — verify definition is stable
+        // Run the same render pass definition on two separate ProcessingManager instances
+        // and assert a bit-exact matching combinedHash — a real same-node determinism check.
         const std::string &json_str = PatchedJson( "regression-b-parseblocksize-model-only.json" );
         ASSERT_FALSE( json_str.empty() );
 
         auto r1 = sgns::sgprocessing::ProcessingManager::Create( json_str );
         ASSERT_TRUE( r1.has_value() );
-
         auto r2 = sgns::sgprocessing::ProcessingManager::Create( json_str );
         ASSERT_TRUE( r2.has_value() );
 
-        const auto passes1 = r1.value()->GetProcessingData().get_passes();
-        const auto passes2 = r2.value()->GetProcessingData().get_passes();
+        sgns::ModelNode model_node1;
+        model_node1.set_source( std::string( "input:vertexData" ) );
+        auto                               ioc1 = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes1;
+        std::vector<std::string>          output_locations1;
+        auto pr1 = r1.value()->Process( ioc1, chunkhashes1, model_node1, output_locations1 );
+        ASSERT_TRUE( pr1.has_value() ) << "First run: " << pr1.error().message();
 
-        ASSERT_EQ( passes1.size(), passes2.size() );
-        ASSERT_EQ( passes1[0].get_type(), passes2[0].get_type() );
+        sgns::ModelNode model_node2;
+        model_node2.set_source( std::string( "input:vertexData" ) );
+        auto                               ioc2 = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes2;
+        std::vector<std::string>          output_locations2;
+        auto pr2 = r2.value()->Process( ioc2, chunkhashes2, model_node2, output_locations2 );
+        ASSERT_TRUE( pr2.has_value() ) << "Second run: " << pr2.error().message();
 
-        std::cout << "RenderPassOutputHashDeterministic: render pass definition stable across creations"
+        ASSERT_EQ( pr1.value().combinedHash, pr2.value().combinedHash )
+            << "Same render pass definition must produce a bit-exact matching output hash";
+
+        std::cout << "RenderPassOutputHashDeterministic: two independent Process() runs "
+                     "produced identical combinedHash"
                   << std::endl;
     }
 
     TEST_F( RenderConformanceTest, RenderPassTeardownVerified )
     {
-        // Create render pass, verify it can be created twice (implies teardown works)
+        // Process() on two separate manager instances built from the same JSON, in sequence.
+        // The second call succeeding proves the first call's RunTeardown() released Vulkan
+        // resources without leaking, mirroring CancellationConformanceTest's
+        // ResourcesCleanedUpAfterProcess pattern.
         const std::string &json_str = PatchedJson( "regression-b-parseblocksize-model-only.json" );
         ASSERT_FALSE( json_str.empty() );
 
         {
             auto r = sgns::sgprocessing::ProcessingManager::Create( json_str );
             ASSERT_TRUE( r.has_value() ) << "First render pass creation should succeed";
+
+            sgns::ModelNode model_node;
+            model_node.set_source( std::string( "input:vertexData" ) );
+            auto                               ioc = std::make_shared<boost::asio::io_context>();
+            std::vector<std::vector<uint8_t>> chunkhashes;
+            std::vector<std::string>          output_locations;
+            auto pr = r.value()->Process( ioc, chunkhashes, model_node, output_locations );
+            ASSERT_TRUE( pr.has_value() ) << "First Process() should succeed: " << pr.error().message();
         }
 
         {
             auto r = sgns::sgprocessing::ProcessingManager::Create( json_str );
             ASSERT_TRUE( r.has_value() ) << "Second render pass creation should succeed (implies teardown worked)";
+
+            sgns::ModelNode model_node;
+            model_node.set_source( std::string( "input:vertexData" ) );
+            auto                               ioc = std::make_shared<boost::asio::io_context>();
+            std::vector<std::vector<uint8_t>> chunkhashes;
+            std::vector<std::string>          output_locations;
+            auto pr = r.value()->Process( ioc, chunkhashes, model_node, output_locations );
+            ASSERT_TRUE( pr.has_value() )
+                << "Second Process() should succeed, proving the first call's teardown released "
+                   "Vulkan resources without leaking: "
+                << pr.error().message();
         }
 
-        std::cout << "RenderPassTeardownVerified: two consecutive render pass creations succeeded" << std::endl;
+        std::cout << "RenderPassTeardownVerified: two consecutive Process() runs both succeeded" << std::endl;
     }
 
     TEST_F( RenderConformanceTest, MoltenVkEquivalentPath )
     {
-        // Render pass definition must work regardless of Vulkan implementation
+        // "Equivalent" is proven by exercising the identical platform-agnostic
+        // Vulkan/RenderProcessor code path on whichever backend (native Vulkan or MoltenVK)
+        // the host provides — per 09-CONTEXT.md's Deferred Ideas, no separate
+        // MoltenVK-specific fixture is needed or in scope.
         const std::string &json_str = PatchedJson( "regression-b-parseblocksize-model-only.json" );
         ASSERT_FALSE( json_str.empty() );
 
@@ -256,12 +308,19 @@ namespace sgns
             << "Render pass should parse on any Vulkan implementation (native or MoltenVK): "
             << r.error().message();
 
-        const auto &manager = r.value();
-        const auto  passes  = manager->GetProcessingData().get_passes();
-        ASSERT_EQ( passes.size(), 1 );
-        ASSERT_EQ( passes[0].get_type(), sgns::PassType::RENDER );
+        sgns::ModelNode model_node;
+        model_node.set_source( std::string( "input:vertexData" ) );
+        auto                               ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>          output_locations;
 
-        std::cout << "MoltenVkEquivalentPath: render pass parses correctly" << std::endl;
+        auto pr = r.value()->Process( ioc, chunkhashes, model_node, output_locations );
+        ASSERT_TRUE( pr.has_value() ) << pr.error().message();
+        ASSERT_EQ( pr.value().combinedHash.size(), 32u );
+
+        std::cout << "MoltenVkEquivalentPath: Process() executed successfully on whichever "
+                     "Vulkan implementation this host provides"
+                  << std::endl;
     }
 
 } // namespace sgns
