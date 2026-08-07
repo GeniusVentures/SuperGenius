@@ -2057,7 +2057,7 @@ namespace sgns
             {
                 return;
             }
-            if ( state.quorum_reached || state.seen_voters.find( voter_id ) != state.seen_voters.end() )
+            if ( state.seen_voters.find( voter_id ) != state.seen_voters.end() )
             {
                 return;
             }
@@ -2081,17 +2081,13 @@ namespace sgns
                 return;
             }
 
-            const auto *validator = registry_->FindValidator( proposal_registry, voter_id );
-            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
+            state.votes.push_back( vote );
+            state.seen_voters.insert( voter_id );
+            if ( state.quorum_reached )
             {
-                ConsensusManagerLogger()->debug( "{}: ignored vote from inactive validator voter_id={}",
-                                                 __func__,
-                                                 voter_id.substr( 0, 8 ) );
                 return;
             }
 
-            state.votes.push_back( vote );
-            state.seen_voters.insert( voter_id );
             // ponytail: recomputing the tally makes admission O(votes^2); restore an incremental tally if validator
             // sets grow enough for this to matter.
             auto tally = EvaluateQuorum( proposal, state.votes, proposal_registry );
