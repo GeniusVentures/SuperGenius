@@ -1486,7 +1486,8 @@ namespace sgns
                     continue;
                 }
                 if ( multisig::VerifyPayloadSignature( signature.validator_id(),
-                                                       signature.signature(),
+                                                       std::vector<uint8_t>( signature.signature().begin(),
+                                                                              signature.signature().end() ),
                                                        signing_bytes.value() ) )
                 {
                     logger_->info( "{}: genesis update verified", __func__ );
