@@ -2,6 +2,8 @@ addtest(processing_dispatch_test
     processing_dispatch_test.cpp
 )
 
+set_tests_properties( processing_dispatch_test PROPERTIES WORKING_DIRECTORY "$<TARGET_FILE_DIR:processing_dispatch_test>" )
+
 target_include_directories(processing_dispatch_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(processing_dispatch_test
