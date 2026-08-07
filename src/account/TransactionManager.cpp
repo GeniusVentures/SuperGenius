@@ -2673,21 +2673,6 @@ namespace sgns
         return nullptr;
     }
 
-    std::shared_ptr<GeniusTransaction> TransactionManager::GetTransactionByNonceAndAddress(
-        uint64_t           nonce,
-        const std::string &address ) const
-    {
-        std::shared_lock<std::shared_mutex> tx_lock( tx_mutex_m );
-        for ( const auto &[_, tracked] : tx_processed_m )
-        {
-            if ( tracked.tx && ( tracked.cached_nonce == nonce ) && ( tracked.tx->GetSrcAddress() == address ) )
-            {
-                return tracked.tx;
-            }
-        }
-        return nullptr;
-    }
-
     std::optional<TransactionManager::TrackedTx> TransactionManager::GetTrackedTxByNonceAndAddress(
         uint64_t           nonce,
         const std::string &address ) const
@@ -2902,17 +2887,6 @@ namespace sgns
         return maybe_tombstones;
     }
 
-    bool TransactionManager::ShouldReplaceTransaction( const GeniusTransaction &existing_tx,
-                                                       const GeniusTransaction &new_tx ) const
-    {
-        m_logger->debug( "{}: Checking if new transaction {} should replace existing one {}",
-                         __func__,
-                         new_tx.GetHash(),
-                         existing_tx.GetHash() );
-
-        return new_tx.GetHash() < existing_tx.GetHash();
-    }
-
     uint64_t TransactionManager::GetCurrentTimestamp()
     {
         // Get current time in milliseconds since epoch
@@ -3050,30 +3024,41 @@ namespace sgns
 
         m_logger->debug( "Verifying if we have a conflicting transaction {}", key );
 
-        auto conflicting_tx = GetConflictingTransaction( *new_tx );
+        auto conflicting_txs = GetConflictingTransactions( *new_tx );
 
-        if ( conflicting_tx.has_value() )
+        if ( !conflicting_txs.empty() )
         {
-            m_logger->warn( "Found conflicting transaction that passed the FILTER with hash: {}",
-                            conflicting_tx.value()->GetHash() );
-            std::unique_lock tx_lock( tx_mutex_m );
-            auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
-
-            // No need to check if not found because we already found it on GetConflictingTransaction
-
-            if ( it->second.status == TransactionStatus::CONFIRMED )
+            bool has_confirmed_conflict = false;
             {
-                m_logger->debug( "Conflicting transaction is already CONFIRMED, not adding incoming transaction{}",
+                std::shared_lock tx_lock( tx_mutex_m );
+                has_confirmed_conflict = std::any_of(
+                    conflicting_txs.begin(),
+                    conflicting_txs.end(),
+                    [&]( const auto &conflict )
+                    {
+                        const auto it = tx_processed_m.find( GetTransactionPath( conflict->GetHash() ) );
+                        return it != tx_processed_m.end() && it->second.status == TransactionStatus::CONFIRMED;
+                    } );
+            }
+            if ( has_confirmed_conflict )
+            {
+                m_logger->debug( "A conflicting transaction is already CONFIRMED, not adding incoming transaction {}",
                                  key );
-                tx_lock.unlock();
                 BOOST_OUTCOME_TRY( ChangeTransactionState( new_tx, TransactionStatus::FAILED ) );
-                tx_lock.lock();
                 return outcome::failure( boost::system::error_code{} );
             }
-            m_logger->warn( "Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
-                            conflicting_tx.value()->GetHash() );
-            tx_lock.unlock();
-            BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::VERIFYING ) );
+            for ( const auto &conflict : conflicting_txs )
+            {
+                const auto tracked = GetTrackedTxByHash( conflict->GetHash() );
+                if ( !tracked.has_value() || tracked->status == TransactionStatus::FAILED ||
+                     tracked->status == TransactionStatus::VERIFYING )
+                {
+                    continue;
+                }
+                m_logger->warn( "Setting conflicting transaction to VERIFYING since it's not confirmed: {}",
+                                conflict->GetHash() );
+                BOOST_OUTCOME_TRY( ChangeTransactionState( conflict, TransactionStatus::VERIFYING ) );
+            }
         }
 
         m_logger->debug( "Checking if the transaction has a valid certificate to be confirmed {}", key );
@@ -3085,12 +3070,17 @@ namespace sgns
         {
             m_logger->debug( "Transaction has a valid certificate, marking as CONFIRMED {}", key );
             next_tx_state = TransactionStatus::CONFIRMED;
-            if ( conflicting_tx.has_value() )
+            for ( const auto &conflict : conflicting_txs )
             {
+                const auto tracked = GetTrackedTxByHash( conflict->GetHash() );
+                if ( !tracked.has_value() || tracked->status == TransactionStatus::FAILED )
+                {
+                    continue;
+                }
                 m_logger->warn(
                     "Setting conflicting transaction to FAILED because the new has a certificate and it doesn't: {}",
-                    conflicting_tx.value()->GetHash() );
-                BOOST_OUTCOME_TRY( ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED ) );
+                    conflict->GetHash() );
+                BOOST_OUTCOME_TRY( ChangeTransactionState( conflict, TransactionStatus::FAILED ) );
             }
         }
 
@@ -3261,16 +3251,20 @@ namespace sgns
         return outcome::failure( std::errc::no_such_file_or_directory );
     }
 
-    outcome::result<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransaction(
+    std::vector<std::shared_ptr<GeniusTransaction>> TransactionManager::GetConflictingTransactions(
         const GeniusTransaction &element ) const
     {
-        auto tx = GetTransactionByNonceAndAddress( element.GetNonce(), element.GetSrcAddress() );
-        if ( tx && tx->GetHash() != element.GetHash() )
+        std::vector<std::shared_ptr<GeniusTransaction>> conflicts;
+        std::shared_lock                                tx_lock( tx_mutex_m );
+        for ( const auto &[_, tracked] : tx_processed_m )
         {
-            return tx;
+            if ( tracked.tx && tracked.cached_nonce == element.GetNonce() &&
+                 tracked.tx->GetSrcAddress() == element.GetSrcAddress() && tracked.tx->GetHash() != element.GetHash() )
+            {
+                conflicts.push_back( tracked.tx );
+            }
         }
-
-        return outcome::failure( std::errc::no_such_file_or_directory );
+        return conflicts;
     }
 
     bool TransactionManager::HasConfirmedInputConflict( const std::shared_ptr<GeniusTransaction> &candidate_tx ) const
@@ -3366,7 +3360,8 @@ namespace sgns
                                            full_node_m,
                                            __func__,
                                            tx_hash );
-        auto tx = GetTransactionByHash( tx_hash );
+        auto tx                             = GetTransactionByHash( tx_hash );
+        bool reconstructed_from_certificate = false;
         if ( !tx )
         {
             // CONFLICT-01 / NONCE-01: Standalone validator without local transaction state.
@@ -3426,27 +3421,74 @@ namespace sgns
                 metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return ConsensusManager::Check::Approve;
             }
+            reconstructed_from_certificate = true;
+        }
 
-            auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
-            if ( result.has_error() )
+        auto conflicting_txs = GetConflictingTransactions( *tx );
+        for ( const auto &conflict : conflicting_txs )
+        {
+            auto tracked = GetTrackedTxByHash( conflict->GetHash() );
+            if ( tracked.has_value() && tracked->status == TransactionStatus::CONFIRMED )
             {
-                TransactionManagerLogger()->error(
-                    "[{} - full: {}] {}: Failed to confirm certificate-deserialized tx for hash {}: {}",
+                TransactionManagerLogger()->critical(
+                    "[{} - full: {}] {}: Conflicting transaction {} is already CONFIRMED while processing "
+                    "certificate winner {}; refusing contradictory finality",
                     account_m->GetAddress().substr( 0, 8 ),
                     full_node_m,
                     __func__,
-                    tx_hash,
+                    conflict->GetHash(),
+                    tx_hash );
+                return ConsensusManager::Check::Stalled;
+            }
+        }
+
+        for ( const auto &conflict : conflicting_txs )
+        {
+            auto tracked = GetTrackedTxByHash( conflict->GetHash() );
+            if ( tracked.has_value() && tracked->status == TransactionStatus::FAILED )
+            {
+                continue;
+            }
+            TransactionManagerLogger()->warn(
+                "[{} - full: {}] {}: Failing transaction {} superseded by certified transaction {}",
+                account_m->GetAddress().substr( 0, 8 ),
+                full_node_m,
+                __func__,
+                conflict->GetHash(),
+                tx_hash );
+            if ( auto result = ChangeTransactionState( conflict, TransactionStatus::FAILED ); result.has_error() )
+            {
+                TransactionManagerLogger()->error(
+                    "[{} - full: {}] {}: Failed to mark superseded transaction {} as FAILED: {}",
+                    account_m->GetAddress().substr( 0, 8 ),
+                    full_node_m,
+                    __func__,
+                    conflict->GetHash(),
                     result.error().message() );
-                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
                 return outcome::failure( result.error() );
             }
+        }
 
-            // METRICS-01: Certificate fallback deserialization and confirmation succeeded
+        if ( auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED ); result.has_error() )
+        {
+            TransactionManagerLogger()->error( "[{} - full: {}] {}: Failed to confirm certified transaction {}: {}",
+                                               account_m->GetAddress().substr( 0, 8 ),
+                                               full_node_m,
+                                               __func__,
+                                               tx_hash,
+                                               result.error().message() );
+            if ( reconstructed_from_certificate )
+            {
+                metrics_cert_fallback_failure_.fetch_add( 1, std::memory_order_relaxed );
+            }
+            return outcome::failure( result.error() );
+        }
+
+        if ( reconstructed_from_certificate )
+        {
             metrics_cert_fallback_success_.fetch_add( 1, std::memory_order_relaxed );
-
             TransactionManagerLogger()->info(
-                "[{} - full: {}] {}: Standalone validator confirmed tx {} from certificate "
-                "proposal_id={}",
+                "[{} - full: {}] {}: Standalone validator confirmed tx {} from certificate proposal_id={}",
                 account_m->GetAddress().substr( 0, 8 ),
                 full_node_m,
                 __func__,
@@ -3455,105 +3497,11 @@ namespace sgns
         }
         else
         {
-            // TRACK-01: Confirm via ChangeTransactionState lifecycle (promote temp embedded-tx entry)
-            {
-                auto result = ChangeTransactionState( tx, TransactionStatus::CONFIRMED );
-                if ( result.has_error() )
-                {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] {}: Failed to change transaction state to CONFIRMED for hash {}: {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        __func__,
-                        tx_hash,
-                        result.error().message() );
-                    return outcome::failure( result.error() );
-                }
-            }
             TransactionManagerLogger()->debug( "[{} - full: {}] {}: Transaction {} confirmed by consensus",
                                                account_m->GetAddress().substr( 0, 8 ),
                                                full_node_m,
                                                __func__,
                                                tx_hash );
-
-            TransactionManagerLogger()->debug( "[{} - full: {}] {}: Checking for conflicting transaction with {}",
-                                               account_m->GetAddress().substr( 0, 8 ),
-                                               full_node_m,
-                                               __func__,
-                                               tx_hash );
-
-            auto conflicting_tx = GetConflictingTransaction( *tx );
-
-            if ( conflicting_tx.has_value() )
-            {
-                TransactionManagerLogger()->warn( "[{} - full: {}] Found conflicting transaction: {}",
-                                                  account_m->GetAddress().substr( 0, 8 ),
-                                                  full_node_m,
-                                                  conflicting_tx.value()->GetHash() );
-                std::unique_lock tx_lock( tx_mutex_m );
-                auto             it = tx_processed_m.find( GetTransactionPath( conflicting_tx.value()->GetHash() ) );
-
-                if ( it->second.status == TransactionStatus::CONFIRMED )
-                {
-                    TransactionManagerLogger()->error(
-                        "[{} - full: {}] Conflicting transaction {} is CONFIRMED as well as incoming {}, not sure what to do {}",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        conflicting_tx.value()->GetHash(),
-                        tx_hash );
-                    tx_lock.unlock();
-                    if ( ShouldReplaceTransaction( *conflicting_tx.value(), *tx ) )
-                    {
-                        auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
-                        if ( result.has_error() )
-                        {
-                            TransactionManagerLogger()->error(
-                                "[{} - full: {}] {}: Failed to change conflicting transaction state to FAILED for current tx {}: {}",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                __func__,
-                                conflicting_tx.value()->GetHash(),
-                                result.error().message() );
-                        }
-                    }
-                    else
-                    {
-                        auto result = ChangeTransactionState( tx, TransactionStatus::FAILED );
-                        if ( result.has_error() )
-                        {
-                            TransactionManagerLogger()->error(
-                                "[{} - full: {}] {}: Failed to change transaction state to FAILED for new tx {}: {}",
-                                account_m->GetAddress().substr( 0, 8 ),
-                                full_node_m,
-                                __func__,
-                                tx_hash,
-                                result.error().message() );
-                        }
-                        return outcome::failure( result.error() );
-                    }
-                }
-                else
-                {
-                    TransactionManagerLogger()->warn(
-                        "[{} - full: {}] Setting conflicting transaction {} to FAILED since the new one {} is confirmed: ",
-                        account_m->GetAddress().substr( 0, 8 ),
-                        full_node_m,
-                        conflicting_tx.value()->GetHash(),
-                        tx_hash );
-                    tx_lock.unlock();
-                    auto result = ChangeTransactionState( conflicting_tx.value(), TransactionStatus::FAILED );
-                    if ( result.has_error() )
-                    {
-                        TransactionManagerLogger()->error(
-                            "[{} - full: {}] {}: Failed to change transaction state to FAILED for hash {}: {}",
-                            account_m->GetAddress().substr( 0, 8 ),
-                            full_node_m,
-                            __func__,
-                            tx_hash,
-                            result.error().message() );
-                    }
-                }
-            }
         }
 
         auto tx_hash_bin = base::Hash256::fromReadableString( tx_hash );
