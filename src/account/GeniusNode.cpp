@@ -1889,6 +1889,16 @@ namespace sgns
 
         ShutdownForDestruction();
 
+        // GraphSync retains PubSub's libp2p host, whose sockets are backed by
+        // PubSub's io_context. GossipPubSub::Stop() releases its own references
+        // to both objects, so keep the context alive until GraphSync releases
+        // the last host reference and destroys those sockets.
+        std::shared_ptr<boost::asio::io_context> pubsub_context_keepalive;
+        if ( pubsub_ )
+        {
+            pubsub_context_keepalive = pubsub_->GetAsioContext();
+        }
+
         // Signal PubSub to stop, but do not destroy it yet: the io_context threads
         // below may still be running in-flight asio/libp2p completion handlers that
         // reference pubsub_/bitswap_. Resetting those objects before the io_context
@@ -1937,6 +1947,7 @@ namespace sgns
         // still alive. This also tears down AccountMessenger subscriptions before
         // the io_context is implicitly destroyed with the remaining members.
         ReleaseRuntimeMembersAfterIoStopped();
+        pubsub_context_keepalive.reset();
 
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
