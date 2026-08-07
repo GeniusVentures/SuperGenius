@@ -58,10 +58,12 @@ namespace sgns::securecrdt
 {
     class SecureCrdt;
 }
+
 namespace sgns::trustedpeer
 {
     class TrustedPeerRegistry;
 }
+
 namespace sgns::account
 {
     class BurnConfig;
@@ -829,13 +831,13 @@ namespace sgns
         /// Starts the catchup scan watcher at bridge init (default true). Set false in sgns_config.json to disable.
         bool rpc_catchup_ = true;
 
-        std::vector<std::string>                 bootstrap_peers_;
-        std::vector<std::string>                 bootstrap_fullnodes_;
-        std::vector<std::string>                 trusted_peers_genesis_;   ///< Genesis trusted-peer list (BURN-02/BURN-03).
-        std::string                               bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
+        std::vector<std::string> bootstrap_peers_;
+        std::vector<std::string> bootstrap_fullnodes_;
+        std::vector<std::string> trusted_peers_genesis_;     ///< Genesis trusted-peer list (BURN-02/BURN-03).
+        std::string              bootstrapper_node_address_; ///< Genesis bootstrapper address (BURN-02/BURN-03).
         /// Quorum threshold for TrustedPeerRegistry membership changes; 0 = unset (defaulted to the
         /// majority floor for the parsed genesis peer count in LoadSgnsConfig()).
-        uint64_t                                 trusted_peer_quorum_threshold_ = 0;
+        uint64_t trusted_peer_quorum_threshold_ = 0;
         /// Quorum threshold for BurnConfig updates; 0 = unset (defaulted the same way).
         uint64_t                                 burn_config_quorum_threshold_ = 0;
         std::vector<libp2p::peer::PeerInfo>      bootstrap_fullnode_infos_;
@@ -845,9 +847,9 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
-        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;           ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
-        std::shared_ptr<sgns::account::BurnConfig>              burn_config_;           ///< BURN-02/BURN-03: live burn-rate source.
+        std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
 
         std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
@@ -1010,8 +1012,7 @@ namespace sgns
          * @param[in] deconfigure_account Whether to clear account database callbacks after stopping services.
          * @param[in] release_members Whether to release service owners immediately after stopping them.
          */
-        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account,
-                                                            bool release_members = true );
+        outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
 
         /**
          * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
@@ -1089,8 +1090,8 @@ namespace sgns
         static constexpr size_t                   DEFAULT_IO_THREADS = 4;                 ///< Default IO thread count.
         size_t                                    io_thread_count_{ DEFAULT_IO_THREADS }; ///< IO thread count.
         std::vector<std::thread>                  io_threads_;                            ///< Threads running @ref io_.
-        std::thread                               upnp_thread;        ///< Background UPnP refresh thread.
-        std::atomic<bool>                         stop_upnp{ false }; ///< UPnP thread stop flag.
+        std::thread                               upnp_thread;                      ///< Background UPnP refresh thread.
+        std::atomic<bool>                         stop_upnp{ false };               ///< UPnP thread stop flag.
         std::string                               base58key_;                       ///< Base58 key suffix for DB paths.
         std::shared_ptr<libp2p::basic::Scheduler> scheduler_;                       ///< libp2p scheduler.
         std::shared_ptr<ipfs_lite::ipfs::graphsync::RequestIdGenerator> generator_; ///< GraphSync request ID generator.

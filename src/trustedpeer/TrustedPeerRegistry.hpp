@@ -123,10 +123,9 @@ namespace sgns::trustedpeer
         static outcome::result<std::shared_ptr<TrustedPeerRegistry>> New(
             std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
             std::vector<std::string>                      genesis_peers,
-            std::string                                    bootstrapper_address,
-            uint64_t                                        quorum_threshold,
-            sgns::crdt::HierarchicalKey                     base_key =
-                sgns::crdt::HierarchicalKey( "trusted-peer-registry" ) );
+            std::string                                   bootstrapper_address,
+            uint64_t                                      quorum_threshold,
+            sgns::crdt::HierarchicalKey base_key = sgns::crdt::HierarchicalKey( "trusted-peer-registry" ) );
 
         /**
          * @brief Seeds the genesis trusted-peer list: proposes the genesis
@@ -140,7 +139,7 @@ namespace sgns::trustedpeer
          *         SecureCrdt call's error.
          */
         outcome::result<void> SeedGenesis( const std::vector<std::string> &genesis_peers,
-                                            const std::vector<uint8_t>     &ephemeral_signature );
+                                           const std::vector<uint8_t>     &ephemeral_signature );
 
         /**
          * @brief Proposes a membership-change value (new full peer list).
@@ -156,7 +155,7 @@ namespace sgns::trustedpeer
          * @return outcome::success on success, or the failing SecureCrdt call's error.
          */
         outcome::result<void> SignMembershipChange( const std::string          &signer_address,
-                                                     const std::vector<uint8_t> &signature );
+                                                    const std::vector<uint8_t> &signature );
 
         /**
          * @brief Attempts to confirm the currently-proposed value against
@@ -207,10 +206,10 @@ namespace sgns::trustedpeer
         std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt_;
         sgns::crdt::HierarchicalKey                   base_key_;
         std::string                                   bootstrapper_address_;
-        uint64_t                                       quorum_threshold_;
+        uint64_t                                      quorum_threshold_;
 
         mutable std::shared_mutex cache_mutex_;
-        std::vector<std::string> cached_peers_;
+        std::vector<std::string>  cached_peers_;
         bool                      genesis_confirmed_ = false;
         int                       registry_token_    = 0;
 

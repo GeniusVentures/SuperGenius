@@ -1868,12 +1868,6 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
-
-        // Stop every GraphSync user while PubSub's host and reactor are still
-        // running. Keep the owning objects alive until the io_context threads
-        // are joined below, but make the eventual Network destructor inert by
-        // closing its peer streams now rather than after PubSub::Stop().
-
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();

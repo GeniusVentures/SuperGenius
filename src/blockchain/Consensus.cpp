@@ -141,23 +141,6 @@ namespace sgns
     ConsensusManager::~ConsensusManager()
     {
         Close();
-        ConsensusManagerLogger()->debug(
-            "{}: teardown state subscription_valid={} pubsub_refs={} db_refs={} registry_refs={} "
-            "journal_refs={} handlers={}/{}/{} proposals={} slots={} pending={} votes={} timer_joinable={}",
-            __func__,
-            consensus_subs_future_.valid(),
-            pubsub_.use_count(),
-            db_.use_count(),
-            registry_.use_count(),
-            certificate_work_journal_.use_count(),
-            subject_handlers_.size(),
-            certificate_subject_handlers_.size(),
-            proposal_cleanup_handlers_.size(),
-            proposals_.size(),
-            slot_states_.size(),
-            pending_entries_.size(),
-            pending_votes_.size(),
-            round_timer_.joinable() );
         ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
