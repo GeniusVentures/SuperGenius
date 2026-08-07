@@ -19,6 +19,15 @@ TEST( HexUtil, Hex )
     ASSERT_EQ( hexed, "00010204081020FF"s );
 }
 
+TEST( HexUtil, IsHexAddress )
+{
+    EXPECT_TRUE( IsHexAddress( std::string( 128, 'a' ) ) );
+    EXPECT_TRUE( IsHexAddress( std::string( 128, '0' ) ) );
+    EXPECT_FALSE( IsHexAddress( std::string( 127, 'a' ) ) );
+    EXPECT_FALSE( IsHexAddress( std::string( 128, 'A' ) ) );
+    EXPECT_FALSE( IsHexAddress( std::string( 128, 'g' ) ) );
+}
+
 /**
  * @given Hexencoded string of even length
  * @when unhex

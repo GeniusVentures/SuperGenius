@@ -7,37 +7,11 @@
  */
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 
-#include <cctype>
 #include <system_error>
 #include <unordered_set>
 
+#include "base/hexutil.hpp"
 #include "securecrdt/QuorumThresholdValidation.hpp"
-
-namespace
-{
-    constexpr size_t kTrustedPeerAddressHexLength =
-        128; ///< Mirrors GeniusAccount::PUBLIC_KEY_HEX_LENGTH (src/account/GeniusAccount.cpp:38).
-
-    bool IsHexAddress( const std::string &address )
-    {
-        if ( address.size() != kTrustedPeerAddressHexLength )
-        {
-            return false;
-        }
-        for ( const auto &ch : address )
-        {
-            if ( !std::isxdigit( static_cast<unsigned char>( ch ) ) )
-            {
-                return false;
-            }
-            if ( std::isalpha( static_cast<unsigned char>( ch ) ) && !std::islower( static_cast<unsigned char>( ch ) ) )
-            {
-                return false;
-            }
-        }
-        return true;
-    }
-} // namespace
 
 namespace sgns::trustedpeer
 {
@@ -126,7 +100,7 @@ namespace sgns::trustedpeer
         std::unordered_set<std::string> unique_entries;
         for ( const auto &entry : entries )
         {
-            if ( !IsHexAddress( entry ) )
+            if ( !sgns::base::IsHexAddress( entry ) )
             {
                 return false;
             }

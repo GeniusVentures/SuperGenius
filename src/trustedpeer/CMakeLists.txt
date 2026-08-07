@@ -4,5 +4,7 @@ add_library(trustedpeer
 target_link_libraries(trustedpeer
     PUBLIC
     securecrdt
+    PRIVATE
+    hexutil
 )
 supergenius_install(trustedpeer)
