@@ -64,6 +64,12 @@ Last activity: 2026-07-24 -- Phase 11 execution started
 - Review `.planning/ROADMAP.md` (Milestone v1.1 section) and `.planning/REQUIREMENTS.md` traceability
 - Run `/gsd:plan-phase 8` to begin planning the MultiSig Primitive phase
 
+## Accumulated Context
+
+### Pending Todos
+
+- 3 pending — see `.planning/todos/pending/`
+
 ### v1.0 History
 
 v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
