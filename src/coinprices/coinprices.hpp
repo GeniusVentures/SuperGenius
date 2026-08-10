@@ -47,6 +47,9 @@ namespace sgns
             int64_t to);
 
     private:
+        outcome::result<std::map<std::string, double>> getCurrentPricesOnce(
+            const std::vector<std::string>& tokenIds);
+
         base::Logger m_logger = sgns::base::createLogger( "CoinPrices" );
     };
 }

@@ -73,14 +73,14 @@ namespace sgns::crdt
          * @param[in] key Logical key to update.
          * @param[in] lease Processing lease duration. Negative values are treated as zero.
          */
-        void MarkProcessing( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 5 ) );
+        void MarkProcessing( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 3 ) );
 
         /**
          * @brief Marks an existing key as stalled with a lease.
          * @param[in] key Logical key to update.
          * @param[in] lease Stall lease duration. Negative values are treated as zero.
          */
-        void MarkStalled( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 5 ) );
+        void MarkStalled( const std::string &key, std::chrono::milliseconds lease = std::chrono::minutes( 3 ) );
 
         /**
          * @brief Removes a key from the journal.

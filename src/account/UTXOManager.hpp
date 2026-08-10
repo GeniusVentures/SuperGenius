@@ -4,7 +4,8 @@
  * @date       2026-01-20
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_UTXO_MANAGER_HPP
+#define SGNS_UTXO_MANAGER_HPP
 
 #include "GeniusUTXO.hpp"
 #include "UTXOStructs.hpp"
@@ -50,8 +51,18 @@ namespace sgns
          */
         enum class UTXOState : uint8_t
         {
-            UTXO_READY,   ///< UTXO is unspent and available for use
-            UTXO_CONSUMED ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_READY    = 0, ///< UTXO is unspent and available for use
+            UTXO_CONSUMED = 1, ///< UTXO has been consumed by a transaction and is no longer available
+            UTXO_RESERVED = 2  ///< Burn UTXO with mint in consensus — blocks local reuse but allows voting
+        };
+
+        /**
+         * @brief Type classification for UTXOs to distinguish standard UTXOs from cross-chain bridge burns.
+         */
+        enum class UTXOType : uint8_t
+        {
+            UTXO_NORMAL = 0, ///< Standard UTXO from local transfers or mints
+            UTXO_BRIDGE = 1  ///< UTXO from cross-chain bridge burn event
         };
 
         /**
@@ -69,6 +80,7 @@ namespace sgns
             uint64_t                     created_epoch{ 0 };             ///< Epoch when the UTXO was created
             std::optional<uint64_t>      spent_epoch;   ///< Epoch when the UTXO was consumed, if applicable
             std::optional<base::Hash256> spent_by_txid; ///< Transaction ID that consumed this UTXO, if applicable
+            UTXOType                     type{ UTXOType::UTXO_NORMAL }; ///< Type classification for the UTXO
         };
 
         /**
@@ -99,16 +111,11 @@ namespace sgns
 
         /**
          * @brief       Construct a new UTXOManager object
-         * @param[in]   is_full_node True if the node is a full node
          * @param[in]   address The address of the node
          * @param[in]   sign The signer method
          * @param[in]   verify_signature The verifier method
          */
-        UTXOManager( const bool          is_full_node,
-                     std::string         address,
-                     SignFunc            sign,
-                     VerifySignatureFunc verify_signature ) :
-            is_full_node_( is_full_node ),
+        UTXOManager( std::string address, SignFunc sign, VerifySignatureFunc verify_signature ) :
             address_( std::move( address ) ),
             sign_( std::move( sign ) ),
             verify_signature_( std::move( verify_signature ) )
@@ -147,9 +154,12 @@ namespace sgns
          * @brief       Add a new UTXO to the account
          * @param[in]   new_utxo The new UTXO to be added
          * @param       address Address to add the UTXO to
+         * @param[in]   type UTXO type classification (default UTXO_NORMAL for standard UTXOs)
          * @return      true if the UTXO was added, false otherwise
          */
-        outcome::result<bool> PutUTXO( GeniusUTXO new_utxo, const std::string &address );
+        outcome::result<bool> PutUTXO( GeniusUTXO         new_utxo,
+                                       const std::string &address,
+                                       UTXOType           type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Adds a new UTXO to the account using the manager's default address.
@@ -175,18 +185,34 @@ namespace sgns
          * @brief       Consume UTXOs from the account
          * @param[in]   infos Vector of UTXO information to be consumed
          * @param       address Address to consume UTXOs from
+         * @param[in]   type Only consume UTXOs of this type (default NORMAL)
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos, const std::string &address );
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                            const std::string                &address,
+                                            UTXOType                          type = UTXOType::UTXO_NORMAL );
+
+        /**
+         * @brief Restores previously consumed inputs when their consuming transaction is reverted.
+         * @param[in] infos Inputs whose outpoints should become spendable again.
+         * @param[in] address Expected owner of the consumed inputs.
+         * @param[in] type Expected UTXO type.
+         * @return Success when every input was consumed by this owner and was restored.
+         */
+        outcome::result<void> RestoreConsumedUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                                    const std::string                &address,
+                                                    UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Consume UTXOs from the default owner address tracked by this manager.
          * @param[in]   infos Vector of UTXO information to be consumed
+         * @param[in]   type Only consume UTXOs of this type (default NORMAL)
          * @return      true if all UTXOs were consumed, false otherwise
          */
-        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos )
+        outcome::result<bool> ConsumeUTXOs( const std::vector<InputUTXOInfo> &infos,
+                                            UTXOType                          type = UTXOType::UTXO_NORMAL )
         {
-            return ConsumeUTXOs( infos, address_ );
+            return ConsumeUTXOs( infos, address_, type );
         }
 
         /**
@@ -206,13 +232,19 @@ namespace sgns
         }
 
         /**
-         * @brief       Get UTXOs for a specific address that are reserved under a given reservation ID
+         * @brief       Get all unconsumed UTXOs for a specific address.
          * @param[in]   address The address to get UTXOs for
-         * @param[in]   reservation_id The reservation ID to filter UTXOs by
-         * @return      The vector of UTXOs for the address under the reservation ID
+         * @return      Ready and locally reserved UTXOs for the address
          */
-        std::vector<GeniusUTXO> GetUTXOsForReservation( const std::string &address,
-                                                        const std::string &reservation_id ) const;
+        std::vector<GeniusUTXO> GetUnconsumedUTXOs( const std::string &address ) const;
+
+        /**
+         * @brief Returns an unconsumed UTXO by its exact outpoint.
+         * @param[in] txid Transaction hash that created the UTXO
+         * @param[in] output_idx Output index within the transaction
+         * @return The UTXO when present and not consumed, otherwise std::nullopt
+         */
+        std::optional<GeniusUTXO> GetUnconsumedUTXO( const base::Hash256 &txid, uint32_t output_idx ) const;
 
         /**
          * @brief       Get all UTXOs tracked by the manager, grouped by owner address
@@ -260,15 +292,21 @@ namespace sgns
          * @brief       Marks inputs as reserved so they are not reused by concurrent transaction assembly.
          * @param[in]   inputs The list of UTXOs to reserve
          * @param[in]   reservation_id The ID for the reservation
+         * @param[in]   type Only reserve UTXOs of this type (default NORMAL)
          */
-        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
+        void ReserveUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                           const std::string                &reservation_id,
+                           UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Releases a previous reservation without consuming the inputs.
          * @param[in]   inputs The list of UTXOs to release
          * @param[in]   reservation_id The ID for the reservation
+         * @param[in]   type Only rollback UTXOs of this type (default NORMAL)
          */
-        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs, const std::string &reservation_id );
+        void RollbackUTXOs( const std::vector<InputUTXOInfo> &inputs,
+                            const std::string                &reservation_id,
+                            UTXOType                          type = UTXOType::UTXO_NORMAL );
 
         /**
          * @brief       Verifies ownership and signatures for UTXO transaction parameters using the default address.
@@ -305,6 +343,14 @@ namespace sgns
         bool IsOutPointConsumed( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
 
         /**
+         * @brief       Indicates whether a specific outpoint is in the RESERVED state (burn UTXO awaiting consensus).
+         * @param[in]   utxo_id The transaction hash that created the UTXO
+         * @param[in]   output_idx The output index of the UTXO within the transaction
+         * @return      true if the outpoint exists and is in UTXO_RESERVED state
+         */
+        bool IsOutPointReserved( const base::Hash256 &utxo_id, uint32_t output_idx ) const;
+
+        /**
          * @brief       Compute a deterministic Merkle root for unspent UTXOs owned by this node address
          * @return      The computed UTXO Merkle root for this node address
          */
@@ -338,7 +384,7 @@ namespace sgns
 
         /**
          * @brief       Stores the current UTXO state for the manager's default address to persistent storage.
-         * @param[in]   address The address to store UTXOs for    
+         * @param[in]   address The address to store UTXOs for
          */
         outcome::result<void> StoreUTXOs( const std::string &address );
 
@@ -411,7 +457,6 @@ namespace sgns
         /// Logger instance for UTXOManager
         base::Logger logger_ = base::createLogger( "UTXOManager" );
 
-        bool                is_full_node_;     ///< Flag that indicates if this is a full node
         std::string         address_;          ///< Address of the account this manager is responsible for
         SignFunc            sign_;             ///< Signer method for authorizing UTXO spends
         VerifySignatureFunc verify_signature_; ///< Verifier method for validating signatures on UTXO spends
@@ -420,8 +465,10 @@ namespace sgns
         mutable std::shared_mutex utxos_mutex_;       ///< Mutex for UTXO state structures
         UTXOOutPointMap           utxo_outpoints_;    ///< Maps outpoints to their UTXO entries for efficient lookup
         AddressOutPointList       address_outpoints_; ///< Maps owner addresses to their outpoints for efficient lookup
-        /// Maps outpoints to their reservation IDs
-        std::unordered_map<OutPoint, std::string, OutPointHash> reserved_outpoints_;
+        /// Transient local ownership for reservations; never persisted or used for consensus validity.
+        std::unordered_map<OutPoint, std::string, OutPointHash> local_reservations_;
     };
 
 }
+
+#endif // SGNS_UTXO_MANAGER_HPP

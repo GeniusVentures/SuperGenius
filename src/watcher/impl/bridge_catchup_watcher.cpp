@@ -1,0 +1,483 @@
+/**
+ * @file       bridge_catchup_watcher.cpp
+ * @brief      Implementation of the bridge catch-up scan watcher
+ * @date       2026-07-12
+ * @author     SuperGenius (ken@gnus.ai)
+ * Copyright 2026 Genius Ventures, Inc.
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <watcher/impl/bridge_catchup_watcher.hpp>
+
+#include <account/BridgeEventTypes.hpp>
+#include <base/parse_utility.hpp>
+#include <base/rlp-logger.hpp>
+#include <eth/abi_decoder.hpp>
+#include <eth/eth_watch_cli.hpp>
+#include <eth/json_rpc.hpp>
+#include <eth/rpc_http_transport.hpp>
+
+#include <boost/chrono.hpp>
+#include <boost/thread.hpp>
+
+#include <algorithm>
+#include <limits>
+#include <set>
+
+namespace sgns::evmwatcher
+{
+
+    BridgeCatchupWatcher::BridgeCatchupWatcher( const Config   &config,
+                                                MessageCallback message_callback,
+                                                ChainsProvider  chains_provider,
+                                                RpcUrlResolver  rpc_resolver,
+                                                BurnProcessor   burn_processor ) :
+        watcher::MessagingWatcher( std::move( message_callback ) ),
+        config_( config ),
+        chains_provider_( std::move( chains_provider ) ),
+        rpc_resolver_( std::move( rpc_resolver ) ),
+        burn_processor_( std::move( burn_processor ) )
+    {
+    }
+
+    void BridgeCatchupWatcher::startWatching()
+    {
+        auto logger = rlp::base::createLogger( "bridge_catchup_watcher" );
+        logger->info( "BridgeCatchupWatcher starting: poll_interval={}s, start_block={}",
+                      config_.poll_interval.count(),
+                      config_.start_block );
+        watcher::MessagingWatcher::startWatching();
+    }
+
+    void BridgeCatchupWatcher::stopWatching()
+    {
+        auto logger = rlp::base::createLogger( "bridge_catchup_watcher" );
+        logger->info( "BridgeCatchupWatcher stopping" );
+        watcher::MessagingWatcher::stopWatching();
+    }
+
+    uint64_t BridgeCatchupWatcher::GetLastProcessedBlock( uint64_t chain_id ) const noexcept
+    {
+        std::lock_guard lock( mutex_ );
+        auto            it = last_block_per_chain_.find( chain_id );
+        return ( it != last_block_per_chain_.end() ) ? it->second : 0ULL;
+    }
+
+    void BridgeCatchupWatcher::watch()
+    {
+        while ( running.load() )
+        {
+            poll_once();
+            if ( !running.load() )
+            {
+                break;
+            }
+            boost::this_thread::sleep_for( boost::chrono::seconds( config_.poll_interval.count() ) );
+        }
+    }
+
+    void BridgeCatchupWatcher::poll_once()
+    {
+        auto logger = rlp::base::createLogger( "bridge_catchup_watcher" );
+        auto stop_requested = [this]() { return !running.load(); };
+
+        if ( stop_requested() )
+        {
+            return;
+        }
+
+        // ── Compute topic0 hashes (v1 + v2) ──────────────────────────────
+        static const std::string kEventSigV1( kBridgeSourceBurnedSig );
+        static const std::string kEventSigV2( kBridgeOutInitiatedSig );
+
+        const auto  topic0_hash_v1 = eth::abi::event_signature_hash( kEventSigV1 );
+        std::string topic0_hex_v1  = rlp::base::parse::hex_bytes( topic0_hash_v1.data(), topic0_hash_v1.size() );
+
+        const auto  topic0_hash_v2 = eth::abi::event_signature_hash( kEventSigV2 );
+        std::string topic0_hex_v2  = rlp::base::parse::hex_bytes( topic0_hash_v2.data(), topic0_hash_v2.size() );
+
+        // ── Snapshot current chains ──────────────────────────────────────
+        const std::vector<ChainContractPair> chains = chains_provider_();
+        if ( stop_requested() || chains.empty() )
+        {
+            return;
+        }
+
+        size_t total_backfilled = 0;
+        size_t total_skipped    = 0;
+        size_t chains_scanned   = 0;
+
+        for ( const auto &chain_entry : chains )
+        {
+            if ( stop_requested() )
+            {
+                break;
+            }
+
+            const std::string chain_id_str = std::to_string( chain_entry.chain_id );
+
+            auto rpc_url = rpc_resolver_( chain_id_str );
+            if ( stop_requested() )
+            {
+                break;
+            }
+            if ( !rpc_url.has_value() )
+            {
+                logger->debug( "CatchUpScan: no RPC endpoint for chain {} (id={}) — skipping",
+                               chain_entry.chain_name,
+                               chain_entry.chain_id );
+                continue;
+            }
+
+            // RPC transport — factory-injected when set, otherwise default RpcHttpTransport
+            std::unique_ptr<eth::rpc::JsonRpcTransport> transport;
+            if ( config_.transport_factory )
+            {
+                transport = config_.transport_factory( *rpc_url );
+            }
+            else
+            {
+                eth::rpc::RpcHttpTransportOptions opts;
+                opts.timeout = std::chrono::seconds( 10 );
+                transport = std::make_unique<eth::rpc::RpcHttpTransport>( *rpc_url, opts );
+            }
+
+            if ( stop_requested() )
+            {
+                break;
+            }
+
+            ++chains_scanned;
+
+            // Parse contract address
+            rlp::Address contract_addr{};
+            if ( !rlp::base::parse::hex_array( chain_entry.contract_address, contract_addr ) )
+            {
+                logger->warn( "CatchUpScan: invalid bridge address {} for chain {}",
+                              chain_entry.contract_address,
+                              chain_entry.chain_name );
+                continue;
+            }
+
+            // Parse topic0 hashes to Hash256 for EventFilter
+            rlp::Hash256 topic0_hash256_v1{};
+            if ( !rlp::base::parse::hex_array( topic0_hex_v1, topic0_hash256_v1 ) )
+            {
+                logger->warn( "CatchUpScan: invalid v1 topic0 for chain {}", chain_entry.chain_name );
+                continue;
+            }
+
+            rlp::Hash256 topic0_hash256_v2{};
+            const bool   has_v2_topic0 = rlp::base::parse::hex_array( topic0_hex_v2, topic0_hash256_v2 );
+
+            // ── Query current block number ────────────────────────────────
+            constexpr uint64_t kBlockNumberRequestId = 99;
+            auto               block_number_req      = eth::rpc::make_get_block_by_number_request(
+                eth::rpc::RpcBlockTag::kLatest, kBlockNumberRequestId );
+            auto               block_number_resp     = transport->call( block_number_req );
+            uint64_t           current_block         = 0;
+
+            if ( stop_requested() )
+            {
+                break;
+            }
+
+            if ( block_number_resp.has_value() )
+            {
+                auto parsed_block = eth::rpc::parse_block_number_response( *block_number_resp );
+                if ( parsed_block.has_value() )
+                {
+                    current_block = *parsed_block;
+                }
+            }
+
+            if ( current_block == 0 )
+            {
+                logger->warn( "CatchUpScan: failed to query block number for chain {} — skipping",
+                              chain_entry.chain_name );
+                continue;
+            }
+
+            // ── Compute block range ──────────────────────────────────────
+            uint64_t from_block = 0;
+            {
+                std::lock_guard lock( mutex_ );
+                auto            it = last_block_per_chain_.find( chain_entry.chain_id );
+                if ( it != last_block_per_chain_.end() && it->second > 0 )
+                {
+                    // Subsequent poll: continue from last processed block
+                    from_block = it->second;
+                }
+                else
+                {
+                    // First poll: floor = max(config start_block, contract creation block).
+                    // When creation_block is known (populated at build/deploy via
+                    // find_contract_creation_blocks), scanning skips pre-deployment blocks.
+                    // When 0 (unknown), falls back to config_.start_block as before.
+                    from_block = std::max( config_.start_block, chain_entry.creation_block );
+                }
+            }
+
+            if ( from_block > current_block )
+            {
+                continue; // Nothing new to scan
+            }
+
+            const uint64_t to_block = current_block;
+
+            // ── Build v1 EventFilter (reused across chunks) ──────────────
+            eth::EventFilter filter_v1;
+            filter_v1.addresses.push_back( contract_addr );
+            filter_v1.topics.push_back( topic0_hash256_v1 );
+
+            // ── Build v2 EventFilter if applicable ────────────────────────
+            eth::EventFilter filter_v2;
+            if ( has_v2_topic0 )
+            {
+                filter_v2.addresses.push_back( contract_addr );
+                filter_v2.topics.push_back( topic0_hash256_v2 );
+            }
+
+            // ── Shared tx_hash dedup across v1 + v2 ──────────────────────
+            std::set<std::string> seen_tx_hashes;
+
+            // ── Helper: process one batch of logs ─────────────────────────
+            auto process_logs = [&]( const std::vector<eth::rpc::RpcLog> &rpc_logs, bool is_v2 ) -> bool
+            {
+                for ( const auto &rpc_log : rpc_logs )
+                {
+                    if ( stop_requested() )
+                    {
+                        return false;
+                    }
+
+                    std::string tx_hash_hex = rlp::base::parse::hex_bytes( rpc_log.tx_hash.data(),
+                                                                           rpc_log.tx_hash.size() );
+
+                    if ( !seen_tx_hashes.insert( tx_hash_hex ).second )
+                    {
+                        ++total_skipped;
+                        logger->debug( "CatchUpScan: burn tx {} already seen this scan — skipping", tx_hash_hex );
+                        continue;
+                    }
+
+                    // Decode the full log entry into ABI values
+                    const std::string &event_sig = is_v2 ? kEventSigV2 : kEventSigV1;
+                    const auto         all_params = eth::cli::event_registry().params_for( event_sig );
+                    auto               decoded    = eth::abi::decode_log( rpc_log.log, event_sig, all_params );
+
+                    if ( !decoded.has_value() )
+                    {
+                        ++total_skipped;
+                        logger->warn( "CatchUpScan: failed to decode log for tx {} — skipping", tx_hash_hex );
+                        continue;
+                    }
+
+                    try
+                    {
+                        const bool processed = burn_processor_( decoded.value(), tx_hash_hex, chain_id_str );
+
+                        if ( processed )
+                        {
+                            ++total_backfilled;
+                            logger->info( "CatchUpScan: backfilled historical burn {} on chain {}",
+                                          tx_hash_hex,
+                                          chain_entry.chain_name );
+                        }
+                        else
+                        {
+                            logger->debug( "CatchUpScan: burn processor returned false for tx {} — "
+                                           "likely already processed",
+                                           tx_hash_hex );
+                            ++total_skipped;
+                        }
+                    }
+                    catch ( const std::exception &e )
+                    {
+                        logger->debug( "CatchUpScan: burn processor threw for tx {}: {} — skipping",
+                                       tx_hash_hex,
+                                       e.what() );
+                        ++total_skipped;
+                    }
+                }
+                return true;
+            };
+
+            // ── Forward chunked scan from from_block → current_block ──────
+            // eth_getLogs with topic filter returns only matching events.
+            // Scanning forward (chronological order) ensures burns are minted
+            // in nonce/timestamp sequence.  max_chunks caps per-poll depth
+            // (0 = unlimited — production scans all the way to current).
+            constexpr uint64_t kChunkRequestIdBase = 1;
+            uint64_t           chunk_request_id    = kChunkRequestIdBase;
+            uint64_t           chunks_done         = 0;
+            const uint64_t     max_chunks          = ( config_.max_chunks > 0 )
+                                                      ? config_.max_chunks
+                                                      : std::numeric_limits<uint64_t>::max();
+
+            while ( from_block <= to_block && chunks_done < max_chunks )
+            {
+                if ( stop_requested() )
+                {
+                    break;
+                }
+
+                const uint64_t chunk_to = std::min( from_block + config_.max_blocks_per_query - 1, to_block );
+
+                logger->info( "CatchUpScan: scanning chain {} chunk {}-{} (current={})",
+                              chain_entry.chain_name,
+                              from_block,
+                              chunk_to,
+                              current_block );
+
+                bool chunk_ok = false;
+                bool chunk_cancelled = false;
+
+                // ── v1 query per chunk ───────────────────────────────────
+                auto v1_request  = eth::rpc::make_get_logs_request( filter_v1,
+                                                                     from_block,
+                                                                     chunk_to,
+                                                                     chunk_request_id++ );
+                auto v1_response = transport->call( v1_request );
+
+                if ( stop_requested() )
+                {
+                    chunk_cancelled = true;
+                    break;
+                }
+
+                if ( !v1_response.has_value() )
+                {
+                    logger->warn( "CatchUpScan: v1 RPC call failed for chain {} (timeout/refused)",
+                                  chain_entry.chain_name );
+                }
+                else
+                {
+                    auto v1_logs = eth::rpc::parse_get_logs_response( *v1_response );
+                    if ( !v1_logs.has_value() )
+                    {
+                        logger->warn( "CatchUpScan: failed to parse v1 getLogs response for chain {} — "
+                                      "response: {}",
+                                      chain_entry.chain_name,
+                                      v1_response->substr( 0, 500 ) );
+                    }
+                    else
+                    {
+                        if ( process_logs( v1_logs.value(), /*is_v2=*/false ) )
+                        {
+                            chunk_ok = true;
+                        }
+                        else
+                        {
+                            chunk_cancelled = true;
+                        }
+                    }
+                }
+
+                if ( chunk_cancelled )
+                {
+                    break;
+                }
+
+                // ── v2 query per chunk ───────────────────────────────────
+                if ( has_v2_topic0 )
+                {
+                    if ( stop_requested() )
+                    {
+                        chunk_cancelled = true;
+                        break;
+                    }
+
+                    auto v2_request  = eth::rpc::make_get_logs_request( filter_v2,
+                                                                         from_block,
+                                                                         chunk_to,
+                                                                         chunk_request_id++ );
+                    auto v2_response = transport->call( v2_request );
+
+                    if ( stop_requested() )
+                    {
+                        chunk_cancelled = true;
+                        break;
+                    }
+
+                    if ( !v2_response.has_value() )
+                    {
+                        logger->warn( "CatchUpScan: v2 RPC call failed for chain {} (timeout/refused)",
+                                      chain_entry.chain_name );
+                    }
+                    else
+                    {
+                        auto v2_logs = eth::rpc::parse_get_logs_response( *v2_response );
+                        if ( !v2_logs.has_value() )
+                        {
+                            logger->warn( "CatchUpScan: failed to parse v2 getLogs response for chain {} — "
+                                          "response: {}",
+                                          chain_entry.chain_name,
+                                          v2_response->substr( 0, 500 ) );
+                        }
+                        else
+                        {
+                            if ( process_logs( v2_logs.value(), /*is_v2=*/true ) )
+                            {
+                                chunk_ok = true;
+                            }
+                            else
+                            {
+                                chunk_cancelled = true;
+                            }
+                        }
+                    }
+                }
+
+                if ( chunk_cancelled )
+                {
+                    break;
+                }
+
+                if ( !chunk_ok )
+                {
+                    // Both v1 and v2 (if present) failed for this chunk — RPC
+                    // error or unparseable response. Do NOT advance from_block;
+                    // leave the cursor at this chunk's start so it is retried on
+                    // the next poll (CR-02). Advancing past a failed chunk would
+                    // silently drop any burns it contained.
+                    logger->warn( "CatchUpScan: chunk {}-{} for chain {} failed — will retry on next poll",
+                                  from_block,
+                                  chunk_to,
+                                  chain_entry.chain_name );
+                    break;
+                }
+
+                from_block = chunk_to + 1;
+                ++chunks_done;
+
+                if ( stop_requested() )
+                {
+                    break;
+                }
+            }
+
+            // ── Update per-chain last block ──────────────────────────────
+            // Only advance the cursor to the last successfully-scanned block.
+            // If the loop completed (from_block > to_block), from_block already
+            // equals to_block + 1. If the loop was capped by max_chunks,
+            // from_block points at the next unscanned chunk's start
+            // (last scanned chunk_to + 1) — do NOT skip to current_block + 1,
+            // or unscanned burns would be permanently lost (CR-01).
+            {
+                std::lock_guard lock( mutex_ );
+                last_block_per_chain_[chain_entry.chain_id] = from_block;
+            }
+        }
+
+        if ( chains_scanned > 0 )
+        {
+            logger->info( "CatchUpScan: scanned {} chains — {} historical burns backfilled, "
+                          "{} skipped (already processed)",
+                          chains_scanned,
+                          total_backfilled,
+                          total_skipped );
+        }
+    }
+
+} // namespace sgns::evmwatcher

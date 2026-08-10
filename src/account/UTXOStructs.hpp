@@ -4,7 +4,8 @@
  * @date       2026-01-20
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_UTXO_STRUCTS_HPP
+#define SGNS_UTXO_STRUCTS_HPP
 
 #include "base/blob.hpp"
 #include "TokenID.hpp"
@@ -58,3 +59,5 @@ namespace sgns
      */
     using UTXOTxParameters = std::pair<std::vector<InputUTXOInfo>, std::vector<OutputDestInfo>>;
 }
+
+#endif // SGNS_UTXO_STRUCTS_HPP

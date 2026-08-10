@@ -16,3 +16,5 @@ target_link_libraries(api_transport
 if (MSVC)
     target_compile_options(api_transport PRIVATE /bigobj)
 endif()
+
+supergenius_install(api_transport)

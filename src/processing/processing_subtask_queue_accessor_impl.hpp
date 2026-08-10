@@ -17,6 +17,12 @@
 #include <thread>
 #include <boost/asio.hpp>
 
+// Forward declaration for bitswap
+namespace sgns::ipfs_bitswap
+{
+    class Bitswap;
+}
+
 namespace sgns::processing
 {
     /**
@@ -48,6 +54,12 @@ namespace sgns::processing
         void CompleteSubTask( const std::string &subTaskId, const SGProcessing::SubTaskResult &subTaskResult ) override;
         bool CreateResultsChannel( const std::string &task_id ) override;
 
+        /// @brief Set callback invoked when a mirrored result arrives. The callback receives the ipfs_results_data_id string.
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
+        /// @brief Set bitswap instance for data availability checks on IPFS results.
+        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
         /** Returns available results of subtask queue
     * @return a vector of subtask id->results pairs
     */
@@ -75,6 +87,10 @@ namespace sgns::processing
         void        PublishExistingResults();
         // Helper method to find a subtask by ID
         boost::optional<SGProcessing::SubTask> FindSubTaskById( const std::string &subTaskId ) const;
+        /// @brief Validate result output scheme (9a) and optionally check IPFS data availability (9b).
+        /// @param requireAvailable If true, also verifies data is locally fetchable via bitswap.
+        /// @return true if the result passes all checks.
+        bool ValidateResultData( const SGProcessing::SubTaskResult &result, bool requireAvailable ) const;
 
         std::shared_ptr<ipfs_pubsub::GossipPubSub>              m_gossipPubSub;
         std::shared_ptr<ProcessingSubTaskQueueManager>          m_subTaskQueueManager;
@@ -88,6 +104,11 @@ namespace sgns::processing
         std::shared_ptr<boost::asio::steady_timer> m_stateTimer;
 
         std::shared_ptr<sgns::ipfs_pubsub::GossipPubSubTopic> m_resultChannel;
+
+        std::function<void( const std::string & )> m_mirrorResultCallback; ///< Invoked when a mirrored result arrives.
+        mutable std::mutex                         m_mutexMirrorCallback;
+
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap; ///< For data availability checks on IPFS results.
 
         mutable std::mutex                                 m_mutexResults;
         std::map<std::string, SGProcessing::SubTaskResult> m_results;

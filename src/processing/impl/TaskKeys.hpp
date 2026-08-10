@@ -5,7 +5,9 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 
-#pragma once
+#ifndef TASK_KEYS_HPP
+#define TASK_KEYS_HPP
+
 #include <string>
 #include <string_view>
 
@@ -80,3 +82,5 @@ namespace sgns::processing
         static constexpr std::string_view LOCK_KEY_PREFIX        = "/lock_";
     };
 }
+
+#endif // TASK_KEYS_HPP

@@ -3,7 +3,8 @@
  * @brief      Header file for a Migration transaction that mint tokens on the destination chain based on observed legacy balances on the source chain.
  * @date       2026-04-29
  */
-#pragma once
+#ifndef SGNS_MIGRATION_TRANSACTION_HPP
+#define SGNS_MIGRATION_TRANSACTION_HPP
 
 #include <cstdint>
 #include <optional>
@@ -11,16 +12,19 @@
 #include <unordered_set>
 #include <vector>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "account/TokenID.hpp"
 #include "account/UTXOStructs.hpp"
 
 namespace sgns
 {
-    class MigrationTransaction final : public IGeniusTransactions
+    class MigrationTransaction final : public GeniusTransaction
     {
     public:
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
+
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
 
         ~MigrationTransaction() override = default;
 
@@ -75,3 +79,5 @@ namespace sgns
         static inline bool registered = Register();
     };
 }
+
+#endif // SGNS_MIGRATION_TRANSACTION_HPP

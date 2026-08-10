@@ -250,6 +250,7 @@ namespace sgns::crdt
             for ( auto &address : peerInfo->addresses )
             {
                 bpi->add_addrs( address.getStringAddress() );
+                m_logger->trace( "Added address from PeerInfo: {}", address.getStringAddress() );
             }
         }
 

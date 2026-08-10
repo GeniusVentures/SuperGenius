@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package sgns;
 
+import "account/proto/SGTransaction.proto";
+
+// Re-export SGTransaction types for use in oneof fields
+// (protobuf requires messages to be imported before use in oneof)
+
 // Deterministic hash of a canonical UTF-8 string.
 message HashOfAString {
   bytes hash = 1;
@@ -59,6 +64,19 @@ message NonceSubject {
   bytes tx_hash = 2;
   UTXOTransitionCommitment utxo_commitment = 3;
   UTXOWitness utxo_witness = 4;
+  EmbeddedTransaction transaction = 5;
+}
+
+message EmbeddedTransaction {
+  oneof transaction {
+    SGTransaction.TransferTx transfer = 1;
+    SGTransaction.MintTxV2 mint_v2 = 2;
+    SGTransaction.MintTx mint = 3;
+    SGTransaction.ProcessingTx processing = 4;
+    SGTransaction.MigrationTx migration = 5;
+    SGTransaction.EscrowTx escrow = 6;
+    SGTransaction.EscrowReleaseTx escrow_release = 7;
+  }
 }
 
 message TaskResultSubject {
@@ -85,12 +103,38 @@ message ConsensusProposal {
   bytes signature = 7;
 }
 
+/**
+ * Phase 6 slot-based RPC-hash voting model (D-01).
+ *
+ * Slot semantics:
+ * - slot_0_hash: SHA-256 of a DIRECT_API endpoint URL (endpoints with
+ *   consensus_weight >= 50, per D-02). Weighted 50/100 in the tally.
+ * - slot_1_hash: SHA-256 of a PUBLIC endpoint URL (consensus_weight < 50).
+ * - slot_2_hash: SHA-256 of a second PUBLIC endpoint URL.
+ *
+ * Slots 1-2 are subject to >=2-distinct-validator deduplication in the
+ * tally (D-03). An EMPTY slot hash (proto3 bytes default) is the abstain /
+ * not-populated sentinel (D-05) -- the tally treats slot_N_hash().empty() as
+ * "did not vote this slot". The hash lives ONLY in the vote (D-04): no slot
+ * hash field is added to ValidatorEntry or ValidatorRegistry.
+ *
+ * These fields are part of the signing surface: ConsensusAuth::VoteSigningBytes
+ * clears only `signature`, so any mutation of a slot hash invalidates the
+ * signature (T-06-01 mitigation). Fields 6/7/8 are new tags; old peers
+ * silently ignore them (forward/backward wire compatible).
+ */
 message ConsensusVote {
   string proposal_id = 1;
   string voter_id = 2;
   bool approve = 3;
   uint64 timestamp = 4;
   bytes signature = 5;
+  // DIRECT_API endpoint hash (weight >= 50). Empty = abstain (D-05).
+  bytes slot_0_hash = 6;
+  // PUBLIC endpoint hash (weight < 50). Empty = abstain (D-05).
+  bytes slot_1_hash = 7;
+  // PUBLIC endpoint hash (weight < 50). Empty = abstain (D-05).
+  bytes slot_2_hash = 8;
 }
 
 message ConsensusVoteBundle {

@@ -4,7 +4,8 @@
  * @date       2026-05-01
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_MIGRATION_ALLOW_LIST_HPP
+#define SGNS_MIGRATION_ALLOW_LIST_HPP
 
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
@@ -120,3 +121,5 @@ namespace sgns
         base::Logger                      logger_ = base::createLogger( "MigrationAllowList" ); ///< Component logger.
     };
 }
+
+#endif // SGNS_MIGRATION_ALLOW_LIST_HPP

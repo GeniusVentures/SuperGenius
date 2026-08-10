@@ -31,7 +31,7 @@ namespace sgns
         static bool HasPendingProposal( const std::shared_ptr<ConsensusManager> &manager,
                                         const std::string                       &proposal_id )
         {
-            return manager && manager->pending_proposals_.find( proposal_id ) != manager->pending_proposals_.end();
+            return manager && manager->pending_entries_.find( proposal_id ) != manager->pending_entries_.end();
         }
 
         static bool HasSubjectHandler( const std::shared_ptr<ConsensusManager> &manager, const std::string &type_hash )
@@ -51,7 +51,8 @@ namespace sgns
             return ConsensusManager::ValidateSubject( subject );
         }
 
-        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager, const ConsensusManager::Proposal &proposal )
+        static void HandleProposal( const std::shared_ptr<ConsensusManager> &manager,
+                                    const ConsensusManager::Proposal        &proposal )
         {
             manager->HandleProposal( proposal );
         }
@@ -62,7 +63,7 @@ namespace sgns
         }
 
         static void HandleCertificate( const std::shared_ptr<ConsensusManager> &manager,
-                                       const ConsensusManager::Certificate      &certificate )
+                                       const ConsensusManager::Certificate     &certificate )
         {
             manager->HandleCertificate( certificate );
         }
@@ -115,7 +116,7 @@ namespace
             { cb( outcome::failure( std::errc::not_supported ) ); } );
         EXPECT_TRUE( registry );
 
-        auto store_result = registry->StoreGenesisRegistry( account->GetAddress(),
+        auto store_result = registry->StoreGenesisRegistry( std::vector<std::string>{ account->GetAddress() },
                                                             [account]( std::vector<uint8_t> payload )
                                                             { return account->Sign( std::move( payload ) ); } );
         EXPECT_FALSE( store_result.has_error() );
@@ -123,7 +124,7 @@ namespace
         ASSERT_WAIT_FOR_CONDITION(
             [&registry]()
             {
-                auto load = registry->LoadRegistry();
+                auto load = registry->LoadCurrentRegistry();
                 return load.has_value() && !registry->GetRegistryCid().empty();
             },
             std::chrono::milliseconds( 2000 ),
@@ -182,7 +183,9 @@ namespace sgns::test
     class ConsensusCertificateTest : public ::test::CRDTFixture
     {
     public:
-        ConsensusCertificateTest() : CRDTFixture( "ConsensusCertificateTest" ) {}
+        ConsensusCertificateTest() : CRDTFixture( "ConsensusCertificateTest" )
+        {
+        }
 
         static void SetUpTestSuite()
         {
@@ -192,7 +195,7 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, CreateCertificateEmbedsProposal )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
@@ -202,10 +205,12 @@ namespace sgns::test
 
         std::string tx_hash        = "0x010203";
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
-                                                                    1,
-                                                                    tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                           1,
+                                                                           tx_hash,
+                                                                           std::string{},
+                                                                           std::vector<uint8_t>{},
+                                                                           MakeTestCommitment(),
+                                                                           MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -231,7 +236,7 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, HandleCertificateRejectsMismatchedProposal )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
@@ -241,10 +246,12 @@ namespace sgns::test
 
         std::string tx_hash        = "0x010203";
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
-                                                                    7,
-                                                                    tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                           7,
+                                                                           tx_hash,
+                                                                           std::string{},
+                                                                           std::vector<uint8_t>{},
+                                                                           MakeTestCommitment(),
+                                                                           MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -269,7 +276,7 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
         ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
         EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
         ConsensusManagerTestAccess::HandleCertificate( manager, cert );
@@ -290,7 +297,7 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, NewRejectsInvalidInputs )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
@@ -328,16 +335,16 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, RegisterAndUnregisterHandlers )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         EXPECT_TRUE( manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                                       []( const ConsensusManager::Subject & )
-                                                      { return ConsensusManager::Check::Approve; } ) );
+                                                      { return ConsensusManager::ValidationResult::Approve(); } ) );
         EXPECT_TRUE(
             manager->RegisterCertificateHandler( NONCE_SUBJECT_TYPE,
                                                  []( const std::string &, const ConsensusManager::Certificate & )
@@ -355,16 +362,18 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, CreateVoteBundleAndSigningBytes )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     2,
                                                                     "0x0a0b0c",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -405,7 +414,7 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, CreateTaskResultSubjectAndComputeSubjectId )
     {
-        auto account        = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto subject_result = ConsensusManager::CreateTaskResultSubject( account->GetAddress(),
                                                                          "escrow/path",
@@ -430,12 +439,14 @@ namespace sgns::test
         ASSERT_TRUE( account2 );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     3,
                                                                     "0x111213",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -460,7 +471,7 @@ namespace sgns::test
                                                  { return account2->Sign( std::move( payload ) ); } );
         ASSERT_TRUE( vote2_result.has_value() );
 
-        auto registry_result = registry->LoadRegistry();
+        auto registry_result = registry->LoadCurrentRegistry();
         ASSERT_TRUE( registry_result.has_value() );
 
         auto tally = manager->TallyVotes( proposal_result.value(),
@@ -483,16 +494,18 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, SubmitProposalVoteCertificateAndProcess )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     4,
                                                                     "0x222324",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -505,7 +518,7 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
 
         auto submit_prop = manager->SubmitProposal( proposal_result.value(), false );
         EXPECT_FALSE( submit_prop.has_error() );
@@ -523,7 +536,8 @@ namespace sgns::test
 
         ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
         ConsensusManagerTestAccess::HandleVote( manager, vote_result.value() );
-        EXPECT_TRUE( ConsensusManagerTestAccess::IsProposalQuorumReached( manager, proposal_result.value().proposal_id() ) );
+        EXPECT_TRUE(
+            ConsensusManagerTestAccess::IsProposalQuorumReached( manager, proposal_result.value().proposal_id() ) );
 
         manager->ProcessCertificates();
         EXPECT_FALSE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
@@ -531,16 +545,18 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, ResumeProposalHandlingFromPending )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     5,
                                                                     "0x333435",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -553,37 +569,40 @@ namespace sgns::test
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Pending; } );
+                                         { return ConsensusManager::ValidationResult::Pending(); } );
         ConsensusManagerTestAccess::HandleProposal( manager, proposal_result.value() );
         EXPECT_TRUE( ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
 
         manager->RegisterSubjectHandler( NONCE_SUBJECT_TYPE,
                                          []( const ConsensusManager::Subject & )
-                                         { return ConsensusManager::Check::Approve; } );
+                                         { return ConsensusManager::ValidationResult::Approve(); } );
 
         auto nonce_subject = ConsensusManager::DecodeNonceSubject( subject_result.value() );
         ASSERT_TRUE( nonce_subject.has_value() );
         auto resume = manager->ResumeProposalHandling( nonce_subject.value().tx_hash() );
         EXPECT_FALSE( resume.has_error() );
-        EXPECT_FALSE( ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
+        EXPECT_FALSE(
+            ConsensusManagerTestAccess::HasPendingProposal( manager, proposal_result.value().proposal_id() ) );
         EXPECT_TRUE( ConsensusManagerTestAccess::HasProposal( manager, proposal_result.value().proposal_id() ) );
     }
 
     TEST_F( ConsensusCertificateTest, SubmitCertificateStoresInCrdt )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         std::string tx_hash        = "0x444546";
         auto        subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
-                                                                    6,
-                                                                    tx_hash,
-                                                                    MakeTestCommitment(),
-                                                                    MakeTestWitness() );
+                                                                           6,
+                                                                           tx_hash,
+                                                                           std::string{},
+                                                                           std::vector<uint8_t>{},
+                                                                           MakeTestCommitment(),
+                                                                           MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
 
         auto proposal_result = manager->CreateProposal( subject_result.value(),
@@ -629,16 +648,18 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedSubjectIdBinding )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     11,
                                                                     "0xabc123",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -657,16 +678,18 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedSubjectTypeHash )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     12,
                                                                     "0xabc124",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     MakeTestCommitment(),
                                                                     MakeTestWitness() );
         ASSERT_TRUE( subject_result.has_value() );
@@ -680,11 +703,11 @@ namespace sgns::test
 
     TEST_F( ConsensusCertificateTest, ValidateSubjectRejectsTamperedWitnessWithStaleSubjectId )
     {
-        auto account  = MakeAccount( getPathString() );
+        auto account = MakeAccount( getPathString() );
         ASSERT_TRUE( account );
         auto registry = MakeRegistry( db_, account );
         ASSERT_TRUE( registry );
-        auto manager  = MakeManager( registry, db_, pubs_, account );
+        auto manager = MakeManager( registry, db_, pubs_, account );
         ASSERT_TRUE( manager );
 
         UTXOTransitionCommitment commitment;
@@ -703,6 +726,8 @@ namespace sgns::test
         auto subject_result = ConsensusManager::CreateNonceSubject( account->GetAddress(),
                                                                     1,
                                                                     "0xdeadbeef",
+                                                                    std::string{},
+                                                                    std::vector<uint8_t>{},
                                                                     commitment,
                                                                     witness );
         ASSERT_TRUE( subject_result.has_value() );

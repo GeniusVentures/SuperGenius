@@ -95,6 +95,34 @@ namespace sgns::processing
         m_logger->debug( "[{}] [SERVICE_STOPPED]", node_address_ );
     }
 
+    void ProcessingServiceImpl::setMirrorResultCallback( std::function<void( const std::string & )> callback )
+    {
+        m_mirrorResultCallback = std::move( callback );
+        // Apply to all existing nodes
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && m_mirrorResultCallback )
+            {
+                node->setMirrorResultCallback( m_mirrorResultCallback );
+            }
+        }
+    }
+
+    void ProcessingServiceImpl::setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap )
+    {
+        m_bitswap = std::move( bitswap );
+        // Apply to all existing nodes
+        std::scoped_lock lock( m_mutexNodes );
+        for ( auto &[id, node] : m_processingNodes )
+        {
+            if ( node && m_bitswap )
+            {
+                node->setBitswap( m_bitswap );
+            }
+        }
+    }
+
     void ProcessingServiceImpl::Listen( const std::string &processingGridChannelId )
     {
         using GossipPubSubTopic = ipfs_pubsub::GossipPubSubTopic;
@@ -354,6 +382,16 @@ namespace sgns::processing
             if ( node != nullptr )
             {
                 m_processingNodes[channelId] = node;
+                // Apply mirror callback to newly created node
+                if ( m_mirrorResultCallback )
+                {
+                    node->setMirrorResultCallback( m_mirrorResultCallback );
+                }
+                // Apply bitswap to newly created node
+                if ( m_bitswap )
+                {
+                    node->setBitswap( m_bitswap );
+                }
             }
         }
 
@@ -540,11 +578,14 @@ namespace sgns::processing
         // Set timer to wait for other peers' responses
         m_nodeCreationTimer.expires_from_now( m_nodeCreationTimeout );
         m_nodeCreationTimer.async_wait(
-            [instance = shared_from_this()]( const boost::system::error_code &error )
+            [instance = weak_from_this()]( const boost::system::error_code &error )
             {
                 if ( !error )
                 { // Only proceed if not canceled
-                    instance->HandleNodeCreationTimeout();
+                    if ( auto self = instance.lock() )
+                    {
+                        self->HandleNodeCreationTimeout();
+                    }
                 }
             } );
     }

@@ -1,6 +1,8 @@
 #include "testutil/storage/base_crdt_test.hpp"
 
+#include <atomic>
 #include <chrono>
+#include <boost/dll/runtime_symbol_info.hpp>
 #include <libp2p/basic/scheduler.hpp>
 #include <libp2p/basic/scheduler/scheduler_impl.hpp>
 #include <memory>
@@ -19,6 +21,7 @@
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include "testutil/remove_all.hpp"
 
 using boost::asio::io_context;
 using sgns::crdt::GlobalDB;
@@ -28,6 +31,8 @@ using sgns::ipfs_pubsub::GossipPubSubTopic;
 
 namespace
 {
+    std::atomic<uint64_t> fixture_counter{ 0 };
+
     const std::string logger_config( R"(
 # ----------------
 sinks:
@@ -43,26 +48,32 @@ groups:
       - name: Gossip
 # ----------------
   )" );
+
+    fs::path UniqueFixturePath( const fs::path &path )
+    {
+        const auto fixture_id = fixture_counter.fetch_add( 1, std::memory_order_relaxed ) + 1;
+        return path.string() + "." + boost::dll::program_location().stem().string() + "." + std::to_string( fixture_id );
+    }
 }
 
 namespace test
 {
-    const std::string                       CRDTFixture::basePath = "CRDT.Datastore.TEST";
     std::shared_ptr<soralog::LoggingSystem> CRDTFixture::logging_system_;
-    std::atomic<uint64_t>                   CRDTFixture::fixture_counter_{ 0 };
 
-    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( std::move( path ) )
+    CRDTFixture::CRDTFixture( fs::path path ) : FSFixture( UniqueFixturePath( path ) )
     {
-        const auto fixture_id = fixture_counter_.fetch_add( 1, std::memory_order_relaxed ) + 1;
-        const auto suffix     = std::to_string( fixture_id );
-        keypair_path_         = basePath + "/unit_test_" + suffix;
-        db_path_              = basePath + ".unit_" + suffix;
+        keypair_path_ = ( base_path / "keypair" ).string();
+        db_path_      = ( base_path / "db" ).string();
 
         io_ = std::make_shared<io_context>();
 
         pubs_ = std::make_shared<GossipPubSub>( KeyPairFileStorage( keypair_path_ ).GetKeyPair().value() );
 
         BOOST_ASSERT_MSG( pubs_ != nullptr, "could not create GossibPubSub for some reason" );
+        auto future = pubs_->Start( 0, {} );
+        auto result = future.get();
+        BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
+
         auto crdtOptions = sgns::crdt::CrdtOptions::DefaultOptions();
         auto scheduler = std::make_shared<libp2p::basic::SchedulerImpl>( std::make_shared<libp2p::basic::AsioSchedulerBackend>(io_), libp2p::basic::Scheduler::Config{std::chrono::milliseconds(100)} );
         auto generator = std::make_shared<sgns::ipfs_lite::ipfs::graphsync::RequestIdGenerator>();
@@ -76,29 +87,38 @@ namespace test
         db_->AddListenTopic( "CRDT.Datastore.TEST.Channel" );
         db_->AddBroadcastTopic( "CRDT.Datastore.TEST.Channel" );
         db_->Start();
-
-        // Start GossipPubSub after Init
-        auto future = pubs_->Start( 40001, { pubs_->GetLocalAddress() } );
-        auto result = future.get();
-        BOOST_ASSERT_MSG( !result, ( "GossipPubSub::Start failed: " + result.message() ).c_str() );
     }
 
     CRDTFixture::~CRDTFixture()
     {
-        if ( pubs_ )
+        try
         {
-            pubs_->Stop();
+            if ( pubs_ )
+            {
+                pubs_->Stop();
+            }
+        }
+        catch ( const std::exception &err )
+        {
+            std::cerr << "GossipPubSub::Stop() exception: " << err.what() << std::endl;
         }
         db_.reset();
-        pubs_.reset();
+        try
+        {
+            pubs_.reset();
+        }
+        catch ( const std::exception &err )
+        {
+            std::cerr << "GossipPubSub destructor exception: " << err.what() << std::endl;
+        }
         io_.reset();
 
         try
         {
-            fs::remove_all( keypair_path_ );
-            fs::remove_all( db_path_ );
+            sgns::test::removeAllWithRetry( keypair_path_ );
+            sgns::test::removeAllWithRetry( db_path_ );
         }
-        catch ( const fs::filesystem_error &err )
+        catch ( const std::exception &err )
         {
             std::cerr << err.what() << std::endl;
         }

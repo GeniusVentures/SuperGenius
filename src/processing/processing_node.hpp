@@ -16,6 +16,11 @@
 #include "processing/processing_subtask_queue_accessor.hpp"
 #include "processing/processing_subtask_result_storage.hpp"
 
+namespace sgns::ipfs_bitswap
+{
+    class Bitswap;
+}
+
 namespace sgns::processing
 {
     /**
@@ -56,6 +61,12 @@ namespace sgns::processing
         ~ProcessingNode();
 
         bool HasQueueOwnership() const;
+
+        /** Set callback for mirroring results from other nodes */
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
+        /** Set bitswap instance for data availability checks */
+        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
 
         /** Get current processing progress
         * @return Progress percentage (0.0 to 100.0)
@@ -102,6 +113,7 @@ namespace sgns::processing
         std::shared_ptr<ProcessingSubTaskQueueChannel>          m_queueChannel;
         std::shared_ptr<ProcessingSubTaskQueueManager>          m_subtaskQueueManager;
         std::shared_ptr<SubTaskQueueAccessor>                   m_subTaskQueueAccessor;
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap>            m_bitswap; ///< Cached for accessor when created.
         std::function<void( const SGProcessing::TaskResult & )> m_taskResultProcessingSink;
         std::function<void( const std::string & )>              m_processingErrorSink;
         std::function<void( void )>                             m_processingDoneSink;

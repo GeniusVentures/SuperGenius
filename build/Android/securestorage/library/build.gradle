@@ -1,14 +1,15 @@
 plugins {
     id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
 }
 
 android {
     namespace 'ai.gnus.sdk'
-    compileSdk 33
+    compileSdk 36
 
     defaultConfig {
-        minSdk 28
-        targetSdk 33
+        minSdk 29
+        targetSdk 35
 
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -24,11 +25,18 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
     
     sourceSets {
         main {
             java {
                 srcDirs = ['../../../../src/local_secure_storage/impl']
+            }
+            kotlin {
+                srcDirs = ['src/main/kotlin']
             }
             manifest.srcFile 'src/main/AndroidManifest.xml'
         }
@@ -37,4 +45,6 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation "androidx.work:work-runtime-ktx:2.9.1"
+    implementation "androidx.core:core-ktx:1.13.1"
 }

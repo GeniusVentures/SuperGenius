@@ -4,7 +4,8 @@
  * @date       2026-02-07
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_CONSENSUS_AUTH_HPP
+#define SGNS_CONSENSUS_AUTH_HPP
 
 #include <system_error>
 #include <vector>
@@ -12,7 +13,7 @@
 #include "account/GeniusAccount.hpp"
 #include "base/hexutil.hpp"
 #include "blockchain/impl/proto/Consensus.pb.h"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include <gsl/span>
 #include "outcome/outcome.hpp"
 
@@ -104,8 +105,7 @@ namespace sgns
             return outcome::failure( signing_bytes.error() );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
@@ -128,9 +128,7 @@ namespace sgns
             return false;
         }
 
-        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(),
-                                              proposal.signature(),
-                                              signing_bytes.value() ) )
+        if ( !GeniusAccount::VerifySignature( proposal.proposer_id(), proposal.signature(), signing_bytes.value() ) )
         {
             return false;
         }
@@ -144,3 +142,5 @@ namespace sgns
         return computed_id.value() == proposal.proposal_id();
     }
 }
+
+#endif // SGNS_CONSENSUS_AUTH_HPP

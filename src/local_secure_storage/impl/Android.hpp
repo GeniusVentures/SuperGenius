@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SGNS_ANDROID_SECURE_STORAGE_HPP
+#define SGNS_ANDROID_SECURE_STORAGE_HPP
 
 #include "JSONBackend.hpp"
 
@@ -9,7 +10,7 @@ namespace sgns
     class AndroidSecureStorage : public JSONBackend
     {
     public:
-        explicit AndroidSecureStorage(std::string identifier, JavaVM *jvm = nullptr);
+        explicit AndroidSecureStorage( std::string identifier, JavaVM *jvm = nullptr );
 
         ~AndroidSecureStorage() override;
 
@@ -33,3 +34,5 @@ namespace sgns
         jmethodID delete_method_;
     };
 }
+
+#endif // SGNS_ANDROID_SECURE_STORAGE_HPP

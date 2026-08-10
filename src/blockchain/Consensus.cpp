@@ -16,12 +16,29 @@
 
 #include "base/hexutil.hpp"
 #include "base/sgns_version.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 #include "account/GeniusAccount.hpp"
 #include "blockchain/ConsensusAuth.hpp"
 
 namespace sgns
 {
+    namespace
+    {
+        bool IsPublicChainMintChainId( const std::string &chain_id )
+        {
+            if ( chain_id.empty() )
+            {
+                return false;
+            }
+            if ( chain_id == "public" )
+            {
+                return true;
+            }
+            return std::all_of( chain_id.begin(),
+                                chain_id.end(),
+                                []( unsigned char c ) { return c >= '0' && c <= '9'; } );
+        }
+    } // namespace
 
     base::Logger ConsensusManagerLogger()
     {
@@ -123,13 +140,37 @@ namespace sgns
 
     ConsensusManager::~ConsensusManager()
     {
-        stop_timer_.store( true );
-        timer_cv_.notify_all();
+        Close();
         ConsensusManagerLogger()->debug( "{}: Finished shutting down ConsensusManager", __func__ );
     }
 
     void ConsensusManager::Close()
     {
+        bool expected = false;
+        if ( !close_started_.compare_exchange_strong( expected, true ) )
+        {
+            return;
+        }
+
+        // Account switches reuse GlobalDB. Remove this manager's registrations
+        // before a replacement ConsensusManager registers the same pattern.
+        // The one-shot guard also prevents a delayed destructor from removing
+        // registrations that belong to the replacement manager.
+        const std::string pattern = std::string( CERT_KEY_PATTERN );
+        if ( db_ )
+        {
+            if ( certificate_callback_registered_ )
+            {
+                db_->UnregisterNewElementCallback( pattern );
+                certificate_callback_registered_ = false;
+            }
+            if ( certificate_filter_registered_ )
+            {
+                db_->UnregisterElementFilter( pattern );
+                certificate_filter_registered_ = false;
+            }
+        }
+
         stop_timer_.store( true );
         timer_cv_.notify_all();
         if ( round_timer_.joinable() )
@@ -149,21 +190,14 @@ namespace sgns
             return;
         }
 
-        std::weak_ptr<ConsensusManager> weak_self = shared_from_this();
-        round_timer_                              = std::thread(
-            [weak_self]()
+        round_timer_ = std::thread(
+            [this]()
             {
                 constexpr auto min_interval = std::chrono::milliseconds( 500 );
                 while ( true )
                 {
-                    auto self = weak_self.lock();
-                    if ( !self )
-                    {
-                        return;
-                    }
-
-                    std::unique_lock<std::mutex> lock( self->timer_mutex_ );
-                    auto                         interval = self->round_duration_ / 2;
+                    std::unique_lock<std::mutex> lock( timer_mutex_ );
+                    auto                         interval = round_duration_ / 2;
                     if ( interval.count() <= 0 )
                     {
                         interval = DEFAULT_ROUND_DURATION / 2;
@@ -172,31 +206,33 @@ namespace sgns
                     {
                         interval = min_interval;
                     }
-                    if ( self->certificates_pending_.load() )
+                    if ( certificates_pending_.load() )
                     {
                         // Work is pending: run on cadence, only interrupt for shutdown.
-                        self->timer_cv_.wait_for( lock, interval, [self]() { return self->stop_timer_.load(); } );
+                        timer_cv_.wait_for( lock, interval, [this]() { return stop_timer_.load(); } );
                     }
                     else
                     {
                         // No pending work: wait up to interval, but wake immediately when new work appears.
-                        self->timer_cv_.wait_for(
+                        timer_cv_.wait_for(
                             lock,
                             interval,
-                            [self]() { return self->stop_timer_.load() || self->certificates_pending_.load(); } );
+                            [this]() { return stop_timer_.load() || certificates_pending_.load(); } );
                     }
-                    if ( self->stop_timer_.load() )
+                    if ( stop_timer_.load() )
                     {
                         return;
                     }
                     lock.unlock();
-                    if ( self->certificates_pending_.load() )
+                    if ( certificates_pending_.load() )
                     {
-                        self->ProcessCertificates();
-                        self->UpdateCertificatesPending();
+                        ProcessCertificates();
+                        UpdateCertificatesPending();
                     }
+                    ExpirePendingProposals();
+                    ProcessDuePendingRetries();
                     // Keep replaying unfinished certificate work while the node is running.
-                    self->RecoverPendingCertificateWork();
+                    RecoverPendingCertificateWork();
                 }
             } );
     }
@@ -290,6 +326,115 @@ namespace sgns
         certificate_subject_handlers_.erase( type_hash.value() );
     }
 
+    bool ConsensusManager::RegisterProposalCleanupHandler( std::string_view       subject_type,
+                                                           ProposalCleanupHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty cleanup handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid cleanup handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return false;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering cleanup handler subject_type={}", __func__, subject_type );
+        std::unique_lock lock( cleanup_handlers_mutex_ );
+        proposal_cleanup_handlers_[type_hash.value()].push_back( std::move( handler ) );
+        return true;
+    }
+
+    void ConsensusManager::UnregisterProposalCleanupHandler( std::string_view subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing cleanup handler with subject_type={}", __func__, subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( cleanup_handlers_mutex_ );
+        proposal_cleanup_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::SetPendingLifecycleConfig( PendingLifecycleConfig config )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        pending_config_ = config;
+    }
+
+    void ConsensusManager::RegisterSlotKeyHandler( std::string_view subject_type, SlotKeyHandler handler )
+    {
+        if ( !handler )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored empty slot key handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return;
+        }
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: ignored invalid slot key handler subject_type={}",
+                                             __func__,
+                                             subject_type );
+            return;
+        }
+        ConsensusManagerLogger()->debug( "{}: Registering slot key handler subject_type={}", __func__, subject_type );
+        std::unique_lock lock( slot_key_handlers_mutex_ );
+        slot_key_handlers_[type_hash.value()] = std::move( handler );
+    }
+
+    void ConsensusManager::UnregisterSlotKeyHandler( std::string_view subject_type )
+    {
+        ConsensusManagerLogger()->debug( "{}: Removing slot key handler subject_type={}", __func__, subject_type );
+        auto type_hash = ComputeSubjectTypeHash( subject_type );
+        if ( type_hash.has_error() )
+        {
+            return;
+        }
+        std::unique_lock lock( slot_key_handlers_mutex_ );
+        slot_key_handlers_.erase( type_hash.value() );
+    }
+
+    void ConsensusManager::FireProposalCleanupCallbacks( const Proposal &proposal )
+    {
+        auto subject_hash = GetSubjectHash( proposal.subject() );
+        if ( subject_hash.has_error() )
+        {
+            return;
+        }
+        auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+        if ( nonce_payload.has_error() )
+        {
+            return;
+        }
+        auto tx_hash = nonce_payload.value().tx_hash();
+        if ( tx_hash.empty() )
+        {
+            return;
+        }
+
+        std::vector<ProposalCleanupHandler> handlers_copy;
+        {
+            std::shared_lock lock( cleanup_handlers_mutex_ );
+            auto             it = proposal_cleanup_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            if ( it != proposal_cleanup_handlers_.end() )
+            {
+                handlers_copy = it->second;
+            }
+        }
+        for ( auto &handler : handlers_copy )
+        {
+            handler( tx_hash );
+        }
+    }
+
     void ConsensusManager::ConfigureTimestampWindow( std::chrono::milliseconds window )
     {
         if ( window.count() <= 0 )
@@ -340,9 +485,9 @@ namespace sgns
         {
             return false;
         }
-        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::system_clock::now().time_since_epoch() )
-                                .count();
+        const auto now_ms    = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::system_clock::now().time_since_epoch() )
+                                   .count();
         const auto window_ms = timestamp_window_.count();
         if ( now_ms < 0 || window_ms < 0 )
         {
@@ -364,9 +509,9 @@ namespace sgns
         {
             return 0;
         }
-        const auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                std::chrono::system_clock::now().time_since_epoch() )
-                                .count();
+        const auto now_ms  = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                 std::chrono::system_clock::now().time_since_epoch() )
+                                 .count();
         const auto elapsed = static_cast<int64_t>( now_ms ) - static_cast<int64_t>( proposal_ts_ms );
         if ( elapsed <= 0 )
         {
@@ -400,19 +545,24 @@ namespace sgns
         return validators;
     }
 
-    bool ConsensusManager::IsCurrentAggregator( const Proposal                    &proposal,
-                                                const ValidatorRegistry::Registry &registry ) const
+    ConsensusManager::AggregatorRole ConsensusManager::GetAggregatorRole(
+        const Proposal                    &proposal,
+        const ValidatorRegistry::Registry &registry ) const
     {
-        ConsensusManagerLogger()->trace( "{}: Checking if is current aggregator for proposal", __func__ );
+        ConsensusManagerLogger()->trace( "{}: Checking local aggregator role for proposal", __func__ );
         auto ordered = GetOrderedActiveValidators( registry );
         if ( ordered.empty() )
         {
-            return false;
+            return AggregatorRole::NotInRegistry;
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
-        uint64_t base_index = 0;
+        if ( std::find( ordered.begin(), ordered.end(), account_address_ ) == ordered.end() )
+        {
+            return AggregatorRole::NotInRegistry;
+        }
+
+        auto hash = sgns::crypto::sha2_256( proposal.proposal_id().data(), proposal.proposal_id().size() );
+        uint64_t                 base_index = 0;
         for ( size_t i = 0; i < sizeof( uint64_t ) && i < hash.size(); ++i )
         {
             base_index = ( base_index << 8 ) | hash[i];
@@ -422,7 +572,8 @@ namespace sgns
         const auto round = GetCurrentRound( proposal.timestamp() );
         const auto index = ( base_index + round ) % ordered.size();
 
-        return ordered[index] == account_address_;
+        return ordered[index] == account_address_ ? AggregatorRole::CurrentAggregator
+                                                  : AggregatorRole::ActiveButNotAggregator;
     }
 
     outcome::result<std::string> ConsensusManager::GetSubjectHash( const Subject &subject )
@@ -496,7 +647,7 @@ namespace sgns
                                                  proposal.proposal_id().substr( 0, 8 ),
                                                  slot_key );
                 slot_state.best_proposal_id = proposal.proposal_id();
-                auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+                auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
                 if ( nonce_payload.has_value() )
                 {
                     slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -520,7 +671,7 @@ namespace sgns
                                                      proposal.proposal_id().substr( 0, 8 ),
                                                      slot_key );
                     slot_state.best_proposal_id = proposal.proposal_id();
-                    auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+                    auto nonce_payload          = DecodeNonceSubject( proposal.subject() );
                     if ( nonce_payload.has_value() )
                     {
                         slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -528,7 +679,8 @@ namespace sgns
                 }
             }
 
-            if ( slot_state.best_proposal_id == proposal.proposal_id() && !slot_state.voted )
+            if ( slot_state.best_proposal_id == proposal.proposal_id() &&
+                 slot_state.voted_proposal_ids.find( proposal.proposal_id() ) == slot_state.voted_proposal_ids.end() )
             {
                 ConsensusManagerLogger()->debug(
                     "{}: My proposal for hash {}, id={}, slot key {} is better so let's vote on it. ",
@@ -536,8 +688,8 @@ namespace sgns
                     GetPrintableSubjectHash( proposal.subject() ),
                     proposal.proposal_id().substr( 0, 8 ),
                     slot_key );
-                slot_state.voted = true;
-                should_vote      = true;
+                slot_state.voted_proposal_ids.insert( proposal.proposal_id() );
+                should_vote = true;
             }
         }
 
@@ -552,7 +704,7 @@ namespace sgns
             auto vote_result = CreateVote( proposal.proposal_id(), account_address_, true, signer_ );
             if ( vote_result.has_value() )
             {
-                (void)SubmitVote( vote_result.value() );
+                (void) SubmitVote( vote_result.value() );
                 ConsensusManagerLogger()->debug( "{}: self-vote submitted for hash {}, id={}, slot key {}",
                                                  __func__,
                                                  GetPrintableSubjectHash( proposal.subject() ),
@@ -571,48 +723,386 @@ namespace sgns
         }
     }
 
-    void ConsensusManager::AddPendingProposal( const Proposal &proposal, const std::string &subject_hash )
+    bool ConsensusManager::CanAdmitPendingProposalLocked( const Proposal    &proposal,
+                                                          std::size_t        retained_bytes,
+                                                          const std::string &proposer_id ) const
+    {
+        if ( pending_entries_.size() >= pending_config_.max_pending_proposals )
+        {
+            ConsensusManagerLogger()->warn( "{}: pending admission refused: global limit reached proposal_id={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        auto proposer_it = pending_count_by_proposer_.find( proposer_id );
+        if ( proposer_it != pending_count_by_proposer_.end() &&
+             proposer_it->second >= pending_config_.max_pending_per_proposer )
+        {
+            ConsensusManagerLogger()->warn(
+                "{}: pending admission refused: proposer limit reached proposer={} proposal_id={}",
+                __func__,
+                proposer_id.substr( 0, 8 ),
+                proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        if ( pending_retained_bytes_ + retained_bytes > pending_config_.max_retained_pending_bytes )
+        {
+            ConsensusManagerLogger()->warn( "{}: pending admission refused: retained byte limit reached proposal_id={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return false;
+        }
+        return true;
+    }
+
+    std::vector<ConsensusManager::PendingDependencyKey> ConsensusManager::NormalizePendingDependencies(
+        const std::string      &subject_hash,
+        const ValidationResult &validation_result ) const
+    {
+        if ( !validation_result.dependencies.empty() )
+        {
+            return validation_result.dependencies;
+        }
+        return { PendingDependencyKey::Certificate( subject_hash ) };
+    }
+
+    std::chrono::milliseconds ConsensusManager::NextPendingRetryDelayLocked( const PendingProposalEntry &entry ) const
+    {
+        if ( entry.retry_after.has_value() )
+        {
+            return entry.retry_after.value();
+        }
+        if ( pending_config_.scheduled_retry_delays.empty() )
+        {
+            return std::chrono::seconds( 10 );
+        }
+        const auto index = std::min( entry.scheduled_retry_count, pending_config_.scheduled_retry_delays.size() - 1 );
+        return pending_config_.scheduled_retry_delays[index];
+    }
+
+    bool ConsensusManager::AddPendingProposal( const Proposal                       &proposal,
+                                               const std::string                    &subject_hash,
+                                               const ValidationResult               &validation_result,
+                                               std::size_t                           scheduled_retry_count,
+                                               std::chrono::steady_clock::time_point last_retry_at )
     {
         std::lock_guard lock( proposals_mutex_ );
-        if ( pending_proposals_.find( proposal.proposal_id() ) != pending_proposals_.end() )
+        if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
         {
-            ConsensusManagerLogger()->error(
-                "{}: Failed adding pending proposal for {}: already have a proposal with id {}",
-                __func__,
-                subject_hash.substr( 0, 8 ),
-                proposal.proposal_id().substr( 0, 8 ) );
-            return;
+            RemovePendingProposalLocked( proposal.proposal_id(), "replace" );
+        }
+
+        const auto  dependencies   = NormalizePendingDependencies( subject_hash, validation_result );
+        const auto  retained_bytes = static_cast<std::size_t>( proposal.ByteSizeLong() );
+        const auto &proposer_id    = proposal.proposer_id();
+        if ( !CanAdmitPendingProposalLocked( proposal, retained_bytes, proposer_id ) )
+        {
+            return false;
         }
         ConsensusManagerLogger()->debug( "{}: Adding pending proposal for {}: proposal with id {}",
                                          __func__,
                                          subject_hash.substr( 0, 8 ),
                                          proposal.proposal_id().substr( 0, 8 ) );
-        pending_proposals_.emplace( proposal.proposal_id(), proposal );
-        pending_by_subject_hash_[subject_hash].push_back( proposal.proposal_id() );
+        const auto now = std::chrono::steady_clock::now();
+
+        PendingProposalEntry entry;
+        entry.proposal              = proposal;
+        entry.dependencies          = dependencies;
+        entry.admitted_at           = now;
+        entry.expires_at            = now + pending_config_.pending_ttl;
+        entry.last_retry_at         = last_retry_at;
+        entry.retry_after           = validation_result.retry_after;
+        entry.retained_bytes        = retained_bytes;
+        entry.proposer_id           = proposer_id;
+        entry.scheduled_retry_count = scheduled_retry_count;
+        entry.next_retry_at         = now + NextPendingRetryDelayLocked( entry );
+
+        pending_retained_bytes_                 += retained_bytes;
+        pending_count_by_proposer_[proposer_id] += 1;
+        for ( const auto &dependency : dependencies )
+        {
+            pending_by_dependency_[dependency].insert( proposal.proposal_id() );
+        }
+        pending_entries_.emplace( proposal.proposal_id(), std::move( entry ) );
+        timer_cv_.notify_all();
+        return true;
     }
 
     std::vector<ConsensusManager::Proposal> ConsensusManager::TakePendingProposals( const std::string &subject_hash )
     {
         std::vector<Proposal> result;
         std::lock_guard       lock( proposals_mutex_ );
-        auto                  it = pending_by_subject_hash_.find( subject_hash );
-        if ( it == pending_by_subject_hash_.end() )
+        const auto            dependency = PendingDependencyKey::Certificate( subject_hash );
+        auto                  it         = pending_by_dependency_.find( dependency );
+        if ( it == pending_by_dependency_.end() )
         {
             ConsensusManagerLogger()->trace( "{}: No pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
             return result;
         }
-        for ( const auto &proposal_id : it->second )
+        const std::vector<std::string> proposal_ids( it->second.begin(), it->second.end() );
+        for ( const auto &proposal_id : proposal_ids )
         {
-            auto prop_it = pending_proposals_.find( proposal_id );
-            if ( prop_it != pending_proposals_.end() )
+            auto prop_it = pending_entries_.find( proposal_id );
+            if ( prop_it != pending_entries_.end() )
             {
-                result.push_back( prop_it->second );
-                pending_proposals_.erase( prop_it );
+                result.push_back( prop_it->second.proposal );
+                RemovePendingProposalLocked( proposal_id, "take" );
             }
         }
         ConsensusManagerLogger()->debug( "{}: Taking pending proposals for {}", __func__, subject_hash.substr( 0, 8 ) );
-        pending_by_subject_hash_.erase( it );
         return result;
+    }
+
+    bool ConsensusManager::RemovePendingProposal( const std::string &proposal_id, std::string_view reason )
+    {
+        std::lock_guard lock( proposals_mutex_ );
+        return RemovePendingProposalLocked( proposal_id, reason );
+    }
+
+    bool ConsensusManager::RemovePendingProposalLocked( const std::string &proposal_id, std::string_view reason )
+    {
+        auto entry_it = pending_entries_.find( proposal_id );
+        if ( entry_it == pending_entries_.end() )
+        {
+            pending_votes_.erase( proposal_id );
+            return false;
+        }
+
+        const auto retained_bytes = entry_it->second.retained_bytes;
+        if ( pending_retained_bytes_ >= retained_bytes )
+        {
+            pending_retained_bytes_ -= retained_bytes;
+        }
+        else
+        {
+            pending_retained_bytes_ = 0;
+        }
+
+        auto proposer_it = pending_count_by_proposer_.find( entry_it->second.proposer_id );
+        if ( proposer_it != pending_count_by_proposer_.end() )
+        {
+            if ( proposer_it->second > 1 )
+            {
+                --proposer_it->second;
+            }
+            else
+            {
+                pending_count_by_proposer_.erase( proposer_it );
+            }
+        }
+
+        for ( const auto &dependency : entry_it->second.dependencies )
+        {
+            auto dep_it = pending_by_dependency_.find( dependency );
+            if ( dep_it != pending_by_dependency_.end() )
+            {
+                dep_it->second.erase( proposal_id );
+                if ( dep_it->second.empty() )
+                {
+                    pending_by_dependency_.erase( dep_it );
+                }
+            }
+        }
+
+        pending_entries_.erase( entry_it );
+        pending_votes_.erase( proposal_id );
+        ConsensusManagerLogger()->debug( "{}: removed pending proposal_id={} reason={}",
+                                         __func__,
+                                         proposal_id.substr( 0, 8 ),
+                                         reason );
+        return true;
+    }
+
+    void ConsensusManager::RetryPendingProposal( const Proposal                       &proposal,
+                                                 std::string_view                      reason,
+                                                 std::size_t                           scheduled_retry_count,
+                                                 std::chrono::steady_clock::time_point last_retry_at )
+    {
+        SubjectHandler subject_handler;
+        {
+            std::shared_lock lock( subject_handlers_mutex_ );
+            auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
+            if ( handler_it == subject_handlers_.end() )
+            {
+                ConsensusManagerLogger()->error(
+                    "{}: rejected: subject handler missing type_hash={} reason={}",
+                    __func__,
+                    base::hex_lower( gsl::span<const uint8_t>(
+                        reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                        proposal.subject().subject_type_hash().hash().size() ) ),
+                    reason );
+                return;
+            }
+            subject_handler = handler_it->second;
+        }
+
+        auto subject_result = subject_handler( proposal.subject() );
+        if ( subject_result.has_error() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject handler error proposal_id={} reason={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             reason );
+            return;
+        }
+
+        const auto &validation_result = subject_result.value();
+        if ( validation_result.check == Check::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: subject check failed proposal_id={} reason={}",
+                                             __func__,
+                                             proposal.proposal_id().substr( 0, 8 ),
+                                             reason );
+            return;
+        }
+
+        if ( validation_result.check == Check::Stalled )
+        {
+            ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled proposal_id={} reason={}",
+                                            __func__,
+                                            proposal.proposal_id().substr( 0, 8 ),
+                                            reason );
+            return;
+        }
+
+        if ( validation_result.check == Check::Pending )
+        {
+            auto subject_hash_result = GetSubjectHash( proposal.subject() );
+            if ( subject_hash_result.has_error() )
+            {
+                ConsensusManagerLogger()->error( "{}: rejected: subject hash missing proposal_id={} reason={}",
+                                                 __func__,
+                                                 proposal.proposal_id().substr( 0, 8 ),
+                                                 reason );
+                return;
+            }
+            AddPendingProposal( proposal,
+                                subject_hash_result.value(),
+                                validation_result,
+                                scheduled_retry_count,
+                                last_retry_at );
+            return;
+        }
+
+        ContinueProposalAfterSubject( proposal );
+    }
+
+    outcome::result<void> ConsensusManager::WakePendingDependency( const PendingDependencyKey &dependency )
+    {
+        struct DependencyRetryCandidate
+        {
+            Proposal    proposal;
+            std::size_t scheduled_retry_count = 0;
+        };
+
+        std::vector<DependencyRetryCandidate> retry_now;
+        const auto                            now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            auto            dep_it = pending_by_dependency_.find( dependency );
+            if ( dep_it == pending_by_dependency_.end() )
+            {
+                return outcome::success();
+            }
+
+            const std::vector<std::string> proposal_ids( dep_it->second.begin(), dep_it->second.end() );
+            for ( const auto &proposal_id : proposal_ids )
+            {
+                auto entry_it = pending_entries_.find( proposal_id );
+                if ( entry_it == pending_entries_.end() )
+                {
+                    continue;
+                }
+                if ( now >= entry_it->second.expires_at )
+                {
+                    continue;
+                }
+                if ( entry_it->second.last_retry_at != std::chrono::steady_clock::time_point{} &&
+                     now - entry_it->second.last_retry_at < pending_config_.min_dependency_retry_interval )
+                {
+                    entry_it->second.next_retry_at = entry_it->second.last_retry_at +
+                                                     pending_config_.min_dependency_retry_interval;
+                    continue;
+                }
+
+                DependencyRetryCandidate candidate;
+                candidate.proposal              = entry_it->second.proposal;
+                candidate.scheduled_retry_count = entry_it->second.scheduled_retry_count;
+                entry_it->second.last_retry_at  = now;
+                retry_now.push_back( std::move( candidate ) );
+                RemovePendingProposalLocked( proposal_id, "dependency-wake" );
+            }
+        }
+
+        for ( const auto &candidate : retry_now )
+        {
+            RetryPendingProposal( candidate.proposal, "dependency-wake", candidate.scheduled_retry_count, now );
+        }
+        return outcome::success();
+    }
+
+    void ConsensusManager::ProcessDuePendingRetries()
+    {
+        struct RetryCandidate
+        {
+            Proposal    proposal;
+            std::size_t scheduled_retry_count = 0;
+        };
+
+        std::vector<RetryCandidate> retry_now;
+        const auto                  now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto it = pending_entries_.begin(); it != pending_entries_.end(); )
+            {
+                if ( now < it->second.next_retry_at || now >= it->second.expires_at )
+                {
+                    ++it;
+                    continue;
+                }
+
+                const auto     proposal_id = it->first;
+                RetryCandidate candidate;
+                candidate.proposal              = it->second.proposal;
+                candidate.scheduled_retry_count = it->second.scheduled_retry_count + 1;
+                it->second.last_retry_at        = now;
+                retry_now.push_back( std::move( candidate ) );
+                ++it;
+                RemovePendingProposalLocked( proposal_id, "scheduled-retry" );
+            }
+        }
+
+        for ( const auto &candidate : retry_now )
+        {
+            RetryPendingProposal( candidate.proposal, "scheduled-retry", candidate.scheduled_retry_count, now );
+        }
+    }
+
+    void ConsensusManager::ExpirePendingProposals()
+    {
+        std::vector<Proposal> expired;
+        const auto            now = std::chrono::steady_clock::now();
+        {
+            std::lock_guard lock( proposals_mutex_ );
+            for ( auto it = pending_entries_.begin(); it != pending_entries_.end(); )
+            {
+                if ( now < it->second.expires_at )
+                {
+                    ++it;
+                    continue;
+                }
+                const auto proposal_id = it->first;
+                expired.push_back( it->second.proposal );
+                ++it;
+                RemovePendingProposalLocked( proposal_id, "ttl-expired" );
+            }
+        }
+
+        for ( const auto &proposal : expired )
+        {
+            FireProposalCleanupCallbacks( proposal );
+            ClearProposalSlot( proposal );
+        }
     }
 
     void ConsensusManager::AddPendingVote( const Vote &vote )
@@ -726,6 +1216,21 @@ namespace sgns
         vote.set_timestamp(
             std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::system_clock::now().time_since_epoch() )
                 .count() );
+
+        // Phase 6 (D-01): populate slot_N_hash fields before signing so the
+        // signature commits to them (T-06-01). No-op when no populator is set.
+        SlotHashPopulator slot_hash_populator;
+        {
+            std::lock_guard<std::mutex> lock( slot_hash_populator_mutex_ );
+            slot_hash_populator = slot_hash_populator_;
+        }
+        if ( slot_hash_populator )
+        {
+            slot_hash_populator( vote );
+            ConsensusManagerLogger()->debug( "{}: populated slot hashes for proposal_id={}",
+                                             __func__,
+                                             proposal_id.substr( 0, 8 ) );
+        }
 
         auto signing_bytes = VoteSigningBytes( vote );
         if ( signing_bytes.has_error() )
@@ -847,6 +1352,87 @@ namespace sgns
         return cert;
     }
 
+    bool ConsensusManager::IsBridgeMintSubject( const Proposal &proposal )
+    {
+        // Fail-closed (RESEARCH Pattern 2): any decode failure returns false so
+        // the single-pool IsQuorum path applies. Only a successfully-decoded
+        // NonceSubject carrying a kMintV2 with public-chain metadata is a
+        // bridge mint. Test/local chains can still use a registered
+        // IInputValidator without being forced through RPC slot quorum.
+        const auto nonce_payload = DecodeNonceSubject( proposal.subject() );
+        if ( nonce_payload.has_error() )
+        {
+            return false;
+        }
+        const auto &transaction = nonce_payload.value().transaction();
+        if ( transaction.transaction_case() != EmbeddedTransaction::kMintV2 )
+        {
+            return false;
+        }
+        const auto &mint = transaction.mint_v2();
+        return IsPublicChainMintChainId( mint.chain_id() );
+    }
+
+    outcome::result<ConsensusManager::QuorumTally> ConsensusManager::EvaluateQuorum(
+        const Proposal                    &proposal,
+        const std::vector<Vote>           &votes,
+        const ValidatorRegistry::Registry &registry ) const
+    {
+        QuorumTally tally;
+
+        if ( IsBridgeMintSubject( proposal ) )
+        {
+            // Bridge-mint subject: cumulative slot tally (D-06).
+            const auto slot_result = registry_->EvaluateSlotQuorum( votes, registry );
+            tally.total_weight     = ValidatorRegistry::TotalWeight( registry );
+            tally.approved_weight  = slot_result.total_voting_reputation;
+            tally.has_quorum       = slot_result.has_quorum;
+            tally.qualified_sum    = slot_result.qualified_sum;
+            tally.slot_threshold   = slot_result.threshold;
+            ConsensusManagerLogger()->debug(
+                "{}: bridge-mint slot tally hash {} proposal_id={} qualified_sum={} "
+                "threshold={} total_voting_rep={} has_quorum={}",
+                __func__,
+                GetPrintableSubjectHash( proposal.subject() ),
+                proposal.proposal_id().substr( 0, 8 ),
+                slot_result.qualified_sum,
+                slot_result.threshold,
+                slot_result.total_voting_reputation,
+                slot_result.has_quorum );
+            return tally;
+        }
+
+        // Non-bridge subject: unchanged single-pool IsQuorum path.
+        const uint64_t total_weight = ValidatorRegistry::TotalWeight( registry );
+        uint64_t       approved_weight = 0;
+        std::unordered_set<std::string> seen;
+        for ( const auto &vote : votes )
+        {
+            if ( vote.proposal_id() != proposal.proposal_id() )
+            {
+                continue;
+            }
+            if ( !seen.insert( vote.voter_id() ).second )
+            {
+                continue;
+            }
+            const auto *validator = ValidatorRegistry::FindValidator( registry, vote.voter_id() );
+            if ( !validator || validator->status() != ValidatorRegistry::Status::ACTIVE )
+            {
+                continue;
+            }
+            if ( vote.approve() )
+            {
+                approved_weight += validator->weight();
+            }
+        }
+        tally.total_weight    = total_weight;
+        tally.approved_weight = approved_weight;
+        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
+        // qualified_sum / slot_threshold remain zero for non-bridge (observability).
+        return tally;
+    }
+
     outcome::result<ConsensusManager::QuorumTally> ConsensusManager::TallyVotes(
         const Proposal                    &proposal,
         const std::vector<Vote>           &votes,
@@ -874,8 +1460,8 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        uint64_t              total_weight    = ValidatorRegistry::TotalWeight( registry );
-        uint64_t              approved_weight = 0;
+        uint64_t                        total_weight    = ValidatorRegistry::TotalWeight( registry );
+        uint64_t                        approved_weight = 0;
         std::unordered_set<std::string> seen;
 
         for ( const auto &vote : votes )
@@ -935,7 +1521,20 @@ namespace sgns
         QuorumTally tally;
         tally.total_weight    = total_weight;
         tally.approved_weight = approved_weight;
-        tally.has_quorum      = registry_->IsQuorum( approved_weight, total_weight );
+        // Phase 6 (D-06): route the final has_quorum decision through the
+        // shared EvaluateQuorum dispatcher so bridge-mint subjects use the
+        // cumulative slot model. The non-bridge branch recomputes the same
+        // single-pool IsQuorum result; sig verification stays in this loop.
+        // Both TallyVotes (certificate creation) and the incremental HandleVote
+        // tally agree on bridge-mint quorum via this single helper (Pitfall 1).
+        auto quorum_result = EvaluateQuorum( proposal, votes, registry );
+        if ( quorum_result.has_error() )
+        {
+            return quorum_result.error();
+        }
+        tally.has_quorum     = quorum_result.value().has_quorum;
+        tally.qualified_sum  = quorum_result.value().qualified_sum;
+        tally.slot_threshold = quorum_result.value().slot_threshold;
         ConsensusManagerLogger()->debug(
             "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
             __func__,
@@ -963,7 +1562,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto registry_result = registry_->LoadRegistry( proposal.registry_cid() );
+        auto registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( registry_result.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: failed: registry load error={} cid={}",
@@ -1171,7 +1770,7 @@ namespace sgns
             return;
         }
 
-        auto proposal_registry_result = registry_->LoadRegistry( proposal.registry_cid() );
+        auto proposal_registry_result = registry_->LoadRegistryByCid( proposal.registry_cid() );
         if ( proposal_registry_result.has_error() )
         {
             ConsensusManagerLogger()->warn(
@@ -1221,8 +1820,7 @@ namespace sgns
                                              subject_hash.value().substr( 0, 8 ),
                                              proposal.proposal_id().substr( 0, 8 ) );
             std::lock_guard lock( proposals_mutex_ );
-            pending_votes_.erase( proposal.proposal_id() );
-            pending_proposals_.erase( proposal.proposal_id() );
+            RemovePendingProposalLocked( proposal.proposal_id(), "already-certified" );
             return;
         }
 
@@ -1232,12 +1830,12 @@ namespace sgns
             auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
             if ( handler_it == subject_handlers_.end() )
             {
-                ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type_hash={}",
-                                                 __func__,
-                                                 base::hex_lower( gsl::span<const uint8_t>(
-                                                     reinterpret_cast<const uint8_t *>(
-                                                         proposal.subject().subject_type_hash().hash().data() ),
-                                                     proposal.subject().subject_type_hash().hash().size() ) ) );
+                ConsensusManagerLogger()->error(
+                    "{}: rejected: subject handler missing type_hash={}",
+                    __func__,
+                    base::hex_lower( gsl::span<const uint8_t>(
+                        reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                        proposal.subject().subject_type_hash().hash().size() ) ) );
                 return;
             }
             subject_handler = handler_it->second;
@@ -1253,7 +1851,8 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == Check::Reject )
+        const auto &validation_result = subject_result.value();
+        if ( validation_result.check == Check::Reject )
         {
             ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                              __func__,
@@ -1262,7 +1861,16 @@ namespace sgns
             return;
         }
 
-        if ( subject_result.value() == Check::Pending )
+        if ( validation_result.check == Check::Stalled )
+        {
+            ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
+                                            __func__,
+                                            GetPrintableSubjectHash( proposal.subject() ),
+                                            proposal.proposal_id().substr( 0, 8 ) );
+            return;
+        }
+
+        if ( validation_result.check == Check::Pending )
         {
             {
                 std::lock_guard lock( proposals_mutex_ );
@@ -1278,7 +1886,7 @@ namespace sgns
                                              __func__,
                                              GetPrintableSubjectHash( proposal.subject() ),
                                              proposal.proposal_id().substr( 0, 8 ) );
-            AddPendingProposal( proposal, subject_hash.value() );
+            AddPendingProposal( proposal, subject_hash.value(), validation_result );
             return;
         }
 
@@ -1305,12 +1913,12 @@ namespace sgns
                 auto             handler_it = subject_handlers_.find( proposal.subject().subject_type_hash().hash() );
                 if ( handler_it == subject_handlers_.end() )
                 {
-                    ConsensusManagerLogger()->error( "{}: rejected: subject handler missing type_hash={}",
-                                                     __func__,
-                                                     base::hex_lower( gsl::span<const uint8_t>(
-                                                         reinterpret_cast<const uint8_t *>(
-                                                             proposal.subject().subject_type_hash().hash().data() ),
-                                                         proposal.subject().subject_type_hash().hash().size() ) ) );
+                    ConsensusManagerLogger()->error(
+                        "{}: rejected: subject handler missing type_hash={}",
+                        __func__,
+                        base::hex_lower( gsl::span<const uint8_t>(
+                            reinterpret_cast<const uint8_t *>( proposal.subject().subject_type_hash().hash().data() ),
+                            proposal.subject().subject_type_hash().hash().size() ) ) );
                     continue;
                 }
                 subject_handler = handler_it->second;
@@ -1326,7 +1934,8 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == Check::Reject )
+            const auto &validation_result = subject_result.value();
+            if ( validation_result.check == Check::Reject )
             {
                 ConsensusManagerLogger()->error( "{}: rejected: subject check failed for hash {} proposal_id={}",
                                                  __func__,
@@ -1335,7 +1944,16 @@ namespace sgns
                 continue;
             }
 
-            if ( subject_result.value() == Check::Pending )
+            if ( validation_result.check == Check::Stalled )
+            {
+                ConsensusManagerLogger()->warn( "{}: stalled: subject handler stalled for hash {} proposal_id={}",
+                                                __func__,
+                                                subject_hash.substr( 0, 8 ),
+                                                proposal.proposal_id().substr( 0, 8 ) );
+                continue;
+            }
+
+            if ( validation_result.check == Check::Pending )
             {
                 auto subject_hash_result = GetSubjectHash( proposal.subject() );
                 if ( subject_hash_result.has_error() )
@@ -1349,7 +1967,7 @@ namespace sgns
                                                  __func__,
                                                  subject_hash.substr( 0, 8 ),
                                                  proposal.proposal_id().substr( 0, 8 ) );
-                AddPendingProposal( proposal, subject_hash_result.value() );
+                AddPendingProposal( proposal, subject_hash_result.value(), validation_result );
                 continue;
             }
 
@@ -1420,7 +2038,7 @@ namespace sgns
                     round );
                 continue;
             }
-            auto proposal_registry_result = registry_->LoadRegistry( state.proposal.registry_cid() );
+            auto proposal_registry_result = registry_->LoadRegistryByCid( state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->debug( "{}: skipping proposal due to registry load error={} proposal_id={}",
@@ -1438,7 +2056,19 @@ namespace sgns
                 continue;
             }
 
-            if ( !IsCurrentAggregator( state.proposal, proposal_registry ) )
+            const auto aggregator_role = GetAggregatorRole( state.proposal, proposal_registry );
+            if ( aggregator_role == AggregatorRole::NotInRegistry )
+            {
+                ConsensusManagerLogger()->debug(
+                    "{}: local node not in proposal registry; clearing local proposal for hash {} proposal_id={}",
+                    __func__,
+                    GetPrintableSubjectHash( state.proposal.subject() ),
+                    state.proposal.proposal_id().substr( 0, 8 ) );
+                ClearProposalSlot( state.proposal );
+                continue;
+            }
+
+            if ( aggregator_role == AggregatorRole::ActiveButNotAggregator )
             {
                 ConsensusManagerLogger()->debug( "{}: not aggregator for proposal for hash {} proposal_id={}",
                                                  __func__,
@@ -1472,7 +2102,7 @@ namespace sgns
                 continue;
             }
 
-            (void)SubmitCertificate( certificate_result.value() );
+            (void) SubmitCertificate( certificate_result.value() );
             ClearProposalSlot( state.proposal );
             ConsensusManagerLogger()->debug( "{}: certificate submitted for hash {} proposal_id={}",
                                              __func__,
@@ -1507,7 +2137,7 @@ namespace sgns
         const std::string pattern = std::string( CERT_KEY_PATTERN );
 
         auto       weak_self         = weak_from_this();
-        const bool filter_registered = db_->RegisterElementFilter(
+        certificate_filter_registered_ = db_->RegisterElementFilter(
             pattern,
             [weak_self]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
             {
@@ -1518,7 +2148,7 @@ namespace sgns
                 return std::nullopt;
             } );
 
-        const bool callback_registered = db_->RegisterNewElementCallback(
+        certificate_callback_registered_ = db_->RegisterNewElementCallback(
             pattern,
             [weak_self]( crdt::CRDTCallbackManager::NewDataPair new_data, const std::string &cid )
             {
@@ -1530,7 +2160,7 @@ namespace sgns
 
         db_->AddListenTopic( consensus_datastore_topic_ );
 
-        return filter_registered && callback_registered;
+        return certificate_filter_registered_ && certificate_callback_registered_;
     }
 
     std::optional<std::vector<crdt::pb::Element>> ConsensusManager::FilterCertificate(
@@ -1564,7 +2194,7 @@ namespace sgns
                                                 const std::string                     &cid )
     {
         auto [key, value] = new_data;
-        (void)cid;
+        (void) cid;
         Certificate certificate;
         if ( !certificate.ParseFromArray( value.data(), value.size() ) )
         {
@@ -1584,6 +2214,12 @@ namespace sgns
 
         auto certificate_check = ValidateCertificate( certificate );
 
+        if ( certificate_check == Check::Reject )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected invalid certificate for key {}", __func__, key );
+            return;
+        }
+
         if ( certificate_check == Check::Stalled )
         {
             ConsensusManagerLogger()->error(
@@ -1599,12 +2235,12 @@ namespace sgns
         CertificateSubjectHandler handler;
         {
             std::shared_lock lock( certificate_handlers_mutex_ );
-            auto it =
-                certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
+            auto it = certificate_subject_handlers_.find( certificate.proposal().subject().subject_type_hash().hash() );
             if ( it == certificate_subject_handlers_.end() )
             {
-                (void)certificate_work_journal_->MarkDone( key );
+                (void) certificate_work_journal_->MarkDone( key );
                 ConsensusManagerLogger()->warn( "{}: No subject handler for certificate with key {} ", __func__, key );
+                (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
                 return;
             }
             handler = it->second;
@@ -1631,7 +2267,8 @@ namespace sgns
             certificate_work_journal_->MarkStalled( key );
             return;
         }
-        (void)certificate_work_journal_->MarkDone( key );
+        (void) certificate_work_journal_->MarkDone( key );
+        (void) WakePendingDependency( PendingDependencyKey::Certificate( subject_hash.value() ) );
     }
 
     ConsensusManager::Check ConsensusManager::ValidateCertificate( const Certificate &certificate ) const
@@ -1664,7 +2301,7 @@ namespace sgns
                                              certificate.proposal_id() );
             return Check::Reject;
         }
-        auto registry_ret = registry_->LoadRegistry( certificate.registry_cid() );
+        auto registry_ret = registry_->LoadRegistryByCid( certificate.registry_cid() );
         if ( registry_ret.has_error() )
         {
             ConsensusManagerLogger()->error( "{}: rejected: registry load error={} for registry cid {} proposal_id={}",
@@ -1799,7 +2436,7 @@ namespace sgns
                 return;
             }
 
-            auto proposal_registry_result = registry_->LoadRegistry( proposal_state.proposal.registry_cid() );
+            auto proposal_registry_result = registry_->LoadRegistryByCid( proposal_state.proposal.registry_cid() );
             if ( proposal_registry_result.has_error() )
             {
                 ConsensusManagerLogger()->warn( "{}: deferred vote: registry load error={} proposal_id={}",
@@ -1831,7 +2468,20 @@ namespace sgns
             if ( is_active_validator )
             {
                 it->second.approved_weight += validator->weight();
-                has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
+                // Phase 6 (D-06): for bridge-mint subjects, recompute has_quorum
+                // via the shared EvaluateQuorum dispatcher over the accumulated
+                // vote vector so the incremental tally agrees with TallyVotes
+                // (RESEARCH Pitfall 1 / T-06-10). For non-bridge subjects, keep
+                // the existing fast-path incremental IsQuorum call.
+                if ( IsBridgeMintSubject( proposal_state.proposal ) )
+                {
+                    auto slot_tally = EvaluateQuorum( proposal_state.proposal, it->second.votes, proposal_registry );
+                    has_quorum      = !slot_tally.has_error() && slot_tally.value().has_quorum;
+                }
+                else
+                {
+                    has_quorum = registry_->IsQuorum( it->second.approved_weight, it->second.total_weight );
+                }
                 if ( has_quorum )
                 {
                     if ( !it->second.quorum_reached )
@@ -1936,7 +2586,7 @@ namespace sgns
         if ( slot_state.best_proposal_id.empty() )
         {
             slot_state.best_proposal_id = new_state.proposal.proposal_id();
-            auto nonce_payload = DecodeNonceSubject( new_state.proposal.subject() );
+            auto nonce_payload          = DecodeNonceSubject( new_state.proposal.subject() );
             if ( nonce_payload.has_value() )
             {
                 slot_state.best_tx_hash = nonce_payload.value().tx_hash();
@@ -2008,27 +2658,8 @@ namespace sgns
 
         for ( const auto &proposal_id : ids_to_remove )
         {
+            RemovePendingProposalLocked( proposal_id, "slot-cleanup" );
             proposals_.erase( proposal_id );
-            pending_proposals_.erase( proposal_id );
-            pending_votes_.erase( proposal_id );
-        }
-
-        for ( auto it_hash = pending_by_subject_hash_.begin(); it_hash != pending_by_subject_hash_.end(); )
-        {
-            auto &vec = it_hash->second;
-            vec.erase( std::remove_if( vec.begin(),
-                                       vec.end(),
-                                       [&]( const std::string &proposal_id )
-                                       { return ids_to_remove.find( proposal_id ) != ids_to_remove.end(); } ),
-                       vec.end() );
-            if ( vec.empty() )
-            {
-                it_hash = pending_by_subject_hash_.erase( it_hash );
-            }
-            else
-            {
-                ++it_hash;
-            }
         }
 
         slot_states_.erase( slot_key );
@@ -2049,15 +2680,27 @@ namespace sgns
         }
     }
 
-    std::string ConsensusManager::GetSlotKey( const Proposal &proposal ) const
+    std::string ConsensusManager::GetSlotKey( const Proposal &proposal )
     {
         ConsensusManagerLogger()->trace( "{}: called proposal_id={}", __func__, proposal.proposal_id() );
-        auto nonce_payload = DecodeNonceSubject( proposal.subject() );
-        if ( nonce_payload.has_value() )
+
+        if ( !proposal.subject().has_subject_type_hash() )
         {
-            return proposal.subject().account_id() + ":" + std::to_string( nonce_payload.value().nonce() );
+            return proposal.proposal_id();
         }
-        auto subject_id = ComputeSubjectId( proposal.subject() );
+        const auto &subject = proposal.subject();
+        const auto &hash    = subject.subject_type_hash().hash();
+
+        {
+            std::shared_lock lock( slot_key_handlers_mutex_ );
+            auto             it = slot_key_handlers_.find( hash );
+            if ( it != slot_key_handlers_.end() )
+            {
+                return it->second( subject );
+            }
+        }
+
+        auto subject_id = ComputeSubjectId( subject );
         return subject_id.has_value() ? subject_id.value() : proposal.proposal_id();
     }
 
@@ -2098,8 +2741,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( serialized.data(), serialized.size() );
+        auto hash = sgns::crypto::sha2_256( serialized.data(), serialized.size() );
         ConsensusManagerLogger()->debug( "{}: success", __func__ );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
@@ -2114,13 +2756,12 @@ namespace sgns
             {
                 return outcome::failure( std::errc::invalid_argument );
             }
-            sgns::crypto::HasherImpl hasher;
-            auto                     hash = hasher.sha2_256( payload.data(), payload.size() );
+            auto hash = sgns::crypto::sha2_256( payload.data(), payload.size() );
             return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
         }
 
-        bool SetSubjectPayload( ConsensusSubject                 *subject,
-                                const std::string                &subject_type_hash,
+        bool SetSubjectPayload( ConsensusSubject                    *subject,
+                                const std::string                   &subject_type_hash,
                                 const google::protobuf::MessageLite &payload )
         {
             if ( subject == nullptr || subject_type_hash.size() != kSubjectTypeHashSize )
@@ -2149,8 +2790,7 @@ namespace sgns
             auto expected = ConsensusManager::ComputeSubjectTypeHash( subject_type );
             if ( expected.has_error() || !subject.has_subject_type_hash() ||
                  subject.subject_type_hash().hash() != expected.value() ||
-                 subject.payload().size() <= kSubjectTypeHashSize ||
-                 expected.value().size() != kSubjectTypeHashSize ||
+                 subject.payload().size() <= kSubjectTypeHashSize || expected.value().size() != kSubjectTypeHashSize ||
                  subject.payload().compare( 0, kSubjectTypeHashSize, expected.value() ) != 0 )
             {
                 return outcome::failure( std::errc::invalid_argument );
@@ -2166,8 +2806,7 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( subject_type.data(), subject_type.size() );
+        auto hash = sgns::crypto::sha2_256( subject_type.data(), subject_type.size() );
         return std::string( reinterpret_cast<const char *>( hash.data() ), hash.size() );
     }
 
@@ -2232,6 +2871,7 @@ namespace sgns
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
@@ -2241,6 +2881,7 @@ namespace sgns
         NonceSubject payload;
         payload.set_nonce( nonce );
         payload.set_tx_hash( tx_hash.data(), tx_hash.size() );
+        *payload.mutable_transaction() = transaction;
         if ( utxo_commitment.has_value() )
         {
             *payload.mutable_utxo_commitment() = utxo_commitment.value();
@@ -2320,9 +2961,10 @@ namespace sgns
         return subject;
     }
 
-    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject( const std::string          &account_id,
-                                                                                        std::string_view            subject_type,
-                                                                                        const std::vector<uint8_t> &payload )
+    outcome::result<ConsensusManager::Subject> ConsensusManager::CreateGenericSubject(
+        const std::string          &account_id,
+        std::string_view            subject_type,
+        const std::vector<uint8_t> &payload )
     {
         ConsensusManagerLogger()->trace( "{}: called account_id={} subject_type={}",
                                          __func__,
@@ -2363,9 +3005,8 @@ namespace sgns
             return {};
         }
 
-        sgns::crypto::HasherImpl hasher;
-        auto                     hash = hasher.sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
-        auto proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto                     proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
         ConsensusManagerLogger()->debug( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
         return proposal_id;
     }
@@ -2418,8 +3059,7 @@ namespace sgns
             }
             return !payload.value().base_registry_cid().empty() &&
                    payload.value().target_registry_epoch() == payload.value().base_registry_epoch() + 1 &&
-                   payload.value().certificate_count() > 0 &&
-                   !payload.value().batch_root().empty();
+                   payload.value().certificate_count() > 0 && !payload.value().batch_root().empty();
         }
         return true;
     }

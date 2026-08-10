@@ -1,0 +1,42 @@
+{
+    "ethereum-mainnet": {
+        "chain_id": 1,
+        "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a",
+        "creation_block": 19758397
+    },
+    "ethereum-sepolia": {
+        "chain_id": 11155111,
+        "bridge_contract_address": "0x9af8050220D8C355CA3c6dC00a78B474cd3e3c70",
+        "creation_block": 11204335
+    },
+    "bnb-smart-chain": {
+        "chain_id": 56,
+        "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a",
+        "creation_block": 38291014
+    },
+    "bnb-smart-chain-testnet": {
+        "chain_id": 97,
+        "bridge_contract_address": "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB",
+        "creation_block": 46157345
+    },
+    "polygon-mainnet": {
+        "chain_id": 137,
+        "bridge_contract_address": "0x127E47abA094a9a87D084a3a93732909Ff031419",
+        "creation_block": 26940669
+    },
+    "polygon-amoy": {
+        "chain_id": 80002,
+        "bridge_contract_address": "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB",
+        "creation_block": 15164888
+    },
+    "base-mainnet": {
+        "chain_id": 8453,
+        "bridge_contract_address": "0x614577036F0a024DBC1C88BA616b394DD65d105a",
+        "creation_block": 13914934
+    },
+    "base-sepolia": {
+        "chain_id": 84532,
+        "bridge_contract_address": "0xeC20bDf2f9f77dc37Ee8313f719A3cbCFA0CD1eB",
+        "creation_block": 18712133
+    }
+}

@@ -5,17 +5,41 @@ transaction_sync_test.cpp
 target_include_directories(transaction_sync_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
 
 target_link_libraries(transaction_sync_test
-    genius_node
+    genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)
-    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(transaction_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
-    target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(transaction_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(transaction_sync_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
+
+addtest(genius_node_bootstrap_reconnect_test
+    genius_node_bootstrap_reconnect_test.cpp
+)
+
+target_include_directories(genius_node_bootstrap_reconnect_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
+
+target_link_libraries(genius_node_bootstrap_reconnect_test
+    genius_node_test
+    json_secure_storage
+)
+
+if(WIN32)
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(genius_node_bootstrap_reconnect_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()
@@ -25,17 +49,18 @@ addtest(migration_sync_test
 )
 
 target_link_libraries(migration_sync_test
-    genius_node
+    genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)
-    target_link_options(migration_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(migration_sync_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
-    target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(migration_sync_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(migration_sync_test PUBLIC
             "-Wl,--whole-archive"
-            "$<TARGET_FILE:genius_node>"
+            "$<TARGET_FILE:genius_node_test>"
             "-Wl,--no-whole-archive"
     )
 endif()
@@ -45,17 +70,18 @@ addtest(transaction_crash_test
 )
 
 target_link_libraries(transaction_crash_test
-    genius_node
+    genius_node_test
+    json_secure_storage
 )
 
 if(WIN32)
-    target_link_options(transaction_crash_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node>)
+    target_link_options(transaction_crash_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
-    target_link_options(transaction_crash_test PUBLIC -force_load "$<TARGET_FILE:genius_node>")
+    target_link_options(transaction_crash_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(transaction_crash_test PUBLIC
         "-Wl,--whole-archive"
-        "$<TARGET_FILE:genius_node>"
+        "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
     )
 endif()

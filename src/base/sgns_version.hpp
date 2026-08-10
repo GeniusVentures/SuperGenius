@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SGNS_SGNS_VERSION_HPP
+#define SGNS_SGNS_VERSION_HPP
 
 #include <cstdint>
 #include <string>
@@ -77,3 +78,5 @@ namespace sgns
         void SetNetworkId( uint16_t net_id );
     }
 }
+
+#endif // SGNS_SGNS_VERSION_HPP

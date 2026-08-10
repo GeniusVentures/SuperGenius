@@ -4,4 +4,5 @@ addtest(node_initialization_progress
 
 target_link_libraries(node_initialization_progress
     genius_node
+    rapidjson
 )

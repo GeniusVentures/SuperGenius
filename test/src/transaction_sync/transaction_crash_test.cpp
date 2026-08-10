@@ -11,8 +11,12 @@
 #include <chrono>
 #include <cstdio>
 #include <boost/dll.hpp>
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 
 namespace sgns
 {
@@ -33,16 +37,16 @@ namespace sgns
         static inline std::shared_ptr<sgns::GeniusNode> node2 = nullptr;
 
         // Configuration for node instances
-        static inline DevConfig_st CONFIG1 = { "0xcafe",
+        static inline GeniusNodeConfig CONFIG1 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash1" };
-        static inline DevConfig_st CONFIG2 = { "0xcafe",
+                                               "./transaction_crash_node1" };
+        static inline GeniusNodeConfig CONFIG2 = { "0xcafe",
                                                "0.65",
                                                "1.0",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
-                                               "./node_crash2" };
+                                               "./transaction_crash_node2" };
 
         // Constants for iterations
         static constexpr int TOTAL_TRANSFERS        = 20;
@@ -53,31 +57,32 @@ namespace sgns
      */
         static void SetUpTestSuite()
         {
+            GeniusAccount::SetSecureStorageFactory(
+                []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
             std::string binary_path = boost::dll::program_location().parent_path().string();
 
-            CONFIG1.BaseWritePath = ( binary_path + "/node_crash1/" );
-            CONFIG2.BaseWritePath = ( binary_path + "/node_crash2/" );
+            CONFIG1.BaseWritePath = ( binary_path + "/transaction_crash_node1/" );
+            CONFIG2.BaseWritePath = ( binary_path + "/transaction_crash_node2/" );
+
+            test::removeAllWithRetry( CONFIG1.BaseWritePath );
+            test::removeAllWithRetry( CONFIG2.BaseWritePath );
 
             // All nodes in this test are non-processors.
             // is_processor is now read exclusively from sgns_config.json (defaults to true).
             std::filesystem::create_directories( CONFIG1.BaseWritePath );
-            {
-                std::ofstream configFile( CONFIG1.BaseWritePath + std::string( "sgns_config.json" ) );
-                configFile << R"({"is_processor": false})";
-            }
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG1.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG1.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
             std::filesystem::create_directories( CONFIG2.BaseWritePath );
-            {
-                std::ofstream configFile( CONFIG2.BaseWritePath + std::string( "sgns_config.json" ) );
-                configFile << R"({"is_processor": false})";
-            }
+            sgns::GeniusNode::WriteNetworkConfig( CONFIG2.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( CONFIG2.BaseWritePath, /*node_type=*/"Light", /*is_processor=*/false, /*rpc_catchup=*/false );
 
-            node1 = sgns::GeniusNode::NewFromPrivateKey( CONFIG1,
-                                           "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false );
+            node1 = sgns::GeniusNode::New( CONFIG1,
+                           sgns::FromPrivateKey{ "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
-            node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false );
+            node2 = sgns::GeniusNode::New( CONFIG2,
+                           sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
 
@@ -97,9 +102,8 @@ namespace sgns
         {
             node2.reset();
             std::this_thread::sleep_for( std::chrono::milliseconds( 5000 ) );
-            node2 = sgns::GeniusNode::NewFromPrivateKey( CONFIG2,
-                                           "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                                           false );
+            node2 = sgns::GeniusNode::New( CONFIG2,
+                           sgns::FromPrivateKey{ "cafebeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef" } );
             std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
         }
     };
@@ -125,10 +129,10 @@ namespace sgns
         std::cout << "Minting the required tokens" << std::endl;
         auto mint_result = node1->MintTokens( total_amount,
                                               sgns::test::NextMintSourceHash(),
-                                              "",
+                                              "test",
                                               TokenID::FromBytes( { 0x00 } ),
                                               "",
-                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT )  );
+                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
         ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out";
         auto [mint_tx_id, mint_duration] = mint_result.value();
         std::cout << "Mint transaction " << mint_tx_id << " completed in " << mint_duration << " ms" << std::endl;
@@ -147,8 +151,8 @@ namespace sgns
         }
 
         std::cout << "Reconnecting nodes for transaction propagation" << std::endl;
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout << "Waiting for the first batch of incoming transactions" << std::endl;
         for ( int i = 0; i < INITIAL_WAIT_TRANSFERS; i++ )
@@ -161,8 +165,8 @@ namespace sgns
 
         std::cout << "Simulating crash and recovery" << std::endl;
         RestartNode2();
-        node1->GetPubSub()->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
-        node2->GetPubSub()->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
+        node1->AddPeers( { node2->GetPubSub()->GetLocalAddress() } );
+        node2->AddPeers( { node1->GetPubSub()->GetLocalAddress() } );
 
         std::cout
             << "****************************Waiting for the remaining transactions after recovery****************************"

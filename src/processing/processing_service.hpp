@@ -6,6 +6,11 @@
 #include "processing/processing_node.hpp"
 #include "processing/processing_subtask_enqueuer.hpp"
 
+namespace sgns::ipfs_bitswap
+{
+    class Bitswap;
+}
+
 namespace sgns::processing
 {
     class ProcessingServiceImpl : public std::enable_shared_from_this<ProcessingServiceImpl>
@@ -58,6 +63,12 @@ namespace sgns::processing
 
         [[nodiscard]] ProcessingStatus GetProcessingStatus() const;
 
+        /// @brief Set callback for mirroring processing results. When set, results with mirror_result=true trigger a fetch.
+        void setMirrorResultCallback( std::function<void( const std::string & )> callback );
+
+        /// @brief Set bitswap instance propagated to all processing nodes for data availability checks.
+        void setBitswap( std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap );
+
     private:
         /** Listen to data feed channel.
         * @param processingGridChannelId - identifier of a data feed channel
@@ -107,6 +118,9 @@ namespace sgns::processing
                                                                  userCallbackSuccess_;
         std::function<void( const std::string &subTaskQueueId )> userCallbackError_;
         std::string                                              node_address_;
+
+        std::function<void( const std::string & )> m_mirrorResultCallback; ///< Mirror callback propagated to all nodes.
+        std::shared_ptr<sgns::ipfs_bitswap::Bitswap> m_bitswap;             ///< Bitswap for data availability checks.
 
         std::set<std::string>                 m_competingPeers;
         std::chrono::steady_clock::time_point m_pendingCreationTimestamp;

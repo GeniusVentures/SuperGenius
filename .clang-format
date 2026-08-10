@@ -1,8 +1,29 @@
----
+#  SuperGenius clang-format configuration
+#
+# Encodes formatting rules from:
+#   - CLAUDE.md Code Style section (takes precedence)
+#   - Software Engineering Handbook §4 (Code Layout)
+#     https://docs.gnus.ai/technical-information/software-engineering-handbook/c++-coding-standards/
+#
+# Key differences from the Handbook baseline:
+#   - 120-column limit (Handbook Guideline 15 says 78)
+#   - nullptr instead of NULLPTR (CLAUDE.md override of Handbook Standard 56)
+#
+# Run: clang-format -i <file>          (apply formatting)
+#      clang-format --dry-run <file>   (check only)
+
+# ─── Base style ─────────────────────────────────────────────────
+# Microsoft with modifications below
 BasedOnStyle: Microsoft
-AccessModifierOffset: -4
-AllowAllArgumentsOnNextLine: false
-AllowAllParametersOfDeclarationOnNextLine: false
+
+# ─── Indentation ────────────────────────────────────────────────
+# Handbook Standard 9: 4 spaces (or 1 tab)
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# ─── Alignment ──────────────────────────────────────────────────
+# Guideline 11 - Use vertical alignment to ease scanning of declarations.
 AlignConsecutiveAssignments:
   Enabled: true
   AlignCompound: true
@@ -12,25 +33,111 @@ AlignConsecutiveDeclarations:
   Enabled: true
 AlignConsecutiveShortCaseStatements:
   Enabled: true
+
+
+# ─── Braces ──────────────────────────────────────────────────────
+# Standard 11 - While, for and if statements shall always use braces, even if they are not syntactically required.
+InsertBraces: true
+
+
+# ─── Column limit ───────────────────────────────────────────────
+# CLAUDE.md override of Handbook Guideline 15 (78 → 120)
+ColumnLimit: 120
+
+# ─── Brace style ────────────────────────────────────────────────
+# Handbook Standard 10: Allman / Ullman style
+# Braces on their own line, at the same indentation as the statement
+BreakBeforeBraces: Allman
+
+# ─── Short statements ───────────────────────────────────────────
+# Handbook Standard 11: Braces required on all control statements.
+# Never put single-statement bodies on the same line as the control.
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+
+# ─── Spacing — parentheses ──────────────────────────────────────
+# Handbook Standard 27: Balance spacing inside parentheses.
+# Handbook Standard 28: Space after '(' and before ')' when args present;
+#   no space between function name and '('.
+#   Exception: no spaces in empty argument lists, e.g. foo() not foo( ).
+SpacesInParentheses: true
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: true
+
+# ─── Spacing — brackets & angles ────────────────────────────────
+SpacesInAngles: false
+
+# ─── Pointer / reference alignment ──────────────────────────────
+# Handbook Standard 23: val = *pFoo (no space between * and name)
+PointerAlignment: Right
+ReferenceAlignment: Right
+
+# ─── Access modifiers ───────────────────────────────────────────
+# Handbook Standard 79: public/protected/private flush with class keyword
+AccessModifierOffset: -4
+
+# ─── Switch / case ──────────────────────────────────────────────
+# Handbook Standard 18: indent cases one level from switch,
+#   code one level beyond the case, break at same level as code.
+IndentCaseLabels: true
+IndentCaseBlocks: false
+
+# ─── Namespaces ─────────────────────────────────────────────────
+# Handbook Standard 78: class keyword (and namespace content) indented
+NamespaceIndentation: All
+CompactNamespaces: false
+
+# ─── Include ordering ───────────────────────────────────────────
+# Handbook Guideline 70: system/third-party includes before local.
+# Preserve existing include groups; sort within each group only.
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# ─── Line wrapping — binary operators ───────────────────────────
+# Handbook Standard 33: Wrap conditional expressions after operators.
+BreakBeforeBinaryOperators: None
+
+# ─── Line wrapping — function parameters ────────────────────────
+# Handbook Standard 35: wrap long function signatures after commas
+# with indentation. When parameters don't fit on one line, place
+# each on its own line.
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+
+# ─── Line wrapping — assignments ────────────────────────────────
+# Handbook Standard 32: wrap assignments past the equal sign.
+BreakBeforeTernaryOperators: true
+
+# ─── Constructor initializer lists ──────────────────────────────
+# Handbook Standard 69: list members in declaration order.
+# Handbook Guideline 41 (CLAUDE.md override): prefer init lists over assignment.
+ConstructorInitializerIndentWidth: 4
+BreakConstructorInitializers: AfterColon
+
+# ─── Trailing comments ──────────────────────────────────────────
+# Handbook Standard 5: closing-brace trailing comments indented one
+# level from the brace. Minimum spaces before a trailing comment.
+SpacesBeforeTrailingComments: 1
+
+# ─── Empty lines ────────────────────────────────────────────────
+# Handbook Standard 29: blank lines before and after block comments.
+MaxEmptyLinesToKeep: 1
+
+AllowAllArgumentsOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
-AllowShortFunctionsOnASingleLine: Empty
 AlwaysBreakTemplateDeclarations: true
 BraceWrapping:
   AfterCaseLabel: true
   BeforeLambdaBody: true
 BinPackArguments: false
-BinPackParameters: false
-BreakConstructorInitializers: AfterColon
 BreakStringLiterals: false
-ColumnLimit: 120
+
 FixNamespaceComments: false
-IndentCaseBlocks: false
-IndentCaseLabels: true
-InsertBraces: true
 InsertNewlineAtEOF: true
 InsertTrailingCommas: Wrapped
 KeepEmptyLinesAtTheStartOfBlocks: false
-NamespaceIndentation: All
 PackConstructorInitializers: NextLine
 PenaltyBreakAssignment: 190
 PenaltyBreakBeforeFirstCallParameter: 2
@@ -38,7 +145,6 @@ ReflowComments: false
 RemoveParentheses: ReturnStatement
 RemoveSemicolon: true
 SeparateDefinitionBlocks: Always
-SortIncludes: Never
 SpacesInParens: Custom
 SpacesInParensOptions:
   InConditionalStatements: true

@@ -4,9 +4,12 @@
  * @date       2025-10-16
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_VALIDATOR_REGISTRY_HPP
+#define SGNS_VALIDATOR_REGISTRY_HPP
 
+#include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -16,6 +19,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
+#include <string_view>
+#include <thread>
 #include <vector>
 
 #include <fmt/format.h>
@@ -81,6 +86,38 @@ namespace sgns
             uint32_t inactivity_decrement_            = 1;   ///< Weight decrement for inactive validators.
             uint64_t total_weight_cap_multiplier_     = 4; ///< Multiplier controlling global weight-cap normalization.
             uint64_t certificate_timestamp_window_ms_ = 300000; ///< Allowed timestamp drift for certificates.
+            // Phase 6 slot-based RPC-hash voting (D-02/D-03/D-06). Integer ratios
+            // keep the tally deterministic across peers (no floating point).
+            uint64_t slot_direct_numerator_   = 1; ///< Slot 0 (DIRECT_API) weight numerator.   0.50 = 1/2 (D-02).
+            uint64_t slot_direct_denominator_ = 2; ///< Slot 0 (DIRECT_API) weight denominator. 0.50 = 1/2 (D-02).
+            uint64_t slot_public_numerator_   = 1; ///< Slots 1-2 (PUBLIC) weight numerator.    0.25 = 1/4 (D-03).
+            uint64_t slot_public_denominator_ = 4; ///< Slots 1-2 (PUBLIC) weight denominator.  0.25 = 1/4 (D-03).
+            uint64_t slot_quorum_numerator_   = 3; ///< Cumulative quorum threshold numerator.  0.75 = 3/4 (D-06).
+            uint64_t slot_quorum_denominator_ = 4; ///< Cumulative quorum threshold denominator.0.75 = 3/4 (D-06).
+            uint64_t slot_public_min_group_   = 2; ///< D-03: minimum distinct validators per PUBLIC hash group.
+            // D-08: REGULAR -> FULL promotion threshold. A REGULAR validator whose
+            // accumulated weight (via ApplyVoteEffects approve increments) reaches
+            // this value AND whose penalty_score is below penalty_threshold_ is
+            // promoted to Role::FULL. The promoted node's weight then accumulates
+            // up to full_max_weight_, flowing into EvaluateSlotQuorum via
+            // validator.weight() with no tally-side special case. Equal to regular_max_weight_ so the approve-branch clamp
+			// does not prevent reaching the threshold.
+            uint64_t full_promotion_weight_ = 100; ///< Weight at which a REGULAR validator is promoted to FULL (D-08).
+        };
+
+        /**
+         * @brief Result of the Phase 6 cumulative slot-quorum tally (D-06).
+         *
+         * Deterministic across peers: computed ONLY from the vote vector and a
+         * registry snapshot (REQ-DETERM-01). No clocks, no local config, no node
+         * state is consulted.
+         */
+        struct SlotQuorumResult
+        {
+            uint64_t qualified_sum           = 0; ///< Sum of slot-weighted contributions (D-06).
+            uint64_t total_voting_reputation = 0; ///< Sum of weight of ALL approve voters.
+            uint64_t threshold               = 0; ///< ceil(total * slot_quorum_numerator_ / slot_quorum_denominator_).
+            bool     has_quorum              = false; ///< qualified_sum > threshold (STRICT, D-06).
         };
 
         /**
@@ -105,6 +142,14 @@ namespace sgns
          * @brief Destroys the registry instance.
          */
         ~ValidatorRegistry();
+
+        /**
+         * @brief Stops accepting registry work and waits for queued persistence to finish.
+         *
+         * Must be called before shutting down the backing GlobalDB. Safe to call
+         * multiple times.
+         */
+        void Close();
 
         /**
          * @brief Computes default weight for a validator role.
@@ -133,30 +178,85 @@ namespace sgns
         bool IsQuorum( uint64_t accumulated_weight, uint64_t total_weight ) const;
 
         /**
+         * @brief Phase 6 cumulative slot-quorum tally for bridge-mint subjects (D-06).
+         *
+         * Reads ONLY the supplied votes and registry snapshot (REQ-DETERM-01).
+         * Slot 0: each distinct approver with a non-empty slot_0_hash contributes
+         * weight * slot_direct_numerator_ / slot_direct_denominator_ (D-02).
+         * Slots 1-2: votes are grouped by slot_N_hash; only groups with at least
+         * slot_public_min_group_ distinct validators contribute
+         * sum(weight) * slot_public_numerator_ / slot_public_denominator_ (D-03).
+         * Solo hashes contribute zero. Abstainers (all slot hashes empty) still
+         * count toward total_voting_reputation but zero toward qualified_sum (D-05).
+         * has_quorum = (qualified_sum > threshold) -- STRICT (D-06).
+         *
+         * @param[in] votes     Consensus votes (only approve votes are counted).
+         * @param[in] registry  Registry snapshot used to resolve voter weights.
+         * @return Slot tally result.
+         */
+        SlotQuorumResult EvaluateSlotQuorum( const std::vector<sgns::ConsensusVote> &votes,
+                                             const Registry                        &registry ) const;
+
+        /**
+         * @brief Pure (stateless) slot-quorum tally for deterministic unit testing.
+         *
+         * Identical arithmetic to EvaluateSlotQuorum, but takes the WeightConfig
+         * explicitly so it can be exercised without a GlobalDB-backed
+         * ValidatorRegistry instance. The member function delegates here.
+         *
+         * @param[in] votes         Consensus votes (only approve votes counted).
+         * @param[in] registry      Registry snapshot used to resolve voter weights.
+         * @param[in] weight_config Slot ratio configuration.
+         * @return Slot tally result.
+         */
+        static SlotQuorumResult EvaluateSlotQuorumStatic( const std::vector<sgns::ConsensusVote> &votes,
+                                                          const Registry                        &registry,
+                                                          const WeightConfig                    &weight_config );
+
+        /**
+         * @brief Pure (stateless) REGULAR -> FULL promotion decision (D-08).
+         *
+         * Returns true iff the entry is currently Role::REGULAR, its accumulated
+         * weight has reached @ref full_promotion_weight_, AND its penalty_score is
+         * strictly below @ref penalty_threshold_. GENESIS, SHARDED, and already-FULL
+         * entries never qualify (no GENESIS demotion, idempotent on FULL). Extracted
+         * as a pure static helper so the promotion decision is unit-testable without
+         * a GlobalDB-backed ValidatorRegistry instance -- ApplyVoteEffects delegates
+         * here. The function reads ONLY its inputs (REQ-DETERM-01), so every peer
+         * mutates the entry identically.
+         *
+         * @param[in] entry         Validator entry under consideration.
+         * @param[in] weight_config Weight policy supplying thresholds.
+         * @return true if the entry should be promoted from REGULAR to FULL.
+         */
+        static bool EvaluateRegularPromotionStatic( const ValidatorEntry &entry,
+                                                    const WeightConfig   &weight_config );
+
+        /**
          * @brief Creates an in-memory genesis registry snapshot.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @return Genesis registry snapshot.
          */
-        Registry CreateGenesisRegistry( const std::string &genesis_validator_id ) const;
+        Registry CreateGenesisRegistry( const std::vector<std::string> &genesis_validator_ids ) const;
         /**
          * @brief Persists a signed genesis registry update.
-         * @param[in] genesis_validator_id Validator id for the genesis authority.
+         * @param[in] genesis_validator_ids Validator ids for genesis authorities.
          * @param[in] sign Signing callback used for registry-update signatures.
          * @return outcome::success on success, otherwise an error.
          */
-        outcome::result<void> StoreGenesisRegistry( const std::string &genesis_validator_id,
+        outcome::result<void> StoreGenesisRegistry( const std::vector<std::string> &genesis_validator_ids,
                                                     std::function<std::vector<uint8_t>( std::vector<uint8_t> )> sign );
         /**
          * @brief Loads the currently active registry.
          * @return Registry snapshot or an error.
          */
-        outcome::result<Registry> LoadRegistry() const;
+        outcome::result<Registry> LoadCurrentRegistry() const;
         /**
          * @brief Loads a registry by CID.
          * @param[in] cid Registry CID.
          * @return Registry snapshot or an error.
          */
-        outcome::result<Registry> LoadRegistry( const std::string &cid ) const;
+        outcome::result<Registry> LoadRegistryByCid( const std::string &cid ) const;
         /**
          * @brief Loads the currently active registry update payload.
          * @return Registry update or an error.
@@ -247,7 +347,7 @@ namespace sgns
          * @brief Handles a finalized consensus certificate.
          * @param[in] certificate Finalized certificate.
          */
-        void OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
+        outcome::result<void> OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate );
 
         /**
          * @brief Decision result when evaluating a registry-batch subject.
@@ -319,6 +419,23 @@ namespace sgns
          */
         static const ValidatorEntry *FindValidator( const Registry &registry, const std::string &validator_id );
 
+        /**
+         * @brief Re-attempts genesis-registry head-CID discovery when initialization has not
+         *        yet completed (bug fix, D-01/2-of-11-nodes-start-bridge).
+         *
+         * InitializeCache() runs synchronously once, at construction time. If the genesis
+         * registry has not yet synced into this node's local CRDT store at that instant
+         * (the common case for a Light node in a large concurrent cluster), it returns
+         * without requesting anything further and initialization is left to depend solely
+         * on a passive CRDT broadcast (RegistryUpdateReceived) that may never arrive for
+         * every node. Callers that periodically retry a deferred blockchain start (e.g.
+         * Blockchain::Start()) should call this on every such retry so an active,
+         * repeating head-CID request backs up the passive broadcast path.
+         *
+         * No-op once the cache is already initialized.
+         */
+        void RetryInitializationIfNeeded();
+
     protected:
         friend class sgns::Migration3_5_0To3_6_0;
 
@@ -382,13 +499,10 @@ namespace sgns
         /**
          * @brief Verifies registry update signatures and consistency.
          * @param[in] update Update to verify.
-         * @param[in] current_registry Current registry snapshot, if available.
          * @param[in] enforce_time_window Whether timestamp window checks are enforced.
          * @return `true` when update is valid.
          */
-        bool VerifyUpdate( const RegistryUpdate &update,
-                           const Registry       *current_registry,
-                           bool                  enforce_time_window ) const;
+        bool VerifyUpdate( const RegistryUpdate &update, bool enforce_time_window ) const;
         /**
          * @brief Validates certificate against current registry constraints.
          * @param[in] certificate Certificate to validate.
@@ -396,7 +510,8 @@ namespace sgns
          * @return `true` when certificate is valid.
          */
         bool ValidateCertificate( const sgns::ConsensusCertificate &certificate,
-                                  const Registry                   &current_registry ) const;
+                                  const Registry                   &current_registry,
+                                  std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Validates certificate suitability for generating a registry update.
          * @param[in] certificate Certificate to validate.
@@ -404,7 +519,8 @@ namespace sgns
          * @return `true` when certificate can drive a registry update.
          */
         bool ValidateCertificateForUpdate( const sgns::ConsensusCertificate &certificate,
-                                           const Registry                   &current_registry ) const;
+                                           const Registry                   &current_registry,
+                                           std::string_view                  expected_registry_cid = {} ) const;
         /**
          * @brief Extracts registered/unregistered vote partitions from certificate.
          * @param[in] certificate Certificate to inspect.
@@ -472,17 +588,18 @@ namespace sgns
          * @brief Initializes local cache from persistent storage.
          */
         void InitializeCache();
+
         /**
          * @brief Builds map key for pending certificate subjects by base registry.
          * @param[in] base_registry_cid Base registry CID.
          * @param[in] base_registry_epoch Base registry epoch.
          * @return Composite batch key string.
          */
-        inline static std::string BuildBatchKey( const std::string &base_registry_cid,
-                                                 uint64_t           base_registry_epoch )
+        inline static std::string BuildBatchKey( const std::string &base_registry_cid, uint64_t base_registry_epoch )
         {
             return fmt::format( "{}:{}", base_registry_cid, base_registry_epoch );
         }
+
         /**
          * @brief Computes deterministic batch root from subject hashes.
          * @param[in] subject_hashes Subject hashes included in the batch.
@@ -532,6 +649,31 @@ namespace sgns
          */
         void RequestHeadCids( const std::set<CID> &cids );
 
+        struct PendingRegistryWrite
+        {
+            std::string    subject_hash;
+            RegistryUpdate update;
+        };
+
+        class ActiveBatchHandlerGuard
+        {
+        public:
+            explicit ActiveBatchHandlerGuard( ValidatorRegistry &registry );
+            ~ActiveBatchHandlerGuard();
+
+            explicit operator bool() const
+            {
+                return active_;
+            }
+
+        private:
+            ValidatorRegistry &registry_;
+            bool               active_ = false;
+        };
+
+        void PersistenceWorkerLoop();
+        bool EnqueueRegistryWrite( std::string subject_hash, RegistryUpdate update );
+
         std::shared_ptr<crdt::GlobalDB> db_;                 ///< Backing GlobalDB instance.
         uint64_t                        quorum_numerator_;   ///< Quorum numerator.
         uint64_t                        quorum_denominator_; ///< Quorum denominator.
@@ -555,9 +697,20 @@ namespace sgns
         std::function<outcome::result<void>( const ConsensusSubject &subject )>
             submit_batch_subject_; ///< Callback used to submit batch subjects.
 
+        std::mutex                       persistence_mutex_; ///< Guards the persistence queue and shutdown state.
+        std::condition_variable          persistence_cv_;    ///< Wakes the persistence worker during work/shutdown.
+        std::deque<PendingRegistryWrite> persistence_queue_; ///< Registry updates waiting to be persisted.
+        bool                             persistence_stopping_ = false; ///< Rejects work after Close starts.
+        size_t                           active_batch_handlers_ = 0; ///< Batch handlers still using GlobalDB.
+        std::thread                      persistence_worker_; ///< Owned registry persistence worker.
+        std::mutex                       close_mutex_;        ///< Serializes idempotent Close calls.
+        bool                             close_started_ = false; ///< Makes Close one-shot.
+
         InitCallback init_callback_; ///< Optional initialization callback.
         std::function<void( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )>
             request_block_by_cid_; ///< Callback to request blocks by CID.
     };
 
 }
+
+#endif // SGNS_VALIDATOR_REGISTRY_HPP

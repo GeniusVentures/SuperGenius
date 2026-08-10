@@ -1,6 +1,5 @@
 #include <filesystem>
 #include <fstream>
-#include <thread>
 #include <iostream>
 #include <cstring>
 #include <system_error>
@@ -11,14 +10,25 @@
 #include <boost/dll.hpp>
 
 #include "account/MigrationAllowList.hpp"
+#include "account/MigrationInputValidator.hpp"
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TokenID.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 
 namespace fs = std::filesystem;
 
 using namespace sgns;
+
+TEST( MigrationInputValidatorTest, RegisteredWithoutLocalUTXOWitnessRequirement )
+{
+    const auto *validator = IInputValidator::Get( "migration" );
+    ASSERT_NE( validator, nullptr );
+    EXPECT_FALSE( validator->RequiresConsensusUTXOData() );
+}
 
 /**
  * @brief Test parameters for migration.
@@ -33,7 +43,7 @@ struct NodeParams
 class MigrationParamTest : public ::testing::TestWithParam<NodeParams>
 {
 protected:
-    static inline DevConfig_st DEV_CONFIG = {
+    static inline GeniusNodeConfig DEV_CONFIG = {
         "0xdeef",                             // Addr
         "0.65",                               // Cut
         "1.0",                                // TokenValueInGNUS
@@ -46,7 +56,6 @@ protected:
     static constexpr std::string_view FULL_NODE_SUBDIR = "migration_full_node";
     static constexpr std::string_view FULL_NODE_ADDR   = "0xcafe";
     static constexpr char     FULL_NODE_KEY[]    = "feedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-    static constexpr uint16_t FULL_NODE_BASEPORT = 43001;
 
     void SetEligibilityCheckEnabled( bool enabled )
     {
@@ -55,6 +64,8 @@ protected:
 
     void SetUp() override
     {
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
         SetEligibilityCheckEnabled( true );
     }
 
@@ -82,15 +93,7 @@ protected:
                 // Remove new database directories, preserving legacy (00) test data
                 if ( name.find( DB_PREFIX ) == std::string::npos )
                 {
-                    fs::remove_all( entry.path(), ec );
-                    // On Windows, file locks may not be immediately released
-                    // Retry removal if it fails
-                    if ( ec && fs::exists( entry.path() ) )
-                    {
-                        std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-                        ec.clear();
-                        fs::remove_all( entry.path() );
-                    }
+                    sgns::test::removeAllWithRetry( entry.path() );
                 }
             }
         }
@@ -99,8 +102,7 @@ protected:
     static std::shared_ptr<sgns::GeniusNode> CreateNodeInstance( const std::string &binaryParent,
                                                                  const std::string &subdir,
                                                                  const char        *key_hex,
-                                                                 bool               is_full_node = false,
-                                                                 uint16_t           base_port    = 40001 )
+                                                                 bool               is_full_node = false )
     {
         fs::path nodeDir = fs::path{ binaryParent } / subdir;
         RemovePrefixedSubdirs( nodeDir );
@@ -108,20 +110,15 @@ protected:
         std::string baseWrite    = binaryParent + "/" + subdir + "/";
         DEV_CONFIG.BaseWritePath = baseWrite;
 
-        // All nodes in this test are non-processors.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        // All nodes in this test are non-processors (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( DEV_CONFIG.BaseWritePath );
-        {
-            std::ofstream configFile( DEV_CONFIG.BaseWritePath + std::string( "sgns_config.json" ) );
-            configFile << R"({"is_processor": false})";
-        }
+        sgns::GeniusNode::WriteNetworkConfig( DEV_CONFIG.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+        sgns::GeniusNode::WriteSgnsConfig( DEV_CONFIG.BaseWritePath,
+                                           is_full_node ? "Full" : "Light",
+                                           /*is_processor=*/false,
+                                           /*rpc_catchup=*/false );
 
-        auto instance = sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG,
-                                                             key_hex,
-                                                             false,
-                                                             base_port,
-                                                             is_full_node );
-        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
+        auto instance = sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ key_hex } );
         return instance;
     }
 
@@ -133,29 +130,25 @@ protected:
         std::string     binaryPath = boost::dll::program_location().parent_path().string();
         std::string     outPath    = ( binaryPath + '/' ).append( FULL_NODE_SUBDIR ) + '_' + std::to_string( id ) + '/';
         std::error_code ec;
-        fs::remove_all( outPath, ec );
+        sgns::test::removeAllWithRetry( outPath, ec );
         fs::create_directories( outPath, ec );
 
-        DevConfig_st devConfig = { std::string( FULL_NODE_ADDR ),
+        GeniusNodeConfig devConfig = { std::string( FULL_NODE_ADDR ),
                                    "0.65",
                                    "1.0",
                                    TokenID::FromBytes( { 0x00 } ),
                                    outPath };
 
-        // Full node is not a processor.
-        // is_processor is now read exclusively from sgns_config.json (defaults to true).
+        // Full node is not a processor (is_processor=false). Config-driven (Phase 3).
         std::filesystem::create_directories( devConfig.BaseWritePath );
-        {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": false})";
-        }
-
-        uint16_t unique_port = FULL_NODE_BASEPORT + static_cast<uint16_t>( id );
-        auto     instance = GeniusNode::NewFromPrivateKey( devConfig, FULL_NODE_KEY, false, unique_port, true );
+        GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, /*port_seed=*/0, /*auto_dht=*/false );
+        GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                      /*node_type=*/"Full",
+                                      /*is_processor=*/false,
+                                      /*rpc_catchup=*/false );
+        auto instance = GeniusNode::New( devConfig, FromPrivateKey{ FULL_NODE_KEY } );
         Blockchain::SetAuthorizedFullNodeAddress( instance->GetAddress() );
 
-        std::this_thread::sleep_for( std::chrono::milliseconds( STARTUP_DELAY_MS ) );
-        std::cout << "Full node created" << std::endl;
         return instance;
     }
 };
@@ -166,18 +159,19 @@ TEST_P( MigrationParamTest, BalanceAfterMigration )
 
     auto params    = GetParam();
     auto full_node = CreateFullNodeInstance();
-    test::assertWaitForCondition( [full_node]
-                                  { return full_node && full_node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 80000 ),
-                                  "Full node not synced" );
+
     auto binaryParent = boost::dll::program_location().parent_path().string();
     auto node         = CreateNodeInstance( binaryParent, params.subdir, params.key_hex );
 
-    node->GetPubSub()->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
+    node->AddPeers( { full_node->GetPubSub()->GetInterfaceAddress() } );
 
     const std::string readiness_message = params.subdir + " node not ready";
+
+    test::assertWaitForCondition( [full_node] { return full_node->GetState() == GeniusNode::NodeState::READY; },
+                                  std::chrono::milliseconds( 100000 ),
+                                  "Full node not synced" );
     test::assertWaitForCondition( [node] { return node && node->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::milliseconds( 40000 ),
+                                  std::chrono::milliseconds( 100000 ),
                                   readiness_message );
 
     EXPECT_EQ( node->GetBalance(), params.expected_balance );
@@ -192,7 +186,7 @@ TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
     const auto      unique_suffix = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() );
     const fs::path  db_path       = fs::temp_directory_path() / ( "migration_allowlist_rejects_test_" + unique_suffix );
     std::error_code ec;
-    fs::remove_all( db_path, ec );
+    sgns::test::removeAllWithRetry( db_path, ec );
     fs::create_directories( db_path, ec );
     ASSERT_FALSE( ec ) << "Failed to create temp DB directory: " << ec.message();
 
@@ -209,7 +203,7 @@ TEST_F( MigrationParamTest, RejectsOverclaimWhenAllowListEnabled )
     ASSERT_TRUE( eligible.has_value() ) << eligible.error().message();
     EXPECT_FALSE( eligible.value() );
 
-    fs::remove_all( db_path, ec );
+    sgns::test::removeAllWithRetry( db_path, ec );
 }
 
 INSTANTIATE_TEST_SUITE_P(

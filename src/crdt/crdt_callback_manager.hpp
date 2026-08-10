@@ -4,7 +4,8 @@
  * @date       2025-09-05
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
-#pragma once
+#ifndef SGNS_CRDT_CALLBACK_MANAGER_HPP
+#define SGNS_CRDT_CALLBACK_MANAGER_HPP
 
 #include <functional>
 #include <memory>
@@ -106,3 +107,5 @@ namespace sgns::crdt
     };
 
 }
+
+#endif // SGNS_CRDT_CALLBACK_MANAGER_HPP

@@ -35,6 +35,13 @@ namespace sgns::base {
   std::string hex_lower(gsl::span<const uint8_t> bytes) noexcept;
 
   /**
+   * @brief Checks whether a string is a 128-character lowercase hexadecimal address.
+   * @param address address to validate
+   * @return true when the address has the expected length and contains only lowercase hexadecimal characters
+   */
+  bool IsHexAddress(std::string_view address) noexcept;
+
+  /**
    * @brief Converts hex representation to bytes
    * @param hex hex string input
    * @return result containing array of bytes if input string is hex encoded and

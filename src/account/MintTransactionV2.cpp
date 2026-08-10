@@ -6,7 +6,6 @@
 #include "account/MintTransactionV2.hpp"
 
 #include "base/blob.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
 
 namespace sgns
 {
@@ -14,7 +13,7 @@ namespace sgns
                                           std::string              chain_id,
                                           TokenID                  token_id,
                                           SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "mint-v2", SetDAGWithType( std::move( dag ), "mint-v2" ) ),
+        GeniusTransaction( "mint-v2", SetDAGWithType( std::move( dag ), "mint-v2" ) ),
         utxo_params_( std::move( utxo_params ) ),
         chain_id_( std::move( chain_id ) ),
         token_id_( std::move( token_id ) )
@@ -56,6 +55,39 @@ namespace sgns
             std::cerr << "Failed to Serialize MintTxV2 to array" << std::endl;
         }
         return serialized_proto;
+    }
+
+    EmbeddedTransaction MintTransactionV2::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        EmbeddedTransaction embedded;
+        SGTransaction::MintTxV2 tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+        tx_struct.set_chain_id( chain_id_ );
+
+        auto *utxo_proto_params = tx_struct.mutable_utxo_params();
+        for ( const auto &[txid_hash_, output_idx_, signature_] : utxo_params_.first )
+        {
+            auto *input_proto = utxo_proto_params->add_inputs();
+            input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
+            input_proto->set_output_index( output_idx_ );
+            input_proto->set_signature( signature_.data(), signature_.size() );
+        }
+
+        for ( const auto &[encrypted_amount, dest_address, token_id] : utxo_params_.second )
+        {
+            auto *output_proto = utxo_proto_params->add_outputs();
+            output_proto->set_encrypted_amount( encrypted_amount );
+            output_proto->set_dest_addr( dest_address );
+            output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
+        }
+
+        const auto amount = GetAmount();
+        const auto token  = GetTokenID();
+        tx_struct.set_amount( amount );
+        tx_struct.set_token_id( token.bytes().data(), token.size() );
+
+        *embedded.mutable_mint_v2() = tx_struct;
+        return embedded;
     }
 
     std::shared_ptr<MintTransactionV2> MintTransactionV2::DeSerializeByteVector( const std::vector<uint8_t> &data )
@@ -148,7 +180,7 @@ namespace sgns
 
     std::unordered_set<std::string> MintTransactionV2::GetTopics() const
     {
-        auto topics = IGeniusTransactions::GetTopics();
+        auto topics = GeniusTransaction::GetTopics();
         for ( const auto &output : utxo_params_.second )
         {
             topics.emplace( output.dest_address );
@@ -157,11 +189,11 @@ namespace sgns
     }
 
     MintTransactionV2 MintTransactionV2::New( uint64_t                 new_amount,
-                                              std::string              chain_id,
-                                              TokenID                  token_id,
-                                              SGTransaction::DAGStruct dag,
-                                              std::vector<InputUTXOInfo> mint_inputs,
-                                              std::string              mint_destination )
+                                               std::string              chain_id,
+                                               TokenID                  token_id,
+                                               SGTransaction::DAGStruct dag,
+                                               std::vector<InputUTXOInfo> mint_inputs,
+                                               std::string              mint_destination )
     {
         if ( mint_destination.empty() )
         {
@@ -170,10 +202,36 @@ namespace sgns
 
         std::vector<OutputDestInfo> mint_outputs{ { new_amount, mint_destination, token_id } };
         MintTransactionV2           instance( { std::move( mint_inputs ), std::move( mint_outputs ) },
-                                    std::move( chain_id ),
-                                    std::move( token_id ),
-                                    std::move( dag ) );
+                                     std::move( chain_id ),
+                                     std::move( token_id ),
+                                     std::move( dag ) );
         instance.FillHash();
         return instance;
     }
+
+    std::string MintTransactionV2::GetSlotID() const
+    {
+        static constexpr std::string_view kPrefix    = "mint-v2:";
+        static constexpr std::string_view kSeparator = ":";
+
+        std::string key( kPrefix );
+        key += chain_id_;
+        key += kSeparator;
+        key += token_id_.ToHex();
+        key += kSeparator;
+        key += std::to_string( GetAmount() );
+        if ( !utxo_params_.second.empty() )
+        {
+            key += kSeparator;
+            key += utxo_params_.second.front().dest_address;
+        }
+        if ( !utxo_params_.first.empty() )
+        {
+            key += kSeparator;
+            key += utxo_params_.first.front().txid_hash_.toReadableString();
+        }
+
+        return key;
+    }
+
 }

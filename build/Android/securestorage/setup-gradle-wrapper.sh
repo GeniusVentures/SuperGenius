@@ -5,13 +5,24 @@ set -e
 
 cd "$(dirname "$0")"
 
-# Check if gradlew already exists
-if [ -f gradlew ]; then
-    echo "Gradle wrapper already exists"
-    exit 0
-fi
-
 GRADLE_VERSION="8.14.4"
+
+# Check if gradlew already exists and its version matches
+if [ -f gradlew ] && [ -f gradle/wrapper/gradle-wrapper.jar ]; then
+    EXISTING_VERSION=$(./gradlew --version 2>/dev/null | grep "^Gradle " | awk '{print $2}' || true)
+    if [ "$EXISTING_VERSION" = "$GRADLE_VERSION" ]; then
+        echo "Gradle wrapper already exists (version $GRADLE_VERSION matches)"
+        exit 0
+    elif [ -n "$EXISTING_VERSION" ]; then
+        echo "Gradle wrapper exists but version is $EXISTING_VERSION (need $GRADLE_VERSION), regenerating..."
+    else
+        echo "Gradle wrapper exists but could not determine version, regenerating..."
+    fi
+else
+    if [ -f gradlew ]; then
+        echo "Gradle wrapper script exists but jar is missing, regenerating..."
+    fi
+fi
 
 # Check if gradle is installed and what version
 if command -v gradle &> /dev/null; then

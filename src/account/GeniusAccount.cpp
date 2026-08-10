@@ -14,6 +14,7 @@
 #include <WalletCore/Hash.h>
 #include <WalletCore/PrivateKey.h>
 #include <charconv>
+#include <cstdlib>
 #include <ipfs_pubsub/gossip_pubsub.hpp>
 #include <algorithm>
 #include <ostream>
@@ -23,6 +24,7 @@
 
 #include "base/hexutil.hpp"
 #include "local_secure_storage/impl/JSONBackend.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
 #include "local_secure_storage/SecureStorage.hpp"
 #include "outcome/outcome.hpp"
@@ -52,12 +54,29 @@ namespace
         return boost::filesystem::canonical( boost::filesystem::absolute( base_path ) ) / FILE_NAME;
     }
 
+    /// Global factory override (null = use default SecureStorageImpl)
+    GeniusAccount::SecureStorageFactory g_storage_factory;
+
     outcome::result<std::shared_ptr<JSONBackend>> CreateSecureStorage( std::string_view public_key_hex )
     {
         BOOST_OUTCOME_TRY( std::vector<uint8_t> vec, base::unhex( public_key_hex ) );
 
-        return std::make_shared<SecureStorageImpl>( std::string( SECURE_STORAGE_PREFIX ) +
-                                                    libp2p::multi::detail::encodeBase58( vec ) );
+        const std::string identifier( std::string( SECURE_STORAGE_PREFIX ) +
+                                      libp2p::multi::detail::encodeBase58( vec ) );
+
+        if ( g_storage_factory )
+        {
+            auto storage = g_storage_factory( identifier );
+            auto backend = std::dynamic_pointer_cast<JSONBackend>( storage );
+            if ( backend )
+            {
+                return backend;
+            }
+            genius_account_logger()->error( "Custom secure storage factory did not return a JSONBackend" );
+            return outcome::failure( std::errc::invalid_argument );
+        }
+
+        return std::make_shared<SecureStorageImpl>( identifier );
     }
 
     std::vector<std::string> ReadPublicKeysFromFile( const boost::filesystem::path &file_path )
@@ -252,6 +271,16 @@ namespace sgns
         0xd4, 0xf9, 0x4b, 0x55, 0xc7, 0x5e, 0xed, 0x6f, 0xda, 0x2e, 0xa0, 0xc9, 0xc8, 0x2c, 0x21, 0x36,
     };
 
+    void GeniusAccount::SetSecureStorageFactory( SecureStorageFactory factory )
+    {
+        g_storage_factory = std::move( factory );
+    }
+
+    const GeniusAccount::SecureStorageFactory &GeniusAccount::GetSecureStorageFactory()
+    {
+        return g_storage_factory;
+    }
+
     std::shared_ptr<GeniusAccount> GeniusAccount::CreateInstanceFromResponse( TokenID            token_id,
                                                                               StorageWithAddress response_value,
                                                                               bool               full_node )
@@ -259,10 +288,7 @@ namespace sgns
         auto [storage, eth_address] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( std::make_shared<ethereum::EthereumKeyGenerator>( std::move( eth_address ) ),
-                               token_id,
-                               std::move( storage ),
-                               full_node ) );
+            new GeniusAccount( GeniusSigner( std::move( eth_address ) ), token_id, std::move( storage ), full_node ) );
 
         return instance;
     }
@@ -281,6 +307,14 @@ namespace sgns
             "Could not find existing Genius address, generating one from a random mnemonic" );
 
         return NewFromRandomMnemonic( token_id, base_path, full_node ).first;
+    }
+
+    std::shared_ptr<GeniusAccount> GeniusAccount::NewEphemeral( TokenID token_id, bool full_node )
+    {
+        auto signer  = GeniusSigner::Generate();
+        auto storage = std::make_shared<MemorySecureStorage>( "ephemeral:" + signer.GetAddress() );
+        return std::shared_ptr<GeniusAccount>(
+            new GeniusAccount( std::move( signer ), token_id, std::move( storage ), full_node ) );
     }
 
     std::shared_ptr<GeniusAccount> GeniusAccount::NewFromPrivateKey( TokenID                        token_id,
@@ -619,9 +653,7 @@ namespace sgns
 
             return outcome::failure( std::errc::owner_dead );
         };
-        messenger_ = AccountMessenger::New( eth_keypair_->GetEntirePubValue(),
-                                            std::move( pubsub ),
-                                            std::move( methods ) );
+        messenger_ = AccountMessenger::New( signer_.GetAddress(), std::move( pubsub ), std::move( methods ) );
 
         if ( messenger_ )
         {
@@ -710,34 +742,31 @@ namespace sgns
         genius_account_logger()->debug( "Cleared database dependency handlers" );
     }
 
-    GeniusAccount::GeniusAccount( std::shared_ptr<ethereum::EthereumKeyGenerator> eth_keypair,
-                                  TokenID                                         token_id,
-                                  std::shared_ptr<ISecureStorage>                 storage,
-                                  bool                                            full_node ) :
+    GeniusAccount::GeniusAccount( GeniusSigner                    signer,
+                                  TokenID                         token_id,
+                                  std::shared_ptr<ISecureStorage> storage,
+                                  bool                            full_node ) :
         token( token_id ),
-        is_full_node_( full_node ),
-        eth_keypair_( std::move( eth_keypair ) ),
         storage_( std::move( storage ) ),
+        is_full_node_( full_node ),
+        signer_( std::move( signer ) ),
         utxo_manager_(
-            is_full_node_,
             GetAddress(),
             [this]( const std::vector<uint8_t> &data ) { return this->Sign( data ); },
             []( const std::string &address, const std::vector<uint8_t> &signature, const std::vector<uint8_t> &data )
-            {
-                return GeniusAccount::VerifySignature( address,
-                                                       std::string( signature.begin(), signature.end() ),
-                                                       data );
-            } ),
+            { return GeniusAccount::VerifySignature( address, signature, data ); } ),
         nonce_request_in_progress_( false ),
         cached_nonce_timestamp_( std::chrono::steady_clock::time_point{} )
     {
     }
 
-    GeniusAccount::~GeniusAccount() {}
+    GeniusAccount::~GeniusAccount()
+    {
+    }
 
     std::string GeniusAccount::GetAddress() const
     {
-        return eth_keypair_->GetEntirePubValue();
+        return signer_.GetAddress();
     }
 
     TokenID GeniusAccount::GetToken() const
@@ -749,64 +778,19 @@ namespace sgns
                                          std::string_view            sig,
                                          const std::vector<uint8_t> &data )
     {
-        bool ret = false;
+        return GeniusSigner::VerifySignature( address, sig, data );
+    }
 
-        do
-        {
-            if ( sig.size() != SIGNATURE_EXP_SIZE )
-            {
-                genius_account_logger()->error( "Incorrect signature size {}, expected ",
-                                                sig.size(),
-                                                SIGNATURE_EXP_SIZE );
-                break;
-            }
-            std::vector<uint8_t> vec_sig( sig.cbegin(), sig.cend() );
-
-            std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-
-            auto [r_success, r] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin(),
-                    vec_sig.cbegin() + 32 );
-
-            if ( !r_success )
-            {
-                break;
-            }
-            auto [s_success, s] =
-                nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_from_bytes(
-                    vec_sig.cbegin() + 32,
-                    vec_sig.cbegin() + 64 );
-
-            if ( !s_success )
-            {
-                break;
-            }
-            ethereum::signature_type sig( r, s );
-            auto                     eth_pubkey = ethereum::EthereumKeyGenerator::BuildPublicKey( address );
-            ret                                 = nil::crypto3::verify( hashed, sig, eth_pubkey );
-        } while ( 0 );
-
-        return ret;
+    bool GeniusAccount::VerifySignature( const std::string          &address,
+                                         const std::vector<uint8_t> &sig,
+                                         const std::vector<uint8_t> &data )
+    {
+        return GeniusSigner::VerifySignature( address, sig, data );
     }
 
     std::vector<uint8_t> GeniusAccount::Sign( const std::vector<uint8_t> &data ) const
     {
-        std::array<uint8_t, 32> hashed = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-
-        ethereum::signature_type  signature = nil::crypto3::sign( hashed, eth_keypair_->get_private_key() );
-        std::vector<std::uint8_t> signed_vector( SIGNATURE_EXP_SIZE );
-
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<0>( signature ),
-                                                  signed_vector.begin(),
-                                                  signed_vector.begin() + 32 );
-        nil::marshalling::bincode::field<ecdsa_t::scalar_field_type>::field_element_to_bytes<
-            std::vector<std::uint8_t>::iterator>( std::get<1>( signature ),
-                                                  signed_vector.begin() + 32,
-                                                  signed_vector.end() );
-
-        return signed_vector;
+        return signer_.Sign( data );
     }
 
     std::vector<InputUTXOInfo> GeniusAccount::CreateInputsFromUTXOs( const std::vector<GeniusUTXO> &utxos ) const
@@ -838,7 +822,7 @@ namespace sgns
         auto updated_nonce         = std::max( nonce, current_confirmed_nonce );
         confirmed_nonces_[address] = updated_nonce;
 
-        if ( address == eth_keypair_->GetEntirePubValue() )
+        if ( address == signer_.GetAddress() )
         {
             if ( !local_confirmed_nonce_ || updated_nonce > local_confirmed_nonce_.value() )
             {
@@ -887,7 +871,7 @@ namespace sgns
             should_persist = true;
         }
 
-        if ( address == eth_keypair_->GetEntirePubValue() )
+        if ( address == signer_.GetAddress() )
         {
             if ( local_confirmed_nonce_.has_value() && ( nonce == local_confirmed_nonce_.value() ) )
             {
@@ -906,7 +890,7 @@ namespace sgns
         }
 
         const auto     final_it        = confirmed_nonces_.find( address );
-        const uint64_t persisted_nonce = address == eth_keypair_->GetEntirePubValue()
+        const uint64_t persisted_nonce = address == signer_.GetAddress()
                                              ? local_confirmed_nonce_.value_or( 0 )
                                              : ( final_it != confirmed_nonces_.end() ? final_it->second : 0 );
 
@@ -964,7 +948,7 @@ namespace sgns
 
     outcome::result<uint64_t> GeniusAccount::GetLocalConfirmedNonce() const
     {
-        return GetPeerNonce( eth_keypair_->GetEntirePubValue() );
+        return GetPeerNonce( signer_.GetAddress() );
     }
 
     outcome::result<std::string> GeniusAccount::GetLocalConfirmedTxHash( uint64_t nonce ) const
@@ -978,7 +962,7 @@ namespace sgns
             }
         }
 
-        return outcome::failure( std::errc::no_message_available );
+        return outcome::failure( std::errc::no_message );
     }
 
     outcome::result<std::optional<uint64_t>> GeniusAccount::FetchNetworkNonce( uint64_t timeout_ms ) const
@@ -1242,22 +1226,31 @@ namespace sgns
 
     void GeniusAccount::SetNonceStore( std::shared_ptr<storage::rocksdb> db )
     {
-        nonce_db_ = std::move( db );
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db_ = std::move( db );
+        }
         LoadConfirmedNonces();
     }
 
     void GeniusAccount::LoadConfirmedNonces()
     {
-        if ( !nonce_db_ )
+        std::shared_ptr<storage::rocksdb> nonce_db;
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db = nonce_db_;
+        }
+
+        if ( !nonce_db )
         {
             return;
         }
 
-        const auto self_address = eth_keypair_->GetEntirePubValue();
+        const auto self_address = signer_.GetAddress();
 
         base::Buffer prefix;
         prefix.put( std::string( NONCE_KEY_PREFIX ) );
-        auto query_res = nonce_db_->query( prefix );
+        auto query_res = nonce_db->query( prefix );
         if ( query_res.has_error() )
         {
             return;
@@ -1293,7 +1286,7 @@ namespace sgns
         std::deque<ConfirmedTxRecord> local_history;
         base::Buffer                  local_history_key;
         local_history_key.put( std::string( LOCAL_CONFIRMED_TX_HISTORY_KEY_PREFIX ) + self_address );
-        if ( auto local_history_res = nonce_db_->get( local_history_key ); local_history_res.has_value() )
+        if ( auto local_history_res = nonce_db->get( local_history_key ); local_history_res.has_value() )
         {
             local_history = DeserializeConfirmedTxHistory( std::string( local_history_res.value().toString() ) );
         }
@@ -1319,7 +1312,13 @@ namespace sgns
 
     void GeniusAccount::PersistConfirmedNonce( const std::string &address, uint64_t nonce )
     {
-        if ( !nonce_db_ )
+        std::shared_ptr<storage::rocksdb> nonce_db;
+        {
+            std::lock_guard lock( nonce_db_mutex_ );
+            nonce_db = nonce_db_;
+        }
+
+        if ( !nonce_db )
         {
             return;
         }
@@ -1329,13 +1328,13 @@ namespace sgns
 
         base::Buffer nonce_value;
         nonce_value.put( std::to_string( nonce ) );
-        auto nonce_put_res = nonce_db_->put( nonce_key, nonce_value );
+        auto nonce_put_res = nonce_db->put( nonce_key, nonce_value );
         if ( nonce_put_res.has_error() )
         {
             genius_account_logger()->error( "Failed to persist nonce for {:.8}", address );
         }
 
-        if ( address != eth_keypair_->GetEntirePubValue() )
+        if ( address != signer_.GetAddress() )
         {
             return;
         }
@@ -1351,7 +1350,7 @@ namespace sgns
 
         base::Buffer history_value;
         history_value.put( SerializeConfirmedTxHistory( history_copy ) );
-        auto history_put_res = nonce_db_->put( history_key, history_value );
+        auto history_put_res = nonce_db->put( history_key, history_value );
         if ( history_put_res.has_error() )
         {
             genius_account_logger()->error( "Failed to persist confirmed tx history for {}", address.substr( 0, 8 ) );

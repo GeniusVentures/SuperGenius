@@ -170,10 +170,11 @@ TEST_F( SubTaskValidationTest, CompleteSubTask_ValidResult_AcceptsResult )
     subTaskQueueAccessor->CompleteSubTask( "SUBTASK_VALID", validResult );
 
     // Wait a bit to see if any errors occur
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
-
-    // Should not have triggered an error
-    EXPECT_FALSE( errorOccurred.load() );
+    EXPECT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return !errorOccurred.load(); },
+        std::chrono::milliseconds( 300 ),
+        "Valid result should not trigger an error",
+        nullptr );
     if ( errorOccurred.load() )
     {
         Color::PrintError( "Unexpected error: ", errorMessage );
@@ -231,10 +232,14 @@ TEST_F( SubTaskValidationTest, CompleteSubTask_InvalidResult_RejectsResult )
     auto invalidResult = CreateInvalidResult( "SUBTASK_INVALID", 5 );
     subTaskQueueAccessor->CompleteSubTask( "SUBTASK_INVALID", invalidResult );
 
-    // Wait a bit to see if validation catches the error
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return errorOccurred.load(); },
+        std::chrono::milliseconds( 500 ),
+        "Validation did not reject invalid result within timeout",
+        &elapsed );
 
-    // Should have triggered validation error (once you implement the validation)
+    // Should have triggered validation error
     EXPECT_TRUE( errorOccurred.load() );
 }
 
@@ -428,8 +433,12 @@ TEST_F( SubTaskValidationTest, OnResultReceived_InvalidExternalResult_RejectsRes
     auto invalidResult = CreateInvalidResult( "INVALID_EXTERNAL_SUBTASK", 4 );
     externalResultChannel.Publish( invalidResult.SerializeAsString() );
 
-    // Wait to see if the invalid result gets rejected
-    std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return errorOccurred.load(); },
+        std::chrono::milliseconds( 2000 ),
+        "Invalid external result was not rejected by validation",
+        &elapsed );
 
     // Should have 0 results (rejected due to validation)
     auto results = subTaskQueueAccessor->GetResults();
@@ -486,9 +495,13 @@ TEST_F( SubTaskValidationTest, CompleteSubTask_DuplicateHashes_RejectsResult )
     auto duplicateResult = CreateDuplicateHashResult( "SUBTASK_DUPLICATE", 3 );
     subTaskQueueAccessor->CompleteSubTask( "SUBTASK_DUPLICATE", duplicateResult );
 
-    // Wait a bit to see if validation catches the duplicate hashes
-    std::this_thread::sleep_for( std::chrono::milliseconds( 100 ) );
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&errorOccurred]() { return errorOccurred.load(); },
+        std::chrono::milliseconds( 500 ),
+        "Validation did not reject duplicate hashes within timeout",
+        &elapsed );
 
-    // Should have triggered validation error (once you implement the validation)
+    // Should have triggered validation error
     EXPECT_TRUE( errorOccurred.load() );
 }

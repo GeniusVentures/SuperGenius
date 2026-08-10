@@ -13,6 +13,8 @@
 
 #include <functional>
 #include <thread>
+#include <chrono>
+#include "testutil/wait_condition.hpp"
 
 using namespace sgns::processing;
 
@@ -21,49 +23,48 @@ namespace
     class SubTaskQueueAccessorMock : public SubTaskQueueAccessor
     {
     public:
-        SubTaskQueueAccessorMock(boost::asio::io_context& context)
-            : m_context(context)
-            , m_timerToKeepContext(m_context)
+        SubTaskQueueAccessorMock( boost::asio::io_context &context ) :
+            m_context( context ), m_timerToKeepContext( m_context )
         {
-            m_timerToKeepContext.expires_from_now(boost::posix_time::seconds(5));
+            m_timerToKeepContext.expires_from_now( boost::posix_time::seconds( 5 ) );
             m_timerToKeepContext.async_wait(
-                std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
+                std::bind( &SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1 ) );
         }
 
-        bool ConnectToSubTaskQueue(std::function<void()> onSubTaskQueueConnectedEventSink) override
+        bool ConnectToSubTaskQueue( std::function<void()> onSubTaskQueueConnectedEventSink ) override
         {
             m_onSubTaskQueueConnectedEventSink = onSubTaskQueueConnectedEventSink;
             return true;
         }
 
-        bool AssignSubTasks(std::list<SGProcessing::SubTask>& subTasks) override
+        bool AssignSubTasks( std::list<SGProcessing::SubTask> &subTasks ) override
         {
-            m_subTasks.swap(subTasks);
-            if (m_onSubTaskQueueConnectedEventSink)
+            m_subTasks.swap( subTasks );
+            if ( m_onSubTaskQueueConnectedEventSink )
             {
                 m_onSubTaskQueueConnectedEventSink();
             }
             return true;
         }
 
-        void GrabSubTask(SubTaskGrabbedCallback onSubTaskGrabbedCallback) override
+        void GrabSubTask( SubTaskGrabbedCallback onSubTaskGrabbedCallback ) override
         {
-            if (!m_subTasks.empty())
+            if ( !m_subTasks.empty() )
             {
                 // Make a copy of the subtask to avoid dangling references
                 SGProcessing::SubTask subTaskCopy = m_subTasks.front();
                 m_subTasks.pop_front();
-                
-                m_context.post([subTaskCopy, onSubTaskGrabbedCallback]() {
-                    onSubTaskGrabbedCallback(subTaskCopy);
-                });
+
+                m_context.post( [subTaskCopy, onSubTaskGrabbedCallback]()
+                                { onSubTaskGrabbedCallback( subTaskCopy ); } );
             }
         }
 
-        void CompleteSubTask(const std::string& subTaskId, const SGProcessing::SubTaskResult& subTaskResult) override
+        void CompleteSubTask( const std::string &subTaskId, const SGProcessing::SubTaskResult &subTaskResult ) override
         {
             // Do nothing
         }
+
         bool CreateResultsChannel( const std::string &task_id ) override
         {
             return true;
@@ -72,14 +73,14 @@ namespace
     private:
         std::list<SGProcessing::SubTask> m_subTasks;
 
-        void OnTimerEvent(const boost::system::error_code& error)
+        void OnTimerEvent( const boost::system::error_code &error )
         {
-            m_timerToKeepContext.expires_from_now(boost::posix_time::seconds(5));
+            m_timerToKeepContext.expires_from_now( boost::posix_time::seconds( 5 ) );
             m_timerToKeepContext.async_wait(
-                std::bind(&SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1));
+                std::bind( &SubTaskQueueAccessorMock::OnTimerEvent, this, std::placeholders::_1 ) );
         }
 
-        boost::asio::io_context& m_context;
+        boost::asio::io_context    &m_context;
         boost::asio::deadline_timer m_timerToKeepContext;
 
         std::function<void()> m_onSubTaskQueueConnectedEventSink;
@@ -88,61 +89,61 @@ namespace
     class ProcessingCoreImpl : public ProcessingCore
     {
     public:
-        ProcessingCoreImpl(size_t processingMillisec)
-            : m_processingMillisec(processingMillisec)
+        ProcessingCoreImpl( size_t processingMillisec ) : m_processingMillisec( processingMillisec )
         {
         }
 
-        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask(
-        const SGProcessing::SubTask& subTask, uint32_t initialHashCode) override 
+        outcome::result<SGProcessing::SubTaskResult> ProcessSubTask( const SGProcessing::SubTask &subTask,
+                                                                     uint32_t initialHashCode ) override
         {
             SGProcessing::SubTaskResult result;
-            if (m_processingMillisec > 0)
+            if ( m_processingMillisec > 0 )
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(m_processingMillisec));
+                std::this_thread::sleep_for( std::chrono::milliseconds( m_processingMillisec ) );
             }
 
-            auto itResultHashes = m_chunkResultHashes.find(subTask.subtaskid());
+            auto itResultHashes = m_chunkResultHashes.find( subTask.subtaskid() );
 
             size_t subTaskResultHash = initialHashCode;
-            for (int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx)
+            for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
             {
                 size_t chunkHash = 0;
-                if (itResultHashes != m_chunkResultHashes.end())
+                if ( itResultHashes != m_chunkResultHashes.end() )
                 {
                     chunkHash = itResultHashes->second[chunkIdx];
                 }
                 else
                 {
-                    const auto& chunk = subTask.chunkstoprocess(chunkIdx);
+                    const auto &chunk = subTask.chunkstoprocess( chunkIdx );
                     // Chunk result hash should be calculated
                     // Chunk data hash is calculated just as a stub
-                    chunkHash = std::hash<std::string>{}(chunk.SerializeAsString());
+                    chunkHash = std::hash<std::string>{}( chunk.SerializeAsString() );
                 }
 
-                std::string chunkHashString(reinterpret_cast<const char*>(&chunkHash), sizeof(chunkHash));
-                result.add_chunk_hashes(chunkHashString);
-                boost::hash_combine(subTaskResultHash, chunkHash);
+                std::string chunkHashString( reinterpret_cast<const char *>( &chunkHash ), sizeof( chunkHash ) );
+                result.add_chunk_hashes( chunkHashString );
+                boost::hash_combine( subTaskResultHash, chunkHash );
             }
 
-            std::string hashString(reinterpret_cast<const char*>(&subTaskResultHash), sizeof(subTaskResultHash));
-            result.set_result_hash(hashString);
+            std::string hashString( reinterpret_cast<const char *>( &subTaskResultHash ), sizeof( subTaskResultHash ) );
+            result.set_result_hash( hashString );
 
-            m_processedSubTasks.push_back(subTask);
-            m_initialHashes.push_back(initialHashCode);
+            m_processedSubTasks.push_back( subTask );
+            m_initialHashes.push_back( initialHashCode );
             return result;
-        };
+        }
 
         std::vector<SGProcessing::SubTask> m_processedSubTasks;
-        std::vector<uint32_t> m_initialHashes;
+        std::vector<uint32_t>              m_initialHashes;
 
         std::map<std::string, std::vector<size_t>> m_chunkResultHashes;
+
     private:
         size_t m_processingMillisec;
     };
 }
 
-const std::string logger_config(R"(
+const std::string logger_config( R"(
 # ----------------
 sinks:
   - name: console
@@ -156,7 +157,7 @@ groups:
       - name: libp2p
       - name: Gossip
 # ----------------
-  )");
+  )" );
 
 class ProcessingEngineTest : public ::testing::Test
 {
@@ -164,73 +165,77 @@ public:
     virtual void SetUp() override
     {
         // prepare log system
-        auto logging_system = std::make_shared<soralog::LoggingSystem>(
-            std::make_shared<soralog::ConfiguratorFromYAML>(
-                // Original LibP2P logging config
-                std::make_shared<libp2p::log::Configurator>(),
-                // Additional logging config for application
-                logger_config));
+        auto logging_system = std::make_shared<soralog::LoggingSystem>( std::make_shared<soralog::ConfiguratorFromYAML>(
+            // Original LibP2P logging config
+            std::make_shared<libp2p::log::Configurator>(),
+            // Additional logging config for application
+            logger_config ) );
         logging_system->configure();
 
-        libp2p::log::setLoggingSystem(logging_system);
+        libp2p::log::setLoggingSystem( logging_system );
 #ifdef SGNS_DEBUGLOGS
-        libp2p::log::setLevelOfGroup("processing_service_test", soralog::Level::DEBUG);
+        libp2p::log::setLevelOfGroup( "processing_service_test", soralog::Level::DEBUG );
 
-        auto loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
+        auto loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueueManager" );
         loggerProcQM->set_level( spdlog::level::debug );
 
-        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueue");
+        loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueue" );
         loggerProcQM->set_level( spdlog::level::debug );
 
-        loggerProcQM  = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl");
+        loggerProcQM = sgns::base::createLogger( "ProcessingSubTaskQueueAccessorImpl" );
         loggerProcQM->set_level( spdlog::level::debug );
 #else
-        libp2p::log::setLevelOfGroup("processing_engine_test", soralog::Level::OFF);
+        libp2p::log::setLevelOfGroup( "processing_engine_test", soralog::Level::OFF );
 #endif
-
     }
 };
+
 /**
  * @given A queue containing subtasks
  * @when Processing is started
  * @then ProcessingCore::ProcessSubTask is called for each subtask.
  */
-TEST_F(ProcessingEngineTest, SubTaskProcessing)
+TEST_F( ProcessingEngineTest, SubTaskProcessing )
 {
     boost::asio::io_context context;
 
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(0);
+    auto processingCore = std::make_shared<ProcessingCoreImpl>( 0 );
 
     auto nodeId = "NODE_1";
-    auto engine = std::make_shared<ProcessingEngine>(nodeId, processingCore, [](const std::string &){},[]{});
+    auto engine = std::make_shared<ProcessingEngine>( nodeId, processingCore, []( const std::string & ) {}, [] {} );
 
     std::list<SGProcessing::SubTask> subTasks;
-    auto subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>(context);
+    auto                             subTaskQueueAccessor = std::make_shared<SubTaskQueueAccessorMock>( context );
     {
         SGProcessing::SubTask subTask;
-        subTask.set_subtaskid("SUBTASK_ID1");
-        subTasks.push_back(std::move(subTask));
+        subTask.set_subtaskid( "SUBTASK_ID1" );
+        subTasks.push_back( std::move( subTask ) );
     }
     {
         SGProcessing::SubTask subTask;
-        subTask.set_subtaskid("SUBTASK_ID2");
-        subTasks.push_back(std::move(subTask));
+        subTask.set_subtaskid( "SUBTASK_ID2" );
+        subTasks.push_back( std::move( subTask ) );
     }
-    subTaskQueueAccessor->AssignSubTasks(subTasks);
+    subTaskQueueAccessor->AssignSubTasks( subTasks );
 
-    std::thread contextThread([&context]() { context.run(); });
-    engine->StartQueueProcessing(subTaskQueueAccessor);
+    std::thread contextThread( [&context]() { context.run(); } );
+    engine->StartQueueProcessing( subTaskQueueAccessor );
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+    std::chrono::milliseconds elapsed;
+    ASSERT_WAIT_FOR_CONDITION(
+        [&processingCore]() { return processingCore->m_processedSubTasks.size() == 2; },
+        std::chrono::milliseconds( 5000 ),
+        "Queue processing did not complete within timeout",
+        &elapsed );
 
     context.stop();
     contextThread.join();
 
     engine->StopQueueProcessing();
 
-    ASSERT_EQ(2, processingCore->m_processedSubTasks.size());
-    EXPECT_EQ("SUBTASK_ID1", processingCore->m_processedSubTasks[0].subtaskid());
-    EXPECT_EQ("SUBTASK_ID2", processingCore->m_processedSubTasks[1].subtaskid());
+    ASSERT_EQ( 2, processingCore->m_processedSubTasks.size() );
+    EXPECT_EQ( "SUBTASK_ID1", processingCore->m_processedSubTasks[0].subtaskid() );
+    EXPECT_EQ( "SUBTASK_ID2", processingCore->m_processedSubTasks[1].subtaskid() );
 }
 
 /**
@@ -238,49 +243,46 @@ TEST_F(ProcessingEngineTest, SubTaskProcessing)
  * @when 2 engines sequentually start the queue processing
  * @then Each of them processes only 1 subtask from the queue.
  */
-TEST_F(ProcessingEngineTest, SharedSubTaskProcessing)
+TEST_F( ProcessingEngineTest, SharedSubTaskProcessing )
 {
     boost::asio::io_context context;
 
-    auto processingCore = std::make_shared<ProcessingCoreImpl>(500);
+    auto processingCore = std::make_shared<ProcessingCoreImpl>( 500 );
 
     auto nodeId1 = "NODE_1";
     auto nodeId2 = "NODE_2";
 
-    auto engine1 = std::make_shared<ProcessingEngine>(nodeId1, processingCore, [](const std::string &){},[]{});
-    auto engine2 = std::make_shared<ProcessingEngine>(nodeId2, processingCore, [](const std::string &){},[]{});
+    auto engine1 = std::make_shared<ProcessingEngine>( nodeId1, processingCore, []( const std::string & ) {}, [] {} );
+    auto engine2 = std::make_shared<ProcessingEngine>( nodeId2, processingCore, []( const std::string & ) {}, [] {} );
 
-    auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>(context);
+    auto subTaskQueueAccessor1 = std::make_shared<SubTaskQueueAccessorMock>( context );
     {
         std::list<SGProcessing::SubTask> subTasks;
-        SGProcessing::SubTask subTask;
-        subTask.set_subtaskid("SUBTASK_ID1");
-        subTasks.push_back(std::move(subTask));
-        subTaskQueueAccessor1->AssignSubTasks(subTasks);
+        SGProcessing::SubTask            subTask;
+        subTask.set_subtaskid( "SUBTASK_ID1" );
+        subTasks.push_back( std::move( subTask ) );
+        subTaskQueueAccessor1->AssignSubTasks( subTasks );
     }
 
-    auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorMock>(context);
+    auto subTaskQueueAccessor2 = std::make_shared<SubTaskQueueAccessorMock>( context );
     {
         std::list<SGProcessing::SubTask> subTasks;
-        SGProcessing::SubTask subTask;
-        subTask.set_subtaskid("SUBTASK_ID2");
-        subTasks.push_back(std::move(subTask));
-        subTaskQueueAccessor2->AssignSubTasks(subTasks);
+        SGProcessing::SubTask            subTask;
+        subTask.set_subtaskid( "SUBTASK_ID2" );
+        subTasks.push_back( std::move( subTask ) );
+        subTaskQueueAccessor2->AssignSubTasks( subTasks );
     }
 
-    std::thread contextThread([&context]() { context.run(); });
+    std::thread contextThread( [&context]() { context.run(); } );
 
-    engine1->StartQueueProcessing(subTaskQueueAccessor1);
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    engine2->StartQueueProcessing(subTaskQueueAccessor2);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    engine1->StartQueueProcessing( subTaskQueueAccessor1 );
+    engine2->StartQueueProcessing( subTaskQueueAccessor2 );
 
     context.stop();
     contextThread.join();
     engine1->StopQueueProcessing();
     engine2->StopQueueProcessing();
-    ASSERT_EQ(2, processingCore->m_initialHashes.size());
-    EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId1)), processingCore->m_initialHashes[0]);
-    EXPECT_EQ(static_cast<uint32_t>(std::hash<std::string>{}(nodeId2)), processingCore->m_initialHashes[1]);
+    ASSERT_EQ( 2, processingCore->m_initialHashes.size() );
+    EXPECT_EQ( static_cast<uint32_t>( std::hash<std::string>{}( nodeId1 ) ), processingCore->m_initialHashes[0] );
+    EXPECT_EQ( static_cast<uint32_t>( std::hash<std::string>{}( nodeId2 ) ), processingCore->m_initialHashes[1] );
 }

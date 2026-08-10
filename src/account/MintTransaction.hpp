@@ -10,7 +10,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "account/TokenID.hpp"
 
 namespace sgns
@@ -18,7 +18,7 @@ namespace sgns
     /**
      * @brief Transaction that mints tokens after proving a corresponding source-chain event.
      */
-    class MintTransaction final : public IGeniusTransactions
+    class MintTransaction final : public GeniusTransaction
     {
     public:
         /**
@@ -46,7 +46,10 @@ namespace sgns
                                     TokenID                                         token_id,
                                     SGTransaction::DAGStruct                        dag );
 
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
+
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
         /**
          * @brief Serializes the mint transaction payload and DAG metadata.
          * @param[in] dag DAG metadata to serialize into the transaction payload.

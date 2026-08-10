@@ -3,6 +3,7 @@
 #include <storage/rocksdb/rocksdb.hpp>
 #include "outcome/outcome.hpp"
 #include <testutil/outcome.hpp>
+#include <testutil/remove_all.hpp>
 #include <boost/filesystem.hpp>
 
 
@@ -28,7 +29,7 @@ namespace sgns::crdt
   TEST(CrdtSetTest, TestInvalidDatabase)
   {
     std::string databasePath = "supergenius_crdt_set_invalid_database";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     rocksdb::Options options;
     options.create_if_missing = true;  // intentionally
@@ -58,7 +59,7 @@ namespace sgns::crdt
 
     // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_set_value";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     // Create new database
     rocksdb::Options options;
@@ -109,7 +110,7 @@ namespace sgns::crdt
 
     // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_delta";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     // Create new database
     rocksdb::Options options;
@@ -165,7 +166,7 @@ namespace sgns::crdt
 
     // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_tombstone";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     // Create new database
     rocksdb::Options options;
@@ -207,7 +208,7 @@ namespace sgns::crdt
 
     // Remove leftover database
     std::string databasePath = "supergenius_crdt_set_test_merge";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     // Create new database
     rocksdb::Options options;
@@ -264,7 +265,7 @@ namespace sgns::crdt
     const std::string cidB = "CID_B";
 
     std::string databasePath = "supergenius_crdt_set_test_tombstone_diff_cids";
-    fs::remove_all(databasePath);
+    test::removeAllWithRetry( databasePath );
 
     rocksdb::Options options;
     options.create_if_missing = true;

@@ -13,16 +13,16 @@ namespace sgns::watcher {
 
     void MessagingWatcher::startWatching() {
         std::lock_guard<std::mutex> lock(running_mutex);
-        if (running) return;
+        if (running.load()) return;
 
-        running = true;
+        running.store(true);
         watcherThread = boost::thread(&MessagingWatcher::watch, this);
     }
 
     void MessagingWatcher::stopWatching() {
         {
             std::lock_guard<std::mutex> lock(running_mutex);
-            running = false;
+            running.store(false);
         }
 
         if (watcherThread.joinable()) {
@@ -47,7 +47,7 @@ namespace sgns::watcher {
     }
 
     void MessagingWatcher::watch() {
-        while (running) {
+        while (running.load()) {
             // Placeholder: This function should be implemented by derived classes
             // Here, it will simply sleep for 1 second, but derived classes should provide a real implementation.
             boost::this_thread::sleep_for(boost::chrono::seconds(1));
@@ -55,8 +55,7 @@ namespace sgns::watcher {
     }
 
     bool MessagingWatcher::isRunning() const {
-        std::lock_guard<std::mutex> const lock(running_mutex);
-        return running;
+        return running.load();
     }
 
 

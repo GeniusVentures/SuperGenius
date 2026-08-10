@@ -1,5 +1,5 @@
-#pragma once
-
+#ifndef SGNS_JSON_BACKEND_HPP
+#define SGNS_JSON_BACKEND_HPP
 #include "../ISecureStorage.hpp"
 
 #include <rapidjson/document.h>
@@ -29,3 +29,5 @@ namespace sgns
         virtual outcome::result<void> SaveJSON( rapidjson::Document document ) = 0;
     };
 }
+
+#endif // SGNS_JSON_BACKEND_HPP

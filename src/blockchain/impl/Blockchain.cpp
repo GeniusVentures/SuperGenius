@@ -5,6 +5,7 @@
  * @author     Henrique A. Klein (hklein@gnus.ai)
  */
 #include <chrono>
+#include <mutex>
 #include <system_error>
 #include <unordered_set>
 #include "blockchain/Blockchain.hpp"
@@ -50,6 +51,12 @@ namespace sgns
 {
     namespace
     {
+        std::mutex &GenesisConfigMutex()
+        {
+            static std::mutex mutex;
+            return mutex;
+        }
+
         base::Logger blockchain_logger()
         {
             // Always call base::createLogger to get the current logger
@@ -62,6 +69,12 @@ namespace sgns
     {
         static std::string address( DEFAULT_FULL_NODE_PUB_ADDRESS );
         return address;
+    }
+
+    std::vector<std::string> &Blockchain::AdditionalGenesisValidatorAddressesStorage()
+    {
+        static std::vector<std::string> addresses;
+        return addresses;
     }
 
     std::shared_ptr<Blockchain> Blockchain::New( std::shared_ptr<crdt::GlobalDB>            global_db,
@@ -140,7 +153,7 @@ namespace sgns
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
-                    (void)strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
+                    (void) strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
@@ -153,6 +166,16 @@ namespace sgns
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
                         request_validator_registry( strong );
+                    }
+                    else if ( strong->start_deferred_.load() )
+                    {
+                        // Registry became ready after Start() deferred. Retry immediately
+                        // instead of waiting for GeniusNode's ScheduleBlockchainRetry timer
+                        // (default 5s), which would otherwise idle here until it fires.
+                        strong->logger_->info(
+                            "[{}] Validator registry ready — retrying deferred blockchain start",
+                            strong->account_->GetAddress().substr( 0, 8 ) );
+                        (void)strong->Start();
                     }
                 }
             } );
@@ -195,11 +218,19 @@ namespace sgns
                     {
                         return outcome::success();
                     }
-                    auto proposal_result = strong->consensus_manager_->CreateProposal(
-                        subject,
-                        strong->account_->GetAddress(),
-                        strong->validator_registry_->GetRegistryCid(),
-                        strong->validator_registry_->GetRegistryEpoch() );
+                    std::string registry_cid   = strong->validator_registry_->GetRegistryCid();
+                    uint64_t    registry_epoch = strong->validator_registry_->GetRegistryEpoch();
+                    auto        batch_payload  = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                    // In case the batch has already started, use the current CID and epoch
+                    if ( batch_payload.has_value() )
+                    {
+                        registry_cid   = batch_payload.value().base_registry_cid();
+                        registry_epoch = batch_payload.value().base_registry_epoch();
+                    }
+                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
+                                                                                       strong->account_->GetAddress(),
+                                                                                       registry_cid,
+                                                                                       registry_epoch );
                     if ( proposal_result.has_error() )
                     {
                         return outcome::failure( proposal_result.error() );
@@ -212,7 +243,7 @@ namespace sgns
         instance->consensus_manager_->RegisterSubjectHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::Check>
+                const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
             {
                 if ( auto strong = weak_ptr.lock() )
                 {
@@ -224,12 +255,12 @@ namespace sgns
                     switch ( decision_result.value() )
                     {
                         case ValidatorRegistry::BatchSubjectDecision::Approve:
-                            return ConsensusManager::Check::Approve;
+                            return ConsensusManager::ValidationResult::Approve();
                         case ValidatorRegistry::BatchSubjectDecision::Pending:
-                            return ConsensusManager::Check::Pending;
+                            return ConsensusManager::ValidationResult::Pending();
                         case ValidatorRegistry::BatchSubjectDecision::Reject:
                         default:
-                            return ConsensusManager::Check::Reject;
+                            return ConsensusManager::ValidationResult::Reject();
                     }
                 }
                 return outcome::failure( std::errc::owner_dead );
@@ -420,7 +451,7 @@ namespace sgns
             blockchain_logger()->debug( "{}: Genesis CID: {}", __func__, genesis_cid.value().toString() );
             crdt::GlobalDB::Buffer genesis_cid_value;
             genesis_cid_value.putBuffer( genesis_cid.value() );
-            (void)new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
+            (void) new_store->put( genesis_cid_key, std::move( genesis_cid_value ) );
             BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( genesis_cid.value().toString() ) ) );
         }
 
@@ -434,7 +465,7 @@ namespace sgns
             {
                 blockchain_logger()->debug( "{}: Account creation CID: {}", __func__, entry.second.toString() );
 
-                (void)new_store->put( entry.first, entry.second );
+                (void) new_store->put( entry.first, entry.second );
                 BOOST_OUTCOME_TRY( MigrateCIDToNewDB( std::string( entry.second.toString() ) ) );
             }
         }
@@ -461,19 +492,7 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
-        if ( consensus_manager_ )
-        {
-            consensus_manager_->Close();
-        }
-        if ( db_ )
-        {
-            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
-            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
-            db_->UnregisterNewElementCallback( genesis_pattern );
-            db_->UnregisterElementFilter( genesis_pattern );
-            db_->UnregisterNewElementCallback( account_pattern );
-            db_->UnregisterElementFilter( account_pattern );
-        }
+        (void)Stop();
         account_->ClearGetBlockChainCIDMethod();
         account_->ClearGetValidatorWeightMethod();
     }
@@ -481,6 +500,7 @@ namespace sgns
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
     {
         auto  logger  = base::createLogger( "Blockchain" );
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         auto &address = AuthorizedFullNodeAddressStorage();
         logger->info( "Setting authorized full node address from {} to {}",
                       address.substr( 0, 8 ),
@@ -488,9 +508,23 @@ namespace sgns
         address = pub_address;
     }
 
-    const std::string &Blockchain::GetAuthorizedFullNodeAddress()
+    std::string Blockchain::GetAuthorizedFullNodeAddress()
     {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
         return AuthorizedFullNodeAddressStorage();
+    }
+
+    void Blockchain::SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses )
+    {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
+        auto &storage = AdditionalGenesisValidatorAddressesStorage();
+        storage       = addresses;
+    }
+
+    std::vector<std::string> Blockchain::GetAdditionalGenesisValidatorAddresses()
+    {
+        std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
+        return AdditionalGenesisValidatorAddressesStorage();
     }
 
     outcome::result<void> Blockchain::Start()
@@ -498,6 +532,7 @@ namespace sgns
         if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
              !validator_registry_initialized_.load() )
         {
+            start_deferred_.store( true );
             logger_->warn(
                 "[{}] Blockchain start deferred (created: {}, filters: {}, callbacks: {}, validator_registry: {})",
                 account_->GetAddress().substr( 0, 8 ),
@@ -505,8 +540,22 @@ namespace sgns
                 filters_registered_,
                 callbacks_registered_,
                 validator_registry_initialized_.load() );
+
+            // Bug fix (2-of-11-nodes-start-bridge): ValidatorRegistry::InitializeCache()
+            // only ever attempts genesis-registry discovery once, synchronously, at
+            // construction time, and otherwise depends entirely on a passive CRDT
+            // broadcast (RegistryUpdateReceived) that may never reach every node in a
+            // large concurrent cluster. Actively re-attempt head-CID discovery on every
+            // deferred-start retry so a missed/delayed broadcast does not permanently
+            // strand this node.
+            if ( validator_registry_ && !validator_registry_initialized_.load() )
+            {
+                validator_registry_->RetryInitializationIfNeeded();
+            }
+
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
+        start_deferred_.store( false );
 
         logger_->info( "[{}] Starting blockchain with authorized full node: {}",
                        account_->GetAddress().substr( 0, 8 ),
@@ -576,7 +625,7 @@ namespace sgns
                                         key_str );
                         continue;
                     }
-                    (void)InitAccountCreationCID( address );
+                    (void) InitAccountCreationCID( address );
                 }
             }
 
@@ -598,6 +647,7 @@ namespace sgns
 
             logger_->info( "[{}] Genesis block verification completed successfully",
                            account_->GetAddress().substr( 0, 8 ) );
+
             logger_->info( "[{}] Requesting account creation block via pubsub", account_->GetAddress().substr( 0, 8 ) );
 
             return account_->RequestAccountCreation(
@@ -667,7 +717,10 @@ namespace sgns
             return outcome::success();
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
@@ -928,6 +981,33 @@ namespace sgns
         logger_->info( "[{}] Requesting account creation block via pubsub (async)",
                        account_->GetAddress().substr( 0, 8 ) );
 
+        // Genesis creator: it creates its own account-creation block, so issuing
+        // RequestAccountCreation(8000) only stalls startup ~8s waiting for a PubSub
+        // response that never arrives (no peers). Trigger the same fallback the
+        // timeout would have, immediately.
+        // This runs on a detached thread because GenesisReceivedCallback executes
+        // on the CRDT DAG worker thread, and CreateAccountCreationBlock -> db_->Put
+        // -> AddDAGNode -> WaitForJob would self-deadlock the single worker if
+        // called synchronously here.
+        if ( account_->GetAddress() == GetAuthorizedFullNodeAddress() )
+        {
+            logger_->info( "[{}] Genesis creator - creating account creation block directly",
+                           account_->GetAddress().substr( 0, 8 ) );
+            std::thread(
+                [weakself = weak_from_this()]()
+                {
+                    if ( auto s = weakself.lock() )
+                    {
+                        // Empty/error result => no peer supplied a CID => fall back
+                        // to creating the account-creation block locally.
+                        (void)s->InformAccountCreationResponse(
+                            outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
+                    }
+                } )
+                .detach();
+            return outcome::success();
+        }
+
         auto result = account_->RequestAccountCreation(
             TIMEOUT_ACC_CREATION_BLOCK_MS,
             [weakself = weak_from_this()]( outcome::result<std::string> creation_cid_res )
@@ -1022,13 +1102,16 @@ namespace sgns
             logger_->error( "[{}] Failed to store genesis CID, rolling back genesis block",
                             account_->GetAddress().substr( 0, 8 ) );
 
-            (void)db_->Remove( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ),
-                               { std::string( BLOCKCHAIN_TOPIC ) } );
+            (void) db_->Remove( crdt::HierarchicalKey( std::string( GENESIS_KEY ) ),
+                                { std::string( BLOCKCHAIN_TOPIC ) } );
 
             return outcome::failure( Error::GENESIS_BLOCK_CREATION_FAILED );
         }
 
-        auto registry_result = validator_registry_->StoreGenesisRegistry( GetAuthorizedFullNodeAddress(),
+        std::vector<std::string> genesis_ids{ GetAuthorizedFullNodeAddress() };
+        const auto              &additional = GetAdditionalGenesisValidatorAddresses();
+        genesis_ids.insert( genesis_ids.end(), additional.begin(), additional.end() );
+        auto registry_result = validator_registry_->StoreGenesisRegistry( genesis_ids,
                                                                           [this]( const std::vector<uint8_t> &data )
                                                                           { return account_->Sign( data ); } );
         if ( registry_result.has_error() )
@@ -1474,8 +1557,8 @@ namespace sgns
                 break;
             }
 
-            const bool existing_genesis_ok = !genesis_known ||
-                                             existing_block.genesis_block_cid() == cids_.genesis_.value();
+            const bool existing_genesis_ok   = !genesis_known ||
+                                               existing_block.genesis_block_cid() == cids_.genesis_.value();
             const bool existing_signature_ok = VerifySignature( existing_block );
 
             if ( !( existing_genesis_ok && existing_signature_ok ) )
@@ -1535,10 +1618,30 @@ namespace sgns
 
     outcome::result<void> Blockchain::Stop()
     {
+        bool expected = false;
+        if ( !stop_started_.compare_exchange_strong( expected, true ) )
+        {
+            return outcome::success();
+        }
+
         logger_->info( "[{}] Stopping blockchain", account_->GetAddress().substr( 0, 8 ) );
         if ( consensus_manager_ )
         {
+            consensus_manager_->SetSlotHashPopulator( {} );
             consensus_manager_->Close();
+        }
+        if ( validator_registry_ )
+        {
+            validator_registry_->Close();
+        }
+        if ( db_ )
+        {
+            const std::string genesis_pattern = "/?" + std::string( GENESIS_KEY );
+            const std::string account_pattern = "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*";
+            db_->UnregisterNewElementCallback( genesis_pattern );
+            db_->UnregisterElementFilter( genesis_pattern );
+            db_->UnregisterNewElementCallback( account_pattern );
+            db_->UnregisterElementFilter( account_pattern );
         }
         //db_->RemoveListenTopic( std::string( BLOCKCHAIN_TOPIC ) );
         return outcome::success();
@@ -1671,6 +1774,18 @@ namespace sgns
         return consensus_manager_->RegisterSubjectHandler( subject_type, std::move( handler ) );
     }
 
+    void Blockchain::SetSlotHashPopulator( ConsensusManager::SlotHashPopulator populator )
+    {
+        if ( consensus_manager_ )
+        {
+            consensus_manager_->SetSlotHashPopulator( std::move( populator ) );
+        }
+        else
+        {
+            logger_->warn( "SetSlotHashPopulator: consensus manager not initialized, populator discarded" );
+        }
+    }
+
     void Blockchain::UnregisterSubjectHandler( std::string_view subject_type )
     {
         consensus_manager_->UnregisterSubjectHandler( subject_type );
@@ -1687,25 +1802,49 @@ namespace sgns
         consensus_manager_->UnregisterCertificateHandler( subject_type );
     }
 
+    bool Blockchain::RegisterProposalCleanupHandler( std::string_view                         subject_type,
+                                                     ConsensusManager::ProposalCleanupHandler handler )
+    {
+        return consensus_manager_->RegisterProposalCleanupHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::RegisterSlotKeyHandler( std::string_view subject_type, ConsensusManager::SlotKeyHandler handler )
+    {
+        ConsensusManager::RegisterSlotKeyHandler( subject_type, std::move( handler ) );
+    }
+
+    void Blockchain::UnregisterSlotKeyHandler( std::string_view subject_type )
+    {
+        ConsensusManager::UnregisterSlotKeyHandler( subject_type );
+    }
+
     outcome::result<ConsensusManager::Subject> Blockchain::CreateConsensusNonceSubject(
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        return consensus_manager_->CreateNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness );
+        return ConsensusManager::CreateNonceSubject( account_id,
+                                                     nonce,
+                                                     tx_hash,
+                                                     transaction,
+                                                     utxo_commitment,
+                                                     utxo_witness );
     }
 
     outcome::result<ConsensusManager::Proposal> Blockchain::CreateConsensusProposal(
         const std::string                             &account_id,
         uint64_t                                       nonce,
         const std::string                             &tx_hash,
+        const EmbeddedTransaction                     &transaction,
         const std::optional<UTXOTransitionCommitment> &utxo_commitment,
         const std::optional<UTXOWitness>              &utxo_witness )
     {
-        BOOST_OUTCOME_TRY( auto &&nonce_subject,
-                           CreateConsensusNonceSubject( account_id, nonce, tx_hash, utxo_commitment, utxo_witness ) );
+        BOOST_OUTCOME_TRY(
+            auto &&nonce_subject,
+            CreateConsensusNonceSubject( account_id, nonce, tx_hash, transaction, utxo_commitment, utxo_witness ) );
         BOOST_OUTCOME_TRY( auto &&nonce_proposal,
                            consensus_manager_->CreateProposal( nonce_subject,
                                                                account_id,
@@ -1727,6 +1866,12 @@ namespace sgns
             return outcome::success();
         }
         return consensus_manager_->ResumeProposalHandling( hash );
+    }
+
+    outcome::result<void> Blockchain::TryResumePendingDependency(
+        const ConsensusManager::PendingDependencyKey &dependency )
+    {
+        return consensus_manager_->WakePendingDependency( dependency );
     }
 
     bool Blockchain::CheckCertificate( const std::string &subject_hash ) const

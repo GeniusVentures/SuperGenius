@@ -2,7 +2,6 @@ add_proto_library(crdt_globaldb_proto proto/broadcast.proto)
 
 add_library(crdt_globaldb
     globaldb.cpp
-    pubsub_broadcaster.cpp
     pubsub_broadcaster_ext.cpp
     keypair_file_storage.cpp
 )

@@ -4,6 +4,7 @@
 #include "outcome/outcome.hpp"
 #include <testutil/outcome.hpp>
 #include <testutil/literals.hpp>
+#include <testutil/remove_all.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/hex.hpp>
 #include <libp2p/multi/multihash.hpp>
@@ -33,7 +34,7 @@ namespace sgns::crdt
 
         // Remove leftover database
         std::string databasePath = "supergenius_crdt_heads_test_set_value_add";
-        fs::remove_all( databasePath );
+        test::removeAllWithRetry( databasePath );
 
         // Create new database
         rocksdb::Options options;
@@ -111,7 +112,7 @@ namespace sgns::crdt
 
         // Remove leftover database
         std::string databasePath = "supergenius_crdt_heads_test_set_value_replace";
-        fs::remove_all( databasePath );
+        test::removeAllWithRetry( databasePath );
 
         // Create new database
         rocksdb::Options options;

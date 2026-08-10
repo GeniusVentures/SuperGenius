@@ -1,300 +1,375 @@
 # Codebase Structure
 
-**Analysis Date:** 2026-05-27
+**Analysis Date:** 2026-05-25
 
 ## Directory Layout
 
 ```
 SuperGenius/
-├── .clang-format                           # C++ code formatting rules (Microsoft-based, 120 cols)
-├── .clang-tidy                             # Static analysis checks (boost, bugprone, cert, cppcoreguidelines)
-├── .clangd                                 # LSP configuration for clangd
-├── .github/workflows/                      # CI/CD pipeline definitions
-├── .planning/codebase/                     # GSD codebase map documents
-├── .vscode/                                # VS Code workspace settings
-├── AgentDocs/                              # Agent documentation (Architecture.md, AGENT_MISTAKES.md, etc.)
-├── cmake/                                  # CMake helper modules (config.cmake.in, functions.cmake, etc.)
-├── build/                                  # Platform-specific CMake build directories (NOT committed)
-│   ├── OSX/                                # macOS (x86 + ARM fat library)
-│   ├── Linux/                              # Linux (x86_64, aarch64)
-│   ├── Windows/                            # Windows (Visual Studio 2022)
-│   ├── Android/                            # Android (armeabi-v7a, arm64-v8a, x86_64)
-│   └── iOS/                                # iOS cross-compile
-├── src/                                    # Core library source (namespace sgns::*)
-│   ├── CMakeLists.txt                      # Top-level build (17 add_subdirectory entries)
-│   ├── account/                            # UTXO ledger, transactions, GeniusAccount/GeniusNode
-│   ├── api/transport/                      # HTTP/WebSocket JSON-RPC server
-│   ├── base/                               # Buffer, Blob, Logger (spdlog), hex utilities, version
-│   ├── blockchain/                         # Genesis bootstrap, ConsensusManager, BlockTree, BlockStorage
-│   ├── coinprices/                         # CoinGecko price retrieval
-│   ├── crdt/                               # CRDT datastore, GlobalDB, DAG syncer, PubSub broadcaster
-│   ├── crypto/                             # ED25519, SR25519, secp256k1, VRF, BIP39, Hasher (blake2/keccak/sha2/twox)
-│   ├── local_secure_storage/               # Platform-specific encrypted key storage
-│   ├── macro/                              # Utility macros (unreachable.hpp)
-│   ├── outcome/                            # outcome::result<T> adapter
-│   ├── primitives/                         # Block, Extrinsic, Authority, Transaction core types
-│   ├── processing/                         # Distributed task/subtask queue and execution engine
-│   ├── proof/                              # zkSNARK provers, assigners, transfer/processing proof circuits
-│   ├── scale/                              # SCALE binary codec (encoder/decoder streams)
-│   ├── singleton/                          # IComponent / CComponentFactory DI container
-│   ├── storage/                            # RocksDB, in-memory, Trie/MPT, changes trie, storage face interfaces
-│   ├── subscription/                       # Templated publish/subscribe event bus
-│   └── watcher/                            # EVM chain event watcher (WebSocket)
-├── example/                                # Runnable example apps (10 entry points with their own main())
-│   ├── node_test/                          # Primary integration example (NodeExample.cpp, 751 lines)
-│   ├── processing_room/                    # Processing service demo
-│   ├── crdt_globaldb/                      # CRDT GlobalDB usage demo
-│   └── ...                                 # ipfs_client, ipfs_pubsub, evm_messaging_dapp, echo_client, etc.
-├── test/                                   # Unit and integration tests
-│   ├── CMakeLists.txt                      # Test root (includes testutil and test/src)
-│   ├── mock/src/                           # Mock implementations for testing
-│   ├── testutil/                           # Test utilities (color_support, literals, WaitCondition, outcome helpers)
-│   └── src/                                # Test suites (mirrors src/ structure)
-├── example/                                # Example apps and integration tests
-│   ├── CMakeLists.txt
-│   ├── crdt_globaldb/                      # CRDT GlobalDB usage example
-│   ├── echo_client/                        # Echo client example
-│   ├── evm_messaging_dapp/                 # EVM messaging dApp example
-│   ├── ipfs_client/                        # IPFS client examples (two variants)
-│   ├── ipfs_pubsub/                        # IPFS pubsub example
-│   ├── mnn_chunkprocess/                   # MNN chunk processing example
-│   ├── node_test/                          # Node integration tests
-│   ├── processing_dapp/                    # Processing dApp example
-│   ├── processing_json/                    # Processing with JSON input example
-│   └── processing_room/                    # Processing room example
-├── GeniusKDF/                              # [submodule] Key derivation function library
-├── ProofSystem/                            # [submodule] Standalone proof system (ElGamal, ECDSA, AES, KDF, circuits)
-├── SGProcessingManager/                    # [submodule] MNN-based ML inference engine
-├── evmrelay/                               # [submodule] EVM RLP/Discv4/Discv5/RLPx relay library
-├── gRPCForSuperGenius/                     # [submodule] OpenAPI REST + gRPC interface definitions
-├── docs/                                   # [submodule] Documentation (Doxygen XML, Doxyfile)
-├── CRDT.Datastore.TEST/                    # CRDT datastore integration test data
-├── CRDT.Datastore.TEST.unit/               # CRDT datastore unit test data (RocksDB files)
-├── Testing/Temporary/                      # Temporary test artifacts
-├── Readme.md                               # Build instructions (CMake per platform)
-├── LICENSE                                 # License file
-└── .gitmodules                             # Submodule declarations (7 submodules)
+├── AgentDocs/                     # Agent instructions, architecture docs, checkpoints
+│   ├── Architecture.md            # Comprehensive architecture reference (1045 lines)
+│   ├── CHECKPOINT.md              # Project checkpoint/status
+│   ├── AGENT_MISTAKES.md          # Recorded agent mistakes and lessons
+│   ├── BRIDGE_MINT_PLAN.md        # Bridge minting implementation plan
+│   ├── EVMRELAY_SECURITY_HARDENING_PLAN.md
+│   └── CLAUDE.md                  # CLAUDE agent instructions
+├── src/                           # Core C++ library source (namespace sgns::*)
+│   ├── account/                   # UTXO ledger, transactions, GeniusAccount/Node
+│   ├── api/transport/             # HTTP/WebSocket JSON-RPC server
+│   ├── base/                      # Buffer, Blob, Logger, hex/padding utilities
+│   ├── blockchain/                # Consensus, BlockTree, BlockStorage, ValidatorRegistry
+│   ├── coinprices/                # CoinGecko token price retrieval
+│   ├── crdt/                      # CRDT datastore, GlobalDB, PubSub broadcaster
+│   ├── crypto/                    # ED25519, SR25519, Secp256k1, VRF, Hasher, BIP39, PBKDF2
+│   ├── local_secure_storage/      # Platform-specific encrypted key storage
+│   ├── macro/                     # Utility macros (unreachable)
+│   ├── outcome/                   # outcome::result<T> adapter header
+│   ├── primitives/                # Block, Extrinsic, Authority, Transaction types
+│   ├── processing/                # Distributed task/subtask queue and execution engine
+│   ├── proof/                     # zkSNARK provers, assigners, transfer/processing proofs
+│   ├── scale/                     # SCALE binary codec (encoder/decoder streams)
+│   ├── singleton/                 # IComponent / CComponentFactory DI container
+│   ├── storage/                   # RocksDB, in-memory, Trie/MPT, ChangesTrie
+│   ├── subscription/              # Templated pub/sub event bus
+│   └── watcher/                   # EVM chain event watcher
+├── test/                          # Unit and integration tests
+│   ├── src/                       # Test source files mirroring src/ structure
+│   ├── mock/src/                  # Mock implementations for testing
+│   ├── testutil/                  # Test utilities: wait_condition, literals, color_support
+│   └── CMakeLists.txt             # Test build configuration
+├── build/                         # Per-platform CMake build directories
+│   ├── OSX/                       # macOS builds (Debug, Release, RelWithDebInfo)
+│   ├── Linux/                     # Linux builds
+│   ├── Windows/                   # Windows builds (VS 2022)
+│   ├── Android/                   # Android cross-compile (armeabi-v7a, arm64-v8a, x86_64)
+│   ├── iOS/                       # iOS builds
+│   ├── CommonBuildParameters.cmake
+│   ├── CommonCompilerOptions.cmake
+│   └── CompilationFlags.cmake
+├── cmake/                         # CMake helper modules
+│   ├── config.cmake.in
+│   ├── functions.cmake
+│   ├── install.cmake
+│   └── version.cmake
+├── gRPCForSuperGenius/            # [Submodule] OpenAPI REST + gRPC interface definitions
+├── GeniusKDF/                     # [Submodule] Key derivation function library
+├── ProofSystem/                   # [Submodule] Standalone proof system + circuits
+├── SGProcessingManager/           # [Submodule] ML inference engine (MNN-based processors)
+├── evmrelay/                      # [Submodule] EVM relay bridge
+├── docs/                          # [Submodule] SG documentation
+├── CRDT.Datastore.TEST/           # CRDT datastore integration tests
+├── example/                       # Example code/configuration
+├── zkPOC/                         # Zero-knowledge proof-of-concept code
+├── .planning/                     # GSD planning documents (this file's destination)
+├── .github/                       # GitHub CI/CD workflows
+├── .gitmodules                    # Git submodule definitions
+├── .clang-format                  # Clang format configuration (Microsoft-based, 4-space indent, 120 cols)
+├── .clang-tidy                    # Clang-tidy configuration
+├── .clangd                        # Clangd LSP configuration
+├── .gitignore                     # Git ignore rules
+├── .git-blame-ignore-revs         # Blame-ignore revision list
+├── LICENSE                        # Project license
+├── Readme.md                      # Build instructions and project overview
+└── new-issues.sh                  # Script to create new issues
 ```
 
 ## Directory Purposes
 
-**src/:**
-- Purpose: Core library containing all domain logic, interfaces, and implementations
-- Contains: C++ headers (`.hpp`) and source files (`.cpp`), Protobuf schemas (`.proto`), CMake build files
-- Key files: `src/CMakeLists.txt` (defines 17 subsystems), `src/account/GeniusAccount.hpp`, `src/blockchain/Blockchain.hpp`, `src/crdt/crdt_datastore.hpp`
+**`src/account/`:**
+- Purpose: Block-lattice token ledger — every account has its own DAG block chain
+- Contains: GeniusAccount (account CRDT chain), GeniusNode (network node with validator/processor roles), GeniusUTXO (UTXO wrapper), TransactionManager (lifecycle orchestration), UTXOManager (UTXO set tracking), AccountMessenger (P2P pubsub messaging), MigrationManager (schema migrations), Transaction types (Transfer, Mint, Processing, Escrow), InputValidators, Genesis/AccountCreation blocks
+- Key files: `src/account/GeniusNode.hpp` (839 lines, top-level facade), `src/account/GeniusAccount.hpp`, `src/account/TransactionManager.hpp`, `src/account/UTXOManager.hpp`, `src/account/proto/SGTransaction.proto`, `src/account/proto/SGAccountComm.proto`
 
-**src/account/:**
-- Purpose: Block-lattice UTXO ledger — account identity, transaction types, token management
-- Contains: `GeniusAccount` (account identity/keys), `GeniusNode` (validator/processor node), `GeniusUTXO`, `TransferTransaction`, `MintTransaction` (V1 + V2), `ProcessingTransaction`, `EscrowTransaction`, `UTXOManager`, `TransactionManager`, `AccountMessenger` (P2P), `MigrationManager` (schema migrations)
-- Key files: `GeniusAccount.hpp`, `TransactionManager.hpp`, `AccountMessenger.hpp`, `MigrationManager.hpp`
+**`src/blockchain/`:**
+- Purpose: Substrate-inspired consensus, block storage, block tree, finality, validator management
+- Contains: Blockchain (genesis/account creation coordinator), Consensus, ConsensusAuth, BlockTree (fork-aware), BlockStorage/BlockHeaderRepository (interfaces), ValidatorRegistry
+- Key files: `src/blockchain/Blockchain.hpp` (501 lines), `src/blockchain/Consensus.hpp`, `src/blockchain/impl/block_tree_impl.hpp`, `src/blockchain/impl/proto/SGBlockchain.proto`
 
-**src/blockchain/:**
-- Purpose: Blockchain bootstrap, consensus protocol, block storage
-- Contains: `Blockchain` (genesis/account creation controller), `ConsensusManager` (weighted voting), `ValidatorRegistry`, `BlockTree`, `BlockStorage`, `BlockHeaderRepository`
-- Key files: `Blockchain.hpp`, `Consensus.hpp` (695 lines), `impl/Blockchain.cpp`
+**`src/processing/`:**
+- Purpose: Distributed AI/ML compute network — task splitting, subtask queuing, execution, result validation
+- Contains: ProcessingCore (interface, implemented in `impl/`), ProcessingEngine, ProcessingNode, ProcessingService, ProcessTaskSplitter, ProcessingSubTaskQueue, SubTaskQueueAccessor, SubTaskEnqueuer, SubTaskResultStorage, ProcessingValidationCore
+- Key files: `src/processing/processing_core.hpp`, `src/processing/processing_service.hpp`, `src/processing/processing_engine.hpp`, `src/processing/proto/SGProcessing.proto`, `src/processing/impl/processing_core_impl.hpp`
 
-**src/crdt/:**
-- Purpose: CRDT-based distributed state replication over IPFS
-- Contains: `CrdtDatastore` (core CRDT with DAG workers), `globaldb/GlobalDB` (high-level API), `CrdtSet` (add-wins OR-Set), `CrdtHeads`, `PubSubBroadcaster`, `GraphsyncDAGSyncer`, `CRDTCallbackManager`, `HierarchicalKey`
-- Key files: `crdt_datastore.hpp` (502 lines), `globaldb/globaldb.cpp`, `impl/crdt_datastore.cpp`
+**`src/crdt/`:**
+- Purpose: Distributed replicated key-value store with causal consistency over IPFS
+- Contains: CrdtDatastore (core CRDT), GlobalDB (high-level facade), CrdtSet (add-wins OR-Set), CrdtHeads (DAG tips), Broadcaster/DAGSyncer (abstract transport), GraphsyncDAGSyncer (IPFS block sync), PubSubBroadcaster, HierarchicalKey, AtomicTransaction, CRDTCallbackManager, CRDTDataFilter
+- Key files: `src/crdt/crdt_datastore.hpp` (502 lines), `src/crdt/globaldb/globaldb.hpp`, `src/crdt/impl/crdt_datastore.cpp`, `src/crdt/proto/delta.proto`, `src/crdt/globaldb/proto/broadcast.proto`
 
-**src/processing/:**
-- Purpose: Distributed ML job processing pipeline
-- Contains: `ProcessingService` (grid coordinator), `ProcessingNode`, `ProcessingEngine`, `ProcessingCore` (interface), `ProcessTaskSplitter`, `ProcessingSubTaskQueueManager`, `SubTaskQueueAccessor`, `ProcessingValidationCore`
-- Key files: `processing_service.hpp`, `processing_engine.hpp`, `processing_core.hpp`, `impl/processing_core_impl.cpp`
+**`src/proof/`:**
+- Purpose: zkSNARK proof generation and verification using nil::crypto3
+- Contains: GeniusProver, GeniusAssigner, TransferProof, RecursiveTransferProof, ProcessingProof, IBasicProof
+- Key files: `src/proof/GeniusProver.hpp`, `src/proof/IBasicProof.hpp`, `src/proof/circuits/`, `src/proof/proto/SGProof.proto`
 
-**src/storage/:**
-- Purpose: Persistent storage backends and trie data structures
-- Contains: `face/` (abstract interfaces: `readable`, `writeable`, `generic_storage`, `batchable`), `rocksdb/` (RocksDB backend), `in_memory/` (ephemeral), `trie/` (Merkle Patricia Trie), `changes_trie/` (block-level change tracking)
-- Key files: `face/generic_storage.hpp`, `rocksdb/rocksdb.hpp`, `trie/supergenius_trie/supergenius_trie.hpp`
+**`src/storage/`:**
+- Purpose: Local persistent and in-memory key-value storage abstractions
+- Contains: `face/` — abstract interfaces (Readable, Writeable, GenericMap, Batchable, MapCursor); `rocksdb/` — RocksDB adapter; `in_memory/` — std::map-backed storage; `trie/` — Merkle Patricia Trie; `changes_trie/` — block-level change tracking
+- Key files: `src/storage/face/generic_storage.hpp`, `src/storage/rocksdb/rocksdb.hpp`, `src/storage/trie/supergenius_trie/`
 
-**src/proof/:**
-- Purpose: zkSNARK proof generation/verification
-- Contains: `IBasicProof`, `GeniusProver`, `GeniusAssigner`, `TransferProof`, `RecursiveTransferProof`, `ProcessingProof`, `circuits/` (TransactionVerifierCircuit, RecursiveTransactionCircuit), `NilFileHelper`
-- Key files: `GeniusProver.hpp`, `TransferProof.hpp`, `IBasicProof.hpp`
+**`src/crypto/`:**
+- Purpose: Cryptographic primitives
+- Contains: `ed25519/` — ED25519 sign/verify/generate (libsodium); `secp256k1/` — secp256k1 ECDSA; `hasher/` — blake2b, keccak, sha2, twox hashing; `sha/` — SHA-256; `keccak/` — Keccak hash; `pbkdf2/` — PBKDF2 key derivation; `twox/` — XXHash-based hasher
+- Key files: `src/crypto/ed25519_provider.hpp`, `src/crypto/secp256k1_provider.hpp`, `src/crypto/hasher.hpp`
 
-**src/crypto/:**
-- Purpose: All cryptographic primitives
-- Contains: `hasher/` (multi-algorithm), `sha/`, `keccak/`, `twox/`, hashing, ED25519/SR25519/secp256k1 providers, VRF, BIP39
-- Key files: `hasher.hpp`, subdirectories for each provider
+**`src/api/transport/`:**
+- Purpose: JSON-RPC over HTTP and WebSocket
+- Contains: `impl/ws/` — WebSocket listener/session/client (Boost.Asio); HTTP listener/session
+- Key files: `src/api/transport/impl/ws/`
 
-**src/base/:**
-- Purpose: Fundamental types and utilities
-- Contains: `Buffer` (dynamic byte array), `Blob<N>` (fixed-size), `Logger` (spdlog wrapper), `hexutil`, `ScaledInteger`, `sgns_version`
-- Key files: `buffer.hpp` (296 lines), `logger.hpp`, `blob.hpp`
+**`src/base/`:**
+- Purpose: Core utility types shared across all subsystems
+- Contains: Buffer (dynamic byte array), Blob<N> (fixed-size array, Hash256/Hash512 specializations), Logger (spdlog wrapper), hexutil (hex encoding/decoding), ScaledInteger, endian helpers, sgns_version, visitor pattern helpers
+- Key files: `src/base/buffer.hpp`, `src/base/blob.hpp`, `src/base/logger.hpp`
 
-**src/singleton/:**
+**`src/primitives/`:**
+- Purpose: Core blockchain data type definitions
+- Contains: Block, BlockHeader, Extrinsic, Transaction, Authority, AuthorityList, Justification, Version, InherentData, Digest, SessionKey, ScheduledChange, ValidTransaction
+- Key files: `src/primitives/block.hpp`, `src/primitives/block_header.hpp`, `src/primitives/transaction.hpp`
+
+**`src/scale/`:**
+- Purpose: SCALE binary codec (serialization for on-chain data)
+- Contains: ScaleEncoderStream, ScaleDecoderStream, compact integer encoding, tuple/variant helpers
+- Key files: `src/scale/scale_encoder_stream.hpp`, `src/scale/scale_decoder_stream.hpp`, `src/scale/types.hpp`
+
+**`src/singleton/`:**
 - Purpose: Dependency injection container
-- Contains: `IComponent` (base interface), `CComponentFactory` (singleton registry), `Singleton.hpp` (CRTP Meyers singleton)
-- Key files: `IComponent.hpp`, `CComponentFactory.hpp`, `Singleton.hpp`
+- Contains: IComponent (base interface), IComponentFactory (registry interface), CComponentFactory (singleton concrete registry), CSingleton<T> (Meyers singleton template)
+- Key files: `src/singleton/IComponent.hpp`, `src/singleton/CComponentFactory.hpp`, `src/singleton/Singleton.hpp`
 
-**src/primitives/:**
-- Purpose: Core blockchain data types shared across all subsystems
-- Contains: `Block`, `BlockHeader`, `BlockData`, `Extrinsic`, `Transaction`, `Authority`, `Version`, `ProductionConfiguration`, `InherentData`
-- Key files: `block.hpp`, `block_header.hpp`, `transaction.hpp`
+**`src/subscription/`:**
+- Purpose: Internal publish/subscribe event bus
+- Contains: SubscriptionEngine<EventT> (templated engine), Subscriber<EventT> (subscriber handle)
+- Key files: `src/subscription/subscription_engine.hpp`, `src/subscription/subscriber.hpp`
 
-**src/account/GeniusNode (node entry point):**
-- Purpose: Application lifecycle management — absorbed all functionality from the deleted `node/` and `app/integration/` directories
-- Contains: `GeniusNode.hpp` (836 lines) / `GeniusNode.cpp` (1953 lines) — God-class facade owning all subsystems, inline DI wiring, node state machine FSM
-- Key files: `src/account/GeniusNode.hpp`, `src/account/GeniusNode.cpp`
+**`src/watcher/`:**
+- Purpose: Bridge message handling orchestration
+- Contains: MessagingWatcher (abstract base, background thread), EvmMessagingWatcher (EVM bridge orchestrator — consumes evmrelay library)
+- Key files: `src/watcher/messaging_watcher.hpp`, `src/watcher/impl/evm_messaging_watcher.hpp`
+- Note: Current `EvmMessagingWatcher` contains placeholder code using raw WebSocket `eth_subscribe`; being migrated to use evmrelay as the Ethereum protocol library
 
-**example/:**
-- Purpose: Runnable example applications with individual `main()` functions
-- Contains: 10 examples — `node_test/` (primary), `processing_room/`, `crdt_globaldb/`, `evm_messaging_dapp/`, `ipfs_client/`, `ipfs_pubsub/`, `ipfs_client2/`, `echo_client/`, `mnn_chunkprocess/`, `processing_json/`
-- Key files: `example/node_test/NodeExample.cpp`
+**`src/local_secure_storage/`:**
+- Purpose: Platform-native secure key storage
+- Contains: ISecureStorage (interface), AppleSecureStorage (Keychain), AndroidSecureStorage (Keystore), LinuxSecureStorage (libsecret), WindowsSecureStorage (DPAPI), JSONSecureStorage (fallback)
+- Key files: `src/local_secure_storage/ISecureStorage.hpp`, `src/local_secure_storage/SecureStorage.hpp`
 
-**test/src/:**
-- Purpose: Unit/integration test suites organized by subsystem
-- Contains: Subdirectories mirroring `src/` layout: `account/`, `blockchain/`, `crdt/`, `crypto/`, `processing/`, `storage/`, `proof/`, `watcher/`, etc., plus cross-cutting: `multiaccount/`, `processing_multi/`, `transaction_sync/`, `pubsub_counts/`, `runtime/`, `graphsync/`, `scale/`, `price_retrieval/`
-- Key files: `test/src/CMakeLists.txt` (lists all subsystem test dirs)
+**`src/coinprices/`:**
+- Purpose: External token price data retrieval
+- Contains: CoinGeckoPriceRetriever (REST API client)
+- Key files: `src/coinprices/coinprices.hpp`
 
-**example/:**
-- Purpose: Runnable example applications demonstrating subsystem usage
-- Contains: `crdt_globaldb/`, `processing_dapp/`, `evm_messaging_dapp/`, `ipfs_client/`, `ipfs_pubsub/`, `processing_room/`, `node_test/`
-- Key files: `example/CMakeLists.txt`
+**`src/outcome/`:**
+- Purpose: outcome::result<T> error handling adapter
+- Contains: Single outcome.hpp header
+- Key files: `src/outcome/outcome.hpp`
 
-**Submodules:**
-- `GeniusKDF/` — Standalone key derivation library (`KeyGenerator::KDFGenerator`)
-- `ProofSystem/` — ElGamal, ECDSA, AES encryption, ETH/BTC key generators, `SGProofCircuits/` (zkLLVM circuits)
-- `SGProcessingManager/` — MNN-based ML inference: `MNN_Image`, `MNN_Audio`, `MNN_ML` processors, `ImageSplitter`, FlatBuffers model configs
-- `evmrelay/` — EVM RLP encoding, Discv4/Discv5 discovery, RLPx transport, `EthWatch` event watcher
-- `gRPCForSuperGenius/` — OpenAPI REST specs (`SuperGenius-OpenAPI.yaml`, `SGProcessing-OpenAPI.yaml`), gRPC definitions
-- `docs/` — Doxygen configuration and pre-built XML docs (1,207 XML files)
+**`src/macro/`:**
+- Purpose: Utility macros
+- Contains: unreachable.hpp (unreachable code marker)
+- Key files: `src/macro/unreachable.hpp`
+
+**`test/src/`:**
+- Purpose: Unit and integration tests mirroring `src/` structure
+- Contains: test subdirectories for `account/`, `base/`, `blockchain/`, `crdt/`, `crypto/`, `graphsync/`, `local_secure_storage/`, `multiaccount/`, `price_retrieval/`, `primitives/`, `processing/`, `processing_datatypes/`, `processing_multi/`, `processing_nodes/`, `processing_schema/`, `proof/`, `pubsub_counts/`, `runtime/`, `scale/`, `storage/`, `transaction_sync/`, `watcher/`, `account_creation/`
+- Key files: `test/src/crdt/crdt_datastore_test.cpp`, `test/src/crdt/globaldb_integration.cpp`, `test/src/blockchain/blockchain_genesis_test.cpp`, `test/src/processing/processing_engine_test.cpp`
+
+**`test/mock/src/`:**
+- Purpose: Mock implementations for testing
+- Contains: Mock classes replacing real subsystems (e.g., mock CRDT broadcasters, mock DAG syncers)
+- Key files: `test/src/crdt/crdt_custom_broadcaster.hpp`, `test/src/processing/processing_mock.hpp`
+
+**`test/testutil/`:**
+- Purpose: Shared test utilities
+- Contains: `wait_condition.hpp` (condition_variable-based wait templates — NEVER use sleep_for), `literals.hpp` (hash literals), `outcome.hpp` (test outcome helpers), `sr25519_utils.hpp`, `color_support.hpp`, `mint_source_hash.hpp`, `primitives/`, `storage/`
+- Key files: `test/testutil/wait_condition.hpp`
+
+**`AgentDocs/`:**
+- Purpose: Agent instruction files and architectural documentation
+- Contains: Architecture.md (comprehensive reference), CHECKPOINT.md, AGENT_MISTAKES.md, CLAUDE.md, BRIDGE_MINT_PLAN.md
+- Key files: `AgentDocs/Architecture.md` (1045 lines, authoritative architecture reference)
+
+**`build/`:**
+- Purpose: Platform-specific CMake build directories
+- Contains: `OSX/`, `Linux/`, `Windows/`, `Android/`, `iOS/` — each with `Debug`/`Release`/`RelWithDebInfo` variants; shared CMake parameter/compiler flag files
+- Key files: `build/CommonBuildParameters.cmake`, `build/CommonCompilerOptions.cmake`
+
+**`gRPCForSuperGenius/`:**
+- Purpose: Git submodule — OpenAPI REST + gRPC interface definitions
+- Contains: `SuperGenius-OpenAPI.yaml` (token/account API), `SGProcessing-OpenAPI.yaml` (processing grid API); `SuperGenius_OpenAPIImpl` server stubs
+
+**`GeniusKDF/`:**
+- Purpose: Git submodule — standalone key derivation function library
+- Contains: KDFGenerator class (`KeyGenerator` namespace); PBKDF2/Scrypt-style key derivation
+
+**`ProofSystem/`:**
+- Purpose: Git submodule — standalone proof system
+- Contains: AESEncryption, ECDHEncryption, ECDSAPublicKey, ECElGamalKeyGenerator, Bitcoin/EthereumKeyGenerator; `SGProofCircuits/` (zkSNARK circuit definitions: MPCVerifier, TxVerifier)
+
+**`SGProcessingManager/`:**
+- Purpose: Git submodule — ML inference engine
+- Contains: ProcessingManager (base), MNN_Image/Audio/ML processors, ImageSplitter, InputTypes; `generated/` (FlatBuffers-generated model config structs)
+
+**`evmrelay/`:**
+- Purpose: Git submodule — Ethereum protocol library providing watcher service (P2P discovery, event watching), public RPC list provider, and RPC connection maker
+- Consumed by: `src/watcher/` (bridge orchestrator uses evmrelay as a library for Ethereum protocol interaction), `src/account/` (mint code uses evmrelay RPC endpoints for transaction verification)
+
+**`CRDT.Datastore.TEST/`:**
+- Purpose: Standalone CRDT datastore integration test suite
+- Contains: Integration test binaries
+
+**`zkPOC/`:**
+- Purpose: Zero-knowledge proof-of-concept exploration code
+
+**`example/`:**
+- Purpose: Example code and configuration demonstrating SuperGenius usage
+
+**`.planning/`:**
+- Purpose: GSD planning documents (phase plans, codebase maps, sprint plans)
+- Contains: `codebase/` directory for codebase analysis documents (this file's destination)
+
+**`cmake/`:**
+- Purpose: CMake helper modules (config template, utility functions, install rules, version)
+- Key files: `cmake/functions.cmake`, `cmake/config.cmake.in`
 
 ## Key File Locations
 
 **Entry Points:**
-- `example/node_test/NodeExample.cpp`: Primary integration example — creates node via `GeniusNode::New()` with hand-rolled CLI
-- `src/account/GeniusNode.cpp`: Core lifecycle class — inline constructor wiring, state machine FSM, all subsystem initialization
-- `src/api/transport/`: HTTP/WebSocket JSON-RPC listener
+- `node/`: Top-level node class and CLI entry point; wires all subsystems
+- `src/account/GeniusNode.hpp`: `GeniusNode::New()` factory — primary application bootstrap
+- `src/api/transport/impl/ws/`: JSON-RPC WebSocket server entry point
+- `src/watcher/impl/evm_messaging_watcher.hpp`: EVM watcher background entry point
 
 **Configuration:**
-- `.clang-format`: C++ formatting rules (Microsoft-based, 120 char limit, C++17)
-- `.clang-tidy`: Static analysis checks (boost, bugprone, cert, cppcoreguidelines, concurrency, modernize, performance)
-- `.clangd`: LSP configuration
-- `cmake/config.cmake.in`: CMake config template for `find_package(SGNs)`
-- `cmake/functions.cmake`: Shared CMake helper functions
-- `Readme.md`: Platform-specific build instructions
+- `build/CommonBuildParameters.cmake`: Shared CMake build parameters
+- `build/CommonCompilerOptions.cmake`: Shared compiler flags
+- `build/CompilationFlags.cmake`: Platform-specific compilation flags
+- `build/apple.toolchain.cmake`: Apple cross-compilation toolchain
+- `src/base/sgnsv.h.in`: Version header template (auto-generated)
+- `cmake/config.cmake.in`: Config header template
+- `src/account/GeniusNode.hpp`: `DevConfig` runtime configuration struct
 
 **Core Logic:**
-- `src/account/`: UTXO ledger, all transaction types, migration steps
-- `src/blockchain/`: Genesis bootstrap, consensus, block tree
-- `src/crdt/`: Distributed state replication, CRDT operations
-- `src/processing/`: ML job grid, subtask queues
-- `src/proof/`: zkSNARK prover/verifier
-- `src/storage/`: RocksDB/in-memory backends, trie structures
+- `src/account/GeniusAccount.hpp`: Account CRDT chain management
+- `src/account/TransactionManager.hpp`: Transaction lifecycle orchestration
+- `src/blockchain/Blockchain.hpp`: Genesis/account creation + consensus integration
+- `src/crdt/crdt_datastore.hpp`: CRDT core implementation (502 lines)
+- `src/crdt/globaldb/globaldb.hpp`: High-level distributed database facade
+- `src/processing/processing_core.hpp`: Processing algorithm interface
+- `src/processing/processing_service.hpp`: Grid coordination service
+- `src/proof/GeniusProver.hpp`: zkSNARK proof generation orchestration
 
 **Testing:**
-- `test/src/`: All test suites, mirrored `src/` structure
-- `test/mock/src/`: Mock objects for unit tests
-- `test/testutil/`: `WaitCondition` templates (condition_variable polling, NEVER `sleep_for`), `literals.hpp`, `outcome.hpp`, `primitives/`, `storage/` helpers
+- `test/src/`: Mirror of `src/` structure with test files
+- `test/mock/src/`: Mock implementations
+- `test/testutil/wait_condition.hpp`: Condition-variable wait templates (mandatory for async testing)
+- `test/testutil/outcome.hpp`: Test helpers for outcome::result assertions
+- `test/CMakeLists.txt`: Test build configuration; test binary targets
 
-**Protobuf Schemas (co-located with subsystems):**
-- `src/crdt/proto/delta.proto`: CRDT Delta and Element messages
-- `src/crdt/proto/bcast.proto`, `src/crdt/globaldb/proto/broadcast.proto`: CRDT broadcast messages
-- `src/blockchain/impl/proto/SGBlockchain.proto`: Genesis and AccountCreation blocks
-- `src/blockchain/impl/proto/SGBlocks.proto`: Block storage structures
-- `src/blockchain/impl/proto/Consensus.proto`: Consensus proposals, votes, certificates
-- `src/blockchain/impl/proto/ValidatorRegistry.proto`: Validator weights and registry messages
-- `src/account/proto/SGTransaction.proto`: Transaction types (DAGStruct, TransferTx, MintTx, EscrowTx, UTXO)
-- `src/account/proto/SGAccountComm.proto`: Account P2P messaging protocol
-- `src/processing/proto/SGProcessing.proto`: Task, SubTask, ProcessingQueue, SubTaskResult, Grid messages
-- `src/proof/proto/SGProof.proto`: Proof serialization
+**Documentation:**
+- `Readme.md`: Build instructions (173 lines)
+- `AgentDocs/Architecture.md`: Comprehensive architecture reference (1045 lines)
+- `AgentDocs/CLAUDE.md`: Agent-specific development instructions
+- `AgentDocs/CHECKPOINT.md`: Project status checkpoint
+- `AgentDocs/AGENT_MISTAKES.md`: Recorded agent mistakes
 
 ## Naming Conventions
 
 **Files:**
-- PascalCase for classes: `GeniusAccount.hpp`, `Blockchain.hpp`, `CrdtDatastore.hpp`
-- snake_case for non-class modules: `crdt_set.hpp`, `processing_engine.hpp`, `buffer.hpp`
-- `CMakeLists.txt` in every buildable directory
-- `proto/` subdirectory for `.proto` files within each subsystem
-- `impl/` subdirectory for concrete implementations
-- `face/` subdirectory for abstract interfaces (storage layer only)
+- PascalCase for class headers: `GeniusNode.hpp`, `TransactionManager.hpp`, `Blockchain.hpp`
+- snake_case for non-class headers: `block_tree.hpp`, `buffer_map_types.hpp`, `scale_error.hpp`, `common.hpp`
+- `.cpp` extension for implementation: `GeniusNode.cpp`, `blockchain.cpp`, `ed25519_provider_impl.cpp`
+- `.hpp` extension for headers: `GeniusNode.hpp`, `buffer.hpp`, `common.hpp`
+- Proto files: `SGTransaction.proto`, `SGAccountComm.proto`, `SGBlockchain.proto`, `SGProcessing.proto`, `SGProof.proto`, `delta.proto`, `bcast.proto`, `broadcast.proto`, `heads.proto`
+- Test files: `<name>_test.cpp` suffix (e.g., `crdt_datastore_test.cpp`, `blockchain_genesis_test.cpp`, `processing_engine_test.cpp`)
 
 **Directories:**
-- Lowercase snake_case: `local_secure_storage/`, `in_memory/`, `globaldb/`
-- Subsystem root directories named after domain concept (singular noun): `account/`, `blockchain/`, `crdt/`, `proof/`, `storage/`, `processing/`
+- snake_case for all directories: `local_secure_storage/`, `block_header_repository/`
+- `impl/` subdirectory: Contains concrete implementations of interfaces defined in parent directory
+- `proto/` subdirectory: Contains `.proto` files for the subsystem
+- `test/src/` mirrors `src/` directory structure exactly
+- PascalCase for submodules: `gRPCForSuperGenius/`, `GeniusKDF/`, `ProofSystem/`, `SGProcessingManager/`
 
 **Classes:**
-- PascalCase: `GeniusAccount`, `CrdtDatastore`, `ConsensusManager`, `TransactionManager`
-- Interface classes prefixed with `I`: `IComponent`, `IBasicProof`, `ISecureStorage`, `IGeniusTransactions`
-- Concrete implementations suffixed with `Impl`: `BlockTreeImpl`, `ProcessingCoreImpl`, `HasherImpl`
-- Management/singleton classes prefixed with `C`: `CComponentFactory`
-
-**Functions:**
-- PascalCase (pseudo-Java style): `GetGenesisCID()`, `SaveGenesisCID()`, `OnGenesisBlockReceived()`
-- Static factory: `New(...)` returning `std::shared_ptr<T>`
-- CRDT-style: `PutKey()`, `GetKey()`, `HasKey()`, `DeleteKey()`
-
-**Variables:**
-- camelCase with prefixes: `m_` for class members (some files), `a` prefix for parameters in CRDT code: `aKey`, `aDatastore`, `aDelta`
-- snake_case with trailing underscore: `dataStore_`, `options_`, `broadcaster_`, `logger_` (most common pattern in newer code)
-- ALL_CAPS for constants: `ELGAMAL_PUBKEY_PREDEFINED`, `TIMEOUT_GENESIS_BLOCK_MS`
+- PascalCase: `GeniusNode`, `CComponentFactory`, `TransferTransaction`, `ProcessingEngine`
+- Interface prefix `I`: `IComponent`, `IComponentFactory`, `IGeniusTransactions`, `IBasicProof`, `IMigrationStep`, `ISecureStorage`
+- Implementation suffix `Impl`: `BlockTreeImpl`, `ED25519ProviderImpl`, `ProcessingCoreImpl`, `SubTaskQueueAccessorImpl`
+- Factory suffix `Factory`: `CComponentFactory`, `IComponentFactory`
 
 **Namespaces:**
-- Top-level: `sgns`
-- Sub-namespaces match directory: `sgns::crdt`, `sgns::processing`, `sgns::blockchain`, `sgns::crypto`, `sgns::storage`, `sgns::scale`, `sgns::base`, `sgns::subscription`
-- Full indentation on nested namespaces per `.clang-format` (`NamespaceIndentation: All`)
-- Protobuf packages: `sgns.crdt.pb`, `sgns.blockchain`, `SGTransaction`, `SGProcessing`, `SGProof`
+- Primary: `sgns`
+- Sub-namespaces (nested, full indentation): `sgns::crdt`, `sgns::processing`, `sgns::crypto`, `sgns::storage`, `sgns::scale`, `sgns::primitives`, `sgns::blockchain`, `sgns::subscription`, `sgns::watcher`, `sgns::api`
+- Third-party namespaces: `ipfs_lite::ipld`, `ipfs_lite::ipfs::graphsync`, `ipfs_pubsub`, `nil::crypto3`
+
+**Variables:**
+- camelCase: `myVariable`, `devConfig`, `basePort`, `isProcessor`
+- Constants: `kCamelCase` prefix for constexpr/inline constexpr: `kPublicKeySize`, `kSignatureSize`
+- Macro constants: ALL_CAPS: `OUTGOING_TIMEOUT_MILLISECONDS`, `INCOMING_TIMEOUT_MILLISECONDS`, `SINGLETONINSTANCE`
+
+**Functions/Methods:**
+- PascalCase: `GetName()`, `GetBalance()`, `Submit()`, `ProcessSubTask()`, `SplitTask()`
+- Factory methods: `New()` or `Create()` returning `shared_ptr`
+- Error enum classes defined inside their owning class: `Blockchain::Error`, `CrdtDatastore::Error`
 
 ## Where to Add New Code
 
-**New Feature (domain logic):**
-- Primary interface: `src/<feature>/<Feature>.hpp`
-- Implementation: `src/<feature>/impl/<feature>_impl.cpp`, `src/<feature>/impl/<feature>_impl.hpp`
-- Tests: `test/src/<feature>/` (mirror source structure)
-- Wiring: Add member and initialization to `GeniusNode::StateTransition()` in `src/account/GeniusNode.cpp`
-- CMake: Add `add_subdirectory(<feature>)` to `src/CMakeLists.txt`
+**New Feature (e.g., new transaction type):**
+- Primary code: `src/account/NewTransaction.hpp`, `src/account/NewTransaction.cpp`
+- Proto schema (if needed): `src/account/proto/NewTransaction.proto`
+- Tests: `test/src/account/new_transaction_test.cpp`
 
-**New Component/Module (pluggable service):**
-- Interface inheriting `IComponent`: `src/<module>/<Module>.hpp`
-- Wire into `GeniusNode` constructor or `StateTransition()` method in `src/account/GeniusNode.cpp`
-- Follow static `New()` factory pattern returning `std::shared_ptr<T>`
+**New Component/Module (e.g., new subsystem):**
+- Interface: `src/newmodule/INewService.hpp` (define abstract interface extending `IComponent`)
+- Implementation: `src/newmodule/impl/new_service_impl.hpp`, `src/newmodule/impl/new_service_impl.cpp`
+- Proto: `src/newmodule/proto/newmodule_messages.proto`
+- CMake: `src/newmodule/CMakeLists.txt` + add `add_subdirectory(newmodule)` to `src/CMakeLists.txt`
+- Factory wiring: `app/integration/NewServiceFactory.hpp` (if using CComponentFactory DI)
+- Tests: `test/src/newmodule/new_service_test.cpp`
 
-**New Transaction Type:**
-- Define protobuf message in `src/account/proto/SGTransaction.proto`
-- Implement transaction class in `src/account/<New>Transaction.cpp/.hpp`
-- Extend `IGeniusTransactions` interface if needed
-- Add test suite: `test/src/account/`
-
-**New Storage Backend:**
-- Implement storage face interfaces (`src/storage/face/`)
-- Place backend in `src/storage/<new_backend>/`
-- Example backends: `rocksdb/`, `in_memory/`
+**New Crypto Provider:**
+- Interface header: `src/crypto/new_provider.hpp`
+- Implementation: `src/crypto/newcrypto/new_provider_impl.hpp`, `src/crypto/newcrypto/new_provider_impl.cpp`
+- CMake: `src/crypto/newcrypto/CMakeLists.txt`
+- Tests: `test/src/crypto/new_provider_test.cpp`
 
 **Utilities:**
-- Shared helpers: `src/base/` (general utilities), `test/testutil/` (test-only helpers)
-- Macro utilities: `src/macro/`
-- CMake helpers: `cmake/`
+- Shared helpers: `src/base/new_utility.hpp`, `src/base/new_utility.cpp`
+- Test utilities: `test/testutil/new_test_helper.hpp`
+
+**New Integration/Mock:**
+- Mock: `test/mock/src/mock_new_service.hpp`
 
 ## Special Directories
 
-**build/:**
-- Purpose: Platform-specific CMake build output directories
-- Generated: Yes (by CMake configure step)
-- Committed: No (build artifacts, `compile_commands.json`, etc.)
-
-**src/crdt/proto/, src/blockchain/impl/proto/, src/account/proto/, src/processing/proto/, src/proof/proto/:**
-- Purpose: Protobuf schema definitions for each subsystem
-- Generated: `.pb.h` / `.pb.cc` generated by protoc at build time
-- Committed: Only `.proto` files are committed; generated C++ is built output
-
-**CRDT.Datastore.TEST/ and CRDT.Datastore.TEST.unit/:**
-- Purpose: CRDT datastore test data (RocksDB database files)
-- Generated: Yes (by running CRDT tests)
-- Committed: Yes (contains test fixture data)
-
-**AgentDocs/:**
-- Purpose: AI agent documentation and project rules
-- Generated: No (manually maintained)
+**`src/*/impl/`:**
+- Purpose: Concrete implementations of interfaces declared in the parent directory
+- Found in: `blockchain/impl/`, `crdt/impl/`, `processing/impl/`, `watcher/impl/`, `api/transport/impl/`, `local_secure_storage/impl/`, `storage/trie/impl/`
+- Generated: No
 - Committed: Yes
-- Key files: `Architecture.md` (full subsystem catalog), `AGENT_MISTAKES.md`, `CHECKPOINT.md`, `CLAUDE.md` (coding rules)
 
-**docs/doxygen/xml/:**
-- Purpose: Pre-built Doxygen XML documentation (1,207 files, ~454 classes/structs)
-- Generated: Yes (by Doxygen)
-- Committed: Yes (submodule `docs`)
+**`src/*/proto/`:**
+- Purpose: Protocol Buffer message schemas for the subsystem
+- Found in: `account/proto/`, `blockchain/impl/proto/`, `crdt/proto/`, `crdt/globaldb/proto/`, `processing/proto/`, `proof/proto/`
+- Generated: `.proto` files are hand-written; generated `.pb.h` / `.pb.cc` files produced during build
+- Committed: Only `.proto` source files are committed; generated files are build artifacts
+
+**`build/<Platform>/`:**
+- Purpose: Per-platform CMake build output directories
+- Generated: Yes (all build outputs, binaries, generated protobuf code)
+- Committed: No (gitignored, except for shared `.cmake` config files at `build/` root)
+
+**`.planning/`:**
+- Purpose: GSD planning documents, codebase maps, phase plans
+- Generated: Yes (by GSD commands like `/gsd-map-codebase`, `/gsd-plan-phase`)
+- Committed: Yes (tracked for team visibility and AI context)
+
+**`AgentDocs/`:**
+- Purpose: Agent instruction files, architecture reference, project status
+- Generated: No (hand-maintained)
+- Committed: Yes
+
+**`CRDT.Datastore.TEST/`:**
+- Purpose: Standalone CRDT integration test binaries
+- Generated: No (hand-written test code)
+- Committed: Yes
 
 ---
 
-*Structure analysis: 2026-05-27*
+*Structure analysis: 2026-05-25*

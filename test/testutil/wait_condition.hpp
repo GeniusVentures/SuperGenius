@@ -133,8 +133,9 @@ sgns::test::assertWaitForCondition(condition, timeout, description, actual_durat
             }
             message += " (timeout: " + std::to_string(timeout.count()) + "ms)";
 
-            // Report the failure with the correct source location and terminate the test
-            GTEST_MESSAGE_AT_(file_name, line_number, message.c_str(), ::testing::TestPartResult::kFatalFailure);
+            // Report the failure at the caller's source location. Non-fatal per the
+            // EXPECT_ semantics — later assertions in the same test body still run.
+            GTEST_MESSAGE_AT_(file_name, line_number, message.c_str(), ::testing::TestPartResult::kNonFatalFailure);
         }
     }
 

@@ -1,5 +1,5 @@
 add_library(hasher
-    hasher/hasher_impl.cpp
+    hasher.cpp
 )
 target_link_libraries(hasher
     PRIVATE

@@ -12,7 +12,7 @@ namespace sgns
                                       std::string              chain_id,
                                       TokenID                  token_id,
                                       SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "mint", SetDAGWithType( std::move( dag ), "mint" ) ),
+        GeniusTransaction( "mint", SetDAGWithType( std::move( dag ), "mint" ) ),
         amount( new_amount ),
         chain_id( std::move( chain_id ) ),
         token_id( std::move( token_id ) )
@@ -36,6 +36,19 @@ namespace sgns
         }
 
         return serialized_proto;
+    }
+
+    EmbeddedTransaction MintTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        EmbeddedTransaction embedded;
+        SGTransaction::MintTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+        tx_struct.set_amount( amount );
+        tx_struct.set_chain_id( chain_id );
+        tx_struct.set_token_id( token_id.bytes().data(), token_id.size() );
+
+        *embedded.mutable_mint() = tx_struct;
+        return embedded;
     }
 
     std::shared_ptr<MintTransaction> MintTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )

@@ -59,18 +59,9 @@ namespace sgns::base
     {
         static std::mutex           mutex;
         std::lock_guard<std::mutex> lock( mutex );
-        auto                        logger = spdlog::get( tag );
-        if ( logger != nullptr && !basepath.empty() )
-        {
-            // Drop any existing logger with this name to force recreation with file sink
-            logger = nullptr;
-            spdlog::drop( tag );
-            logger = ::createLogger( tag, false, basepath );
-            return logger;
-        }
-
-        // For console loggers, use existing if available
-
+        // ponytail: logger names are process-wide, so the first sink wins. Use per-node tags before supporting
+        // separate node log files in one process; replacing a registered logger races its active users.
+        auto logger = spdlog::get( tag );
         if ( logger == nullptr )
         {
             logger = ::createLogger( tag, false, basepath );

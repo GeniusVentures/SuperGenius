@@ -27,3 +27,36 @@ target_link_libraries(task_queue_test
     SGProcessingProto
     base_crdt_test
 )
+
+addtest(processing_result_durability_test
+    processing_result_durability_test.cpp
+    processing_service_test_base.cpp
+)
+
+target_include_directories(processing_result_durability_test PRIVATE ${GSL_INCLUDE_DIR})
+
+target_link_libraries(processing_result_durability_test
+    processing_service
+    SGProcessingProto
+    ipfs-bitswap-cpp
+    logger
+    Boost::headers
+    p2p::p2p_logger
+    ipfs-pubsub
+)
+
+addtest(processing_validate_result_data_test
+    processing_validate_result_data_test.cpp
+    processing_service_test_base.cpp
+)
+
+target_include_directories(processing_validate_result_data_test PRIVATE ${GSL_INCLUDE_DIR})
+
+target_link_libraries(processing_validate_result_data_test
+    processing_service
+    SGProcessingProto
+    logger
+    Boost::headers
+    p2p::p2p_logger
+    ipfs-pubsub
+)

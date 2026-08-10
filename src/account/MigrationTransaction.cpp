@@ -8,7 +8,7 @@
 #include <fmt/format.h>
 
 #include "base/blob.hpp"
-#include "crypto/hasher/hasher_impl.hpp"
+#include "crypto/hasher.hpp"
 
 namespace sgns
 {
@@ -16,7 +16,7 @@ namespace sgns
                                                 std::string              from_version,
                                                 TokenID                  token_id,
                                                 SGTransaction::DAGStruct dag ) :
-        IGeniusTransactions( "migration", SetDAGWithType( std::move( dag ), "migration" ) ),
+        GeniusTransaction( "migration", SetDAGWithType( std::move( dag ), "migration" ) ),
         utxo_params_( std::move( utxo_params ) ),
         from_version_( std::move( from_version ) ),
         token_id_( std::move( token_id ) )
@@ -57,6 +57,39 @@ namespace sgns
             std::cerr << "Failed to Serialize MigrationTx to array" << std::endl;
         }
         return serialized_proto;
+    }
+
+    EmbeddedTransaction MigrationTransaction::SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const
+    {
+        EmbeddedTransaction embedded;
+        SGTransaction::MigrationTx tx_struct;
+        tx_struct.mutable_dag_struct()->CopyFrom( dag );
+
+        auto *utxo_proto_params = tx_struct.mutable_utxo_params();
+        for ( const auto &[txid_hash_, output_idx_, signature_] : utxo_params_.first )
+        {
+            auto *input_proto = utxo_proto_params->add_inputs();
+            input_proto->set_tx_id_hash( txid_hash_.toReadableString() );
+            input_proto->set_output_index( output_idx_ );
+            input_proto->set_signature( signature_.data(), signature_.size() );
+        }
+
+        for ( const auto &[encrypted_amount, dest_address, token_id] : utxo_params_.second )
+        {
+            auto *output_proto = utxo_proto_params->add_outputs();
+            output_proto->set_encrypted_amount( encrypted_amount );
+            output_proto->set_dest_addr( dest_address );
+            output_proto->set_token_id( token_id.bytes().data(), token_id.size() );
+        }
+
+        const auto amount = GetAmount();
+        const auto token  = GetTokenID();
+        tx_struct.set_amount( amount );
+        tx_struct.set_token_id( token.bytes().data(), token.size() );
+        tx_struct.set_from_version( from_version_ );
+
+        *embedded.mutable_migration() = tx_struct;
+        return embedded;
     }
 
     std::shared_ptr<MigrationTransaction> MigrationTransaction::DeSerializeByteVector( const std::vector<uint8_t> &data )
@@ -155,7 +188,7 @@ namespace sgns
 
     std::unordered_set<std::string> MigrationTransaction::GetTopics() const
     {
-        auto topics = IGeniusTransactions::GetTopics();
+        auto topics = GeniusTransaction::GetTopics();
         for ( const auto &output : utxo_params_.second )
         {
             topics.emplace( output.dest_address );
@@ -168,8 +201,7 @@ namespace sgns
                                                              const TokenID   &token_id )
     {
         const auto payload = fmt::format( "migration:{}:{}:{}", from_version, source_address, token_id.ToHex() );
-        auto hasher = std::make_shared<crypto::HasherImpl>();
-        return hasher->blake2b_256( std::vector<uint8_t>( payload.begin(), payload.end() ) ).toReadableString();
+        return crypto::blake2b_256( std::vector<uint8_t>( payload.begin(), payload.end() ) ).toReadableString();
     }
 
     MigrationTransaction MigrationTransaction::New( uint64_t                 amount,

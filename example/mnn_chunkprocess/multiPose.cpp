@@ -11,10 +11,23 @@
 #include <iostream>
 #include <memory>
 #include <cstring>
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4244 4100)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
 #include "stb_image_write.h"
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include <MNN/ImageProcess.hpp>
 #include <MNN/Interpreter.hpp>

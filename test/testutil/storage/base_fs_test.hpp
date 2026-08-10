@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TESTUTIL_STORAGE_BASE_FS_TEST_HPP
+#define TESTUTIL_STORAGE_BASE_FS_TEST_HPP
 
 #include <gtest/gtest.h>
 #include <boost/filesystem.hpp>
@@ -33,3 +34,5 @@ namespace test
         sgns::base::Logger logger;
     };
 }
+
+#endif // TESTUTIL_STORAGE_BASE_FS_TEST_HPP

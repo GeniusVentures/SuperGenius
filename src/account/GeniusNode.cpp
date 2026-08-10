@@ -10,22 +10,30 @@
 #include <thread>
 #include <memory>
 #include <random>
+#include <cctype>
+#include <filesystem>
+#include <set>
+#include <string_view>
 
 #include <boost/format.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <fstream>
+#include <filesystem>
 #include <sstream>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/dll.hpp>
+#include <boost/json.hpp>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <ipfs_lite/ipfs/graphsync/impl/network/network.hpp>
 #include <ipfs_lite/ipfs/graphsync/impl/local_requests.hpp>
 #include <libp2p/basic/scheduler/asio_scheduler_backend.hpp>
+#include <libp2p/network/route_helper.hpp>
 #include <WalletCore/HDWallet.h>
 #include <WalletCore/Coin.h>
 
@@ -33,19 +41,39 @@
 #include "base/sgns_version.hpp"
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/MigrationManager.hpp"
+#include "account/BurnConfig.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "account/ChainRpcEndpointProvider.hpp"
+#include "watcher/impl/bridge_catchup_watcher.hpp"
+#include "migration/MigrationManager.hpp"
 #include "crdt/globaldb/keypair_file_storage.hpp"
 #include "upnp.hpp"
 #include "processing/processing_tasksplit.hpp"
+#include <eth/abi_decoder.hpp>
+#include <base/parse_utility.hpp>
+#include <eth/rpc_http_transport.hpp>
+#include <eth/json_rpc.hpp>
+#include <eth/event_filter.hpp>
+#include <eth/eth_watch_cli.hpp>     // event_registry().params_for() — Bridge V2 ABI decode (D-13)
+#include <eth/secp256k1_utility.hpp> // DecompressXOnlyPubkey() — X-only key decompression (D-13)
 #include "processing/processing_subtask_enqueuer_impl.hpp"
 #include "processing/impl/TaskQueueImpl.hpp"
 #include "outcome/outcome.hpp"
 #include <Generators.hpp>
+#include <bitswap.hpp>
+#include <libp2p/multi/content_identifier_codec.hpp>
+#include "FileManager.hpp"
 
 namespace
 {
     uint16_t GenerateRandomPort( uint16_t base, const std::string &seed )
     {
+        if ( base == 0 )
+        {
+            return 0;
+        }
+
         uint32_t seed_hash = 0;
         for ( char c : seed )
         {
@@ -80,6 +108,31 @@ namespace
         }
         return "UNKNOWN";
     }
+
+    // Case-insensitive parse of the "node_type" sgns_config.json value (CONTEXT D-02).
+    // Returns nullopt for unrecognized values; the caller (LoadSgnsConfig) WARN-logs + defaults to Light.
+    std::optional<sgns::GeniusNode::NodeType> NodeTypeFromString( std::string_view s )
+    {
+        std::string lower;
+        lower.reserve( s.size() );
+        for ( char c : s )
+        {
+            lower.push_back( static_cast<char>( std::tolower( static_cast<unsigned char>( c ) ) ) );
+        }
+        if ( lower == "full" )
+        {
+            return sgns::GeniusNode::NodeType::Full;
+        }
+        if ( lower == "light" )
+        {
+            return sgns::GeniusNode::NodeType::Light;
+        }
+        if ( lower == "archive" )
+        {
+            return sgns::GeniusNode::NodeType::Archive;
+        }
+        return std::nullopt;
+    }
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -99,7 +152,7 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
         case sgns::GeniusNode::Error::TOKEN_ID_MISMATCH:
             return "Informed Token ID doesn't match initialized ID";
         case sgns::GeniusNode::Error::PROCESS_COST_ERROR:
-            return "The calculated Processing cost was negative";
+            return "The processing cost could not be calculated";
         case sgns::GeniusNode::Error::PROCESS_INFO_MISSING:
             return "Processing information missing on JSON file";
         case sgns::GeniusNode::Error::INVALID_JSON:
@@ -116,6 +169,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
             return "Requested transaction not finalized within timeout";
         case sgns::GeniusNode::Error::TRANSACTION_FAILED:
             return "Requested transaction failed";
+        case sgns::GeniusNode::Error::INVALID_NODE_TYPE:
+            return "sgns_config.json node_type was not Full/Light/Archive";
     }
     return "Unknown error";
 }
@@ -129,86 +184,79 @@ namespace sgns
         return base::createLogger( "GeniusNode" );
     }
 
-    std::shared_ptr<GeniusNode> GeniusNode::New( const DevConfig_st &dev_config,
-                                                 bool                autodht,
-                                                 uint16_t            base_port,
-                                                 bool                is_full_node )
+    // Canonical factory (INTF-01). try/catch preserves the nullptr-on-failure contract (D-04):
+    // the reordered ctor throws on account-restore/loggers/network failure; here it becomes nullptr.
+    std::shared_ptr<GeniusNode> GeniusNode::New( const GeniusNodeConfig &dev_config, AccountSource source )
     {
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config,
-                            GeniusAccount::New( dev_config.TokenID, dev_config.BaseWritePath, is_full_node ),
-                            autodht,
-                            base_port,
-                            is_full_node ) );
-
-        if ( instance )
+        try
         {
-            instance->BeginDBInitialization();
+            auto instance = std::shared_ptr<GeniusNode>( new GeniusNode( dev_config, source ) );
+            if ( instance )
+            {
+                instance->BeginDBInitialization();
+            }
+            return instance;
         }
-
-        return instance;
-    }
-
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromPrivateKey( const DevConfig_st &dev_config,
-                                                               const char         *eth_private_key,
-                                                               bool                autodht,
-                                                               uint16_t            base_port,
-                                                               bool                is_full_node )
-    {
-        auto instance = std::shared_ptr<GeniusNode>( new GeniusNode(
-            dev_config,
-            GeniusAccount::NewFromPrivateKey( dev_config.TokenID, eth_private_key, dev_config.BaseWritePath, is_full_node ),
-            autodht,
-            base_port,
-            is_full_node ) );
-
-        if ( instance )
+        catch ( const std::exception &e )
         {
-            instance->BeginDBInitialization();
-        }
-
-        return instance;
-    }
-
-    std::shared_ptr<GeniusNode> GeniusNode::NewFromMnemonic( const DevConfig_st &dev_config,
-                                                             const std::string  &mnemonic,
-                                                             bool                autodht,
-                                                             uint16_t            base_port,
-                                                             bool                is_full_node )
-    {
-        auto account = GeniusAccount::NewFromMnemonic( dev_config.TokenID,
-                                                       mnemonic,
-                                                       dev_config.BaseWritePath,
-                                                       is_full_node );
-
-        if ( account == nullptr )
-        {
+            std::cerr << "GeniusNode initialization failed: " << e.what() << '\n';
             return nullptr;
         }
-
-        auto instance = std::shared_ptr<GeniusNode>(
-            new GeniusNode( dev_config, std::move( account ), autodht, base_port, is_full_node ) );
-
-        if ( instance )
+        catch ( ... )
         {
-            instance->BeginDBInitialization();
+            std::cerr << "GeniusNode initialization failed with an unknown exception\n";
+            return nullptr;
         }
-
-        return instance;
     }
 
-    GeniusNode::GeniusNode( const DevConfig_st            &dev_config,
-                            std::shared_ptr<GeniusAccount> account,
-                            bool                           autodht,
-                            uint16_t                       base_port,
-                            bool                           is_full_node ) :
+    outcome::result<void> GeniusNode::WriteNetworkConfig( const std::string &base_path,
+                                                          uint16_t           port_seed,
+                                                          bool               auto_dht )
+    {
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
+        std::ofstream ofs( base_path + "/network_config.json" );
+        if ( !ofs.good() )
+        {
+            return Error::DATABASE_WRITE_ERROR;
+        }
+        ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
+            << ", \"upnp_enabled\": false }";
+        return outcome::success();
+    }
+
+    outcome::result<void> GeniusNode::WriteSgnsConfig( const std::string &base_path,
+                                                       const std::string &node_type,
+                                                       bool               is_processor,
+                                                       bool               rpc_catchup )
+    {
+        if ( !NodeTypeFromString( node_type ) ) // case-insensitive validation (Phase-2 D-02)
+        {
+            return Error::INVALID_NODE_TYPE;
+        }
+        std::error_code ec;
+        std::filesystem::create_directories( base_path, ec ); // ofstream can't create dirs; ensure parent exists
+        std::ofstream ofs( base_path + "/sgns_config.json" );
+        if ( !ofs.good() )
+        {
+            return Error::DATABASE_WRITE_ERROR;
+        }
+        ofs << "{ \"node_type\": \"" << node_type << "\", \"is_processor\": " << ( is_processor ? "true" : "false" )
+            << ", \"rpc_catchup\": " << ( rpc_catchup ? "true" : "false" ) << " }";
+        return outcome::success();
+    }
+
+    // Reordered constructor (INTF-03 / CONTEXT D-05). Account is created via std::visit
+    // AFTER LoadSgnsConfig() resolves node_type_ -> is_full_node_ (the init-order hinge fix).
+    // account_ and is_full_node_ are default-init here (no source/param) and assigned in the
+    // body; autodht_ defaults to true (Phase-1 config layer overrides from network_config.json).
+    // Throws on account-restore failure; New(dev_config, AccountSource) catches -> nullptr (D-04).
+    GeniusNode::GeniusNode( const GeniusNodeConfig &dev_config, AccountSource source ) :
         write_base_path_( dev_config.BaseWritePath ),
-        account_( std::move( account ) ),
         io_( std::make_shared<boost::asio::io_context>() ),
         io_work_guard_( boost::asio::make_work_guard( *io_ ) ),
-        autodht_( autodht ),
+        autodht_( true ),
         isprocessor_( true ),
-        is_full_node_( is_full_node ),
         dev_config_( dev_config ),
         processing_channel_topic_( std::string( PROCESSING_CHANNEL ) ),
         processing_grid_chanel_topic_( std::string( PROCESSING_GRID_CHANNEL ) ),
@@ -216,8 +264,7 @@ namespace sgns
         scheduler_( std::make_shared<libp2p::basic::SchedulerImpl>(
             std::make_shared<libp2p::basic::AsioSchedulerBackend>( io_ ),
             libp2p::basic::Scheduler::Config{ std::chrono::milliseconds( 100 ) } ) ),
-        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() ),
-        processing_callback_pool_( std::make_unique<boost::asio::thread_pool>( 1 ) )
+        generator_( std::make_shared<ipfs_lite::ipfs::graphsync::RequestIdGenerator>() )
     {
         // Rotate log files before initializing logging system
         RotateLogFiles( write_base_path_ );
@@ -230,9 +277,48 @@ namespace sgns
 
         node_logger_->info( sgns::version::SuperGeniusVersionText() );
 
-        LoadSgnsConfig();
+        LoadSgnsConfig(); // resolves node_type_
 
-        if ( !InitNetwork( base_port, is_full_node_ ) )
+        is_full_node_ = ( node_type_ != NodeType::Light ); // CFG-03 derivation
+
+        // Create the account with is_full_node_ already known (the hinge fix).
+        account_ = std::visit(
+            [this]( auto &&src ) -> std::shared_ptr<GeniusAccount>
+            {
+                using T = std::decay_t<decltype( src )>;
+                if constexpr ( std::is_same_v<T, NewAccount> )
+                {
+                    return GeniusAccount::New( dev_config_.TokenID, write_base_path_, is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPrivateKey> )
+                {
+                    return GeniusAccount::NewFromPrivateKey( dev_config_.TokenID,
+                                                             src.eth_private_key.c_str(),
+                                                             write_base_path_,
+                                                             is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromMnemonic> )
+                {
+                    return GeniusAccount::NewFromMnemonic( dev_config_.TokenID,
+                                                           src.mnemonic,
+                                                           write_base_path_,
+                                                           is_full_node_ );
+                }
+                else if constexpr ( std::is_same_v<T, FromPublicKey> )
+                {
+                    // FromPublicKey carries a public_address; GeniusAccount::NewFromPublicKey
+                    // takes no base_path and consumes an address-like string_view.
+                    return GeniusAccount::NewFromPublicKey( dev_config_.TokenID, src.public_address, is_full_node_ );
+                }
+            },
+            source );
+        if ( !account_ )
+        {
+            throw std::runtime_error( "Account creation failed" ); // D-04: New() catches -> nullptr
+        }
+
+        // Default port_seed (40001); Phase-1 config layer overrides from network_config.json when present.
+        if ( !InitNetwork( 40001, is_full_node_ ) )
         {
             throw std::runtime_error( "Network initialization error" );
         }
@@ -286,6 +372,40 @@ namespace sgns
             isprocessor_ = true;
             node_logger_->info( "sgns_config.json: is_processor not set, defaulting to true" );
         }
+        if ( config_json.HasMember( "rpc_catchup" ) && config_json["rpc_catchup"].IsBool() )
+        {
+            rpc_catchup_ = config_json["rpc_catchup"].GetBool();
+        }
+        else
+        {
+            rpc_catchup_ = true;
+        }
+        node_logger_->info( "sgns_config.json: rpc_catchup={}", rpc_catchup_ );
+        // node_type read (CFG-02 / CONTEXT D-02). Sets node_type_ ONLY — does NOT touch
+        // is_full_node_ (the AccountSource ctor derives it; the retained old ctor keeps its param).
+        if ( config_json.HasMember( "node_type" ) && config_json["node_type"].IsString() )
+        {
+            const auto parsed = NodeTypeFromString( config_json["node_type"].GetString() );
+            if ( parsed )
+            {
+                node_type_ = *parsed;
+                node_logger_->info( "sgns_config.json: node_type={}",
+                                    *parsed == sgns::GeniusNode::NodeType::Full      ? "Full"
+                                    : *parsed == sgns::GeniusNode::NodeType::Archive ? "Archive"
+                                                                                     : "Light" );
+            }
+            else
+            {
+                node_type_ = sgns::GeniusNode::NodeType::Light; // default on unrecognized value
+                node_logger_->warn( "sgns_config.json: node_type '{}' unrecognized, defaulting to Light",
+                                    config_json["node_type"].GetString() );
+            }
+        }
+        else
+        {
+            node_type_ = sgns::GeniusNode::NodeType::Light; // default on missing key
+            node_logger_->info( "sgns_config.json: node_type not set, defaulting to Light" );
+        }
         if ( config_json.HasMember( "subnet_id" ) && config_json["subnet_id"].IsUint() )
         {
             subnet_id_ = static_cast<uint16_t>( config_json["subnet_id"].GetUint() );
@@ -308,6 +428,68 @@ namespace sgns
             const std::string addr = config_json["authorized_full_node"].GetString();
             node_logger_->info( "sgns_config.json: setting authorized_full_node" );
             Blockchain::SetAuthorizedFullNodeAddress( addr );
+        }
+        // Parse-only: trusted_peers/bootstrapper_node are stored for a future phase's live
+        // wiring, no live signer-set/genesis behavior is activated in this phase.
+        if ( config_json.HasMember( "trusted_peers" ) && config_json["trusted_peers"].IsArray() )
+        {
+            for ( auto &v : config_json["trusted_peers"].GetArray() )
+            {
+                if ( v.IsString() )
+                {
+                    trusted_peers_genesis_.push_back( v.GetString() );
+                }
+            }
+            node_logger_->info( "sgns_config.json: loaded {} trusted peers", trusted_peers_genesis_.size() );
+        }
+        if ( config_json.HasMember( "bootstrapper_node" ) && config_json["bootstrapper_node"].IsString() )
+        {
+            bootstrapper_node_address_ = config_json["bootstrapper_node"].GetString();
+            node_logger_->info( "sgns_config.json: loaded bootstrapper_node" );
+        }
+        if ( config_json.HasMember( "trusted_peer_quorum_threshold" ) &&
+             config_json["trusted_peer_quorum_threshold"].IsUint64() )
+        {
+            trusted_peer_quorum_threshold_ = config_json["trusted_peer_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: trusted_peer_quorum_threshold={}", trusted_peer_quorum_threshold_ );
+        }
+        if ( config_json.HasMember( "burn_config_quorum_threshold" ) &&
+             config_json["burn_config_quorum_threshold"].IsUint64() )
+        {
+            burn_config_quorum_threshold_ = config_json["burn_config_quorum_threshold"].GetUint64();
+            node_logger_->info( "sgns_config.json: burn_config_quorum_threshold={}", burn_config_quorum_threshold_ );
+        }
+        // Unset config never trips D-07's floor rejection: default to the exact majority
+        // floor for the parsed genesis peer count (ceil(0.51*N)).
+        const auto majority_floor =
+            static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        if ( trusted_peer_quorum_threshold_ == 0 )
+        {
+            trusted_peer_quorum_threshold_ = majority_floor;
+        }
+        if ( burn_config_quorum_threshold_ == 0 )
+        {
+            burn_config_quorum_threshold_ = majority_floor;
+        }
+        if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
+        {
+            ipfs_cache_dir_ = config_json["ipfs_cache_dir"].GetString();
+            node_logger_->info( "sgns_config.json: ipfs_cache_dir={}", ipfs_cache_dir_ );
+        }
+        if ( config_json.HasMember( "mirror_results" ) && config_json["mirror_results"].IsBool() )
+        {
+            mirror_results_ = config_json["mirror_results"].GetBool();
+            node_logger_->info( "sgns_config.json: mirror_results={}", mirror_results_ );
+        }
+        if ( config_json.HasMember( "result_retention_hours" ) && config_json["result_retention_hours"].IsInt() )
+        {
+            result_retention_hours_ = config_json["result_retention_hours"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_hours={}", result_retention_hours_ );
+        }
+        if ( config_json.HasMember( "result_retention_max_mb" ) && config_json["result_retention_max_mb"].IsInt() )
+        {
+            result_retention_max_mb_ = config_json["result_retention_max_mb"].GetInt();
+            node_logger_->info( "sgns_config.json: result_retention_max_mb={}", result_retention_max_mb_ );
         }
     }
 
@@ -441,7 +623,7 @@ namespace sgns
             {
                 if ( !bootstrap_fullnodes_.empty() )
                 {
-                    pubsub_->AddPeers( bootstrap_fullnodes_ );
+                    AddPeers( bootstrap_fullnodes_ );
                     node_logger_->info( "Added {} bootstrap fullnodes", bootstrap_fullnodes_.size() );
                 }
                 account_->InitMessenger( pubsub_ );
@@ -536,21 +718,83 @@ namespace sgns
                             }
                         } );
                 }
-                blockchain_->Start();
-                InitBootstrapReconnect();
-                StartBootstrapHealthCheck();
+                if ( blockchain_ )
+                {
+                    blockchain_->Start();
+                    InitBootstrapReconnect();
+                    StartBootstrapHealthCheck();
+                }
+                else
+                {
+                    node_logger_->warn( "Blockchain creation failed, scheduling delayed retry" );
+                    ScheduleBlockchainRetry( std::chrono::seconds( 10 ) );
+                }
                 break;
             }
 
             case NodeState::INITIALIZING_TRANSACTIONS:
             {
+                if ( !blockchain_ )
+                {
+                    node_logger_->error( "Blockchain not initialized, cannot initialize transactions" );
+                    return;
+                }
+
+                // BURN-02/BURN-03: construct SecureCrdt -> TrustedPeerRegistry -> BurnConfig before
+                // TransactionManager, so its cached burn-rate can be seeded from a live quorum-signed
+                // value. Shares the same full-node topic TransactionManager listens on (trusted peers
+                // are full nodes), ensuring proposals/signatures for these quorum-gated values propagate.
+                const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+                tx_globaldb_->AddListenTopic( quorum_topic );
+
+                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
+
+                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                               trusted_peers_genesis_,
+                                                                               bootstrapper_node_address_,
+                                                                               trusted_peer_quorum_threshold_ );
+                if ( tpr_result.has_error() )
+                {
+                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                         tpr_result.error().message() );
+                    secure_crdt_.reset();
+                    return;
+                }
+                trusted_peer_registry_ = tpr_result.value();
+
+                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                          tx_globaldb_,
+                                                                          trusted_peer_registry_,
+                                                                          burn_config_quorum_threshold_,
+                                                                          account_ );
+                if ( burn_config_result.has_error() )
+                {
+                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                         burn_config_result.error().message() );
+                    ResetQuorumMembers();
+                    return;
+                }
+                burn_config_ = burn_config_result.value();
+
+                // Register only after both policy owners have populated SecureCrdtRegistry;
+                // otherwise a new node can start without filters for either runtime key.
+                if ( !secure_crdt_->RegisterFilters() )
+                {
+                    node_logger_->error( "SecureCrdt filter registration failed" );
+                    ResetQuorumMembers();
+                    return;
+                }
+
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
-                                                                std::make_shared<crypto::HasherImpl>(),
                                                                 blockchain_,
                                                                 is_full_node_,
-                                                                subnet_id_ );
+                                                                subnet_id_,
+                                                                std::chrono::milliseconds( 300000 ),
+                                                                std::chrono::milliseconds( 0 ),
+                                                                burn_config_->GetCachedBasisPoints(),
+                                                                burn_config_ );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -562,6 +806,76 @@ namespace sgns
                         }
                     } );
                 transaction_manager_->Start();
+                // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
+                // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
+                // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
+                transaction_manager_->SetTimeFrameToleranceMs( kDefaultTimestampToleranceMs );
+
+                // Phase 6 (D-01..D-10): Wire slot-hash populator bridging
+                // PublicChainInputValidator -> ConsensusManager::CreateVote, so
+                // each signed vote commits to its RPC endpoint slot hashes.
+                // Single-chain resolution: use the first configured chain id.
+
+                blockchain_->SetSlotHashPopulator(
+                    [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                     logger                   = node_logger_]( sgns::ConsensusVote &vote )
+                    {
+                        auto transaction_manager = weak_transaction_manager.lock();
+                        if ( !transaction_manager )
+                        {
+                            return;
+                        }
+                        auto      &validator = transaction_manager->GetPublicChainInputValidator();
+                        const auto chain_id  = validator.GetFirstConfiguredChainId();
+                        if ( !chain_id.has_value() )
+                        {
+                            logger->debug( "SlotHashPopulator: no configured chain; abstaining" );
+                            return;
+                        }
+                        const auto slot0 = validator.GetSlotHash( 0, chain_id.value() );
+                        const auto slot1 = validator.GetSlotHash( 1, chain_id.value() );
+                        const auto slot2 = validator.GetSlotHash( 2, chain_id.value() );
+                        if ( !slot0.empty() )
+                        {
+                            vote.set_slot_0_hash( slot0.data(), slot0.size() );
+                        }
+                        if ( !slot1.empty() )
+                        {
+                            vote.set_slot_1_hash( slot1.data(), slot1.size() );
+                        }
+                        if ( !slot2.empty() )
+                        {
+                            vote.set_slot_2_hash( slot2.data(), slot2.size() );
+                        }
+
+                        logger->debug( "SlotHashPopulator: populated chain_id={} slot0={} slot1={} slot2={}",
+                                       chain_id.value(),
+                                       !slot0.empty(),
+                                       !slot1.empty(),
+                                       !slot2.empty() );
+                    } );
+
+                // Initialize shared EthWatchService for EVM event detection
+                eth_watch_service_ = std::make_shared<eth::EthWatchService>();
+
+                // Initialize bridge relayer — wires evmrelay burn events → MintFunds
+                bridge_relayer_ = BridgeRelayer::Create( std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                                                         eth_watch_service_ );
+
+                // D-04: Launch async bridge initialization as NON-BLOCKING post.
+                // ChainRpcEndpointProvider::Initialize() runs on the io_context
+                // independently; observers (BridgeRelayer, catch-up scan) are
+                // notified synchronously within Initialize. The node state
+                // machine proceeds through INITIALIZING_PROCESSING → READY without waiting.
+                boost::asio::post( *io_,
+                                   [weak_self = weak_from_this()]
+                                   {
+                                       if ( auto strong = weak_self.lock() )
+                                       {
+                                           strong->InitializeAndStartBridge();
+                                       }
+                                   } );
+
                 break;
             }
             case NodeState::INITIALIZING_PROCESSING:
@@ -605,6 +919,94 @@ namespace sgns
                     payout_address );
 
                 processing_service_->SetChannelListRequestTimeout( boost::posix_time::milliseconds( 3000 ) );
+
+                // Set up result mirroring for full/archive nodes
+                if ( mirror_results_ && bitswap_ )
+                {
+                    auto weak_self = weak_from_this();
+                    processing_service_->setMirrorResultCallback(
+                        [weak_self]( const std::string &ipfs_results_data_id )
+                        {
+                            auto strong = weak_self.lock();
+                            if ( !strong )
+                            {
+                                return;
+                            }
+
+                            auto bitswap = strong->bitswap_;
+                            if ( !bitswap )
+                            {
+                                return;
+                            }
+
+                            static constexpr std::string_view kIpfsUriScheme = "ipfs://";
+
+                            // Parse newline-separated CIDs and fetch any we don't already have
+                            std::istringstream stream( ipfs_results_data_id );
+                            std::string        line;
+                            while ( std::getline( stream, line ) )
+                            {
+                                if ( line.empty() )
+                                {
+                                    continue;
+                                }
+                                // Strip "ipfs://" prefix if present
+                                std::string cidStr = line;
+                                if ( cidStr.compare( 0,
+                                                     kIpfsUriScheme.size(),
+                                                     kIpfsUriScheme.data(),
+                                                     kIpfsUriScheme.size() ) == 0 )
+                                {
+                                    cidStr = cidStr.substr( kIpfsUriScheme.size() );
+                                }
+                                auto cid = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                                if ( !cid )
+                                {
+                                    continue;
+                                }
+                                if ( bitswap->HasBlock( cid.value() ) )
+                                {
+                                    continue; // Already have it
+                                }
+                                strong->node_logger_->info( "Mirroring result data for CID: {}", cidStr );
+                                bitswap->RequestContent(
+                                    cid.value(),
+                                    [weak_self,
+                                     cidStr]( libp2p::outcome::result<sgns::ipfs_bitswap::UnixFSContent> content )
+                                    {
+                                        auto strong = weak_self.lock();
+                                        if ( !strong )
+                                        {
+                                            return;
+                                        }
+
+                                        if ( content )
+                                        {
+                                            strong->node_logger_->info(
+                                                "Successfully mirrored result data: {} ({} files)",
+                                                cidStr,
+                                                content.value().files.size() );
+                                        }
+                                        else
+                                        {
+                                            strong->node_logger_->warn( "Failed to mirror result data for CID {}: {}",
+                                                                        cidStr,
+                                                                        content.error().message() );
+                                        }
+                                    } );
+                            }
+                        } );
+                }
+
+                // Wire bitswap to processing service for data availability checks
+                if ( bitswap_ )
+                {
+                    processing_service_->setBitswap( bitswap_ );
+                }
+
+                // Start periodic result cache GC
+                StartResultGC();
+
                 if ( isprocessor_ )
                 {
                     StartProcessing();
@@ -665,7 +1067,7 @@ namespace sgns
         auto loggerTransactions   = ConfigureLogger( "TransactionManager", logdir, spdlog::level::debug );
         auto loggerMigration      = ConfigureLogger( "MigrationManager", logdir, spdlog::level::err );
         auto loggerMigrationStep  = ConfigureLogger( "MigrationStep", logdir, spdlog::level::err );
-        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::trace );
+        auto loggerQueue          = ConfigureLogger( "TaskQueueImpl", logdir, spdlog::level::err );
         auto loggerRocksDB        = ConfigureLogger( "rocksdb", logdir, spdlog::level::err );
         auto logkad               = ConfigureLogger( "Kademlia", logdir, spdlog::level::err );
         auto logNoise             = ConfigureLogger( "Noise", logdir, spdlog::level::err );
@@ -678,8 +1080,9 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
-        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
+        auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::debug );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::debug );
         auto loggerProcMgr          = ConfigureLogger( "SGProcessingManager", logdir, spdlog::level::err );
         auto loggerProcessor        = ConfigureLogger( "SGProcessor", logdir, spdlog::level::err );
@@ -688,6 +1091,9 @@ namespace sgns
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::debug );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
+        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::err );
+        auto loggerBitswap          = ConfigureLogger( "Bitswap", logdir, spdlog::level::err );
+
         // AsyncIOManager loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
         auto asioFileManager = ConfigureLogger( "FileManager", logdir, spdlog::level::err );
@@ -736,6 +1142,7 @@ namespace sgns
         auto loggerGossipPubsub   = ConfigureLogger( "GossipPubSub", logdir, spdlog::level::err );
         auto loggerAccountMessenger = ConfigureLogger( "AccountMessenger", logdir, spdlog::level::err );
         auto loggerGeniusAccount    = ConfigureLogger( "GeniusAccount", logdir, spdlog::level::err );
+        auto loggerGeniusSigner     = ConfigureLogger( "GeniusSigner", logdir, spdlog::level::err );
         auto loggerKeyPair          = ConfigureLogger( "KeyPairFileStorage", logdir, spdlog::level::err );
         auto loggerBlockchain       = ConfigureLogger( "Blockchain", logdir, spdlog::level::err );
         auto loggerValidator        = ConfigureLogger( "ValidatorRegistry", logdir, spdlog::level::err );
@@ -746,6 +1153,8 @@ namespace sgns
         auto loggerUTXOManager      = ConfigureLogger( "UTXOManager", logdir, spdlog::level::err );
         auto loggerConsensusManager = ConfigureLogger( "ConsensusManager", logdir, spdlog::level::err );
         auto loggerCRDTSet          = ConfigureLogger( "CRDTSet", logdir, spdlog::level::err );
+        auto loggerInputValidator   = ConfigureLogger( "InputValidator", logdir, spdlog::level::err );
+        auto loggerBitswap          = ConfigureLogger( "Bitswap", logdir, spdlog::level::err );
 
         //AsyncIOManager Loggers
         auto asioFileCommon  = ConfigureLogger( "FILECommon", logdir, spdlog::level::err );
@@ -765,7 +1174,27 @@ namespace sgns
         return true;
     }
 
-    bool GeniusNode::InitNetwork( uint16_t base_port, bool is_full_node )
+    uint16_t GeniusNode::GetPubsubPort() const noexcept
+    {
+        return pubsubport_;
+    }
+
+    bool GeniusNode::IsAutodhtEnabled() const noexcept
+    {
+        return autodht_;
+    }
+
+    bool GeniusNode::IsFullNode() const noexcept
+    {
+        return is_full_node_;
+    }
+
+    GeniusNode::NodeType GeniusNode::GetNodeType() const noexcept
+    {
+        return node_type_;
+    }
+
+    bool GeniusNode::InitNetwork( uint16_t port_seed, bool is_full_node )
     {
         bool                ret         = true;
         std::string         config_path = write_base_path_ + "/network_config.json";
@@ -829,6 +1258,40 @@ namespace sgns
                 if ( config_json.HasMember( "low_water" ) && config_json["low_water"].IsInt() )
                 {
                     low_water = config_json["low_water"].GetInt();
+                }
+
+                // ── port_seed: numeric read (intentional divergence from the legacy
+                //    string-based pubsub_port read above — see HARD-01 / CONTEXT D-08).
+                //    Config wins when present; the constructor param is the fallback.
+                if ( config_json.HasMember( "port_seed" ) )
+                {
+                    if ( config_json["port_seed"].IsUint() )
+                    {
+                        port_seed = static_cast<uint16_t>( config_json["port_seed"].GetUint() );
+                        node_logger_->info( "network_config.json: port_seed overridden to {}", port_seed );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: port_seed is not a uint, using default/param {}",
+                                            port_seed );
+                    }
+                }
+
+                // ── auto_dht: bool read. JSON key "auto_dht" -> member autodht_ (D-07).
+                //    Config wins when present; the constructor param (assigned in the ctor
+                //    init-list) is the fallback.
+                if ( config_json.HasMember( "auto_dht" ) )
+                {
+                    if ( config_json["auto_dht"].IsBool() )
+                    {
+                        autodht_ = config_json["auto_dht"].GetBool();
+                        node_logger_->info( "network_config.json: auto_dht overridden to {}", autodht_ );
+                    }
+                    else
+                    {
+                        node_logger_->warn( "network_config.json: auto_dht is not a bool, using default/param {}",
+                                            autodht_ );
+                    }
                 }
 
                 // ── Parse reconnect config ──
@@ -908,14 +1371,18 @@ namespace sgns
             node_logger_->info( "Parsed {} bootstrap peer(s) for reconnection tracking", bootstrap_peer_infos_.size() );
         }
 
-        // Port selection logic
+        // Port resolution priority (Doxygen: see InitNetwork declaration):
+        //   1. pubsub_port (string override from network_config.json) -> config_port
+        //   2. else: port_seed (constructor param, or network_config.json "port_seed"
+        //      key when present) derives the port via GenerateRandomPort(port_seed, address);
+        //      zero uses an OS-selected port because GossipPubSub cannot reliably start on zero.
         if ( config_port != 0 )
         {
             pubsubport_ = config_port;
         }
         else
         {
-            pubsubport_ = GenerateRandomPort( base_port, account_->GetAddress() );
+            pubsubport_ = GenerateRandomPort( port_seed, account_->GetAddress() );
         }
 
         do
@@ -924,7 +1391,8 @@ namespace sgns
             // RefreshUPNP() runs on its own thread and will try immediately.
             if ( upnp_enabled )
             {
-                node_logger_->info( "UPnP enabled: startup port mapping will run in background" );
+                //ret = InitUPNP();
+                (void) InitUPNP(); // Ignore UPNP init result for now
             }
 
             // Make a base58 out of our address
@@ -961,8 +1429,53 @@ namespace sgns
                 config );
 
             auto pubs = pubsub_->Start( pubsubport_, bootstrap_peers_, pubsub_bind_address, {} );
-            pubs.wait();
-            node_logger_->info( "PubSub started at address: {}", pubsub_->GetInterfaceAddress() );
+            if ( auto pubsub_start_error = pubs.get(); pubsub_start_error )
+            {
+                node_logger_->error( "PubSub failed to start on {}:{}: {}",
+                                     pubsub_bind_address,
+                                     pubsubport_,
+                                     pubsub_start_error.message() );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+
+            auto pubsub_interface_address = pubsub_->GetInterfaceAddress();
+            if ( pubsub_interface_address.empty() )
+            {
+                node_logger_->error( "PubSub started without an interface address on {}:{}",
+                                     pubsub_bind_address,
+                                     pubsubport_ );
+                pubsub_->Stop();
+                pubsub_.reset();
+                ret = false;
+                break;
+            }
+            if ( pubsubport_ == 0 )
+            {
+                auto address = libp2p::multi::Multiaddress::create( pubsub_interface_address );
+                if ( address )
+                {
+                    auto assigned_port = address.value().getFirstValueForProtocol<uint16_t>(
+                        libp2p::multi::Protocol::Code::TCP,
+                        []( const std::string &value ) { return static_cast<uint16_t>( std::stoul( value ) ); } );
+                    if ( assigned_port )
+                    {
+                        pubsubport_ = assigned_port.value();
+                    }
+                }
+                if ( pubsubport_ == 0 )
+                {
+                    node_logger_->error( "PubSub did not report its OS-assigned TCP port: {}",
+                                         pubsub_interface_address );
+                    pubsub_->Stop();
+                    pubsub_.reset();
+                    ret = false;
+                    break;
+                }
+            }
+            node_logger_->info( "PubSub started at address: {}", pubsub_interface_address );
 
             if ( upnp_enabled )
             {
@@ -971,6 +1484,18 @@ namespace sgns
 
             pubsub_->GetHost()->getConnectionManagerConfig().high_water = high_water;
             pubsub_->GetHost()->getConnectionManagerConfig().low_water  = low_water;
+
+            // Initialize Bitswap for IPFS content-addressed data exchange
+            bitswap_event_bus_ = std::make_shared<libp2p::event::Bus>();
+            bitswap_ = std::make_shared<sgns::ipfs_bitswap::Bitswap>( *pubsub_->GetHost(), *bitswap_event_bus_, io_ );
+            bitswap_->initialize();
+            if ( !ipfs_cache_dir_.empty() )
+            {
+                auto fullCachePath = write_base_path_ + "/" + ipfs_cache_dir_;
+                bitswap_->setCacheDir( fullCachePath );
+            }
+            FileManager::GetInstance().InitializeSingletons();
+            FileManager::GetInstance().setBitswap( bitswap_ );
 
             graphsyncnetwork_ = std::make_shared<ipfs_lite::ipfs::graphsync::Network>( pubsub_->GetHost(), scheduler_ );
 
@@ -1134,12 +1659,12 @@ namespace sgns
             .detach();
     }
 
-    void GeniusNode::ScheduleBlockchainRetry()
+    void GeniusNode::ScheduleBlockchainRetry( std::chrono::seconds delay )
     {
         std::thread(
-            [weak_self = weak_from_this()]
+            [weak_self = weak_from_this(), delay]
             {
-                std::this_thread::sleep_for( std::chrono::seconds( 5 ) );
+                std::this_thread::sleep_for( delay );
                 if ( auto strong = weak_self.lock() )
                 {
                     auto current_state = strong->state_.load();
@@ -1168,6 +1693,136 @@ namespace sgns
         return logger;
     }
 
+    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account,
+                                                                    bool release_members )
+    {
+        if ( processing_service_ )
+        {
+            processing_service_->StopProcessing();
+        }
+
+        // Invalidate any in-flight async bridge init and drop its observer
+        // registrations BEFORE bridge_relayer_ is destroyed. The posted init
+        // job captures this generation token and aborts if stale; resetting the
+        // provider here also releases its raw bridge_relayer_ observer so a
+        // late Initialize() cannot notify a freed relayer.
+        ++bridge_init_generation_;
+        rpc_endpoint_provider_.reset();
+
+        // Stop consensus and drain registry persistence while TransactionManager
+        // and GlobalDB are still alive. Consensus owns callbacks into both.
+        if ( blockchain_ )
+        {
+            BOOST_OUTCOME_TRY( blockchain_->Stop() );
+        }
+
+        if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
+        }
+
+        if ( release_members )
+        {
+            ResetProcessingMembers();
+            transaction_manager_.reset();
+            ResetQuorumMembers();
+            bridge_relayer_.reset();
+            eth_watch_service_.reset();
+            blockchain_.reset();
+        }
+
+        if ( deconfigure_account && account_ )
+        {
+            account_->DeconfigureDatabaseDependencies();
+        }
+
+        return outcome::success();
+    }
+
+    void GeniusNode::ResetQuorumMembers()
+    {
+        // Unregister while the policy owners and their owner tokens are still alive.
+        // Their destructors repeat this defensively, so partial initialization is safe.
+        if ( burn_config_ )
+        {
+            burn_config_->Unregister();
+        }
+        if ( trusted_peer_registry_ )
+        {
+            trusted_peer_registry_->Unregister();
+        }
+
+        // BurnConfig retains GlobalDB, TrustedPeerRegistry, SecureCrdt, and the
+        // account. Release it first so those dependencies can actually drain.
+        burn_config_.reset();
+        trusted_peer_registry_.reset();
+        secure_crdt_.reset();
+    }
+
+    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
+    {
+        // The timer's completion handler captures a scheduling closure associated
+        // with this node. Destroy it while the io_context is still alive.
+        if ( gc_timer_ )
+        {
+            boost::system::error_code ignored;
+            gc_timer_->cancel( ignored );
+            gc_timer_.reset();
+        }
+
+        // Account-bound services depend on GlobalDB, which in turn depends on
+        // GraphSync, the scheduler, PubSub, and the io_context.
+        ResetProcessingMembers();
+        transaction_manager_.reset();
+        ResetQuorumMembers();
+        bridge_relayer_.reset();
+        eth_watch_service_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
+        blockchain_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
+
+        {
+            std::lock_guard<std::mutex> lock( migration_mutex_ );
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
+                                 migration_manager_.use_count() );
+            migration_manager_.reset();
+        }
+
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
+                             tx_globaldb_.use_count() );
+        tx_globaldb_.reset();
+
+        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
+        // PubSub host and scheduler. Release dependents before their providers.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
+                             bitswap_.use_count() );
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
+                             bitswap_.use_count() );
+        bitswap_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
+                             bitswap_event_bus_.use_count() );
+        bitswap_event_bus_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
+                             graphsyncnetwork_.use_count() );
+        graphsyncnetwork_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
+                             generator_.use_count() );
+        generator_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
+                             scheduler_.use_count() );
+        scheduler_.reset();
+
+        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
+        // account_ is declared before io_, so relying on implicit destruction
+        // would otherwise destroy its messenger after the io_context.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
+        account_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
+        pubsub_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
+    }
+
     void GeniusNode::ShutdownForDestruction()
     {
         bool expected = false;
@@ -1178,11 +1833,24 @@ namespace sgns
 
         node_logger_->info( "GeniusNode shutdown start" );
 
+        // Stop the catch-up watcher before tearing down account-bound services
+        if ( catchup_watcher_ )
+        {
+            catchup_watcher_->stopWatching();
+            catchup_watcher_.reset();
+        }
+
         // Cancel bootstrap health check timer
         if ( health_check_handle_ )
         {
             health_check_handle_->cancel();
             health_check_handle_.reset();
+        }
+
+        if ( gc_timer_ )
+        {
+            boost::system::error_code ignored;
+            gc_timer_->cancel( ignored );
         }
 
         // Unsubscribe from bootstrap disconnect events
@@ -1192,9 +1860,24 @@ namespace sgns
             bootstrap_disconnect_subscription_.reset();
         }
 
+        // Stop and unregister account-bound work, but retain the owning objects
+        // until the io_context has been stopped and all handlers have drained.
+        auto services_shutdown = ShutdownAccountBoundServices( true, false );
+        if ( services_shutdown.has_error() )
+        {
+            node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
+                                 services_shutdown.error().message() );
+        }
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();
+        }
+
+        if ( graphsyncnetwork_ )
+        {
+            node_logger_->debug( "GeniusNode shutdown: closing GraphSync peers before PubSub" );
+            graphsyncnetwork_->stop( nullptr );
+            node_logger_->debug( "GeniusNode shutdown: GraphSync peers closed" );
         }
 
         node_logger_->info( "GeniusNode shutdown phase CRDT/GlobalDB complete" );
@@ -1206,19 +1889,41 @@ namespace sgns
 
         ShutdownForDestruction();
 
+        // GraphSync retains PubSub's libp2p host, whose sockets are backed by
+        // PubSub's io_context. GossipPubSub::Stop() releases its own references
+        // to both objects, so keep the context alive until GraphSync releases
+        // the last host reference and destroys those sockets.
+        std::shared_ptr<boost::asio::io_context> pubsub_context_keepalive;
         if ( pubsub_ )
         {
-            pubsub_->Stop(); // Stop activities of OtherClass
+            pubsub_context_keepalive = pubsub_->GetAsioContext();
+        }
+
+        // Signal PubSub to stop, but do not destroy it yet: the io_context threads
+        // below may still be running in-flight asio/libp2p completion handlers that
+        // reference pubsub_/bitswap_. Resetting those objects before the io_context
+        // is stopped and joined is a use-after-free race.
+        if ( pubsub_ )
+        {
+            pubsub_->Stop();
         }
         io_work_guard_.reset();
         if ( io_ )
         {
             io_->stop(); // Stop our io_context
         }
+        const auto caller_thread_id = std::this_thread::get_id();
         for ( auto &t : io_threads_ )
         {
             if ( t.joinable() )
             {
+                if ( t.get_id() == caller_thread_id )
+                {
+                    node_logger_->error(
+                        "~GeniusNode called from io_context thread; detaching current thread to avoid self-join" );
+                    t.detach();
+                    continue;
+                }
                 t.join();
             }
         }
@@ -1226,17 +1931,24 @@ namespace sgns
         stop_upnp = true;
         if ( upnp_thread.joinable() )
         {
-            upnp_thread.join();
+            if ( upnp_thread.get_id() == caller_thread_id )
+            {
+                node_logger_->error(
+                    "~GeniusNode called from UPNP thread; detaching current thread to avoid self-join" );
+                upnp_thread.detach();
+            }
+            else
+            {
+                upnp_thread.join();
+            }
         }
-        if ( processing_service_ )
-        {
-            processing_service_->StopProcessing();
-        }
-        if ( processing_callback_pool_ )
-        {
-            processing_callback_pool_->join();
-            processing_callback_pool_.reset();
-        }
+
+        // Destroy the complete runtime graph in dependency order while io_ is
+        // still alive. This also tears down AccountMessenger subscriptions before
+        // the io_context is implicitly destroyed with the remaining members.
+        ReleaseRuntimeMembersAfterIoStopped();
+        pubsub_context_keepalive.reset();
+
         std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
         node_logger_->debug( "~GeniusNode FINISHED" );
     }
@@ -1298,7 +2010,87 @@ namespace sgns
 
     void GeniusNode::AddPeer( const std::string &peer )
     {
-        pubsub_->AddPeers( { peer } );
+        auto peer_info = ParsePeerInfoFromString( peer );
+        if ( !peer_info )
+        {
+            node_logger_->warn( "Cannot add invalid peer multiaddress: {}", peer );
+            return;
+        }
+
+        ConnectPeer( peer, std::move( peer_info.value() ), 0 );
+    }
+
+    void GeniusNode::ConnectPeer( std::string peer, libp2p::peer::PeerInfo peer_info, unsigned attempt )
+    {
+        if ( shutdown_started_.load() )
+        {
+            return;
+        }
+
+        auto weak_self = weak_from_this();
+        pubsub_->GetAsioContext()->post(
+            [weak_self, peer = std::move( peer ), peer_info = std::move( peer_info ), attempt]()
+            {
+                auto strong = weak_self.lock();
+                if ( !strong || strong->shutdown_started_.load() )
+                {
+                    return;
+                }
+
+                strong->pubsub_->GetHost()->connect(
+                    peer_info,
+                    [weak_self, peer, peer_info, attempt]( auto result ) mutable
+                    {
+                        auto strong = weak_self.lock();
+                        if ( !strong || strong->shutdown_started_.load() )
+                        {
+                            return;
+                        }
+
+                        if ( result )
+                        {
+                            strong->node_logger_->debug( "Connected to peer {}", peer_info.id.toBase58() );
+                            // Register only after the transport is connected. Otherwise
+                            // GossipSub joins the failed dial and bans the peer for a minute.
+                            strong->pubsub_->AddPeers( { peer } );
+                            return;
+                        }
+
+                        const auto retry_attempt = std::min( attempt, 10u );
+                        auto       delay_sec =
+                            strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
+                        delay_sec = std::min<uint64_t>(
+                            delay_sec,
+                            static_cast<uint64_t>( strong->reconnect_config_.max_delay.count() ) );
+                        const auto delay = std::chrono::seconds( delay_sec );
+
+                        strong->node_logger_->warn( "Failed to connect to peer {}: {}; retrying in {}s",
+                                                    peer_info.id.toBase58(),
+                                                    result.error().message(),
+                                                    delay.count() );
+                        strong->scheduler_->schedule(
+                            [weak_self,
+                             peer = std::move( peer ),
+                             peer_info = std::move( peer_info ),
+                             attempt = retry_attempt + 1]() mutable
+                            {
+                                if ( auto strong = weak_self.lock() )
+                                {
+                                    strong->ConnectPeer( std::move( peer ), std::move( peer_info ), attempt );
+                                }
+                            },
+                            delay );
+                    },
+                    std::chrono::seconds( 15 ) );
+            } );
+    }
+
+    void GeniusNode::AddPeers( const std::vector<std::string> &peers )
+    {
+        for ( const auto &peer : peers )
+        {
+            AddPeer( peer );
+        }
     }
 
     void GeniusNode::DHTInit()
@@ -1354,7 +2146,10 @@ namespace sgns
 
     outcome::result<void> GeniusNode::AddAccountWithKey( const char *private_key ) const
     {
-        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(), private_key, write_base_path_, is_full_node_ );
+        auto new_account = GeniusAccount::NewFromPrivateKey( this->GetTokenID(),
+                                                             private_key,
+                                                             write_base_path_,
+                                                             is_full_node_ );
         if ( new_account == nullptr )
         {
             return outcome::failure( std::errc::invalid_argument );
@@ -1406,26 +2201,20 @@ namespace sgns
 
         if ( account == nullptr )
         {
+            node_logger_->error( "Account not created" );
             return std::errc::address_not_available;
         }
 
-        ResetProcessingMembers();
+        BOOST_OUTCOME_TRY( ShutdownAccountBoundServices( true ) );
 
-        if ( this->transaction_manager_ )
+        if ( account_ )
         {
-            this->transaction_manager_->Stop();
-            this->transaction_manager_.reset();
+            account_.swap( account );
         }
-
-        if ( this->blockchain_ )
+        else
         {
-            BOOST_OUTCOME_TRY( this->blockchain_->Stop() );
-            this->blockchain_.reset();
+            account_ = account;
         }
-
-        this->account_->DeconfigureDatabaseDependencies();
-
-        this->account_.swap( account );
         account.reset();
 
         if ( this->tx_globaldb_ )
@@ -1446,6 +2235,10 @@ namespace sgns
 
     void GeniusNode::ResetProcessingMembers()
     {
+        if ( processing_service_ )
+        {
+            processing_service_->StopProcessing();
+        }
         processing_service_.reset();
         task_result_storage_.reset();
         processing_core_.reset();
@@ -1626,10 +2419,10 @@ namespace sgns
         }
 
         // Work from the end (newest entries) backward
-        const size_t total = my_task_ids_.size();
-        const size_t start = ( offset >= total ) ? 0 : ( total - offset );
+        const size_t total     = my_task_ids_.size();
+        const size_t start     = ( offset >= total ) ? 0 : ( total - offset );
         const size_t available = ( start >= limit ) ? ( start - limit ) : 0;
-        const size_t count = start - available;
+        const size_t count     = start - available;
 
         std::vector<std::string> result;
         result.reserve( count );
@@ -1663,7 +2456,7 @@ namespace sgns
         auto maybeGnusPrice = GetGNUSPrice();
         if ( !maybeGnusPrice )
         {
-            node_logger_->error( "GetGNUSPrice failed" );
+            node_logger_->error( "GetGNUSPrice failed: {}", maybeGnusPrice.error().message() );
             return 0;
         }
         double gnusPrice = maybeGnusPrice.value();
@@ -1686,9 +2479,16 @@ namespace sgns
         auto price = GetCoinprice( { "genius-ai" } );
         if ( !price )
         {
+            node_logger_->error( "GNUS price request failed: {}", price.error().message() );
+            return price.error();
+        }
+        auto price_it = price.value().find( "genius-ai" );
+        if ( price_it == price.value().end() || !std::isfinite( price_it->second ) || price_it->second <= 0.0 )
+        {
+            node_logger_->error( "GNUS price response did not contain a finite positive price" );
             return outcome::failure( Error::NO_PRICE );
         }
-        return price.value()["genius-ai"];
+        return price_it->second;
     }
 
     std::string GeniusNode::GetVersion()
@@ -1931,36 +2731,6 @@ namespace sgns
         return std::nullopt;
     }
 
-    outcome::result<std::pair<std::string, uint64_t>> GeniusNode::PayEscrow(
-        const std::string                       &escrow_path,
-        const SGProcessing::TaskResult          &taskresult,
-        std::shared_ptr<crdt::AtomicTransaction> crdt_transaction,
-        std::chrono::milliseconds                timeout )
-    {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
-        {
-            return outcome::failure( Error::TRANSACTIONS_NOT_READY );
-        }
-        auto start_time = std::chrono::steady_clock::now();
-
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->PayEscrow( escrow_path, taskresult, std::move( crdt_transaction ) ) );
-
-        auto payescrow_result = manager->WaitForTransactionOutgoing( tx_id, timeout );
-
-        auto end_time = std::chrono::steady_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>( end_time - start_time ).count();
-
-        if ( payescrow_result != TransactionManager::TransactionStatus::CONFIRMED )
-        {
-            node_logger_->error( "Pay escrow transaction {} failed after {} ms", tx_id, duration );
-            return outcome::failure( boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
-        }
-
-        node_logger_->debug( "Pay escrow transaction {} completed in {} ms", tx_id, duration );
-        return std::make_pair( tx_id, duration );
-    }
-
     uint64_t GeniusNode::GetBalance()
     {
         return account_->GetUTXOManager().GetBalance();
@@ -1983,83 +2753,90 @@ namespace sgns
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
-        static constexpr std::string_view FUNC = __func__;
-        boost::asio::post( *processing_callback_pool_,
-                           [weak_self( weak_from_this() ), task_id, taskresult]()
-                           {
-                               if ( auto strong = weak_self.lock() )
-                               {
-                                   strong->node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC,
-                                                               task_id );
+        static constexpr std::string_view FUNC        = __func__;
+        const auto                        account_tag = account_->GetAddress().substr( 0, 8 );
+        node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
-                                   if ( strong->task_queue_->IsTaskCompleted( task_id ) )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Task Already completed!",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC );
-                                       return;
-                                   }
-                                   if ( strong->GetTransactionManagerState() != TransactionManager::State::READY )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Transactions are not ready",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC );
-                                       return;
-                                   }
-                                   strong->node_logger_->info( "[{}]{}: Transactions READY",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC );
+        if ( task_queue_->IsTaskCompleted( task_id ) )
+        {
+            node_logger_->info( "[{}]{}: Task Already completed!", account_tag, FUNC );
+            return;
+        }
+        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        {
+            node_logger_->info( "[{}]{}: Transactions are not ready", account_tag, FUNC );
+            return;
+        }
 
-                                   auto maybe_task = strong->task_queue_->GetTask( task_id );
-                                   if ( maybe_task.has_failure() )
-                                   {
-                                       strong->node_logger_->info( "[{}]{}: Task id {} not found in DB",
-                                                                   strong->account_->GetAddress().substr( 0, 8 ),
-                                                                   FUNC,
-                                                                   task_id );
-                                       return;
-                                   }
+        auto maybe_task = task_queue_->GetTask( task_id );
+        if ( maybe_task.has_failure() )
+        {
+            node_logger_->info( "[{}]{}: Task id {} not found in DB", account_tag, FUNC, task_id );
+            return;
+        }
 
-                                   auto escrow_path          = maybe_task.value().escrow_path();
-                                   auto complete_task_result = strong->task_queue_->CompleteTask( task_id, taskresult );
-                                   if ( complete_task_result.has_failure() )
-                                   {
-                                       strong->node_logger_->error( "[{}]{}: Unable to complete task: {} ",
-                                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                                    FUNC,
-                                                                    task_id );
-                                       return;
-                                   }
+        auto complete_task_result = task_queue_->CompleteTask( task_id, taskresult );
+        if ( complete_task_result.has_failure() )
+        {
+            node_logger_->error( "[{}]{}: Unable to complete task: {} ", account_tag, FUNC, task_id );
+            return;
+        }
 
-                                   strong->node_logger_->info( "[{}]{}: Creating the payout transactions",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC );
+        auto manager_result = GetTransactionManager();
+        if ( manager_result.has_failure() )
+        {
+            node_logger_->error( "[{}]{}: Unable to access transaction manager for task: {}",
+                                 account_tag,
+                                 FUNC,
+                                 task_id );
+            return;
+        }
 
-                                   auto pay_result = strong->PayEscrow( escrow_path,
-                                                                        taskresult,
-                                                                        std::move( complete_task_result.value() ) );
-                                   if ( pay_result.has_failure() )
-                                   {
-                                       strong->node_logger_->error( "[{}]{}: Escrow not paid for task: {} ",
-                                                                    strong->account_->GetAddress().substr( 0, 8 ),
-                                                                    FUNC,
-                                                                    task_id );
-                                       return;
-                                   }
+        node_logger_->info( "[{}]{}: Creating the payout transaction", account_tag, FUNC );
+        manager_result.value()->AsyncPayEscrow(
+            maybe_task.value().escrow_path(),
+            taskresult,
+            std::move( complete_task_result.value() ),
+            TIMEOUT_ESCROW_PAY,
+            [logger = node_logger_, account_tag, task_id]( TransactionManager::TransactionCompletion completion )
+            {
+                if ( completion.error == boost::asio::error::operation_aborted )
+                {
+                    logger->debug( "[{}]ProcessingDone: Escrow payout cancelled during shutdown for task {}",
+                                   account_tag,
+                                   task_id );
+                    return;
+                }
+                if ( completion.error )
+                {
+                    logger->error( "[{}]ProcessingDone: Escrow payout failed for task {} after {} ms: {}",
+                                   account_tag,
+                                   task_id,
+                                   completion.elapsed.count(),
+                                   completion.error.message() );
+                    return;
+                }
+                if ( completion.status != TransactionManager::TransactionStatus::CONFIRMED )
+                {
+                    logger->error( "[{}]ProcessingDone: Escrow payout transaction {} ended in state {} for task {}",
+                                   account_tag,
+                                   completion.transaction_id,
+                                   static_cast<int>( completion.status ),
+                                   task_id );
+                    return;
+                }
 
-                                   strong->node_logger_->info( "[{}]{}: Paid for task: {}",
-                                                               strong->account_->GetAddress().substr( 0, 8 ),
-                                                               FUNC,
-                                                               task_id );
-                               }
-                           } );
+                logger->info( "[{}]ProcessingDone: Paid for task {} with transaction {} in {} ms",
+                              account_tag,
+                              task_id,
+                              completion.transaction_id,
+                              completion.elapsed.count() );
+            } );
     }
 
     void GeniusNode::ProcessingError( const std::string &task_id )
     {
-        boost::asio::post( *processing_callback_pool_,
+        boost::asio::post( boost::asio::system_executor{},
                            [weak_self( weak_from_this() ), task_id]()
                            {
                                if ( auto strong = weak_self.lock() )
@@ -2232,15 +3009,25 @@ namespace sgns
         return manager_result.value()->GetOutTransactions();
     }
 
-    const std::vector<std::vector<uint8_t>> GeniusNode::GetTransactions(
-        std::optional<TransactionManager::TransactionStatus> tx_status ) const
+    size_t GeniusNode::CountTransactions( std::optional<TransactionManager::TransactionStatus> tx_status ) const
     {
         auto manager_result = GetTransactionManager();
         if ( !manager_result.has_value() )
         {
-            return {};
+            return 0;
         }
-        return manager_result.value()->GetTransactions( tx_status );
+        return manager_result.value()->CountTransactions( tx_status );
+    }
+
+    std::string GeniusNode::GetAddress() const
+    {
+        std::string address = "UNVAILABLE";
+        auto        account = account_;
+        if ( account )
+        {
+            address = account->GetAddress();
+        }
+        return address;
     }
 
     // Wait for a transaction to be processed with a timeout
@@ -2310,7 +3097,7 @@ namespace sgns
         return manager_result.value()->GetState();
     }
 
-    void GeniusNode::SendTransactionAndProof( std::shared_ptr<IGeniusTransactions> tx, std::vector<uint8_t> proof )
+    void GeniusNode::SendTransactionAndProof( std::shared_ptr<GeniusTransaction> tx, std::vector<uint8_t> proof )
     {
         auto manager_result = GetTransactionManager();
         if ( manager_result.has_value() )
@@ -2321,19 +3108,6 @@ namespace sgns
         {
             node_logger_->error( "{}: Transactions not ready", __func__ );
         }
-    }
-
-    void GeniusNode::ConfigureTransactionFilterTimeoutsMs( uint64_t timeframe_limit_ms, uint64_t mutability_window_ms )
-    {
-        auto manager_result = GetTransactionManager();
-        if ( !manager_result.has_value() )
-        {
-            node_logger_->error( "{}: Transactions not ready", __func__ );
-            return;
-        }
-        auto manager = manager_result.value();
-        manager->SetTimeFrameToleranceMs( timeframe_limit_ms );
-        manager->SetMutabilityWindowMs( mutability_window_ms );
     }
 
     void GeniusNode::RotateLogFiles( const std::string &base_path )
@@ -2385,6 +3159,254 @@ namespace sgns
         }
     }
 
+    void GeniusNode::SetChainlistFetcher( std::function<std::optional<std::string>()> fetcher )
+    {
+        chainlist_fetcher_ = std::move( fetcher );
+    }
+
+    bool GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
+    {
+        auto transaction_manager = transaction_manager_;
+        if ( !transaction_manager || transaction_manager->GetState() != TransactionManager::State::READY )
+        {
+            node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
+            return false;
+        }
+        const size_t endpoint_count = endpoints.size();
+        transaction_manager->GetPublicChainInputValidator().SetRpcEndpoints( chain_id, std::move( endpoints ) );
+        node_logger_->info( "Configured {} RPC endpoint(s) for chain {}", endpoint_count, chain_id );
+        return true;
+    }
+
+    std::filesystem::path GeniusNode::ResolveBridgeChainsConfigPath() const
+    {
+        std::filesystem::path bridge_chains_path;
+
+        // Primary: use GeniusNodeConfig BaseWritePath (writable on all platforms including Android)
+        if ( !dev_config_.BaseWritePath.empty() )
+        {
+            bridge_chains_path = std::filesystem::path( dev_config_.BaseWritePath ) / "bridge_chains_config.json";
+        }
+
+        // Fallback: binary directory (finds CMake-installed or copied default)
+        if ( bridge_chains_path.empty() || !std::filesystem::exists( bridge_chains_path ) )
+        {
+            try
+            {
+                auto bin_dir   = boost::dll::program_location().parent_path();
+                auto candidate = std::filesystem::path( bin_dir.string() ) / "bridge_chains_config.json";
+                if ( std::filesystem::exists( candidate ) )
+                {
+                    bridge_chains_path = std::move( candidate );
+                }
+            }
+            catch ( const std::exception &e )
+            {
+                node_logger_->warn( "ResolveBridgeChainsConfigPath: cannot determine binary location ({}), "
+                                    "falling back to CWD",
+                                    e.what() );
+            }
+        }
+
+        // Final fallback: current working directory
+        if ( bridge_chains_path.empty() || !std::filesystem::exists( bridge_chains_path ) )
+        {
+            bridge_chains_path = std::filesystem::current_path() / "bridge_chains_config.json";
+        }
+
+        return bridge_chains_path;
+    }
+
+    void GeniusNode::OnRpcEndpointsReady( std::vector<ChainContractPair> chains )
+    {
+        std::lock_guard lock( catchup_mutex_ );
+        catchup_chains_ = std::move( chains );
+        node_logger_->info( "GeniusNode: received {} chain(s) from provider — stored for catch-up watcher",
+                            catchup_chains_.size() );
+    }
+
+    void GeniusNode::InitializeAndStartBridge()
+    {
+        node_logger_->info( "InitializeAndStartBridge: thin orchestrator (D-01, D-03)" );
+
+        // 1. Resolve config path (stays in GeniusNode per D-01)
+        auto config_path = ResolveBridgeChainsConfigPath();
+        node_logger_->info( "InitializeAndStartBridge: loading bridge chain config from {}", config_path.string() );
+
+        // 2. Construct provider
+        rpc_endpoint_provider_ = std::make_shared<ChainRpcEndpointProvider>();
+
+        // 2a. Inject custom chainlist fetcher if provided (test injection point via SetChainlistFetcher)
+        if ( chainlist_fetcher_ )
+        {
+            rpc_endpoint_provider_->SetChainlistFetcher( chainlist_fetcher_ );
+        }
+
+        // 3. Subscribe observers BEFORE post (D-03 ordering)
+        rpc_endpoint_provider_->AddObserverCallback(
+            [weak_self = weak_from_this()]( std::vector<ChainContractPair> chains )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->OnRpcEndpointsReady( std::move( chains ) );
+                }
+            } );
+        if ( bridge_relayer_ )
+        {
+            rpc_endpoint_provider_->AddObserver( *bridge_relayer_ );
+        }
+
+        // 3a. Create and start the catch-up polling watcher (replaces the old
+        //     INITIALIZING_RPC_CATCH_UP state machine + PerformStartupCatchupScan).
+        //     The watcher owns its own thread and polls eth_getLogs independently
+        //     of the node lifecycle — no state machine coupling.
+        if ( rpc_catchup_ )
+        {
+            evmwatcher::BridgeCatchupWatcher::Config catchup_config;
+            catchup_config.poll_interval = std::chrono::seconds( 15 );
+
+            auto chains_provider = [weak_self = weak_from_this()]() -> std::vector<ChainContractPair>
+            {
+                auto strong = weak_self.lock();
+                if ( !strong )
+                {
+                    return {};
+                }
+                std::lock_guard lock( strong->catchup_mutex_ );
+                return strong->catchup_chains_;
+            };
+
+            auto rpc_resolver =
+                [weak_self = weak_from_this()]( const std::string &chain_id_str ) -> std::optional<std::string>
+            {
+                auto strong = weak_self.lock();
+                if ( !strong || !strong->transaction_manager_ )
+                {
+                    return std::nullopt;
+                }
+                auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
+                return validator.GetFirstRpcUrl( chain_id_str );
+            };
+
+            auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
+                                                                  const std::string                     &tx_hash_hex,
+                                                                  const std::string &chain_id_str ) -> bool
+            {
+                // Parse the ABI-decoded values into a BurnEventParams
+                auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
+                if ( !burn )
+                {
+                    GeniusNodeLogger()->debug( "CatchUpWatcher: failed to parse burn event for tx {} — skipping",
+                                               tx_hash_hex );
+                    return false;
+                }
+
+                // UTXO state checks (same guards as the old scan)
+                base::Hash256 burn_tx_hash;
+                if ( !rlp::base::parse::hex_array( tx_hash_hex, burn_tx_hash ) )
+                {
+                    GeniusNodeLogger()->error( "CatchUpWatcher: failed to parse tx_hash to hex {} — skipping",
+                                               tx_hash_hex );
+                    return false;
+                }
+
+                auto strong = weak_self.lock();
+                if ( !strong || !strong->account_ )
+                {
+                    return false;
+                }
+                auto &utxo_mgr = strong->account_->GetUTXOManager();
+                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
+                                                 tx_hash_hex );
+                    return false;
+                }
+                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
+                                                 tx_hash_hex );
+                    return false;
+                }
+
+                try
+                {
+                    auto result = strong->MintTokens( burn.value().amount,
+                                                      tx_hash_hex,
+                                                      chain_id_str,
+                                                      burn.value().token_id,
+                                                      burn.value().destination );
+                    return result.has_value();
+                }
+                catch ( const std::exception &e )
+                {
+                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
+                                                 tx_hash_hex,
+                                                 e.what() );
+                    return false;
+                }
+            };
+
+            catchup_watcher_ = std::make_shared<evmwatcher::BridgeCatchupWatcher>(
+                catchup_config,
+                nullptr, // no raw message callback needed
+                std::move( chains_provider ),
+                std::move( rpc_resolver ),
+                std::move( burn_processor ) );
+
+            catchup_watcher_->startWatching();
+            node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
+                                catchup_config.poll_interval.count() );
+        }
+        else
+        {
+            node_logger_->info( "InitializeAndStartBridge: catchup watcher disabled (rpc_catchup_=false)" );
+        }
+
+        // 4. Post Initialize() to io_context — non-blocking. Capture a
+        //    generation token + shared ownership of the transaction manager,
+        //    provider, and relayer. Initialize() can block ~15s on the chainlist
+        //    fetch; SelectAccount() may run on another io_ thread during that
+        //    window and reset these members. The shared_ptr captures keep the
+        //    objects alive for the duration of the call (no mid-execution free of
+        //    the provider's chainlist_fetcher_/observers_, and the raw
+        //    bridge_relayer_ observer stays valid). The generation check still
+        //    discards work posted before a completed switch.
+        const auto generation = bridge_init_generation_.load();
+        auto       tx_mgr     = transaction_manager_;   // shared_ptr copy: stable lifetime
+        auto       provider   = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
+        auto       relayer    = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
+        boost::asio::post( *io_,
+                           [weak_self   = weak_from_this(),
+                            config_path = std::move( config_path ),
+                            generation,
+                            tx_mgr   = std::move( tx_mgr ),
+                            provider = std::move( provider ),
+                            relayer  = std::move( relayer )]() mutable
+                           {
+                               auto strong = weak_self.lock();
+                               if ( !strong || strong->bridge_init_generation_.load() != generation )
+                               {
+                                   return; // account switched — stale init, abort
+                               }
+                               strong.reset();
+                               if ( !tx_mgr || !provider )
+                               {
+                                   return;
+                               }
+                               // Stale check consulted INSIDE Initialize() after the blocking
+                               // fetch, before it publishes validator pointers / notifies
+                               // observers — so a switch during the fetch aborts publishing.
+                               auto is_cancelled = [weak_self, generation]() -> bool
+                               {
+                                   auto s = weak_self.lock();
+                                   return !s || s->bridge_init_generation_.load() != generation;
+                               };
+                               auto &validator = tx_mgr->GetPublicChainInputValidator();
+                               provider->Initialize( config_path, validator, is_cancelled );
+                           } );
+    }
+
     TransactionManager::TransactionStatus GeniusNode::GetTransactionStatus( const std::string &txId ) const
     {
         auto manager_result = GetTransactionManager();
@@ -2393,13 +3415,7 @@ namespace sgns
             node_logger_->error( "{}: Transactions not ready", __func__ );
             return TransactionManager::TransactionStatus::INVALID;
         }
-        auto manager = manager_result.value();
-        auto retval  = manager->GetOutgoingStatusByTxId( txId );
-        if ( retval == TransactionManager::TransactionStatus::INVALID )
-        {
-            retval = manager->GetIncomingStatusByTxId( txId );
-        }
-        return retval;
+        return manager_result.value()->GetTransactionStatusByTxId( txId );
     }
 
     void GeniusNode::TransactionStateChanged( TransactionManager::State old_state, TransactionManager::State new_state )
@@ -2409,6 +3425,7 @@ namespace sgns
         switch ( new_state )
         {
             case TransactionManager::State::READY:
+            {
                 if ( processing_service_ == nullptr )
                 {
                     StateTransition( NodeState::INITIALIZING_PROCESSING );
@@ -2418,6 +3435,7 @@ namespace sgns
                     StartProcessing();
                 }
                 break;
+            }
             case TransactionManager::State::INITIALIZING:
             case TransactionManager::State::SYNCING:
                 if ( isprocessor_ )
@@ -2440,9 +3458,153 @@ namespace sgns
         }
     }
 
-    const std::string &GeniusNode::GetAuthorizedFullNodeAddress() const
+    std::string GeniusNode::GetAuthorizedFullNodeAddress() const
     {
         return Blockchain::GetAuthorizedFullNodeAddress();
+    }
+
+    // ── Result Cache GC ──
+
+    void GeniusNode::StartResultGC()
+    {
+        if ( result_retention_hours_ == 0 )
+        {
+            node_logger_->info( "Result retention disabled (retention_hours=0), skipping GC" );
+            return;
+        }
+
+        auto intervalHours = std::max( 1, result_retention_hours_ / 10 );
+        node_logger_->info( "Starting result GC timer: every {} hour(s), retention {} hours, max {} MB",
+                            intervalHours,
+                            result_retention_hours_,
+                            result_retention_max_mb_ );
+
+        gc_timer_                          = std::make_shared<boost::asio::steady_timer>( *io_ );
+        std::weak_ptr<GeniusNode> weakSelf = shared_from_this();
+
+        auto schedule = [this, weakSelf, intervalHours]()
+        {
+            gc_timer_->expires_from_now( std::chrono::hours( intervalHours ) );
+            gc_timer_->async_wait(
+                [weakSelf]( const boost::system::error_code &ec )
+                {
+                    if ( ec )
+                    {
+                        return;
+                    }
+                    if ( auto self = weakSelf.lock() )
+                    {
+                        self->RunResultGC();
+                    }
+                } );
+        };
+
+        schedule();
+        // Run one initial pass after a short delay
+        gc_timer_->cancel();
+        gc_timer_->expires_from_now( std::chrono::seconds( 30 ) );
+        gc_timer_->async_wait(
+            [weakSelf, schedule]( const boost::system::error_code &ec )
+            {
+                if ( ec )
+                {
+                    return;
+                }
+                if ( auto self = weakSelf.lock() )
+                {
+                    self->RunResultGC();
+                    schedule();
+                }
+            } );
+    }
+
+    void GeniusNode::RunResultGC()
+    {
+        if ( result_retention_hours_ == 0 || !bitswap_ )
+        {
+            return;
+        }
+
+        auto            resultsDir = write_base_path_ + "/" + ipfs_cache_dir_ + "/results";
+        std::error_code ec;
+        if ( !std::filesystem::exists( resultsDir, ec ) )
+        {
+            return;
+        }
+
+        size_t    deletedCount = 0;
+        uintmax_t deletedBytes = 0;
+
+        // Collect all result files sorted by age (oldest first)
+        struct FileEntry
+        {
+            std::string                     path;
+            std::filesystem::file_time_type mtime;
+        };
+
+        std::vector<FileEntry> files;
+        for ( const auto &entry : std::filesystem::recursive_directory_iterator( resultsDir, ec ) )
+        {
+            if ( ec || !entry.is_regular_file() )
+            {
+                continue;
+            }
+            FileEntry fe;
+            fe.path  = entry.path().string();
+            fe.mtime = entry.last_write_time();
+            files.push_back( fe );
+        }
+
+        std::sort( files.begin(), files.end(), []( const auto &a, const auto &b ) { return a.mtime < b.mtime; } );
+
+        // Compute cutoff using the clock backing file_time_type
+        using FT    = std::filesystem::file_time_type;
+        auto now    = FT::clock::now();
+        auto cutoff = now - std::chrono::hours( result_retention_hours_ );
+
+        uintmax_t totalBytes = 0;
+        for ( const auto &f : files )
+        {
+            totalBytes += std::filesystem::file_size( f.path, ec );
+        }
+
+        // Evict expired files
+        for ( auto it = files.begin(); it != files.end() && totalBytes > 0; ++it )
+        {
+            const auto &path    = it->path;
+            const auto &mtime   = it->mtime;
+            bool        expired = mtime < cutoff;
+            bool        overCap = ( result_retention_max_mb_ > 0 ) &&
+                                  ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+            if ( !expired && !overCap )
+            {
+                break;
+            }
+
+            auto fileSize = std::filesystem::file_size( path, ec );
+            std::filesystem::remove( path, ec );
+            if ( !ec )
+            {
+                auto cidStr = std::filesystem::path( path ).filename().string();
+                auto cid    = libp2p::multi::ContentIdentifierCodec::fromString( cidStr );
+                if ( cid )
+                {
+                    bitswap_->unpersistBlock( cid.value() );
+                }
+                deletedCount++;
+                deletedBytes += fileSize;
+                totalBytes   -= fileSize;
+            }
+        }
+
+        if ( deletedCount > 0 )
+        {
+            node_logger_->info( "GC: removed {} result files ({} bytes), {} files remaining ({} bytes)",
+                                deletedCount,
+                                deletedBytes,
+                                files.size() - deletedCount,
+                                totalBytes );
+        }
     }
 
     // ── Bootstrap Fullnode Reconnection ──
@@ -2641,7 +3803,15 @@ namespace sgns
             {
                 if ( auto strong = weak_self.lock() )
                 {
-                    strong->DoReconnectToBootstrapPeer( peer_id );
+                    // DialerImpl is shared with GossipSub and is not thread-safe.
+                    strong->pubsub_->GetAsioContext()->post(
+                        [weak_self, peer_id]()
+                        {
+                            if ( auto strong = weak_self.lock() )
+                            {
+                                strong->DoReconnectToBootstrapPeer( peer_id );
+                            }
+                        } );
                 }
             },
             delay );
@@ -2691,7 +3861,12 @@ namespace sgns
         node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
 
         auto weak_self = weak_from_this();
-        pubsub_->GetHost()->connect(
+        auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
+        auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
+        libp2p::network::RouteHelper::SourceAddresses source_addresses{
+            std::move( ipv4_source ), std::move( ipv6_source ), true, true };
+
+        pubsub_->GetHost()->getNetwork().getDialer().dial(
             *peer_info_ptr,
             [weak_self, peer_id]( auto result )
             {
@@ -2722,7 +3897,8 @@ namespace sgns
                     }
                 }
             },
-            std::chrono::seconds( 15 ) );
+            std::chrono::seconds( 15 ),
+            source_addresses );
     }
 
     std::string GeniusNode::MyTasksFilePath() const
@@ -2762,10 +3938,7 @@ namespace sgns
                     my_task_ids_.push_back( std::move( all_ids[i] ) );
                 }
 
-                node_logger_->info( "Loaded {} of {} task IDs from {}",
-                                    my_task_ids_.size(),
-                                    total,
-                                    MyTasksFilePath() );
+                node_logger_->info( "Loaded {} of {} task IDs from {}", my_task_ids_.size(), total, MyTasksFilePath() );
             }
         }
         catch ( const std::exception &e )

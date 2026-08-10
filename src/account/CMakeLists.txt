@@ -9,6 +9,7 @@ add_library(sgns_genius_account
     UTXOStructs.cpp
     UTXOManager.cpp
     MigrationAllowList.cpp
+    GeniusSigner.cpp
     GeniusAccount.cpp
     AccountMessenger.cpp
 )
@@ -33,6 +34,7 @@ target_link_libraries(sgns_genius_account
     ${USER_ENV_LIBRARY}
     wallet_core_rs
     protobuf::libprotobuf
+    libsecp256k1::secp256k1
     ${WIN_CRYPT_LIBRARY}
     TrezorCrypto
 )
@@ -52,28 +54,39 @@ if(MSVC)
 elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(sgns_genius_account PUBLIC -fconstexpr-steps=10000000)
 endif()
-add_library(genius_node
-    IGeniusTransactions.cpp
+
+# BurnConfig: genesis-seeded, quorum-signed BURN_BASIS_POINTS value (BURN-01,
+# BURN-02, BURN-03), built on top of SecureCrdt/TrustedPeerRegistry/GeniusAccount.
+add_library(burnconfig
+    BurnConfig.cpp
+)
+target_link_libraries(burnconfig
+    PUBLIC
+    trustedpeer
+    securecrdt
+    sgns_genius_account
+)
+supergenius_install(burnconfig)
+
+set(GENIUS_NODE_SOURCES
+    GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp
     MintTransactionV2.cpp
     MigrationTransaction.cpp
-    ProcessingTransaction.cpp
     EscrowTransaction.cpp
+    GeniusInputValidator.cpp
+    MigrationInputValidator.cpp
     InputValidators.cpp
+    PublicChainInputValidator.cpp
     TransactionManager.cpp
     TokenAmount.cpp
-    BridgeConsensusAdapter.cpp
-    MigrationManager.cpp
-    Migration0_2_0To1_0_0.cpp
-    Migration1_0_0To3_4_0.cpp
-    Migration3_4_0To3_5_0.cpp
-    Migration3_5_0To3_6_0.cpp
-    Migration3_6_0To3_7_0.cpp
     GeniusNode.cpp
+    ChainRpcEndpointProvider.cpp
+    BridgeRelayer.cpp
 )
 
-target_link_libraries(genius_node
+set(GENIUS_NODE_LIBS
     PRIVATE
     AsyncIOManager
     component_factory
@@ -88,8 +101,11 @@ target_link_libraries(genius_node
     p2p::p2p_kademlia
     p2p::p2p_identify
     p2p::p2p_ping
+    ipfs-bitswap-proto
+    ipfs-unixfs-proto
+    ipfs-bitswap-cpp
+    AsyncIOManager
     Boost::Boost.DI
-    SGTransactionProto
     ScaledInteger
     sgns_version
     ${WIN_API_LIBRARY}
@@ -106,13 +122,31 @@ target_link_libraries(genius_node
     outcome
     logger
     crdt_globaldb
+    SGTransactionProto
     processing_service
     gnus_upnp
     blockchain_genesis
     ProcessingBase
     evmrelay
+    migration
+    evm_watcher_service
     sgns_genius_account
+    trustedpeer
+    burnconfig
 )
+
+
+# Production library — uses OS keychain (Apple/Windows/Linux secure storage)
+add_library(genius_node ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node ${GENIUS_NODE_LIBS})
+target_include_directories(
+    genius_node
+    PRIVATE
+    ${AsyncIOManager_INCLUDE_DIR}
+)
+# Test library — uses in-memory secure storage via DI factory (no keychain prompts)
+add_library(genius_node_test ${GENIUS_NODE_SOURCES})
+target_link_libraries(genius_node_test ${GENIUS_NODE_LIBS})
 
 add_dependencies(genius_node rlp)
 
@@ -123,6 +157,38 @@ elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
     target_compile_options(genius_node PUBLIC -fconstexpr-steps=10000000)
 endif()
 
-# Install both libraries
+# Install production library only
 supergenius_install(sgns_genius_account)
 supergenius_install(genius_node)
+
+# Copy default bridge chains config to test binary output for dev/test runs
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    ${CMAKE_BINARY_DIR}/test_bin/bridge_chains_config.json
+    COPYONLY
+)
+
+# Install the default config alongside the binary for production
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/bridge_chains_config.json
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# ── find_contract_creation_blocks — optional one-shot utility ────────────
+# Downloads the GeniusDiamond deployment manifest, cross-references diamond
+# addresses, and binary-searches eth_getCode for creation blocks using
+# built-in public RPC endpoints (no API key needed).
+# NOT part of the default build — invoke explicitly when deployments change:
+#
+#   cmake --build build --target find_contract_creation_blocks
+#
+# To override a chain's RPC endpoint, run the script directly:
+#   python3 scripts/find_contract_creation_blocks.py \
+#       src/account/bridge_chains_config.json \
+#       --rpc ethereum-sepolia=https://my-node.com
+add_custom_target(find_contract_creation_blocks
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/scripts/find_contract_creation_blocks.py
+        ${CMAKE_SOURCE_DIR}/src/account/bridge_chains_config.json
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Cross-referencing GeniusDiamond manifest + discovering creation blocks"
+    VERBATIM
+)

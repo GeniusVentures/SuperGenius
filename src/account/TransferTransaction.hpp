@@ -7,7 +7,7 @@
 #ifndef _TRANSFER_TRANSACTION_HPP_
 #define _TRANSFER_TRANSACTION_HPP_
 
-#include "account/IGeniusTransactions.hpp"
+#include "account/GeniusTransaction.hpp"
 #include "UTXOStructs.hpp"
 #include "account/proto/SGTransaction.pb.h"
 
@@ -16,7 +16,7 @@ namespace sgns
     /**
      * @brief Transaction for transferring funds between UTXO inputs and outputs.
      */
-    class TransferTransaction final : public IGeniusTransactions
+    class TransferTransaction final : public GeniusTransaction
     {
     public:
         static TransferTransaction New( std::vector<InputUTXOInfo>  inputs,
@@ -31,8 +31,11 @@ namespace sgns
          * @brief      Serializes the transaction into a byte vector.
          * @return     Serialized bytes.
          */
-        using IGeniusTransactions::SerializeByteVector;
+        using GeniusTransaction::SerializeByteVector;
         std::vector<uint8_t> SerializeByteVector( const SGTransaction::DAGStruct &dag ) const override;
+
+        using GeniusTransaction::SerializeToEmbeddedTransaction;
+        EmbeddedTransaction SerializeToEmbeddedTransaction( const SGTransaction::DAGStruct &dag ) const override;
 
         /**
          * @brief      Deserializes a TransferTransaction from bytes.

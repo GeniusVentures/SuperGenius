@@ -2,6 +2,10 @@ add_proto_library(SGBlockchainProto proto/SGBlockchain.proto)
 add_proto_library(ConsensusProto proto/Consensus.proto)
 add_proto_library(ValidatorRegistryProto proto/ValidatorRegistry.proto)
 
+target_link_libraries(ConsensusProto
+    PUBLIC
+    SGTransactionProto
+)
 
 add_library(blockchain_genesis
     Blockchain.cpp

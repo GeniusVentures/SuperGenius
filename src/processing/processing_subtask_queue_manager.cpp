@@ -308,8 +308,13 @@ namespace sgns::processing
                 m_dltGrabSubTaskTimeout.expires_from_now( boost::posix_time::milliseconds( grabSubTaskTimeoutMs ) );
 
                 m_dltGrabSubTaskTimeout.async_wait(
-                    [instance = shared_from_this()]( const boost::system::error_code &ec )
-                    { instance->HandleGrabSubTaskTimeout( ec ); } );
+                    [instance = weak_from_this()]( const boost::system::error_code &ec )
+                    {
+                        if ( auto self = instance.lock() )
+                        {
+                            self->HandleGrabSubTaskTimeout( ec );
+                        }
+                    } );
             }
             else
             {
@@ -585,8 +590,14 @@ namespace sgns::processing
                 }
             }
 
-            m_dltQueueResponseTimeout.async_wait( [instance = shared_from_this()]( const boost::system::error_code &ec )
-                                                  { instance->HandleQueueRequestTimeout( ec ); } );
+            m_dltQueueResponseTimeout.async_wait(
+                [instance = weak_from_this()]( const boost::system::error_code &ec )
+                {
+                    if ( auto self = instance.lock() )
+                    {
+                        self->HandleQueueRequestTimeout( ec );
+                    }
+                } );
             // If it hasn't been long enough, schedule another timeout check, with shorter subsequent checks.
             m_dltQueueResponseTimeout.expires_from_now( boost::posix_time::milliseconds( 100 ) );
         }

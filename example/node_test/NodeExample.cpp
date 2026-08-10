@@ -280,7 +280,7 @@ static void cmd_mint( const std::vector<std::string> &args, std::shared_ptr<sgns
     }
     try
     {
-        node->MintTokens( std::stoull( args[1] ), "", "", sgns::TokenID::FromBytes( { 0x00 } ) );
+        node->MintTokens( std::stoull( args[1] ), "supergenius", "", sgns::TokenID::FromBytes( { 0x00 } ) );
     }
     catch ( const std::exception &e )
     {
@@ -478,13 +478,14 @@ static std::string generate_eth_private_key()
     return oss.str();
 }
 
-DevConfig_st DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
+GeniusNodeConfig DEV_CONFIG{ "0xcafe", "0.65", "1.0", sgns::TokenID::FromBytes( { 0x00 } ), "./" };
 
 int main( int argc, char *argv[] )
 {
     bool        start_processing = false; // Default behavior for "process"
-    bool        is_full_node     = false;
     bool        terminal_mode    = false;
+
+    //full node flag is now defined in the sgns_config.json file, so we don't need to pass it as a command line argument anymore
     std::string path_override;
 
     for ( int i = 1; i < argc; ++i )
@@ -494,16 +495,10 @@ int main( int argc, char *argv[] )
         if ( arg == "server" )
         {
             start_processing = true;
-            is_full_node     = true;
         }
         else if ( arg == "jobposter" )
         {
             start_processing = true;
-            is_full_node     = false;
-        }
-        else if ( arg == "--full" )
-        {
-            is_full_node = true;
         }
         else if ( arg == "--terminal" )
         {
@@ -528,8 +523,10 @@ int main( int argc, char *argv[] )
     std::string eth_private_key = generate_eth_private_key();
     logger->info( "Generated Ethereum Private Key: {}", eth_private_key );
 
+    // node_type/is_processor come from the shipped sgns_config.json; port_seed/auto_dht come from
+    // the shipped network_config.json (both operator-managed, like a real deployment).
     auto node_instance =
-        sgns::GeniusNode::NewFromPrivateKey( DEV_CONFIG, eth_private_key.c_str(), true, 40101, is_full_node );
+        sgns::GeniusNode::New( DEV_CONFIG, sgns::FromPrivateKey{ eth_private_key } );
 
     std::thread status_thread;
 

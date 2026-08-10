@@ -1,6 +1,7 @@
 #include <chrono>
 #include <gtest/gtest.h>
 
+#include <array>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -8,6 +9,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstdio>
+#include <system_error>
 
 #ifdef _WIN32
 //#include <windows.h>
@@ -22,18 +24,23 @@
 #include <random>
 #include <ctime>
 #include <tuple>
+#include <unordered_map>
 
 #include <boost/program_options.hpp>
 #include <boost/format.hpp>
 #include <boost/asio.hpp>
-#include "local_secure_storage/impl/json/JSONSecureStorage.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include "testutil/mint_source_hash.hpp"
+#include "testutil/remove_all.hpp"
+#include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 
 using namespace sgns;
 
@@ -42,49 +49,96 @@ namespace sgns
     class MultiAccountTestAccess
     {
     public:
-        static std::shared_ptr<Blockchain> GetBlockchain( const std::shared_ptr<GeniusNode> &node )
+        static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )
         {
-            return node ? node->blockchain_ : nullptr;
+            return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
         }
 
-        static std::shared_ptr<ConsensusManager> GetConsensusManager( const std::shared_ptr<Blockchain> &blockchain )
+        static bool ConfigureConsensus( const std::shared_ptr<GeniusNode> &node,
+                                        size_t                             certificates_per_batch,
+                                        std::chrono::milliseconds          certificate_delay )
         {
-            return blockchain ? blockchain->consensus_manager_ : nullptr;
+            if ( !node || !node->blockchain_ || !node->blockchain_->consensus_manager_ )
+            {
+                return false;
+            }
+
+            auto registry = node->blockchain_->GetValidatorRegistry();
+            if ( !registry )
+            {
+                return false;
+            }
+
+            registry->SetCertificatesPerBatch( certificates_per_batch );
+            node->blockchain_->consensus_manager_->ConfigureCertificateDelay( certificate_delay );
+            return true;
+        }
+
+        static inline std::string GetDatabasePath( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->write_base_path_ + node->gnus_network_full_path_ : std::string{};
+        }
+
+        static bool RemoveRegistryPersistence( const std::string &database_path,
+                                               std::vector<uint8_t> registry_block_key )
+        {
+            auto datastore_result = storage::rocksdb::create( database_path );
+            if ( datastore_result.has_error() )
+            {
+                return false;
+            }
+            auto datastore = std::move( datastore_result.value() );
+
+            base::Buffer registry_cid_key;
+            registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
+            if ( datastore->remove( registry_cid_key ).has_error() )
+            {
+                return false;
+            }
+
+            const base::Buffer block_key( std::move( registry_block_key ) );
+            return datastore->remove( block_key ).has_value() && !datastore->contains( block_key );
         }
     };
+
 } // namespace sgns
 
 class MultiAccountTest : public ::testing::Test
 {
 protected:
-    static constexpr std::string_view FILE_PREFIX = "node_multi_account_";
+    static constexpr std::string_view FILE_PREFIX = "mat_";
 
     std::shared_ptr<sgns::GeniusNode> CreateNode( const std::string &self_address,
-                                                  const std::string &dev_addr,
-                                                  const std::string &tokenValue,
-                                                  sgns::TokenID      tokenId,
                                                   bool               isFullNode          = false,
                                                   bool               isProcessor         = false,
-                                                  bool               isGenesisAuthorized = false )
+                                                  bool               isGenesisAuthorized = false,
+                                                  std::string        existingBasePath    = {} )
     {
         static std::atomic<int> nodeCounter{ 0 };
-        int                     id = nodeCounter.fetch_add( 1 );
-
-        // is_processor is now read from sgns_config.json; the parameter is retained
-        // for source compatibility with existing test call sites.
-        (void)isProcessor;
-
-        auto binaryPath = boost::dll::program_location().parent_path();
-        auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
-        auto outPathStr = outPath.generic_string() + '/';
-
-        DevConfig_st devConfig = { dev_addr, "0.65", tokenValue, tokenId, outPathStr };
-
-        // Write sgns_config.json with the intended is_processor value
-        std::filesystem::create_directories( devConfig.BaseWritePath );
+        const bool              reuseStorage = !existingBasePath.empty();
+        std::string             outPathStr   = std::move( existingBasePath );
+        if ( outPathStr.empty() )
         {
-            std::ofstream configFile( devConfig.BaseWritePath + "sgns_config.json" );
-            configFile << R"({"is_processor": )" << ( isProcessor ? "true" : "false" ) << '}';
+            const auto id         = nodeCounter.fetch_add( 1 );
+            const auto binaryPath = boost::dll::program_location().parent_path();
+            const auto outPath    = binaryPath / ( std::string( FILE_PREFIX ) + std::to_string( id ) );
+            outPathStr            = outPath.generic_string() + '/';
+        }
+        else if ( outPathStr.back() != '/' )
+        {
+            outPathStr.push_back( '/' );
+        }
+
+        GeniusNodeConfig devConfig = { "0xcafe", "0.65", "1.0", TokenID::FromBytes( { 0x00 } ), outPathStr };
+
+        if ( !reuseStorage )
+        {
+            sgns::test::removeAllWithRetry( devConfig.BaseWritePath );
+            std::filesystem::create_directories( devConfig.BaseWritePath );
+            {
+                std::ofstream bridgeConfigFile( devConfig.BaseWritePath + "bridge_chains_config.json" );
+                bridgeConfigFile << "{}";
+            }
         }
 
         // Generate deterministic key from self_address
@@ -106,40 +160,57 @@ protected:
                              return hexChars[dist( rng )];
                          } );
 
-        uint16_t uniquePort = static_cast<uint16_t>( 40001 + id );
-        auto     node = sgns::GeniusNode::NewFromPrivateKey( devConfig, key.c_str(), false, uniquePort, isFullNode );
+        if ( !reuseStorage )
+        {
+            sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
+            sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
+                                               isFullNode ? "Full" : "Light",
+                                               /*is_processor=*/isProcessor,
+                                               /*rpc_catchup=*/false );
+        }
+        auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
         {
             sgns::Blockchain::SetAuthorizedFullNodeAddress( node->GetAddress() );
         }
 
+        node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
         return node;
+    }
+
+    const std::string &GetBaseWritePath( const std::shared_ptr<GeniusNode> &node ) const
+    {
+        return node_base_paths_.at( node.get() );
+    }
+
+    void WaitForReady( const std::shared_ptr<GeniusNode> &node )
+    {
+        sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+                                            std::chrono::milliseconds( 50000 ),
+                                            "node not synced: " + node->GetAddress() );
+    }
+
+    void ConfigureConsensus( const std::shared_ptr<GeniusNode> &node,
+                             size_t                             certificates_per_batch,
+                             std::chrono::milliseconds          certificate_delay )
+    {
+        sgns::test::assertWaitForCondition(
+            [&]()
+            {
+                return node->GetState() == GeniusNode::NodeState::READY &&
+                       sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
+            },
+            std::chrono::milliseconds( 50000 ),
+            "node blockchain not ready for consensus configuration" );
+
+        ASSERT_TRUE(
+            sgns::MultiAccountTestAccess::ConfigureConsensus( node, certificates_per_batch, certificate_delay ) );
     }
 
     void SetUp() override
     {
-        // Helper to remove directory with retry on Windows (file locks may not be immediately released)
-        auto removeWithRetry = []( const std::string &path )
-        {
-            std::error_code ec;
-            std::filesystem::remove_all( path, ec );
-
-            // On Windows, retry if removal fails due to file locks
-            if ( ec && std::filesystem::exists( path ) )
-            {
-                std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-                ec.clear();
-                std::filesystem::remove_all( path, ec );
-
-                // Final attempt after longer delay
-                if ( ec && std::filesystem::exists( path ) )
-                {
-                    std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
-                    ec.clear();
-                    std::filesystem::remove_all( path, ec );
-                }
-            }
-        };
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
         auto binaryPath = boost::dll::program_location().parent_path();
 
@@ -148,50 +219,114 @@ protected:
         {
             if ( entry.is_directory() && entry.path().filename().string().find( FILE_PREFIX ) != std::string::npos )
             {
-                removeWithRetry( entry.path().string() );
+                std::error_code ec;
+                sgns::test::removeAllWithRetry( entry.path().string(), ec );
             }
         }
     }
 
-    void TearDown() override
-    {
-        // Cleanup is automatic when shared_ptrs go out of scope
-        // On Windows, give time for file handles to be released before next test
-        std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
-    }
+    std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
 };
+
+class ValidatorRegistryTest : public MultiAccountTest
+{
+};
+
+TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
+{
+    auto node_full   = CreateNode( "registry_cid_full", true, true, true );
+    auto node_client = CreateNode( "registry_cid_client" );
+    node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_full );
+    WaitForReady( node_client );
+
+    auto full_registry   = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
+    auto client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
+    ASSERT_TRUE( full_registry );
+    ASSERT_TRUE( client_registry );
+
+    ConfigureConsensus( node_full, 1, std::chrono::milliseconds( 100 ) );
+    ConfigureConsensus( node_client, 1, std::chrono::milliseconds( 100 ) );
+
+    auto registry_before = full_registry->LoadCurrentRegistry();
+    ASSERT_TRUE( registry_before.has_value() );
+    const auto initial_epoch = registry_before.value().epoch();
+
+    auto mint_result = node_client->MintTokens( 100,
+                                                sgns::test::NextMintSourceHash(),
+                                                "test",
+                                                TokenID::FromBytes( { 0x00 } ),
+                                                "",
+                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( mint_result.has_value() );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto full_state   = full_registry->LoadCurrentRegistry();
+            auto client_state = client_registry->LoadCurrentRegistry();
+            return full_state.has_value() && client_state.has_value() && full_state.value().epoch() > initial_epoch &&
+                   client_state.value().epoch() == full_state.value().epoch() &&
+                   client_registry->GetRegistryCid() == full_registry->GetRegistryCid();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "client did not receive the updated validator registry" );
+
+    const auto registry_cid = full_registry->GetRegistryCid();
+    auto       parsed_cid   = CID::fromString( registry_cid );
+    ASSERT_TRUE( parsed_cid.has_value() );
+    auto cid_bytes = parsed_cid.value().toBytes();
+    ASSERT_TRUE( cid_bytes.has_value() );
+
+    const auto client_base_path = GetBaseWritePath( node_client );
+    const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
+
+    client_registry.reset();
+    node_client.reset();
+
+    ASSERT_TRUE( sgns::MultiAccountTestAccess::RemoveRegistryPersistence( client_database_path,
+                                                                          std::move( cid_bytes.value() ) ) );
+
+    const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
+    {
+        std::ofstream network_config( client_base_path + "network_config.json" );
+        ASSERT_TRUE( network_config.good() );
+        network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
+                          "\"bootstrap_addresses\": [\"" << full_address
+                       << "\"] }";
+    }
+
+    node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
+    ASSERT_TRUE( node_client );
+    WaitForReady( node_client );
+
+    client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
+    ASSERT_TRUE( client_registry );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        {
+            auto loaded = client_registry->LoadRegistryByCid( registry_cid );
+            return loaded.has_value();
+        },
+        std::chrono::milliseconds( 30000 ),
+        "missing validator registry block was not fetched from the full node" );
+}
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
     // Create nodes dynamically
-    auto node_full = CreateNode( "node_multi_full",
-                                 "0xcafe",
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true, // is full node
-                                 true, // is processor
-                                 true );
-    sgns::test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 30000 ),
-                                        "node_full not synced" );
-    auto node_original = CreateNode( "node_multi_1",
-                                     "0xcafe",
-                                     "1.0",
-                                     sgns::TokenID::FromBytes( { 0x00 } ),
-                                     false, // not full node
-                                     false  // not processor
-    );
-
-    node_original->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    sgns::test::assertWaitForCondition( [&]() { return node_original->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 30000 ),
-                                        "node_original not synced" );
+    auto node_full     = CreateNode( "node_multi_full", true, true, true );
+    auto node_original = CreateNode( "node_multi_1" );
+    node_original->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_full );
+    WaitForReady( node_original );
 
     auto balance_original_start = node_original->GetBalance();
     // Mint some tokens
     auto mint_result = node_original->MintTokens( 100,
                                                   sgns::test::NextMintSourceHash(),
-                                                  "",
+                                                  "test",
                                                   sgns::TokenID::FromBytes( { 0x00 } ),
                                                   "",
                                                   std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -199,14 +334,14 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     mint_result = node_original->MintTokens( 2000,
                                              sgns::test::NextMintSourceHash(),
-                                             "",
+                                             "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
                                              "",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint_result.has_value() ) << "Mint transaction failed or timed out on node_original";
     mint_result = node_original->MintTokens( 30,
                                              sgns::test::NextMintSourceHash(),
-                                             "",
+                                             "test",
                                              sgns::TokenID::FromBytes( { 0x00 } ),
                                              "",
                                              std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -215,22 +350,13 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 
     std::cout << " 3 mint transactions on original node completed, Creating duplicated node..." << std::endl;
 
-    auto node_duplicated = CreateNode( "node_multi_1",
-                                       "0xcafe",
-                                       "1.0",
-                                       sgns::TokenID::FromBytes( { 0x00 } ),
-                                       false, // not full node
-                                       true   // is processor
-    );
-    node_duplicated->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-
-    sgns::test::assertWaitForCondition( [&]() { return node_duplicated->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 30000 ),
-                                        "node_duplicated not synced" );
+    auto node_duplicated = CreateNode( "node_multi_1", false, true );
+    node_duplicated->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_duplicated );
 
     mint_result = node_duplicated->MintTokens( 60000,
                                                sgns::test::NextMintSourceHash(),
-                                               "",
+                                               "test",
                                                sgns::TokenID::FromBytes( { 0x00 } ),
                                                "",
                                                std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -251,43 +377,16 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
 TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 {
     // Create 3 nodes - 2 with the same address, 1 different (full node for network)
-    auto node_full = CreateNode( "full_node_address_unique", // different self_address
-                                 "0xcafe",                   // dev_addr
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true, // is full node
-                                 true, // is processor
-                                 true );
+    auto node_full        = CreateNode( "full_node_address_unique", true, true, true );
+    auto node_same_addr_1 = CreateNode( "duplicate_address_12345" );
+    node_same_addr_1->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
-    sgns::test::assertWaitForCondition( [&]() { return node_full->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 30000 ),
-                                        "node_full not synced" );
-    auto node_same_addr_1 = CreateNode( "duplicate_address_12345", // same self_address
-                                        "0xcafe",                  // dev_addr
-                                        "1.0",
-                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                        false, //
-                                        false  // not processor
-    );
+    auto node_same_addr_2 = CreateNode( "duplicate_address_12345", false, true );
+    node_same_addr_2->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
 
-    node_same_addr_1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-
-    auto node_same_addr_2 = CreateNode( "duplicate_address_12345", // same self_address
-                                        "0xcafe",                  // dev_addr
-                                        "1.0",
-                                        sgns::TokenID::FromBytes( { 0x00 } ),
-                                        false, //
-                                        true   // is processor
-    );
-
-    node_same_addr_2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-
-    sgns::test::assertWaitForCondition( [&]() { return node_same_addr_1->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
-                                        "node_same_addr_1 not synced" );
-    sgns::test::assertWaitForCondition( [&]() { return node_same_addr_2->GetState() == GeniusNode::NodeState::READY; },
-                                        std::chrono::milliseconds( 20000 ),
-                                        "node_same_addr_2 not synced" );
+    WaitForReady( node_full );
+    WaitForReady( node_same_addr_1 );
+    WaitForReady( node_same_addr_2 );
 
     // Verify nodes have the same address (they should since they use same self_address)
     ASSERT_EQ( node_same_addr_1->GetAddress(), node_same_addr_2->GetAddress() )
@@ -308,11 +407,9 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_start );
 
     // Get initial transaction counts
-    auto tx_count_node1_start = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_start = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_full_start  = node_full->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED ).size();
+    auto tx_count_node1_start = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_start = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_full_start  = node_full->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Initial tx counts - Node1: {}, Node2: {}, Full: {}",
                   tx_count_node1_start,
@@ -324,7 +421,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
     auto mint_result_1 = node_same_addr_1->MintTokens( 50000000000, // 50 GNUS
                                                        sgns::test::NextMintSourceHash(),
-                                                       "",
+                                                       "test",
                                                        sgns::TokenID::FromBytes( { 0x00 } ),
                                                        "",
                                                        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -369,7 +466,7 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
     ASSERT_TRUE( transfer2_res.has_value() ) << "Transfer 2 failed on node_same_addr_2";
 
     // Add peers to each node
-    node_same_addr_2->GetPubSub()->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
+    node_same_addr_2->AddPeers( { node_same_addr_1->GetPubSub()->GetInterfaceAddress() } );
 
     auto tx1_received = node_full->WaitForTransactionIncoming(
         transfer1_res.value(),
@@ -426,10 +523,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
                   balance_full_final );
 
     // Get final transaction counts
-    auto tx_count_node1_final = node_same_addr_1->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
-    auto tx_count_node2_final = node_same_addr_2->GetTransactions( TransactionManager::TransactionStatus::CONFIRMED )
-                                    .size();
+    auto tx_count_node1_final = node_same_addr_1->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    auto tx_count_node2_final = node_same_addr_2->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
 
     fmt::println( "Final tx counts - Node1: {}, Node2: {}", tx_count_node1_final, tx_count_node2_final );
 
@@ -445,107 +540,32 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 TEST_F( MultiAccountTest, NodeConsensusTest )
 {
     constexpr size_t kCertificatesPerBatch = 1;
-    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+    const auto       kCertificateDelay     = std::chrono::seconds( 1 );
 
-    auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
+    auto node_full   = CreateNode( "node_consensus_full", true, true, true );
+    auto node_client = CreateNode( "node_consensus_client" );
+    auto node_peer1  = CreateNode( "node_consensus_peer1" );
+    auto node_peer2  = CreateNode( "node_consensus_peer2" );
+    auto node_peer3  = CreateNode( "node_consensus_peer3" );
+
+    const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
+    for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        sgns::test::assertWaitForCondition(
-            [&]()
-            {
-                auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
-                return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
-                       node->GetTransactionManagerState() == TransactionManager::State::READY;
-            },
-            std::chrono::milliseconds( 30000 ),
-            "node blockchain not ready for consensus configuration" );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    }
+    for ( const auto &node : nodes )
+    {
+        ConfigureConsensus( node, kCertificatesPerBatch, kCertificateDelay );
+    }
 
-        auto blockchain    = sgns::MultiAccountTestAccess::GetBlockchain( node );
-        auto node_registry = blockchain ? blockchain->GetValidatorRegistry() : nullptr;
-        ASSERT_TRUE( node_registry );
-
-        node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
-        auto consensus_manager = sgns::MultiAccountTestAccess::GetConsensusManager( blockchain );
-        ASSERT_TRUE( consensus_manager );
-        consensus_manager->ConfigureCertificateDelay( kCertificateDelay );
-    };
-
-    auto node_full = CreateNode( "node_consensus_full",
-                                 "0xcafe",
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true,   // is full node
-                                 true,   // is processor
-                                 true ); // is genesis authorized
-
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_full not synced" );
-
-    auto node_client = CreateNode( "node_consensus_client",
-                                   "0xcafe",
-                                   "1.0",
-                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                   false, // not full node
-                                   false  // not processor
-    );
-
-    auto node_peer1 = CreateNode( "node_consensus_peer1",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-    auto node_peer2 = CreateNode( "node_consensus_peer2",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-    auto node_peer3 = CreateNode( "node_consensus_peer3",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-
-    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_client not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer1 not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer2 not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer3 not synced" );
-
-    configure_consensus_batch_and_delay( node_full );
-    configure_consensus_batch_and_delay( node_client );
-    configure_consensus_batch_and_delay( node_peer1 );
-    configure_consensus_batch_and_delay( node_peer2 );
-    configure_consensus_batch_and_delay( node_peer3 );
-
-    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
-    ASSERT_TRUE( full_blockchain );
-    auto registry = full_blockchain->GetValidatorRegistry();
+    auto registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
     ASSERT_TRUE( registry );
 
     fmt::println( "Nodes created. Registry loaded" );
     sgns::test::assertWaitForCondition(
         [&]()
         {
-            auto load = registry->LoadRegistry();
+            auto load = registry->LoadCurrentRegistry();
             return load.has_value() && !registry->GetRegistryCid().empty();
         },
         std::chrono::milliseconds( 30000 ),
@@ -557,14 +577,14 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
         sgns::test::assertWaitForCondition(
             [&]()
             {
-                auto load = registry->LoadRegistry();
-                return load.has_value() &&
-                       ( load.value().epoch() > epoch_before || registry->GetRegistryCid() != cid_before );
+                auto load = registry->LoadCurrentRegistry();
+                return load.has_value() && load.value().epoch() > epoch_before &&
+                       registry->GetRegistryCid() != cid_before;
             },
             std::chrono::milliseconds( 30000 ),
             "validator registry did not update" );
 
-        auto registry_after = registry->LoadRegistry();
+        auto registry_after = registry->LoadCurrentRegistry();
         ASSERT_TRUE( registry_after.has_value() );
         EXPECT_GT( registry_after.value().epoch(), epoch_before );
         EXPECT_NE( registry->GetRegistryCid(), cid_before );
@@ -609,16 +629,14 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto wait_client_registry_caught_up = [&]()
     {
-        auto client_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_client );
-        ASSERT_TRUE( client_blockchain );
-        auto client_registry = client_blockchain->GetValidatorRegistry();
+        auto client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
         ASSERT_TRUE( client_registry );
 
         sgns::test::assertWaitForCondition(
             [&]()
             {
-                auto full_load   = registry->LoadRegistry();
-                auto client_load = client_registry->LoadRegistry();
+                auto full_load   = registry->LoadCurrentRegistry();
+                auto client_load = client_registry->LoadCurrentRegistry();
                 return full_load.has_value() && client_load.has_value() &&
                        client_registry->GetRegistryCid() == registry->GetRegistryCid() &&
                        client_load.value().epoch() >= full_load.value().epoch();
@@ -629,7 +647,7 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto load_registry_state = [&]() -> std::pair<uint64_t, std::string>
     {
-        auto state = registry->LoadRegistry();
+        auto state = registry->LoadCurrentRegistry();
         EXPECT_TRUE( state.has_value() );
         if ( !state.has_value() )
         {
@@ -640,7 +658,10 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     auto [epoch_before, cid_before] = load_registry_state();
 
-    auto mint1 = node_client->MintTokens( 100, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint1 = node_client->MintTokens( 100,
+                                          sgns::test::NextMintSourceHash(),
+                                          "test",
+                                          TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
     fmt::println( "Mint 1 succeeded" );
 
@@ -649,7 +670,10 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 
     std::tie( epoch_before, cid_before ) = load_registry_state();
 
-    auto mint2 = node_client->MintTokens( 250, sgns::test::NextMintSourceHash(), "", TokenID::FromBytes( { 0x00 } ) );
+    auto mint2 = node_client->MintTokens( 250,
+                                          sgns::test::NextMintSourceHash(),
+                                          "test",
+                                          TokenID::FromBytes( { 0x00 } ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
     fmt::println( "Mint 2 succeeded" );
     assert_registry_updated( epoch_before, cid_before );
@@ -689,123 +713,47 @@ TEST_F( MultiAccountTest, NodeConsensusTest )
 TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 {
     constexpr size_t kCertificatesPerBatch = 5;
-    const auto       kCertificateDelay     = std::chrono::seconds( 7 );
+    const auto       kCertificateDelay     = std::chrono::seconds( 1 );
 
-    auto node_full = CreateNode( "node_consensus_batch5_full",
-                                 "0xcafe",
-                                 "1.0",
-                                 sgns::TokenID::FromBytes( { 0x00 } ),
-                                 true,   // is full node
-                                 true,   // is processor
-                                 true ); // is genesis authorized
+    auto node_full   = CreateNode( "node_consensus_batch5_full", true, true, true );
+    auto node_client = CreateNode( "node_consensus_batch5_client" );
+    auto node_peer1  = CreateNode( "node_consensus_batch5_peer1" );
+    auto node_peer2  = CreateNode( "node_consensus_batch5_peer2" );
+    auto node_peer3  = CreateNode( "node_consensus_batch5_peer3" );
 
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_full->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_full not synced" );
-
-    auto node_client = CreateNode( "node_consensus_batch5_client",
-                                   "0xcafe",
-                                   "1.0",
-                                   sgns::TokenID::FromBytes( { 0x00 } ),
-                                   false, // not full node
-                                   false  // not processor
-    );
-
-    auto node_peer1 = CreateNode( "node_consensus_batch5_peer1",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-    auto node_peer2 = CreateNode( "node_consensus_batch5_peer2",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-    auto node_peer3 = CreateNode( "node_consensus_batch5_peer3",
-                                  "0xcafe",
-                                  "1.0",
-                                  sgns::TokenID::FromBytes( { 0x00 } ),
-                                  false,
-                                  false );
-
-    auto configure_consensus_batch_and_delay = [&]( const std::shared_ptr<sgns::GeniusNode> &node )
+    const std::array nodes = { node_full, node_client, node_peer1, node_peer2, node_peer3 };
+    for ( size_t i = 1; i < nodes.size(); ++i )
     {
-        sgns::test::assertWaitForCondition(
-            [&]()
-            {
-                auto blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node );
-                return node && blockchain && sgns::MultiAccountTestAccess::GetConsensusManager( blockchain ) &&
-                       node->GetTransactionManagerState() == TransactionManager::State::READY;
-            },
-            std::chrono::milliseconds( 30000 ),
-            "node blockchain not ready for consensus configuration" );
+        nodes[i]->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    }
+    for ( const auto &node : nodes )
+    {
+        ConfigureConsensus( node, kCertificatesPerBatch, kCertificateDelay );
+    }
 
-        auto blockchain    = sgns::MultiAccountTestAccess::GetBlockchain( node );
-        auto node_registry = blockchain ? blockchain->GetValidatorRegistry() : nullptr;
-        ASSERT_TRUE( node_registry );
-
-        node_registry->SetCertificatesPerBatch( kCertificatesPerBatch );
-        auto consensus_manager = sgns::MultiAccountTestAccess::GetConsensusManager( blockchain );
-        ASSERT_TRUE( consensus_manager );
-        consensus_manager->ConfigureCertificateDelay( kCertificateDelay );
-    };
-
-    node_client->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer1->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer2->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-    node_peer3->GetPubSub()->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
-
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_client->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_client not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer1->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer1 not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer2->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer2 not synced" );
-    sgns::test::assertWaitForCondition(
-        [&]() { return node_peer3->GetTransactionManagerState() == TransactionManager::State::READY; },
-        std::chrono::milliseconds( 30000 ),
-        "node_peer3 not synced" );
-
-    configure_consensus_batch_and_delay( node_full );
-    configure_consensus_batch_and_delay( node_client );
-    configure_consensus_batch_and_delay( node_peer1 );
-    configure_consensus_batch_and_delay( node_peer2 );
-    configure_consensus_batch_and_delay( node_peer3 );
-
-    auto full_blockchain = sgns::MultiAccountTestAccess::GetBlockchain( node_full );
-    ASSERT_TRUE( full_blockchain );
-    auto registry = full_blockchain->GetValidatorRegistry();
+    auto registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_full );
     ASSERT_TRUE( registry );
 
     sgns::test::assertWaitForCondition(
         [&]()
         {
-            auto load = registry->LoadRegistry();
+            auto load = registry->LoadCurrentRegistry();
             return load.has_value() && !registry->GetRegistryCid().empty();
         },
         std::chrono::milliseconds( 30000 ),
         "validator registry not initialized" );
 
-    auto registry_state = registry->LoadRegistry();
+    auto registry_state = registry->LoadCurrentRegistry();
     ASSERT_TRUE( registry_state.has_value() );
     const auto initial_epoch = registry_state.value().epoch();
     const auto initial_cid   = registry->GetRegistryCid();
 
     auto assert_registry_immutable = [&]( const char *step )
     {
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( 10 );
+        const auto deadline = std::chrono::steady_clock::now() + kCertificateDelay + std::chrono::seconds( 1 );
         while ( std::chrono::steady_clock::now() < deadline )
         {
-            auto load = registry->LoadRegistry();
+            auto load = registry->LoadCurrentRegistry();
             ASSERT_TRUE( load.has_value() ) << "registry load failed during " << step;
             EXPECT_EQ( load.value().epoch(), initial_epoch ) << "registry epoch changed unexpectedly at " << step;
             EXPECT_EQ( registry->GetRegistryCid(), initial_cid ) << "registry CID changed unexpectedly at " << step;
@@ -815,34 +763,32 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
 
     auto mint1 = node_client->MintTokens( 100,
                                           sgns::test::NextMintSourceHash(),
-                                          "",
+                                          "test",
                                           TokenID::FromBytes( { 0x00 } ),
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint1.has_value() ) << "Mint 1 failed on node_client";
-    assert_registry_immutable( "tx1" );
 
     auto mint2 = node_client->MintTokens( 250,
                                           sgns::test::NextMintSourceHash(),
-                                          "",
+                                          "test",
                                           TokenID::FromBytes( { 0x00 } ),
                                           "",
                                           std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
     ASSERT_TRUE( mint2.has_value() ) << "Mint 2 failed on node_client";
-    assert_registry_immutable( "tx2" );
 
     auto transfer1 = node_client->TransferFunds( 75,
                                                  node_peer1->GetAddress(),
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer1.has_value() ) << "Transfer 1 failed on node_client";
-    assert_registry_immutable( "tx3" );
 
     auto transfer2 = node_client->TransferFunds( 40,
                                                  node_peer2->GetAddress(),
                                                  TokenID::FromBytes( { 0x00 } ),
                                                  std::chrono::milliseconds( OUTGOING_TIMEOUT_MILLISECONDS ) );
     ASSERT_TRUE( transfer2.has_value() ) << "Transfer 2 failed on node_client";
+    // Waiting once after the fourth certificate detects any premature update from the partial batch.
     assert_registry_immutable( "tx4" );
 
     auto transfer3 = node_client->TransferFunds( 10,
@@ -854,14 +800,14 @@ TEST_F( MultiAccountTest, NodeConsensusBatch5Test )
     sgns::test::assertWaitForCondition(
         [&]()
         {
-            auto load = registry->LoadRegistry();
-            return load.has_value() &&
-                   ( load.value().epoch() > initial_epoch || registry->GetRegistryCid() != initial_cid );
+            auto load = registry->LoadCurrentRegistry();
+            return load.has_value() && load.value().epoch() > initial_epoch &&
+                   registry->GetRegistryCid() != initial_cid;
         },
         std::chrono::milliseconds( 60000 ),
         "validator registry did not update after 5th certificate" );
 
-    auto registry_after = registry->LoadRegistry();
+    auto registry_after = registry->LoadCurrentRegistry();
     ASSERT_TRUE( registry_after.has_value() );
     EXPECT_GT( registry_after.value().epoch(), initial_epoch );
     EXPECT_NE( registry->GetRegistryCid(), initial_cid );

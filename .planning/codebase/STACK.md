@@ -1,182 +1,124 @@
 # Technology Stack
 
-**Analysis Date:** 2026-05-27
+**Analysis Date:** 2026-05-25
 
 ## Languages
 
 **Primary:**
-- C++ (C++17) - Entire core project: blockchain, consensus, processing, networking, crypto, storage
-  - Standard set via `CMAKE_CXX_STANDARD 17` with `CMAKE_CXX_STANDARD_REQUIRED ON` in `build/CommonCompilerOptions.cmake`
+- C++17 - Core blockchain node, networking, storage, crypto, proof system, processing engine, EVM relay
+- C (via some third-party dependencies)
 
 **Secondary:**
-- Python 3 - Test data generation scripts in `test/src/processing_datatypes/` (create models, convert NIfTI)
-- Java - Android keystore support in `src/local_secure_storage/impl/KeyStoreHelper.java`
-- JavaScript - Static documentation search in `docs/hdoc/`
-- Go - Used indirectly by `gRPCForSuperGenius` for gnostic/OpenAPI-to-protobuf toolchain
+- JavaScript/TypeScript - zkPOC smart contract testing and deployment (`zkPOC/`)
+- Solidity - Smart contracts in zkPOC (`zkPOC/`)
+- Go - gRPC/OpenAPI tooling (`gRPCForSuperGenius/`), EVM relay's go-ethereum integration (`evmrelay/go-ethereum/`)
+- Rust - TrustWallet `wallet_core_rs` library (via thirdparty)
 
 ## Runtime
 
 **Environment:**
-- C++17 compiler required (GCC, Clang, or MSVC)
-- No managed runtime — compiled to native binaries/libraries
-- Cross-compilation via CMake toolchains for Android (NDK r27b) and iOS
+- C++17 compiler toolchain (Clang, GCC, MSVC 2022)
+- CMake 3.22+ build system
+- Ninja generator (primary); Visual Studio 17 2022 generator (Windows)
 
 **Package Manager:**
-- Git submodules (preferred dependency model — `thirdparty` repo at `../thirdparty/`)
-- CMake `find_package` with pre-built thirdparty libraries
-- Third-party dependency versions managed in `build/CommonBuildParameters.cmake`
-- npm (for QuickType code generation in `SGProcessingManager`)
+- CMake FetchContent / submodule-based dependency management
+- Thirdparty repository (`github.com/GeniusVentures/thirdparty`) provides pre-built dependencies
+- Lockfile: Not applicable (build from thirdparty)
 
 ## Frameworks
 
 **Core:**
-- Boost 1.85.0 - Foundational framework (Asio, JSON, Outcome, DI, Log, ProgramOptions, Filesystem, etc.)
-  - Configured in `build/CommonBuildParameters.cmake` lines 1-221
-  - Components used: container, date_time, filesystem, random, regex, system, thread, log, log_setup, program_options, unit_test_framework, json, context, coroutine, Boost.DI
-- Protocol Buffers (protobuf) - Message serialization across all subsystems
-  - Configured in `build/CommonBuildParameters.cmake` lines 41-87
-  - `.proto` files located in: `src/account/proto/`, `src/blockchain/impl/proto/`, `src/crdt/proto/`, `src/crdt/globaldb/proto/`, `src/processing/proto/`, `src/proof/proto/`
-  - gRPC proto includes in `gRPCForSuperGenius/proto-include/`
-
-**Networking:**
-- libp2p - Peer-to-peer networking stack (Kademlia DHT, Identify, Ping, GossipSub, basic host)
-  - Configured in `build/CommonBuildParameters.cmake` lines 240-248
-- Boost.Asio - Async I/O for HTTP and network communication (`src/coinprices/coinprices.cpp`)
-- c-ares - Async DNS resolution (`build/CommonBuildParameters.cmake` lines 236-248)
-
-**AI/ML:**
-- MNN (Mobile Neural Network) - On-device ML inference engine
-  - Configured in `build/CommonBuildParameters.cmake` lines 92-103
-  - Used by the processing subsystem for ML task execution
-
-**Graphics:**
-- Vulkan (via MoltenVK on macOS) - GPU compute for processing tasks
-  - Configured in `build/CommonBuildParameters.cmake` lines 251-259
-  - macOS uses MoltenVK bridge (`build/OSX/CMakeLists.txt` lines 30-31)
-
-**Zero-Knowledge Proofs:**
-- zkLLVM - Zero-knowledge proof compiler infrastructure
-  - Downloaded automatically from GitHub Releases (`build/CommonCompilerOptions.cmake` lines 57-126)
-  - crypto3 libraries: algebra, block, blueprint, codec, math, multiprecision, pkpad, pubkey, random, zk
-  - marshalling libraries: core, crypto3_algebra, crypto3_multiprecision, crypto3_zk
+- Boost 1.85.0 - Extensive use: asio, beast, json, log, program_options, coroutine, context, filesystem, date_time, random, regex, system, thread, container, unit_test_framework
+  - Config: `build/CommonBuildParameters.cmake` (lines 2-9)
+- Protobuf - Serialization for gRPC, CRDT deltas, processing definitions, proof data, account messages
+  - Version resolved via thirdparty prebuilt
 
 **Testing:**
-- Google Test (GTest) + Google Mock (GMock) - Unit testing framework
-  - Configured in `build/CommonBuildParameters.cmake` lines 13-38
-  - Test registration via `addtest()` macro in `cmake/functions.cmake`
-  - XML output for CI in `xunit/` directory
-  - Run with: `ctest -C [Debug|Release]`
+- Google Test (GTest) - Unit testing framework
+  - Config: enabled via `-DBUILD_TESTING=ON` / `-DTESTING=ON`
+  - Located: `build/CommonBuildParameters.cmake` (line 13)
+  - Run: `ctest -C [Debug|Release]`
 
 **Build/Dev:**
-- CMake 3.22+ - Build system generator
-  - Platform-specific entry points in `build/{Linux,Windows,OSX,Android,iOS}/CMakeLists.txt`
-  - Shared configuration in `build/CommonBuildParameters.cmake` and `build/CommonCompilerOptions.cmake`
-  - Helper functions in `cmake/functions.cmake`
-- Ninja - Build executor (Linux/macOS)
-- Visual Studio 17 2022 - Build executor (Windows)
-- clang-format / clang-tidy - Code formatting and static analysis (`.clang-format`, `.clang-tidy`, `.clangd` present)
+- CMake 3.22+ - Cross-platform build system
+- Ninja - Build executor (macOS/Linux)
+- Visual Studio 17 2022 - Build system (Windows)
+- Android NDK r27b - Android cross-compilation
+- clang-format (Microsoft-based style) - `/.clang-format`
+- clang-tidy - Static analysis (`/.clang-tidy`)
+- clangd - Language server (`/.clangd`)
 
 ## Key Dependencies
 
-**Critical (required for build):**
+**Critical (thirdparty prebuilt):**
+- `Boost 1.85.0` - Concurrency, networking (Beast/ASIO), logging, JSON, coroutines, serialization
+- `Protobuf` - Binary serialization protocol for gRPC and inter-node messaging
+- `OpenSSL` - TLS, cryptographic primitives (`build/CommonBuildParameters.cmake` lines 106-112)
+- `RocksDB` - Persistent key-value storage for blockchain state (`src/storage/rocksdb/`)
+- `libp2p` v0.1.2 - Peer-to-peer networking (`build/CommonBuildParameters.cmake` lines 240-241)
+- `ipfs-lite-cpp` + `ipfs-pubsub` + `ipfs-bitswap-cpp` - IPFS content-addressed storage and messaging
+- `MNN` - AI/ML inference engine (`build/CommonBuildParameters.cmake` lines 92-96)
+- `Vulkan` / MoltenVK - GPU compute for processing (`build/CommonBuildParameters.cmake` lines 251-259)
+- `zkLLVM` - Zero-knowledge proof circuit compiler (`build/CommonBuildParameters.cmake` lines 57-126, 324-389)
+- `LLVM` - Low-level compiler infrastructure for proof generation (`src/proof/CMakeLists.txt`)
+- `TrustWalletCore` + `TrezorCrypto` + `wallet_core_rs` - Wallet operations, key management (`build/CommonBuildParameters.cmake` lines 400-425)
+- `libsecp256k1` - secp256k1 elliptic curve cryptography (Ethereum)
+- `ed25519` - Ed25519 signature scheme (`build/CommonBuildParameters.cmake` line 274)
+- `SQLite3` + `SQLiteModernCpp` - Local secure storage (`build/CommonBuildParameters.cmake` lines 224-233)
+- `libssh2` - SSH protocol (`build/CommonBuildParameters.cmake` lines 305-307)
+- `gnus_upnp` - UPnP NAT traversal (`build/CommonBuildParameters.cmake` lines 393-394)
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| Boost | 1.85.0 | Foundation: Asio, DI, JSON, Outcome, Log, Filesystem, Thread, Coroutine, etc. |
-| Protocol Buffers | (via thirdparty) | Binary serialization for all internal and gRPC messages |
-| OpenSSL | (via thirdparty) | TLS, cryptographic primitives |
-| RocksDB | (via thirdparty) | Persistent key-value storage engine |
-| libp2p | (via thirdparty) | P2P networking: host, Kademlia DHT, GossipSub, Identify |
-| zkLLVM | (auto-downloaded) | ZK proof compiler infrastructure |
-| MNN | (via thirdparty) | Mobile neural network inference engine |
-| fmt | (via thirdparty) | Modern C++ string formatting |
-| spdlog | 1.4.2 (via thirdparty) | Fast C++ logging library |
-| soralog | (via thirdparty) | Structured logging on top of spdlog |
-| RapidJSON | (via thirdparty) | JSON parsing (CoinGecko API responses) |
-| nlohmann/json | (via thirdparty) | Modern C++ JSON library |
-| yaml-cpp | (via thirdparty) | YAML parsing |
-| GSL (Microsoft.GSL) | (via thirdparty) | Guidelines Support Library |
-
-**Infrastructure:**
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| SQLite3 | (via thirdparty) | Lightweight embedded database |
-| SQLiteModernCpp | (via thirdparty) | Modern C++ wrapper for SQLite |
-| Snappy | (via thirdparty) | Compression library (used by RocksDB) |
-| zlib | (via thirdparty) | Compression library |
-| xxHash | (via thirdparty) | Fast non-cryptographic hashing |
-| tsl_hat_trie | (via thirdparty) | Hat-trie data structure |
-| libssh2 | (via thirdparty) | SSH2 protocol library |
-| stb | (via thirdparty) | Single-file public domain libraries (image loading) |
-
-**IPFS Stack:**
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| ipfs-lite-cpp | (via thirdparty) | Lightweight IPFS client (content-addressed storage) |
-| ipfs-pubsub | (via thirdparty) | IPFS pubsub (GossipSub messaging) |
-| ipfs-bitswap-cpp | (via thirdparty) | IPFS Bitswap protocol (data exchange) |
-
-**Crypto Stack:**
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| ed25519 | (via thirdparty) | Ed25519 digital signatures |
-| secp256k1 | (via thirdparty) | ECDSA on secp256k1 curve (Bitcoin/Ethereum compatible) |
-| TrezorCrypto | (via thirdparty) | Hardware-wallet compatible crypto primitives |
-| wallet_core_rs | (via thirdparty) | Rust-based wallet core bindings |
-| TrustWalletCore | (via thirdparty) | Cross-platform multi-coin wallet library |
-
-**Submodules (Git):**
-- `gRPCForSuperGenius` - gRPC and OpenAPI protocol definitions
-- `GeniusKDF` - Key derivation function module
-- `ProofSystem` - Zero-knowledge proof circuit system
-- `SGProcessingManager` - Processing pipeline schema and C++ headers
-- `evmrelay` - EVM P2P relay (discv4, RLPx, ETH protocol)
-- `docs` - Documentation submodule (`sg-docs`)
+**Supporting:**
+- `fmt` - Modern C++ string formatting
+- `spdlog` v1.4.2 + `soralog` - Logging frameworks
+- `rapidjson` + `nlohmann_json` - JSON parsing
+- `xxHash` - Fast hash function
+- `Snappy` - Compression for RocksDB
+- `zlib` - Compression
+- `yaml-cpp` - YAML configuration parsing
+- `tsl_hat_trie` - Hat-trie data structure
+- `Boost.DI` - Dependency injection
+- `Microsoft.GSL` - Guidelines Support Library
+- `c-ares` - Async DNS resolution
+- `stb` - Single-file image/texture loading
+- `AsyncIOManager` - Async I/O operations
 
 ## Configuration
 
 **Environment:**
-- Build type: `CMAKE_BUILD_TYPE` (Debug, Release, RelWithDebInfo)
-- Testing: `-DTESTING=ON|OFF` (maps to `BUILD_TESTING`)
-- Network: `SGNS_NETWORK` — when not "release", `DEV_NET` compile definition added (`cmake/version.cmake`)
-- Proofs: `BUILD_WITH_PROOFS` compile definition (`src/account/CMakeLists.txt`)
-- Debug logs: `SGNS_DEBUGLOGS` and `SGNS_DEBUG` compile definitions
-- Custom zkLLVM and thirdparty paths via `ZKLLVM_BUILD_DIR`, `THIRDPARTY_DIR`, `THIRDPARTY_BUILD_DIR`
-- Cross-compilation: `ANDROID_ABI`, `ABI_SUBFOLDER_NAME`, `IOS` variable
+- All dependencies resolved via `THIRDPARTY_DIR` or auto-detected from `../thirdparty/`
+- `ZKLLVM_BUILD_DIR` - Path to zkLLVM prebuilt (or auto-downloaded from GitHub Releases)
+- `SGNS_NETWORK` - Network mode (`release` or development with `DEV_NET`)
+- Build type: `CMAKE_BUILD_TYPE` (`Debug`, `Release`, `RelWithDebInfo`)
+- Optional: `SGNS_STACKTRACE_BACKTRACE` for POSIX stacktraces
+- Optional: `SANITIZE_CODE` for sanitizer builds
+- Optional: `ABI_SUBFOLDER_NAME` for cross-ABI builds (e.g., `aarch64`)
+- `.env` file present in `evmrelay/examples/` - contains environment configuration (not read)
 
 **Build:**
-- `cmake/version.cmake` — Project version (3.7.0), git-derived version metadata
-- `cmake/functions.cmake` — `addtest()`, `add_proto_library()`, `compile_proto_to_cpp()`
-- `cmake/install.cmake` — Install rules
-- `cmake/config.cmake.in` — CMake package config template
-- `build/CommonCompilerOptions.cmake` — Compiler flags, standards, version info
-  - Package version: 21.0.0-pre.12, Vendor: Genius Ventures
-- `build/CommonBuildParameters.cmake` — All third-party dependency resolution
-- `build/CompilationFlags.cmake` — Platform-specific compilation flags
-
-**Static Analysis:**
-- `.clang-format`, `.clang-tidy`, `.clangd` at repo root
-- `.clang-tidy` disabled for generated protobuf code via `disable_clang_tidy()` in `cmake/functions.cmake`
+- `build/<Platform>/CMakeLists.txt` - Platform-specific top-level CMake (OSX, Linux, Windows, Android, iOS)
+- `build/CommonBuildParameters.cmake` (547 lines) - All thirdparty dependency paths and configuration
+- `build/CommonCompilerOptions.cmake` (195 lines) - Compiler standard, flags, toolchain setup
+- `build/CompilationFlags.cmake` (38 lines) - Warning flags per compiler
+- `cmake/version.cmake` (56 lines) - Git-based versioning: project version 3.7.0, git tag/branch/commit
+- `cmake/functions.cmake` - Helper CMake functions
+- Output: `compile_commands.json` generated for IDE support
 
 ## Platform Requirements
 
 **Development:**
-- macOS, Linux, or Windows host
-- CMake 3.22+, Ninja or Visual Studio 2022
-- Git with submodule support: `git submodule update --init --recursive`
-- Python 3 (for test data generation scripts)
-- Thirdparty dependencies pre-built or auto-downloaded from GitHub Releases
+- macOS 13.0+ (x86_64 + ARM universal binary)
+- Linux (x86_64, aarch64)
+- Windows 10+ (MSVC 2022, Win32 target 0x0A00)
+- CMake 3.22+, Ninja, Git
+- Thirdparty build directory (sibling `../thirdparty/`)
 
-**Production - Target Platforms:**
-- Linux (x86_64, aarch64/ARM)
-- Windows (x86_64 — MSVC, Windows 10+)
-- macOS (universal: x86_64 + ARM64, deployment target 13.0)
-- iOS (cross-compiled from macOS)
-- Android (armeabi-v7a, arm64-v8a, x86_64 — NDK r27b)
+**Production:**
+- Desktop: macOS (fat binary), Linux (x86_64/aarch64), Windows
+- Mobile: Android (armeabi-v7a, arm64-v8a, x86_64), iOS
+- Native C++ library deployable on all targets
 
 ---
 
-*Stack analysis: 2026-05-27*
+*Stack analysis: 2026-05-25*
