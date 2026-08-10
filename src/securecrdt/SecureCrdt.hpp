@@ -139,15 +139,16 @@ namespace sgns::securecrdt
          *        deltas only (crdt_datastore.cpp, !created_by_self). Rejects
          *        (returns an empty vector) on parse failure or invalid
          *        signature/value, accepts (returns std::nullopt) otherwise.
-         * @param[in] base_key Registered base key this entry was registered under.
-         * @param[in] entry Resolved SecureCrdtRegistry entry for base_key.
+         *        Derives the concrete base key from `element.key()` so registry
+         *        patterns containing regular expressions are never used as
+         *        datastore keys.
+         * @param[in] entry Resolved SecureCrdtRegistry entry for the element.
          * @param[in] element Incoming CRDT element (`base_key` value or `sig/<addr>` child).
          * @return std::nullopt to accept, or an (empty) vector to reject.
          */
         std::optional<std::vector<sgns::crdt::pb::Element>> FilterSecureCrdtUpdate(
-            const sgns::crdt::HierarchicalKey &base_key,
-            const SecureCrdtRegistryEntry     &entry,
-            const sgns::crdt::pb::Element     &element );
+            const SecureCrdtRegistryEntry &entry,
+            const sgns::crdt::pb::Element &element );
 
         std::shared_ptr<sgns::crdt::GlobalDB> db_;
         std::string                           topic_;

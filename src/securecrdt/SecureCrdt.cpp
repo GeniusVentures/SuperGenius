@@ -207,16 +207,15 @@ namespace sgns::securecrdt
         const auto   entries        = SecureCrdtRegistry::AllEntries();
         for ( const auto &entry : entries )
         {
-            const std::string  pattern     = "/?" + entry.key_pattern + "(/sig/[^/]+)?";
-            sgns::crdt::HierarchicalKey base_key( entry.key_pattern );
+            const std::string pattern = "/?" + entry.key_pattern + "(/sig/[^/]+)?";
             const bool registered = db_->RegisterElementFilter(
                 pattern,
-                [weak_self, base_key, entry]( const sgns::crdt::pb::Element &element )
+                [weak_self, entry]( const sgns::crdt::pb::Element &element )
                     -> std::optional<std::vector<sgns::crdt::pb::Element>>
                 {
                     if ( auto strong = weak_self.lock() )
                     {
-                        return strong->FilterSecureCrdtUpdate( base_key, entry, element );
+                        return strong->FilterSecureCrdtUpdate( entry, element );
                     }
                     return std::nullopt;
                 } );
@@ -228,13 +227,21 @@ namespace sgns::securecrdt
     }
 
     std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterSecureCrdtUpdate(
-        const sgns::crdt::HierarchicalKey &base_key,
-        const SecureCrdtRegistryEntry     &entry,
-        const sgns::crdt::pb::Element     &element )
+        const SecureCrdtRegistryEntry &entry,
+        const sgns::crdt::pb::Element &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
         std::vector<uint8_t>              element_bytes( element.value().begin(), element.value().end() );
         const sgns::crdt::HierarchicalKey element_key( element.key() );
+        const auto                        key_segments = element_key.GetList();
+        const bool is_signature = key_segments.size() >= 2 && key_segments[key_segments.size() - 2] == "sig";
+
+        sgns::crdt::HierarchicalKey base_key = element_key;
+        if ( is_signature )
+        {
+            const auto signature_suffix = element_key.GetKey().rfind( "/sig/" );
+            base_key = sgns::crdt::HierarchicalKey( element_key.GetKey().substr( 0, signature_suffix ) );
+        }
 
         if ( element_key == base_key )
         {
@@ -249,7 +256,7 @@ namespace sgns::securecrdt
             return std::nullopt;
         }
 
-        const std::string address       = element_key.GetList().back();
+        const std::string address       = key_segments.back();
         auto              current_value = db_->Get( base_key );
         if ( current_value.has_error() )
         {
