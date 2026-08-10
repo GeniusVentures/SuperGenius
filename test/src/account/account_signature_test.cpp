@@ -1,6 +1,11 @@
 #include <gtest/gtest.h>
 
 #include <boost/filesystem/operations.hpp>
+#include <TrustWalletCore/TWCurve.h>
+#include <WalletCore/Hash.h>
+#include <WalletCore/PrivateKey.h>
+#include <ProofSystem/EthereumKeyGenerator.hpp>
+
 #include <nil/crypto3/algebra/marshalling.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/pubkey/algorithm/sign.hpp>
@@ -164,6 +169,37 @@ TEST( GeniusSignerTest, SignaturesInteroperateWithCrypto3 )
 
     const auto crypto3_signature = SignWithCrypto3( crypto3_key, message );
     EXPECT_TRUE( GeniusSigner::VerifySignature( signer.GetAddress(), crypto3_signature, message ) );
+}
+
+/// GeniusAccount now derives its address from the stored key seed with
+/// boost::multiprecision + libsecp256k1 instead of crypto3. Reproduce the
+/// legacy crypto3 derivation end to end and pin the account address to it, so
+/// no already-provisioned wallet can silently resolve to a different address.
+TEST_F( GeniusAccountSignatureTest, AccountAddressMatchesLegacyCrypto3SeedDerivation )
+{
+    // Legacy path: TW-sign the fixed ElGamal seed, SHA256 it, read the digest
+    // big-endian as a 256-bit key seed, then derive the key through crypto3.
+    const auto     private_key_bytes = base::unhex( PRIVATE_KEY ).value();
+    TW::PrivateKey tw_private_key( private_key_bytes );
+
+    const auto signed_secret = tw_private_key.sign( TW::Data( GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED.cbegin(),
+                                                              GeniusAccount::ELGAMAL_PUBKEY_PREDEFINED.cend() ),
+                                                    TWCurveSECP256k1 );
+    ASSERT_FALSE( signed_secret.empty() );
+
+    const nil::crypto3::multiprecision::uint256_t key_seed( TW::Hash::sha256( signed_secret ) );
+    const ethereum::EthereumKeyGenerator          legacy_key( key_seed );
+
+    // New path: the same seed derivation, now free of crypto3.
+    const auto account = GeniusAccount::NewFromPrivateKey( TokenID::FromBytes( { 0x00 } ), PRIVATE_KEY, path_ );
+    ASSERT_NE( account, nullptr );
+
+    ASSERT_EQ( account->GetAddress().size(), 128 ); // guard against an empty == empty pass
+    EXPECT_EQ( account->GetAddress(), legacy_key.GetEntirePubValue() );
+
+    // The signature the account produces must still verify under crypto3 at that address.
+    const std::vector<uint8_t> message = { 's', 'e', 'e', 'd' };
+    EXPECT_TRUE( VerifyWithCrypto3( account->GetAddress(), account->Sign( message ), message ) );
 }
 
 TEST_F( GeniusAccountSignatureTest, Crypto3AndLibsecp256k1AreCompatible )
