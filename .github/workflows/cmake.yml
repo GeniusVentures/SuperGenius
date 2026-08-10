@@ -745,15 +745,16 @@ jobs:
         run: ctest . -j 4 -C ${{ matrix.build-type }} --output-on-failure
 
       - name: Collect macOS crash diagnostics
+        id: collect_macos_crash_diagnostics
         if: ${{ failure() && matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
         shell: bash
         run: |
           marker="$RUNNER_TEMP/macos-tests-started"
           output_dir="$RUNNER_TEMP/macos-crash-reports"
           report_list="$RUNNER_TEMP/macos-crash-report-list.txt"
+          echo "reports_found=false" >> "$GITHUB_OUTPUT"
 
           if [ ! -f "$marker" ]; then
-            echo "CTest did not start; no diagnostic marker exists."
             exit 0
           fi
 
@@ -767,12 +768,7 @@ jobs:
               find "$report_dir" \
                 -type f \
                 -newer "$marker" \
-                \( \
-                  -name 'blockchain_genesis_test*.ips' -o \
-                  -name 'blockchain_genesis_test*.crash' -o \
-                  -name 'multi_account_test*.ips' -o \
-                  -name 'multi_account_test*.crash' \
-                \) \
+                \( -name '*.ips' -o -name '*.crash' \) \
                 -print \
                 2>/dev/null || true
             done
@@ -786,15 +782,10 @@ jobs:
           done
 
           if [ ! -s "$report_list" ]; then
-            echo "::warning::No macOS crash report appeared within 30 seconds."
-            echo "Recent ReportCrash activity:"
-            /usr/bin/log show \
-              --last 5m \
-              --style compact \
-              --predicate 'process == "ReportCrash" OR process == "osanalyticshelper"' \
-              || true
             exit 0
           fi
+
+          echo "reports_found=true" >> "$GITHUB_OUTPUT"
 
           while IFS= read -r report; do
             report_name="$(basename "$report")"
@@ -806,12 +797,11 @@ jobs:
           done < "$report_list"
 
       - name: Upload macOS crash diagnostics
-        if: ${{ failure() && matrix.target == 'OSX' && matrix.build-type == 'Debug' }}
+        if: ${{ failure() && steps.collect_macos_crash_diagnostics.outputs.reports_found == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: macos-debug-crash-reports-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/macos-crash-reports/
-          if-no-files-found: warn
           retention-days: 14
 
       - name: Save CTest cost data
