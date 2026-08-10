@@ -200,7 +200,9 @@ namespace sgns::trustedpeer
             return propose_result.error();
         }
 
-        auto sign_result = secure_crdt_->AddSignature( base_key_, bootstrapper_address_, ephemeral_signature );
+        auto sign_result = secure_crdt_->AddSignature( base_key_, bootstrapper_address_,
+                                                        std::vector<uint8_t>( ephemeral_signature.begin(),
+                                                                               ephemeral_signature.end() ) );
         if ( sign_result.has_error() )
         {
             logger_->error( "{}: AddSignature failed", __func__ );
@@ -221,7 +223,8 @@ namespace sgns::trustedpeer
                                                                      const std::vector<uint8_t> &signature )
     {
         logger_->info( "{}: signing membership change (signer={})", __func__, signer_address );
-        return secure_crdt_->AddSignature( base_key_, signer_address, signature );
+        return secure_crdt_->AddSignature( base_key_, signer_address,
+                                            std::vector<uint8_t>( signature.begin(), signature.end() ) );
     }
 
     outcome::result<bool> TrustedPeerRegistry::TryConfirm()
