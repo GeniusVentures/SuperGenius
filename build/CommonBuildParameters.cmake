@@ -497,6 +497,16 @@ link_directories(
     ${ipfs-lite-cpp_LIB_DIR}
 )
 
+# enable_testing() must run before any add_subdirectory() below so that CTest's
+# per-directory CTestTestfile.cmake chain (root -> SGProcessingManager -> test ->
+# capability/artifacts/capture) is actually generated; calling it only inside the
+# later if(BUILD_TESTING) block (after these subdirectories are already configured)
+# left ctest silently unable to discover any test registered under them, even
+# though the leaf CMakeLists.txt files call enable_testing()/add_test() themselves.
+if(BUILD_TESTING)
+    enable_testing()
+endif()
+
 add_subdirectory(${PROJECT_ROOT}/ProofSystem ${CMAKE_BINARY_DIR}/ProofSystem)
 add_subdirectory(${PROJECT_ROOT}/SGProcessingManager ${CMAKE_BINARY_DIR}/SGProcessingManager)
 add_subdirectory(${PROJECT_ROOT}/evmrelay ${CMAKE_BINARY_DIR}/evmrelay)
@@ -505,7 +515,6 @@ add_subdirectory(${PROJECT_ROOT}/src ${CMAKE_BINARY_DIR}/src)
 #add_subdirectory(${PROJECT_ROOT}/GeniusKDF ${CMAKE_BINARY_DIR}/GeniusKDF)
 
 if(BUILD_TESTING)
-    enable_testing()
     add_subdirectory(${PROJECT_ROOT}/test ${CMAKE_BINARY_DIR}/test)
 endif()
 
