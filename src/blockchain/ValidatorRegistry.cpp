@@ -25,6 +25,7 @@
 #include "blockchain/impl/proto/ValidatorRegistry.pb.h"
 #include "crypto/hasher.hpp"
 #include "crdt/graphsync_dagsyncer.hpp"
+#include "multisig/MultiSig.hpp"
 #include "outcome/outcome.hpp"
 
 namespace sgns
@@ -1321,10 +1322,14 @@ namespace sgns
             logger_->debug( "{}: verifying genesis update", __func__ );
             for ( const auto &signature : update.signatures() )
             {
-                if ( signature.validator_id() == genesis_authority_ &&
-                     GeniusAccount::VerifySignature( signature.validator_id(),
-                                                     signature.signature(),
-                                                     signing_bytes.value() ) )
+                if ( signature.validator_id() != genesis_authority_ )
+                {
+                    continue;
+                }
+                if ( multisig::VerifyPayloadSignature( signature.validator_id(),
+                                                       std::vector<uint8_t>( signature.signature().begin(),
+                                                                              signature.signature().end() ),
+                                                       signing_bytes.value() ) )
                 {
                     logger_->info( "{}: genesis update verified", __func__ );
                     return true;

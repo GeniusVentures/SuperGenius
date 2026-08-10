@@ -220,6 +220,12 @@ namespace sgns
         {
             return Error::DATABASE_WRITE_ERROR;
         }
+        // upnp_enabled is intentionally forced false here: this helper writes the
+        // network_config.json used by tests/examples (see class doc comment), which must
+        // not depend on real host-LAN UPnP/SSDP discovery. Without this, GeniusNode
+        // defaults upnp_enabled to true and every node performs real, blocking, non-
+        // deterministic UPnP network I/O during construction (see multi-node-crdt-
+        // instability debug session for the crash this caused).
         ofs << "{ \"port_seed\": " << port_seed << ", \"auto_dht\": " << ( auto_dht ? "true" : "false" )
             << ", \"upnp_enabled\": false }";
         return outcome::success();
