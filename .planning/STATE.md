@@ -70,6 +70,12 @@ Last activity: 2026-07-24 -- Phase 11 execution started
 |---|-------------|------|--------|-----------|
 | 260827-hbf | Add GetGraphsyncNetwork() accessor to GeniusNode (SDK needs it — no public path existed) | 2026-08-27 | 8c9e1b4f | [260827-hbf-check-if-graphsyncnetwork-can-be-obtaine](./quick/260827-hbf-check-if-graphsyncnetwork-can-be-obtaine/) |
 
+## Accumulated Context
+
+### Pending Todos
+
+- 3 pending — see `.planning/todos/pending/`
+
 ### v1.0 History
 
 v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
