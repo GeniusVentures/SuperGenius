@@ -24,6 +24,7 @@
 #include "blockchain/impl/proto/Consensus.pb.h"
 #include "account/proto/SGTransaction.pb.h"
 #include "crypto/hasher.hpp"
+#include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include <gsl/span>
 #include "testutil/storage/base_crdt_test.hpp"
 
@@ -208,17 +209,24 @@ class CertificateFallbackTest : public test::CRDTFixture
 public:
     CertificateFallbackTest() : CRDTFixture( "cert_fallback_test" )
     {
+    }
+
+    void SetUp() override
+    {
+        GeniusAccount::SetSecureStorageFactory( []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
+                                                { return std::make_shared<MemorySecureStorage>( identifier ); } );
+
         // Create a GeniusAccount for the TransactionManager (random key, no crypto derivation)
         account_ = GeniusAccount::New( kTestTokenId, base_path / "account" );
-        assert( account_ != nullptr );
+        ASSERT_NE( account_, nullptr );
 
         // Load the UTXOManager's DB so ParseTransaction can store UTXOs
         auto load_result = account_->GetUTXOManager().LoadUTXOs( db_->GetDataStore() );
-        assert( load_result.has_value() );
+        ASSERT_TRUE( load_result.has_value() );
 
         // Create a Blockchain with a no-op callback
         blockchain_ = Blockchain::New( db_, account_, pubs_, []( outcome::result<void> ) {} );
-        assert( blockchain_ != nullptr );
+        ASSERT_NE( blockchain_, nullptr );
 
         // Create a TransactionManager in non-full-node mode
         constexpr auto kTimestampTolerance = std::chrono::milliseconds( 300000 );
@@ -232,7 +240,12 @@ public:
                                        0,     // subnet_id
                                        kTimestampTolerance,
                                        kMutabilityWindow );
-        assert( tm_ != nullptr );
+        ASSERT_NE( tm_, nullptr );
+    }
+
+    void TearDown() override
+    {
+        GeniusAccount::SetSecureStorageFactory( nullptr );
     }
 
     ~CertificateFallbackTest() override = default;
