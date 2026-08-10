@@ -8,6 +8,7 @@
 
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusSigner.hpp"
+#include "base/hexutil.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "testutil/remove_all.hpp"
 
@@ -16,6 +17,18 @@ namespace
     using namespace sgns;
 
     constexpr char PRIVATE_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+
+    /// Same re-encoding GeniusAccount performs when handing a crypto3 key to GeniusSigner.
+    GeniusSigner::PrivateKey ToSecp256k1SecretKey( const ethereum::EthereumKeyGenerator &key )
+    {
+        GeniusSigner::PrivateKey secret_key{};
+        nil::marshalling::bincode::field<ethereum::scalar_field_type>::field_element_to_bytes<
+            GeniusSigner::PrivateKey::iterator>( key.get_private_key().private_key_data(),
+                                                 secret_key.begin(),
+                                                 secret_key.end() );
+        std::reverse( secret_key.begin(), secret_key.end() );
+        return secret_key;
+    }
 
     std::vector<uint8_t> SignWithCrypto3( const ethereum::EthereumKeyGenerator &key, const std::vector<uint8_t> &data )
     {
@@ -119,6 +132,38 @@ TEST( GeniusSignerTest, GeneratedSignerUsesCanonicalAccountSignatureFormat )
     ASSERT_EQ( signature.size(), 64 );
     EXPECT_TRUE( GeniusSigner::VerifySignature( signer.GetAddress(), signature, message ) );
     EXPECT_TRUE( GeniusAccount::VerifySignature( signer.GetAddress(), signature, message ) );
+}
+
+/// GeniusSigner no longer derives its address through crypto3. Pin the new
+/// libsecp256k1 derivation against EthereumKeyGenerator so the switch cannot
+/// silently change any existing account's address.
+TEST( GeniusSignerTest, DerivesTheSameAddressAsEthereumKeyGenerator )
+{
+    const ethereum::EthereumKeyGenerator crypto3_key( PRIVATE_KEY );
+    const GeniusSigner                   signer( ToSecp256k1SecretKey( crypto3_key ) );
+
+    EXPECT_EQ( signer.GetAddress(), crypto3_key.GetEntirePubValue() );
+    EXPECT_EQ( signer.GetAddress().size(), 128 );
+
+    // The secret key round-trips to exactly the hex the caller supplied.
+    EXPECT_EQ( base::hex_lower( gsl::make_span( ToSecp256k1SecretKey( crypto3_key ) ) ), PRIVATE_KEY );
+}
+
+/// A signature produced by the crypto3-free signer must still verify under
+/// crypto3, and vice versa, for the very same address.
+TEST( GeniusSignerTest, SignaturesInteroperateWithCrypto3 )
+{
+    const std::vector<uint8_t> message = { 'i', 'n', 't', 'e', 'r', 'o', 'p' };
+
+    const ethereum::EthereumKeyGenerator crypto3_key( PRIVATE_KEY );
+    const GeniusSigner                   signer( ToSecp256k1SecretKey( crypto3_key ) );
+
+    const auto signer_signature = signer.Sign( message );
+    ASSERT_EQ( signer_signature.size(), 64 );
+    EXPECT_TRUE( VerifyWithCrypto3( signer.GetAddress(), signer_signature, message ) );
+
+    const auto crypto3_signature = SignWithCrypto3( crypto3_key, message );
+    EXPECT_TRUE( GeniusSigner::VerifySignature( signer.GetAddress(), crypto3_signature, message ) );
 }
 
 TEST_F( GeniusAccountSignatureTest, Crypto3AndLibsecp256k1AreCompatible )

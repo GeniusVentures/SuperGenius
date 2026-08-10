@@ -25,6 +25,8 @@ target_link_libraries(sgns_genius_account
     TrustWalletCore
     PRIVATE
     hasher
+    sha
+    OpenSSL::Crypto
     json_secure_storage
     secure_storage
     component_factory

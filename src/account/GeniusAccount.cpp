@@ -225,6 +225,19 @@ namespace
         return secure_storage;
     }
 
+    /// Re-encode a crypto3 scalar-field private key as the big-endian 32-byte
+    /// secret key libsecp256k1 (and therefore GeniusSigner) expects.
+    GeniusSigner::PrivateKey ToSecp256k1SecretKey( const ethereum::EthereumKeyGenerator &key )
+    {
+        GeniusSigner::PrivateKey secret_key{};
+        nil::marshalling::bincode::field<ethereum::scalar_field_type>::field_element_to_bytes<
+            GeniusSigner::PrivateKey::iterator>( key.get_private_key().private_key_data(),
+                                                 secret_key.begin(),
+                                                 secret_key.end() );
+        std::reverse( secret_key.begin(), secret_key.end() );
+        return secret_key;
+    }
+
     outcome::result<GeniusAccount::StorageWithAddress> BuildStorageWithAddress( std::shared_ptr<ISecureStorage> storage,
                                                                                 std::string_view public_key )
     {
@@ -287,8 +300,11 @@ namespace sgns
     {
         auto [storage, eth_address] = std::move( response_value );
 
-        auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( GeniusSigner( std::move( eth_address ) ), token_id, std::move( storage ), full_node ) );
+        auto instance = std::shared_ptr<GeniusAccount>( new GeniusAccount( GeniusSigner( ToSecp256k1SecretKey(
+                                                                               eth_address ) ),
+                                                                           token_id,
+                                                                           std::move( storage ),
+                                                                           full_node ) );
 
         return instance;
     }
