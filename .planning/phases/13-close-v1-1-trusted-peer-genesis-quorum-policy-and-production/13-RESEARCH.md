@@ -513,27 +513,33 @@ outcome::result<void> GeniusNode::SelectAccount( std::string_view address )
 | A7 | Suggested candidate byte/count caps require product confirmation. | Security / pitfalls | No project-wide maximum trusted-peer count is specified; picking a cap without confirmation could reject a legitimate future policy. |
 | A8 | OS permissions protect the node-local TrustStateStore from wholesale replacement. | Security Domain | Without a TPM/off-host monotonic anchor, an attacker able to restore the complete local disk to an older valid snapshot can defeat a purely local high-water mark. |
 
-## Open Questions
+## Open Questions (RESOLVED)
+
+All four questions below were resolved during Phase 13 planning revision. Their resolutions are binding planning inputs and replace the earlier recommendation-only status.
 
 1. **What exactly makes the initial BurnConfig state “confirmed”?**
    - What we know: BURN-03 requires 100 basis points by default; D-13 blocks BurnConfig-dependent operations until genesis is confirmed; Phase 11 allowed genesis-only automatic behavior. [VERIFIED: requirements and prior context]
    - What's unclear: D-03 explicitly names submission of the TPR genesis record, not a BurnConfig genesis record. [VERIFIED: D-03]
    - Recommendation: Include initial burn value 100 in the genesis manifest, then allow trusted-peer nodes to auto-publish only that version-1 candidate after TPR genesis is durable; enable economic operations only after its burn quorum confirms. Never auto-sign later versions. [ASSUMED]
+   - **RESOLVED:** The manifest binds burn value 100; after durable TPR genesis, initial trusted peers may auto-approve only the deterministic BurnConfig v1 candidate, and economic readiness begins only after its current-policy burn quorum confirms.
 
 2. **What resource bounds apply to manifests/candidates?**
    - What we know: D-04 requires structural rejection, and unbounded peer/candidate bytes are a CRDT DoS risk. [VERIFIED: D-04; ASSUMED risk]
    - What's unclear: No maximum trusted-peer count or candidate size is specified. [VERIFIED: context/project search]
    - Recommendation: Decide and document `MAX_TRUSTED_PEERS`, `MAX_CANDIDATE_BYTES`, and maximum active candidates per predecessor before implementation; add exact boundary tests. [ASSUMED]
+   - **RESOLVED:** Enforce 256 trusted peers, 64 KiB per candidate, 32 active candidates per predecessor, 256 approvals per candidate, and 64 MiB active approval bytes per predecessor, with exact boundary tests.
 
 3. **How strong must local rollback protection be against a host administrator?**
    - What we know: Signed chains prevent forged successors and the local high-water mark rejects older CRDT data while intact. [ASSUMED]
    - What's unclear: A host-level attacker who can replace the entire trust database with an older valid snapshot cannot be detected by local state alone. [ASSUMED]
    - Recommendation: Treat wholesale disk rollback as outside v1.1 unless the user requires a TPM/OS-keystore/off-host anchor; document the boundary in the operator runbook. [ASSUMED]
+   - **RESOLVED:** Whole-disk rollback is outside the software-only protection boundary; document that TPM, OS-keystore monotonic state, or an off-host checkpoint is required to detect it.
 
 4. **Where should the one-shot tool obtain networking configuration?**
    - What we know: `GlobalDB` construction requires pubsub, scheduler, graphsync, and database-path setup; an existing example demonstrates that composition. [VERIFIED: `globaldb_app.cpp`, `securecrdt_test_node.hpp`]
    - What's unclear: There is no production reusable factory for a minimal SecureCrdt client. [VERIFIED: codebase grep]
    - Recommendation: Extract/reuse a narrow node network/GlobalDB composition helper rather than instantiate a full `GeniusNode` with the ephemeral key. [ASSUMED]
+   - **RESOLVED:** Use a reusable `GlobalDbNetworkComposition`; the one-shot tool must not instantiate a full `GeniusNode` with the ephemeral key.
 
 ## Environment Availability
 
