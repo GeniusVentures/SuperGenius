@@ -25,8 +25,6 @@
 #include <boost/filesystem/path.hpp>
 #include <WalletCore/PrivateKey.h>
 
-#include <ProofSystem/EthereumKeyGenerator.hpp>
-
 #include "account/TokenID.hpp"
 #include "account/GeniusSigner.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
@@ -46,7 +44,7 @@ namespace sgns
     class GeniusAccount : public std::enable_shared_from_this<GeniusAccount>
     {
     public:
-        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, ethereum::EthereumKeyGenerator>;
+        using StorageWithAddress = std::pair<std::shared_ptr<ISecureStorage>, GeniusSigner::PrivateKey>;
 
         static const std::array<uint8_t, 32> ELGAMAL_PUBKEY_PREDEFINED;      ///< Legacy deterministic seed bytes
         static constexpr int64_t             NONCE_CACHE_DURATION_MS = 5000; ///< Cache nonce results for 5 seconds

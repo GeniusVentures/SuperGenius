@@ -1,8 +1,3 @@
-// Keep these include files here to prevent errors within crypto3's headers
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-
 #include "GeniusAccount.hpp"
 
 #include <fmt/std.h>
@@ -45,6 +40,34 @@ namespace
         // Always call base::createLogger to get the current logger
         // This will return existing logger or create new one as needed
         return base::createLogger( "GeniusAccount" );
+    }
+
+    /// Order of the secp256k1 group. A key seed is a raw 256-bit number, so it
+    /// must be reduced into the scalar field before it is a usable secret key
+    /// (this is what the crypto3 scalar-field conversion used to do implicitly).
+    const uint256_t SECP256K1_CURVE_ORDER( "0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141" );
+
+    /// Re-encode a stored key seed as the big-endian 32-byte secret key
+    /// libsecp256k1 (and therefore GeniusSigner) expects.
+    GeniusSigner::PrivateKey KeySeedToPrivateKey( const uint256_t &key_seed )
+    {
+        uint256_t reduced = key_seed % SECP256K1_CURVE_ORDER;
+
+        GeniusSigner::PrivateKey secret_key{};
+        for ( size_t i = secret_key.size(); i-- > 0; )
+        {
+            secret_key[i]  = static_cast<uint8_t>( reduced & 0xFFu );
+            reduced      >>= 8;
+        }
+        return secret_key;
+    }
+
+    /// Interpret a hash as a key seed, most significant byte first.
+    uint256_t KeySeedFromBytes( const std::vector<uint8_t> &bytes )
+    {
+        uint256_t key_seed;
+        boost::multiprecision::import_bits( key_seed, bytes.begin(), bytes.end(), 8 );
+        return key_seed;
     }
 
     boost::filesystem::path SetupStoragePath( const boost::filesystem::path &base_path )
@@ -209,9 +232,8 @@ namespace
             return std::errc::bad_message;
         }
 
-        nil::crypto3::multiprecision::uint256_t key_seed( maybe_key->value.GetString() );
-        ethereum::EthereumKeyGenerator          eth_key( key_seed );
-        auto                                    pub_key = eth_key.GetEntirePubValue();
+        uint256_t key_seed( maybe_key->value.GetString() );
+        auto      pub_key = GeniusSigner( KeySeedToPrivateKey( key_seed ) ).GetAddress();
 
         BOOST_OUTCOME_TRY( auto secure_storage, CreateSecureStorage( pub_key ) );
 
@@ -235,20 +257,20 @@ namespace
             return std::errc::no_such_file_or_directory;
         }
 
-        auto key_seed = nil::crypto3::multiprecision::uint256_t( load_res.value() );
+        auto key_seed = uint256_t( load_res.value() );
         genius_account_logger()->info( "Successfully loaded key_seed from storage" );
 
+        auto private_key = KeySeedToPrivateKey( key_seed );
+
         // Validate loaded key_seed matches the expected public key
-        if ( ethereum::EthereumKeyGenerator( key_seed ).GetEntirePubValue() != public_key )
+        if ( GeniusSigner( private_key ).GetAddress() != public_key )
         {
             genius_account_logger()->error( "Validation failed: key_seed does not match stored public key" );
             return std::errc::bad_message;
         }
         genius_account_logger()->info( "Validation successful: key_seed matches stored public key" );
 
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-
-        return std::make_pair( std::move( storage ), std::move( eth_key ) );
+        return std::make_pair( std::move( storage ), private_key );
     }
 }
 
@@ -285,10 +307,10 @@ namespace sgns
                                                                               StorageWithAddress response_value,
                                                                               bool               full_node )
     {
-        auto [storage, eth_address] = std::move( response_value );
+        auto [storage, private_key] = std::move( response_value );
 
         auto instance = std::shared_ptr<GeniusAccount>(
-            new GeniusAccount( GeniusSigner( std::move( eth_address ) ), token_id, std::move( storage ), full_node ) );
+            new GeniusAccount( GeniusSigner( private_key ), token_id, std::move( storage ), full_node ) );
 
         return instance;
     }
@@ -528,18 +550,18 @@ namespace sgns
             return outcome::failure( std::errc::invalid_argument );
         }
 
-        auto key_seed = nil::crypto3::multiprecision::uint256_t( TW::Hash::sha256( signed_secret ) );
+        auto key_seed = KeySeedFromBytes( TW::Hash::sha256( signed_secret ) );
 
         // Create storage and keys
-        ethereum::EthereumKeyGenerator eth_key( key_seed );
-        auto                           pub_key = eth_key.GetEntirePubValue();
+        auto sgns_private_key = KeySeedToPrivateKey( key_seed );
+        auto pub_key          = GeniusSigner( sgns_private_key ).GetAddress();
 
         BOOST_OUTCOME_TRY( auto storage, CreateSecureStorage( pub_key ) );
         BOOST_OUTCOME_TRY( storage->Save( "sgns_key", key_seed.str() ) );
 
         BOOST_OUTCOME_TRY( AppendPublicKeyToFile( base_path, pub_key ) );
 
-        return std::make_pair( std::move( storage ), std::move( eth_key ) );
+        return std::make_pair( std::move( storage ), sgns_private_key );
     }
 
     bool GeniusAccount::InitMessenger( std::shared_ptr<ipfs_pubsub::GossipPubSub> pubsub )

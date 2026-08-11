@@ -65,6 +65,9 @@ addtest(account_signature_test
 target_link_libraries(account_signature_test
     sgns_genius_account
     json_secure_storage
+    # Kept only so this test can cross-check the crypto3-free implementation
+    # against the legacy crypto3/ProofSystem derivation.
+    ProofSystem
 )
 
 addtest(burnconfig_test
