@@ -26,8 +26,17 @@
 - [ ] **BURN-03:** Existing behavior is preserved by default — genesis seeds `BURN_BASIS_POINTS=100` (1%) so `PayEscrow` burns the same amount until a quorum-signed update changes it
 
 **Migration**
-- [ ] **MIG-05:** `ValidatorRegistry` is migrated onto the `ISignedCRDTData` interface (reusing SecureCRDT, not just `BURN_BASIS_POINTS`)
+- [ ] **MIG-05 (approved adjusted scope):** `ValidatorRegistry` genesis-path signature verification reuses `multisig::VerifyPayloadSignature`; the broader `ISignedCRDTData` storage/quorum migration is retired by the locked Phase 12 scope decision
 - [ ] **MIG-06:** Existing `ValidatorRegistry` behavior/tests remain green after migration
+
+**Phase 13 closure — trusted-peer genesis, policy authority, and production integration**
+- [ ] **BOOT-01:** Document the manual trusted-channel peer collection, validation, canonicalization, fingerprint review, ephemeral-key handling, and non-production status of example identities
+- [ ] **BOOT-02:** Define a canonical authenticated genesis manifest binding network ID, bootstrapper public key, ordered peers, policy version, both quorum thresholds, initial burn value, and fingerprint
+- [ ] **BOOT-03:** Confirm TPR genesis through production SecureCrdt and persist the confirmed identity before enabling policy or economic behavior
+- [ ] **BOOT-04:** On restart, use verified persisted state as authority and reject rollback, fork, corruption, or network mismatch without erasing last-known-good state
+- [ ] **POLICY-01:** Store membership and BurnConfig thresholds in versioned quorum-signed policy state whose successor is authorized exclusively by the current confirmed policy
+- [ ] **VALID-01:** Enforce bounded non-empty unique valid peers, complete threshold bounds, strict-majority membership floor, and two-thirds BurnConfig floor
+- [ ] **TEST-01:** Prove first boot, restart, altered JSON/bootstrapper/thresholds, manifest tamper, rollback/fork, candidate race, explicit approval, live `PayEscrow`, and account-switch lifetime behavior
 
 ### Out of Scope
 
@@ -54,8 +63,15 @@
 | BURN-03 | Phase 11 | Pending |
 | MIG-05 | Phase 12 | Pending |
 | MIG-06 | Phase 12 | Pending |
+| BOOT-01 | Phase 13 | Pending |
+| BOOT-02 | Phase 13 | Pending |
+| BOOT-03 | Phase 13 | Pending |
+| BOOT-04 | Phase 13 | Pending |
+| POLICY-01 | Phase 13 | Pending |
+| VALID-01 | Phase 13 | Pending |
+| TEST-01 | Phase 13 | Pending |
 
-Coverage: 15/15 v1.1 requirements mapped.
+Coverage: 22/22 v1.1 requirements mapped.
 
 ### ELM Bridging (added 2026-08-26 — product-v1.0 requirement, pre-ship; extends v1.1)
 
@@ -140,4 +156,3 @@ Coverage: 8/8 ELM requirements mapped (Phase 14 executes in the SGProcessingMana
 - Signed Reject votes, rejection certificates, or negative-quorum rules.
 - Validator reputation rewards or penalties based on negative votes.
 - Penalizing validators when a proposal merely expires without a conclusive outcome.
-
