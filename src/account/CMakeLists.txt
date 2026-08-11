@@ -17,7 +17,6 @@ add_library(sgns_genius_account
 target_link_libraries(sgns_genius_account
     PUBLIC
     Boost::headers
-    ProofSystem
     outcome
     logger
     crdt_globaldb
@@ -25,6 +24,8 @@ target_link_libraries(sgns_genius_account
     TrustWalletCore
     PRIVATE
     hasher
+    sha
+    OpenSSL::Crypto
     json_secure_storage
     secure_storage
     component_factory
@@ -37,10 +38,6 @@ target_link_libraries(sgns_genius_account
     libsecp256k1::secp256k1
     ${WIN_CRYPT_LIBRARY}
     TrezorCrypto
-)
-
-target_precompile_headers(sgns_genius_account PUBLIC
-    $<BUILD_INTERFACE:<ProofSystem/EthereumKeyGenerator.hpp$<ANGLE-R>>
 )
 
 target_include_directories(

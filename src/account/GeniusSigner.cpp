@@ -1,20 +1,16 @@
-// Keep these includes before EthereumKeyGenerator to satisfy crypto3's headers.
-#include <nil/crypto3/algebra/marshalling.hpp>
-#include <nil/crypto3/pubkey/algorithm/sign.hpp>
-#include <nil/crypto3/pubkey/algorithm/verify.hpp>
-
 #include "account/GeniusSigner.hpp"
 
+#include <openssl/rand.h>
 #include <secp256k1.h>
 
 #include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <memory>
-#include <utility>
 
 #include "base/hexutil.hpp"
 #include "base/logger.hpp"
+#include "crypto/sha/sha256.hpp"
 
 namespace
 {
@@ -34,22 +30,66 @@ namespace
         }
         return context.get();
     }
+
+    /// Preserve the historical SHA256(SHA256(data)) Genius signing protocol.
+    std::array<uint8_t, 32> GeniusMessageHash( const std::vector<uint8_t> &data )
+    {
+        const auto first  = sgns::crypto::sha256( gsl::make_span( data.data(), data.size() ) );
+        const auto second = sgns::crypto::sha256( gsl::make_span( first.data(), first.size() ) );
+
+        std::array<uint8_t, 32> hash{};
+        std::copy( second.begin(), second.end(), hash.begin() );
+        return hash;
+    }
 } // namespace
 
 namespace sgns
 {
     GeniusSigner GeniusSigner::Generate()
     {
-        return GeniusSigner( ethereum::EthereumKeyGenerator{} );
+        const auto *context = GetSecp256k1Context();
+
+        PrivateKey private_key{};
+        // A uniformly random 32-byte string lands outside the curve order with
+        // negligible probability, but retry so the result is always usable.
+        do
+        {
+            if ( RAND_bytes( private_key.data(), static_cast<int>( private_key.size() ) ) != 1 )
+            {
+                genius_signer_logger()->critical( "Could not obtain entropy for a new Genius key" );
+                std::abort();
+            }
+        } while ( secp256k1_ec_seckey_verify( context, private_key.data() ) == 0 );
+
+        return GeniusSigner( private_key );
     }
 
-    GeniusSigner::GeniusSigner( ethereum::EthereumKeyGenerator keypair ) : keypair_( std::move( keypair ) )
+    GeniusSigner::GeniusSigner( const PrivateKey &private_key ) : private_key_( private_key )
     {
+        const auto *context = GetSecp256k1Context();
+
+        secp256k1_pubkey public_key;
+        if ( secp256k1_ec_pubkey_create( context, &public_key, private_key_.data() ) == 0 )
+        {
+            genius_signer_logger()->error( "Could not derive a public key from the supplied secret key" );
+            return;
+        }
+
+        std::array<uint8_t, 65> uncompressed_public_key{};
+        size_t                  length = uncompressed_public_key.size();
+        secp256k1_ec_pubkey_serialize( context,
+                                       uncompressed_public_key.data(),
+                                       &length,
+                                       &public_key,
+                                       SECP256K1_EC_UNCOMPRESSED );
+
+        // Drop the 0x04 uncompressed tag: the Genius address is just X || Y.
+        address_ = base::hex_lower( gsl::make_span( uncompressed_public_key.data() + 1, 64 ) );
     }
 
     std::string GeniusSigner::GetAddress() const
     {
-        return keypair_.GetEntirePubValue();
+        return address_;
     }
 
     bool GeniusSigner::VerifySignature( const std::string          &address,
@@ -99,9 +139,7 @@ namespace sgns
         }
         secp256k1_ecdsa_signature_normalize( context, &parsed_signature, &parsed_signature );
 
-        // Preserve the historical SHA256(SHA256(data)) Genius signing protocol.
-        const std::array<uint8_t, 32> first_hash   = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-        const std::array<uint8_t, 32> message_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
+        const std::array<uint8_t, 32> message_hash = GeniusMessageHash( data );
 
         return secp256k1_ecdsa_verify( context, &parsed_signature, message_hash.data(), &public_key ) == 1;
     }
@@ -122,18 +160,10 @@ namespace sgns
     {
         const auto *context = GetSecp256k1Context();
 
-        std::array<uint8_t, 32> secret_key{};
-        const auto              private_key = keypair_.get_private_key();
-        nil::marshalling::bincode::field<ethereum::scalar_field_type>::field_element_to_bytes<
-            std::array<uint8_t, 32>::iterator>( private_key.private_key_data(), secret_key.begin(), secret_key.end() );
-        std::reverse( secret_key.begin(), secret_key.end() );
-
-        // Preserve the historical SHA256(SHA256(data)) Genius signing protocol.
-        const std::array<uint8_t, 32> first_hash   = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( data );
-        const std::array<uint8_t, 32> message_hash = nil::crypto3::hash<nil::crypto3::hashes::sha2<256>>( first_hash );
+        const std::array<uint8_t, 32> message_hash = GeniusMessageHash( data );
 
         secp256k1_ecdsa_signature signature;
-        if ( secp256k1_ecdsa_sign( context, &signature, message_hash.data(), secret_key.data(), nullptr, nullptr ) ==
+        if ( secp256k1_ecdsa_sign( context, &signature, message_hash.data(), private_key_.data(), nullptr, nullptr ) ==
              0 )
         {
             genius_signer_logger()->error( "Could not sign data with the account key" );
