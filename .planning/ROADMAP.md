@@ -21,6 +21,32 @@ Milestone summary: `.planning/MILESTONES.md`
 
 </details>
 
+### Phase 13: Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
+
+**Goal:** Running nodes establish a manually reviewed, authenticated trusted-peer genesis; persist and enforce versioned quorum policy as the restart authority; accept only current-peer-authenticated content-addressed CRDT candidates; apply explicit quorum-approved membership and burn successors; and preserve policy services and live burn behavior across account selection.
+**Requirements:** BOOT-01, BOOT-02, BOOT-03, BOOT-04, POLICY-01, VALID-01, TEST-01, SCRDT-04, TPR-01, TPR-02, BURN-01, BURN-02, BURN-03, MIG-05, MIG-06
+**Depends on:** Phase 12
+**Success Criteria** (what must be TRUE):
+
+  1. A local one-shot genesis command validates and canonicalizes the reviewed manifest, displays its fingerprint, signs through an ephemeral in-memory bootstrapper, confirms the TPR genesis through SecureCrdt, and deletes key material only after durable confirmation.
+  2. Persisted versioned policy and burn heads are authoritative after first confirmation; mutable JSON cannot replace them, network mismatch fails startup, and older/fork/missing CRDT data cannot erase the last-known-good state.
+  3. Only current trusted peers can introduce or approve bounded content-addressed candidates; current policy exclusively authorizes hash-linked version successors, and the first quorum-confirmed candidate is durably committed before caches publish.
+  4. Fresh nodes remain economically restricted until TPR genesis and deterministic BurnConfig version 1/value 100 are confirmed; later explicit approvals can change membership, thresholds, and the live `PayEscrow` burn rate.
+  5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
+  6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
+
+**Plans:** 8 plans
+
+Plans:
+- [ ] 13-01-PLAN.md — Canonical genesis manifest and versioned quorum-policy contracts
+- [ ] 13-02-PLAN.md — Crash-safe network-scoped confirmed trust-state store
+- [ ] 13-03-PLAN.md — Instance-scoped SecureCrdt policy registry migration
+- [ ] 13-04-PLAN.md — Authenticated bounded content-addressed candidate transport
+- [ ] 13-05-PLAN.md — Trusted-peer and BurnConfig successor activation
+- [ ] 13-06-PLAN.md — Reusable networking composition, one-shot genesis, and local administration tools
+- [ ] 13-07-PLAN.md — Restricted first boot, restart authority, and tamper-safe startup integration
+- [ ] 13-08-PLAN.md — Node-scoped account switching, live economics, and milestone reconciliation
+
 ## Backlog
 
 (Items deferred to future milestones — see `.planning/milestones/v1.0-REQUIREMENTS.md` v2 section: PROP-01 NodeType propagation, PROP-02 Archive/Full behavior split, HARD-01 pubsub_port numeric, HARD-02 config schema versioning.)
