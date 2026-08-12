@@ -4,15 +4,15 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-10-PLAN.md
-last_updated: "2026-08-12T17:14:19.963Z"
+stopped_at: Completed 13-11-PLAN.md
+last_updated: "2026-08-12T18:43:21.494Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 20
-  completed_plans: 18
-  percent: 29
+  completed_plans: 20
+  percent: 35
 ---
 
 # State: SuperGenius — Multi-Signature Secure CRDT Storage
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 10 of 12
+Plan: 11 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -74,8 +74,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T17:14:19.959Z
-**Stopped At:** Completed 13-10-PLAN.md
+**Last session:** 2026-08-12T18:43:21.490Z
+**Stopped At:** Completed 13-11-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -106,6 +106,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P09 | 22min | 2 tasks | 9 files |
 | Phase 13 P07 | 12min | 3 tasks | 15 files |
 | Phase 13 P10 | 7min | 1 tasks | 2 files |
+| Phase 13 P11 | 4min | 1 tasks | 4 files |
 
 ## Decisions
 
@@ -136,3 +137,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: First-boot verification connects independent production GlobalDB compositions through the reviewed GenesisCeremony path before protected-key deletion.
 - [Phase 13]: Operator manifest construction mirrors the release codec exactly because sgns-trust accepts canonical binary GenesisManifest bytes, not JSON. — This keeps independently reviewed, fingerprinted, submitted, and durably verified bytes identical.
 - [Phase 13]: Durable verified trust state is restart authority; software-only protection excludes restoration of the whole disk and all local anchors. — TPM or OS-keystore monotonic state, or authenticated off-host checkpoints, is required for that threat.
+- [Phase 13]: Canonical v1.1 completion is derived from Plan 13-08's recorded exact 25/25 gate and five additional policy-lifetime passes.
+- [Phase 13]: MIG-05 remains the approved signature-verification-only migration; full ValidatorRegistry ISignedCRDTData adoption remains retired.
+- [Phase 13]: BOOT-04 covers software-visible rollback while whole-disk/all-anchor restoration remains an accepted unsolved boundary without external anchoring.
