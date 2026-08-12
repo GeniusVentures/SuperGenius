@@ -51,16 +51,30 @@ namespace sgns::securecrdt
         }
     } // namespace
 
-    SecureCrdt::SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string topic ) :
-        db_( std::move( db ) ), topic_( std::move( topic ) )
+    SecureCrdt::SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                            std::string                            topic,
+                            std::shared_ptr<SecureCrdtRegistry>    registry ) :
+        db_( std::move( db ) ),
+        topic_( std::move( topic ) ),
+        registry_( registry ? std::move( registry ) : std::make_shared<SecureCrdtRegistry>() )
     {
+    }
+
+    SecureCrdtRegistry &SecureCrdt::Registry()
+    {
+        return *registry_;
+    }
+
+    const SecureCrdtRegistry &SecureCrdt::Registry() const
+    {
+        return *registry_;
     }
 
     outcome::result<void> SecureCrdt::ProposeValue( const sgns::crdt::HierarchicalKey &base_key,
                                                     const std::vector<uint8_t>        &payload )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = registry_->Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -97,7 +111,7 @@ namespace sgns::securecrdt
                                                     const std::vector<uint8_t>        &signature )
     {
         logger_->trace( "{}: entry key={} signer={}", __func__, base_key.GetKey(), signer_address );
-        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = registry_->Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -136,7 +150,7 @@ namespace sgns::securecrdt
         const sgns::crdt::HierarchicalKey &base_key )
     {
         logger_->trace( "{}: entry key={}", __func__, base_key.GetKey() );
-        const auto entry = SecureCrdtRegistry::Resolve( base_key.GetKey() );
+        const auto entry = registry_->Resolve( base_key.GetKey() );
         if ( !entry )
         {
             logger_->error( "{}: unregistered key={}", __func__, base_key.GetKey() );
@@ -204,7 +218,7 @@ namespace sgns::securecrdt
         logger_->trace( "{}: entry", __func__ );
         bool         all_registered = true;
         auto         weak_self      = weak_from_this();
-        const auto   entries        = SecureCrdtRegistry::AllEntries();
+        const auto   entries        = registry_->AllEntries();
         for ( const auto &entry : entries )
         {
             const std::string  pattern     = "/?" + entry.key_pattern + "(/sig/[^/]+)?";
