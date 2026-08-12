@@ -54,12 +54,12 @@
 | SCRDT-01 | Phase 9 | Pending |
 | SCRDT-02 | Phase 9 | Pending |
 | SCRDT-03 | Phase 9 | Pending |
-| SCRDT-04 | Phase 9 | Pending |
+| SCRDT-04 | Phase 9 | Complete |
 | TPR-01 | Phase 10 | Complete |
 | TPR-02 | Phase 10 | Pending |
 | TPR-03 | Phase 10 | Pending |
 | BURN-01 | Phase 11 | Pending |
-| BURN-02 | Phase 11 | Pending |
+| BURN-02 | Phase 11 | Complete |
 | BURN-03 | Phase 11 | Complete |
 | MIG-05 | Phase 12 | Pending |
 | MIG-06 | Phase 12 | Pending |
@@ -69,7 +69,7 @@
 | BOOT-04 | Phase 13 | Pending |
 | POLICY-01 | Phase 13 | Pending |
 | VALID-01 | Phase 13 | Pending |
-| TEST-01 | Phase 13 | Pending |
+| TEST-01 | Phase 13 | Complete |
 
 Coverage: 22/22 v1.1 requirements mapped.
 
