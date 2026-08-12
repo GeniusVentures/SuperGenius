@@ -9,9 +9,11 @@
 #include <boost/filesystem/operations.hpp>
 
 #include "account/GeniusAccount.hpp"
+#include "account/GeniusSigner.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt_test_node.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
 
 namespace
 {
@@ -175,4 +177,50 @@ TEST_F( SecureCrdtCandidateRaceTest, SynchronizedCandidatesCoexistDeduplicateAnd
     EXPECT_EQ( audit.value().size(), 2U );
     EXPECT_EQ( secure_crdt_->SubmitCandidateApproval( SignedRecord( 1, 'b' ) ).error(),
                SecureCrdt::Error::CANDIDATE_CONTEXT_MISMATCH );
+}
+
+TEST( SecureCrdtCandidateDurableRaceTest, ExactlyOneStoreBackedPolicyWinnerSurvivesReopen )
+{
+    using namespace sgns::trustedpeer;
+    const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+    std::vector<GeniusSigner> signers{ GeniusSigner::Generate(), GeniusSigner::Generate(), GeniusSigner::Generate() };
+    auto store = TrustStateStore::Open( path.string(), 42 ).value();
+    GenesisManifest manifest;
+    manifest.network_id = 42;
+    manifest.bootstrapper_public_key = signers[0].GetAddress();
+    manifest.peers = { signers[0].GetAddress(), signers[1].GetAddress(), signers[2].GetAddress() };
+    manifest.membership_threshold = 2;
+    manifest.burn_threshold = 2;
+    const auto manifest_bytes = manifest.CanonicalBytes().value();
+    const auto initial = store->CommitGenesis( manifest, signers[0].Sign( manifest_bytes ) ).value();
+    auto first = initial.policy;
+    first.version += 1;
+    first.expected_previous_hash = initial.policy.Hash().value();
+    first.authorizing_policy_hash = initial.policy.Hash().value();
+    auto second = first;
+    second.membership_threshold = 3;
+    const auto proof = [&]( const QuorumPolicyState &candidate )
+    {
+        const auto bytes = candidate.CanonicalBytes().value();
+        return multisig::CollectedSignatures{
+            { signers[0].GetAddress(), signers[0].Sign( bytes ) },
+            { signers[1].GetAddress(), signers[1].Sign( bytes ) }
+        };
+    };
+    TwoPartyBarrier barrier;
+    std::array<outcome::result<ConfirmedTrustSnapshot>, 2> results{
+        outcome::failure( TrustStateStore::Error::COMMIT_FAILED ),
+        outcome::failure( TrustStateStore::Error::COMMIT_FAILED )
+    };
+    std::thread a( [&] { barrier.ArriveAndWait(); results[0] = store->CommitPolicySuccessor( first, proof( first ) ); } );
+    std::thread b( [&] { barrier.ArriveAndWait(); results[1] = store->CommitPolicySuccessor( second, proof( second ) ); } );
+    a.join();
+    b.join();
+    EXPECT_NE( results[0].has_value(), results[1].has_value() );
+    const auto loser = results[0].has_error() ? results[0].error() : results[1].error();
+    EXPECT_EQ( loser, TrustStateStore::Error::STALE_HEAD );
+    const auto winner = store->LoadAndVerify().value();
+    store.reset();
+    EXPECT_EQ( TrustStateStore::Open( path.string(), 42 ).value()->LoadAndVerify().value(), winner );
+    boost::filesystem::remove_all( path );
 }
