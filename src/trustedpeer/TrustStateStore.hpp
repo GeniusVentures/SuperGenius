@@ -104,7 +104,8 @@ namespace sgns::trustedpeer
 
         outcome::result<ConfirmedTrustSnapshot> LoadAndVerify() const;
         outcome::result<ConfirmedTrustSnapshot> CommitGenesis( const GenesisManifest      &manifest,
-                                                               const std::vector<uint8_t> &bootstrap_signature );
+                                                               const std::vector<uint8_t> &bootstrap_signature,
+                                                               const std::vector<uint8_t> &authorization_bytes = {} );
         outcome::result<ConfirmedTrustSnapshot> CommitPolicySuccessor(
             const QuorumPolicyState             &candidate,
             const multisig::CollectedSignatures &proof,
