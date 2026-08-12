@@ -160,9 +160,10 @@ namespace sgns::trustedpeer
                 return outcome::failure( Error::INVALID_PRIVATE_KEY );
             try
             {
-                auto signer = std::make_shared<GeniusSigner>( ethereum::EthereumKeyGenerator( private_key ) );
-                return Signer{ signer->GetAddress(),
-                               [signer]( const std::vector<uint8_t> &bytes ) { return signer->Sign( bytes ); } };
+                std::shared_ptr<GeniusSigner> local_key =
+                    std::make_shared<GeniusSigner>( ethereum::EthereumKeyGenerator( private_key ) );
+                return Signer{ local_key->GetAddress(),
+                               [local_key]( const std::vector<uint8_t> &bytes ) { return local_key->Sign( bytes ); } };
             }
             catch ( const std::exception & )
             {
@@ -292,14 +293,14 @@ namespace sgns::trustedpeer
             WriteCriticalRetention( request, errors );
             return outcome::failure( Error::INVALID_PRIVATE_KEY );
         }
-        auto signer = hooks_.create_signer( private_key );
+        outcome::result<Signer> local_signer = hooks_.create_signer( private_key );
         cleanse();
-        if ( signer.has_error() )
+        if ( local_signer.has_error() )
         {
             WriteCriticalRetention( request, errors );
-            return signer.error();
+            return local_signer.error();
         }
-        if ( signer.value().address != canonical->bootstrapper_public_key )
+        if ( local_signer.value().address != canonical->bootstrapper_public_key )
         {
             WriteCriticalRetention( request, errors );
             return outcome::failure( Error::BOOTSTRAPPER_MISMATCH );
@@ -319,11 +320,11 @@ namespace sgns::trustedpeer
             WriteCriticalRetention( request, errors );
             return outcome::failure( Error::NETWORK_START_FAILED );
         }
-        const auto manifest_signature = signer.value().sign( *manifest_bytes );
+        const std::vector<uint8_t> manifest_signature = local_signer.value().sign( *manifest_bytes );
         auto submitted = network.submit( *canonical,
                                          manifest_signature,
-                                         signer.value().address,
-                                         signer.value().sign );
+                                         local_signer.value().address,
+                                         local_signer.value().sign );
         if ( submitted.has_error() )
         {
             WriteCriticalRetention( request, errors );
