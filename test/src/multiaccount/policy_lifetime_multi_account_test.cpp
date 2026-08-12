@@ -7,10 +7,8 @@
 
 #include <fstream>
 
-#include "ProofSystem/EthereumKeyGenerator.hpp"
 #include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
-#include "account/GeniusSigner.hpp"
 #include "account/TransactionManager.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -123,19 +121,23 @@ namespace
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
 
-            signer_ = std::make_unique<GeniusSigner>( ethereum::EthereumKeyGenerator( PRIMARY_KEY ) );
+            bootstrap_account_ = GeniusAccount::NewFromPrivateKey( TOKEN_ID, PRIMARY_KEY, path_ );
+            ASSERT_TRUE( bootstrap_account_ );
             ASSERT_TRUE( GeniusNode::WriteNetworkConfig( path_.generic_string() + '/', 0, false ).has_value() );
             std::ofstream config( ( path_ / "sgns_config.json" ).string() );
             ASSERT_TRUE( config.good() );
             config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\"Full\","
                       "\"is_processor\":false,\"rpc_catchup\":false,\"trusted_peers\":[\""
-                   << signer_->GetAddress() << "\"],\"bootstrapper_node\":\"" << signer_->GetAddress()
+                   << bootstrap_account_->GetAddress() << "\"],\"bootstrapper_node\":\""
+                   << bootstrap_account_->GetAddress()
                    << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
             config.close();
 
+            Blockchain::SetAuthorizedFullNodeAddress( bootstrap_account_->GetAddress() );
             node_ = GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path_.generic_string() + '/' },
                                      FromPrivateKey{ PRIMARY_KEY } );
             ASSERT_TRUE( node_ );
+            Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
             test::assertWaitForCondition(
                 [&] { return node_->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
                 std::chrono::seconds( 50 ),
@@ -145,7 +147,7 @@ namespace
         void TearDown() override
         {
             node_.reset();
-            signer_.reset();
+            bootstrap_account_.reset();
             GeniusAccount::SetSecureStorageFactory( nullptr );
             test::removeAllWithRetry( path_.string() );
         }
@@ -154,8 +156,8 @@ namespace
         {
             GenesisManifest manifest;
             manifest.network_id              = 144;
-            manifest.bootstrapper_public_key = signer_->GetAddress();
-            manifest.peers                   = { signer_->GetAddress() };
+            manifest.bootstrapper_public_key = bootstrap_account_->GetAddress();
+            manifest.peers                   = { bootstrap_account_->GetAddress() };
             manifest.membership_threshold    = 1;
             manifest.burn_threshold          = 1;
             return manifest;
@@ -178,8 +180,8 @@ namespace
             ASSERT_TRUE( MultiAccountTestAccess::SecureCrdt( node_ )
                              ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
                                                           core,
-                                                          signer_->GetAddress(),
-                                                          signer_->Sign( bytes ) } )
+                                                          bootstrap_account_->GetAddress(),
+                                                          bootstrap_account_->Sign( bytes ) } )
                              .has_value() );
             test::assertWaitForCondition(
                 [&] { return node_->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS; },
@@ -194,8 +196,8 @@ namespace
         }
 
         boost::filesystem::path       path_;
-        std::unique_ptr<GeniusSigner> signer_;
-        std::shared_ptr<GeniusNode>   node_;
+        std::shared_ptr<GeniusAccount> bootstrap_account_;
+        std::shared_ptr<GeniusNode>    node_;
     };
 } // namespace
 
@@ -268,14 +270,15 @@ TEST_F( PolicyLifetimeMultiAccountTest, PolicyObjectsAndProviderSurviveRepeatedA
     successor.authorizing_policy_hash = snapshot.policy.Hash().value();
     successor.basis_points            = 250;
     const auto core = BurnConfig::BurnCandidateCore( successor ).value();
-    const auto id   = securecrdt::CandidateId::FromCore( core ).value();
     ASSERT_TRUE( MultiAccountTestAccess::SecureCrdt( node_ )
                      ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
                                                   core,
-                                                  signer_->GetAddress(),
-                                                  signer_->Sign( core.CanonicalBytes().value() ) } )
+                                                  bootstrap_account_->GetAddress(),
+                                                  bootstrap_account_->Sign( core.CanonicalBytes().value() ) } )
                      .has_value() );
-    ASSERT_TRUE( MultiAccountTestAccess::Burn( node_ )->TryActivateBurnCandidate( id ).has_value() );
+    test::assertWaitForCondition( [&] { return provider->GetBasisPoints() == 250U; },
+                                  std::chrono::seconds( 5 ),
+                                  "post-switch burn successor was not published" );
     EXPECT_EQ( provider->GetBasisPoints(), 250U );
     EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
                provider.get() );

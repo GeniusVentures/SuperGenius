@@ -925,7 +925,7 @@ namespace sgns
                     {
                         node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
                                              burn_config_result.error().message() );
-                        ResetQuorumMembers();
+                        ShutdownNodePolicyServices();
                         return;
                     }
                     burn_config_ = burn_config_result.value();
@@ -935,7 +935,7 @@ namespace sgns
                     if ( !secure_crdt_->RegisterFilters() )
                     {
                         node_logger_->error( "SecureCrdt filter registration failed" );
-                        ResetQuorumMembers();
+                        ShutdownNodePolicyServices();
                         return;
                     }
                 }
@@ -949,7 +949,7 @@ namespace sgns
                                                                 std::chrono::milliseconds( 300000 ),
                                                                 std::chrono::milliseconds( 0 ),
                                                                 burn_config_->GetCachedBasisPoints(),
-                                                                burn_config_ );
+                                                                burn_config_->GetConfirmedValueProvider() );
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this()]( TransactionManager::State old_state,
@@ -1901,7 +1901,6 @@ namespace sgns
         {
             ResetProcessingMembers();
             transaction_manager_.reset();
-            ResetQuorumMembers();
             bridge_relayer_.reset();
             eth_watch_service_.reset();
             blockchain_.reset();
@@ -1915,8 +1914,12 @@ namespace sgns
         return outcome::success();
     }
 
-    void GeniusNode::ResetQuorumMembers()
+    void GeniusNode::ShutdownNodePolicyServices()
     {
+        // The controller owns candidate callbacks into SecureCrdt and retains both
+        // policy services. Release it before unregistering those owners.
+        trust_startup_controller_.reset();
+
         // Unregister while the policy owners and their owner tokens are still alive.
         // Their destructors repeat this defensively, so partial initialization is safe.
         if ( burn_config_ )
@@ -1933,6 +1936,7 @@ namespace sgns
         burn_config_.reset();
         trusted_peer_registry_.reset();
         secure_crdt_.reset();
+        trust_state_store_.reset();
     }
 
     void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
@@ -1950,7 +1954,7 @@ namespace sgns
         // GraphSync, the scheduler, PubSub, and the io_context.
         ResetProcessingMembers();
         transaction_manager_.reset();
-        ResetQuorumMembers();
+        ShutdownNodePolicyServices();
         bridge_relayer_.reset();
         eth_watch_service_.reset();
         node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
@@ -2045,6 +2049,7 @@ namespace sgns
             node_logger_->error( "GeniusNode shutdown account-bound services failed: {}",
                                  services_shutdown.error().message() );
         }
+        ShutdownNodePolicyServices();
         if ( tx_globaldb_ )
         {
             tx_globaldb_->ShutdownNow();

@@ -34,6 +34,16 @@
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
+{
+    switch ( e )
+    {
+        case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
+            return "TRUST_POLICY_NOT_READY";
+    }
+    return "Unknown TransactionManager error";
+}
+
 namespace sgns
 {
     namespace
@@ -130,7 +140,8 @@ namespace sgns
                                                                  std::chrono::milliseconds timestamp_tolerance,
                                                                  std::chrono::milliseconds mutability_window,
                                                                  uint64_t                  initial_burn_basis_points,
-                                                                 std::shared_ptr<sgns::account::BurnConfig> burn_config )
+                                                                 std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider>
+                                                                     confirmed_burn_provider )
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
@@ -141,7 +152,7 @@ namespace sgns
                                                                                      timestamp_tolerance,
                                                                                      mutability_window,
                                                                                      initial_burn_basis_points,
-                                                                                     burn_config ) );
+                                                                                     std::move( confirmed_burn_provider ) ) );
 
         instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
@@ -261,18 +272,6 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
 
-        if ( burn_config )
-        {
-            burn_config->RegisterRefreshCallback(
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( uint64_t new_value )
-                {
-                    if ( auto strong = weak_ptr.lock() )
-                    {
-                        strong->burn_basis_points_.store( new_value, std::memory_order_relaxed );
-                    }
-                } );
-        }
-
         return instance;
     }
 
@@ -284,8 +283,9 @@ namespace sgns
                                             uint16_t                                 subnet_id,
                                             std::chrono::milliseconds                timestamp_tolerance,
                                             std::chrono::milliseconds                mutability_window,
-                                            uint64_t                                 initial_burn_basis_points,
-                                            std::shared_ptr<sgns::account::BurnConfig> /*burn_config*/ ) :
+                                            uint64_t initial_burn_basis_points,
+                                            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider>
+                                                confirmed_burn_provider ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
@@ -297,6 +297,7 @@ namespace sgns
         timestamp_tolerance_m( timestamp_tolerance ),
         mutability_window_m( mutability_window ),
         burn_basis_points_( initial_burn_basis_points ),
+        confirmed_burn_provider_( std::move( confirmed_burn_provider ) ),
         last_loop_time_( std::chrono::steady_clock::now() ),
         m_logger( MakeTransactionManagerLogger( account_m->GetAddress(), full_node_m ) )
     {
@@ -786,6 +787,16 @@ namespace sgns
         const SGProcessing::TaskResult          &task_result,
         std::shared_ptr<crdt::AtomicTransaction> crdt_transaction )
     {
+        uint64_t burn_basis_points = burn_basis_points_.load( std::memory_order_relaxed );
+        if ( confirmed_burn_provider_ )
+        {
+            if ( !confirmed_burn_provider_->IsReady() )
+            {
+                return outcome::failure( Error::TRUST_POLICY_NOT_READY );
+            }
+            burn_basis_points = confirmed_burn_provider_->GetBasisPoints();
+        }
+
         const auto &subtask_results = task_result.subtask_results();
         if ( subtask_results.empty() )
         {
@@ -823,8 +834,7 @@ namespace sgns
 
         // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
         // taken at escrow creation.
-        const auto burn_amount = ( escrow_amount * burn_basis_points_.load( std::memory_order_relaxed ) ) /
-                                  BASIS_POINTS_TOTAL;
+        const auto burn_amount = ( escrow_amount * burn_basis_points ) / BASIS_POINTS_TOTAL;
         const auto available   = escrow_amount - burn_amount;
 
         BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
