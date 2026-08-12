@@ -84,6 +84,9 @@ namespace sgns::crdt
         /** @brief Returns the running GlobalDB instance, or nullptr before Start/after Stop. */
         std::shared_ptr<GlobalDB> db() const;
 
+        /** @brief Returns the running PubSub interface address for bootstrap configuration. */
+        std::string interface_address() const;
+
     private:
         struct NetworkConfig
         {
