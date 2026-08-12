@@ -41,6 +41,16 @@
 #include "outcome/outcome.hpp"
 #include "proof/ProcessingProof.hpp"
 
+OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, TransactionManager::Error, e )
+{
+    switch ( e )
+    {
+        case sgns::TransactionManager::Error::TRUST_POLICY_NOT_READY:
+            return "TRUST_POLICY_NOT_READY";
+    }
+    return "Unknown TransactionManager error";
+}
+
 namespace sgns
 {
     namespace
@@ -133,14 +143,42 @@ namespace sgns
                                                                  std::chrono::milliseconds timestamp_tolerance,
                                                                  std::chrono::milliseconds mutability_window )
     {
+        // Legacy bool factory kept for the phase-12 fault suites; forwards onto the
+        // NodeType factory (Full keeps the legacy full-node behaviour, else Light).
+        return New( std::move( processing_db ),
+                    std::move( ctx ),
+                    std::move( account ),
+                    std::move( blockchain ),
+                    full_node ? NodeType::Full : NodeType::Light,
+                    subnet_id,
+                    timestamp_tolerance,
+                    mutability_window,
+                    BURN_BASIS_POINTS_DEFAULT,
+                    nullptr );
+    }
+
+    std::shared_ptr<TransactionManager> TransactionManager::New(
+        std::shared_ptr<crdt::GlobalDB>          processing_db,
+        std::shared_ptr<boost::asio::io_context> ctx,
+        std::shared_ptr<GeniusAccount>           account,
+        std::shared_ptr<Blockchain>              blockchain,
+        NodeType                                 node_type,
+        uint16_t                                 subnet_id,
+        std::chrono::milliseconds                timestamp_tolerance,
+        std::chrono::milliseconds                mutability_window,
+        uint64_t                                 initial_burn_basis_points,
+        std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider )
+    {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
                                                                                      std::move( account ),
                                                                                      std::move( blockchain ),
-                                                                                     full_node,
+                                                                                     node_type,
                                                                                      subnet_id,
                                                                                      timestamp_tolerance,
-                                                                                     mutability_window ) );
+                                                                                     mutability_window,
+                                                                                     initial_burn_basis_points,
+                                                                                     std::move( confirmed_burn_provider ) ) );
 
         instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
@@ -289,76 +327,31 @@ namespace sgns
         return instance;
     }
 
-    std::shared_ptr<TransactionManager> TransactionManager::New(
-        std::shared_ptr<crdt::GlobalDB>            processing_db,
-        std::shared_ptr<boost::asio::io_context>   ctx,
-        std::shared_ptr<GeniusAccount>             account,
-        std::shared_ptr<Blockchain>                blockchain,
-        NodeType                                   node_type,
-        uint16_t                                   subnet_id,
-        std::chrono::milliseconds                  timestamp_tolerance,
-        std::chrono::milliseconds                  mutability_window,
-        uint64_t                                   initial_burn_basis_points,
-        std::shared_ptr<sgns::account::BurnConfig> burn_config )
-    {
-        // NodeType::Full keeps the legacy full-node behaviour (full-node topic
-        // subscription); every other role runs the light path. All CRDT/consensus
-        // wiring is inherited from the bool-based factory above.
-        const bool full_node = node_type == NodeType::Full;
-        auto       instance  = New( std::move( processing_db ),
-                                    std::move( ctx ),
-                                    std::move( account ),
-                                    std::move( blockchain ),
-                                    full_node,
-                                    subnet_id,
-                                    timestamp_tolerance,
-                                    mutability_window );
-        if ( !instance )
-        {
-            return nullptr;
-        }
-        // Archive runs the light wiring above but still replicates network-wide
-        // data: its local ledger is complete, so init must not block on a network
-        // nonce answer (see CheckNonce) the way a Light node's does.
-        instance->replicates_all_accounts_m_ = ReplicatesAllAccounts( node_type );
-        instance->burn_basis_points_.store( initial_burn_basis_points, std::memory_order_relaxed );
-
-        if ( burn_config )
-        {
-            burn_config->RegisterRefreshCallback(
-                [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( uint64_t new_value )
-                {
-                    if ( auto strong = weak_ptr.lock() )
-                    {
-                        strong->burn_basis_points_.store( new_value, std::memory_order_relaxed );
-                    }
-                } );
-        }
-
-        return instance;
-    }
-
     TransactionManager::TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
                                             std::shared_ptr<boost::asio::io_context> ctx,
                                             std::shared_ptr<GeniusAccount>           account,
                                             std::shared_ptr<Blockchain>              blockchain,
-                                            bool                                     full_node,
+                                            NodeType                                 node_type,
                                             uint16_t                                 subnet_id,
                                             std::chrono::milliseconds                timestamp_tolerance,
-                                            std::chrono::milliseconds                mutability_window ) :
+                                            std::chrono::milliseconds                mutability_window,
+                                            uint64_t initial_burn_basis_points,
+                                            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider>
+                                                confirmed_burn_provider ) :
         globaldb_m( std::move( processing_db ) ),
         ctx_m( std::move( ctx ) ),
         account_m( std::move( account ) ),
         blockchain_( std::move( blockchain ) ),
-        full_node_m( full_node ),
-        replicates_all_accounts_m_( full_node ),
+        full_node_m( node_type == NodeType::Full ),
+        replicates_all_accounts_m_( ReplicatesAllAccounts( node_type ) ),
         subnet_id_( subnet_id ),
         state_m( State::CREATING ),
         last_periodic_sync_time_( std::chrono::steady_clock::now() ),
         timestamp_tolerance_m( timestamp_tolerance ),
         mutability_window_m( mutability_window ),
+        burn_basis_points_( initial_burn_basis_points ),
+        confirmed_burn_provider_( std::move( confirmed_burn_provider ) ),
         last_loop_time_( std::chrono::steady_clock::now() )
-
     {
     }
 
@@ -1306,6 +1299,16 @@ namespace sgns
         {
             return std::errc::operation_canceled;
         }
+        uint64_t burn_basis_points = burn_basis_points_.load( std::memory_order_relaxed );
+        if ( confirmed_burn_provider_ )
+        {
+            if ( !confirmed_burn_provider_->IsReady() )
+            {
+                return outcome::failure( Error::TRUST_POLICY_NOT_READY );
+            }
+            burn_basis_points = confirmed_burn_provider_->GetBasisPoints();
+        }
+
         if ( task_result.subtask_results().size() == 0 )
         {
             TransactionManagerLogger()->error( "[{} - full: {}] No result found on escrow {}",
@@ -1358,7 +1361,7 @@ namespace sgns
                            BuildPayoutOutputs( task_result,
                                                escrow_tx->GetAmount(),
                                                escrow_params.second.front().token_id,
-                                               burn_basis_points_.load( std::memory_order_relaxed ) ) );
+                                               burn_basis_points ) );
 
         InputUTXOInfo escrow_utxo_input;
         escrow_utxo_input.txid_hash_  = base::Hash256::fromReadableString( escrow_tx->GetHash() ).value();
