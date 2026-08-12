@@ -153,11 +153,14 @@ namespace sgns::trustedpeer
                                                                std::move( bootstrapper_address ),
                                                                quorum_threshold,
                                                                std::move( base_key ) );
-        instance->RegisterSignerSetSource();
+        if ( !instance->RegisterSignerSetSource() )
+        {
+            return outcome::failure( std::errc::file_exists );
+        }
         return instance;
     }
 
-    void TrustedPeerRegistry::RegisterSignerSetSource()
+    bool TrustedPeerRegistry::RegisterSignerSetSource()
     {
         sgns::securecrdt::SecureCrdtRegistryEntry entry;
         entry.signer_set_source = [weak_self = weak_from_this()](
@@ -174,7 +177,7 @@ namespace sgns::trustedpeer
         { return std::make_shared<TrustedPeerListPayload>(); };
         entry.owner_token = &registry_token_;
 
-        sgns::securecrdt::SecureCrdtRegistry::Register( base_key_.GetKey(), entry );
+        return secure_crdt_->Registry().Register( base_key_.GetKey(), std::move( entry ) );
     }
 
     outcome::result<sgns::securecrdt::SignerSetSnapshot> TrustedPeerRegistry::ResolveSignerSet() const
@@ -278,6 +281,6 @@ namespace sgns::trustedpeer
 
     void TrustedPeerRegistry::Unregister()
     {
-        sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( base_key_.GetKey(), &registry_token_ );
+        secure_crdt_->Registry().UnregisterIf( base_key_.GetKey(), &registry_token_ );
     }
 } // namespace sgns::trustedpeer
