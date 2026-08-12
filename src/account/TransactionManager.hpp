@@ -40,6 +40,7 @@
 namespace sgns::account
 {
     class BurnConfig;
+    class ConfirmedBurnValueProvider;
 } // namespace sgns::account
 
 namespace sgns
@@ -80,6 +81,11 @@ namespace sgns
         static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
         /// Fixed destination of the burn slice of an escrow payout.
         static constexpr std::string_view BURN_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+        enum class Error : uint8_t
+        {
+            TRUST_POLICY_NOT_READY = 1,
+        };
 
         /**
          * @brief State of the Transaction Manager
@@ -146,32 +152,33 @@ namespace sgns
             std::shared_ptr<boost::asio::io_context> ctx,
             std::shared_ptr<GeniusAccount>           account,
             std::shared_ptr<Blockchain>              blockchain,
-            bool                                     full_node            = true,
-            uint16_t                                 subnet_id           = 0,
-            std::chrono::milliseconds                timestamp_tolerance = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                mutability_window   = std::chrono::milliseconds( 0 ) );
+            bool                                     full_node,
+            uint16_t                                 subnet_id                 = 0,
+            std::chrono::milliseconds                timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
+            std::chrono::milliseconds                mutability_window         = std::chrono::milliseconds( 0 ) );
 
         /**
          * @brief Factory constructor variant taking the deployment role.
          *
          * @param[in] node_type Deployment role of this node (Full / Light / Archive). Full maps
          *            onto the legacy full-node behaviour (full-node topic subscription).
-         * @param[in] initial_burn_basis_points Burn slice used until BurnConfig publishes a
-         *            quorum-signed value.
-         * @param[in] burn_config Optional BurnConfig whose refresh callback updates the cached
-         *            burn slice at runtime.
+         * @param[in] initial_burn_basis_points Burn slice used until a confirmed trust policy
+         *            publishes a quorum-signed value.
+         * @param[in] confirmed_burn_provider Optional node-scoped provider whose confirmed
+         *            basis points drive the live burn rate; without one the cached fallback
+         *            value applies.
          */
         static std::shared_ptr<TransactionManager> New(
             std::shared_ptr<crdt::GlobalDB>            processing_db,
             std::shared_ptr<boost::asio::io_context>   ctx,
             std::shared_ptr<GeniusAccount>             account,
             std::shared_ptr<Blockchain>                blockchain,
-            NodeType                                   node_type,
+            NodeType                                   node_type                 = NodeType::Light,
             uint16_t                                   subnet_id                 = 0,
             std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
             std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
             uint64_t                                   initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
-            std::shared_ptr<sgns::account::BurnConfig> burn_config               = nullptr );
+            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider = nullptr );
 
         ~TransactionManager();
 
@@ -594,6 +601,36 @@ namespace sgns
                                              boost::system::error_code                      error = {} );
         void        CancelPendingTransactionWaits();
 
+        struct TrackedTx
+        {
+            std::shared_ptr<GeniusTransaction> tx;
+            TransactionStatus                  status;
+            uint64_t                           cached_nonce; // Cache nonce to avoid dereferencing tx
+        };
+
+        struct ReplayProtectionResult
+        {
+            ConsensusManager::ValidationResult validation = ConsensusManager::ValidationResult::Approve();
+        };
+
+        struct AccountUTXOState
+        {
+            uint64_t      version{ 0 };
+            base::Hash256 root{};
+            bool          initialized{ false };
+        };
+
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<Blockchain>              blockchain,
+                            NodeType                                 node_type,
+                            uint16_t                                 subnet_id,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                mutability_window,
+                            uint64_t                                 initial_burn_basis_points,
+                            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider );
+
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
             outcome::result<void> ( TransactionManager::* )( const std::shared_ptr<GeniusTransaction> & );
@@ -839,6 +876,9 @@ namespace sgns
         std::condition_variable fault_test_cv_;
         uint64_t                mint_effects_for_test_ = 0;
         FinalityFaultBarrier    mint_effects_barrier_;
+
+        /// @brief Node-scoped durable-ready burn state shared by every replacement manager.
+        std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider_;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
@@ -1134,6 +1174,8 @@ namespace sgns
         PublicChainInputValidator public_chain_input_validator_;
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, TransactionManager::Error );
 
 template <>
 struct fmt::formatter<sgns::TransactionManager::State> : formatter<std::string_view>
