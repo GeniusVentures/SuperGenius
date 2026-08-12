@@ -20,6 +20,14 @@ set(SECURECRDT_TEST_NODE_LIBS
     json_secure_storage
 )
 
+addtest(securecrdt_candidate_test
+    securecrdt_candidate_test.cpp
+)
+target_link_libraries(securecrdt_candidate_test
+    ${SECURECRDT_TEST_NODE_LIBS}
+    trustedpeer
+)
+
 addtest(securecrdt_quorum_gate_test
     securecrdt_quorum_gate_test.cpp
 )
