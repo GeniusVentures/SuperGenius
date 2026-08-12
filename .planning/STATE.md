@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-03-PLAN.md
-last_updated: "2026-08-12T14:21:08.305Z"
+stopped_at: Completed 13-12-PLAN.md
+last_updated: "2026-08-12T14:36:55.771Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 10
+  completed_plans: 11
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 3 of 12
+Plan: 4 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T14:20:29.218Z
-**Stopped At:** Completed 13-03-PLAN.md
+**Last session:** 2026-08-12T14:36:55.767Z
+**Stopped At:** Completed 13-12-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -92,9 +92,13 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 |-------|------|----------|-------|
 | Phase 13 P01 | 10min | 1 tasks | 7 files |
 | Phase 13 P03 | 27min | 3 tasks | 10 files |
+| Phase 13 P12 | 12 min | 1 tasks | 8 files |
 
 ## Decisions
 
 - [Phase 13]: Genesis identity uses SGNS_TRUST_GENESIS_V1 with fixed-width big-endian fields and sorted lowercase 64-byte keys. — This makes the reviewed trust root deterministic and independently verifiable.
 - [Phase 13]: Initial genesis policy is version 1 with burn value 100 and majority/two-thirds safety floors. — Unsafe bootstrap thresholds or ambiguous economic readiness must fail before fingerprinting.
 - [Phase 13]: SecureCrdt owns an isolated registry by default; duplicate same-node patterns fail closed instead of replacing the current owner. — This prevents co-located nodes and duplicate policy owners from replacing signer sources or unregistering one another.
+- [Phase 13]: Quorum policy identity binds distinct predecessor and authorizer hashes in canonical bytes. — Both links must equal the confirmed current policy hash for a successor.
+- [Phase 13]: Membership uses M/2+1 and BurnConfig uses M-M/3 with bounds checked first. — Exact integer formulas avoid percentage drift and overflow.
+- [Phase 13]: Production TPR and BurnConfig select explicit policy-specific validators. — The burn path cannot silently inherit the weaker membership floor.
