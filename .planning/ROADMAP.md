@@ -63,7 +63,7 @@ Full phase details: `.planning/milestones/v3.0-ROADMAP.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 5/12 plans executed
+**Plans:** 6/12 plans executed
 Plans:
 **Wave 1**
 
@@ -84,7 +84,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 13-05-PLAN.md — Trusted-peer and BurnConfig successor activation
+- [x] 13-05-PLAN.md — Trusted-peer and BurnConfig successor activation
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
