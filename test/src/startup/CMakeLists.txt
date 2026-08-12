@@ -51,7 +51,13 @@ target_compile_definitions(startup_wiring_test
 
 # CTest defaults CWD to this source/build subdirectory. Run from the binary
 # directory because the test opens bridge_chains_config.json by relative path.
-set_tests_properties(startup_wiring_test PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin)
+set_tests_properties(
+    startup_wiring_test
+    trust_first_boot_e2e_test
+    trust_restart_test
+    trust_tamper_e2e_test
+    PROPERTIES WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/test_bin
+)
 
 if(MSVC)
     target_link_options(startup_wiring_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
