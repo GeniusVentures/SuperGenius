@@ -2,8 +2,18 @@ addtest(startup_wiring_test
     startup_wiring_test.cpp
 )
 
+addtest(trust_first_boot_e2e_test
+    trust_first_boot_e2e_test.cpp
+)
+
 target_link_libraries(startup_wiring_test
     genius_node_test
+    json_secure_storage
+)
+
+target_link_libraries(trust_first_boot_e2e_test
+    genius_node_test
+    local_trust_admin
     json_secure_storage
 )
 
@@ -26,10 +36,17 @@ set_tests_properties(startup_wiring_test PROPERTIES WORKING_DIRECTORY ${CMAKE_BI
 
 if(MSVC)
     target_link_options(startup_wiring_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+    target_link_options(trust_first_boot_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
 elseif(APPLE)
     target_link_options(startup_wiring_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+    target_link_options(trust_first_boot_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
 else()
     target_link_options(startup_wiring_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+    target_link_options(trust_first_boot_e2e_test PUBLIC
         "-Wl,--whole-archive"
         "$<TARGET_FILE:genius_node_test>"
         "-Wl,--no-whole-archive"
