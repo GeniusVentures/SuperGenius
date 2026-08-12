@@ -314,4 +314,10 @@ namespace sgns::crdt
         std::lock_guard<std::mutex> lock( mutex_ );
         return db_;
     }
+
+    std::string GlobalDbNetworkComposition::interface_address() const
+    {
+        std::lock_guard<std::mutex> lock( mutex_ );
+        return pubsub_ ? pubsub_->GetInterfaceAddress() : std::string{};
+    }
 } // namespace sgns::crdt
