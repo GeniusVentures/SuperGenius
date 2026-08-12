@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-05-PLAN.md
-last_updated: "2026-08-12T15:43:34.215Z"
+stopped_at: Completed 13-06-PLAN.md
+last_updated: "2026-08-12T15:54:25.670Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 14
+  completed_plans: 15
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 6 of 12
+Plan: 7 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -74,8 +74,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T15:43:34.211Z
-**Stopped At:** Completed 13-05-PLAN.md
+**Last session:** 2026-08-12T15:54:25.666Z
+**Stopped At:** Completed 13-06-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -102,6 +102,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P02 | 11min | 2 tasks | 5 files |
 | Phase 13 P04 | 22m | 3 tasks | 9 files |
 | Phase 13 P05 | 23min | 3 tasks | 11 files |
+| Phase 13 P06 | 8min | 1 tasks | 4 files |
 
 ## Decisions
 
@@ -121,3 +122,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Trust records bind proofs to exact candidate-core authorization bytes with strict legacy decoding. — Restart verification must check the same context operators approved without rejecting prior Phase 13 records.
 - [Phase 13]: Burn v1 uses a domain-separated genesis anchor and current burn quorum. — Economic readiness cannot derive from the bootstrap proof or unconfirmed peers.
 - [Phase 13]: A node-scoped confirmed burn provider publishes only after durable activation. — TransactionManager replacements need one authoritative readiness and value source.
+- [Phase 13]: GlobalDbNetworkComposition validates configuration in Create but defers network and datastore side effects to Start.
+- [Phase 13]: The GlobalDB transport identity stays internal beneath the database path; callers provide no account or private key.
+- [Phase 13]: GlobalDB listen and broadcast topics remain mandatory caller inputs so local trust tools reuse the production CRDT channel.
