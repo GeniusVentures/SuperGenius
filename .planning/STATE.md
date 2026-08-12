@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-02-PLAN.md
-last_updated: "2026-08-12T14:50:58.428Z"
+stopped_at: Completed 13-04-PLAN.md
+last_updated: "2026-08-12T15:16:25.023Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 12
+  completed_plans: 13
   percent: 29
 ---
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T14:50:41.173Z
-**Stopped At:** Completed 13-02-PLAN.md
+**Last session:** 2026-08-12T15:16:25.019Z
+**Stopped At:** Completed 13-04-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -94,6 +94,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P03 | 27min | 3 tasks | 10 files |
 | Phase 13 P12 | 12 min | 1 tasks | 8 files |
 | Phase 13 P02 | 11min | 2 tasks | 5 files |
+| Phase 13 P04 | 22m | 3 tasks | 9 files |
 
 ## Decisions
 
@@ -106,3 +107,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Genesis derives version-1 policy and burn records from the canonical signed manifest. — This makes the bootstrap proof independently revalidatable after restart.
 - [Phase 13]: Trust-store loads verify complete policy and burn predecessor chains. — Canonical hashes and quorum proofs, not JSON or arrival order, determine authority.
 - [Phase 13]: Competing same-version trust candidates return STALE_HEAD. — Exact replay/decrease remains distinct while concurrent losers have a stable race outcome.
+- [Phase 13]: Candidate approvals repeat exact canonical core bytes and bind version, content hash, and signer in the storage key. — Self-contained signed bytes and key binding prevent ambiguous reconstruction or cross-candidate approval reuse.
+- [Phase 13]: One CandidateAuthorizationSource snapshot drives local submission and remote filtering. — Both ingress paths must enforce the same live network, predecessor, policy, signer, and resource constraints.
+- [Phase 13]: Current-only candidate listing separates activation eligibility from bounded stale audit visibility. — Predecessor changes must immediately deactivate stale candidates without erasing authenticated audit records.
