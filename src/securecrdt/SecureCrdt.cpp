@@ -24,6 +24,16 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
             return "payload failed DeserializeFromBytes/Verify (codec/semantic check)";
         case Error::QUORUM_THRESHOLD_BELOW_FLOOR:
             return "configured quorum_threshold is below the majority-safety floor (ceil(0.51*signer_set_size))";
+        case Error::UNREGISTERED_CANDIDATE_DOMAIN:
+            return "candidate domain has no authorization source";
+        case Error::CANDIDATE_CONTEXT_MISMATCH:
+            return "candidate does not match the current authorization context";
+        case Error::UNAUTHORIZED_CANDIDATE_SIGNER:
+            return "candidate signer is not authorized or its signature is invalid";
+        case Error::CANDIDATE_LIMIT_EXCEEDED:
+            return "candidate resource limit exceeded";
+        case Error::DUPLICATE_CANDIDATE_APPROVAL:
+            return "candidate already has an approval from this signer";
     }
     return "unknown SecureCrdt::Error";
 }
@@ -52,8 +62,8 @@ namespace sgns::securecrdt
     } // namespace
 
     SecureCrdt::SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db,
-                            std::string                            topic,
-                            std::shared_ptr<SecureCrdtRegistry>    registry ) :
+                            std::string                           topic,
+                            std::shared_ptr<SecureCrdtRegistry>   registry ) :
         db_( std::move( db ) ),
         topic_( std::move( topic ) ),
         registry_( registry ? std::move( registry ) : std::make_shared<SecureCrdtRegistry>() )
@@ -89,15 +99,16 @@ namespace sgns::securecrdt
         }
         if ( !instance->Verify( payload ) )
         {
-            logger_->error( "{}: semantically-invalid payload rejected locally key={}", __func__,
-                            base_key.GetKey() );
+            logger_->error( "{}: semantically-invalid payload rejected locally key={}", __func__, base_key.GetKey() );
             return outcome::failure( Error::MALFORMED_VALUE );
         }
 
         auto put_result = db_->Put( base_key, sgns::base::Buffer( payload ), { topic_ } );
         if ( put_result.has_error() )
         {
-            logger_->error( "{}: Put failed key={} error={}", __func__, base_key.GetKey(),
+            logger_->error( "{}: Put failed key={} error={}",
+                            __func__,
+                            base_key.GetKey(),
                             put_result.error().message() );
             return put_result.error();
         }
@@ -128,16 +139,21 @@ namespace sgns::securecrdt
         const std::vector<uint8_t> payload = current_value.value().toVector();
         if ( !multisig::VerifyPayloadSignature( signer_address, signature, payload ) )
         {
-            logger_->error( "{}: invalid signature rejected locally key={} signer={}", __func__,
-                            base_key.GetKey(), signer_address );
+            logger_->error( "{}: invalid signature rejected locally key={} signer={}",
+                            __func__,
+                            base_key.GetKey(),
+                            signer_address );
             return outcome::failure( Error::INVALID_SIGNATURE );
         }
 
         auto put_result = db_->Put( base_key.ChildString( "sig" ).ChildString( signer_address ),
-                                    sgns::base::Buffer( signature ), { topic_ } );
+                                    sgns::base::Buffer( signature ),
+                                    { topic_ } );
         if ( put_result.has_error() )
         {
-            logger_->error( "{}: Put failed key={} error={}", __func__, base_key.GetKey(),
+            logger_->error( "{}: Put failed key={} error={}",
+                            __func__,
+                            base_key.GetKey(),
                             put_result.error().message() );
             return put_result.error();
         }
@@ -165,7 +181,7 @@ namespace sgns::securecrdt
         }
         const std::vector<uint8_t> payload = current_value.value().toVector();
 
-        auto sig_query = db_->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
+        auto                          sig_query = db_->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
         multisig::CollectedSignatures collected_signatures;
         if ( !sig_query.has_error() )
         {
@@ -203,22 +219,69 @@ namespace sgns::securecrdt
         const auto quorum_result = quorum.EvaluateQuorum( collected_signatures, payload );
         if ( !quorum_result.has_quorum )
         {
-            logger_->debug( "{}: quorum not met key={} valid_unique_count={}", __func__, base_key.GetKey(),
+            logger_->debug( "{}: quorum not met key={} valid_unique_count={}",
+                            __func__,
+                            base_key.GetKey(),
                             quorum_result.valid_unique_count );
             return outcome::success( std::optional<sgns::base::Buffer>{} );
         }
 
-        logger_->debug( "{}: quorum met key={} valid_unique_count={}", __func__, base_key.GetKey(),
+        logger_->debug( "{}: quorum met key={} valid_unique_count={}",
+                        __func__,
+                        base_key.GetKey(),
                         quorum_result.valid_unique_count );
         return outcome::success( std::optional<sgns::base::Buffer>{ current_value.value() } );
+    }
+
+    outcome::result<CandidateId> SecureCrdt::SubmitCandidateApproval( const CandidateApprovalRecord & )
+    {
+        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+    }
+
+    outcome::result<std::vector<CandidateApprovalRecord>> SecureCrdt::ReadCandidateApprovals( const CandidateId & )
+    {
+        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+    }
+
+    outcome::result<std::vector<CandidateId>> SecureCrdt::ListCandidates( const std::string &,
+                                                                          const std::string &,
+                                                                          bool )
+    {
+        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+    }
+
+    bool SecureCrdt::RegisterCandidateCallback( const std::string &, CandidateCallback, const void * )
+    {
+        return false;
+    }
+
+    void SecureCrdt::UnregisterCandidateCallbackIf( const std::string &, const void * )
+    {
+    }
+
+    outcome::result<CandidateApprovalRecord> SecureCrdt::ValidateCandidateApproval( const sgns::crdt::HierarchicalKey &,
+                                                                                    const std::vector<uint8_t> &,
+                                                                                    bool )
+    {
+        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+    }
+
+    std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterCandidateApproval(
+        const sgns::crdt::pb::Element & )
+    {
+        return std::vector<sgns::crdt::pb::Element>{};
+    }
+
+    void SecureCrdt::OnCandidateApproval( const std::string &, const std::pair<std::string, sgns::base::Buffer> & )
+    {
     }
 
     bool SecureCrdt::RegisterFilters()
     {
         logger_->trace( "{}: entry", __func__ );
-        bool         all_registered = true;
-        auto         weak_self      = weak_from_this();
-        const auto   entries        = registry_->AllEntries();
+        bool       all_registered = true;
+        auto       weak_self      = weak_from_this();
+        const auto entries        = registry_->AllEntries();
         for ( const auto &entry : entries )
         {
             const std::string pattern = "/?" + entry.key_pattern + "(/sig/[^/]+)?";

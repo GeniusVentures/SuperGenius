@@ -23,6 +23,7 @@
 
 #include "outcome/outcome.hpp"
 #include "securecrdt/ISignedCRDTData.hpp"
+#include "securecrdt/SecureCrdtCandidate.hpp"
 
 namespace sgns::securecrdt
 {
@@ -43,19 +44,39 @@ namespace sgns::securecrdt
      */
     using SignerSetSource = std::function<outcome::result<SignerSetSnapshot>( const std::string &base_key )>;
 
+    struct CandidateAuthorizationSnapshot
+    {
+        uint16_t                 network_id   = 0;
+        CandidateKind            kind         = CandidateKind::TrustPolicy;
+        uint64_t                 next_version = 0;
+        std::string              expected_previous_hash;
+        std::string              authorizing_policy_hash;
+        std::vector<std::string> authorized_signers;
+    };
+
+    using CandidateAuthorizationSource = std::function<outcome::result<CandidateAuthorizationSnapshot>()>;
+
+    struct CandidateDomainEntry
+    {
+        std::string                  domain;
+        CandidateKind                kind = CandidateKind::TrustPolicy;
+        CandidateAuthorizationSource authorization_source;
+        const void                  *owner_token = nullptr;
+    };
+
     /**
      * @brief Policy entry describing how a registered key pattern is verified
      *        and instantiated.
      */
     struct SecureCrdtRegistryEntry
     {
-        std::string                                          key_pattern;
-        SignerSetSource                                      signer_set_source;
-        std::function<std::shared_ptr<ISignedCRDTData>()>    make_instance;
-        std::regex                                           compiled_pattern;
+        std::string                                       key_pattern;
+        SignerSetSource                                   signer_set_source;
+        std::function<std::shared_ptr<ISignedCRDTData>()> make_instance;
+        std::regex                                        compiled_pattern;
         /// @brief Opaque token supplied by the caller at Register() time; must
         ///        be presented verbatim to UnregisterIf() to remove this entry.
-        const void                                          *owner_token = nullptr;
+        const void *owner_token = nullptr;
     };
 
     /**
@@ -79,7 +100,7 @@ namespace sgns::securecrdt
          */
         bool Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
         {
-            entry.key_pattern     = key_pattern;
+            entry.key_pattern      = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
             std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
             return registry_.emplace( key_pattern, std::move( entry ) ).second;
@@ -97,7 +118,7 @@ namespace sgns::securecrdt
         void UnregisterIf( const std::string &key_pattern, const void *expected_token )
         {
             std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
-            auto it = registry_.find( key_pattern );
+            auto                                it = registry_.find( key_pattern );
             if ( it != registry_.end() && it->second.owner_token == expected_token )
             {
                 registry_.erase( it );
@@ -131,7 +152,7 @@ namespace sgns::securecrdt
          */
         std::vector<SecureCrdtRegistryEntry> AllEntries() const
         {
-            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            std::shared_lock<std::shared_mutex>  lock( registry_mutex_ );
             std::vector<SecureCrdtRegistryEntry> entries;
             entries.reserve( registry_.size() );
             for ( const auto &[pattern, entry] : registry_ )
@@ -141,9 +162,46 @@ namespace sgns::securecrdt
             return entries;
         }
 
+        bool RegisterCandidateDomain( const std::string &domain, CandidateDomainEntry entry )
+        {
+            entry.domain = domain;
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            return candidate_domains_.emplace( domain, std::move( entry ) ).second;
+        }
+
+        void UnregisterCandidateDomainIf( const std::string &domain, const void *expected_token )
+        {
+            std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
+            auto                                it = candidate_domains_.find( domain );
+            if ( it != candidate_domains_.end() && it->second.owner_token == expected_token )
+            {
+                candidate_domains_.erase( it );
+            }
+        }
+
+        std::optional<CandidateDomainEntry> ResolveCandidateDomain( const std::string &domain ) const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            const auto                          it = candidate_domains_.find( domain );
+            return it == candidate_domains_.end() ? std::nullopt : std::optional<CandidateDomainEntry>( it->second );
+        }
+
+        std::vector<CandidateDomainEntry> AllCandidateDomains() const
+        {
+            std::shared_lock<std::shared_mutex> lock( registry_mutex_ );
+            std::vector<CandidateDomainEntry>   entries;
+            entries.reserve( candidate_domains_.size() );
+            for ( const auto &[domain, entry] : candidate_domains_ )
+            {
+                entries.push_back( entry );
+            }
+            return entries;
+        }
+
     private:
         std::unordered_map<std::string, SecureCrdtRegistryEntry> registry_;
-        mutable std::shared_mutex                               registry_mutex_;
+        std::unordered_map<std::string, CandidateDomainEntry>    candidate_domains_;
+        mutable std::shared_mutex                                registry_mutex_;
     };
 } // namespace sgns::securecrdt
 
