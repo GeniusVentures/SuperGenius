@@ -1,13 +1,23 @@
+add_library(local_trust_admin
+    LocalTrustAdmin.cpp
+)
+target_link_libraries(local_trust_admin
+    PUBLIC
+    trustedpeer
+    burnconfig
+)
+supergenius_install(local_trust_admin)
+
 add_executable(sgns-trust
     main.cpp
 )
 target_link_libraries(sgns-trust
     PRIVATE
-    trustedpeer
-    burnconfig
+    local_trust_admin
     crdt_globaldb
     securecrdt
     sgns_genius_account
     Boost::program_options
     OpenSSL::Crypto
 )
+supergenius_install(sgns-trust)

@@ -7,6 +7,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <fstream>
+#include <map>
 #include <sstream>
 
 #include <boost/filesystem/operations.hpp>
@@ -319,6 +320,55 @@ TEST_F( TrustGenesisToolTest, ConfirmationTimeoutLeavesSecretAndReportsCriticalR
                GenesisCeremony::Error::CONFIRMATION_TIMEOUT );
     EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
     EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+}
+
+TEST_F( TrustGenesisToolTest, SecretConfirmationFailureRetainsKeyAndProducesNoConfirmedRecord )
+{
+    GenesisCeremony ceremony;
+    GenesisCeremony::Network network;
+    network.start = [] { return outcome::success(); };
+    network.submit = []( const GenesisManifest &manifest, const auto &, const auto &, auto )
+        -> outcome::result<securecrdt::CandidateId>
+    {
+        securecrdt::CandidateCore core;
+        core.domain = "trusted-peer-genesis";
+        core.network_id = manifest.network_id;
+        core.kind = securecrdt::CandidateKind::TrustedPeerGenesis;
+        core.version = manifest.policy_version;
+        core.expected_previous_hash = manifest.Fingerprint().value();
+        core.authorizing_policy_hash = manifest.Fingerprint().value();
+        core.payload = manifest.CanonicalBytes().value();
+        return securecrdt::CandidateId::FromCore( core ).value();
+    };
+    network.confirmed = []() -> outcome::result<std::optional<ConfirmedTrustSnapshot>>
+    { return outcome::failure( std::errc::io_error ); };
+    EXPECT_EQ( Run( ceremony, std::move( network ), manifest_.Fingerprint().value() + "\n" ),
+               GenesisCeremony::Error::CONFIRMATION_FAILED );
+    EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
+    EXPECT_EQ( store_, nullptr );
+    EXPECT_NE( captured_errors_.find( "CRITICAL" ), std::string::npos );
+}
+
+TEST_F( TrustGenesisToolTest, ArgvEnvironmentAndStructuredLogSurfacesExcludeSecretBytes )
+{
+    const std::vector<std::string> argv_capture = {
+        "sgns-trust", "genesis", "--manifest", ( path_ / "manifest" ).string(),
+        "--network-config", ( path_ / "network.json" ).string(), "--database", path_.string(),
+        "--topic", "existing-production-topic", "--key-file", key_path_.string()
+    };
+    const std::map<std::string, std::string> environment_capture = {
+        { "PATH", "/usr/bin" }, { "SGNS_NETWORK", "42" }
+    };
+    const std::vector<std::string> structured_logs;
+    for ( const auto &argument : argv_capture )
+        EXPECT_EQ( argument.find( PRIVATE_KEY ), std::string::npos );
+    for ( const auto &[name, value] : environment_capture )
+    {
+        EXPECT_EQ( name.find( PRIVATE_KEY ), std::string::npos );
+        EXPECT_EQ( value.find( PRIVATE_KEY ), std::string::npos );
+    }
+    for ( const auto &entry : structured_logs )
+        EXPECT_EQ( entry.find( PRIVATE_KEY ), std::string::npos );
 }
 
 TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSecret )
