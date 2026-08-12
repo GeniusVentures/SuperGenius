@@ -7,6 +7,9 @@
  */
 #include "securecrdt/SecureCrdt.hpp"
 
+#include <algorithm>
+#include <unordered_set>
+
 #include "multisig/MultiSig.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
@@ -58,6 +61,69 @@ namespace sgns::securecrdt
                 return {};
             }
             return list[list.size() - 2];
+        }
+
+        std::string EscapeRegex( const std::string &value )
+        {
+            static const std::string metacharacters = R"(\.^$|()[]{}*+?)";
+            std::string              result;
+            result.reserve( value.size() * 2 );
+            for ( const char byte : value )
+            {
+                if ( metacharacters.find( byte ) != std::string::npos )
+                {
+                    result.push_back( '\\' );
+                }
+                result.push_back( byte );
+            }
+            return result;
+        }
+
+        std::string CandidatePattern( const std::string &domain )
+        {
+            return "/?" + EscapeRegex( domain ) + "/candidate/v[1-9][0-9]*/[0-9a-f]{64}/approval/[0-9a-f]{128}";
+        }
+
+        struct StoredCandidateRecord
+        {
+            CandidateKey            key;
+            CandidateApprovalRecord record;
+            size_t                  bytes = 0;
+        };
+
+        outcome::result<std::vector<StoredCandidateRecord>> QueryCandidateRecords(
+            const std::shared_ptr<sgns::crdt::GlobalDB> &db,
+            const std::string                           &domain )
+        {
+            auto query = db->QueryKeyValues(
+                sgns::crdt::HierarchicalKey( domain ).ChildString( "candidate" ).GetKey() );
+            if ( query.has_error() )
+            {
+                return query.error();
+            }
+
+            std::vector<StoredCandidateRecord> records;
+            records.reserve( query.value().size() );
+            for ( const auto &[raw_key, value] : query.value() )
+            {
+                const auto logical_key = db->KeyToString( raw_key );
+                if ( logical_key.has_error() )
+                {
+                    continue;
+                }
+                const auto key = CandidateKey::Parse( sgns::crdt::HierarchicalKey( logical_key.value() ) );
+                if ( !key || key->id.domain != domain )
+                {
+                    continue;
+                }
+                auto bytes  = value.toVector();
+                auto record = CandidateApprovalRecord::DecodeCanonical( bytes, *key );
+                if ( record )
+                {
+                    records.push_back( StoredCandidateRecord{ *key, std::move( *record ), bytes.size() } );
+                }
+            }
+            return records;
         }
     } // namespace
 
@@ -233,47 +299,280 @@ namespace sgns::securecrdt
         return outcome::success( std::optional<sgns::base::Buffer>{ current_value.value() } );
     }
 
-    outcome::result<CandidateId> SecureCrdt::SubmitCandidateApproval( const CandidateApprovalRecord & )
+    outcome::result<CandidateId> SecureCrdt::SubmitCandidateApproval( const CandidateApprovalRecord &record )
     {
-        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+        const auto bytes = record.CanonicalBytes();
+        const auto id    = CandidateId::FromCore( record.core );
+        if ( !bytes || !id )
+        {
+            return outcome::failure( Error::MALFORMED_VALUE );
+        }
+        const CandidateKey key{ *id, record.signer };
+
+        std::lock_guard<std::mutex> lock( candidate_write_mutex_ );
+        auto                        validated = ValidateCandidateApproval( key.ToHierarchicalKey(), *bytes, true );
+        if ( validated.has_error() )
+        {
+            return validated.error();
+        }
+        auto put = db_->Put( key.ToHierarchicalKey(), sgns::base::Buffer( *bytes ), { topic_ } );
+        if ( put.has_error() )
+        {
+            return put.error();
+        }
+        return *id;
     }
 
-    outcome::result<std::vector<CandidateApprovalRecord>> SecureCrdt::ReadCandidateApprovals( const CandidateId & )
+    outcome::result<std::vector<CandidateApprovalRecord>> SecureCrdt::ReadCandidateApprovals( const CandidateId &id )
     {
-        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+        if ( !registry_->ResolveCandidateDomain( id.domain ) )
+        {
+            return outcome::failure( Error::UNREGISTERED_CANDIDATE_DOMAIN );
+        }
+        auto stored = QueryCandidateRecords( db_, id.domain );
+        if ( stored.has_error() )
+        {
+            return stored.error();
+        }
+        std::vector<CandidateApprovalRecord> approvals;
+        for ( auto &item : stored.value() )
+        {
+            if ( item.key.id == id )
+            {
+                approvals.push_back( std::move( item.record ) );
+            }
+        }
+        std::sort( approvals.begin(),
+                   approvals.end(),
+                   []( const auto &left, const auto &right ) { return left.signer < right.signer; } );
+        return approvals;
     }
 
-    outcome::result<std::vector<CandidateId>> SecureCrdt::ListCandidates( const std::string &,
-                                                                          const std::string &,
-                                                                          bool )
+    outcome::result<std::vector<CandidateId>> SecureCrdt::ListCandidates( const std::string &domain,
+                                                                          const std::string &predecessor_hash,
+                                                                          bool               current_only )
     {
-        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+        const auto domain_entry = registry_->ResolveCandidateDomain( domain );
+        if ( !domain_entry )
+        {
+            return outcome::failure( Error::UNREGISTERED_CANDIDATE_DOMAIN );
+        }
+        if ( current_only )
+        {
+            auto authorization = domain_entry->authorization_source();
+            if ( authorization.has_error() )
+            {
+                return authorization.error();
+            }
+            if ( authorization.value().expected_previous_hash != predecessor_hash )
+            {
+                return std::vector<CandidateId>{};
+            }
+        }
+
+        auto stored = QueryCandidateRecords( db_, domain );
+        if ( stored.has_error() )
+        {
+            return stored.error();
+        }
+        std::vector<CandidateId> candidates;
+        for ( const auto &item : stored.value() )
+        {
+            if ( item.record.core.expected_previous_hash == predecessor_hash &&
+                 std::find( candidates.begin(), candidates.end(), item.key.id ) == candidates.end() )
+            {
+                candidates.push_back( item.key.id );
+            }
+        }
+        std::sort( candidates.begin(),
+                   candidates.end(),
+                   []( const auto &left, const auto &right )
+                   {
+                       return left.version == right.version ? left.content_hash < right.content_hash
+                                                            : left.version < right.version;
+                   } );
+        return candidates;
     }
 
-    bool SecureCrdt::RegisterCandidateCallback( const std::string &, CandidateCallback, const void * )
+    bool SecureCrdt::RegisterCandidateCallback( const std::string &domain,
+                                                CandidateCallback  callback,
+                                                const void        *owner_token )
     {
-        return false;
+        if ( !callback || !registry_->ResolveCandidateDomain( domain ) )
+        {
+            return false;
+        }
+        {
+            std::lock_guard<std::mutex> lock( candidate_callbacks_mutex_ );
+            if ( candidate_callbacks_.count( domain ) != 0 )
+            {
+                return false;
+            }
+            candidate_callbacks_.emplace( domain, CandidateCallbackEntry{ std::move( callback ), owner_token } );
+        }
+
+        auto       weak_self  = weak_from_this();
+        const bool registered = db_->RegisterNewElementCallback(
+            CandidatePattern( domain ),
+            [weak_self, domain]( sgns::crdt::CRDTCallbackManager::NewDataPair data, const std::string & )
+            {
+                if ( auto strong = weak_self.lock() )
+                {
+                    strong->OnCandidateApproval( domain, data );
+                }
+            } );
+        if ( !registered )
+        {
+            std::lock_guard<std::mutex> lock( candidate_callbacks_mutex_ );
+            candidate_callbacks_.erase( domain );
+        }
+        return registered;
     }
 
-    void SecureCrdt::UnregisterCandidateCallbackIf( const std::string &, const void * )
+    void SecureCrdt::UnregisterCandidateCallbackIf( const std::string &domain, const void *owner_token )
     {
+        bool removed = false;
+        {
+            std::lock_guard<std::mutex> lock( candidate_callbacks_mutex_ );
+            const auto                  it = candidate_callbacks_.find( domain );
+            if ( it != candidate_callbacks_.end() && it->second.owner_token == owner_token )
+            {
+                candidate_callbacks_.erase( it );
+                removed = true;
+            }
+        }
+        if ( removed )
+        {
+            db_->UnregisterNewElementCallback( CandidatePattern( domain ) );
+        }
     }
 
-    outcome::result<CandidateApprovalRecord> SecureCrdt::ValidateCandidateApproval( const sgns::crdt::HierarchicalKey &,
-                                                                                    const std::vector<uint8_t> &,
-                                                                                    bool )
+    outcome::result<CandidateApprovalRecord> SecureCrdt::ValidateCandidateApproval(
+        const sgns::crdt::HierarchicalKey &key_value,
+        const std::vector<uint8_t>        &bytes,
+        bool                               enforce_resources )
     {
-        return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+        const auto key = CandidateKey::Parse( key_value );
+        if ( !key )
+        {
+            return outcome::failure( Error::MALFORMED_VALUE );
+        }
+        const auto record = CandidateApprovalRecord::DecodeCanonical( bytes, *key );
+        if ( !record )
+        {
+            return outcome::failure( Error::MALFORMED_VALUE );
+        }
+        const auto domain_entry = registry_->ResolveCandidateDomain( key->id.domain );
+        if ( !domain_entry )
+        {
+            return outcome::failure( Error::UNREGISTERED_CANDIDATE_DOMAIN );
+        }
+        auto authorization = domain_entry->authorization_source();
+        if ( authorization.has_error() )
+        {
+            return authorization.error();
+        }
+        const auto &current = authorization.value();
+        if ( current.network_id != record->core.network_id || current.kind != record->core.kind ||
+             domain_entry->kind != record->core.kind || current.next_version != record->core.version ||
+             current.expected_previous_hash != record->core.expected_previous_hash ||
+             current.authorizing_policy_hash != record->core.authorizing_policy_hash )
+        {
+            return outcome::failure( Error::CANDIDATE_CONTEXT_MISMATCH );
+        }
+        if ( std::find( current.authorized_signers.begin(), current.authorized_signers.end(), record->signer ) ==
+             current.authorized_signers.end() )
+        {
+            return outcome::failure( Error::UNAUTHORIZED_CANDIDATE_SIGNER );
+        }
+        const auto core_bytes = record->core.CanonicalBytes();
+        if ( !core_bytes || !multisig::VerifyPayloadSignature( record->signer, record->signature, *core_bytes ) )
+        {
+            return outcome::failure( Error::UNAUTHORIZED_CANDIDATE_SIGNER );
+        }
+        if ( !enforce_resources )
+        {
+            return *record;
+        }
+
+        auto stored = QueryCandidateRecords( db_, key->id.domain );
+        if ( stored.has_error() )
+        {
+            return stored.error();
+        }
+        std::unordered_set<std::string> active_candidates;
+        size_t                          approvals_for_candidate = 0;
+        size_t                          active_approval_bytes   = 0;
+        bool                            candidate_exists        = false;
+        for ( const auto &item : stored.value() )
+        {
+            if ( item.record.core.expected_previous_hash != record->core.expected_previous_hash )
+            {
+                continue;
+            }
+            active_candidates.insert( item.key.id.content_hash );
+            if ( !CandidateLimits::ApprovalBytesAllowed( active_approval_bytes, item.bytes ) )
+            {
+                return outcome::failure( Error::CANDIDATE_LIMIT_EXCEEDED );
+            }
+            active_approval_bytes += item.bytes;
+            if ( item.key.id == key->id )
+            {
+                candidate_exists = true;
+                ++approvals_for_candidate;
+                if ( item.record.signer == record->signer )
+                {
+                    return outcome::failure( Error::DUPLICATE_CANDIDATE_APPROVAL );
+                }
+            }
+        }
+        if ( ( !candidate_exists && !CandidateLimits::CandidateCountAllowed( active_candidates.size() + 1 ) ) ||
+             !CandidateLimits::ApprovalCountAllowed( approvals_for_candidate + 1 ) ||
+             !CandidateLimits::ApprovalBytesAllowed( active_approval_bytes, bytes.size() ) )
+        {
+            return outcome::failure( Error::CANDIDATE_LIMIT_EXCEEDED );
+        }
+        return *record;
     }
 
     std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterCandidateApproval(
-        const sgns::crdt::pb::Element & )
+        const sgns::crdt::pb::Element &element )
     {
-        return std::vector<sgns::crdt::pb::Element>{};
+        const std::vector<uint8_t> bytes( element.value().begin(), element.value().end() );
+        auto validated = ValidateCandidateApproval( sgns::crdt::HierarchicalKey( element.key() ), bytes, true );
+        if ( validated.has_error() )
+        {
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+        return std::nullopt;
     }
 
-    void SecureCrdt::OnCandidateApproval( const std::string &, const std::pair<std::string, sgns::base::Buffer> & )
+    void SecureCrdt::OnCandidateApproval( const std::string                                &domain,
+                                          const std::pair<std::string, sgns::base::Buffer> &data )
     {
+        auto validated = ValidateCandidateApproval( sgns::crdt::HierarchicalKey( data.first ),
+                                                    data.second.toVector(),
+                                                    false );
+        if ( validated.has_error() )
+        {
+            return;
+        }
+        const auto id = CandidateId::FromCore( validated.value().core );
+        if ( !id )
+        {
+            return;
+        }
+        CandidateCallback callback;
+        {
+            std::lock_guard<std::mutex> lock( candidate_callbacks_mutex_ );
+            const auto                  it = candidate_callbacks_.find( domain );
+            if ( it == candidate_callbacks_.end() )
+            {
+                return;
+            }
+            callback = it->second.callback;
+        }
+        callback( *id, validated.value() );
     }
 
     bool SecureCrdt::RegisterFilters()
@@ -296,6 +595,22 @@ namespace sgns::securecrdt
                         return strong->FilterSecureCrdtUpdate( base_key, entry, element );
                     }
                     return std::nullopt;
+                } );
+            all_registered = all_registered && registered;
+        }
+        const auto candidate_domains = registry_->AllCandidateDomains();
+        for ( const auto &entry : candidate_domains )
+        {
+            const bool registered = db_->RegisterElementFilter(
+                CandidatePattern( entry.domain ),
+                [weak_self](
+                    const sgns::crdt::pb::Element &element ) -> std::optional<std::vector<sgns::crdt::pb::Element>>
+                {
+                    if ( auto strong = weak_self.lock() )
+                    {
+                        return strong->FilterCandidateApproval( element );
+                    }
+                    return std::vector<sgns::crdt::pb::Element>{};
                 } );
             all_registered = all_registered && registered;
         }
