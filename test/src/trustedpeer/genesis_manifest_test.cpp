@@ -22,12 +22,12 @@ namespace
     GenesisManifest MakeManifest( std::vector<std::string> peers = { PEER_B, PEER_A } )
     {
         GenesisManifest manifest;
-        manifest.network_id = 42;
-        manifest.bootstrapper_public_key = BOOTSTRAPPER;
-        manifest.policy_version = 1;
-        manifest.peers = std::move( peers );
-        manifest.membership_threshold = 2;
-        manifest.burn_threshold = 2;
+        manifest.network_id                = 42;
+        manifest.bootstrapper_public_key   = BOOTSTRAPPER;
+        manifest.policy_version            = 1;
+        manifest.peers                     = std::move( peers );
+        manifest.membership_threshold      = 2;
+        manifest.burn_threshold            = 2;
         manifest.initial_burn_basis_points = 100;
         return manifest;
     }
@@ -40,17 +40,17 @@ namespace
 
 TEST( GenesisManifestTest, PeerPermutationsNormalizeToOneGoldenFingerprint )
 {
-    const auto forward = MakeManifest( { PEER_A, PEER_B } );
+    const auto forward  = MakeManifest( { PEER_A, PEER_B } );
     const auto reversed = MakeManifest( { PEER_B, PEER_A } );
 
-    const auto forward_canonical = forward.Canonicalized();
+    const auto forward_canonical  = forward.Canonicalized();
     const auto reversed_canonical = reversed.Canonicalized();
     ASSERT_TRUE( forward_canonical.has_value() );
     ASSERT_TRUE( reversed_canonical.has_value() );
     EXPECT_EQ( forward_canonical->peers, ( std::vector<std::string>{ PEER_A, PEER_B } ) );
     EXPECT_EQ( reversed_canonical->peers, forward_canonical->peers );
 
-    const auto forward_fingerprint = forward.Fingerprint();
+    const auto forward_fingerprint  = forward.Fingerprint();
     const auto reversed_fingerprint = reversed.Fingerprint();
     ASSERT_TRUE( forward_fingerprint.has_value() );
     ASSERT_TRUE( reversed_fingerprint.has_value() );
@@ -88,27 +88,27 @@ TEST( GenesisManifestTest, RejectsEmptyMalformedAndOverCapPeerSets )
 
 TEST( GenesisManifestTest, RejectsMalformedBootstrapperAndInvalidInitialPolicy )
 {
-    auto manifest = MakeManifest();
+    auto manifest                    = MakeManifest();
     manifest.bootstrapper_public_key = std::string( 127, 'c' );
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 
-    manifest = MakeManifest();
+    manifest                  = MakeManifest();
     manifest.encoding_version = 2;
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 
-    manifest = MakeManifest();
+    manifest                = MakeManifest();
     manifest.policy_version = 0;
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 
-    manifest = MakeManifest();
+    manifest                      = MakeManifest();
     manifest.membership_threshold = 0;
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 
-    manifest = MakeManifest();
+    manifest                = MakeManifest();
     manifest.burn_threshold = 3;
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 
-    manifest = MakeManifest();
+    manifest                           = MakeManifest();
     manifest.initial_burn_basis_points = 101;
     EXPECT_FALSE( manifest.Canonicalized().has_value() );
 }
@@ -138,19 +138,20 @@ TEST( GenesisManifestTest, DecoderRejectsUnknownVersionOverflowDuplicateAndNonCa
     const auto bytes_result = MakeManifest().CanonicalBytes();
     ASSERT_TRUE( bytes_result.has_value() );
 
-    auto unknown_version = *bytes_result;
+    auto unknown_version                                        = *bytes_result;
     unknown_version[CanonicalTrustCodec::GENESIS_DOMAIN.size()] = 2;
     EXPECT_FALSE( GenesisManifest::DecodeCanonical( unknown_version ).has_value() );
 
-    auto length_overflow = *bytes_result;
+    auto             length_overflow         = *bytes_result;
     constexpr size_t bootstrap_length_offset = 24;
     std::fill_n( length_overflow.begin() + bootstrap_length_offset, 4, UINT8_MAX );
     EXPECT_FALSE( GenesisManifest::DecodeCanonical( length_overflow ).has_value() );
 
-    constexpr size_t first_peer_offset = 108;
+    constexpr size_t first_peer_offset  = 108;
     constexpr size_t second_peer_offset = 176;
-    auto duplicate = *bytes_result;
-    std::copy_n( duplicate.begin() + first_peer_offset, CanonicalTrustCodec::PUBLIC_KEY_BYTES,
+    auto             duplicate          = *bytes_result;
+    std::copy_n( duplicate.begin() + first_peer_offset,
+                 CanonicalTrustCodec::PUBLIC_KEY_BYTES,
                  duplicate.begin() + second_peer_offset );
     EXPECT_FALSE( GenesisManifest::DecodeCanonical( duplicate ).has_value() );
 
@@ -164,16 +165,22 @@ TEST( GenesisManifestTest, DecoderRejectsUnknownVersionOverflowDuplicateAndNonCa
 TEST( GenesisManifestTest, FingerprintBindsEveryReviewedFieldAndRejectsTampering )
 {
     const auto bytes_result = MakeManifest().CanonicalBytes();
-    const auto fingerprint = MakeManifest().Fingerprint();
+    const auto fingerprint  = MakeManifest().Fingerprint();
     ASSERT_TRUE( bytes_result.has_value() );
     ASSERT_TRUE( fingerprint.has_value() );
 
     const std::vector<size_t> field_offsets = {
-        23, 28, 99, 108, 247, 255, 263,
+        23,
+        28,
+        99,
+        108,
+        247,
+        255,
+        263,
     };
     for ( const size_t offset : field_offsets )
     {
-        auto tampered = *bytes_result;
+        auto tampered     = *bytes_result;
         tampered[offset] ^= 0x01;
         EXPECT_NE( HashBytes( tampered ), *fingerprint ) << "field offset " << offset;
         EXPECT_FALSE( GenesisManifest::DecodeAndVerify( tampered, *fingerprint ).has_value() )

@@ -14,26 +14,25 @@ namespace sgns::trustedpeer
 {
     struct GenesisManifest
     {
-        static constexpr uint8_t  ENCODING_VERSION = 1;
+        static constexpr uint8_t  ENCODING_VERSION          = 1;
         static constexpr uint64_t INITIAL_BURN_BASIS_POINTS = 100;
 
         uint8_t                  encoding_version = ENCODING_VERSION;
-        uint16_t                 network_id = 0;
+        uint16_t                 network_id       = 0;
         std::string              bootstrapper_public_key;
         uint64_t                 policy_version = 1;
         std::vector<std::string> peers;
-        uint64_t                 membership_threshold = 0;
-        uint64_t                 burn_threshold = 0;
+        uint64_t                 membership_threshold      = 0;
+        uint64_t                 burn_threshold            = 0;
         uint64_t                 initial_burn_basis_points = INITIAL_BURN_BASIS_POINTS;
 
-        [[nodiscard]] std::optional<GenesisManifest> Canonicalized() const;
+        [[nodiscard]] std::optional<GenesisManifest>      Canonicalized() const;
         [[nodiscard]] std::optional<std::vector<uint8_t>> CanonicalBytes() const;
-        [[nodiscard]] std::optional<std::string> Fingerprint() const;
+        [[nodiscard]] std::optional<std::string>          Fingerprint() const;
 
         [[nodiscard]] static std::optional<GenesisManifest> DecodeCanonical( const std::vector<uint8_t> &bytes );
-        [[nodiscard]] static std::optional<GenesisManifest> DecodeAndVerify(
-            const std::vector<uint8_t> &bytes,
-            const std::string          &expected_fingerprint );
+        [[nodiscard]] static std::optional<GenesisManifest> DecodeAndVerify( const std::vector<uint8_t> &bytes,
+                                                                             const std::string &expected_fingerprint );
 
         bool operator==( const GenesisManifest &other ) const;
     };
