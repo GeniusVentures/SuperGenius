@@ -17,6 +17,7 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -36,6 +37,18 @@ namespace sgns
 
 namespace sgns::account
 {
+    class ConfirmedBurnValueProvider
+    {
+    public:
+        [[nodiscard]] bool IsReady() const;
+        [[nodiscard]] uint64_t GetBasisPoints() const;
+
+    private:
+        friend class BurnConfig;
+        std::atomic<bool> ready_{ false };
+        std::atomic<uint64_t> basis_points_{ 0 };
+    };
+
     /**
      * @brief ISignedCRDTData payload type carrying the burn-basis-points
      *        value. Serialization/verification mirrors
@@ -90,6 +103,7 @@ namespace sgns::account
         static constexpr uint64_t GENESIS_DEFAULT_BASIS_POINTS = 100;
 
         using RefreshCallback = std::function<void( uint64_t )>;
+        using SignCallback = std::function<std::vector<uint8_t>( const std::vector<uint8_t> & )>;
 
         BurnConfig( std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
                     std::shared_ptr<sgns::crdt::GlobalDB>                   db,
@@ -125,6 +139,26 @@ namespace sgns::account
             uint64_t                                                quorum_threshold,
             std::shared_ptr<sgns::GeniusAccount>                    account,
             sgns::crdt::HierarchicalKey base_key = sgns::crdt::HierarchicalKey( "burn-config" ) );
+
+        static outcome::result<std::shared_ptr<BurnConfig>> NewProduction(
+            std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt,
+            std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry,
+            std::shared_ptr<sgns::trustedpeer::TrustStateStore>     trust_store,
+            std::string                                             local_signer_address,
+            SignCallback                                            sign_callback,
+            std::string                                             candidate_domain = "burn-config" );
+
+        outcome::result<sgns::securecrdt::CandidateId> OnTrustedPeerGenesisConfirmed();
+        outcome::result<std::vector<sgns::securecrdt::CandidateId>> ListPendingBurnCandidates() const;
+        outcome::result<sgns::securecrdt::CandidateId> ProposeBurnCandidate( uint64_t basis_points );
+        outcome::result<sgns::securecrdt::CandidateId> ApproveBurnCandidate(
+            const sgns::securecrdt::CandidateId &candidate_id );
+        outcome::result<bool> TryActivateBurnCandidate( const sgns::securecrdt::CandidateId &candidate_id );
+        [[nodiscard]] bool IsEconomicallyReady() const;
+        [[nodiscard]] std::shared_ptr<const ConfirmedBurnValueProvider> GetConfirmedValueProvider() const;
+        [[nodiscard]] static std::optional<sgns::securecrdt::CandidateCore> BurnCandidateCore(
+            const sgns::trustedpeer::ConfirmedBurnState &candidate,
+            const std::string &domain = "burn-config" );
 
         /**
          * @brief Returns the currently-cached, quorum-confirmed basis-points
@@ -177,6 +211,12 @@ namespace sgns::account
          */
         void TrySeedGenesisIfEligible();
 
+        bool RegisterProductionDomain();
+        outcome::result<sgns::securecrdt::CandidateAuthorizationSnapshot> ResolveBurnAuthorization() const;
+        outcome::result<sgns::securecrdt::CandidateId> SubmitLocalApproval(
+            const sgns::securecrdt::CandidateCore &core );
+        void PublishConfirmedBurn( const sgns::trustedpeer::ConfirmedTrustSnapshot &snapshot );
+
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
         std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_;
@@ -190,6 +230,15 @@ namespace sgns::account
         std::vector<RefreshCallback> refresh_callbacks_;
 
         int registry_token_ = 0;
+
+        bool production_mode_ = false;
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore> trust_store_;
+        std::string local_signer_address_;
+        SignCallback sign_callback_;
+        std::string candidate_domain_ = "burn-config";
+        std::optional<sgns::securecrdt::CandidateId> automatic_genesis_candidate_;
+        std::shared_ptr<ConfirmedBurnValueProvider> confirmed_value_provider_ =
+            std::make_shared<ConfirmedBurnValueProvider>();
 
         sgns::base::Logger logger_ = sgns::base::createLogger( "BurnConfig" );
     };
