@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-09-PLAN.md
-last_updated: "2026-08-12T16:19:58.282Z"
+stopped_at: Completed 13-07-PLAN.md
+last_updated: "2026-08-12T17:03:51.526Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 16
+  completed_plans: 17
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 8 of 12
+Plan: 9 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T16:19:58.278Z
-**Stopped At:** Completed 13-09-PLAN.md
+**Last session:** 2026-08-12T17:03:51.522Z
+**Stopped At:** Completed 13-07-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -98,6 +98,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P05 | 23min | 3 tasks | 11 files |
 | Phase 13 P06 | 8min | 1 tasks | 4 files |
 | Phase 13 P09 | 22min | 2 tasks | 9 files |
+| Phase 13 P07 | 12min | 3 tasks | 15 files |
 
 ## Decisions
 
@@ -123,3 +124,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: sgns-trust consumes canonical GenesisManifest bytes and a caller-supplied existing production CRDT topic. — The reviewed, fingerprinted, signed, submitted, and verified bytes remain identical while the tool reuses the deployed topic.
 - [Phase 13]: Private key material enters only through an owner-controlled 0600 no-symlink file or echo-disabled terminal input and never through argv or environment variables. — This limits secret exposure and permits deterministic cleanse plus success-only deletion.
 - [Phase 13]: Local propose and approve operations attempt durable activation after the explicit signature while receive and list paths remain signer-free. — Explicit operator actions can complete quorum without adding an automatic signing surface.
+- [Phase 13]: TrustStartupController advances only from verified durable records while networking remains live in restricted waiting states.
+- [Phase 13]: Canonical peer ordering is diagnostic-equivalent on restart; actual trust-field conflicts alert while network mismatch remains fatal.
+- [Phase 13]: First-boot verification connects independent production GlobalDB compositions through the reviewed GenesisCeremony path before protected-key deletion.
