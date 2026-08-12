@@ -63,7 +63,7 @@
 | BURN-03 | Phase 11 | Complete |
 | MIG-05 | Phase 12 | Pending |
 | MIG-06 | Phase 12 | Pending |
-| BOOT-01 | Phase 13 | Pending |
+| BOOT-01 | Phase 13 | Complete |
 | BOOT-02 | Phase 13 | Complete |
 | BOOT-03 | Phase 13 | Complete |
 | BOOT-04 | Phase 13 | Complete |
