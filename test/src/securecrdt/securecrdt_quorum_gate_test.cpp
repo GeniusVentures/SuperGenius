@@ -12,6 +12,7 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt_test_node.hpp"
+#include "testutil/wait_condition.hpp"
 
 namespace
 {
@@ -78,31 +79,30 @@ namespace
             node_ = sgns::test::securecrdt::MakeSecureCrdtTestNode( "securecrdt_quorum_gate" );
             ASSERT_NE( node_, nullptr );
 
-            SecureCrdtRegistry::Register( "gnus-test-secure",
+            secure_crdt_ = std::make_shared<SecureCrdt>( node_->db, "securecrdt_test_topic" );
+            ASSERT_TRUE( secure_crdt_->Registry().Register( "gnus-test-secure",
                                           SecureCrdtRegistryEntry{
                                               "gnus-test-secure",
                                               []( const std::string & ) -> outcome::result<SignerSetSnapshot>
                                               { return SignerSetSnapshot{ signer_set_static(), 2 }; },
                                               []() -> std::shared_ptr<ISignedCRDTData>
                                               { return std::make_shared<TestSignedData>(); },
-                                              std::regex(), &token_ } );
+                                              std::regex(), &token_ } ) );
 
-            SecureCrdtRegistry::Register( "gnus-test-secure-malformed",
+            ASSERT_TRUE( secure_crdt_->Registry().Register( "gnus-test-secure-malformed",
                                           SecureCrdtRegistryEntry{
                                               "gnus-test-secure-malformed",
                                               []( const std::string & ) -> outcome::result<SignerSetSnapshot>
                                               { return SignerSetSnapshot{ signer_set_static(), 2 }; },
                                               []() -> std::shared_ptr<ISignedCRDTData>
                                               { return std::make_shared<TestSignedData>(); },
-                                              std::regex(), &token_ } );
-
-            secure_crdt_ = std::make_shared<SecureCrdt>( node_->db, "securecrdt_test_topic" );
+                                              std::regex(), &token_ } ) );
         }
 
         void TearDown() override
         {
-            SecureCrdtRegistry::UnregisterIf( "gnus-test-secure", &token_ );
-            SecureCrdtRegistry::UnregisterIf( "gnus-test-secure-malformed", &token_ );
+            secure_crdt_->Registry().UnregisterIf( "gnus-test-secure", &token_ );
+            secure_crdt_->Registry().UnregisterIf( "gnus-test-secure-malformed", &token_ );
             secure_crdt_.reset();
             node_.reset();
             GeniusAccount::SetSecureStorageFactory( nullptr );
@@ -166,4 +166,75 @@ TEST_F( SecureCrdtQuorumGateTest, ProposeValueRejectsMalformedPayloadLocally )
 
     auto get_result = node_->db->Get( base_key );
     EXPECT_TRUE( get_result.has_error() ) << "db_->Put must never be called for a malformed local proposal";
+}
+
+TEST_F( SecureCrdtQuorumGateTest, InProcessNodesKeepSameKeyPoliciesAndQuorumIndependent )
+{
+    constexpr const char *shared_key = "gnus-test-node-isolation";
+    const sgns::crdt::HierarchicalKey base_key( shared_key );
+    const std::vector<uint8_t>        payload_a = { 'n', 'o', 'd', 'e', '-', 'a' };
+    const std::vector<uint8_t>        payload_b = { 'n', 'o', 'd', 'e', '-', 'b' };
+
+    auto node_b = sgns::test::securecrdt::MakeSecureCrdtTestNode( "securecrdt_quorum_gate_peer" );
+    ASSERT_NE( node_b, nullptr );
+    auto secure_crdt_b = std::make_shared<SecureCrdt>( node_b->db, "securecrdt_test_topic" );
+    int  token_a = 0;
+    int  token_b = 0;
+
+    ASSERT_TRUE( secure_crdt_->Registry().Register(
+        shared_key,
+        SecureCrdtRegistryEntry{
+            shared_key,
+            [signer = signers_[0]->GetAddress()]( const std::string & ) -> outcome::result<SignerSetSnapshot>
+            { return SignerSetSnapshot{ { signer }, 1 }; },
+            []() -> std::shared_ptr<ISignedCRDTData> { return std::make_shared<TestSignedData>(); },
+            std::regex(),
+            &token_a } ) );
+    ASSERT_TRUE( secure_crdt_b->Registry().Register(
+        shared_key,
+        SecureCrdtRegistryEntry{
+            shared_key,
+            [signer = signers_[1]->GetAddress()]( const std::string & ) -> outcome::result<SignerSetSnapshot>
+            { return SignerSetSnapshot{ { signer }, 1 }; },
+            []() -> std::shared_ptr<ISignedCRDTData> { return std::make_shared<TestSignedData>(); },
+            std::regex(),
+            &token_b } ) );
+
+    ASSERT_FALSE( secure_crdt_->ProposeValue( base_key, payload_a ).has_error() );
+    ASSERT_FALSE( secure_crdt_b->ProposeValue( base_key, payload_b ).has_error() );
+    ASSERT_FALSE( secure_crdt_->AddSignature( base_key, signers_[0]->GetAddress(), signers_[0]->Sign( payload_a ) )
+                      .has_error() );
+    ASSERT_FALSE( secure_crdt_b
+                      ->AddSignature( base_key, signers_[1]->GetAddress(), signers_[1]->Sign( payload_b ) )
+                      .has_error() );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            const auto read_a = secure_crdt_->ReadIfQuorum( base_key );
+            const auto read_b = secure_crdt_b->ReadIfQuorum( base_key );
+            return read_a.has_value() && read_a.value().has_value() &&
+                   read_a.value()->toVector() == payload_a && read_b.has_value() && read_b.value().has_value() &&
+                   read_b.value()->toVector() == payload_b;
+        },
+        std::chrono::seconds( 5 ),
+        "both in-process SecureCrdt nodes did not independently reach quorum" );
+
+    secure_crdt_b->Registry().UnregisterIf( shared_key, &token_b );
+    secure_crdt_b.reset();
+    node_b.reset();
+
+    const auto retained = secure_crdt_->Registry().Resolve( shared_key );
+    ASSERT_TRUE( retained.has_value() );
+    const auto retained_snapshot = retained->signer_set_source( shared_key );
+    ASSERT_TRUE( retained_snapshot.has_value() );
+    EXPECT_EQ( retained_snapshot.value().signer_set,
+               std::vector<std::string>{ signers_[0]->GetAddress() } );
+
+    const auto read_after_peer_destroyed = secure_crdt_->ReadIfQuorum( base_key );
+    ASSERT_TRUE( read_after_peer_destroyed.has_value() );
+    ASSERT_TRUE( read_after_peer_destroyed.value().has_value() );
+    EXPECT_EQ( read_after_peer_destroyed.value()->toVector(), payload_a );
+
+    secure_crdt_->Registry().UnregisterIf( shared_key, &token_a );
 }
