@@ -83,6 +83,20 @@ target_link_libraries(burnconfig_test
 )
 target_include_directories(burnconfig_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
+addtest(burnconfig_policy_e2e_test
+    burnconfig_policy_e2e_test.cpp
+)
+target_link_libraries(burnconfig_policy_e2e_test
+    burnconfig
+    trustedpeer
+    securecrdt
+    multisig
+    crdt_globaldb
+    sgns_genius_account
+    rocksdb
+)
+target_include_directories(burnconfig_policy_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
 )
