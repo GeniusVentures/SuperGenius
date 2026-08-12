@@ -15,6 +15,16 @@ target_link_libraries(genesis_manifest_test
     trustedpeer
 )
 
+addtest(trust_genesis_tool_test
+    trust_genesis_tool_test.cpp
+)
+target_link_libraries(trust_genesis_tool_test
+    ${TRUSTEDPEER_TEST_NODE_LIBS}
+    rocksdb
+    OpenSSL::Crypto
+)
+target_include_directories(trust_genesis_tool_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
 addtest(quorum_policy_test
     quorum_policy_test.cpp
 )
