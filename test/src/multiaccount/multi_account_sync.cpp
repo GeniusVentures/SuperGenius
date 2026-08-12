@@ -374,7 +374,7 @@ TEST_F( MultiAccountTest, SyncThroughEachOther )
     ASSERT_EQ( node_duplicated->GetBalance(), node_original->GetBalance() );
 }
 
-TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
+TEST_F( MultiAccountTest, CRDTFilterDuplicateTx )
 {
     // Create 3 nodes - 2 with the same address, 1 different (full node for network)
     auto node_full        = CreateNode( "full_node_address_unique", true, true, true );
@@ -474,7 +474,14 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
 
     fmt::println( "Waiting for the conflict resolution" );
 
-    uint64_t correct_tokens_transferred = 0;
+    // Both transfers claim the same address+nonce, so exactly one can be certified. The
+    // losing peer must learn that from the winner's certificate and fail its own
+    // transaction, rather than sitting in VERIFYING until the proposal TTL expires.
+    const auto conflict_start = std::chrono::steady_clock::now();
+
+    uint64_t           correct_tokens_transferred = 0;
+    sgns::GeniusNode  *losing_node                = nullptr;
+    std::string        losing_tx;
     sgns::test::assertWaitForCondition(
         [&]()
         {
@@ -482,6 +489,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
             if ( status1 == TransactionManager::TransactionStatus::CONFIRMED )
             {
                 correct_tokens_transferred = 10000000000;
+                losing_node                = node_same_addr_2.get();
+                losing_tx                  = transfer2_res.value();
                 return true;
             }
 
@@ -489,6 +498,8 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
             if ( status2 == TransactionManager::TransactionStatus::CONFIRMED )
             {
                 correct_tokens_transferred = 13000000000;
+                losing_node                = node_same_addr_1.get();
+                losing_tx                  = transfer1_res.value();
                 return true;
             }
 
@@ -496,6 +507,27 @@ TEST_F( MultiAccountTest, DISABLED_CRDTFilterDuplicateTx )
         },
         std::chrono::milliseconds( 50000 ),
         "Neither transfer was confirmed" );
+
+    ASSERT_NE( losing_node, nullptr );
+
+    // The whole point of the fix: the loser fails off the winner's certificate. The bound
+    // is deliberately far below ConsensusManager::PendingLifecycleConfig::pending_ttl
+    // (3 minutes), so a regression to "wait for the TTL" fails this test instead of
+    // merely slowing it down.
+    static constexpr auto kFailFastBudget = std::chrono::seconds( 60 );
+    static_assert( kFailFastBudget < std::chrono::minutes( 3 ), "budget must beat the proposal TTL" );
+
+    sgns::test::assertWaitForCondition(
+        [&]()
+        { return losing_node->GetTransactionStatus( losing_tx ) == TransactionManager::TransactionStatus::FAILED; },
+        kFailFastBudget,
+        "Losing transaction did not fail after the winner's certificate arrived" );
+
+    const auto conflict_elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::steady_clock::now() - conflict_start );
+    fmt::println( "Losing transaction {} failed {} ms after the conflict started", losing_tx, conflict_elapsed.count() );
+    EXPECT_LT( conflict_elapsed, std::chrono::minutes( 3 ) )
+        << "loser only resolved around the proposal TTL -- the certificate shortcut did not work";
 
     sgns::test::assertWaitForCondition(
         [&]() { return node_same_addr_1->GetBalance() == ( balance_node1_after_mint - correct_tokens_transferred ); },
