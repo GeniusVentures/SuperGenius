@@ -1,5 +1,6 @@
 {
-    "_comment": "SuperGenius network configuration. All fields optional with safe defaults.",
+    "_comment": "SuperGenius network configuration. Operational fields have defaults; the example trust fields below are not safe production defaults.",
+    "_trust_configuration_notice": "NON-PRODUCTION EXAMPLE ONLY. trusted_peers, bootstrapper_node, and quorum thresholds are placeholders; after durable confirmation these JSON trust fields are non-authoritative and persisted verified trust state is authoritative.",
     "net_id": 144,
     "node_type": "Light",
     "subnet_id": 0,
