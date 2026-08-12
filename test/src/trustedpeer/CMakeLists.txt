@@ -22,6 +22,15 @@ addtest(quorum_policy_test
 addtest(trust_state_store_test
     trust_state_store_test.cpp
 )
+
+addtest(operator_approval_test
+    operator_approval_test.cpp
+)
+target_link_libraries(operator_approval_test
+    ${TRUSTEDPEER_TEST_NODE_LIBS}
+    rocksdb
+)
+target_include_directories(operator_approval_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(trust_state_store_test
     trustedpeer
     sgns_genius_account
