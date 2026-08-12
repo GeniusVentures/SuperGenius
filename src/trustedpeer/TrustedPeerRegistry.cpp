@@ -392,6 +392,70 @@ namespace sgns::trustedpeer
         return submitted.value();
     }
 
+    outcome::result<bool> TrustedPeerRegistry::TryActivateReviewedGenesisCandidate(
+        const sgns::securecrdt::CandidateId &candidate_id )
+    {
+        if ( !production_mode_ || !trust_store_ )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        const auto fingerprint = reviewed_manifest_.Fingerprint();
+        const auto payload     = reviewed_manifest_.CanonicalBytes();
+        if ( !fingerprint || !payload )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        const sgns::securecrdt::CandidateCore expected{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+                                                        genesis_domain_,
+                                                        reviewed_manifest_.network_id,
+                                                        sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
+                                                        reviewed_manifest_.policy_version,
+                                                        *fingerprint,
+                                                        *fingerprint,
+                                                        *payload };
+        const auto                            expected_id = sgns::securecrdt::CandidateId::FromCore( expected );
+        if ( !expected_id || !( *expected_id == candidate_id ) )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        auto approvals = secure_crdt_->ReadCandidateApprovals( candidate_id );
+        if ( approvals.has_error() )
+        {
+            return approvals.error();
+        }
+        const auto approval = std::find_if(
+            approvals.value().begin(),
+            approvals.value().end(),
+            [&]( const auto &record )
+            { return record.core == expected && record.signer == reviewed_manifest_.bootstrapper_public_key; } );
+        if ( approval == approvals.value().end() )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        const auto authorization_bytes = expected.CanonicalBytes();
+        if ( !authorization_bytes )
+        {
+            return outcome::failure( Error::INVALID_CANDIDATE );
+        }
+        auto committed = trust_store_->CommitGenesis( reviewed_manifest_, approval->signature, *authorization_bytes );
+        if ( committed.has_error() )
+        {
+            if ( committed.error() == TrustStateStore::Error::ALREADY_INITIALIZED )
+            {
+                auto existing = trust_store_->LoadAndVerify();
+                if ( existing.has_error() || existing.value().genesis_fingerprint != *fingerprint )
+                {
+                    return committed.error();
+                }
+                PublishSnapshot( existing.value() );
+                return false;
+            }
+            return committed.error();
+        }
+        PublishSnapshot( committed.value() );
+        return true;
+    }
+
     outcome::result<std::vector<sgns::securecrdt::CandidateId>> TrustedPeerRegistry::ListPendingPolicyCandidates() const
     {
         auto snapshot = GetConfirmedSnapshot();

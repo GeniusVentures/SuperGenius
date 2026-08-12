@@ -62,12 +62,14 @@ namespace sgns::securecrdt
 
 namespace sgns::trustedpeer
 {
+    class TrustStateStore;
     class TrustedPeerRegistry;
 }
 
 namespace sgns::account
 {
     class BurnConfig;
+    class TrustStartupController;
 }
 
 /**
@@ -186,6 +188,9 @@ namespace sgns
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            WAITING_FOR_TRUST_GENESIS, ///< Networking is live but no durable trust genesis exists.
+            WAITING_FOR_BURN_GENESIS,  ///< Trust genesis is durable but initial burn quorum is pending.
+            FATAL_TRUST_MISMATCH,      ///< Durable trust state cannot safely start for this network.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
@@ -782,6 +787,10 @@ namespace sgns
             return state_.load();
         }
 
+        [[nodiscard]] bool                     IsTrustEconomicallyReady() const;
+        [[nodiscard]] bool                     CanApproveTrustSuccessors() const;
+        [[nodiscard]] std::vector<std::string> GetCurrentTrustedPeers() const;
+
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
@@ -911,6 +920,10 @@ namespace sgns
         std::vector<libp2p::peer::PeerInfo>      bootstrap_peer_infos_;
         std::unordered_set<libp2p::peer::PeerId> bootstrap_peer_ids_;
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>
+            trust_state_store_; ///< Durable network-scoped trust authority.
+        std::shared_ptr<sgns::account::TrustStartupController>
+            trust_startup_controller_; ///< Restricted boot state machine.
 
         /**
          * @brief Constructs a node, creating the account from @p source AFTER LoadSgnsConfig()
@@ -1129,6 +1142,14 @@ namespace sgns
          *        and stops the transaction GlobalDB.
          */
         void ShutdownForDestruction();
+
+        /**
+         * @brief Releases the runtime object graph after all node I/O threads have stopped.
+         *
+         * Dependencies are destroyed explicitly so objects that own PubSub subscriptions,
+         * GraphSync handlers, or Asio operations do not outlive PubSub or its I/O context.
+         */
+        void ReleaseRuntimeMembersAfterIoStopped();
 
         /**
          * @brief Stops account-bound runtime services in dependency order.
