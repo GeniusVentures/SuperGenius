@@ -15,6 +15,15 @@ target_link_libraries(genesis_manifest_test
     trustedpeer
 )
 
+addtest(quorum_policy_test
+    quorum_policy_test.cpp
+)
+target_link_libraries(quorum_policy_test
+    trustedpeer
+    multisig
+    sgns_genius_account
+)
+
 addtest(trustedpeerregistry_genesis_test
     trustedpeerregistry_genesis_test.cpp
 )

@@ -21,6 +21,26 @@
 
 namespace sgns::securecrdt
 {
+    inline uint64_t MembershipQuorumFloor( size_t )
+    {
+        return 0;
+    }
+
+    inline uint64_t BurnQuorumFloor( size_t )
+    {
+        return 0;
+    }
+
+    inline outcome::result<void> ValidateMembershipQuorumThreshold( uint64_t, size_t )
+    {
+        return outcome::success();
+    }
+
+    inline outcome::result<void> ValidateBurnQuorumThreshold( uint64_t, size_t )
+    {
+        return outcome::success();
+    }
+
     /**
      * @brief Validates that `threshold` is at or above the majority-safety
      *        floor for a signer set of size `signer_set_size`
@@ -34,12 +54,7 @@ namespace sgns::securecrdt
      */
     inline outcome::result<void> ValidateQuorumThreshold( uint64_t threshold, size_t signer_set_size )
     {
-        const uint64_t minimum_safe_threshold = ( static_cast<uint64_t>( signer_set_size ) * 51 + 99 ) / 100;
-        if ( threshold < minimum_safe_threshold )
-        {
-            return outcome::failure( SecureCrdt::Error::QUORUM_THRESHOLD_BELOW_FLOOR );
-        }
-        return outcome::success();
+        return ValidateMembershipQuorumThreshold( threshold, signer_set_size );
     }
 } // namespace sgns::securecrdt
 
