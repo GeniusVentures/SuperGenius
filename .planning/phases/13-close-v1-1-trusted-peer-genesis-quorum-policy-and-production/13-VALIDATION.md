@@ -16,7 +16,7 @@ revised: 2026-08-11
 |----------|-------|
 | Framework | GoogleTest via repository `addtest(...)`; CTest 3.31.4 |
 | Quick command | `ctest --test-dir build/OSX/Release --output-on-failure -R 'securecrdt_candidate|genesis_manifest|quorum_policy|trust_state_store|trustedpeerregistry|burnconfig'` |
-| Full phase gate | `ctest --test-dir build/OSX/Release --output-on-failure -R 'genesis_manifest_test|quorum_policy_test|trust_state_store_test|operator_approval_test|trust_genesis_tool_test|trust_restart_test|trust_tamper_e2e_test|securecrdt|trustedpeer|burnconfig|account_management|node_startup|startup|multi_account'` |
+| Full phase gate | `ctest --test-dir build/OSX/Release --output-on-failure -R 'genesis_manifest_test|quorum_policy_test|trust_state_store_test|operator_approval_test|trust_genesis_tool_test|trust_first_boot_e2e_test|trust_restart_test|trust_tamper_e2e_test|securecrdt|trustedpeer|burnconfig|account_management|node_startup|startup|multi_account'` |
 | Repetition gate | Run `policy_lifetime_multi_account_test` five consecutive times after the full phase gate |
 
 ## Sampling Contract
