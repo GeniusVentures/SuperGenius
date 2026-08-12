@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <limits>
 #include <map>
-#include <sstream>
 
 #include <gsl/span>
 
@@ -60,11 +59,6 @@ namespace sgns::trustedpeer
 
         base::Buffer Buffer( std::string_view value ) { return base::Buffer{}.put( value ); }
         base::Buffer Buffer( const std::vector<uint8_t> &value ) { return base::Buffer( value ); }
-
-        std::string ToString( const base::Buffer &value )
-        {
-            return std::string( reinterpret_cast<const char *>( value.data() ), value.size() );
-        }
 
         std::string Prefix( uint16_t network_id )
         {
@@ -458,7 +452,15 @@ namespace sgns::trustedpeer
         auto current_result = LoadAndVerify();
         if ( current_result.has_error() ) return current_result.error();
         const auto &current = current_result.value();
-        if ( candidate.version <= current.policy.version ) return outcome::failure( Error::VERSION_DECREASE );
+        if ( candidate.version < current.policy.version ) return outcome::failure( Error::VERSION_DECREASE );
+        if ( candidate.version == current.policy.version )
+        {
+            const auto candidate_hash = candidate.Hash();
+            const auto current_hash = current.policy.Hash();
+            if ( candidate_hash && current_hash && *candidate_hash != *current_hash )
+                return outcome::failure( Error::STALE_HEAD );
+            return outcome::failure( Error::VERSION_DECREASE );
+        }
         if ( current.policy.version == std::numeric_limits<uint64_t>::max() ||
              candidate.version != current.policy.version + 1 ) return outcome::failure( Error::VERSION_SKIP );
         const auto current_hash = current.policy.Hash().value();
@@ -488,7 +490,15 @@ namespace sgns::trustedpeer
         auto current_result = LoadAndVerify();
         if ( current_result.has_error() ) return current_result.error();
         const auto &current = current_result.value();
-        if ( candidate.version <= current.burn.version ) return outcome::failure( Error::VERSION_DECREASE );
+        if ( candidate.version < current.burn.version ) return outcome::failure( Error::VERSION_DECREASE );
+        if ( candidate.version == current.burn.version )
+        {
+            const auto candidate_hash = candidate.Hash();
+            const auto current_hash = current.burn.Hash();
+            if ( candidate_hash && current_hash && *candidate_hash != *current_hash )
+                return outcome::failure( Error::STALE_HEAD );
+            return outcome::failure( Error::VERSION_DECREASE );
+        }
         if ( current.burn.version == std::numeric_limits<uint64_t>::max() ||
              candidate.version != current.burn.version + 1 ) return outcome::failure( Error::VERSION_SKIP );
         if ( candidate.expected_previous_hash != current.burn.Hash().value() )
