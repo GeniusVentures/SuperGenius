@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-04-PLAN.md
-last_updated: "2026-08-12T15:16:25.023Z"
+stopped_at: Completed 13-05-PLAN.md
+last_updated: "2026-08-12T15:43:34.215Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 13
+  completed_plans: 14
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 5 of 12
+Plan: 6 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T15:16:25.019Z
-**Stopped At:** Completed 13-04-PLAN.md
+**Last session:** 2026-08-12T15:43:34.211Z
+**Stopped At:** Completed 13-05-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -95,6 +95,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P12 | 12 min | 1 tasks | 8 files |
 | Phase 13 P02 | 11min | 2 tasks | 5 files |
 | Phase 13 P04 | 22m | 3 tasks | 9 files |
+| Phase 13 P05 | 23min | 3 tasks | 11 files |
 
 ## Decisions
 
@@ -110,3 +111,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Candidate approvals repeat exact canonical core bytes and bind version, content hash, and signer in the storage key. — Self-contained signed bytes and key binding prevent ambiguous reconstruction or cross-candidate approval reuse.
 - [Phase 13]: One CandidateAuthorizationSource snapshot drives local submission and remote filtering. — Both ingress paths must enforce the same live network, predecessor, policy, signer, and resource constraints.
 - [Phase 13]: Current-only candidate listing separates activation eligibility from bounded stale audit visibility. — Predecessor changes must immediately deactivate stale candidates without erasing authenticated audit records.
+- [Phase 13]: Production TPR publishes peers only from durable TrustStateStore snapshots. — Genesis and successor candidates remain separate, and receive callbacks never sign.
+- [Phase 13]: Trust records bind proofs to exact candidate-core authorization bytes with strict legacy decoding. — Restart verification must check the same context operators approved without rejecting prior Phase 13 records.
+- [Phase 13]: Burn v1 uses a domain-separated genesis anchor and current burn quorum. — Economic readiness cannot derive from the bootstrap proof or unconfirmed peers.
+- [Phase 13]: A node-scoped confirmed burn provider publishes only after durable activation. — TransactionManager replacements need one authoritative readiness and value source.
