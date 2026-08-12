@@ -35,11 +35,11 @@ Milestone summary: `.planning/MILESTONES.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 12 plans in 10 waves
+**Plans:** 1/12 plans executed
 Plans:
 **Wave 1**
 
-- [ ] 13-01-PLAN.md — Canonical genesis identity and fingerprint contract
+- [x] 13-01-PLAN.md — Canonical genesis identity and fingerprint contract
 - [ ] 13-03-PLAN.md — Instance-scoped SecureCrdt policy registry migration
 
 **Wave 2** *(blocked on Wave 1 completion)*

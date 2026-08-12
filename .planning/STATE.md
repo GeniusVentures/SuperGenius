@@ -1,18 +1,18 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: Multi-Signature Secure CRDT Storage
+milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
-status: ready_to_execute
-stopped_at: Phase 13 planned
+status: executing
+stopped_at: Completed 13-01-PLAN.md
 last_updated: "2026-08-27T00:00:00.000Z"
 last_activity: 2026-08-27 -- Completed quick task 260827-hbf: GetGraphsyncNetwork accessor
 progress:
-  total_phases: 6
+  total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 8
-  percent: 83
+  completed_plans: 9
+  percent: 29
 ---
 
 # State: SuperGenius — Multi-Signature Secure CRDT Storage
@@ -26,14 +26,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-07-20)
 
 **Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
-**Current focus:** Phase 13 — close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps
+**Current focus:** Phase 13 — close-v1-1-trusted-peer-genesis-quorum-policy-and-production
 
 ## Current Position
 
-Phase: 13 (trusted-peer genesis, quorum policy, and production integration) — PLANNED
-Plan: 0 of 12
+Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
+Plan: 2 of 12
 Status: Ready to execute
-Last activity: 2026-08-12 -- Phase 13 planning complete
+Last activity: 2026-08-12
 
 ## Roadmap Snapshot
 
@@ -74,9 +74,9 @@ Last activity: 2026-08-12 -- Phase 13 planning complete
 
 ## Session
 
-**Last session:** 2026-08-12T13:26:18Z
-**Stopped At:** Phase 13 planned
-**Resume File:** .planning/phases/13-close-v1-1-trusted-peer-genesis-quorum-policy-and-production/13-01-PLAN.md
+**Last session:** 2026-08-12T13:50:34.800Z
+**Stopped At:** Completed 13-01-PLAN.md
+**Resume File:** None
 
 ## Accumulated Context
 
@@ -91,3 +91,14 @@ Last activity: 2026-08-12 -- Phase 13 planning complete
 ### v1.0 History
 
 v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MILESTONES.md` and `.planning/milestones/v1.0-*` for full history. Between v1.0 and v1.1, a substantial body of bridge-relayer/consensus-voting work (`.planning/phases/01` through `07`) was executed outside formal GSD milestone tracking; it is unrelated to this milestone's scope.
+
+## Performance Metrics
+
+| Phase | Plan | Duration | Notes |
+|-------|------|----------|-------|
+| Phase 13 P01 | 10min | 1 tasks | 7 files |
+
+## Decisions
+
+- [Phase 13]: Genesis identity uses SGNS_TRUST_GENESIS_V1 with fixed-width big-endian fields and sorted lowercase 64-byte keys. — This makes the reviewed trust root deterministic and independently verifiable.
+- [Phase 13]: Initial genesis policy is version 1 with burn value 100 and majority/two-thirds safety floors. — Unsafe bootstrap thresholds or ambiguous economic readiness must fail before fingerprinting.
