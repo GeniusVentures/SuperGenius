@@ -65,8 +65,8 @@
 | MIG-06 | Phase 12 | Pending |
 | BOOT-01 | Phase 13 | Pending |
 | BOOT-02 | Phase 13 | Complete |
-| BOOT-03 | Phase 13 | Pending |
-| BOOT-04 | Phase 13 | Pending |
+| BOOT-03 | Phase 13 | Complete |
+| BOOT-04 | Phase 13 | Complete |
 | POLICY-01 | Phase 13 | Complete |
 | VALID-01 | Phase 13 | Complete |
 | TEST-01 | Phase 13 | Complete |
