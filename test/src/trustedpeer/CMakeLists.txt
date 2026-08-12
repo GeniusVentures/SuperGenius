@@ -18,6 +18,15 @@ target_link_libraries(genesis_manifest_test
 addtest(quorum_policy_test
     quorum_policy_test.cpp
 )
+
+addtest(trust_state_store_test
+    trust_state_store_test.cpp
+)
+target_link_libraries(trust_state_store_test
+    trustedpeer
+    sgns_genius_account
+    rocksdb
+)
 target_link_libraries(quorum_policy_test
     trustedpeer
     multisig

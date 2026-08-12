@@ -2,6 +2,7 @@ add_library(trustedpeer
     CanonicalTrustCodec.cpp
     GenesisManifest.cpp
     QuorumPolicy.cpp
+    TrustStateStore.cpp
     TrustedPeerRegistry.cpp
 )
 target_link_libraries(trustedpeer
@@ -10,5 +11,6 @@ target_link_libraries(trustedpeer
     PRIVATE
     hexutil
     sha
+    rocksdb
 )
 supergenius_install(trustedpeer)
