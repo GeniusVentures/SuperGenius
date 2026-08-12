@@ -63,7 +63,7 @@ Full phase details: `.planning/milestones/v3.0-ROADMAP.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 10/12 plans executed
+**Plans:** 11/12 plans executed
 Plans:
 **Wave 1**
 
@@ -101,7 +101,7 @@ Plans:
 
 **Wave 9** *(blocked on Wave 8 completion)*
 
-- [ ] 13-08-PLAN.md — Node-scoped account switching and live economics
+- [x] 13-08-PLAN.md — Node-scoped account switching and live economics
 
 **Wave 10** *(blocked on Wave 9 completion)*
 
