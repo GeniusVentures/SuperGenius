@@ -15,7 +15,9 @@ target_link_libraries(trust_first_boot_e2e_test
     genius_node_test
     local_trust_admin
     json_secure_storage
+    rocksdb
 )
+target_include_directories(trust_first_boot_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 # Copy bridge_chains_config.json next to the test binary so direct execution
 # and CTest use the same relative lookup path.
