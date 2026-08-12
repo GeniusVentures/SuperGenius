@@ -6,6 +6,7 @@
 
 #include <processingbase/ProcessingManager.hpp>
 #include <artifacts/artifact_serializer.hpp>
+#include "util/sha256.hpp"
 #include "testutil/processing_conformance_fixture.hpp"
 
 namespace sgns
@@ -306,6 +307,73 @@ namespace sgns
                   << " outputArtifactCount=" << manifest.outputArtifactCount
                   << " startTimeUsec=" << manifest.startTimeUsec
                   << " endTimeUsec=" << manifest.endTimeUsec << std::endl;
+    }
+
+    TEST_F( OutputHashingTest, PostQuantizationHashAgreesWithArtifactIdentity )
+    {
+        // QUANT-02, ROADMAP Phase 12 SC2: proves the processor's own
+        // post-quantization hashed bytes (captured via
+        // ExecutionContext::rawOutputCapture at the real sha256() call site)
+        // and ComputeArtifactIdentity()'s independent re-hash of the same
+        // output bytes agree with each other on a single run on a single
+        // machine, now that real quantization is in place (Phase 12).
+        const std::string &json_str = PatchedJson( "float-processing-definition.json" );
+        ASSERT_FALSE( json_str.empty() );
+
+        auto r = sgns::sgprocessing::ProcessingManager::Create( json_str );
+        ASSERT_TRUE( r.has_value() );
+
+        const auto &manager = r.value();
+        auto        p = manager->GetProcessingData();
+        const auto &passes = p.get_passes();
+        ASSERT_EQ( passes.size(), 1 );
+        ASSERT_TRUE( passes[0].get_model().has_value() );
+        const auto model       = passes[0].get_model().value();
+        const auto input_nodes = model.get_input_nodes();
+        ASSERT_GE( input_nodes.size(), 1 );
+
+        auto                              ioc = std::make_shared<boost::asio::io_context>();
+        std::vector<std::vector<uint8_t>> chunkhashes;
+        std::vector<std::string>         output_locations;
+        sgns::ModelNode                   model_node = input_nodes[0];
+
+        // Caller-owned ExecutionContext (5-arg Process() overload) with
+        // rawOutputCapture wired to collect every quantized-bytes invocation
+        // across both hash layers (per-chunk + stitched-combined).
+        sgns::sgprocessing::ExecutionContext execCtx;
+        execCtx.cancelToken.SetCallback( []() {} );
+
+        std::vector<std::vector<uint8_t>> captured;
+        execCtx.rawOutputCapture =
+            [&captured]( const std::vector<uint8_t> &quantizedBytes, const std::vector<uint8_t> & /*preQuantizeBytes*/ )
+        {
+            captured.push_back( quantizedBytes );
+        };
+
+        auto pr = manager->Process( ioc, chunkhashes, model_node, output_locations, execCtx );
+        ASSERT_TRUE( pr.has_value() ) << pr.error().message();
+        ASSERT_FALSE( captured.empty() ) << "rawOutputCapture must have fired at least once";
+
+        // The LAST invocation is the stitched-combined layer's exact
+        // post-quantization bytes -- the same bytes MNN_Float's own
+        // subTaskResultHash/result.hash was computed from, and the same
+        // bytes that flow into result.output_buffers -> ComputeArtifactIdentity.
+        const std::vector<uint8_t> &finalQuantizedBytes = captured.back();
+
+        auto independentRehash =
+            sgns::sgprocmanagersha::sha256( finalQuantizedBytes.data(), finalQuantizedBytes.size() );
+        ASSERT_EQ( independentRehash.size(), sgns::sgprocessing::SHA256_HASH_SIZE );
+
+        ASSERT_GE( pr.value().artifacts.size(), 1u ) << "Process() should produce at least one artifact";
+        const auto &art = pr.value().artifacts[0];
+
+        EXPECT_EQ( std::memcmp( independentRehash.data(), art.artifactId, sgns::sgprocessing::SHA256_HASH_SIZE ), 0 )
+            << "Processor's own hashed post-quantization bytes must agree with "
+               "ComputeArtifactIdentity's independent re-hash of the same bytes";
+
+        std::cout << "PostQuantizationHashAgreesWithArtifactIdentity: " << captured.size()
+                  << " rawOutputCapture invocation(s), final layer " << finalQuantizedBytes.size()
+                  << " bytes, independent re-hash matches artifactId" << std::endl;
     }
 
     TEST_F( OutputHashingTest, ManifestDeterministicSerialization )
