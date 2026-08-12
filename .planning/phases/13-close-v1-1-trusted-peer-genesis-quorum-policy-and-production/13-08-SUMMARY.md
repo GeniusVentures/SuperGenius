@@ -112,7 +112,12 @@ completed: 2026-08-12
 ## Verification
 
 - Focused `account_management_test --gtest_color=no` - PASS, 5/5 tests in 63.917 seconds.
-- Exact plan HIGH-threat command - PASS with exit status 0.
+- Exact plan HIGH-threat command - PASS with exit status 0:
+
+```sh
+ctest --test-dir build/OSX/Release --output-on-failure -R 'genesis_manifest_test|quorum_policy_test|trust_state_store_test|operator_approval_test|trust_genesis_tool_test|trust_first_boot_e2e_test|trust_restart_test|trust_tamper_e2e_test|securecrdt|trustedpeer|burnconfig|account_management|node_startup|startup|multi_account' && for i in 1 2 3 4 5; do build/OSX/Release/test_bin/policy_lifetime_multi_account_test || exit 1; done
+```
+
 - CTest selection - PASS, 25/25: account management, BurnConfig unit/e2e, SecureCrdt interface/registry/candidate/race/quorum/contract, genesis manifest, trust tool, quorum policy, trust store, operator approval, TrustedPeerRegistry genesis/quorum/floor, startup wiring, first boot, restart, tamper, node startup, multi-account, and policy lifetime.
 - CTest elapsed time - 276.34 seconds with zero failed or skipped selected tests.
 - Five additional consecutive `policy_lifetime_multi_account_test` invocations - PASS, 5/5; each asserted retained policy identity and post-switch behavior.
