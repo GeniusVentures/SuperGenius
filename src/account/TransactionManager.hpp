@@ -40,6 +40,7 @@
 namespace sgns::account
 {
     class BurnConfig;
+    class ConfirmedBurnValueProvider;
 } // namespace sgns::account
 
 namespace sgns
@@ -63,6 +64,11 @@ namespace sgns
         /// and refreshed via BurnConfig's quorum-signed CRDT value (BURN-02, BURN-03).
         static constexpr uint64_t BURN_BASIS_POINTS_DEFAULT = 100; // 1%
         static constexpr uint64_t BASIS_POINTS_TOTAL        = 10000;
+
+        enum class Error : uint8_t
+        {
+            TRUST_POLICY_NOT_READY = 1,
+        };
 
         /**
          * @brief State of the Transaction Manager
@@ -125,16 +131,16 @@ namespace sgns
          * @note timestamp_tolerance must be smaller than mutability_window
          */
         static std::shared_ptr<TransactionManager> New(
-            std::shared_ptr<crdt::GlobalDB>            processing_db,
-            std::shared_ptr<boost::asio::io_context>   ctx,
-            std::shared_ptr<GeniusAccount>             account,
-            std::shared_ptr<Blockchain>                blockchain,
-            NodeType                                   node_type                 = NodeType::Light,
-            uint16_t                                   subnet_id                 = 0,
-            std::chrono::milliseconds                  timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
-            std::chrono::milliseconds                  mutability_window         = std::chrono::milliseconds( 0 ),
-            uint64_t                                   initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
-            std::shared_ptr<sgns::account::BurnConfig> burn_config               = nullptr );
+            std::shared_ptr<crdt::GlobalDB>          processing_db,
+            std::shared_ptr<boost::asio::io_context> ctx,
+            std::shared_ptr<GeniusAccount>           account,
+            std::shared_ptr<Blockchain>              blockchain,
+            NodeType                                 node_type                 = NodeType::Light,
+            uint16_t                                 subnet_id                 = 0,
+            std::chrono::milliseconds                timestamp_tolerance       = std::chrono::milliseconds( 300000 ),
+            std::chrono::milliseconds                mutability_window         = std::chrono::milliseconds( 0 ),
+            uint64_t                                 initial_burn_basis_points = BURN_BASIS_POINTS_DEFAULT,
+            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider = nullptr );
 
         ~TransactionManager();
 
@@ -332,6 +338,7 @@ namespace sgns
         friend class Migration3_6_0To3_7_0;
         friend class CertificateFallbackTestAccess;
         friend class TransactionManagerPendingLifecycleTestAccess;
+        friend class MultiAccountTestAccess;
         void EnqueueTransaction( TransactionPair element );
         void EnqueueTransaction( TransactionItem element );
 
@@ -412,16 +419,16 @@ namespace sgns
             bool          initialized{ false };
         };
 
-        TransactionManager( std::shared_ptr<crdt::GlobalDB>            processing_db,
-                            std::shared_ptr<boost::asio::io_context>   ctx,
-                            std::shared_ptr<GeniusAccount>             account,
-                            std::shared_ptr<Blockchain>                blockchain,
-                            NodeType                                   node_type,
-                            uint16_t                                   subnet_id,
-                            std::chrono::milliseconds                  timestamp_tolerance,
-                            std::chrono::milliseconds                  mutability_window,
-                            uint64_t                                   initial_burn_basis_points,
-                            std::shared_ptr<sgns::account::BurnConfig> burn_config );
+        TransactionManager( std::shared_ptr<crdt::GlobalDB>          processing_db,
+                            std::shared_ptr<boost::asio::io_context> ctx,
+                            std::shared_ptr<GeniusAccount>           account,
+                            std::shared_ptr<Blockchain>              blockchain,
+                            NodeType                                 node_type,
+                            uint16_t                                 subnet_id,
+                            std::chrono::milliseconds                timestamp_tolerance,
+                            std::chrono::milliseconds                mutability_window,
+                            uint64_t                                 initial_burn_basis_points,
+                            std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider );
 
         // Parser function pointer alias: returns a set of topic strings or an error
         using TransactionParserFn =
@@ -631,9 +638,10 @@ namespace sgns
         std::atomic<uint64_t> metrics_tracking_confirm_{ 0 };
         std::atomic<uint64_t> metrics_tracking_fail_{ 0 };
 
-        /// @brief Live, cached burn-rate basis-points value (BURN-02, BURN-03).
-        ///        Refreshed via BurnConfig::RegisterRefreshCallback; never a direct CRDT read.
+        /// @brief Compatibility burn rate for managers constructed without a trust provider.
         std::atomic<uint64_t> burn_basis_points_{ BURN_BASIS_POINTS_DEFAULT };
+        /// @brief Node-scoped durable-ready burn state shared by every replacement manager.
+        std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> confirmed_burn_provider_;
 
         static constexpr std::chrono::milliseconds TIMESTAMP_TOLERANCE  = std::chrono::seconds( 10 );
         static constexpr std::chrono::milliseconds MUTABILITY_WINDOW    = std::chrono::minutes( 15 );
@@ -826,6 +834,8 @@ namespace sgns
         PublicChainInputValidator public_chain_input_validator_;
     };
 }
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns, TransactionManager::Error );
 
 template <>
 struct fmt::formatter<sgns::TransactionManager::State> : formatter<std::string_view>
