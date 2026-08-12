@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-06-PLAN.md
-last_updated: "2026-08-12T15:54:25.670Z"
+stopped_at: Completed 13-09-PLAN.md
+last_updated: "2026-08-12T16:19:58.282Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 15
+  completed_plans: 16
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 7 of 12
+Plan: 8 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -74,8 +74,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T15:54:25.666Z
-**Stopped At:** Completed 13-06-PLAN.md
+**Last session:** 2026-08-12T16:19:58.278Z
+**Stopped At:** Completed 13-09-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -103,6 +103,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P04 | 22m | 3 tasks | 9 files |
 | Phase 13 P05 | 23min | 3 tasks | 11 files |
 | Phase 13 P06 | 8min | 1 tasks | 4 files |
+| Phase 13 P09 | 22min | 2 tasks | 9 files |
 
 ## Decisions
 
@@ -125,3 +126,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: GlobalDbNetworkComposition validates configuration in Create but defers network and datastore side effects to Start.
 - [Phase 13]: The GlobalDB transport identity stays internal beneath the database path; callers provide no account or private key.
 - [Phase 13]: GlobalDB listen and broadcast topics remain mandatory caller inputs so local trust tools reuse the production CRDT channel.
+- [Phase 13]: sgns-trust consumes canonical GenesisManifest bytes and a caller-supplied existing production CRDT topic. — The reviewed, fingerprinted, signed, submitted, and verified bytes remain identical while the tool reuses the deployed topic.
+- [Phase 13]: Private key material enters only through an owner-controlled 0600 no-symlink file or echo-disabled terminal input and never through argv or environment variables. — This limits secret exposure and permits deterministic cleanse plus success-only deletion.
+- [Phase 13]: Local propose and approve operations attempt durable activation after the explicit signature while receive and list paths remain signer-free. — Explicit operator actions can complete quorum without adding an automatic signing surface.
