@@ -1,6 +1,7 @@
 add_library(trustedpeer
     CanonicalTrustCodec.cpp
     GenesisManifest.cpp
+    QuorumPolicy.cpp
     TrustedPeerRegistry.cpp
 )
 target_link_libraries(trustedpeer
