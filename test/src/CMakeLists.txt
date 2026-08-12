@@ -28,6 +28,7 @@ add_subdirectory(processing_conformance_hashing)
 add_subdirectory(processing_conformance_migration)
 add_subdirectory(processing_conformance_regression)
 add_subdirectory(processing_conformance_schema)
+add_subdirectory(processing_conformance_security)
 
 add_subdirectory(shader_compiler)
 add_subdirectory(proof)
