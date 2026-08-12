@@ -1,0 +1,13 @@
+add_executable(sgns-trust
+    main.cpp
+)
+target_link_libraries(sgns-trust
+    PRIVATE
+    trustedpeer
+    burnconfig
+    crdt_globaldb
+    securecrdt
+    sgns_genius_account
+    Boost::program_options
+    OpenSSL::Crypto
+)

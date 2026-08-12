@@ -24,6 +24,7 @@ target_link_libraries(trust_genesis_tool_test
     OpenSSL::Crypto
 )
 target_include_directories(trust_genesis_tool_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+add_dependencies(trust_genesis_tool_test sgns-trust)
 
 addtest(quorum_policy_test
     quorum_policy_test.cpp
