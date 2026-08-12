@@ -45,7 +45,9 @@
 #include "base/ScaledInteger.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
+#include "account/TrustStartupController.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
@@ -88,7 +90,6 @@ namespace
 
         return base + dist( rng );
     }
-
 }
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns, GeniusNode::Error, e )
@@ -429,14 +430,16 @@ namespace sgns
         }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)).
-        const auto majority_floor = static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        const auto majority_floor = static_cast<uint64_t>( trusted_peers_genesis_.size() / 2 + 1 );
+        const auto burn_floor     = static_cast<uint64_t>( trusted_peers_genesis_.size() -
+                                                       trusted_peers_genesis_.size() / 3 );
         if ( trusted_peer_quorum_threshold_ == 0 )
         {
             trusted_peer_quorum_threshold_ = majority_floor;
         }
         if ( burn_config_quorum_threshold_ == 0 )
         {
-            burn_config_quorum_threshold_ = majority_floor;
+            burn_config_quorum_threshold_ = burn_floor;
         }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
@@ -723,42 +726,182 @@ namespace sgns
                 const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
                 tx_globaldb_->AddListenTopic( quorum_topic );
 
-                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
-
-                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
-                                                                               trusted_peers_genesis_,
-                                                                               bootstrapper_node_address_,
-                                                                               trusted_peer_quorum_threshold_ );
-                if ( tpr_result.has_error() )
+                if ( !secure_crdt_ )
                 {
-                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
-                                         tpr_result.error().message() );
-                    secure_crdt_.reset();
-                    return;
+                    secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
                 }
-                trusted_peer_registry_ = tpr_result.value();
 
-                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
-                                                                          tx_globaldb_,
-                                                                          trusted_peer_registry_,
-                                                                          burn_config_quorum_threshold_,
-                                                                          account_ );
-                if ( burn_config_result.has_error() )
+                const std::string trust_path = write_base_path_ + gnus_network_full_path_ + "/trust-state";
+                if ( !trust_state_store_ )
                 {
-                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
-                                         burn_config_result.error().message() );
-                    ResetQuorumMembers();
-                    return;
+                    auto opened = sgns::trustedpeer::TrustStateStore::Open( trust_path, subnet_id_ );
+                    if ( opened.has_value() )
+                    {
+                        trust_state_store_ = opened.value();
+                    }
                 }
-                burn_config_ = burn_config_result.value();
-
-                // Register only after both policy owners have populated SecureCrdtRegistry;
-                // otherwise a new node can start without filters for either runtime key.
-                if ( !secure_crdt_->RegisterFilters() )
+                const bool has_configured_trust = !trusted_peers_genesis_.empty() ||
+                                                  !bootstrapper_node_address_.empty();
+                bool has_persisted_trust = false;
+                if ( trust_state_store_ )
                 {
-                    node_logger_->error( "SecureCrdt filter registration failed" );
-                    ResetQuorumMembers();
-                    return;
+                    auto persisted      = trust_state_store_->LoadAndVerify();
+                    has_persisted_trust = persisted.has_value() ||
+                                          persisted.error() != sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND;
+                }
+
+                if ( ( has_configured_trust || has_persisted_trust ) && !trust_startup_controller_ )
+                {
+                    std::optional<sgns::trustedpeer::GenesisManifest> manifest;
+                    if ( has_configured_trust )
+                    {
+                        sgns::trustedpeer::GenesisManifest configured;
+                        configured.network_id              = subnet_id_;
+                        configured.bootstrapper_public_key = bootstrapper_node_address_;
+                        configured.peers                   = trusted_peers_genesis_;
+                        configured.membership_threshold    = trusted_peer_quorum_threshold_;
+                        configured.burn_threshold          = burn_config_quorum_threshold_;
+                        manifest                           = std::move( configured );
+                    }
+                    auto created = sgns::account::TrustStartupController::New(
+                        secure_crdt_,
+                        trust_state_store_,
+                        std::move( manifest ),
+                        account_->GetAddress(),
+                        [weak_self = weak_from_this()]( const std::vector<uint8_t> &bytes )
+                        {
+                            auto self = weak_self.lock();
+                            return self && self->account_ ? self->account_->Sign( bytes ) : std::vector<uint8_t>{};
+                        },
+                        [logger = node_logger_]( const sgns::account::TrustStartupController::Event &event )
+                        {
+                            const char *code = "TRUST_CONFIG_CONFLICT";
+                            switch ( event.code )
+                            {
+                                case sgns::account::TrustStartupController::EventCode::TRUST_NETWORK_MISMATCH:
+                                    code = "TRUST_NETWORK_MISMATCH";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_LOCAL_STATE_CORRUPT:
+                                    code = "TRUST_LOCAL_STATE_CORRUPT";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_MISSING:
+                                    code = "TRUST_CRDT_MISSING";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_ROLLBACK:
+                                    code = "TRUST_CRDT_ROLLBACK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_FORK:
+                                    code = "TRUST_CRDT_FORK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
+                                    break;
+                            }
+                            logger->critical( "{} fingerprint={} fields={}",
+                                              code,
+                                              event.persisted_fingerprint,
+                                              fmt::join( event.fields, "," ) );
+                        },
+                        [weak_self = weak_from_this()]( sgns::account::TrustStartupController::State state )
+                        {
+                            auto self = weak_self.lock();
+                            if ( !self )
+                            {
+                                return;
+                            }
+                            boost::asio::post(
+                                *self->io_,
+                                [weak_self, state]
+                                {
+                                    auto node = weak_self.lock();
+                                    if ( !node )
+                                    {
+                                        return;
+                                    }
+                                    if ( state == sgns::account::TrustStartupController::State::ConfirmedReady )
+                                    {
+                                        node->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                    }
+                                    else if ( state ==
+                                              sgns::account::TrustStartupController::State::WaitingForInitialBurn )
+                                    {
+                                        node->state_.store( NodeState::WAITING_FOR_BURN_GENESIS );
+                                    }
+                                    else if ( state ==
+                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis )
+                                    {
+                                        node->state_.store( NodeState::WAITING_FOR_TRUST_GENESIS );
+                                    }
+                                    else
+                                    {
+                                        node->state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                                    }
+                                } );
+                        } );
+                    if ( created.has_error() )
+                    {
+                        node_logger_->critical( "Trust startup failed closed: {}", created.error().message() );
+                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    trust_startup_controller_ = created.value();
+                    trusted_peer_registry_    = trust_startup_controller_->registry();
+                    burn_config_              = trust_startup_controller_->burn_config();
+                }
+
+                if ( trust_startup_controller_ )
+                {
+                    auto refreshed = trust_startup_controller_->Refresh();
+                    if ( refreshed.has_error() )
+                    {
+                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    if ( !trust_startup_controller_->IsEconomicallyReady() )
+                    {
+                        state_.store( trust_startup_controller_->GetState() ==
+                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis
+                                          ? NodeState::WAITING_FOR_TRUST_GENESIS
+                                          : NodeState::WAITING_FOR_BURN_GENESIS );
+                        return;
+                    }
+                }
+                else
+                {
+                    auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                                   trusted_peers_genesis_,
+                                                                                   bootstrapper_node_address_,
+                                                                                   trusted_peer_quorum_threshold_ );
+                    if ( tpr_result.has_error() )
+                    {
+                        node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                             tpr_result.error().message() );
+                        secure_crdt_.reset();
+                        return;
+                    }
+                    trusted_peer_registry_ = tpr_result.value();
+
+                    auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                              tx_globaldb_,
+                                                                              trusted_peer_registry_,
+                                                                              burn_config_quorum_threshold_,
+                                                                              account_ );
+                    if ( burn_config_result.has_error() )
+                    {
+                        node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                             burn_config_result.error().message() );
+                        ResetQuorumMembers();
+                        return;
+                    }
+                    burn_config_ = burn_config_result.value();
+
+                    // Register only after both policy owners have populated SecureCrdtRegistry;
+                    // otherwise a new node can start without filters for either runtime key.
+                    if ( !secure_crdt_->RegisterFilters() )
+                    {
+                        node_logger_->error( "SecureCrdt filter registration failed" );
+                        ResetQuorumMembers();
+                        return;
+                    }
                 }
 
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
@@ -1011,10 +1154,32 @@ namespace sgns
                 node_logger_->info( "GeniusNode READY" );
                 break;
             }
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+            case NodeState::FATAL_TRUST_MISMATCH:
+                break;
             case NodeState::CREATING:
             default:
                 break;
         }
+    }
+
+    bool GeniusNode::IsTrustEconomicallyReady() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->IsEconomicallyReady()
+                                         : burn_config_ && burn_config_->IsEconomicallyReady();
+    }
+
+    bool GeniusNode::CanApproveTrustSuccessors() const
+    {
+        return trust_startup_controller_ && trust_startup_controller_->CanApproveSuccessors();
+    }
+
+    std::vector<std::string> GeniusNode::GetCurrentTrustedPeers() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->GetCurrentPeers()
+                                         : ( trusted_peer_registry_ ? trusted_peer_registry_->GetCurrentPeers()
+                                                                    : std::vector<std::string>{} );
     }
 
     void GeniusNode::InitOpenSSL()
@@ -1766,6 +1931,71 @@ namespace sgns
         burn_config_.reset();
         trusted_peer_registry_.reset();
         secure_crdt_.reset();
+    }
+
+    void GeniusNode::ReleaseRuntimeMembersAfterIoStopped()
+    {
+        // The timer's completion handler captures a scheduling closure associated
+        // with this node. Destroy it while the io_context is still alive.
+        if ( gc_timer_ )
+        {
+            boost::system::error_code ignored;
+            gc_timer_->cancel( ignored );
+            gc_timer_.reset();
+        }
+
+        // Account-bound services depend on GlobalDB, which in turn depends on
+        // GraphSync, the scheduler, PubSub, and the io_context.
+        ResetProcessingMembers();
+        transaction_manager_.reset();
+        ResetQuorumMembers();
+        bridge_relayer_.reset();
+        eth_watch_service_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing blockchain_" );
+        blockchain_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: blockchain_ released" );
+
+        {
+            std::lock_guard<std::mutex> lock( migration_mutex_ );
+            node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing migration_manager_ (refs={})",
+                                 migration_manager_.use_count() );
+            migration_manager_.reset();
+        }
+
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing tx_globaldb_ (refs={})",
+                             tx_globaldb_.use_count() );
+        tx_globaldb_.reset();
+
+        // Bitswap borrows the PubSub host and event bus; GraphSync borrows the
+        // PubSub host and scheduler. Release dependents before their providers.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: clearing FileManager bitswap (refs={})",
+                             bitswap_.use_count() );
+        FileManager::GetInstance().clearBitswap( bitswap_ );
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_ (refs={})",
+                             bitswap_.use_count() );
+        bitswap_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing bitswap_event_bus_ (refs={})",
+                             bitswap_event_bus_.use_count() );
+        bitswap_event_bus_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing graphsyncnetwork_ (refs={})",
+                             graphsyncnetwork_.use_count() );
+        graphsyncnetwork_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing generator_ (refs={})",
+                             generator_.use_count() );
+        generator_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing scheduler_ (refs={})",
+                             scheduler_.use_count() );
+        scheduler_.reset();
+
+        // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
+        // account_ is declared before io_, so relying on implicit destruction
+        // would otherwise destroy its messenger after the io_context.
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})",
+                             account_.use_count() );
+        account_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
+        pubsub_.reset();
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: remaining runtime members released" );
     }
 
     void GeniusNode::ShutdownForDestruction()
@@ -2538,6 +2768,15 @@ namespace sgns
                 }
                 return { 0.60f, "Initializing transactions" };
             }
+
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+                return { 0.60f, "Waiting for confirmed trust genesis" };
+
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+                return { 0.65f, "Waiting for confirmed burn genesis" };
+
+            case NodeState::FATAL_TRUST_MISMATCH:
+                return { 0.60f, "Trust startup failed closed" };
 
             case NodeState::INITIALIZING_PROCESSING:
                 return { 0.945f, "Initializing processing modules" };
@@ -3510,7 +3749,7 @@ namespace sgns
             const auto &mtime   = it->mtime;
             bool        expired = mtime < cutoff;
             bool        overCap = ( result_retention_max_mb_ > 0 ) &&
-                                  ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+                           ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
             if ( !expired && !overCap )
             {
                 break;

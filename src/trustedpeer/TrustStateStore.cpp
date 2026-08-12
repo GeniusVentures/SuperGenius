@@ -1,5 +1,7 @@
 #include "trustedpeer/TrustStateStore.hpp"
 
+#include "securecrdt/SecureCrdtCandidate.hpp"
+
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -243,12 +245,11 @@ namespace sgns::trustedpeer
         std::optional<SignedRecord> DecodeSignedRecord( const base::Buffer &value, std::string_view domain )
         {
             CanonicalTrustCodec::Reader current_reader( value );
-            auto current_domain = current_reader.ReadBytes( domain.size() );
-            auto current_bytes = current_reader.ReadLengthPrefixedBytes( 64 * 1024 );
-            auto authorization_bytes = current_reader.ReadLengthPrefixedBytes( 128 * 1024 );
-            if ( current_domain &&
-                 std::equal( current_domain->begin(), current_domain->end(), domain.begin() ) && current_bytes &&
-                 authorization_bytes && !authorization_bytes->empty() )
+            auto                        current_domain      = current_reader.ReadBytes( domain.size() );
+            auto                        current_bytes       = current_reader.ReadLengthPrefixedBytes( 64 * 1024 );
+            auto                        authorization_bytes = current_reader.ReadLengthPrefixedBytes( 128 * 1024 );
+            if ( current_domain && std::equal( current_domain->begin(), current_domain->end(), domain.begin() ) &&
+                 current_bytes && authorization_bytes && !authorization_bytes->empty() )
             {
                 auto proof = DecodeProof( current_reader );
                 if ( proof && current_reader.Exhausted() )
@@ -262,15 +263,18 @@ namespace sgns::trustedpeer
             // Compatibility with the original Phase 13-02 record layout,
             // where signatures directly followed the canonical state bytes.
             CanonicalTrustCodec::Reader legacy_reader( value );
-            auto legacy_domain = legacy_reader.ReadBytes( domain.size() );
-            auto legacy_bytes = legacy_reader.ReadLengthPrefixedBytes( 64 * 1024 );
+            auto                        legacy_domain = legacy_reader.ReadBytes( domain.size() );
+            auto                        legacy_bytes  = legacy_reader.ReadLengthPrefixedBytes( 64 * 1024 );
             if ( !legacy_domain || !std::equal( legacy_domain->begin(), legacy_domain->end(), domain.begin() ) ||
                  !legacy_bytes )
             {
                 return std::nullopt;
             }
             auto legacy_proof = DecodeProof( legacy_reader );
-            if ( !legacy_proof || !legacy_reader.Exhausted() ) return std::nullopt;
+            if ( !legacy_proof || !legacy_reader.Exhausted() )
+            {
+                return std::nullopt;
+            }
             return SignedRecord{ *legacy_bytes, std::move( *legacy_bytes ), std::move( *legacy_proof ) };
         }
 
@@ -441,9 +445,21 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::NETWORK_MISMATCH );
         }
+        const sgns::securecrdt::CandidateCore genesis_core{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+                                                            "trusted-peer-genesis",
+                                                            genesis->network_id,
+                                                            sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
+                                                            genesis->policy_version,
+                                                            genesis_record->fingerprint,
+                                                            genesis_record->fingerprint,
+                                                            genesis_record->bytes };
+        const auto                            genesis_authorization = genesis_core.CanonicalBytes();
         if ( !multisig::VerifyPayloadSignature( genesis->bootstrapper_public_key,
                                                 genesis_record->signature,
-                                                genesis_record->bytes ) )
+                                                genesis_record->bytes ) &&
+             ( !genesis_authorization || !multisig::VerifyPayloadSignature( genesis->bootstrapper_public_key,
+                                                                            genesis_record->signature,
+                                                                            *genesis_authorization ) ) )
         {
             return outcome::failure( Error::INVALID_GENESIS_PROOF );
         }
@@ -573,14 +589,17 @@ namespace sgns::trustedpeer
             const auto &authorization_bytes = burn_authorizations.at( hash );
             if ( burn.version == 1 )
             {
-                auto       policy          = policies.find( burn.authorizing_policy_hash );
-                auto       bytes           = burn.CanonicalBytes().value();
+                auto       policy           = policies.find( burn.authorizing_policy_hash );
+                auto       bytes            = burn.CanonicalBytes().value();
                 const bool legacy_bootstrap = burn.expected_previous_hash == genesis_record->fingerprint &&
                                               authorization_bytes == bytes;
                 const bool bootstrap_proof = proof.size() == 1 &&
                                              proof.front().first == genesis->bootstrapper_public_key &&
                                              proof.front().second == genesis_record->signature &&
-                                             ( authorization_bytes == genesis_record->bytes || legacy_bootstrap );
+                                             ( authorization_bytes == genesis_record->bytes ||
+                                               ( genesis_authorization &&
+                                                 authorization_bytes == *genesis_authorization ) ||
+                                               legacy_bootstrap );
                 const bool peer_proof = policy != policies.end() &&
                                         AuthorizationBindsBurn( authorization_bytes, bytes, burn ) &&
                                         VerifyProof( policy->second,
@@ -620,7 +639,8 @@ namespace sgns::trustedpeer
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitGenesis(
         const GenesisManifest      &manifest,
-        const std::vector<uint8_t> &bootstrap_signature )
+        const std::vector<uint8_t> &bootstrap_signature,
+        const std::vector<uint8_t> &authorization_bytes )
     {
         std::lock_guard<std::mutex> lock( transition_mutex_ );
         if ( database_->contains( Buffer( GenesisKey( network_id_ ) ) ) )
@@ -638,7 +658,21 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::NETWORK_MISMATCH );
         }
-        if ( !multisig::VerifyPayloadSignature( canonical->bootstrapper_public_key, bootstrap_signature, *bytes ) )
+        const sgns::securecrdt::CandidateCore genesis_core{ sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+                                                            "trusted-peer-genesis",
+                                                            canonical->network_id,
+                                                            sgns::securecrdt::CandidateKind::TrustedPeerGenesis,
+                                                            canonical->policy_version,
+                                                            *fingerprint,
+                                                            *fingerprint,
+                                                            *bytes };
+        const auto                            expected_candidate_authorization = genesis_core.CanonicalBytes();
+        const auto                           &proof_bytes = authorization_bytes.empty() ? *bytes : authorization_bytes;
+        if ( !multisig::VerifyPayloadSignature( canonical->bootstrapper_public_key,
+                                                bootstrap_signature,
+                                                proof_bytes ) ||
+             ( proof_bytes != *bytes &&
+               ( !expected_candidate_authorization || proof_bytes != *expected_candidate_authorization ) ) )
         {
             return outcome::failure( Error::INVALID_GENESIS_PROOF );
         }
@@ -676,10 +710,10 @@ namespace sgns::trustedpeer
             { Buffer( GenesisKey( network_id_ ) ),
               Buffer( EncodeGenesisRecord( *bytes, *fingerprint, bootstrap_signature ) ) },
             { Buffer( PolicyRecordKey( network_id_, 1, *policy_hash ) ),
-              Buffer( EncodeSignedRecord( POLICY_RECORD, *policy_bytes, *bytes, proof ) ) },
+              Buffer( EncodeSignedRecord( POLICY_RECORD, *policy_bytes, proof_bytes, proof ) ) },
             { Buffer( PolicyHeadKey( network_id_ ) ), Buffer( EncodeHead( 1, *policy_hash ) ) },
             { Buffer( BurnRecordKey( network_id_, 1, *burn_hash ) ),
-              Buffer( EncodeSignedRecord( BURN_RECORD, *burn_bytes, *bytes, proof ) ) },
+              Buffer( EncodeSignedRecord( BURN_RECORD, *burn_bytes, proof_bytes, proof ) ) },
             { Buffer( BurnHeadKey( network_id_ ) ), Buffer( EncodeHead( 1, *burn_hash ) ) },
         };
         auto committed = CommitWrites( writes );
