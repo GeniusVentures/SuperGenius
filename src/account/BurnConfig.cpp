@@ -109,7 +109,10 @@ namespace sgns::account
         auto instance = std::make_shared<BurnConfig>( std::move( secure_crdt ), std::move( db ),
                                                        std::move( trusted_peer_registry ), quorum_threshold,
                                                        std::move( account ), std::move( base_key ) );
-        instance->RegisterSignerSetSource();
+        if ( !instance->RegisterSignerSetSource() )
+        {
+            return outcome::failure( std::errc::file_exists );
+        }
         instance->RegisterCrdtChangeCallback();
         instance->TrySeedGenesisIfEligible();
 
@@ -121,7 +124,7 @@ namespace sgns::account
         return instance;
     }
 
-    void BurnConfig::RegisterSignerSetSource()
+    bool BurnConfig::RegisterSignerSetSource()
     {
         sgns::securecrdt::SecureCrdtRegistryEntry entry;
         entry.signer_set_source =
@@ -141,7 +144,7 @@ namespace sgns::account
         };
         entry.owner_token = &registry_token_;
 
-        sgns::securecrdt::SecureCrdtRegistry::Register( base_key_.GetKey(), entry );
+        return secure_crdt_->Registry().Register( base_key_.GetKey(), std::move( entry ) );
     }
 
     void BurnConfig::RegisterCrdtChangeCallback()
@@ -249,6 +252,6 @@ namespace sgns::account
 
     void BurnConfig::Unregister()
     {
-        sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( base_key_.GetKey(), &registry_token_ );
+        secure_crdt_->Registry().UnregisterIf( base_key_.GetKey(), &registry_token_ );
     }
 } // namespace sgns::account

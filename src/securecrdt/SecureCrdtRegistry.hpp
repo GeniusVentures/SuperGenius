@@ -65,7 +65,7 @@ namespace sgns::securecrdt
     {
     public:
         /**
-         * @brief Registers (or replaces) the policy entry for `key_pattern`.
+         * @brief Registers the policy entry for `key_pattern` if absent.
          *        Compiles `compiled_pattern` as "/?" + key_pattern + "(/sig/[^/]+)?"
          *        so both the base key and a valid `sig/<addr>` child resolve to the
          *        same entry - mirrors CRDTDataFilter::RegisterElementFilter's
@@ -74,13 +74,15 @@ namespace sgns::securecrdt
          *            if it contains regex metacharacters).
          * @param[in] entry Policy entry to register (compiled_pattern is
          *            overwritten by this call).
+         * @return true when inserted; false when this registry already owns
+         *         the same pattern. Existing registrations are never replaced.
          */
-        void Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
+        bool Register( const std::string &key_pattern, SecureCrdtRegistryEntry entry )
         {
             entry.key_pattern     = key_pattern;
             entry.compiled_pattern = std::regex( "/?" + key_pattern + "(/sig/[^/]+)?" );
             std::unique_lock<std::shared_mutex> lock( registry_mutex_ );
-            registry_[key_pattern] = std::move( entry );
+            return registry_.emplace( key_pattern, std::move( entry ) ).second;
         }
 
         /**

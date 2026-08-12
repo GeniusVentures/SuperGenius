@@ -191,7 +191,7 @@ namespace sgns::trustedpeer
          * @brief Registers this instance's signer-set-source with
          *        SecureCrdtRegistry under "trusted-peer-registry".
          */
-        void RegisterSignerSetSource();
+        bool RegisterSignerSetSource();
 
         /**
          * @brief Resolves the current authorized signer set: the sole
