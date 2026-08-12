@@ -242,21 +242,36 @@ namespace sgns::trustedpeer
 
         std::optional<SignedRecord> DecodeSignedRecord( const base::Buffer &value, std::string_view domain )
         {
-            CanonicalTrustCodec::Reader reader( value );
-            auto                        decoded_domain      = reader.ReadBytes( domain.size() );
-            auto                        bytes               = reader.ReadLengthPrefixedBytes( 64 * 1024 );
-            auto                        authorization_bytes = reader.ReadLengthPrefixedBytes( 128 * 1024 );
-            if ( !decoded_domain || !std::equal( decoded_domain->begin(), decoded_domain->end(), domain.begin() ) ||
-                 !bytes || !authorization_bytes || authorization_bytes->empty() )
+            CanonicalTrustCodec::Reader current_reader( value );
+            auto current_domain = current_reader.ReadBytes( domain.size() );
+            auto current_bytes = current_reader.ReadLengthPrefixedBytes( 64 * 1024 );
+            auto authorization_bytes = current_reader.ReadLengthPrefixedBytes( 128 * 1024 );
+            if ( current_domain &&
+                 std::equal( current_domain->begin(), current_domain->end(), domain.begin() ) && current_bytes &&
+                 authorization_bytes && !authorization_bytes->empty() )
+            {
+                auto proof = DecodeProof( current_reader );
+                if ( proof && current_reader.Exhausted() )
+                {
+                    return SignedRecord{ std::move( *current_bytes ),
+                                         std::move( *authorization_bytes ),
+                                         std::move( *proof ) };
+                }
+            }
+
+            // Compatibility with the original Phase 13-02 record layout,
+            // where signatures directly followed the canonical state bytes.
+            CanonicalTrustCodec::Reader legacy_reader( value );
+            auto legacy_domain = legacy_reader.ReadBytes( domain.size() );
+            auto legacy_bytes = legacy_reader.ReadLengthPrefixedBytes( 64 * 1024 );
+            if ( !legacy_domain || !std::equal( legacy_domain->begin(), legacy_domain->end(), domain.begin() ) ||
+                 !legacy_bytes )
             {
                 return std::nullopt;
             }
-            auto proof = DecodeProof( reader );
-            if ( !proof || !reader.Exhausted() )
-            {
-                return std::nullopt;
-            }
-            return SignedRecord{ std::move( *bytes ), std::move( *authorization_bytes ), std::move( *proof ) };
+            auto legacy_proof = DecodeProof( legacy_reader );
+            if ( !legacy_proof || !legacy_reader.Exhausted() ) return std::nullopt;
+            return SignedRecord{ *legacy_bytes, std::move( *legacy_bytes ), std::move( *legacy_proof ) };
         }
 
         bool VerifyProof( const QuorumPolicyState             &policy,
@@ -560,17 +575,20 @@ namespace sgns::trustedpeer
             {
                 auto       policy          = policies.find( burn.authorizing_policy_hash );
                 auto       bytes           = burn.CanonicalBytes().value();
+                const bool legacy_bootstrap = burn.expected_previous_hash == genesis_record->fingerprint &&
+                                              authorization_bytes == bytes;
                 const bool bootstrap_proof = proof.size() == 1 &&
                                              proof.front().first == genesis->bootstrapper_public_key &&
                                              proof.front().second == genesis_record->signature &&
-                                             authorization_bytes == genesis_record->bytes;
+                                             ( authorization_bytes == genesis_record->bytes || legacy_bootstrap );
                 const bool peer_proof = policy != policies.end() &&
                                         AuthorizationBindsBurn( authorization_bytes, bytes, burn ) &&
                                         VerifyProof( policy->second,
                                                      policy->second.burn_threshold,
                                                      proof,
                                                      authorization_bytes );
-                if ( burn.expected_previous_hash != BurnGenesisAnchorHash( genesis_record->fingerprint ) ||
+                if ( ( burn.expected_previous_hash != BurnGenesisAnchorHash( genesis_record->fingerprint ) &&
+                       !legacy_bootstrap ) ||
                      policy == policies.end() || policy->second.version != 1 ||
                      burn.basis_points != genesis->initial_burn_basis_points || ( !bootstrap_proof && !peer_proof ) )
                 {
