@@ -1,5 +1,6 @@
 add_library(securecrdt
     SecureCrdt.cpp
+    SecureCrdtCandidate.cpp
 )
 target_link_libraries(securecrdt
     PUBLIC
