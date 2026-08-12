@@ -12,6 +12,7 @@
 #define SGNS_TRUSTEDPEER_TRUSTEDPEERREGISTRY_HPP
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <shared_mutex>
@@ -24,6 +25,9 @@
 #include "securecrdt/ISignedCRDTData.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/SecureCrdtRegistry.hpp"
+#include "trustedpeer/GenesisManifest.hpp"
+#include "trustedpeer/QuorumPolicy.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
 
 namespace sgns::trustedpeer
 {
@@ -83,6 +87,15 @@ namespace sgns::trustedpeer
     class TrustedPeerRegistry : public std::enable_shared_from_this<TrustedPeerRegistry>
     {
     public:
+        enum class Error : uint8_t
+        {
+            NOT_CONFIRMED = 0,
+            INVALID_CANDIDATE,
+            SIGNING_UNAVAILABLE,
+        };
+
+        using SignCallback = std::function<std::vector<uint8_t>( const std::vector<uint8_t> & )>;
+
         /**
          * @brief Constructs a TrustedPeerRegistry. The genesis peer list is
          *        cached immediately (D-05) -- GetCurrentPeers() reflects it
@@ -126,6 +139,32 @@ namespace sgns::trustedpeer
             std::string                                   bootstrapper_address,
             uint64_t                                      quorum_threshold,
             sgns::crdt::HierarchicalKey base_key = sgns::crdt::HierarchicalKey( "trusted-peer-registry" ) );
+
+        /**
+         * @brief Builds the durable production registry. Fresh stores expose no
+         * peers until SubmitReviewedGenesisApproval commits the reviewed
+         * manifest. Existing stores restore only independently verified state.
+         */
+        static outcome::result<std::shared_ptr<TrustedPeerRegistry>> NewProduction(
+            std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt,
+            std::shared_ptr<TrustStateStore>              trust_store,
+            GenesisManifest                               reviewed_manifest,
+            std::vector<uint8_t>                          bootstrap_manifest_signature,
+            std::string                                   local_signer_address,
+            SignCallback                                  sign_callback,
+            std::string                                   policy_domain = "trusted-peer" );
+
+        outcome::result<sgns::securecrdt::CandidateId>              SubmitReviewedGenesisApproval();
+        outcome::result<std::vector<sgns::securecrdt::CandidateId>> ListPendingPolicyCandidates() const;
+        outcome::result<sgns::securecrdt::CandidateId> ProposePolicyCandidate( const QuorumPolicyState &candidate );
+        outcome::result<sgns::securecrdt::CandidateId> ApprovePolicyCandidate(
+            const sgns::securecrdt::CandidateId &candidate_id );
+        outcome::result<bool> TryActivatePolicyCandidate( const sgns::securecrdt::CandidateId &candidate_id );
+        outcome::result<ConfirmedTrustSnapshot> GetConfirmedSnapshot() const;
+
+        [[nodiscard]] static std::optional<sgns::securecrdt::CandidateCore> PolicyCandidateCore(
+            const QuorumPolicyState &candidate,
+            const std::string       &domain = "trusted-peer" );
 
         /**
          * @brief Seeds the genesis trusted-peer list: proposes the genesis
@@ -203,6 +242,13 @@ namespace sgns::trustedpeer
          */
         outcome::result<sgns::securecrdt::SignerSetSnapshot> ResolveSignerSet() const;
 
+        bool                                                              RegisterProductionDomains();
+        outcome::result<sgns::securecrdt::CandidateAuthorizationSnapshot> ResolveGenesisAuthorization() const;
+        outcome::result<sgns::securecrdt::CandidateAuthorizationSnapshot> ResolvePolicyAuthorization() const;
+        outcome::result<sgns::securecrdt::CandidateId>                    SubmitLocalApproval(
+                               const sgns::securecrdt::CandidateCore &core );
+        void PublishSnapshot( const ConfirmedTrustSnapshot &snapshot );
+
         std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt_;
         sgns::crdt::HierarchicalKey                   base_key_;
         std::string                                   bootstrapper_address_;
@@ -213,8 +259,19 @@ namespace sgns::trustedpeer
         bool                      genesis_confirmed_ = false;
         int                       registry_token_    = 0;
 
+        bool                             production_mode_ = false;
+        std::shared_ptr<TrustStateStore> trust_store_;
+        GenesisManifest                  reviewed_manifest_;
+        std::vector<uint8_t>             bootstrap_manifest_signature_;
+        std::string                      local_signer_address_;
+        SignCallback                     sign_callback_;
+        std::string                      policy_domain_  = "trusted-peer";
+        std::string                      genesis_domain_ = "trusted-peer-genesis";
+
         sgns::base::Logger logger_ = sgns::base::createLogger( "TrustedPeerRegistry" );
     };
 } // namespace sgns::trustedpeer
+
+OUTCOME_HPP_DECLARE_ERROR_2( sgns::trustedpeer, TrustedPeerRegistry::Error );
 
 #endif // SGNS_TRUSTEDPEER_TRUSTEDPEERREGISTRY_HPP

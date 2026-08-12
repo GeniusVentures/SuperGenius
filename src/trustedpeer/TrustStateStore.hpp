@@ -38,11 +38,10 @@ namespace sgns::trustedpeer
         std::string authorizing_policy_hash;
         uint64_t    basis_points = 0;
 
-        [[nodiscard]] std::optional<std::vector<uint8_t>> CanonicalBytes() const;
-        [[nodiscard]] std::optional<std::string>          Hash() const;
-        [[nodiscard]] static std::optional<ConfirmedBurnState> DecodeCanonical(
-            const std::vector<uint8_t> &bytes );
-        bool operator==( const ConfirmedBurnState &other ) const;
+        [[nodiscard]] std::optional<std::vector<uint8_t>>      CanonicalBytes() const;
+        [[nodiscard]] std::optional<std::string>               Hash() const;
+        [[nodiscard]] static std::optional<ConfirmedBurnState> DecodeCanonical( const std::vector<uint8_t> &bytes );
+        bool                                                   operator==( const ConfirmedBurnState &other ) const;
     };
 
     struct ConfirmedTrustSnapshot
@@ -96,25 +95,27 @@ namespace sgns::trustedpeer
             COMMIT_FAILED,
         };
 
-        using Write = std::pair<base::Buffer, base::Buffer>;
-        using BatchCommitter = std::function<outcome::result<void>(
-            storage::rocksdb &, const std::vector<Write> & )>;
+        using Write          = std::pair<base::Buffer, base::Buffer>;
+        using BatchCommitter = std::function<outcome::result<void>( storage::rocksdb &, const std::vector<Write> & )>;
 
-        static outcome::result<std::shared_ptr<TrustStateStore>> Open(
-            const std::string &path, uint16_t network_id, BatchCommitter committer = {} );
+        static outcome::result<std::shared_ptr<TrustStateStore>> Open( const std::string &path,
+                                                                       uint16_t           network_id,
+                                                                       BatchCommitter     committer = {} );
 
         outcome::result<ConfirmedTrustSnapshot> LoadAndVerify() const;
-        outcome::result<ConfirmedTrustSnapshot> CommitGenesis(
-            const GenesisManifest &manifest, const std::vector<uint8_t> &bootstrap_signature );
+        outcome::result<ConfirmedTrustSnapshot> CommitGenesis( const GenesisManifest      &manifest,
+                                                               const std::vector<uint8_t> &bootstrap_signature );
         outcome::result<ConfirmedTrustSnapshot> CommitPolicySuccessor(
-            const QuorumPolicyState &candidate, const multisig::CollectedSignatures &proof );
+            const QuorumPolicyState             &candidate,
+            const multisig::CollectedSignatures &proof,
+            const std::vector<uint8_t>          &authorization_bytes = {} );
         outcome::result<ConfirmedTrustSnapshot> CommitBurnSuccessor(
-            const ConfirmedBurnState &candidate, const multisig::CollectedSignatures &proof );
+            const ConfirmedBurnState            &candidate,
+            const multisig::CollectedSignatures &proof,
+            const std::vector<uint8_t>          &authorization_bytes = {} );
 
     private:
-        TrustStateStore( std::shared_ptr<storage::rocksdb> database,
-                         uint16_t                          network_id,
-                         BatchCommitter                   committer );
+        TrustStateStore( std::shared_ptr<storage::rocksdb> database, uint16_t network_id, BatchCommitter committer );
 
         outcome::result<void> CommitWrites( const std::vector<Write> &writes );
 
@@ -123,6 +124,9 @@ namespace sgns::trustedpeer
         BatchCommitter                    committer_;
         mutable std::mutex                transition_mutex_;
     };
+
+    /** Domain-separated predecessor used by the deterministic burn v1 candidate. */
+    [[nodiscard]] std::string BurnGenesisAnchorHash( const std::string &genesis_fingerprint );
 } // namespace sgns::trustedpeer
 
 OUTCOME_HPP_DECLARE_ERROR_2( sgns::trustedpeer, TrustStateStore::Error );
