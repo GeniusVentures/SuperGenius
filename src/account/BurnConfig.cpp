@@ -99,7 +99,7 @@ namespace sgns::account
         std::shared_ptr<sgns::GeniusAccount>           account,
         sgns::crdt::HierarchicalKey                              base_key )
     {
-        auto validation_result = sgns::securecrdt::ValidateQuorumThreshold(
+        auto validation_result = sgns::securecrdt::ValidateBurnQuorumThreshold(
             quorum_threshold, trusted_peer_registry->GetCurrentPeers().size() );
         if ( validation_result.has_error() )
         {

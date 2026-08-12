@@ -27,18 +27,16 @@ namespace sgns::trustedpeer
         uint64_t                 membership_threshold = 0;
         uint64_t                 burn_threshold       = 0;
 
-        [[nodiscard]] std::optional<QuorumPolicyState>      Canonicalized() const;
-        [[nodiscard]] std::optional<std::vector<uint8_t>>   CanonicalBytes() const;
-        [[nodiscard]] std::optional<std::string>            Hash() const;
-        [[nodiscard]] static std::optional<QuorumPolicyState> DecodeCanonical(
-            const std::vector<uint8_t> &bytes );
+        [[nodiscard]] std::optional<QuorumPolicyState>        Canonicalized() const;
+        [[nodiscard]] std::optional<std::vector<uint8_t>>     CanonicalBytes() const;
+        [[nodiscard]] std::optional<std::string>              Hash() const;
+        [[nodiscard]] static std::optional<QuorumPolicyState> DecodeCanonical( const std::vector<uint8_t> &bytes );
 
         bool operator==( const QuorumPolicyState &other ) const;
     };
 
     [[nodiscard]] bool ValidateQuorumPolicy( const QuorumPolicyState &policy );
-    [[nodiscard]] bool ValidatePolicySuccessor( const QuorumPolicyState &current,
-                                                const QuorumPolicyState &candidate );
+    [[nodiscard]] bool ValidatePolicySuccessor( const QuorumPolicyState &current, const QuorumPolicyState &candidate );
 } // namespace sgns::trustedpeer
 
 #endif // SUPERGENIUS_QUORUM_POLICY_HPP
