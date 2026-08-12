@@ -2,6 +2,8 @@
 
 #include <boost/filesystem/operations.hpp>
 
+#include <algorithm>
+
 #include "account/BurnConfig.hpp"
 #include "account/GeniusSigner.hpp"
 #include "account/TrustStartupController.hpp"
@@ -85,6 +87,17 @@ TEST_F( TrustRestartTest, OmittedTrustConfigRestoresIdenticalDurableAuthority )
     EXPECT_EQ( started.value()->GetCurrentPeers(), expected_.policy.peers );
     EXPECT_EQ( started.value()->registry()->GetConfirmedSnapshot().value(), expected_ );
     EXPECT_TRUE( events.empty() );
+}
+
+TEST_F( TrustRestartTest, ReorderedConfiguredPeersMatchCanonicalDurableAuthority )
+{
+    auto reordered = manifest_;
+    std::reverse( reordered.peers.begin(), reordered.peers.end() );
+    std::vector<TrustStartupController::Event> events;
+    auto                                       started = Start( reordered, events );
+    ASSERT_TRUE( started.has_value() ) << started.error().message();
+    EXPECT_TRUE( events.empty() );
+    EXPECT_EQ( started.value()->registry()->GetConfirmedSnapshot().value(), expected_ );
 }
 
 TEST_F( TrustRestartTest, EveryTrustFieldConflictEmitsOneStructuredCriticalAndKeepsHeads )
