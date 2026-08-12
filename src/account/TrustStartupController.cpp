@@ -85,7 +85,9 @@ namespace sgns::account
         else
         {
             instance->SetState( State::FatalMismatch );
-            instance->Emit( EventCode::TRUST_LOCAL_STATE_CORRUPT );
+            instance->Emit( persisted.error() == sgns::trustedpeer::TrustStateStore::Error::NETWORK_MISMATCH
+                                ? EventCode::TRUST_NETWORK_MISMATCH
+                                : EventCode::TRUST_LOCAL_STATE_CORRUPT );
             return persisted.error();
         }
 
