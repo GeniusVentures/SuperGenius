@@ -142,7 +142,8 @@ namespace sgns::trustedpeer
         uint64_t                                      quorum_threshold,
         sgns::crdt::HierarchicalKey                   base_key )
     {
-        auto validation_result = sgns::securecrdt::ValidateQuorumThreshold( quorum_threshold, genesis_peers.size() );
+        auto validation_result =
+            sgns::securecrdt::ValidateMembershipQuorumThreshold( quorum_threshold, genesis_peers.size() );
         if ( validation_result.has_error() )
         {
             return validation_result.error();

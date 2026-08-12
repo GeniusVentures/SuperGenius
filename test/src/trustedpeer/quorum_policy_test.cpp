@@ -25,13 +25,13 @@ namespace
     QuorumPolicyState MakePolicy( std::vector<std::string> peers = { PEER_B, PEER_A } )
     {
         QuorumPolicyState policy;
-        policy.network_id                = 42;
-        policy.version                   = 2;
-        policy.expected_previous_hash    = CURRENT_HASH;
-        policy.authorizing_policy_hash   = CURRENT_HASH;
-        policy.peers                     = std::move( peers );
-        policy.membership_threshold      = 2;
-        policy.burn_threshold            = 2;
+        policy.network_id              = 42;
+        policy.version                 = 2;
+        policy.expected_previous_hash  = CURRENT_HASH;
+        policy.authorizing_policy_hash = CURRENT_HASH;
+        policy.peers                   = std::move( peers );
+        policy.membership_threshold    = 2;
+        policy.burn_threshold          = 2;
         return policy;
     }
 
@@ -55,10 +55,22 @@ namespace
 TEST( QuorumPolicyTest, ExactMembershipAndBurnFloorsMatchLockedBoundaryVectors )
 {
     const std::vector<std::pair<size_t, uint64_t>> membership = {
-        { 0, 0 }, { 1, 1 }, { 2, 2 }, { 3, 2 }, { 4, 3 }, { 100, 51 }, { 101, 51 },
+        { 0, 0 },
+        { 1, 1 },
+        { 2, 2 },
+        { 3, 2 },
+        { 4, 3 },
+        { 100, 51 },
+        { 101, 51 },
     };
     const std::vector<std::pair<size_t, uint64_t>> burn = {
-        { 0, 0 }, { 1, 1 }, { 2, 2 }, { 3, 2 }, { 4, 3 }, { 100, 67 }, { 101, 68 },
+        { 0, 0 },
+        { 1, 1 },
+        { 2, 2 },
+        { 3, 2 },
+        { 4, 3 },
+        { 100, 67 },
+        { 101, 68 },
     };
 
     for ( const auto &[signer_count, expected] : membership )
@@ -91,13 +103,12 @@ TEST( QuorumPolicyTest, ValidatorsRejectEmptyZeroOversizedAndBelowFloorThreshold
         EXPECT_TRUE( sgns::securecrdt::ValidateBurnQuorumThreshold( burn_floor, signer_count ).has_value() );
         if ( membership_floor > 1 )
         {
-            EXPECT_TRUE( sgns::securecrdt::ValidateMembershipQuorumThreshold( membership_floor - 1, signer_count )
-                             .has_error() );
+            EXPECT_TRUE(
+                sgns::securecrdt::ValidateMembershipQuorumThreshold( membership_floor - 1, signer_count ).has_error() );
         }
         if ( burn_floor > 1 )
         {
-            EXPECT_TRUE(
-                sgns::securecrdt::ValidateBurnQuorumThreshold( burn_floor - 1, signer_count ).has_error() );
+            EXPECT_TRUE( sgns::securecrdt::ValidateBurnQuorumThreshold( burn_floor - 1, signer_count ).has_error() );
         }
     }
 }
@@ -115,8 +126,8 @@ TEST( QuorumPolicyTest, PolicyValidationNormalizesOrderAndRejectsInvalidSignerSe
     EXPECT_FALSE( MakePolicy( { std::string( 128, 'g' ) } ).Canonicalized().has_value() );
     EXPECT_FALSE( MakePolicy( MakePeers( CanonicalTrustCodec::MAX_TRUSTED_PEERS + 1 ) ).Canonicalized().has_value() );
 
-    auto invalid_hash                       = MakePolicy();
-    invalid_hash.expected_previous_hash     = std::string( 63, '1' );
+    auto invalid_hash                   = MakePolicy();
+    invalid_hash.expected_previous_hash = std::string( 63, '1' );
     EXPECT_FALSE( invalid_hash.Canonicalized().has_value() );
     invalid_hash                            = MakePolicy();
     invalid_hash.authorizing_policy_hash[0] = 'A';
@@ -164,10 +175,25 @@ TEST( QuorumPolicyTest, CanonicalBytesBindAllFieldsAndDecoderRejectsMalformedOrd
     truncated.pop_back();
     EXPECT_FALSE( QuorumPolicyState::DecodeCanonical( truncated ).has_value() );
 
-    constexpr size_t HASH_BYTES = 32;
-    const size_t first_peer = QuorumPolicyState::POLICY_DOMAIN.size() + 1 + 2 + 8 + 4 + HASH_BYTES + 4 + HASH_BYTES + 4 + 4;
+    auto unknown_encoding                                     = *bytes;
+    unknown_encoding[QuorumPolicyState::POLICY_DOMAIN.size()] = 2;
+    EXPECT_FALSE( QuorumPolicyState::DecodeCanonical( unknown_encoding ).has_value() );
+
+    constexpr size_t HASH_BYTES        = 32;
+    const size_t     peer_count_offset = QuorumPolicyState::POLICY_DOMAIN.size() + 1 + 2 + 8 + 4 + HASH_BYTES + 4 +
+                                     HASH_BYTES;
+    auto           over_cap         = *bytes;
+    const uint32_t invalid_count    = static_cast<uint32_t>( CanonicalTrustCodec::MAX_TRUSTED_PEERS + 1 );
+    over_cap[peer_count_offset]     = static_cast<uint8_t>( invalid_count >> 24U );
+    over_cap[peer_count_offset + 1] = static_cast<uint8_t>( invalid_count >> 16U );
+    over_cap[peer_count_offset + 2] = static_cast<uint8_t>( invalid_count >> 8U );
+    over_cap[peer_count_offset + 3] = static_cast<uint8_t>( invalid_count );
+    EXPECT_FALSE( QuorumPolicyState::DecodeCanonical( over_cap ).has_value() );
+
+    const size_t first_peer = QuorumPolicyState::POLICY_DOMAIN.size() + 1 + 2 + 8 + 4 + HASH_BYTES + 4 + HASH_BYTES +
+                              4 + 4;
     const size_t second_peer = first_peer + CanonicalTrustCodec::PUBLIC_KEY_BYTES + 4;
-    auto duplicate = *bytes;
+    auto         duplicate   = *bytes;
     std::copy_n( duplicate.begin() + static_cast<ptrdiff_t>( first_peer ),
                  CanonicalTrustCodec::PUBLIC_KEY_BYTES,
                  duplicate.begin() + static_cast<ptrdiff_t>( second_peer ) );
@@ -179,19 +205,55 @@ TEST( QuorumPolicyTest, CanonicalBytesBindAllFieldsAndDecoderRejectsMalformedOrd
     EXPECT_FALSE( QuorumPolicyState::DecodeCanonical( reversed ).has_value() );
 }
 
+TEST( QuorumPolicyTest, PolicyHashBindsNetworkVersionLinksPeersAndThresholds )
+{
+    const auto original_hash = MakePolicy().Hash();
+    ASSERT_TRUE( original_hash.has_value() );
+
+    auto expect_changed = [&]( QuorumPolicyState changed )
+    {
+        const auto changed_hash = changed.Hash();
+        ASSERT_TRUE( changed_hash.has_value() );
+        EXPECT_NE( *changed_hash, *original_hash );
+    };
+
+    auto changed        = MakePolicy();
+    changed.network_id += 1;
+    expect_changed( changed );
+    changed          = MakePolicy();
+    changed.version += 1;
+    expect_changed( changed );
+    changed                        = MakePolicy();
+    changed.expected_previous_hash = std::string( 64, '2' );
+    expect_changed( changed );
+    changed                         = MakePolicy();
+    changed.authorizing_policy_hash = std::string( 64, '3' );
+    expect_changed( changed );
+    changed = MakePolicy( { PEER_A, PEER_C } );
+    expect_changed( changed );
+
+    changed                      = MakePolicy( { PEER_A, PEER_B, PEER_C } );
+    changed.membership_threshold = 3;
+    changed.burn_threshold       = 2;
+    expect_changed( changed );
+    changed.membership_threshold = 2;
+    changed.burn_threshold       = 3;
+    expect_changed( changed );
+}
+
 TEST( QuorumPolicyTest, SuccessorRequiresExactVersionPredecessorAndCurrentAuthorizerHash )
 {
-    auto current                         = MakePolicy();
-    current.version                     = 7;
-    current.expected_previous_hash      = std::string( 64, '0' );
-    current.authorizing_policy_hash     = std::string( 64, '0' );
-    const auto current_hash             = current.Hash();
+    auto current                    = MakePolicy();
+    current.version                 = 7;
+    current.expected_previous_hash  = std::string( 64, '0' );
+    current.authorizing_policy_hash = std::string( 64, '0' );
+    const auto current_hash         = current.Hash();
     ASSERT_TRUE( current_hash.has_value() );
 
-    auto candidate                      = MakePolicy( { PEER_A, PEER_B, PEER_C } );
-    candidate.version                   = 8;
-    candidate.expected_previous_hash    = *current_hash;
-    candidate.authorizing_policy_hash   = *current_hash;
+    auto candidate                    = MakePolicy( { PEER_A, PEER_B, PEER_C } );
+    candidate.version                 = 8;
+    candidate.expected_previous_hash  = *current_hash;
+    candidate.authorizing_policy_hash = *current_hash;
     EXPECT_TRUE( sgns::trustedpeer::ValidatePolicySuccessor( current, candidate ) );
 
     candidate.version = 9;
@@ -202,33 +264,32 @@ TEST( QuorumPolicyTest, SuccessorRequiresExactVersionPredecessorAndCurrentAuthor
     candidate.expected_previous_hash  = *current_hash;
     candidate.authorizing_policy_hash = std::string( 64, '3' );
     EXPECT_FALSE( sgns::trustedpeer::ValidatePolicySuccessor( current, candidate ) );
-    candidate.authorizing_policy_hash = *current_hash;
-    candidate.network_id += 1;
+    candidate.authorizing_policy_hash  = *current_hash;
+    candidate.network_id              += 1;
     EXPECT_FALSE( sgns::trustedpeer::ValidatePolicySuccessor( current, candidate ) );
 }
 
 TEST( QuorumPolicyTest, NewlyProposedPeersCannotAuthorizeThePolicyThatAddsThem )
 {
-    const auto current_a = sgns::GeniusSigner::Generate();
-    const auto current_b = sgns::GeniusSigner::Generate();
+    const auto current_a  = sgns::GeniusSigner::Generate();
+    const auto current_b  = sgns::GeniusSigner::Generate();
     const auto proposed_a = sgns::GeniusSigner::Generate();
     const auto proposed_b = sgns::GeniusSigner::Generate();
 
-    auto current                     = MakePolicy( { current_a.GetAddress(), current_b.GetAddress() } );
+    auto current                    = MakePolicy( { current_a.GetAddress(), current_b.GetAddress() } );
     current.version                 = 4;
     current.expected_previous_hash  = std::string( 64, '0' );
     current.authorizing_policy_hash = std::string( 64, '0' );
     const auto current_hash         = current.Hash();
     ASSERT_TRUE( current_hash.has_value() );
 
-    auto candidate = MakePolicy( { current_a.GetAddress(), current_b.GetAddress(), proposed_a.GetAddress(),
-                                   proposed_b.GetAddress() } );
-    candidate.version                   = 5;
-    candidate.expected_previous_hash    = *current_hash;
-    candidate.authorizing_policy_hash   = *current_hash;
-    candidate.membership_threshold      = 3;
-    candidate.burn_threshold            = 3;
-    const auto candidate_bytes          = candidate.CanonicalBytes();
+    auto candidate    = MakePolicy( { current_a.GetAddress(), proposed_a.GetAddress(), proposed_b.GetAddress() } );
+    candidate.version = 5;
+    candidate.expected_previous_hash  = *current_hash;
+    candidate.authorizing_policy_hash = *current_hash;
+    candidate.membership_threshold    = 2;
+    candidate.burn_threshold          = 2;
+    const auto candidate_bytes        = candidate.CanonicalBytes();
     ASSERT_TRUE( candidate_bytes.has_value() );
     ASSERT_TRUE( sgns::trustedpeer::ValidatePolicySuccessor( current, candidate ) );
 
@@ -239,18 +300,5 @@ TEST( QuorumPolicyTest, NewlyProposedPeersCannotAuthorizeThePolicyThatAddsThem )
     const sgns::multisig::MultiSig current_authorizer( current.peers, current.membership_threshold );
     const sgns::multisig::MultiSig proposed_authorizer( candidate.peers, candidate.membership_threshold );
     EXPECT_FALSE( current_authorizer.EvaluateQuorum( new_peer_signatures, *candidate_bytes ).has_quorum );
-    EXPECT_FALSE( proposed_authorizer.EvaluateQuorum( new_peer_signatures, *candidate_bytes ).has_quorum );
-
-    auto candidate_with_unsafe_self_threshold = candidate;
-    candidate_with_unsafe_self_threshold.membership_threshold = 2;
-    const auto unsafe_bytes = candidate_with_unsafe_self_threshold.CanonicalBytes();
-    ASSERT_TRUE( unsafe_bytes.has_value() );
-    const sgns::multisig::MultiSig unsafe_proposed_authorizer(
-        candidate_with_unsafe_self_threshold.peers, candidate_with_unsafe_self_threshold.membership_threshold );
-    const sgns::multisig::CollectedSignatures unsafe_new_peer_signatures = {
-        { proposed_a.GetAddress(), proposed_a.Sign( *unsafe_bytes ) },
-        { proposed_b.GetAddress(), proposed_b.Sign( *unsafe_bytes ) },
-    };
-    EXPECT_TRUE( unsafe_proposed_authorizer.EvaluateQuorum( unsafe_new_peer_signatures, *unsafe_bytes ).has_quorum );
-    EXPECT_FALSE( current_authorizer.EvaluateQuorum( unsafe_new_peer_signatures, *unsafe_bytes ).has_quorum );
+    EXPECT_TRUE( proposed_authorizer.EvaluateQuorum( new_peer_signatures, *candidate_bytes ).has_quorum );
 }
