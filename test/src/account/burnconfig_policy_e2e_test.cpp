@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
+
 #include <boost/filesystem/operations.hpp>
 
 #include "account/BurnConfig.hpp"
@@ -121,6 +123,11 @@ TEST_F( BurnConfigPolicyE2ETest, GenesisWaitsForTrustedPeerConfirmationAndExactB
     auto approvals = secure_crdt_->ReadCandidateApprovals( genesis.value() ).value();
     ASSERT_EQ( approvals.size(), 1U );
     const auto first_hash = approvals.front().core.Hash();
+    auto reordered_manifest = Manifest();
+    std::reverse( reordered_manifest.peers.begin(), reordered_manifest.peers.end() );
+    EXPECT_EQ( reordered_manifest.Fingerprint(), Manifest().Fingerprint() );
+    auto same_burn = store_->LoadAndVerify().value().burn;
+    EXPECT_EQ( BurnConfig::BurnCandidateCore( same_burn )->Hash(), first_hash );
     auto repeated = burn_->OnTrustedPeerGenesisConfirmed();
     ASSERT_TRUE( repeated.has_value() );
     EXPECT_EQ( repeated.value(), genesis.value() );
@@ -137,6 +144,8 @@ TEST_F( BurnConfigPolicyE2ETest, PolicyBindingStalesOldCandidateAndLaterVersions
     ConfirmGenesisAndBurn();
     auto v2 = burn_->ProposeBurnCandidate( 250 );
     ASSERT_TRUE( v2.has_value() );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( v2.value() ).value().size(), 1U );
+    EXPECT_TRUE( burn_->ApproveBurnCandidate( v2.value() ).has_value() );
     EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( v2.value() ).value().size(), 1U );
 
     auto next_policy = tpr_->GetConfirmedSnapshot().value().policy;
