@@ -1,4 +1,6 @@
 add_library(trustedpeer
+    CanonicalTrustCodec.cpp
+    GenesisManifest.cpp
     TrustedPeerRegistry.cpp
 )
 target_link_libraries(trustedpeer
@@ -6,5 +8,6 @@ target_link_libraries(trustedpeer
     securecrdt
     PRIVATE
     hexutil
+    sha
 )
 supergenius_install(trustedpeer)

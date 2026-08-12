@@ -8,6 +8,13 @@ set(TRUSTEDPEER_TEST_NODE_LIBS
     sgns_genius_account
 )
 
+addtest(genesis_manifest_test
+    genesis_manifest_test.cpp
+)
+target_link_libraries(genesis_manifest_test
+    trustedpeer
+)
+
 addtest(trustedpeerregistry_genesis_test
     trustedpeerregistry_genesis_test.cpp
 )
