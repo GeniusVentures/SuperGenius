@@ -63,7 +63,7 @@ Full phase details: `.planning/milestones/v3.0-ROADMAP.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 6/12 plans executed
+**Plans:** 7/12 plans executed
 Plans:
 **Wave 1**
 
@@ -88,7 +88,7 @@ Plans:
 
 **Wave 6** *(blocked on Wave 5 completion)*
 
-- [ ] 13-06-PLAN.md — Reusable production GlobalDB networking composition
+- [x] 13-06-PLAN.md — Reusable production GlobalDB networking composition
 
 **Wave 7** *(blocked on Wave 6 completion)*
 
