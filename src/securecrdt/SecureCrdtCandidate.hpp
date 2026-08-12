@@ -18,17 +18,17 @@ namespace sgns::securecrdt
 {
     enum class CandidateKind : uint8_t
     {
-        TrustPolicy       = 1,
-        BurnConfig        = 2,
+        TrustPolicy        = 1,
+        BurnConfig         = 2,
         TrustedPeerGenesis = 3,
     };
 
     struct CandidateLimits
     {
-        static constexpr size_t MAX_CANDIDATE_BYTES                         = 65536;
-        static constexpr size_t MAX_ACTIVE_CANDIDATES_PER_PREDECESSOR       = 32;
-        static constexpr size_t MAX_APPROVALS_PER_CANDIDATE                 = 256;
-        static constexpr size_t MAX_ACTIVE_APPROVAL_BYTES_PER_PREDECESSOR   = 64 * 1024 * 1024;
+        static constexpr size_t MAX_CANDIDATE_BYTES                       = 65536;
+        static constexpr size_t MAX_ACTIVE_CANDIDATES_PER_PREDECESSOR     = 32;
+        static constexpr size_t MAX_APPROVALS_PER_CANDIDATE               = 256;
+        static constexpr size_t MAX_ACTIVE_APPROVAL_BYTES_PER_PREDECESSOR = 64 * 1024 * 1024;
 
         [[nodiscard]] static bool CandidateCountAllowed( size_t count );
         [[nodiscard]] static bool ApprovalCountAllowed( size_t count );
@@ -61,10 +61,9 @@ namespace sgns::securecrdt
         std::string domain;
         uint64_t    version = 0;
         std::string content_hash;
-        std::string expected_previous_hash;
 
         [[nodiscard]] static std::optional<CandidateId> FromCore( const CandidateCore &core );
-        bool operator==( const CandidateId &other ) const;
+        bool                                            operator==( const CandidateId &other ) const;
     };
 
     struct CandidateKey
@@ -72,7 +71,7 @@ namespace sgns::securecrdt
         CandidateId id;
         std::string signer;
 
-        [[nodiscard]] sgns::crdt::HierarchicalKey ToHierarchicalKey() const;
+        [[nodiscard]] sgns::crdt::HierarchicalKey        ToHierarchicalKey() const;
         [[nodiscard]] static std::optional<CandidateKey> Parse( const sgns::crdt::HierarchicalKey &key );
     };
 
@@ -86,10 +85,9 @@ namespace sgns::securecrdt
         std::string          signer;
         std::vector<uint8_t> signature;
 
-        [[nodiscard]] std::optional<std::vector<uint8_t>> CanonicalBytes() const;
-        [[nodiscard]] static std::optional<CandidateApprovalRecord> DecodeCanonical(
-            const std::vector<uint8_t> &bytes,
-            const CandidateKey         &key );
+        [[nodiscard]] std::optional<std::vector<uint8_t>>           CanonicalBytes() const;
+        [[nodiscard]] static std::optional<CandidateApprovalRecord> DecodeCanonical( const std::vector<uint8_t> &bytes,
+                                                                                     const CandidateKey         &key );
     };
 } // namespace sgns::securecrdt
 
