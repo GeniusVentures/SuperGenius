@@ -53,6 +53,16 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 <!-- This milestone's scope. Hypotheses until shipped. -->
 
 - (none — milestone v3.0 scope fully validated)
+- ✓ Standalone `multisig` signature verification and runtime N-of-M quorum evaluation, exercised without a running node or network transport (MSIG-01, MSIG-02, MSIG-03) — **Validated in Phase 8; completion metadata reconciled from Phase 13 evidence**
+- ✓ `ISignedCRDTData` and the static policy registry reject unsigned/under-signed registered writes and transport proposals/approvals over existing CRDT puts and callbacks only (SCRDT-01, SCRDT-02, SCRDT-03, SCRDT-04) — **Validated in Phases 9 and 13**
+- ✓ `TrustedPeerRegistry` uses SecureCRDT, starts from an authenticated reviewed genesis manifest, and authorizes membership successors from the current confirmed policy (TPR-01, TPR-02, TPR-03) — **Validated in Phases 10 and 13**
+- ✓ `BURN_BASIS_POINTS` is durable quorum-signed state, published through a node-scoped confirmed provider and consumed by `PayEscrow` with the genesis value of 100 (BURN-01, BURN-02, BURN-03) — **Validated in Phases 11 and 13**
+- ✓ `ValidatorRegistry` genesis-path signature verification reuses `multisig::VerifyPayloadSignature` under the approved adjusted, signature-verification-only scope; the broader `ISignedCRDTData` storage/quorum migration remains retired (MIG-05, MIG-06) — **Validated in Phase 12; metadata reconciled in Phase 13**
+- ✓ Reviewed trusted-peer ceremony, canonical genesis identity, versioned quorum policy, durable restart authority, bounds validation, explicit approvals, and production first-boot/restart/tamper/economic/account-lifetime coverage (BOOT-01..04, POLICY-01, VALID-01, TEST-01) — **Validated in Phase 13**
+
+### Active
+
+No active v1.1 implementation items remain. Phase 13's exact 25/25 HIGH-threat gate plus five additional consecutive policy-lifetime passes is the closure evidence for the production integration rows.
 
 ### Out of Scope
 
@@ -67,6 +77,7 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 - Porting, rebasing, or repairing the rejected Phase 9–12 implementation — its design and dependencies are reference material only, not a source of production code
 - A local `DeliverySource` flag as proof of certificate authorship or CRDT write authority — local call provenance is neither network-verifiable nor durable
 - Broad TransactionManager, CRDT, registry, or persistence refactors that are not required by the canonical-finality contract
+- Detection of a restore that rolls back the whole disk and every local trust anchor together — accepted unsolved software-only boundary; deployments with this threat require TPM/OS-keystore monotonic state or authenticated off-host checkpoints
 
 ## Context
 
@@ -75,6 +86,7 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 **Observed failure:** Different mint proposals for the same external burn used different source/nonce identities and could independently reach certificate quorum. The exploratory fix made certificates slot-keyed, but allowed every PubSub recipient to write the same CRDT key. Its follow-up avoided writes from non-local ingress by treating `DeliverySource::Local` as the author, which stranded receivers waiting for an unverified presumed author.
 
 **Required design boundary:** Canonical-slot competition, certificate authority, publication/failover, durable vote locking, and application idempotency must be specified as one protocol contract. The certificate store is generic and keyed by canonical slot, not a bridge-only finality side channel. The finality path cannot use a local callback source as authorization, and receiver behavior must remain live if the initial publisher fails.
+**v1.1 Outcome:** The decoupled multi-signature and SecureCRDT layers now back authenticated `TrustedPeerRegistry` and live `BURN_BASIS_POINTS` policy in the production node path. Phase 13 closed the audited genesis, policy-authority, callback-lifetime, operator-ingress, restart, tamper, and economic E2E gaps. Durable verified state is authoritative on restart; software detects rollback/fork/corruption while at least one trusted local anchor remains intact, but restoration of the whole disk and all local anchors together remains an accepted unsolved boundary without external monotonic or off-host anchoring.
 
 **Brownfield.** A full codebase map exists at `.planning/codebase/` (STACK, ARCHITECTURE, STRUCTURE, CONVENTIONS, TESTING, INTEGRATIONS, CONCERNS — 2,039 lines). Key facts informing this refactor:
 
@@ -110,6 +122,17 @@ Develop carries an active parallel milestone this branch does not touch: **v1.1 
 | Treat certificate publication authority as a protocol rule | A local ingress enum cannot prove authorship across peers or survive restart; publication and failover must be validated from durable certificate/proposal facts | Phase 10 ✓ |
 | Store authoritative certificates by canonical slot | Same-slot contenders must meet one generic certificate authority, while the certificate itself retains exact-proposal binding; no bridge-only finality record is introduced | Phase 10 ✓ |
 | Persist one local active vote per slot before publication | Volatile slot arbitration is insufficient after restart or cleanup; a published vote remains locked until matching durable finality or cryptographic expiry | Phase 9 ✓ |
+| v1.1: Reuse `ConsensusAuth` primitives directly (signing-bytes/SHA-256/`VerifySignature`), not `ConsensusManager`'s proposal/vote/certificate lifecycle | `ConsensusManager`'s voter/weight source is hardwired to a single `ValidatorRegistry` instance per manager, not pluggable per proposal kind — extending it is bigger scope than needed | Phase 8/12 ✓; MIG-05 remains signature-verification-only |
+| v1.1: Propose/sign/quorum flow transported over CRDT itself (pending-value + signature entries via filter callbacks), no new networking | `ValidatorRegistry` already proves this pattern works for signature+quorum-gated CRDT updates; avoids building new RPC/gossip machinery | Phase 9/13 ✓ |
+| v1.1: `ISignedCRDTData` interface-based per-type classes (not a generic `SignedCRDTValue<T>` template) | Matches `ValidatorRegistry`'s existing per-type `Verify()`/`Apply()` style; less abstraction risk for the first two instances (`TrustedPeerRegistry`, `BURN_BASIS_POINTS`) | Phase 9/10/11 ✓ |
+| v1.1: `TrustedPeerRegistry` is separate from `ValidatorRegistry`'s consensus voter set | Validator consensus roles and "who can sign economic-parameter changes" are different concerns; genesis-seeded, quorum-updatable from its own current membership | Phase 10/13 ✓ |
+| v1.1: `BURN_BASIS_POINTS` cached in `TransactionManager`, refreshed via CRDT-change callback | Avoids a CRDT read on every `PayEscrow` call while still picking up quorum-signed updates promptly | Phase 11/13 ✓ |
+| v1.0: `node_type` lives in `sgns_config.json`, not as a constructor param | Node role is a deployment-time concern, not a per-call concern; `sgns_config.json` already drives `is_processor` and other role-ish fields | Phase 2 ✓ (read via `NodeTypeFromString`, case-insensitive, default Light) |
+| v1.0: `autodht` + `base_port` live in `network_config.json` | They are network-layer settings; `network_config.json` already holds the adjacent knobs (`pubsub_port`, watermarks, reconnect) | Phase 1 ✓ (reads added; `base_port` renamed to `port_seed`) |
+| v1.0: Keep `is_full_node_` as a derived bool, do not propagate enum downstream | `TransactionManager` has 60+ `full_node_m` refs; propagation is a separate, larger refactor | Phase 2 ✓ (derived in the reordered ctor; downstream keeps the bool) |
+| v1.0: Single `New(dev_config, AccountSource)` with `std::variant` | One entry point, self-documenting, forward-compatible for new account sources; eliminates 3 near-duplicate factories | Phase 2 ✓ (canonical factory + variant added; old factories deleted Phase 3) |
+| v1.0: `Archive` and `Full` both map to `is_full_node_=true` for now | Distinguishing them is a future behavior change; introduce the vocabulary now, wire behavior later | — Pending |
+| v1.0: Defaults: `autodht=true`, `base_port=40001`, `node_type=Light` | Match today's factory default args so deployed configs behave identically when keys are absent | Phase 2 ✓ |
 
 ## Evolution
 
@@ -130,3 +153,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 *Last updated: 2026-09-03 after v3.0 milestone (Canonical Burn Finality Rebuild shipped; 13 acknowledged deferred items in STATE.md; next milestone not yet planned)*
+*Last updated: 2026-08-12 — milestone v1.1 evidence reconciled after Phase 13 closure gate*
