@@ -13,7 +13,9 @@ namespace sgns::account
                                                     const sgns::trustedpeer::GenesisManifest &persisted )
         {
             std::vector<std::string> fields;
-            if ( configured.peers != persisted.peers )
+            auto                     configured_peers = configured.peers;
+            std::sort( configured_peers.begin(), configured_peers.end() );
+            if ( configured_peers != persisted.peers )
             {
                 fields.emplace_back( "trusted_peers" );
             }
