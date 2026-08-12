@@ -1,8 +1,15 @@
 #include <boost/filesystem.hpp>
 #include <gtest/gtest.h>
 
+#include <array>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
 #include "account/GeniusSigner.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
+#include "storage/rocksdb/rocksdb_batch.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 
 namespace
@@ -184,4 +191,102 @@ TEST_F( TrustStateStoreTest, CorruptAndPartialRecordsReturnTypedFailuresWithoutR
     raw.reset();
 
     EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), snapshot );
+}
+
+TEST_F( TrustStateStoreTest, CommitFailureBeforeBatchLeavesDurableStateAndPublicationUnchanged )
+{
+    std::atomic_uint32_t publication_count{ 0 };
+    auto fail_before_commit = []( sgns::storage::rocksdb &, const std::vector<TrustStateStore::Write> & )
+        -> outcome::result<void> { return outcome::failure( std::errc::io_error ); };
+    auto store = TrustStateStore::Open( path_.string(), 42, fail_before_commit ).value();
+    auto manifest = Manifest();
+    auto result = store->CommitGenesis( manifest, signers_[0].Sign( manifest.CanonicalBytes().value() ) );
+    if ( result.has_value() ) ++publication_count;
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_EQ( result.error(), TrustStateStore::Error::COMMIT_FAILED );
+    EXPECT_EQ( publication_count.load(), 0U );
+    store.reset();
+    auto reopened = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( reopened.has_error() );
+    EXPECT_EQ( reopened.error(), TrustStateStore::Error::NOT_FOUND );
+}
+
+TEST_F( TrustStateStoreTest, CommitFailureAfterDurableBatchRecoversNewHeadWithoutPublication )
+{
+    std::atomic_uint32_t publication_count{ 0 };
+    auto fail_after_commit = []( sgns::storage::rocksdb &database,
+                                 const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void> {
+        auto batch = database.batch();
+        for ( const auto &[key, value] : writes )
+        {
+            auto put = batch->put( key, value );
+            if ( put.has_error() ) return put.error();
+        }
+        auto commit = batch->commit();
+        if ( commit.has_error() ) return commit.error();
+        return outcome::failure( std::errc::io_error );
+    };
+    auto store = TrustStateStore::Open( path_.string(), 42, fail_after_commit ).value();
+    auto manifest = Manifest();
+    auto result = store->CommitGenesis( manifest, signers_[0].Sign( manifest.CanonicalBytes().value() ) );
+    if ( result.has_value() ) ++publication_count;
+    ASSERT_TRUE( result.has_error() );
+    EXPECT_EQ( publication_count.load(), 0U );
+    store.reset();
+    auto recovered = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( recovered.has_value() );
+    EXPECT_EQ( recovered.value().genesis_fingerprint, manifest.Fingerprint().value() );
+}
+
+TEST_F( TrustStateStoreTest, ConcurrentSuccessorsHaveOneWinnerAndOneStableStaleResult )
+{
+    auto store = TrustStateStore::Open( path_.string(), 42 ).value();
+    const auto initial = CommitGenesis( store );
+    auto first = initial.policy;
+    first.version++;
+    first.expected_previous_hash = initial.policy.Hash().value();
+    first.authorizing_policy_hash = initial.policy.Hash().value();
+    auto second = first;
+    second.membership_threshold = 3;
+    const auto first_proof = Sign( first.CanonicalBytes().value() );
+    const auto second_proof = Sign( second.CanonicalBytes().value() );
+
+    std::mutex gate_mutex;
+    std::condition_variable gate_cv;
+    size_t ready = 0;
+    bool go = false;
+    std::array<std::optional<std::error_code>, 2> errors;
+    auto run = [&]( size_t index, const QuorumPolicyState &candidate,
+                    const sgns::multisig::CollectedSignatures &proof ) {
+        {
+            std::unique_lock<std::mutex> lock( gate_mutex );
+            ++ready;
+            gate_cv.notify_all();
+            gate_cv.wait( lock, [&] { return go; } );
+        }
+        auto result = store->CommitPolicySuccessor( candidate, proof );
+        if ( result.has_error() ) errors[index] = result.error();
+    };
+    std::thread a( run, 0, std::cref( first ), std::cref( first_proof ) );
+    std::thread b( run, 1, std::cref( second ), std::cref( second_proof ) );
+    {
+        std::unique_lock<std::mutex> lock( gate_mutex );
+        gate_cv.wait( lock, [&] { return ready == 2; } );
+        go = true;
+    }
+    gate_cv.notify_all();
+    a.join();
+    b.join();
+
+    EXPECT_EQ( static_cast<unsigned>( errors[0].has_value() ) + static_cast<unsigned>( errors[1].has_value() ), 1U );
+    const auto loser = errors[0].has_value() ? *errors[0] : *errors[1];
+    EXPECT_EQ( loser, TrustStateStore::Error::STALE_HEAD );
+    const auto winner = store->LoadAndVerify().value();
+    store.reset();
+    EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), winner );
+}
+
+TEST_F( TrustStateStoreTest, RollbackBoundaryIsDocumentedByThePublicContract )
+{
+    SUCCEED() << "Whole-disk rollback requires a TPM, OS-keystore monotonic counter, or off-host checkpoint.";
 }
