@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "account/GeniusSigner.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 
 namespace
@@ -69,8 +70,9 @@ TEST_F( TrustStateStoreTest, CommitAndReopenReproducesVerifiedHashesWithoutJson 
     ASSERT_TRUE( policy_result.has_value() );
 
     auto next_burn = policy_result.value().burn;
+    const auto previous_burn_hash = next_burn.Hash().value();
     next_burn.version++;
-    next_burn.expected_previous_hash = *next_burn.Hash();
+    next_burn.expected_previous_hash = previous_burn_hash;
     next_burn.authorizing_policy_hash = *policy_result.value().policy.Hash();
     next_burn.basis_points = 250;
     auto burn_bytes = next_burn.CanonicalBytes();
@@ -137,4 +139,49 @@ TEST_F( TrustStateStoreTest, ForkAttemptCannotReplaceDurableWinner )
     EXPECT_TRUE( rejected.error() == TrustStateStore::Error::VERSION_DECREASE ||
                  rejected.error() == TrustStateStore::Error::STALE_HEAD );
     EXPECT_EQ( store->LoadAndVerify().value().policy, winner.Canonicalized().value() );
+}
+
+TEST_F( TrustStateStoreTest, CorruptAndPartialRecordsReturnTypedFailuresWithoutRepairingDisk )
+{
+    auto store = TrustStateStore::Open( path_.string(), 42 ).value();
+    const auto snapshot = CommitGenesis( store );
+    store.reset();
+
+    auto raw = sgns::storage::rocksdb::create( path_.string() ).value();
+    auto key = []( const std::string &text ) { return sgns::base::Buffer{}.put( text ); };
+    const std::string prefix = "trust/version-1/network/42/";
+    const auto genesis_key = key( prefix + "genesis" );
+    const auto original_genesis = raw->get( genesis_key ).value();
+    ASSERT_TRUE( raw->put( genesis_key, key( "corrupt" ) ).has_value() );
+    raw.reset();
+    auto corrupt = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( corrupt.has_error() );
+    EXPECT_EQ( corrupt.error(), TrustStateStore::Error::CORRUPT_GENESIS );
+    raw = sgns::storage::rocksdb::create( path_.string() ).value();
+    ASSERT_TRUE( raw->put( genesis_key, original_genesis ).has_value() );
+
+    const auto policy_hash = snapshot.policy.Hash().value();
+    const auto policy_key = key( prefix + "policy/version-1/" + policy_hash );
+    const auto original_policy = raw->get( policy_key ).value();
+    ASSERT_TRUE( raw->remove( policy_key ).has_value() );
+    raw.reset();
+    auto missing_policy = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( missing_policy.has_error() );
+    EXPECT_EQ( missing_policy.error(), TrustStateStore::Error::MISSING_POLICY_RECORD );
+    raw = sgns::storage::rocksdb::create( path_.string() ).value();
+    ASSERT_TRUE( raw->put( policy_key, original_policy ).has_value() );
+
+    const auto burn_hash = snapshot.burn.Hash().value();
+    const auto burn_key = key( prefix + "burn/version-1/" + burn_hash );
+    const auto original_burn = raw->get( burn_key ).value();
+    ASSERT_TRUE( raw->put( burn_key, key( "corrupt" ) ).has_value() );
+    raw.reset();
+    auto corrupt_burn = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( corrupt_burn.has_error() );
+    EXPECT_EQ( corrupt_burn.error(), TrustStateStore::Error::CORRUPT_BURN_RECORD );
+    raw = sgns::storage::rocksdb::create( path_.string() ).value();
+    ASSERT_TRUE( raw->put( burn_key, original_burn ).has_value() );
+    raw.reset();
+
+    EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), snapshot );
 }
