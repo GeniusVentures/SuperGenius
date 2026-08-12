@@ -19,20 +19,20 @@ namespace sgns::trustedpeer
     class CanonicalTrustCodec
     {
     public:
-        static constexpr std::string_view GENESIS_DOMAIN = "SGNS_TRUST_GENESIS_V1";
+        static constexpr std::string_view GENESIS_DOMAIN    = "SGNS_TRUST_GENESIS_V1";
         static constexpr size_t           MAX_TRUSTED_PEERS = 256;
-        static constexpr size_t           PUBLIC_KEY_BYTES = 64;
+        static constexpr size_t           PUBLIC_KEY_BYTES  = 64;
 
         class Writer
         {
         public:
-            void WriteU8( uint8_t value );
-            void WriteU16( uint16_t value );
-            void WriteU32( uint32_t value );
-            void WriteU64( uint64_t value );
-            void WriteBytes( gsl::span<const uint8_t> bytes );
-            void WriteBytes( std::string_view bytes );
-            void WriteLengthPrefixedBytes( gsl::span<const uint8_t> bytes );
+            void               WriteU8( uint8_t value );
+            void               WriteU16( uint16_t value );
+            void               WriteU32( uint32_t value );
+            void               WriteU64( uint64_t value );
+            void               WriteBytes( gsl::span<const uint8_t> bytes );
+            void               WriteBytes( std::string_view bytes );
+            [[nodiscard]] bool WriteLengthPrefixedBytes( gsl::span<const uint8_t> bytes );
 
             [[nodiscard]] const std::vector<uint8_t> &Bytes() const;
             [[nodiscard]] std::vector<uint8_t>        Take();
@@ -60,7 +60,7 @@ namespace sgns::trustedpeer
         };
 
         [[nodiscard]] static std::optional<std::vector<uint8_t>> DecodePublicKey( std::string_view public_key );
-        [[nodiscard]] static std::string EncodePublicKey( gsl::span<const uint8_t> public_key );
+        [[nodiscard]] static std::string                         EncodePublicKey( gsl::span<const uint8_t> public_key );
         [[nodiscard]] static std::optional<std::vector<std::string>> NormalizePublicKeys(
             const std::vector<std::string> &public_keys );
         [[nodiscard]] static std::string Sha256Hex( gsl::span<const uint8_t> canonical_bytes );
