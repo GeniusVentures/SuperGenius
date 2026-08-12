@@ -20,6 +20,8 @@ addtest(trust_genesis_tool_test
 )
 target_link_libraries(trust_genesis_tool_test
     ${TRUSTEDPEER_TEST_NODE_LIBS}
+    local_trust_admin
+    burnconfig
     rocksdb
     OpenSSL::Crypto
 )
