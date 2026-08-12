@@ -37,7 +37,7 @@ namespace
             key_path_ = path_ / "bootstrap.key";
             WriteKeyFile();
 
-            GeniusSigner bootstrapper( ethereum::EthereumKeyGenerator( PRIVATE_KEY ) );
+            GeniusSigner bootstrapper{ ethereum::EthereumKeyGenerator( PRIVATE_KEY ) };
             manifest_.network_id = 42;
             manifest_.bootstrapper_public_key = bootstrapper.GetAddress();
             manifest_.peers = { bootstrapper.GetAddress(), GeniusSigner::Generate().GetAddress(),
@@ -255,7 +255,8 @@ TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSec
     {
         SCOPED_TRACE( static_cast<int>( expected ) );
         GenesisCeremony::Hooks hooks = GenesisCeremony::DefaultHooks();
-        hooks.inspect_key_file = [status]( const std::string & ) { return outcome::success( status ); };
+        const auto status_copy = status;
+        hooks.inspect_key_file = [status_copy]( const std::string & ) { return outcome::success( status_copy ); };
         GenesisCeremony ceremony( std::move( hooks ) );
         GenesisCeremony::Network network;
         network.start = [] { return outcome::success(); };
