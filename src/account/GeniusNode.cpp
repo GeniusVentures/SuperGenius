@@ -42,7 +42,9 @@
 #include "account/TokenAmount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/BurnConfig.hpp"
+#include "account/TrustStartupController.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "account/ChainRpcEndpointProvider.hpp"
 #include "watcher/impl/bridge_catchup_watcher.hpp"
@@ -103,6 +105,12 @@ namespace
                 return "INITIALIZING_BLOCKCHAIN";
             case State::INITIALIZING_TRANSACTIONS:
                 return "INITIALIZING_TRANSACTIONS";
+            case State::WAITING_FOR_TRUST_GENESIS:
+                return "WAITING_FOR_TRUST_GENESIS";
+            case State::WAITING_FOR_BURN_GENESIS:
+                return "WAITING_FOR_BURN_GENESIS";
+            case State::FATAL_TRUST_MISMATCH:
+                return "FATAL_TRUST_MISMATCH";
             case State::READY:
                 return "READY";
         }
@@ -467,15 +475,16 @@ namespace sgns
         }
         // Unset config never trips D-07's floor rejection: default to the exact majority
         // floor for the parsed genesis peer count (ceil(0.51*N)).
-        const auto majority_floor =
-            static_cast<uint64_t>( ( trusted_peers_genesis_.size() * 51 + 99 ) / 100 );
+        const auto majority_floor = static_cast<uint64_t>( trusted_peers_genesis_.size() / 2 + 1 );
+        const auto burn_floor     = static_cast<uint64_t>( trusted_peers_genesis_.size() -
+                                                       trusted_peers_genesis_.size() / 3 );
         if ( trusted_peer_quorum_threshold_ == 0 )
         {
             trusted_peer_quorum_threshold_ = majority_floor;
         }
         if ( burn_config_quorum_threshold_ == 0 )
         {
-            burn_config_quorum_threshold_ = majority_floor;
+            burn_config_quorum_threshold_ = burn_floor;
         }
         if ( config_json.HasMember( "ipfs_cache_dir" ) && config_json["ipfs_cache_dir"].IsString() )
         {
@@ -753,42 +762,182 @@ namespace sgns
                 const std::string quorum_topic = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
                 tx_globaldb_->AddListenTopic( quorum_topic );
 
-                secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
-
-                auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
-                                                                               trusted_peers_genesis_,
-                                                                               bootstrapper_node_address_,
-                                                                               trusted_peer_quorum_threshold_ );
-                if ( tpr_result.has_error() )
+                if ( !secure_crdt_ )
                 {
-                    node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
-                                         tpr_result.error().message() );
-                    secure_crdt_.reset();
-                    return;
+                    secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( tx_globaldb_, quorum_topic );
                 }
-                trusted_peer_registry_ = tpr_result.value();
 
-                auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
-                                                                          tx_globaldb_,
-                                                                          trusted_peer_registry_,
-                                                                          burn_config_quorum_threshold_,
-                                                                          account_ );
-                if ( burn_config_result.has_error() )
+                const std::string trust_path = write_base_path_ + gnus_network_full_path_ + "/trust-state";
+                if ( !trust_state_store_ )
                 {
-                    node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
-                                         burn_config_result.error().message() );
-                    ResetQuorumMembers();
-                    return;
+                    auto opened = sgns::trustedpeer::TrustStateStore::Open( trust_path, subnet_id_ );
+                    if ( opened.has_value() )
+                    {
+                        trust_state_store_ = opened.value();
+                    }
                 }
-                burn_config_ = burn_config_result.value();
-
-                // Register only after both policy owners have populated SecureCrdtRegistry;
-                // otherwise a new node can start without filters for either runtime key.
-                if ( !secure_crdt_->RegisterFilters() )
+                const bool has_configured_trust = !trusted_peers_genesis_.empty() ||
+                                                  !bootstrapper_node_address_.empty();
+                bool has_persisted_trust = false;
+                if ( trust_state_store_ )
                 {
-                    node_logger_->error( "SecureCrdt filter registration failed" );
-                    ResetQuorumMembers();
-                    return;
+                    auto persisted      = trust_state_store_->LoadAndVerify();
+                    has_persisted_trust = persisted.has_value() ||
+                                          persisted.error() != sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND;
+                }
+
+                if ( ( has_configured_trust || has_persisted_trust ) && !trust_startup_controller_ )
+                {
+                    std::optional<sgns::trustedpeer::GenesisManifest> manifest;
+                    if ( has_configured_trust )
+                    {
+                        sgns::trustedpeer::GenesisManifest configured;
+                        configured.network_id              = subnet_id_;
+                        configured.bootstrapper_public_key = bootstrapper_node_address_;
+                        configured.peers                   = trusted_peers_genesis_;
+                        configured.membership_threshold    = trusted_peer_quorum_threshold_;
+                        configured.burn_threshold          = burn_config_quorum_threshold_;
+                        manifest                           = std::move( configured );
+                    }
+                    auto created = sgns::account::TrustStartupController::New(
+                        secure_crdt_,
+                        trust_state_store_,
+                        std::move( manifest ),
+                        account_->GetAddress(),
+                        [weak_self = weak_from_this()]( const std::vector<uint8_t> &bytes )
+                        {
+                            auto self = weak_self.lock();
+                            return self && self->account_ ? self->account_->Sign( bytes ) : std::vector<uint8_t>{};
+                        },
+                        [logger = node_logger_]( const sgns::account::TrustStartupController::Event &event )
+                        {
+                            const char *code = "TRUST_CONFIG_CONFLICT";
+                            switch ( event.code )
+                            {
+                                case sgns::account::TrustStartupController::EventCode::TRUST_NETWORK_MISMATCH:
+                                    code = "TRUST_NETWORK_MISMATCH";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_LOCAL_STATE_CORRUPT:
+                                    code = "TRUST_LOCAL_STATE_CORRUPT";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_MISSING:
+                                    code = "TRUST_CRDT_MISSING";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_ROLLBACK:
+                                    code = "TRUST_CRDT_ROLLBACK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_FORK:
+                                    code = "TRUST_CRDT_FORK";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
+                                    break;
+                            }
+                            logger->critical( "{} fingerprint={} fields={}",
+                                              code,
+                                              event.persisted_fingerprint,
+                                              fmt::join( event.fields, "," ) );
+                        },
+                        [weak_self = weak_from_this()]( sgns::account::TrustStartupController::State state )
+                        {
+                            auto self = weak_self.lock();
+                            if ( !self )
+                            {
+                                return;
+                            }
+                            boost::asio::post(
+                                *self->io_,
+                                [weak_self, state]
+                                {
+                                    auto node = weak_self.lock();
+                                    if ( !node )
+                                    {
+                                        return;
+                                    }
+                                    if ( state == sgns::account::TrustStartupController::State::ConfirmedReady )
+                                    {
+                                        node->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                    }
+                                    else if ( state ==
+                                              sgns::account::TrustStartupController::State::WaitingForInitialBurn )
+                                    {
+                                        node->state_.store( NodeState::WAITING_FOR_BURN_GENESIS );
+                                    }
+                                    else if ( state ==
+                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis )
+                                    {
+                                        node->state_.store( NodeState::WAITING_FOR_TRUST_GENESIS );
+                                    }
+                                    else
+                                    {
+                                        node->state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                                    }
+                                } );
+                        } );
+                    if ( created.has_error() )
+                    {
+                        node_logger_->critical( "Trust startup failed closed: {}", created.error().message() );
+                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    trust_startup_controller_ = created.value();
+                    trusted_peer_registry_    = trust_startup_controller_->registry();
+                    burn_config_              = trust_startup_controller_->burn_config();
+                }
+
+                if ( trust_startup_controller_ )
+                {
+                    auto refreshed = trust_startup_controller_->Refresh();
+                    if ( refreshed.has_error() )
+                    {
+                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        return;
+                    }
+                    if ( !trust_startup_controller_->IsEconomicallyReady() )
+                    {
+                        state_.store( trust_startup_controller_->GetState() ==
+                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis
+                                          ? NodeState::WAITING_FOR_TRUST_GENESIS
+                                          : NodeState::WAITING_FOR_BURN_GENESIS );
+                        return;
+                    }
+                }
+                else
+                {
+                    auto tpr_result = sgns::trustedpeer::TrustedPeerRegistry::New( secure_crdt_,
+                                                                                   trusted_peers_genesis_,
+                                                                                   bootstrapper_node_address_,
+                                                                                   trusted_peer_quorum_threshold_ );
+                    if ( tpr_result.has_error() )
+                    {
+                        node_logger_->error( "TrustedPeerRegistry construction failed (majority-floor violation): {}",
+                                             tpr_result.error().message() );
+                        secure_crdt_.reset();
+                        return;
+                    }
+                    trusted_peer_registry_ = tpr_result.value();
+
+                    auto burn_config_result = sgns::account::BurnConfig::New( secure_crdt_,
+                                                                              tx_globaldb_,
+                                                                              trusted_peer_registry_,
+                                                                              burn_config_quorum_threshold_,
+                                                                              account_ );
+                    if ( burn_config_result.has_error() )
+                    {
+                        node_logger_->error( "BurnConfig construction failed (majority-floor violation): {}",
+                                             burn_config_result.error().message() );
+                        ResetQuorumMembers();
+                        return;
+                    }
+                    burn_config_ = burn_config_result.value();
+
+                    // Register only after both policy owners have populated SecureCrdtRegistry;
+                    // otherwise a new node can start without filters for either runtime key.
+                    if ( !secure_crdt_->RegisterFilters() )
+                    {
+                        node_logger_->error( "SecureCrdt filter registration failed" );
+                        ResetQuorumMembers();
+                        return;
+                    }
                 }
 
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
@@ -1026,10 +1175,32 @@ namespace sgns
                 node_logger_->info( "GeniusNode READY" );
                 break;
             }
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+            case NodeState::FATAL_TRUST_MISMATCH:
+                break;
             case NodeState::CREATING:
             default:
                 break;
         }
+    }
+
+    bool GeniusNode::IsTrustEconomicallyReady() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->IsEconomicallyReady()
+                                         : burn_config_ && burn_config_->IsEconomicallyReady();
+    }
+
+    bool GeniusNode::CanApproveTrustSuccessors() const
+    {
+        return trust_startup_controller_ && trust_startup_controller_->CanApproveSuccessors();
+    }
+
+    std::vector<std::string> GeniusNode::GetCurrentTrustedPeers() const
+    {
+        return trust_startup_controller_ ? trust_startup_controller_->GetCurrentPeers()
+                                         : ( trusted_peer_registry_ ? trusted_peer_registry_->GetCurrentPeers()
+                                                                    : std::vector<std::string>{} );
     }
 
     void GeniusNode::InitOpenSSL()
@@ -1699,8 +1870,7 @@ namespace sgns
         return logger;
     }
 
-    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account,
-                                                                    bool release_members )
+    outcome::result<void> GeniusNode::ShutdownAccountBoundServices( bool deconfigure_account, bool release_members )
     {
         if ( processing_service_ )
         {
@@ -1822,7 +1992,8 @@ namespace sgns
         // GeniusAccount owns AccountMessenger, which owns PubSub subscriptions.
         // account_ is declared before io_, so relying on implicit destruction
         // would otherwise destroy its messenger after the io_context.
-        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})", account_.use_count() );
+        node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing account_ (refs={})",
+                             account_.use_count() );
         account_.reset();
         node_logger_->debug( "ReleaseRuntimeMembersAfterIoStopped: releasing pubsub_ (refs={})", pubsub_.use_count() );
         pubsub_.reset();
@@ -2063,9 +2234,8 @@ namespace sgns
                         }
 
                         const auto retry_attempt = std::min( attempt, 10u );
-                        auto       delay_sec =
-                            strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
-                        delay_sec = std::min<uint64_t>(
+                        auto       delay_sec = strong->reconnect_config_.base_delay.count() * ( 1ull << retry_attempt );
+                        delay_sec            = std::min<uint64_t>(
                             delay_sec,
                             static_cast<uint64_t>( strong->reconnect_config_.max_delay.count() ) );
                         const auto delay = std::chrono::seconds( delay_sec );
@@ -2076,9 +2246,9 @@ namespace sgns
                                                     delay.count() );
                         strong->scheduler_->schedule(
                             [weak_self,
-                             peer = std::move( peer ),
+                             peer      = std::move( peer ),
                              peer_info = std::move( peer_info ),
-                             attempt = retry_attempt + 1]() mutable
+                             attempt   = retry_attempt + 1]() mutable
                             {
                                 if ( auto strong = weak_self.lock() )
                                 {
@@ -2609,6 +2779,15 @@ namespace sgns
                 }
                 return { 0.60f, "Initializing transactions" };
             }
+
+            case NodeState::WAITING_FOR_TRUST_GENESIS:
+                return { 0.60f, "Waiting for confirmed trust genesis" };
+
+            case NodeState::WAITING_FOR_BURN_GENESIS:
+                return { 0.65f, "Waiting for confirmed burn genesis" };
+
+            case NodeState::FATAL_TRUST_MISMATCH:
+                return { 0.60f, "Trust startup failed closed" };
 
             case NodeState::INITIALIZING_PROCESSING:
                 return { 0.945f, "Initializing processing modules" };
@@ -3581,7 +3760,7 @@ namespace sgns
             const auto &mtime   = it->mtime;
             bool        expired = mtime < cutoff;
             bool        overCap = ( result_retention_max_mb_ > 0 ) &&
-                                  ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
+                           ( totalBytes > static_cast<uintmax_t>( result_retention_max_mb_ ) * 1024 * 1024 );
             if ( !expired && !overCap )
             {
                 break;
@@ -3866,11 +4045,13 @@ namespace sgns
 
         node_logger_->info( "Attempting reconnect to bootstrap fullnode {}...", peer_id.toBase58() );
 
-        auto weak_self = weak_from_this();
+        auto weak_self   = weak_from_this();
         auto ipv4_source = libp2p::multi::Multiaddress::create( "/ip4/0.0.0.0/tcp/0" ).value();
         auto ipv6_source = libp2p::multi::Multiaddress::create( "/ip6/::/tcp/0" ).value();
-        libp2p::network::RouteHelper::SourceAddresses source_addresses{
-            std::move( ipv4_source ), std::move( ipv6_source ), true, true };
+        libp2p::network::RouteHelper::SourceAddresses source_addresses{ std::move( ipv4_source ),
+                                                                        std::move( ipv6_source ),
+                                                                        true,
+                                                                        true };
 
         pubsub_->GetHost()->getNetwork().getDialer().dial(
             *peer_info_ptr,

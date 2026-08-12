@@ -154,7 +154,8 @@ namespace sgns::trustedpeer
             SignCallback                                  sign_callback,
             std::string                                   policy_domain = "trusted-peer" );
 
-        outcome::result<sgns::securecrdt::CandidateId>              SubmitReviewedGenesisApproval();
+        outcome::result<sgns::securecrdt::CandidateId> SubmitReviewedGenesisApproval();
+        outcome::result<bool> TryActivateReviewedGenesisCandidate( const sgns::securecrdt::CandidateId &candidate_id );
         outcome::result<std::vector<sgns::securecrdt::CandidateId>> ListPendingPolicyCandidates() const;
         outcome::result<sgns::securecrdt::CandidateId> ProposePolicyCandidate( const QuorumPolicyState &candidate );
         outcome::result<sgns::securecrdt::CandidateId> ApprovePolicyCandidate(

@@ -69,6 +69,7 @@ target_link_libraries(burnconfig
 supergenius_install(burnconfig)
 
 set(GENIUS_NODE_SOURCES
+    TrustStartupController.cpp
     GeniusTransaction.cpp
     TransferTransaction.cpp
     MintTransaction.cpp

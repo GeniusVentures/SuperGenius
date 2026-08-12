@@ -61,12 +61,14 @@ namespace sgns::securecrdt
 
 namespace sgns::trustedpeer
 {
+    class TrustStateStore;
     class TrustedPeerRegistry;
 }
 
 namespace sgns::account
 {
     class BurnConfig;
+    class TrustStartupController;
 }
 
 /**
@@ -185,6 +187,9 @@ namespace sgns
             INITIALIZING_DATABASE,     ///< Primary CRDT database is being initialized.
             INITIALIZING_BLOCKCHAIN,   ///< Blockchain service is being initialized.
             INITIALIZING_TRANSACTIONS, ///< Transaction manager is being initialized.
+            WAITING_FOR_TRUST_GENESIS, ///< Networking is live but no durable trust genesis exists.
+            WAITING_FOR_BURN_GENESIS,  ///< Trust genesis is durable but initial burn quorum is pending.
+            FATAL_TRUST_MISMATCH,      ///< Durable trust state cannot safely start for this network.
             INITIALIZING_PROCESSING,   ///< Processing modules are being initialized.
             READY,                     ///< Node is ready for external operations.
         };
@@ -760,6 +765,10 @@ namespace sgns
             return state_.load();
         }
 
+        [[nodiscard]] bool                     IsTrustEconomicallyReady() const;
+        [[nodiscard]] bool                     CanApproveTrustSuccessors() const;
+        [[nodiscard]] std::vector<std::string> GetCurrentTrustedPeers() const;
+
     protected:
         friend class TransactionSyncTest;
         friend class MultiAccountTestAccess;
@@ -847,9 +856,13 @@ namespace sgns
         uint16_t                                 pubsubport_; ///< Active PubSub TCP port.
         std::shared_ptr<Blockchain>              blockchain_; ///< Blockchain service.
 
-        std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::securecrdt::SecureCrdt> secure_crdt_; ///< BURN-02: quorum-signing wrapper.
+        std::shared_ptr<sgns::trustedpeer::TrustStateStore>
+            trust_state_store_; ///< Durable network-scoped trust authority.
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> trusted_peer_registry_; ///< BURN-02: signer-set source.
         std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
+        std::shared_ptr<sgns::account::TrustStartupController>
+            trust_startup_controller_; ///< Restricted boot state machine.
 
         std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
