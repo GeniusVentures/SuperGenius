@@ -1159,9 +1159,9 @@ namespace sgns
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
 
         /**
-         * @brief Unregisters and releases quorum services while GlobalDB and account dependencies are alive.
+         * @brief Unregisters and releases node-scoped policy services during full shutdown only.
          */
-        void ResetQuorumMembers();
+        void ShutdownNodePolicyServices();
 
         outcome::result<std::shared_ptr<crdt::AtomicTransaction>> CreateEscrowInfoCRDTTransaction(
             std::string        path,
