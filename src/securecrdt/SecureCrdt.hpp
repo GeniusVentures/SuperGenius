@@ -194,6 +194,7 @@ namespace sgns::securecrdt
         std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
         std::string                                             topic_;
         std::shared_ptr<SecureCrdtRegistry>                     registry_;
+        std::mutex                                              candidate_write_mutex_;
         std::mutex                                              candidate_callbacks_mutex_;
         std::unordered_map<std::string, CandidateCallbackEntry> candidate_callbacks_;
         sgns::base::Logger                                      logger_ = sgns::base::createLogger( "SecureCrdt" );
