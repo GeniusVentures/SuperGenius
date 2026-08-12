@@ -119,6 +119,45 @@ TEST( SecureCrdtRegistryTest, ResolvedEntryRemainsValidAfterUnregister )
     EXPECT_NE( resolved->make_instance(), nullptr );
 }
 
+TEST( SecureCrdtRegistryTest, RegistriesWithSamePatternRemainIsolated )
+{
+    SecureCrdtRegistry registry_a;
+    SecureCrdtRegistry registry_b;
+    int                owner_a = 0;
+    int                owner_b = 0;
+
+    SecureCrdtRegistryEntry entry_a;
+    entry_a.signer_set_source = []( const std::string & ) -> outcome::result<SignerSetSnapshot>
+    { return SignerSetSnapshot{ { "node-a-signer" }, 1 }; };
+    entry_a.make_instance = [] { return std::make_shared<TestSignedData>(); };
+    entry_a.owner_token    = &owner_a;
+
+    SecureCrdtRegistryEntry entry_b;
+    entry_b.signer_set_source = []( const std::string & ) -> outcome::result<SignerSetSnapshot>
+    { return SignerSetSnapshot{ { "node-b-signer" }, 1 }; };
+    entry_b.make_instance = [] { return std::make_shared<TestSignedData>(); };
+    entry_b.owner_token    = &owner_b;
+
+    registry_a.Register( kTestKeyPattern, std::move( entry_a ) );
+    registry_b.Register( kTestKeyPattern, std::move( entry_b ) );
+
+    const auto resolved_a = registry_a.Resolve( kTestKeyPattern );
+    const auto resolved_b = registry_b.Resolve( kTestKeyPattern );
+    ASSERT_TRUE( resolved_a.has_value() );
+    ASSERT_TRUE( resolved_b.has_value() );
+
+    const auto snapshot_a = resolved_a->signer_set_source( kTestKeyPattern );
+    const auto snapshot_b = resolved_b->signer_set_source( kTestKeyPattern );
+    ASSERT_FALSE( snapshot_a.has_error() );
+    ASSERT_FALSE( snapshot_b.has_error() );
+    EXPECT_EQ( snapshot_a.value().signer_set, std::vector<std::string>{ "node-a-signer" } );
+    EXPECT_EQ( snapshot_b.value().signer_set, std::vector<std::string>{ "node-b-signer" } );
+
+    registry_b.UnregisterIf( kTestKeyPattern, &owner_b );
+    EXPECT_TRUE( registry_a.Resolve( kTestKeyPattern ).has_value() );
+    EXPECT_FALSE( registry_b.Resolve( kTestKeyPattern ).has_value() );
+}
+
 TEST( SecureCrdtRegistryTest, ConcurrentAccessUsesStableSnapshots )
 {
     constexpr size_t thread_count = 8;
