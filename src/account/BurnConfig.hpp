@@ -152,7 +152,7 @@ namespace sgns::account
          * @brief Registers this instance's signer-set-source with
          *        SecureCrdtRegistry under base_key_.
          */
-        void RegisterSignerSetSource();
+        bool RegisterSignerSetSource();
 
         /**
          * @brief Registers the GlobalDB new-element callback that re-derives
