@@ -73,7 +73,8 @@ namespace sgns::test::securecrdt
             node_ = MakeSecureCrdtTestNode( "securecrdt_quorum" );
             ASSERT_NE( node_, nullptr );
 
-            sgns::securecrdt::SecureCrdtRegistry::Register(
+            secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( node_->db, "securecrdt_test_topic" );
+            ASSERT_TRUE( secure_crdt_->Registry().Register(
                 BASE_KEY,
                 sgns::securecrdt::SecureCrdtRegistryEntry{
                     BASE_KEY,
@@ -82,14 +83,12 @@ namespace sgns::test::securecrdt
                     []() -> std::shared_ptr<sgns::securecrdt::ISignedCRDTData>
                     { return std::make_shared<TestSignedData>(); },
                     std::regex(),
-                    this } );
-
-            secure_crdt_ = std::make_shared<sgns::securecrdt::SecureCrdt>( node_->db, "securecrdt_test_topic" );
+                    this } ) );
         }
 
         void TearDown() override
         {
-            sgns::securecrdt::SecureCrdtRegistry::UnregisterIf( BASE_KEY, this );
+            secure_crdt_->Registry().UnregisterIf( BASE_KEY, this );
             secure_crdt_.reset();
             node_.reset();
             GeniusAccount::SetSecureStorageFactory( nullptr );
