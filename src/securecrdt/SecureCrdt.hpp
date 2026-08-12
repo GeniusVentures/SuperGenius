@@ -13,10 +13,12 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
+#include <unordered_map>
 
 #include "base/buffer.hpp"
 #include "base/logger.hpp"
@@ -46,12 +48,19 @@ namespace sgns::securecrdt
          */
         enum class Error : uint8_t
         {
-            UNREGISTERED_KEY = 0, ///< base_key has no SecureCrdtRegistry entry
-            NO_VALUE_PROPOSED,    ///< AddSignature/ReadIfQuorum called before any ProposeValue
-            INVALID_SIGNATURE,    ///< signature failed VerifyPayloadSignature against the current value
-            MALFORMED_VALUE,      ///< payload failed DeserializeFromBytes/Verify (codec/semantic check)
+            UNREGISTERED_KEY = 0,         ///< base_key has no SecureCrdtRegistry entry
+            NO_VALUE_PROPOSED,            ///< AddSignature/ReadIfQuorum called before any ProposeValue
+            INVALID_SIGNATURE,            ///< signature failed VerifyPayloadSignature against the current value
+            MALFORMED_VALUE,              ///< payload failed DeserializeFromBytes/Verify (codec/semantic check)
             QUORUM_THRESHOLD_BELOW_FLOOR, ///< configured quorum_threshold below ceil(0.51*signer_set_size)
+            UNREGISTERED_CANDIDATE_DOMAIN,
+            CANDIDATE_CONTEXT_MISMATCH,
+            UNAUTHORIZED_CANDIDATE_SIGNER,
+            CANDIDATE_LIMIT_EXCEEDED,
+            DUPLICATE_CANDIDATE_APPROVAL,
         };
+
+        using CandidateCallback = std::function<void( const CandidateId &, const CandidateApprovalRecord & )>;
 
         /**
          * @brief Constructs a SecureCrdt wrapper over an existing GlobalDB instance.
@@ -63,8 +72,8 @@ namespace sgns::securecrdt
          *            A fresh registry is created when omitted.
          */
         SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db,
-                    std::string                            topic,
-                    std::shared_ptr<SecureCrdtRegistry>    registry = nullptr );
+                    std::string                           topic,
+                    std::shared_ptr<SecureCrdtRegistry>   registry = nullptr );
 
         /// @brief Returns this node's isolated policy registry.
         SecureCrdtRegistry &Registry();
@@ -127,8 +136,17 @@ namespace sgns::securecrdt
          *         if the key does not exist yet or quorum is not yet met, or
          *         Error::UNREGISTERED_KEY if base_key has no registry entry.
          */
-        outcome::result<std::optional<sgns::base::Buffer>> ReadIfQuorum(
-            const sgns::crdt::HierarchicalKey &base_key );
+        outcome::result<std::optional<sgns::base::Buffer>> ReadIfQuorum( const sgns::crdt::HierarchicalKey &base_key );
+
+        outcome::result<CandidateId> SubmitCandidateApproval( const CandidateApprovalRecord &record );
+        outcome::result<std::vector<CandidateApprovalRecord>> ReadCandidateApprovals( const CandidateId &id );
+        outcome::result<std::vector<CandidateId>>             ListCandidates( const std::string &domain,
+                                                                              const std::string &predecessor_hash,
+                                                                              bool               current_only = true );
+        bool                                                  RegisterCandidateCallback( const std::string &domain,
+                                                                                         CandidateCallback  callback,
+                                                                                         const void        *owner_token );
+        void UnregisterCandidateCallbackIf( const std::string &domain, const void *owner_token );
 
         /**
          * @brief Self-registration entry point: registers the element filter
@@ -160,10 +178,25 @@ namespace sgns::securecrdt
             const SecureCrdtRegistryEntry &entry,
             const sgns::crdt::pb::Element &element );
 
-        std::shared_ptr<sgns::crdt::GlobalDB> db_;
-        std::string                           topic_;
-        std::shared_ptr<SecureCrdtRegistry>   registry_;
-        sgns::base::Logger                    logger_ = sgns::base::createLogger( "SecureCrdt" );
+        outcome::result<CandidateApprovalRecord> ValidateCandidateApproval( const sgns::crdt::HierarchicalKey &key,
+                                                                            const std::vector<uint8_t>        &bytes,
+                                                                            bool check_duplicate );
+        std::optional<std::vector<sgns::crdt::pb::Element>> FilterCandidateApproval(
+            const sgns::crdt::pb::Element &element );
+        void OnCandidateApproval( const std::string &domain, const std::pair<std::string, sgns::base::Buffer> &data );
+
+        struct CandidateCallbackEntry
+        {
+            CandidateCallback callback;
+            const void       *owner_token = nullptr;
+        };
+
+        std::shared_ptr<sgns::crdt::GlobalDB>                   db_;
+        std::string                                             topic_;
+        std::shared_ptr<SecureCrdtRegistry>                     registry_;
+        std::mutex                                              candidate_callbacks_mutex_;
+        std::unordered_map<std::string, CandidateCallbackEntry> candidate_callbacks_;
+        sgns::base::Logger                                      logger_ = sgns::base::createLogger( "SecureCrdt" );
     };
 } // namespace sgns::securecrdt
 
