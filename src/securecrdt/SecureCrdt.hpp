@@ -59,8 +59,18 @@ namespace sgns::securecrdt
          * @param[in] topic CRDT broadcast/listen topic to use for all Put calls
          *            (no new networking -- reuses whatever topic the caller's
          *            GlobalDB is already wired to).
+         * @param[in] registry Optional registry injection for composition/tests.
+         *            A fresh registry is created when omitted.
          */
-        SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db, std::string topic );
+        SecureCrdt( std::shared_ptr<sgns::crdt::GlobalDB> db,
+                    std::string                            topic,
+                    std::shared_ptr<SecureCrdtRegistry>    registry = nullptr );
+
+        /// @brief Returns this node's isolated policy registry.
+        SecureCrdtRegistry &Registry();
+
+        /// @brief Returns this node's isolated policy registry.
+        const SecureCrdtRegistry &Registry() const;
 
         /**
          * @brief Proposes a value for a registered base_key. Runs the SAME
@@ -152,6 +162,7 @@ namespace sgns::securecrdt
 
         std::shared_ptr<sgns::crdt::GlobalDB> db_;
         std::string                           topic_;
+        std::shared_ptr<SecureCrdtRegistry>   registry_;
         sgns::base::Logger                    logger_ = sgns::base::createLogger( "SecureCrdt" );
     };
 } // namespace sgns::securecrdt
