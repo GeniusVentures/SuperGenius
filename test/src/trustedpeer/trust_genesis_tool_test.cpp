@@ -19,6 +19,7 @@
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
+#include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace
 {
@@ -37,11 +38,14 @@ namespace
             key_path_ = path_ / "bootstrap.key";
             WriteKeyFile();
 
-            GeniusSigner bootstrapper{ ethereum::EthereumKeyGenerator( PRIVATE_KEY ) };
+            signers_.emplace_back( ethereum::EthereumKeyGenerator( PRIVATE_KEY ) );
+            signers_.push_back( GeniusSigner::Generate() );
+            signers_.push_back( GeniusSigner::Generate() );
+            signers_.push_back( GeniusSigner::Generate() );
+            const auto &bootstrapper = signers_.front();
             manifest_.network_id = 42;
             manifest_.bootstrapper_public_key = bootstrapper.GetAddress();
-            manifest_.peers = { bootstrapper.GetAddress(), GeniusSigner::Generate().GetAddress(),
-                                GeniusSigner::Generate().GetAddress() };
+            manifest_.peers = { bootstrapper.GetAddress(), signers_[1].GetAddress(), signers_[2].GetAddress() };
             manifest_.membership_threshold = 2;
             manifest_.burn_threshold = 2;
             manifest_ = manifest_.Canonicalized().value();
@@ -113,6 +117,78 @@ namespace
             return request;
         }
 
+        void ConfirmForAdmin()
+        {
+            GenesisCeremony ceremony;
+            EXPECT_EQ( Run( ceremony, RealNetwork(), manifest_.Fingerprint().value() + "\n" ),
+                       GenesisCeremony::Error::SUCCESS );
+            registry_.reset();
+            auto rebuilt = TrustedPeerRegistry::NewProduction(
+                secure_crdt_,
+                store_,
+                manifest_,
+                {},
+                signers_[0].GetAddress(),
+                [this]( const std::vector<uint8_t> &bytes )
+                {
+                    ++admin_sign_invocations_;
+                    return signers_[0].Sign( bytes );
+                } );
+            ASSERT_TRUE( rebuilt.has_value() ) << rebuilt.error().message();
+            registry_ = rebuilt.value();
+            auto burn = account::BurnConfig::NewProduction(
+                secure_crdt_,
+                registry_,
+                store_,
+                signers_[0].GetAddress(),
+                [this]( const std::vector<uint8_t> &bytes )
+                {
+                    ++admin_sign_invocations_;
+                    return signers_[0].Sign( bytes );
+                } );
+            ASSERT_TRUE( burn.has_value() ) << burn.error().message();
+            burn_config_ = burn.value();
+        }
+
+        QuorumPolicyState Successor( bool alternate = false ) const
+        {
+            auto current = registry_->GetConfirmedSnapshot().value().policy;
+            const auto hash = current.Hash().value();
+            current.version += 1;
+            current.expected_previous_hash = hash;
+            current.authorizing_policy_hash = hash;
+            if ( alternate )
+                current.peers = { signers_[0].GetAddress(), signers_[1].GetAddress(), signers_[3].GetAddress() };
+            return current.Canonicalized().value();
+        }
+
+        securecrdt::CandidateId SubmitRemotePolicyApproval( const QuorumPolicyState &candidate )
+        {
+            const auto core = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
+            const auto bytes = core.CanonicalBytes().value();
+            return secure_crdt_->SubmitCandidateApproval(
+                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                  core,
+                  signers_[1].GetAddress(),
+                  signers_[1].Sign( bytes ) } ).value();
+        }
+
+        void ConfirmInitialBurn()
+        {
+            auto local = burn_config_->OnTrustedPeerGenesisConfirmed();
+            ASSERT_TRUE( local.has_value() ) << local.error().message();
+            const auto snapshot = store_->LoadAndVerify().value();
+            const auto core = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+            const auto bytes = core.CanonicalBytes().value();
+            ASSERT_TRUE( secure_crdt_->SubmitCandidateApproval(
+                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                  core,
+                  signers_[1].GetAddress(),
+                  signers_[1].Sign( bytes ) } ).has_value() );
+            ASSERT_TRUE( burn_config_->TryActivateBurnCandidate( local.value() ).has_value() );
+            ASSERT_TRUE( burn_config_->IsEconomicallyReady() );
+        }
+
         GenesisCeremony::Error Run( GenesisCeremony &ceremony,
                                     GenesisCeremony::Network network,
                                     std::string confirmation )
@@ -134,6 +210,9 @@ namespace
         std::shared_ptr<securecrdt::SecureCrdt> secure_crdt_;
         std::shared_ptr<TrustStateStore> store_;
         std::shared_ptr<TrustedPeerRegistry> registry_;
+        std::shared_ptr<account::BurnConfig> burn_config_;
+        std::vector<GeniusSigner> signers_;
+        std::atomic_uint32_t admin_sign_invocations_{ 0 };
         std::string captured_output_;
         std::string captured_errors_;
     };
@@ -268,4 +347,59 @@ TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSec
         EXPECT_EQ( Run( ceremony, std::move( network ), "unused\n" ), expected );
         EXPECT_TRUE( boost::filesystem::exists( key_path_ ) );
     }
+}
+
+TEST_F( TrustGenesisToolTest, AdminReceiptAndListNeverSignWhileExplicitProposeSignsOnce )
+{
+    ConfirmForAdmin();
+    const auto candidate = Successor();
+    const auto id = SubmitRemotePolicyApproval( candidate );
+    admin_sign_invocations_.store( 0 );
+
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    auto listed = admin.ListCandidates();
+    ASSERT_TRUE( listed.has_value() ) << listed.error().message();
+    ASSERT_NE( std::find_if( listed.value().begin(), listed.value().end(),
+                            [&]( const auto &item ) { return item.id == id; } ),
+               listed.value().end() );
+    EXPECT_EQ( admin_sign_invocations_.load(), 0U );
+
+    auto proposed = admin.ProposePolicy( candidate );
+    ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
+    EXPECT_EQ( proposed.value(), id );
+    EXPECT_EQ( admin_sign_invocations_.load(), 1U );
+    ASSERT_TRUE( admin.Approve( id ).has_value() );
+    EXPECT_EQ( admin_sign_invocations_.load(), 1U );
+}
+
+TEST_F( TrustGenesisToolTest, AdminApproveTargetsOnlyExactCandidateId )
+{
+    ConfirmForAdmin();
+    const auto first = SubmitRemotePolicyApproval( Successor() );
+    const auto second = SubmitRemotePolicyApproval( Successor( true ) );
+    admin_sign_invocations_.store( 0 );
+
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    ASSERT_TRUE( admin.Approve( first ).has_value() );
+    EXPECT_EQ( admin_sign_invocations_.load(), 1U );
+    const auto first_approvals = secure_crdt_->ReadCandidateApprovals( first ).value();
+    const auto second_approvals = secure_crdt_->ReadCandidateApprovals( second ).value();
+    EXPECT_EQ( first_approvals.size(), 2U );
+    EXPECT_EQ( second_approvals.size(), 1U );
+    EXPECT_TRUE( std::none_of( second_approvals.begin(), second_approvals.end(), [&]( const auto &approval ) {
+        return approval.signer == signers_[0].GetAddress();
+    } ) );
+}
+
+TEST_F( TrustGenesisToolTest, AdminExplicitBurnProposalContributesOneApproval )
+{
+    ConfirmForAdmin();
+    ConfirmInitialBurn();
+    admin_sign_invocations_.store( 0 );
+
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    auto proposed = admin.ProposeBurn( 250 );
+    ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
+    EXPECT_EQ( admin_sign_invocations_.load(), 1U );
+    EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( proposed.value() ).value().size(), 1U );
 }

@@ -1,6 +1,7 @@
 add_library(trustedpeer
     CanonicalTrustCodec.cpp
     genesis_tool/GenesisCeremony.cpp
+    genesis_tool/LocalTrustAdmin.cpp
     GenesisManifest.cpp
     QuorumPolicy.cpp
     TrustStateStore.cpp
@@ -16,4 +17,5 @@ target_link_libraries(trustedpeer
     rocksdb
     OpenSSL::Crypto
 )
+add_subdirectory(genesis_tool)
 supergenius_install(trustedpeer)
