@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-12-PLAN.md
-last_updated: "2026-08-12T14:36:55.771Z"
+stopped_at: Completed 13-02-PLAN.md
+last_updated: "2026-08-12T14:50:58.428Z"
 last_activity: 2026-08-12
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 20
-  completed_plans: 11
+  completed_plans: 12
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 4 of 12
+Plan: 5 of 12
 Status: Ready to execute
 Last activity: 2026-08-12
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-12
 
 ## Session
 
-**Last session:** 2026-08-12T14:36:55.767Z
-**Stopped At:** Completed 13-12-PLAN.md
+**Last session:** 2026-08-12T14:50:41.173Z
+**Stopped At:** Completed 13-02-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -93,6 +93,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P01 | 10min | 1 tasks | 7 files |
 | Phase 13 P03 | 27min | 3 tasks | 10 files |
 | Phase 13 P12 | 12 min | 1 tasks | 8 files |
+| Phase 13 P02 | 11min | 2 tasks | 5 files |
 
 ## Decisions
 
@@ -102,3 +103,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Quorum policy identity binds distinct predecessor and authorizer hashes in canonical bytes. — Both links must equal the confirmed current policy hash for a successor.
 - [Phase 13]: Membership uses M/2+1 and BurnConfig uses M-M/3 with bounds checked first. — Exact integer formulas avoid percentage drift and overflow.
 - [Phase 13]: Production TPR and BurnConfig select explicit policy-specific validators. — The burn path cannot silently inherit the weaker membership floor.
+- [Phase 13]: Genesis derives version-1 policy and burn records from the canonical signed manifest. — This makes the bootstrap proof independently revalidatable after restart.
+- [Phase 13]: Trust-store loads verify complete policy and burn predecessor chains. — Canonical hashes and quorum proofs, not JSON or arrival order, determine authority.
+- [Phase 13]: Competing same-version trust candidates return STALE_HEAD. — Exact replay/decrease remains distinct while concurrent losers have a stable race outcome.
