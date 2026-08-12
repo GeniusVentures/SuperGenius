@@ -87,6 +87,8 @@ addtest(burnconfig_policy_e2e_test
     burnconfig_policy_e2e_test.cpp
 )
 target_link_libraries(burnconfig_policy_e2e_test
+    genius_node_test
+    json_secure_storage
     burnconfig
     trustedpeer
     securecrdt
@@ -96,6 +98,18 @@ target_link_libraries(burnconfig_policy_e2e_test
     rocksdb
 )
 target_include_directories(burnconfig_policy_e2e_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+if(MSVC)
+    target_link_options(burnconfig_policy_e2e_test PUBLIC /WHOLEARCHIVE:$<TARGET_FILE:genius_node_test>)
+elseif(APPLE)
+    target_link_options(burnconfig_policy_e2e_test PUBLIC -force_load "$<TARGET_FILE:genius_node_test>")
+else()
+    target_link_options(burnconfig_policy_e2e_test PUBLIC
+        "-Wl,--whole-archive"
+        "$<TARGET_FILE:genius_node_test>"
+        "-Wl,--no-whole-archive"
+    )
+endif()
 
 addtest(bridge_relayer_test
     bridge_relayer_test.cpp
