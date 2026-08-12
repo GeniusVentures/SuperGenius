@@ -270,6 +270,23 @@ set_target_properties(Vulkan::Vulkan PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_THIRDPARTY_BUILD_DIR}/Vulkan-Headers/include"
 )
 
+# On macOS, libMoltenVK.a contains Objective-C code that calls Metal.
+# The ObjC runtime (-lobjc) and Metal/AppKit frameworks must be linked by
+# every consumer of Vulkan::Vulkan or the linker fails with undefined
+# _objc_msgSend / _objc_retain / _objc_release etc.
+if(APPLE)
+    target_link_libraries(Vulkan::Vulkan INTERFACE
+        "-framework Metal"
+        "-framework IOSurface"
+        "-framework QuartzCore"
+        "-framework Foundation"
+        "-framework CoreFoundation"
+        "-framework CoreGraphics"
+        "-framework IOKit"
+        "-framework AppKit"
+    )
+endif()
+
 # vk-bootstrap
 set(vk-bootstrap_DIR "${_THIRDPARTY_BUILD_DIR}/vk-bootstrap/lib/cmake/vk-bootstrap")
 find_package(vk-bootstrap CONFIG REQUIRED)
