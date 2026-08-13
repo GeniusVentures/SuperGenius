@@ -51,6 +51,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::trustedpeer, TrustStateStore::Error, e )
             return "candidate does not descend from the durable head";
         case Error::WRONG_AUTHORIZER:
             return "candidate is not authorized by the durable policy head";
+        case Error::INITIAL_BURN_NOT_CONFIRMED:
+            return "initial burn state does not yet have peer-quorum authorization";
         case Error::STALE_HEAD:
             return "candidate lost the durable-head transition race";
         case Error::COMMIT_FAILED:
@@ -315,6 +317,17 @@ namespace sgns::trustedpeer
                    core->version == burn.version && core->expected_previous_hash == burn.expected_previous_hash &&
                    core->authorizing_policy_hash == burn.authorizing_policy_hash && core->payload == burn_bytes;
         }
+
+        bool IsCanonicalBurnCandidateAuthorization( const std::vector<uint8_t> &authorization_bytes,
+                                                     const std::vector<uint8_t> &burn_bytes,
+                                                     const ConfirmedBurnState   &burn )
+        {
+            auto core = securecrdt::CandidateCore::DecodeCanonical( authorization_bytes );
+            return core && core->kind == securecrdt::CandidateKind::BurnConfig &&
+                   core->network_id == burn.network_id && core->version == burn.version &&
+                   core->expected_previous_hash == burn.expected_previous_hash &&
+                   core->authorizing_policy_hash == burn.authorizing_policy_hash && core->payload == burn_bytes;
+        }
     } // namespace
 
     std::string BurnGenesisAnchorHash( const std::string &genesis_fingerprint )
@@ -394,7 +407,8 @@ namespace sgns::trustedpeer
     {
         return genesis == other.genesis && genesis_fingerprint == other.genesis_fingerprint &&
                bootstrap_signature == other.bootstrap_signature && policy == other.policy &&
-               policy_proof == other.policy_proof && burn == other.burn && burn_proof == other.burn_proof;
+               policy_proof == other.policy_proof && burn == other.burn && burn_proof == other.burn_proof &&
+               burn_authorization == other.burn_authorization;
     }
 
     TrustStateStore::TrustStateStore( std::shared_ptr<storage::rocksdb> database,
@@ -554,6 +568,7 @@ namespace sgns::trustedpeer
         std::map<std::string, ConfirmedBurnState>            burns;
         std::map<std::string, multisig::CollectedSignatures> burn_proofs;
         std::map<std::string, std::vector<uint8_t>>          burn_authorizations;
+        std::map<std::string, BurnAuthorizationKind>         burn_authorization_kinds;
         std::string                                          burn_hash = burn_head->second;
         for ( uint64_t version = burn_head->first; version > 0; --version )
         {
@@ -613,6 +628,8 @@ namespace sgns::trustedpeer
                 {
                     return outcome::failure( Error::INVALID_BURN_PROOF );
                 }
+                burn_authorization_kinds.emplace(
+                    hash, peer_proof ? BurnAuthorizationKind::PeerQuorum : BurnAuthorizationKind::BootstrapOnly );
             }
             else
             {
@@ -625,6 +642,7 @@ namespace sgns::trustedpeer
                 {
                     return outcome::failure( Error::INVALID_BURN_PROOF );
                 }
+                burn_authorization_kinds.emplace( hash, BurnAuthorizationKind::PeerQuorum );
             }
         }
 
@@ -634,7 +652,8 @@ namespace sgns::trustedpeer
                                        current_policy->second,
                                        policy_proofs.at( current_policy->first ),
                                        current_burn->second,
-                                       burn_proofs.at( current_burn->first ) };
+                                       burn_proofs.at( current_burn->first ),
+                                       burn_authorization_kinds.at( current_burn->first ) };
     }
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitGenesis(
@@ -736,6 +755,10 @@ namespace sgns::trustedpeer
             return current_result.error();
         }
         const auto &current = current_result.value();
+        if ( current.burn_authorization != BurnAuthorizationKind::PeerQuorum )
+        {
+            return outcome::failure( Error::INITIAL_BURN_NOT_CONFIRMED );
+        }
         if ( candidate.version < current.policy.version )
         {
             return outcome::failure( Error::VERSION_DECREASE );
@@ -802,6 +825,24 @@ namespace sgns::trustedpeer
             return current_result.error();
         }
         const auto &current = current_result.value();
+        if ( current.burn_authorization == BurnAuthorizationKind::BootstrapOnly )
+        {
+            const auto current_bytes       = current.burn.CanonicalBytes();
+            const auto candidate_bytes     = candidate.CanonicalBytes();
+            const auto current_hash        = current.burn.Hash();
+            const auto candidate_hash      = candidate.Hash();
+            const auto current_policy_hash = current.policy.Hash();
+            if ( current.burn.version != 1 || current.burn.basis_points != GenesisManifest::INITIAL_BURN_BASIS_POINTS ||
+                 !( candidate == current.burn ) || !current_bytes || !candidate_bytes ||
+                 *candidate_bytes != *current_bytes ||
+                 !current_hash || !candidate_hash || *candidate_hash != *current_hash || !current_policy_hash ||
+                 candidate.authorizing_policy_hash != *current_policy_hash || authorization_bytes.empty() ||
+                 !IsCanonicalBurnCandidateAuthorization( authorization_bytes, *candidate_bytes, candidate ) ||
+                 !VerifyProof( current.policy, current.policy.burn_threshold, proof, authorization_bytes ) )
+            {
+                return outcome::failure( Error::INITIAL_BURN_NOT_CONFIRMED );
+            }
+        }
         if ( candidate.version < current.burn.version )
         {
             return outcome::failure( Error::VERSION_DECREASE );

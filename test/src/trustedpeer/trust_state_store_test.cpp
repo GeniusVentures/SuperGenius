@@ -57,6 +57,26 @@ namespace
                      { signers_[1].GetAddress(), signers_[1].Sign( bytes ) } };
         }
 
+        ConfirmedTrustSnapshot ConfirmInitialBurn( const std::shared_ptr<TrustStateStore> &store,
+                                                   const ConfirmedTrustSnapshot            &snapshot ) const
+        {
+            const auto burn_bytes = snapshot.burn.CanonicalBytes().value();
+            const sgns::securecrdt::CandidateCore core{
+                sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+                "burn-config",
+                snapshot.burn.network_id,
+                sgns::securecrdt::CandidateKind::BurnConfig,
+                snapshot.burn.version,
+                snapshot.burn.expected_previous_hash,
+                snapshot.burn.authorizing_policy_hash,
+                burn_bytes,
+            };
+            const auto authorization = core.CanonicalBytes().value();
+            auto result = store->CommitBurnSuccessor( snapshot.burn, Sign( authorization ), authorization );
+            EXPECT_TRUE( result.has_value() );
+            return result.value();
+        }
+
         boost::filesystem::path          path_;
         std::vector<sgns::GeniusSigner> signers_;
     };
@@ -67,6 +87,9 @@ TEST_F( TrustStateStoreTest, CommitAndReopenReproducesVerifiedHashesWithoutJson 
     auto opened = TrustStateStore::Open( path_.string(), 42 );
     ASSERT_TRUE( opened.has_value() );
     auto snapshot = CommitGenesis( opened.value() );
+    EXPECT_EQ( snapshot.burn_authorization, BurnAuthorizationKind::BootstrapOnly );
+    snapshot = ConfirmInitialBurn( opened.value(), snapshot );
+    EXPECT_EQ( snapshot.burn_authorization, BurnAuthorizationKind::PeerQuorum );
 
     auto next_policy = snapshot.policy;
     next_policy.version++;
@@ -110,7 +133,7 @@ TEST_F( TrustStateStoreTest, WrongNetworkIsDistinctAndDoesNotMutateSnapshot )
 TEST_F( TrustStateStoreTest, VersionAndLinkFailuresAreDistinctAndPreserveLastKnownGood )
 {
     auto store = TrustStateStore::Open( path_.string(), 42 ).value();
-    const auto expected = CommitGenesis( store );
+    const auto expected = ConfirmInitialBurn( store, CommitGenesis( store ) );
     auto candidate = expected.policy;
     const auto current_hash = *expected.policy.Hash();
 
@@ -131,7 +154,7 @@ TEST_F( TrustStateStoreTest, VersionAndLinkFailuresAreDistinctAndPreserveLastKno
 TEST_F( TrustStateStoreTest, ForkAttemptCannotReplaceDurableWinner )
 {
     auto store = TrustStateStore::Open( path_.string(), 42 ).value();
-    auto initial = CommitGenesis( store );
+    auto initial = ConfirmInitialBurn( store, CommitGenesis( store ) );
     auto winner = initial.policy;
     winner.version++;
     winner.expected_previous_hash = *initial.policy.Hash();
@@ -242,7 +265,7 @@ TEST_F( TrustStateStoreTest, CommitFailureAfterDurableBatchRecoversNewHeadWithou
 TEST_F( TrustStateStoreTest, ConcurrentSuccessorsHaveOneWinnerAndOneStableStaleResult )
 {
     auto store = TrustStateStore::Open( path_.string(), 42 ).value();
-    const auto initial = CommitGenesis( store );
+    const auto initial = ConfirmInitialBurn( store, CommitGenesis( store ) );
     auto first = initial.policy;
     first.version++;
     first.expected_previous_hash = initial.policy.Hash().value();
@@ -291,6 +314,7 @@ TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirme
 {
     auto store   = TrustStateStore::Open( path_.string(), 42 ).value();
     auto initial = CommitGenesis( store );
+    EXPECT_EQ( initial.burn_authorization, BurnAuthorizationKind::BootstrapOnly );
 
     auto policy_v2 = initial.policy;
     policy_v2.version++;
@@ -311,6 +335,7 @@ TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirme
 
     auto rejected = store->CommitPolicySuccessor( policy_v2, Sign( policy_authorization ), policy_authorization );
     ASSERT_TRUE( rejected.has_error() );
+    EXPECT_EQ( rejected.error(), TrustStateStore::Error::INITIAL_BURN_NOT_CONFIRMED );
     EXPECT_EQ( store->LoadAndVerify().value(), initial );
 
     store.reset();
@@ -331,17 +356,22 @@ TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirme
     const auto burn_authorization = burn_core.CanonicalBytes().value();
     auto confirmed = store->CommitBurnSuccessor( initial.burn, Sign( burn_authorization ), burn_authorization );
     ASSERT_TRUE( confirmed.has_value() );
+    EXPECT_EQ( confirmed.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
 
     auto committed = store->CommitPolicySuccessor( policy_v2, Sign( policy_authorization ), policy_authorization );
     ASSERT_TRUE( committed.has_value() );
     store.reset();
-    EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), committed.value() );
+    auto reopened = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( reopened.has_value() );
+    EXPECT_EQ( reopened.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
+    EXPECT_EQ( reopened.value(), committed.value() );
 }
 
 TEST_F( TrustStateStoreTest, BurnV2RejectedUntilInitialBurnPeerConfirmed )
 {
     auto store   = TrustStateStore::Open( path_.string(), 42 ).value();
     auto initial = CommitGenesis( store );
+    EXPECT_EQ( initial.burn_authorization, BurnAuthorizationKind::BootstrapOnly );
 
     auto burn_v2 = initial.burn;
     burn_v2.version++;
@@ -363,6 +393,7 @@ TEST_F( TrustStateStoreTest, BurnV2RejectedUntilInitialBurnPeerConfirmed )
 
     auto rejected = store->CommitBurnSuccessor( burn_v2, Sign( burn_v2_authorization ), burn_v2_authorization );
     ASSERT_TRUE( rejected.has_error() );
+    EXPECT_EQ( rejected.error(), TrustStateStore::Error::INITIAL_BURN_NOT_CONFIRMED );
     EXPECT_EQ( store->LoadAndVerify().value(), initial );
 
     store.reset();
@@ -383,11 +414,15 @@ TEST_F( TrustStateStoreTest, BurnV2RejectedUntilInitialBurnPeerConfirmed )
     const auto burn_v1_authorization = burn_v1_core.CanonicalBytes().value();
     auto confirmed = store->CommitBurnSuccessor( initial.burn, Sign( burn_v1_authorization ), burn_v1_authorization );
     ASSERT_TRUE( confirmed.has_value() );
+    EXPECT_EQ( confirmed.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
 
     auto committed = store->CommitBurnSuccessor( burn_v2, Sign( burn_v2_authorization ), burn_v2_authorization );
     ASSERT_TRUE( committed.has_value() );
     store.reset();
-    EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), committed.value() );
+    auto reopened = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( reopened.has_value() );
+    EXPECT_EQ( reopened.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
+    EXPECT_EQ( reopened.value(), committed.value() );
 }
 
 TEST_F( TrustStateStoreTest, RollbackBoundaryIsDocumentedByThePublicContract )
