@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-13-PLAN.md
-last_updated: "2026-08-13T14:10:30.048Z"
+stopped_at: Completed 13-16-PLAN.md
+last_updated: "2026-08-13T14:20:03.901Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 26
-  completed_plans: 21
+  completed_plans: 22
   percent: 29
 ---
 
@@ -74,8 +74,8 @@ Last activity: 2026-08-13
 
 ## Session
 
-**Last session:** 2026-08-13T14:10:30.044Z
-**Stopped At:** Completed 13-13-PLAN.md
+**Last session:** 2026-08-13T14:20:03.897Z
+**Stopped At:** Completed 13-16-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -108,6 +108,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P10 | 7min | 1 tasks | 2 files |
 | Phase 13 P11 | 4min | 1 tasks | 4 files |
 | Phase 13 P13 | 10min | 1 tasks | 5 files |
+| Phase 13 P16 | 6min | 1 tasks | 2 files |
 
 ## Decisions
 
@@ -143,3 +144,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: BOOT-04 covers software-visible rollback while whole-disk/all-anchor restoration remains an accepted unsolved boundary without external anchoring.
 - [Phase 13]: Burn readiness is classified from the verified authorization path stored with the current burn head, never from proof count or the current policy threshold.
 - [Phase 13]: While burn v1 is BootstrapOnly, both successor APIs reject before normal validation and writes; only an identical burn-v1/value-100 canonical candidate-core with current-policy burn quorum may replace its proof.
+- [Phase 13]: PayEscrow uses validated quotient/remainder basis-point arithmetic so full-domain uint64_t financial outputs are exact without non-standard wide integers. — Validated bounds make each intermediate and the final sum fit uint64_t while preserving floor semantics.
