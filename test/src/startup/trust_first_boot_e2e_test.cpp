@@ -359,79 +359,289 @@ namespace
         cleanup();
     }
 
-    TEST( TrustFirstBootE2ETest, ActivationFailureCallbackReportsDurableErrorButPendingIsQuiet )
+    TEST( TrustFirstBootE2ETest, PreloadedRefreshActivationFailuresAreReturnedAndEmitted )
     {
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
         auto cleanup = [&] { boost::filesystem::remove_all( path ); };
-        auto node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "trust_activation_callback" );
-        ASSERT_NE( node, nullptr );
-        auto secure = std::make_shared<sgns::securecrdt::SecureCrdt>( node->db, "trust-activation-callback-topic" );
         auto bootstrapper = sgns::GeniusSigner::Generate();
+        auto peer_a = sgns::GeniusSigner::Generate();
         auto peer_b = sgns::GeniusSigner::Generate();
+        auto non_member = sgns::GeniusSigner::Generate();
         GenesisManifest manifest;
         manifest.network_id = 42;
         manifest.bootstrapper_public_key = bootstrapper.GetAddress();
-        manifest.peers = { bootstrapper.GetAddress(), peer_b.GetAddress() };
+        manifest.peers = { peer_a.GetAddress(), peer_b.GetAddress() };
         manifest.membership_threshold = 2;
         manifest.burn_threshold = 2;
         manifest = manifest.Canonicalized().value();
+        const auto manifest_bytes = manifest.CanonicalBytes().value();
+        const auto bootstrap_signature = bootstrapper.Sign( manifest_bytes );
+        auto fail_commits = []( sgns::storage::rocksdb &, const std::vector<TrustStateStore::Write> & )
+            -> outcome::result<void> { return outcome::failure( std::errc::io_error ); };
 
-        std::atomic_bool fail_commits{ false };
-        auto store = TrustStateStore::Open(
-            ( path / "trust" ).string(),
+        auto genesis_node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "preloaded_genesis_failure" );
+        ASSERT_NE( genesis_node, nullptr );
+        auto genesis_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( genesis_node->db, "preloaded-genesis-topic" );
+        auto genesis_preload_store =
+            TrustStateStore::Open( ( path / "genesis-preload" ).string(), manifest.network_id ).value();
+        auto genesis_preloader = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+            genesis_secure,
+            genesis_preload_store,
+            manifest,
+            bootstrap_signature,
+            bootstrapper.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return bootstrapper.Sign( bytes ); } ).value();
+        const auto genesis_id = genesis_preloader->SubmitReviewedGenesisApproval();
+        ASSERT_TRUE( genesis_id.has_value() );
+        genesis_preloader.reset();
+        genesis_preload_store.reset();
+
+        auto failing_genesis_store = TrustStateStore::Open(
+            ( path / "genesis-target" ).string(), manifest.network_id, fail_commits ).value();
+        std::vector<TrustStartupController::Event> genesis_events;
+        auto failed_genesis = TrustStartupController::New(
+            genesis_secure,
+            failing_genesis_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
+            [&]( const auto &event ) { genesis_events.push_back( event ); } );
+        ASSERT_TRUE( failed_genesis.has_error() );
+        EXPECT_EQ( failed_genesis.error(), TrustStateStore::Error::COMMIT_FAILED );
+        ASSERT_EQ( genesis_events.size(), 1U );
+        EXPECT_EQ( genesis_events.front().code, TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED );
+        EXPECT_EQ( genesis_events.front().fields.at( 0 ), genesis_id.value().domain );
+        EXPECT_EQ( genesis_events.front().fields.at( 1 ), std::to_string( genesis_id.value().version ) );
+        EXPECT_EQ( genesis_events.front().fields.at( 2 ), genesis_id.value().content_hash );
+        EXPECT_EQ( genesis_events.front().fields.at( 3 ), failed_genesis.error().message() );
+        failing_genesis_store.reset();
+
+        auto recovered_genesis_store =
+            TrustStateStore::Open( ( path / "genesis-target" ).string(), manifest.network_id ).value();
+        auto recovered_genesis = TrustStartupController::New(
+            genesis_secure,
+            recovered_genesis_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } );
+        ASSERT_TRUE( recovered_genesis.has_value() );
+        EXPECT_EQ( recovered_genesis.value()->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+        recovered_genesis.value().reset();
+        recovered_genesis_store.reset();
+
+        auto burn_node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "preloaded_burn_failure" );
+        ASSERT_NE( burn_node, nullptr );
+        auto burn_secure = std::make_shared<sgns::securecrdt::SecureCrdt>( burn_node->db, "preloaded-burn-topic" );
+        auto burn_store = TrustStateStore::Open( ( path / "burn-target" ).string(), manifest.network_id ).value();
+        ASSERT_TRUE( burn_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+        auto burn_registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+            burn_secure,
+            burn_store,
+            manifest,
+            {},
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } ).value();
+        auto burn_config = sgns::account::BurnConfig::NewProduction(
+            burn_secure,
+            burn_registry,
+            burn_store,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } ).value();
+        const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( burn_store->LoadAndVerify().value().burn );
+        ASSERT_TRUE( burn_core.has_value() );
+        const auto burn_id = CandidateId::FromCore( *burn_core );
+        ASSERT_TRUE( burn_id.has_value() );
+        const auto burn_bytes = burn_core->CanonicalBytes().value();
+        ASSERT_TRUE( burn_secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION, *burn_core, peer_a.GetAddress(), peer_a.Sign( burn_bytes ) } )
+                         .has_value() );
+        ASSERT_TRUE( burn_secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION, *burn_core, peer_b.GetAddress(), peer_b.Sign( burn_bytes ) } )
+                         .has_value() );
+        burn_config.reset();
+        burn_registry.reset();
+        burn_store.reset();
+
+        auto failing_burn_store =
+            TrustStateStore::Open( ( path / "burn-target" ).string(), manifest.network_id, fail_commits ).value();
+        std::vector<TrustStartupController::Event> burn_events;
+        auto failed_burn = TrustStartupController::New(
+            burn_secure,
+            failing_burn_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
+            [&]( const auto &event ) { burn_events.push_back( event ); } );
+        ASSERT_TRUE( failed_burn.has_error() );
+        EXPECT_EQ( failed_burn.error(), TrustStateStore::Error::COMMIT_FAILED );
+        ASSERT_EQ( burn_events.size(), 1U );
+        EXPECT_EQ( burn_events.front().code, TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED );
+        EXPECT_EQ( burn_events.front().fields.at( 0 ), burn_id->domain );
+        EXPECT_EQ( burn_events.front().fields.at( 1 ), std::to_string( burn_id->version ) );
+        EXPECT_EQ( burn_events.front().fields.at( 2 ), burn_id->content_hash );
+        EXPECT_EQ( burn_events.front().fields.at( 3 ), failed_burn.error().message() );
+        failing_burn_store.reset();
+
+        auto recovered_burn_store =
+            TrustStateStore::Open( ( path / "burn-target" ).string(), manifest.network_id ).value();
+        auto recovered_burn = TrustStartupController::New(
+            burn_secure,
+            recovered_burn_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } );
+        ASSERT_TRUE( recovered_burn.has_value() );
+        EXPECT_EQ( recovered_burn.value()->GetState(), TrustStartupController::State::ConfirmedReady );
+        EXPECT_TRUE( recovered_burn.value()->IsEconomicallyReady() );
+        recovered_burn.value().reset();
+        recovered_burn_store.reset();
+
+        auto pending_node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "preloaded_pending_controls" );
+        ASSERT_NE( pending_node, nullptr );
+        auto pending_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( pending_node->db, "preloaded-pending-topic" );
+        auto pending_store =
+            TrustStateStore::Open( ( path / "pending-target" ).string(), manifest.network_id ).value();
+        ASSERT_TRUE( pending_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+        auto pending_registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+            pending_secure,
+            pending_store,
+            manifest,
+            {},
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } ).value();
+        auto pending_burn = sgns::account::BurnConfig::NewProduction(
+            pending_secure,
+            pending_registry,
+            pending_store,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } ).value();
+        const auto pending_core =
+            sgns::account::BurnConfig::BurnCandidateCore( pending_store->LoadAndVerify().value().burn ).value();
+        const auto pending_id = CandidateId::FromCore( pending_core ).value();
+        const auto pending_bytes = pending_core.CanonicalBytes().value();
+        ASSERT_TRUE( pending_secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              pending_core,
+              peer_a.GetAddress(),
+              peer_a.Sign( pending_bytes ) } ).has_value() );
+        pending_burn.reset();
+        pending_registry.reset();
+        pending_store.reset();
+
+        auto below_quorum_store =
+            TrustStateStore::Open( ( path / "pending-target" ).string(), manifest.network_id ).value();
+        std::vector<TrustStartupController::Event> pending_events;
+        auto below_quorum = TrustStartupController::New(
+            pending_secure,
+            below_quorum_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
+            [&]( const auto &event ) { pending_events.push_back( event ); } );
+        ASSERT_TRUE( below_quorum.has_value() );
+        EXPECT_EQ( below_quorum.value()->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+        EXPECT_TRUE( pending_events.empty() );
+        EXPECT_EQ( pending_secure->ReadCandidateApprovals( pending_id ).value().size(), 1U );
+        below_quorum.value().reset();
+        below_quorum_store.reset();
+
+        auto non_member_store =
+            TrustStateStore::Open( ( path / "pending-target" ).string(), manifest.network_id ).value();
+        std::vector<TrustStartupController::Event> non_member_events;
+        auto non_member_controller = TrustStartupController::New(
+            pending_secure,
+            non_member_store,
+            manifest,
+            non_member.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return non_member.Sign( bytes ); },
+            [&]( const auto &event ) { non_member_events.push_back( event ); } );
+        ASSERT_TRUE( non_member_controller.has_value() );
+        EXPECT_EQ( non_member_controller.value()->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+        EXPECT_TRUE( non_member_events.empty() );
+        const auto pending_approvals = pending_secure->ReadCandidateApprovals( pending_id ).value();
+        EXPECT_EQ( pending_approvals.size(), 1U );
+        EXPECT_TRUE( std::none_of( pending_approvals.begin(), pending_approvals.end(), [&]( const auto &approval ) {
+            return approval.signer == non_member.GetAddress();
+        } ) );
+
+        non_member_controller.value().reset();
+        non_member_store.reset();
+
+        std::atomic_bool pending_fail_commits{ false };
+        std::atomic_uint32_t pending_commit_attempts{ 0 };
+        auto callback_failure_store = TrustStateStore::Open(
+            ( path / "pending-target" ).string(),
             manifest.network_id,
             [&]( sgns::storage::rocksdb &database,
                  const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
             {
-                if ( fail_commits.load() )
-                    return outcome::failure( std::errc::io_error );
-                auto batch = database.batch();
-                if ( !batch )
-                    return outcome::failure( std::errc::io_error );
-                for ( const auto &[key, value] : writes )
+                if ( pending_fail_commits.load() )
                 {
-                    auto put = batch->put( key, value );
-                    if ( put.has_error() )
-                        return put.error();
+                    ++pending_commit_attempts;
+                    return outcome::failure( std::errc::io_error );
                 }
-                return batch->commit();
+                return CommitBatch( database, writes );
             } ).value();
-        const auto manifest_bytes = manifest.CanonicalBytes().value();
-        ASSERT_TRUE( store->CommitGenesis( manifest, bootstrapper.Sign( manifest_bytes ) ).has_value() );
-
-        std::vector<TrustStartupController::Event> events;
-        auto controller = TrustStartupController::New(
-            secure,
-            store,
+        std::vector<TrustStartupController::Event> callback_events;
+        std::atomic_uint32_t callback_event_count{ 0 };
+        auto callback_failure = TrustStartupController::New(
+            pending_secure,
+            callback_failure_store,
             manifest,
-            bootstrapper.GetAddress(),
-            [&]( const std::vector<uint8_t> &bytes ) { return bootstrapper.Sign( bytes ); },
-            [&]( const auto &event ) { events.push_back( event ); } ).value();
-        ASSERT_EQ( controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
-
-        auto burn_id = controller->burn_config()->OnTrustedPeerGenesisConfirmed();
-        ASSERT_TRUE( burn_id.has_value() ) << burn_id.error().message();
-        EXPECT_TRUE( events.empty() );
-
-        const auto snapshot = store->LoadAndVerify().value();
-        const auto core = sgns::account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
-        const auto bytes = core.CanonicalBytes().value();
-        fail_commits.store( true );
-        ASSERT_TRUE( secure->SubmitCandidateApproval(
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
+            [&]( const auto &event )
+            {
+                callback_events.push_back( event );
+                callback_event_count.store( callback_events.size(), std::memory_order_release );
+            } );
+        ASSERT_TRUE( callback_failure.has_value() );
+        pending_fail_commits.store( true );
+        ASSERT_TRUE( pending_secure->SubmitCandidateApproval(
             { CandidateApprovalRecord::ENCODING_VERSION,
-              core,
+              pending_core,
               peer_b.GetAddress(),
-              peer_b.Sign( bytes ) } ).has_value() );
-        ASSERT_EQ( events.size(), 1U );
-        EXPECT_EQ( events.front().code, static_cast<TrustStartupController::EventCode>( 6 ) );
-        EXPECT_EQ( controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+              peer_b.Sign( pending_bytes ) } ).has_value() );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                return callback_event_count.load( std::memory_order_acquire ) == 1U &&
+                       pending_commit_attempts.load() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "quorate callback failure was not emitted" );
+        ASSERT_EQ( callback_events.size(), 1U );
+        EXPECT_EQ( callback_events.front().code, TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED );
+        const auto attempts_after_callback = pending_commit_attempts.load();
+        auto repeated_refresh = callback_failure.value()->Refresh();
+        EXPECT_TRUE( repeated_refresh.has_value() );
+        EXPECT_EQ( pending_commit_attempts.load(), attempts_after_callback );
+        callback_failure.value().reset();
+        callback_failure_store.reset();
 
-        controller.reset();
-        secure.reset();
-        store.reset();
-        node.reset();
+        auto recovered_pending_store =
+            TrustStateStore::Open( ( path / "pending-target" ).string(), manifest.network_id ).value();
+        auto recovered_pending = TrustStartupController::New(
+            pending_secure,
+            recovered_pending_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } );
+        ASSERT_TRUE( recovered_pending.has_value() );
+        EXPECT_EQ( recovered_pending.value()->GetState(), TrustStartupController::State::ConfirmedReady );
+        recovered_pending.value().reset();
+        recovered_pending_store.reset();
+
+        pending_secure.reset();
+        pending_node.reset();
+        burn_secure.reset();
+        burn_node.reset();
+        genesis_secure.reset();
+        genesis_node.reset();
         cleanup();
     }
 } // namespace
