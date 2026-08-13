@@ -145,7 +145,7 @@ namespace
             [&]( sgns::storage::rocksdb &database,
                  const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
             {
-                if ( peer_a_commit_count.fetch_add( 1 ) == 1 )
+                if ( peer_a_commit_count.fetch_add( 1 ) >= 1 )
                 {
                     return outcome::failure( std::errc::io_error );
                 }
@@ -283,6 +283,9 @@ namespace
         sgns::test::assertWaitForCondition(
             [&]
             {
+                (void) peer_a_controller->Refresh();
+                (void) peer_b_controller->Refresh();
+                (void) non_member_controller->Refresh();
                 auto approvals = peer_a_secure->ReadCandidateApprovals( *burn_candidate );
                 return approvals.has_value() && approvals.value().size() == 2U &&
                        peer_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
@@ -313,8 +316,17 @@ namespace
 
         peer_a_controller.reset();
         peer_a_store.reset();
-        auto reopened_peer_a_store_result =
-            TrustStateStore::Open( ( path / "peer-a-trust" ).string(), manifest.network_id );
+        outcome::result<std::shared_ptr<TrustStateStore>> reopened_peer_a_store_result =
+            outcome::failure( std::errc::resource_unavailable_try_again );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                reopened_peer_a_store_result =
+                    TrustStateStore::Open( ( path / "peer-a-trust" ).string(), manifest.network_id );
+                return reopened_peer_a_store_result.has_value();
+            },
+            std::chrono::seconds( 5 ),
+            "failed controller retained the trust-store lock after destruction" );
         ASSERT_TRUE( reopened_peer_a_store_result.has_value() );
         auto reopened_peer_a_store = reopened_peer_a_store_result.value();
         auto restarted = TrustStartupController::New(
