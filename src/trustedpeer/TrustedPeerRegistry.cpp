@@ -540,6 +540,10 @@ namespace sgns::trustedpeer
         {
             proof.emplace_back( approval.signer, approval.signature );
         }
+        if ( proof.size() < current.value().policy.membership_threshold )
+        {
+            return false;
+        }
         const auto authorization_bytes = core.CanonicalBytes();
         if ( !authorization_bytes )
         {
