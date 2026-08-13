@@ -10,12 +10,14 @@
 #include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
+#include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
+#include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace sgns
 {
@@ -165,34 +167,51 @@ namespace
 
         void ConfirmTrust()
         {
-            const auto manifest    = Manifest().Canonicalized().value();
-            const auto fingerprint = manifest.Fingerprint().value();
-            const auto payload     = manifest.CanonicalBytes().value();
-            securecrdt::CandidateCore core{ securecrdt::CandidateCore::ENCODING_VERSION,
-                                            "trusted-peer-genesis",
-                                            manifest.network_id,
-                                            securecrdt::CandidateKind::TrustedPeerGenesis,
-                                            manifest.policy_version,
-                                            fingerprint,
-                                            fingerprint,
-                                            payload };
-            const auto bytes = core.CanonicalBytes().value();
-            ASSERT_TRUE( MultiAccountTestAccess::SecureCrdt( node_ )
-                             ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-                                                          core,
-                                                          bootstrap_account_->GetAddress(),
-                                                          bootstrap_account_->Sign( bytes ) } )
-                             .has_value() );
-            test::assertWaitForCondition(
-                [&] { return node_->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS; },
-                std::chrono::seconds( 5 ),
-                "reviewed genesis did not become durable" );
+            const auto network_config = path_ / "reviewed-trust-network.json";
+            const auto database_path  = path_ / "reviewed-trust-globaldb";
+            boost::filesystem::create_directories( database_path );
+            {
+                std::ofstream config( network_config.string() );
+                ASSERT_TRUE( config.good() );
+                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+                       << node_->GetPubSub()->GetInterfaceAddress() << R"("]})";
+            }
 
-            auto burn_candidate = MultiAccountTestAccess::Burn( node_ )->OnTrustedPeerGenesisConfirmed();
-            ASSERT_TRUE( burn_candidate.has_value() ) << burn_candidate.error().message();
+            const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+            sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
+            composition_config.network_config_path = network_config.string();
+            composition_config.database_path       = database_path.string();
+            composition_config.listen_topic        = topic;
+            composition_config.broadcast_topic     = topic;
+            auto composition_result =
+                sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
+            ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
+            auto composition = composition_result.value();
+            ASSERT_TRUE( composition->Start().has_value() );
+
+            auto secure_crdt = std::make_shared<securecrdt::SecureCrdt>( composition->db(), topic );
+            auto store = TrustStateStore::Open( ( path_ / "reviewed-trust-state" ).string(), 144 );
+            ASSERT_TRUE( store.has_value() ) << store.error().message();
+            const auto manifest = Manifest().Canonicalized();
+            ASSERT_TRUE( manifest.has_value() );
+            const auto manifest_bytes = manifest->CanonicalBytes();
+            ASSERT_TRUE( manifest_bytes.has_value() );
+
+            auto registry = TrustedPeerRegistry::NewProduction(
+                secure_crdt,
+                store.value(),
+                *manifest,
+                bootstrap_account_->Sign( *manifest_bytes ),
+                bootstrap_account_->GetAddress(),
+                [account = bootstrap_account_]( const std::vector<uint8_t> &bytes ) { return account->Sign( bytes ); } );
+            ASSERT_TRUE( registry.has_value() ) << registry.error().message();
+            ASSERT_TRUE( secure_crdt->RegisterFilters() );
+            auto submitted = registry.value()->SubmitReviewedGenesisApproval();
+            ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+
             test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                           std::chrono::seconds( 50 ),
-                                          "confirmed burn did not unlock transaction services" );
+                                          "reviewed trust and deterministic initial burn did not unlock transaction services" );
         }
 
         boost::filesystem::path       path_;
@@ -214,7 +233,7 @@ TEST_F( PolicyLifetimeMultiAccountTest, PolicyObjectsAndProviderSurviveRepeatedA
 
     ConfirmTrust();
     const auto initial_policy  = MultiAccountTestAccess::Snapshot( node_ );
-    const auto initial_manager = MultiAccountTestAccess::Manager( node_ ).get();
+    const auto initial_manager = MultiAccountTestAccess::Manager( node_ );
     const auto initial_account = MultiAccountTestAccess::Account( node_ );
     auto provider = MultiAccountTestAccess::Burn( node_ )->GetConfirmedValueProvider();
     ASSERT_TRUE( provider->IsReady() );
@@ -242,12 +261,12 @@ TEST_F( PolicyLifetimeMultiAccountTest, PolicyObjectsAndProviderSurviveRepeatedA
     EXPECT_EQ( initial_policy.confirmed_provider, secondary_policy.confirmed_provider );
     EXPECT_EQ( initial_policy.policy_registrations, secondary_policy.policy_registrations );
     EXPECT_EQ( initial_policy.candidate_registrations, secondary_policy.candidate_registrations );
-    EXPECT_NE( initial_manager, MultiAccountTestAccess::Manager( node_ ).get() );
+    EXPECT_NE( initial_manager.get(), MultiAccountTestAccess::Manager( node_ ).get() );
     EXPECT_NE( initial_account, MultiAccountTestAccess::Account( node_ ) );
     EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
                provider.get() );
 
-    const auto secondary_manager = MultiAccountTestAccess::Manager( node_ ).get();
+    const auto secondary_manager = MultiAccountTestAccess::Manager( node_ );
     ASSERT_TRUE( node_->SelectAccount( primary ).has_value() );
     test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::seconds( 50 ),
@@ -261,23 +280,13 @@ TEST_F( PolicyLifetimeMultiAccountTest, PolicyObjectsAndProviderSurviveRepeatedA
     EXPECT_EQ( initial_policy.confirmed_provider, restored_policy.confirmed_provider );
     EXPECT_EQ( initial_policy.policy_registrations, restored_policy.policy_registrations );
     EXPECT_EQ( initial_policy.candidate_registrations, restored_policy.candidate_registrations );
-    EXPECT_NE( secondary_manager, MultiAccountTestAccess::Manager( node_ ).get() );
+    EXPECT_NE( secondary_manager.get(), MultiAccountTestAccess::Manager( node_ ).get() );
 
-    auto snapshot = MultiAccountTestAccess::Store( node_ )->LoadAndVerify().value();
-    ConfirmedBurnState successor = snapshot.burn;
-    successor.version += 1;
-    successor.expected_previous_hash  = snapshot.burn.Hash().value();
-    successor.authorizing_policy_hash = snapshot.policy.Hash().value();
-    successor.basis_points            = 250;
-    const auto core = BurnConfig::BurnCandidateCore( successor ).value();
-    ASSERT_TRUE( MultiAccountTestAccess::SecureCrdt( node_ )
-                     ->SubmitCandidateApproval( { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
-                                                  core,
-                                                  bootstrap_account_->GetAddress(),
-                                                  bootstrap_account_->Sign( core.CanonicalBytes().value() ) } )
-                     .has_value() );
+    LocalTrustAdmin admin( MultiAccountTestAccess::Registry( node_ ), MultiAccountTestAccess::Burn( node_ ) );
+    auto proposed = admin.ProposeBurn( 250 );
+    ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
     test::assertWaitForCondition( [&] { return provider->GetBasisPoints() == 250U; },
-                                  std::chrono::seconds( 5 ),
+                                  std::chrono::seconds( 50 ),
                                   "post-switch burn successor was not published" );
     EXPECT_EQ( provider->GetBasisPoints(), 250U );
     EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
