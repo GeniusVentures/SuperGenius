@@ -14,9 +14,12 @@
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
+#include "storage/rocksdb/rocksdb_batch.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
+#include "trustedpeer/genesis_tool/LocalTrustAdmin.hpp"
 
 namespace
 {
@@ -44,7 +47,7 @@ namespace
         output << "]}";
     }
 
-    TEST( TrustFirstBootE2ETest, FreshStateIsRestrictedUntilBothDurableGenesisStages )
+    TEST( TrustFirstBootE2ETest, PolicyV2BeforeInitialBurnCannotStrandStartup )
     {
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -188,10 +191,22 @@ namespace
         EXPECT_NE( node_composition->db(), nullptr );
         EXPECT_NE( tool_composition->db(), nullptr );
         EXPECT_EQ( controller->GetCurrentPeers(), manifest.Canonicalized()->peers );
-        EXPECT_TRUE( controller->CanApproveSuccessors() );
+        EXPECT_FALSE( controller->CanApproveSuccessors() );
         EXPECT_FALSE( controller->IsEconomicallyReady() );
         EXPECT_EQ( store_result.value()->LoadAndVerify().value().genesis_fingerprint, fingerprint );
         EXPECT_EQ( tool_store->LoadAndVerify().value().genesis_fingerprint, fingerprint );
+
+        sgns::trustedpeer::LocalTrustAdmin admin( controller->registry(), controller->burn_config() );
+        const auto before_policy_attempt = store_result.value()->LoadAndVerify().value();
+        auto policy_v2 = before_policy_attempt.policy;
+        const auto policy_v1_hash = before_policy_attempt.policy.Hash().value();
+        ++policy_v2.version;
+        policy_v2.expected_previous_hash = policy_v1_hash;
+        policy_v2.authorizing_policy_hash = policy_v1_hash;
+        auto rejected_policy = admin.ProposePolicy( policy_v2 );
+        ASSERT_TRUE( rejected_policy.has_error() );
+        EXPECT_EQ( rejected_policy.error(), std::make_error_code( std::errc::operation_not_permitted ) );
+        EXPECT_EQ( store_result.value()->LoadAndVerify().value(), before_policy_attempt );
 
         auto burn_candidate = controller->burn_config()->OnTrustedPeerGenesisConfirmed();
         ASSERT_TRUE( burn_candidate.has_value() ) << burn_candidate.error().message();
@@ -216,7 +231,22 @@ namespace
         EXPECT_EQ( controller->GetState(), TrustStartupController::State::ConfirmedReady );
         EXPECT_NE( node_composition->db(), nullptr );
         EXPECT_TRUE( controller->IsEconomicallyReady() );
+        EXPECT_TRUE( controller->CanApproveSuccessors() );
         EXPECT_EQ( controller->burn_config()->GetCachedBasisPoints(), 100U );
+
+        auto policy_candidate = admin.ProposePolicy( policy_v2 );
+        ASSERT_TRUE( policy_candidate.has_value() ) << policy_candidate.error().message();
+        const auto policy_core = sgns::trustedpeer::TrustedPeerRegistry::PolicyCandidateCore( policy_v2 ).value();
+        const auto policy_core_bytes = policy_core.CanonicalBytes().value();
+        ASSERT_TRUE( secure
+                         ->SubmitCandidateApproval( { CandidateApprovalRecord::ENCODING_VERSION,
+                                                      policy_core,
+                                                      peer_b.GetAddress(),
+                                                      peer_b.Sign( policy_core_bytes ) } )
+                         .has_value() );
+        auto activated_policy = admin.Approve( policy_candidate.value() );
+        ASSERT_TRUE( activated_policy.has_value() ) << activated_policy.error().message();
+        EXPECT_EQ( store_result.value()->LoadAndVerify().value().policy, policy_v2.Canonicalized().value() );
 
         controller.reset();
         secure.reset();
@@ -227,6 +257,82 @@ namespace
         tool_store.reset();
         tool_composition->Stop();
         node_composition->Stop();
+        cleanup();
+    }
+
+    TEST( TrustFirstBootE2ETest, ActivationFailureCallbackReportsDurableErrorButPendingIsQuiet )
+    {
+        sgns::test::securecrdt::EnsureLoggingSystemConfigured();
+        const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+        boost::filesystem::create_directories( path );
+        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+        auto node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "trust_activation_callback" );
+        ASSERT_NE( node, nullptr );
+        auto secure = std::make_shared<sgns::securecrdt::SecureCrdt>( node->db, "trust-activation-callback-topic" );
+        auto bootstrapper = sgns::GeniusSigner::Generate();
+        auto peer_b = sgns::GeniusSigner::Generate();
+        GenesisManifest manifest;
+        manifest.network_id = 42;
+        manifest.bootstrapper_public_key = bootstrapper.GetAddress();
+        manifest.peers = { bootstrapper.GetAddress(), peer_b.GetAddress() };
+        manifest.membership_threshold = 2;
+        manifest.burn_threshold = 2;
+        manifest = manifest.Canonicalized().value();
+
+        std::atomic_bool fail_commits{ false };
+        auto store = TrustStateStore::Open(
+            ( path / "trust" ).string(),
+            manifest.network_id,
+            [&]( sgns::storage::rocksdb &database,
+                 const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+            {
+                if ( fail_commits.load() )
+                    return outcome::failure( std::errc::io_error );
+                auto batch = database.batch();
+                if ( !batch )
+                    return outcome::failure( std::errc::io_error );
+                for ( const auto &[key, value] : writes )
+                {
+                    auto put = batch->put( key, value );
+                    if ( put.has_error() )
+                        return put.error();
+                }
+                return batch->commit();
+            } ).value();
+        const auto manifest_bytes = manifest.CanonicalBytes().value();
+        ASSERT_TRUE( store->CommitGenesis( manifest, bootstrapper.Sign( manifest_bytes ) ).has_value() );
+
+        std::vector<TrustStartupController::Event> events;
+        auto controller = TrustStartupController::New(
+            secure,
+            store,
+            manifest,
+            bootstrapper.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return bootstrapper.Sign( bytes ); },
+            [&]( const auto &event ) { events.push_back( event ); } ).value();
+        ASSERT_EQ( controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+
+        auto burn_id = controller->burn_config()->OnTrustedPeerGenesisConfirmed();
+        ASSERT_TRUE( burn_id.has_value() ) << burn_id.error().message();
+        EXPECT_TRUE( events.empty() );
+
+        const auto snapshot = store->LoadAndVerify().value();
+        const auto core = sgns::account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+        const auto bytes = core.CanonicalBytes().value();
+        fail_commits.store( true );
+        ASSERT_TRUE( secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              peer_b.GetAddress(),
+              peer_b.Sign( bytes ) } ).has_value() );
+        ASSERT_EQ( events.size(), 1U );
+        EXPECT_EQ( events.front().code, static_cast<TrustStartupController::EventCode>( 6 ) );
+        EXPECT_EQ( controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+
+        controller.reset();
+        secure.reset();
+        store.reset();
+        node.reset();
         cleanup();
     }
 } // namespace
