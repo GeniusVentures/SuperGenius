@@ -413,14 +413,19 @@ namespace sgns::trustedpeer
 
     TrustStateStore::TrustStateStore( std::shared_ptr<storage::rocksdb> database,
                                       uint16_t                          network_id,
-                                      BatchCommitter                    committer ) :
-        database_( std::move( database ) ), network_id_( network_id ), committer_( std::move( committer ) )
+                                      BatchCommitter                    committer,
+                                      LoadObserver                      load_observer ) :
+        database_( std::move( database ) ),
+        network_id_( network_id ),
+        committer_( std::move( committer ) ),
+        load_observer_( std::move( load_observer ) )
     {
     }
 
     outcome::result<std::shared_ptr<TrustStateStore>> TrustStateStore::Open( const std::string &path,
                                                                              uint16_t           network_id,
-                                                                             BatchCommitter     committer )
+                                                                             BatchCommitter     committer,
+                                                                             LoadObserver       load_observer )
     {
         storage::rocksdb::Options options;
         options.create_if_missing = true;
@@ -430,7 +435,8 @@ namespace sgns::trustedpeer
             return outcome::failure( Error::COMMIT_FAILED );
         }
         return std::shared_ptr<TrustStateStore>(
-            new TrustStateStore( database.value(), network_id, std::move( committer ) ) );
+            new TrustStateStore(
+                database.value(), network_id, std::move( committer ), std::move( load_observer ) ) );
     }
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::LoadAndVerify() const
@@ -553,6 +559,11 @@ namespace sgns::trustedpeer
                     return outcome::failure( Error::INVALID_POLICY_PROOF );
                 }
             }
+        }
+
+        if ( load_observer_ )
+        {
+            load_observer_( LoadStage::PolicyHistoryVerifiedBeforeBurnHead );
         }
 
         auto burn_head_value = database_->get( Buffer( BurnHeadKey( network_id_ ) ) );
