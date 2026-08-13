@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <unordered_set>
 
+#include "base/hexutil.hpp"
 #include "multisig/MultiSig.hpp"
+#include "trustedpeer/CanonicalTrustCodec.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
 {
@@ -23,6 +25,10 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::securecrdt, SecureCrdt::Error, e )
             return "no value has been proposed at base_key yet";
         case Error::INVALID_SIGNATURE:
             return "signature verification failed against the current value";
+        case Error::UNAUTHORIZED_SIGNER:
+            return "signer is noncanonical or absent from the current signer-set snapshot";
+        case Error::SIGNATURE_LIMIT_EXCEEDED:
+            return "legacy signature child limit exceeds the current authorized signer set";
         case Error::MALFORMED_VALUE:
             return "payload failed DeserializeFromBytes/Verify (codec/semantic check)";
         case Error::QUORUM_THRESHOLD_BELOW_FLOOR:
@@ -45,24 +51,6 @@ namespace sgns::securecrdt
 {
     namespace
     {
-        /// @brief Extracts the signer address from a raw datastore key returned by
-        ///        GlobalDB::QueryKeyValues(..., QUERY_VALUESUFFIX). QueryElements
-        ///        returns entries keyed by the RAW datastore key (e.g.
-        ///        "/crdt/s/k/<base>/sig/<address>/v"), not the logical CRDT key
-        ///        ("/<base>/sig/<address>") — the value-suffix marker ("v") is
-        ///        always the last path segment, so the address is the segment
-        ///        immediately preceding it.
-        std::string LastKeySegment( const std::string &key )
-        {
-            sgns::crdt::HierarchicalKey hk( key );
-            auto                        list = hk.GetList();
-            if ( list.size() < 2 )
-            {
-                return {};
-            }
-            return list[list.size() - 2];
-        }
-
         std::string EscapeRegex( const std::string &value )
         {
             static const std::string metacharacters = R"(\.^$|()[]{}*+?)";
@@ -146,6 +134,86 @@ namespace sgns::securecrdt
         return *registry_;
     }
 
+    outcome::result<SignerSetSnapshot> SecureCrdt::ResolveLegacySignerSnapshot(
+        const SecureCrdtRegistryEntry         &entry,
+        const sgns::crdt::HierarchicalKey     &base_key,
+        const std::optional<std::string_view> &claimed_address ) const
+    {
+        auto resolved = entry.signer_set_source( base_key.GetKey() );
+        if ( resolved.has_error() )
+        {
+            return resolved.error();
+        }
+
+        auto &snapshot = resolved.value();
+        if ( snapshot.signer_set.empty() ||
+             snapshot.signer_set.size() > trustedpeer::CanonicalTrustCodec::MAX_TRUSTED_PEERS )
+        {
+            return outcome::failure( Error::UNAUTHORIZED_SIGNER );
+        }
+
+        std::unordered_set<std::string> authorized;
+        authorized.reserve( snapshot.signer_set.size() );
+        for ( const auto &address : snapshot.signer_set )
+        {
+            if ( !base::IsHexAddress( address ) || !authorized.insert( address ).second )
+            {
+                return outcome::failure( Error::UNAUTHORIZED_SIGNER );
+            }
+        }
+        if ( claimed_address &&
+             ( !base::IsHexAddress( *claimed_address ) || authorized.count( std::string( *claimed_address ) ) == 0 ) )
+        {
+            return outcome::failure( Error::UNAUTHORIZED_SIGNER );
+        }
+        return snapshot;
+    }
+
+    outcome::result<SecureCrdt::LegacySignatures> SecureCrdt::RetainAuthorizedLegacySignatures(
+        const sgns::crdt::HierarchicalKey &base_key,
+        const SignerSetSnapshot           &snapshot )
+    {
+        auto query = db_->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
+        if ( query.has_error() )
+        {
+            return query.error();
+        }
+
+        const std::unordered_set<std::string> authorized( snapshot.signer_set.begin(), snapshot.signer_set.end() );
+        std::unordered_set<std::string>       retained_addresses;
+        LegacySignatures                     retained;
+        retained.reserve( std::min( query.value().size(), snapshot.signer_set.size() ) );
+        for ( const auto &[raw_key, value] : query.value() )
+        {
+            auto logical_key = db_->KeyToString( raw_key );
+            if ( logical_key.has_error() )
+            {
+                return logical_key.error();
+            }
+
+            const sgns::crdt::HierarchicalKey child_key( logical_key.value() );
+            const auto                        segments = child_key.GetList();
+            const std::string address = segments.empty() ? std::string{} : segments.back();
+            const bool canonical_current =
+                base::IsHexAddress( address ) && authorized.count( address ) != 0 &&
+                child_key == base_key.ChildString( "sig" ).ChildString( address );
+            if ( !canonical_current )
+            {
+                auto removed = db_->Remove( child_key, { topic_ } );
+                if ( removed.has_error() )
+                {
+                    return removed.error();
+                }
+                continue;
+            }
+            if ( retained_addresses.insert( address ).second )
+            {
+                retained.emplace_back( address, value.toVector() );
+            }
+        }
+        return retained;
+    }
+
     outcome::result<void> SecureCrdt::ProposeValue( const sgns::crdt::HierarchicalKey &base_key,
                                                     const std::vector<uint8_t>        &payload )
     {
@@ -195,6 +263,25 @@ namespace sgns::securecrdt
             return outcome::failure( Error::UNREGISTERED_KEY );
         }
 
+        auto snapshot = ResolveLegacySignerSnapshot( *entry, base_key, signer_address );
+        if ( snapshot.has_error() )
+        {
+            return snapshot.error();
+        }
+        auto retained = RetainAuthorizedLegacySignatures( base_key, snapshot.value() );
+        if ( retained.has_error() )
+        {
+            return retained.error();
+        }
+        const bool replacing = std::any_of( retained.value().begin(),
+                                            retained.value().end(),
+                                            [&signer_address]( const auto &item )
+                                            { return item.first == signer_address; } );
+        if ( !replacing && retained.value().size() >= snapshot.value().signer_set.size() )
+        {
+            return outcome::failure( Error::SIGNATURE_LIMIT_EXCEEDED );
+        }
+
         auto current_value = db_->Get( base_key );
         if ( current_value.has_error() )
         {
@@ -239,6 +326,12 @@ namespace sgns::securecrdt
             return outcome::failure( Error::UNREGISTERED_KEY );
         }
 
+        auto snapshot = ResolveLegacySignerSnapshot( *entry, base_key );
+        if ( snapshot.has_error() )
+        {
+            return snapshot.error();
+        }
+
         auto current_value = db_->Get( base_key );
         if ( current_value.has_error() )
         {
@@ -247,31 +340,13 @@ namespace sgns::securecrdt
         }
         const std::vector<uint8_t> payload = current_value.value().toVector();
 
-        auto                          sig_query = db_->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
-        multisig::CollectedSignatures collected_signatures;
-        if ( !sig_query.has_error() )
+        auto collected_signatures = RetainAuthorizedLegacySignatures( base_key, snapshot.value() );
+        if ( collected_signatures.has_error() )
         {
-            for ( const auto &[key_buffer, value_buffer] : sig_query.value() )
-            {
-                const std::string key_string( key_buffer.toString() );
-                const std::string address = LastKeySegment( key_string );
-                if ( address.empty() )
-                {
-                    continue;
-                }
-                collected_signatures.emplace_back( address, value_buffer.toVector() );
-            }
+            return collected_signatures.error();
         }
 
-        auto signer_set_result = entry->signer_set_source( base_key.GetKey() );
-        if ( signer_set_result.has_error() )
-        {
-            logger_->error( "{}: signer_set_source failed key={}", __func__, base_key.GetKey() );
-            return signer_set_result.error();
-        }
-        const auto &snapshot = signer_set_result.value();
-
-        const multisig::MultiSig quorum( snapshot.signer_set, snapshot.required_signatures );
+        const multisig::MultiSig quorum( snapshot.value().signer_set, snapshot.value().required_signatures );
         if ( !quorum.IsValid() )
         {
             logger_->error( "{}: invalid quorum configuration key={} required={} authorized={}",
@@ -282,7 +357,7 @@ namespace sgns::securecrdt
             return outcome::success( std::optional<sgns::base::Buffer>{} );
         }
 
-        const auto quorum_result = quorum.EvaluateQuorum( collected_signatures, payload );
+        const auto quorum_result = quorum.EvaluateQuorum( collected_signatures.value(), payload );
         if ( !quorum_result.has_quorum )
         {
             logger_->debug( "{}: quorum not met key={} valid_unique_count={}",
@@ -583,15 +658,16 @@ namespace sgns::securecrdt
         const auto entries        = registry_->AllEntries();
         for ( const auto &entry : entries )
         {
-            const std::string pattern = "/?" + entry.key_pattern + "(/sig/[^/]+)?";
-            const bool registered = db_->RegisterElementFilter(
+            const std::string           pattern = "/?" + entry.key_pattern + "(/sig(/.*)?)?";
+            sgns::crdt::HierarchicalKey base_key( entry.key_pattern );
+            const bool                  registered = db_->RegisterElementFilter(
                 pattern,
-                [weak_self, entry]( const sgns::crdt::pb::Element &element )
-                    -> std::optional<std::vector<sgns::crdt::pb::Element>>
+                [weak_self, base_key, entry](
+                    const sgns::crdt::pb::Element &element ) -> std::optional<std::vector<sgns::crdt::pb::Element>>
                 {
                     if ( auto strong = weak_self.lock() )
                     {
-                        return strong->FilterSecureCrdtUpdate( entry, element );
+                        return strong->FilterSecureCrdtUpdate( base_key, entry, element );
                     }
                     return std::nullopt;
                 } );
@@ -619,21 +695,13 @@ namespace sgns::securecrdt
     }
 
     std::optional<std::vector<sgns::crdt::pb::Element>> SecureCrdt::FilterSecureCrdtUpdate(
-        const SecureCrdtRegistryEntry &entry,
-        const sgns::crdt::pb::Element &element )
+        const sgns::crdt::HierarchicalKey &base_key,
+        const SecureCrdtRegistryEntry     &entry,
+        const sgns::crdt::pb::Element     &element )
     {
         logger_->trace( "{}: entry key={}", __func__, element.key() );
         std::vector<uint8_t>              element_bytes( element.value().begin(), element.value().end() );
         const sgns::crdt::HierarchicalKey element_key( element.key() );
-        const auto                        key_segments = element_key.GetList();
-        const bool is_signature = key_segments.size() >= 2 && key_segments[key_segments.size() - 2] == "sig";
-
-        sgns::crdt::HierarchicalKey base_key = element_key;
-        if ( is_signature )
-        {
-            const auto signature_suffix = element_key.GetKey().rfind( "/sig/" );
-            base_key = sgns::crdt::HierarchicalKey( element_key.GetKey().substr( 0, signature_suffix ) );
-        }
 
         if ( element_key == base_key )
         {
@@ -648,8 +716,39 @@ namespace sgns::securecrdt
             return std::nullopt;
         }
 
-        const std::string address       = key_segments.back();
-        auto              current_value = db_->Get( base_key );
+        const auto element_segments = element_key.GetList();
+        if ( element_segments.empty() )
+        {
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+        const std::string address = element_segments.back();
+        if ( element_key != base_key.ChildString( "sig" ).ChildString( address ) )
+        {
+            logger_->error( "{}: noncanonical remote signature key rejected key={}", __func__, element.key() );
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+
+        auto snapshot = ResolveLegacySignerSnapshot( entry, base_key, address );
+        if ( snapshot.has_error() )
+        {
+            logger_->error( "{}: unauthorized remote signature rejected key={}", __func__, element.key() );
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+        auto retained = RetainAuthorizedLegacySignatures( base_key, snapshot.value() );
+        if ( retained.has_error() )
+        {
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+        const bool replacing = std::any_of( retained.value().begin(),
+                                            retained.value().end(),
+                                            [&address]( const auto &item ) { return item.first == address; } );
+        if ( !replacing && retained.value().size() >= snapshot.value().signer_set.size() )
+        {
+            logger_->error( "{}: remote signature limit reached key={}", __func__, element.key() );
+            return std::vector<sgns::crdt::pb::Element>{};
+        }
+
+        auto current_value = db_->Get( base_key );
         if ( current_value.has_error() )
         {
             logger_->error( "{}: no base value yet, rejecting signature key={}", __func__, element.key() );

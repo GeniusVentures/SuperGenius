@@ -6,5 +6,7 @@ target_link_libraries(securecrdt
     PUBLIC
     crdt_globaldb
     multisig
+    PRIVATE
+    hexutil
 )
 supergenius_install(securecrdt)
