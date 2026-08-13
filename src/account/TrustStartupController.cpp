@@ -118,7 +118,15 @@ namespace sgns::account
                  {
                      if ( auto self = weak.lock() )
                      {
-                         (void) self->registry_->TryActivateReviewedGenesisCandidate( id );
+                         auto activated = self->registry_->TryActivateReviewedGenesisCandidate( id );
+                         if ( activated.has_error() )
+                         {
+                             self->Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                                         { id.domain,
+                                           std::to_string( id.version ),
+                                           id.content_hash,
+                                           activated.error().message() } );
+                         }
                          (void) self->Refresh();
                      }
                  },
@@ -138,7 +146,15 @@ namespace sgns::account
                                  self->pending_burn_candidates_.push_back( id );
                              }
                          }
-                         (void) self->burn_config_->TryActivateBurnCandidate( id );
+                         auto activated = self->burn_config_->TryActivateBurnCandidate( id );
+                         if ( activated.has_error() )
+                         {
+                             self->Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                                         { id.domain,
+                                           std::to_string( id.version ),
+                                           id.content_hash,
+                                           activated.error().message() } );
+                         }
                          (void) self->Refresh();
                      }
                  },
@@ -254,7 +270,7 @@ namespace sgns::account
 
     bool TrustStartupController::CanApproveSuccessors() const noexcept
     {
-        return state_.load() != State::FreshWaitingForGenesis && state_.load() != State::FatalMismatch;
+        return state_.load() == State::ConfirmedReady;
     }
 
     bool TrustStartupController::IsEconomicallyReady() const noexcept

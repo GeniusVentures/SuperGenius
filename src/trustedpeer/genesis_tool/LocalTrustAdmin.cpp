@@ -35,11 +35,17 @@ namespace sgns::trustedpeer
     outcome::result<sgns::securecrdt::CandidateId> LocalTrustAdmin::ProposePolicy(
         const QuorumPolicyState &candidate )
     {
-        if ( !registry_ )
+        if ( !registry_ || !burn_config_ )
             return outcome::failure( std::errc::not_connected );
+        if ( !burn_config_->IsEconomicallyReady() )
+            return outcome::failure( std::errc::operation_not_permitted );
         auto proposed = registry_->ProposePolicyCandidate( candidate );
         if ( proposed.has_value() )
-            (void)registry_->TryActivatePolicyCandidate( proposed.value() );
+        {
+            auto activated = registry_->TryActivatePolicyCandidate( proposed.value() );
+            if ( activated.has_error() )
+                return activated.error();
+        }
         return proposed;
     }
 
@@ -49,7 +55,11 @@ namespace sgns::trustedpeer
             return outcome::failure( std::errc::not_connected );
         auto proposed = burn_config_->ProposeBurnCandidate( basis_points );
         if ( proposed.has_value() )
-            (void)burn_config_->TryActivateBurnCandidate( proposed.value() );
+        {
+            auto activated = burn_config_->TryActivateBurnCandidate( proposed.value() );
+            if ( activated.has_error() )
+                return activated.error();
+        }
         return proposed;
     }
 
@@ -58,16 +68,28 @@ namespace sgns::trustedpeer
     {
         if ( candidate_id.domain == policy_domain_ && registry_ )
         {
+            if ( !burn_config_ )
+                return outcome::failure( std::errc::not_connected );
+            if ( !burn_config_->IsEconomicallyReady() )
+                return outcome::failure( std::errc::operation_not_permitted );
             auto approved = registry_->ApprovePolicyCandidate( candidate_id );
             if ( approved.has_value() )
-                (void)registry_->TryActivatePolicyCandidate( approved.value() );
+            {
+                auto activated = registry_->TryActivatePolicyCandidate( approved.value() );
+                if ( activated.has_error() )
+                    return activated.error();
+            }
             return approved;
         }
         if ( candidate_id.domain == burn_domain_ && burn_config_ )
         {
             auto approved = burn_config_->ApproveBurnCandidate( candidate_id );
             if ( approved.has_value() )
-                (void)burn_config_->TryActivateBurnCandidate( approved.value() );
+            {
+                auto activated = burn_config_->TryActivateBurnCandidate( approved.value() );
+                if ( activated.has_error() )
+                    return activated.error();
+            }
             return approved;
         }
         return outcome::failure( std::errc::invalid_argument );
