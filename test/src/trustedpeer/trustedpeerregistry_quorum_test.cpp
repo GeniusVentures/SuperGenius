@@ -3,8 +3,8 @@
  * @brief      TPR-02: proves N-of-M quorum-gated membership changes -- a
  *             sub-quorum signature count never mutates GetCurrentPeers(), and
  *             a quorum-met membership change replaces the whole peer list.
- *             Also proves a signature from a non-member address never counts
- *             toward quorum.
+ *             Also proves a signature from a non-member address is rejected
+ *             before persistence and never counts toward quorum.
  *
  *             TPR-03 (manual, code-inspection-only gate, not automatable as a
  *             unit test): run
@@ -157,10 +157,20 @@ TEST_F( TrustedPeerRegistryQuorumTest, SignatureFromNonMemberAddressNeverCountsT
     auto propose_result = registry_->ProposeMembershipChange( new_peers );
     ASSERT_FALSE( propose_result.has_error() ) << propose_result.error().message();
 
+    const sgns::crdt::HierarchicalKey signature_prefix( "trusted-peer-registry/sig" );
+    auto retained_before = node_->db->QueryKeyValues( signature_prefix.GetKey() );
+    ASSERT_TRUE( retained_before.has_value() );
+
     // Cryptographically VALID signature, but from an address NOT in the current genesis set.
     auto non_member_sig = non_member_->Sign( new_payload );
     auto sign_result     = registry_->SignMembershipChange( non_member_->GetAddress(), non_member_sig );
-    ASSERT_FALSE( sign_result.has_error() ) << sign_result.error().message();
+    ASSERT_TRUE( sign_result.has_error() );
+    EXPECT_EQ( sign_result.error().message(),
+               "signer is noncanonical or absent from the current signer-set snapshot" );
+
+    auto retained_after = node_->db->QueryKeyValues( signature_prefix.GetKey() );
+    ASSERT_TRUE( retained_after.has_value() );
+    EXPECT_EQ( retained_after.value().size(), retained_before.value().size() );
 
     auto confirm_after_non_member = registry_->TryConfirm();
     ASSERT_FALSE( confirm_after_non_member.has_error() ) << confirm_after_non_member.error().message();
@@ -168,7 +178,7 @@ TEST_F( TrustedPeerRegistryQuorumTest, SignatureFromNonMemberAddressNeverCountsT
         << "a valid signature from a non-member address must never contribute toward quorum";
     EXPECT_EQ( registry_->GetCurrentPeers(), genesis_peers_ );
 
-    // A 2nd genuine genesis-signer signature is still required to actually meet quorum.
+    // Two genuine genesis-signer signatures are still required to meet quorum.
     auto sig0 = signers_[0]->Sign( new_payload );
     auto sign0_result = registry_->SignMembershipChange( signers_[0]->GetAddress(), sig0 );
     ASSERT_FALSE( sign0_result.has_error() ) << sign0_result.error().message();
@@ -176,6 +186,15 @@ TEST_F( TrustedPeerRegistryQuorumTest, SignatureFromNonMemberAddressNeverCountsT
     auto confirm_after_one_member = registry_->TryConfirm();
     ASSERT_FALSE( confirm_after_one_member.has_error() ) << confirm_after_one_member.error().message();
     EXPECT_FALSE( confirm_after_one_member.value() )
-        << "only 1 counted (member) signature must remain below threshold 2 (non-member signature never counted)";
+        << "only 1 member signature must remain below threshold 2 (non-member signature was rejected)";
     EXPECT_EQ( registry_->GetCurrentPeers(), genesis_peers_ );
+
+    auto sig1 = signers_[1]->Sign( new_payload );
+    auto sign1_result = registry_->SignMembershipChange( signers_[1]->GetAddress(), sig1 );
+    ASSERT_FALSE( sign1_result.has_error() ) << sign1_result.error().message();
+
+    auto confirm_after_two_members = registry_->TryConfirm();
+    ASSERT_FALSE( confirm_after_two_members.has_error() ) << confirm_after_two_members.error().message();
+    EXPECT_TRUE( confirm_after_two_members.value() );
+    EXPECT_EQ( registry_->GetCurrentPeers(), new_peers );
 }
