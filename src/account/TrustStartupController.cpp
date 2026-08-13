@@ -131,7 +131,10 @@ namespace sgns::account
                      {
                          {
                              std::lock_guard<std::mutex> lock( self->candidate_mutex_ );
-                             if ( std::find( self->pending_burn_candidates_.begin(),
+                             if ( std::find( self->failed_burn_candidates_.begin(),
+                                             self->failed_burn_candidates_.end(),
+                                             id ) == self->failed_burn_candidates_.end() &&
+                                  std::find( self->pending_burn_candidates_.begin(),
                                              self->pending_burn_candidates_.end(),
                                              id ) == self->pending_burn_candidates_.end() )
                              {
@@ -205,7 +208,7 @@ namespace sgns::account
                                                         *fingerprint,
                                                         *payload };
             const auto                            candidate = sgns::securecrdt::CandidateId::FromCore( core );
-            if ( candidate )
+            if ( candidate && ( !failed_genesis_candidate_ || !( *failed_genesis_candidate_ == *candidate ) ) )
             {
                 auto approvals = secure_crdt_->ReadCandidateApprovals( *candidate );
                 if ( approvals.has_error() )
@@ -217,6 +220,7 @@ namespace sgns::account
                     auto activated = registry_->TryActivateReviewedGenesisCandidate( *candidate );
                     if ( activated.has_error() )
                     {
+                        failed_genesis_candidate_ = *candidate;
                         Emit( EventCode::TRUST_ACTIVATION_FAILED,
                               { candidate->domain,
                                 std::to_string( candidate->version ),
@@ -255,19 +259,56 @@ namespace sgns::account
             auto initiated = burn_config_->OnTrustedPeerGenesisConfirmed();
             if ( initiated.has_error() )
             {
+                auto core = BurnConfig::BurnCandidateCore( snapshot.value().burn );
+                auto id = core ? sgns::securecrdt::CandidateId::FromCore( *core ) : std::nullopt;
+                Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                      { id ? id->domain : "burn-config",
+                        id ? std::to_string( id->version ) : std::to_string( snapshot.value().burn.version ),
+                        id ? id->content_hash : "",
+                        initiated.error().message() } );
                 return initiated.error();
             }
-            pending.push_back( initiated.value() );
+            {
+                std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                if ( std::find( failed_burn_candidates_.begin(),
+                                failed_burn_candidates_.end(),
+                                initiated.value() ) == failed_burn_candidates_.end() &&
+                     std::find( pending_burn_candidates_.begin(),
+                                pending_burn_candidates_.end(),
+                                initiated.value() ) == pending_burn_candidates_.end() )
+                {
+                    pending_burn_candidates_.push_back( initiated.value() );
+                }
+            }
         }
-        auto discovered = burn_config_->ListPendingBurnCandidates();
-        if ( discovered.has_error() )
-        {
-            return discovered.error();
-        }
-        pending.insert( pending.end(), discovered.value().begin(), discovered.value().end() );
+        bool discover_candidates = false;
         {
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
-            pending.insert( pending.end(), pending_burn_candidates_.begin(), pending_burn_candidates_.end() );
+            discover_candidates = !burn_candidates_discovered_;
+        }
+        if ( discover_candidates )
+        {
+            auto discovered = burn_config_->ListPendingBurnCandidates();
+            if ( discovered.has_error() )
+            {
+                return discovered.error();
+            }
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            for ( const auto &candidate : discovered.value() )
+            {
+                if ( std::find( failed_burn_candidates_.begin(), failed_burn_candidates_.end(), candidate ) ==
+                         failed_burn_candidates_.end() &&
+                     std::find( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ) ==
+                         pending_burn_candidates_.end() )
+                {
+                    pending_burn_candidates_.push_back( candidate );
+                }
+            }
+            burn_candidates_discovered_ = true;
+        }
+        {
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            pending = pending_burn_candidates_;
         }
         std::sort( pending.begin(), pending.end(), []( const auto &left, const auto &right ) {
             if ( left.domain != right.domain ) return left.domain < right.domain;
@@ -280,6 +321,17 @@ namespace sgns::account
             auto activated = burn_config_->TryActivateBurnCandidate( candidate );
             if ( activated.has_error() )
             {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_burn_candidates_.erase(
+                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
+                        pending_burn_candidates_.end() );
+                    if ( std::find( failed_burn_candidates_.begin(), failed_burn_candidates_.end(), candidate ) ==
+                         failed_burn_candidates_.end() )
+                    {
+                        failed_burn_candidates_.push_back( candidate );
+                    }
+                }
                 Emit( EventCode::TRUST_ACTIVATION_FAILED,
                       { candidate.domain,
                         std::to_string( candidate.version ),
@@ -289,6 +341,12 @@ namespace sgns::account
             }
             if ( activated.value() )
             {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_burn_candidates_.erase(
+                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
+                        pending_burn_candidates_.end() );
+                }
                 auto verified = trust_store_->LoadAndVerify();
                 if ( verified.has_error() )
                 {
