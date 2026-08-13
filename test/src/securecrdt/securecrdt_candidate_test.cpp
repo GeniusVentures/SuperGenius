@@ -86,12 +86,21 @@ protected:
 
     void TearDown() override
     {
-        secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", &owner_token_ );
-        secure_crdt_->Registry().UnregisterCandidateDomainIf( "trusted-peer", &owner_token_ );
-        secure_crdt_.reset();
-        node_.reset();
+        if ( secure_crdt_ )
+        {
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", &owner_token_ );
+            secure_crdt_->Registry().UnregisterCandidateDomainIf( "trusted-peer", &owner_token_ );
+            secure_crdt_.reset();
+        }
+        if ( node_ )
+        {
+            node_.reset();
+        }
         sgns::GeniusAccount::SetSecureStorageFactory( nullptr );
-        boost::filesystem::remove_all( path_ );
+        if ( !path_.empty() )
+        {
+            boost::filesystem::remove_all( path_ );
+        }
     }
 
     CandidateApprovalRecord SignedRecord( size_t signer_index, std::vector<uint8_t> payload = { 'p' } )
