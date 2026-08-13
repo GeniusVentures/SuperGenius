@@ -44,6 +44,12 @@ namespace sgns::trustedpeer
         bool                                                   operator==( const ConfirmedBurnState &other ) const;
     };
 
+    enum class BurnAuthorizationKind : uint8_t
+    {
+        BootstrapOnly = 0,
+        PeerQuorum,
+    };
+
     struct ConfirmedTrustSnapshot
     {
         GenesisManifest               genesis;
@@ -53,6 +59,7 @@ namespace sgns::trustedpeer
         multisig::CollectedSignatures policy_proof;
         ConfirmedBurnState            burn;
         multisig::CollectedSignatures burn_proof;
+        BurnAuthorizationKind         burn_authorization = BurnAuthorizationKind::BootstrapOnly;
 
         bool operator==( const ConfirmedTrustSnapshot &other ) const;
     };
@@ -91,6 +98,7 @@ namespace sgns::trustedpeer
             VERSION_SKIP,
             WRONG_PREDECESSOR,
             WRONG_AUTHORIZER,
+            INITIAL_BURN_NOT_CONFIRMED,
             STALE_HEAD,
             COMMIT_FAILED,
         };
