@@ -4,29 +4,33 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-19-PLAN.md
-last_updated: "2026-08-13T17:10:16.378Z"
+stopped_at: Completed 13-20-PLAN.md
+last_updated: "2026-08-13T17:41:02.046Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 30
-  completed_plans: 27
+  completed_plans: 28
   percent: 29
 ---
+
 # State: SuperGenius — Multi-Signature Secure CRDT Storage
+
 **Last updated:** 2026-08-12
 **Milestone:** v1.1 — Multi-Signature Secure CRDT Storage
 **Current Phase:** 13
 
 ## Project Reference
+
 See: .planning/PROJECT.md (updated 2026-07-20)
 **Core value:** A decoupled multi-signature component and secure CRDT storage layer let specific CRDT-backed values require quorum signatures to create/update — first applied to `TrustedPeerRegistry` and `BURN_BASIS_POINTS`.
 **Current focus:** Phase 13 — close-v1-1-trusted-peer-genesis-quorum-policy-and-production
 
 ## Current Position
+
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 20 of 22
+Plan: 21 of 22
 Status: Ready to execute
 Last activity: 2026-08-13
 
@@ -69,8 +73,8 @@ Last activity: 2026-08-13
 
 ## Session
 
-**Last session:** 2026-08-13T17:10:16.374Z
-**Stopped At:** Completed 13-19-PLAN.md
+**Last session:** 2026-08-13T17:41:02.042Z
+**Stopped At:** Completed 13-20-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -109,6 +113,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P15 | 4min | 1 tasks | 2 files |
 | Phase 13 P18 | 7min | 1 tasks | 1 files |
 | Phase 13 P19 | 5 min | 1 tasks | 3 files |
+| Phase 13 P20 | 22 min | 2 tasks | 3 files |
 
 ## Decisions
 
@@ -153,3 +158,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: BurnConfig restart publication consumes TrustStateStore's verified PeerQuorum classification and never reconstructs authority from proof cardinality or the current policy threshold.
 - [Phase 13]: Phase 13 gap closure requires focused counterexamples, exact 25-test enumeration/JUnit accounting, and five post-gate lifetime repetitions in one fail-fast chain.
 - [Phase 13]: Public LoadAndVerify holds transition_mutex_ across complete trust verification; lock-owning commit paths use LoadAndVerifyUnlocked. — This serializes coherent durable views without recursively locking commit precondition and post-commit verification.
+- [Phase 13]: Automatic signing is limited to a verified current member and the exact deterministic BootstrapOnly burn-v1/value-100 candidate. — This closes initial-burn liveness without broadening manual approval or successor-signing authority.
+- [Phase 13]: SecureCrdt callbacks queue serialized worker Refresh operations. — Activation writes must not reenter the GlobalDB callback thread.
+- [Phase 13]: Failed candidate IDs are suppressed only for the current controller while authoritative CRDT records remain restart-discoverable. — This prevents tight in-process retries while preserving fault recovery after reconstruction.
