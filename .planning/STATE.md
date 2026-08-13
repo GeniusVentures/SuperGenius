@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-11-PLAN.md
-last_updated: "2026-08-13T13:57:13.161Z"
-last_activity: 2026-08-13 -- Phase 13 execution started
+stopped_at: Completed 13-13-PLAN.md
+last_updated: "2026-08-13T14:10:30.048Z"
+last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 26
-  completed_plans: 20
+  completed_plans: 21
   percent: 29
 ---
 
@@ -31,9 +31,9 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 1 of 18
-Status: Executing Phase 13
-Last activity: 2026-08-13 -- Phase 13 execution started
+Plan: 14 of 18
+Status: Ready to execute
+Last activity: 2026-08-13
 
 ## Roadmap Snapshot
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-13 -- Phase 13 execution started
 
 ## Session
 
-**Last session:** 2026-08-12T18:43:21.490Z
-**Stopped At:** Completed 13-11-PLAN.md
+**Last session:** 2026-08-13T14:10:30.044Z
+**Stopped At:** Completed 13-13-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -101,6 +101,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P07 | 12min | 3 tasks | 15 files |
 | Phase 13 P10 | 7min | 1 tasks | 2 files |
 | Phase 13 P11 | 4min | 1 tasks | 4 files |
+| Phase 13 P13 | 10min | 1 tasks | 5 files |
 
 ## Decisions
 
@@ -134,3 +135,5 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Canonical v1.1 completion is derived from Plan 13-08's recorded exact 25/25 gate and five additional policy-lifetime passes.
 - [Phase 13]: MIG-05 remains the approved signature-verification-only migration; full ValidatorRegistry ISignedCRDTData adoption remains retired.
 - [Phase 13]: BOOT-04 covers software-visible rollback while whole-disk/all-anchor restoration remains an accepted unsolved boundary without external anchoring.
+- [Phase 13]: Burn readiness is classified from the verified authorization path stored with the current burn head, never from proof count or the current policy threshold.
+- [Phase 13]: While burn v1 is BootstrapOnly, both successor APIs reject before normal validation and writes; only an identical burn-v1/value-100 canonical candidate-core with current-policy burn quorum may replace its proof.
