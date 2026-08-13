@@ -192,7 +192,25 @@ TEST( SecureCrdtCandidateDurableRaceTest, ExactlyOneStoreBackedPolicyWinnerSurvi
     manifest.membership_threshold = 2;
     manifest.burn_threshold = 2;
     const auto manifest_bytes = manifest.CanonicalBytes().value();
-    const auto initial = store->CommitGenesis( manifest, signers[0].Sign( manifest_bytes ) ).value();
+    auto initial = store->CommitGenesis( manifest, signers[0].Sign( manifest_bytes ) ).value();
+    const auto burn_bytes = initial.burn.CanonicalBytes().value();
+    const sgns::securecrdt::CandidateCore burn_core{
+        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+        "burn-config",
+        initial.burn.network_id,
+        sgns::securecrdt::CandidateKind::BurnConfig,
+        initial.burn.version,
+        initial.burn.expected_previous_hash,
+        initial.burn.authorizing_policy_hash,
+        burn_bytes,
+    };
+    const auto burn_authorization = burn_core.CanonicalBytes().value();
+    const multisig::CollectedSignatures burn_proof{
+        { signers[0].GetAddress(), signers[0].Sign( burn_authorization ) },
+        { signers[1].GetAddress(), signers[1].Sign( burn_authorization ) },
+    };
+    initial = store->CommitBurnSuccessor( initial.burn, burn_proof, burn_authorization ).value();
+    ASSERT_EQ( initial.burn_authorization, BurnAuthorizationKind::PeerQuorum );
     auto first = initial.policy;
     first.version += 1;
     first.expected_previous_hash = initial.policy.Hash().value();
