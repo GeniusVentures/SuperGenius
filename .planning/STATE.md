@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-14-PLAN.md
-last_updated: "2026-08-13T14:55:14.030Z"
+stopped_at: Completed 13-15-PLAN.md
+last_updated: "2026-08-13T15:01:56.067Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 26
-  completed_plans: 24
+  completed_plans: 25
   percent: 29
 ---
 
@@ -31,7 +31,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 15 of 18
+Plan: 16 of 18
 Status: Ready to execute
 Last activity: 2026-08-13
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-13
 
 ## Session
 
-**Last session:** 2026-08-13T14:55:14.026Z
-**Stopped At:** Completed 13-14-PLAN.md
+**Last session:** 2026-08-13T15:01:56.063Z
+**Stopped At:** Completed 13-15-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -105,6 +105,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P16 | 6min | 1 tasks | 2 files |
 | Phase 13 P17 | 13min | 2 tasks | 8 files |
 | Phase 13 P14 | 13min | 1 tasks | 8 files |
+| Phase 13 P15 | 4min | 1 tasks | 2 files |
 
 ## Decisions
 
@@ -146,3 +147,4 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Policy successor authorization is available only in ConfirmedReady, and local policy signing preflights BurnConfig economic readiness. — Rejected policy operations must not write or sign before peer-confirmed burn readiness.
 - [Phase 13]: Activation APIs return false only for authenticated below-quorum candidates; actionable validation and durable failures remain errors. — Callers can preserve ordinary pending operations without masking corruption, wrong-head, or commit failures.
 - [Phase 13]: Startup activation failures emit TRUST_ACTIVATION_FAILED with candidate identity and typed error context. — Operators need structured evidence when asynchronous durable activation fails.
+- [Phase 13]: BurnConfig restart publication consumes TrustStateStore's verified PeerQuorum classification and never reconstructs authority from proof cardinality or the current policy threshold.
