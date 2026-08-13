@@ -4,6 +4,7 @@
 #include <array>
 #include <atomic>
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <thread>
 
@@ -308,6 +309,161 @@ TEST_F( TrustStateStoreTest, ConcurrentSuccessorsHaveOneWinnerAndOneStableStaleR
     const auto winner = store->LoadAndVerify().value();
     store.reset();
     EXPECT_EQ( TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify().value(), winner );
+}
+
+TEST_F( TrustStateStoreTest, LoadAndVerifySerializesPolicyAndBurnTransitionWithoutTornSnapshot )
+{
+    using namespace std::chrono_literals;
+
+    auto setup_store = TrustStateStore::Open( path_.string(), 42 ).value();
+    const auto old_snapshot = ConfirmInitialBurn( setup_store, CommitGenesis( setup_store ) );
+    setup_store.reset();
+
+    std::mutex              barrier_mutex;
+    std::condition_variable barrier_cv;
+    bool                    reader_paused  = false;
+    bool                    release_reader = false;
+    bool                    writer_started = false;
+    size_t                  observed_loads = 0;
+    auto observer = [&]( TrustStateStore::LoadStage stage ) {
+        if ( stage != TrustStateStore::LoadStage::PolicyHistoryVerifiedBeforeBurnHead )
+        {
+            return;
+        }
+        std::unique_lock<std::mutex> lock( barrier_mutex );
+        ++observed_loads;
+        if ( observed_loads != 1 )
+        {
+            return;
+        }
+        reader_paused = true;
+        barrier_cv.notify_all();
+        barrier_cv.wait( lock, [&] { return release_reader; } );
+    };
+    auto store = TrustStateStore::Open( path_.string(), 42, {}, observer ).value();
+
+    auto policy_v2 = old_snapshot.policy;
+    policy_v2.version++;
+    policy_v2.expected_previous_hash  = old_snapshot.policy.Hash().value();
+    policy_v2.authorizing_policy_hash = old_snapshot.policy.Hash().value();
+    const auto policy_proof = Sign( policy_v2.CanonicalBytes().value() );
+
+    auto burn_v2 = old_snapshot.burn;
+    burn_v2.version++;
+    burn_v2.expected_previous_hash  = old_snapshot.burn.Hash().value();
+    burn_v2.authorizing_policy_hash = policy_v2.Hash().value();
+    burn_v2.basis_points            = 250;
+    const auto burn_proof = Sign( burn_v2.CanonicalBytes().value() );
+
+    auto reader = std::async( std::launch::async, [&] { return store->LoadAndVerify(); } );
+    {
+        std::unique_lock<std::mutex> lock( barrier_mutex );
+        ASSERT_TRUE( barrier_cv.wait_for( lock, 5s, [&] { return reader_paused; } ) );
+    }
+
+    auto writer = std::async( std::launch::async, [&] {
+        {
+            std::lock_guard<std::mutex> lock( barrier_mutex );
+            writer_started = true;
+        }
+        barrier_cv.notify_all();
+        auto policy_result = store->CommitPolicySuccessor( policy_v2, policy_proof );
+        if ( policy_result.has_error() )
+        {
+            return policy_result;
+        }
+        return store->CommitBurnSuccessor( burn_v2, burn_proof );
+    } );
+    {
+        std::unique_lock<std::mutex> lock( barrier_mutex );
+        ASSERT_TRUE( barrier_cv.wait_for( lock, 5s, [&] { return writer_started; } ) );
+    }
+
+    EXPECT_EQ( writer.wait_for( 250ms ), std::future_status::timeout );
+    {
+        std::lock_guard<std::mutex> lock( barrier_mutex );
+        release_reader = true;
+    }
+    barrier_cv.notify_all();
+
+    auto old_result = reader.get();
+    ASSERT_TRUE( old_result.has_value() );
+    EXPECT_EQ( old_result.value(), old_snapshot );
+
+    auto new_result = writer.get();
+    ASSERT_TRUE( new_result.has_value() );
+    EXPECT_EQ( new_result.value().policy, policy_v2.Canonicalized().value() );
+    EXPECT_EQ( new_result.value().burn, burn_v2 );
+
+    auto loaded_after = store->LoadAndVerify();
+    ASSERT_TRUE( loaded_after.has_value() );
+    EXPECT_EQ( loaded_after.value(), new_result.value() );
+}
+
+TEST_F( TrustStateStoreTest, CommitPathsUseUnlockedVerifierWithoutSelfDeadlock )
+{
+    using namespace std::chrono_literals;
+
+    auto store    = TrustStateStore::Open( path_.string(), 42 ).value();
+    auto manifest = Manifest();
+    auto genesis = std::async( std::launch::async, [&] {
+        return store->CommitGenesis( manifest, signers_[0].Sign( manifest.CanonicalBytes().value() ) );
+    } );
+    ASSERT_EQ( genesis.wait_for( 5s ), std::future_status::ready );
+    auto snapshot = genesis.get();
+    ASSERT_TRUE( snapshot.has_value() );
+
+    const auto burn_v1_bytes = snapshot.value().burn.CanonicalBytes().value();
+    const sgns::securecrdt::CandidateCore burn_v1_core{
+        sgns::securecrdt::CandidateCore::ENCODING_VERSION,
+        "burn-config",
+        snapshot.value().burn.network_id,
+        sgns::securecrdt::CandidateKind::BurnConfig,
+        snapshot.value().burn.version,
+        snapshot.value().burn.expected_previous_hash,
+        snapshot.value().burn.authorizing_policy_hash,
+        burn_v1_bytes,
+    };
+    const auto burn_v1_authorization = burn_v1_core.CanonicalBytes().value();
+    auto burn_v1 = std::async( std::launch::async, [&] {
+        return store->CommitBurnSuccessor(
+            snapshot.value().burn, Sign( burn_v1_authorization ), burn_v1_authorization );
+    } );
+    ASSERT_EQ( burn_v1.wait_for( 5s ), std::future_status::ready );
+    snapshot = burn_v1.get();
+    ASSERT_TRUE( snapshot.has_value() );
+
+    auto policy_v2 = snapshot.value().policy;
+    policy_v2.version++;
+    policy_v2.expected_previous_hash  = snapshot.value().policy.Hash().value();
+    policy_v2.authorizing_policy_hash = snapshot.value().policy.Hash().value();
+    auto policy = std::async( std::launch::async, [&] {
+        const auto bytes = policy_v2.CanonicalBytes().value();
+        return store->CommitPolicySuccessor( policy_v2, Sign( bytes ) );
+    } );
+    ASSERT_EQ( policy.wait_for( 5s ), std::future_status::ready );
+    snapshot = policy.get();
+    ASSERT_TRUE( snapshot.has_value() );
+
+    auto burn_v2 = snapshot.value().burn;
+    burn_v2.version++;
+    burn_v2.expected_previous_hash  = snapshot.value().burn.Hash().value();
+    burn_v2.authorizing_policy_hash = snapshot.value().policy.Hash().value();
+    burn_v2.basis_points            = 250;
+    auto burn = std::async( std::launch::async, [&] {
+        const auto bytes = burn_v2.CanonicalBytes().value();
+        return store->CommitBurnSuccessor( burn_v2, Sign( bytes ) );
+    } );
+    ASSERT_EQ( burn.wait_for( 5s ), std::future_status::ready );
+    snapshot = burn.get();
+    ASSERT_TRUE( snapshot.has_value() );
+
+    store.reset();
+    auto reopened = TrustStateStore::Open( path_.string(), 42 ).value()->LoadAndVerify();
+    ASSERT_TRUE( reopened.has_value() );
+    EXPECT_EQ( reopened.value(), snapshot.value() );
+    EXPECT_EQ( reopened.value().policy.version, 2U );
+    EXPECT_EQ( reopened.value().burn.version, 2U );
 }
 
 TEST_F( TrustStateStoreTest, PolicySuccessorRejectedUntilInitialBurnPeerConfirmed )

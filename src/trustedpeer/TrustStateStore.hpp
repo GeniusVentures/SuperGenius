@@ -80,6 +80,11 @@ namespace sgns::trustedpeer
     class TrustStateStore : public std::enable_shared_from_this<TrustStateStore>
     {
     public:
+        enum class LoadStage : uint8_t
+        {
+            PolicyHistoryVerifiedBeforeBurnHead = 0,
+        };
+
         enum class Error : uint8_t
         {
             NOT_FOUND = 0,
@@ -105,10 +110,12 @@ namespace sgns::trustedpeer
 
         using Write          = std::pair<base::Buffer, base::Buffer>;
         using BatchCommitter = std::function<outcome::result<void>( storage::rocksdb &, const std::vector<Write> & )>;
+        using LoadObserver   = std::function<void( LoadStage )>;
 
         static outcome::result<std::shared_ptr<TrustStateStore>> Open( const std::string &path,
                                                                        uint16_t           network_id,
-                                                                       BatchCommitter     committer = {} );
+                                                                       BatchCommitter     committer = {},
+                                                                       LoadObserver       load_observer = {} );
 
         outcome::result<ConfirmedTrustSnapshot> LoadAndVerify() const;
         outcome::result<ConfirmedTrustSnapshot> CommitGenesis( const GenesisManifest      &manifest,
@@ -124,13 +131,17 @@ namespace sgns::trustedpeer
             const std::vector<uint8_t>          &authorization_bytes = {} );
 
     private:
-        TrustStateStore( std::shared_ptr<storage::rocksdb> database, uint16_t network_id, BatchCommitter committer );
+        TrustStateStore( std::shared_ptr<storage::rocksdb> database,
+                         uint16_t                          network_id,
+                         BatchCommitter                    committer,
+                         LoadObserver                      load_observer );
 
         outcome::result<void> CommitWrites( const std::vector<Write> &writes );
 
         std::shared_ptr<storage::rocksdb> database_;
         uint16_t                          network_id_ = 0;
         BatchCommitter                    committer_;
+        LoadObserver                      load_observer_;
         mutable std::mutex                transition_mutex_;
     };
 
