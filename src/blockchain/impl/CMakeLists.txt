@@ -8,6 +8,11 @@ target_link_libraries(ConsensusProto
     SGTransactionProto
 )
 
+target_link_libraries(sgns_genius_account
+    PUBLIC
+    ConsensusLocalStateProto
+)
+
 add_library(blockchain_genesis
     Blockchain.cpp
     ../ValidatorRegistry.cpp
