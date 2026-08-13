@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <limits>
 
 #include <boost/filesystem/operations.hpp>
 
@@ -160,6 +161,18 @@ namespace
 
         uint64_t PayEscrowAndReadBurn( const std::string &escrow_path )
         {
+            auto transfer = PayEscrowAndReadTransfer( escrow_path );
+            if ( !transfer ) return 0;
+            constexpr std::string_view zero = "0x0000000000000000000000000000000000000000";
+            const auto outputs = transfer->GetDstInfos();
+            const auto burn = std::find_if( outputs.begin(), outputs.end(), [zero]( const OutputDestInfo &output )
+                                            { return output.dest_address == zero; } );
+            EXPECT_NE( burn, outputs.end() );
+            return burn == outputs.end() ? 0 : burn->encrypted_amount;
+        }
+
+        std::shared_ptr<TransferTransaction> PayEscrowAndReadTransfer( const std::string &escrow_path )
+        {
             SGProcessing::TaskResult result;
             auto *subtask = result.add_subtask_results();
             subtask->set_node_address( account_->GetAddress() );
@@ -179,13 +192,44 @@ namespace
                 }
             }
             EXPECT_TRUE( transfer );
-            if ( !transfer ) return 0;
-            constexpr std::string_view zero = "0x0000000000000000000000000000000000000000";
-            const auto outputs = transfer->GetDstInfos();
-            const auto burn = std::find_if( outputs.begin(), outputs.end(), [zero]( const OutputDestInfo &output )
-                                            { return output.dest_address == zero; } );
-            EXPECT_NE( burn, outputs.end() );
-            return burn == outputs.end() ? 0 : burn->encrypted_amount;
+            return transfer;
+        }
+
+        void ActivateBurnBasisPoints( uint64_t basis_points )
+        {
+            if ( burn_->GetCachedBasisPoints() == basis_points ) return;
+            auto candidate = burn_->ProposeBurnCandidate( basis_points );
+            ASSERT_TRUE( candidate.has_value() ) << candidate.error().message();
+            auto approvals = secure_crdt_->ReadCandidateApprovals( candidate.value() );
+            ASSERT_TRUE( approvals.has_value() );
+            ASSERT_EQ( approvals.value().size(), 1U );
+            ASSERT_TRUE(
+                secure_crdt_->SubmitCandidateApproval( Approval( approvals.value().front().core, 1 ) ).has_value() );
+            ASSERT_TRUE( burn_->TryActivateBurnCandidate( candidate.value() ).has_value() );
+            ASSERT_EQ( burn_->GetCachedBasisPoints(), basis_points );
+        }
+
+        SGProcessing::TaskResult SingleSubtaskResult() const
+        {
+            SGProcessing::TaskResult result;
+            auto *subtask = result.add_subtask_results();
+            subtask->set_node_address( account_->GetAddress() );
+            const auto &bytes = token_id_.bytes();
+            subtask->set_token_id( bytes.data(), bytes.size() );
+            return result;
+        }
+
+        size_t CountOutputDestinations() const
+        {
+            size_t count = 0;
+            for ( auto bytes : manager_->GetOutTransactions() )
+            {
+                auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( bytes ) ) );
+                if ( transaction.has_error() ) continue;
+                auto transfer = std::dynamic_pointer_cast<TransferTransaction>( transaction.value() );
+                if ( transfer ) count += transfer->GetDstInfos().size();
+            }
+            return count;
         }
 
         boost::filesystem::path path_;
@@ -330,4 +374,53 @@ TEST_F( BurnConfigPolicyE2ETest, PersistBeforeCacheLeavesConfirmedValueAndCallba
     EXPECT_TRUE( burn_->IsEconomicallyReady() );
     EXPECT_EQ( callback_count, 0U );
     EXPECT_EQ( PayEscrowAndReadBurn( escrow ), 100U );
+}
+
+TEST_F( BurnConfigPolicyE2ETest, PayEscrowUsesExactOverflowSafeBurnForUint64Maximum )
+{
+    ConfirmGenesisAndBurn();
+    constexpr auto maximum = std::numeric_limits<uint64_t>::max();
+
+    ActivateBurnBasisPoints( 1 );
+    EXPECT_EQ( PayEscrowAndReadBurn( StoreEscrow( maximum ) ), 1844674407370955ULL );
+
+    ActivateBurnBasisPoints( 100 );
+    EXPECT_EQ( PayEscrowAndReadBurn( StoreEscrow( maximum ) ), 184467440737095516ULL );
+
+    ActivateBurnBasisPoints( TransactionManager::BASIS_POINTS_TOTAL );
+    auto full_burn = PayEscrowAndReadTransfer( StoreEscrow( maximum ) );
+    ASSERT_TRUE( full_burn );
+    constexpr std::string_view zero = "0x0000000000000000000000000000000000000000";
+    const auto outputs = full_burn->GetDstInfos();
+    const auto burn = std::find_if( outputs.begin(), outputs.end(), [zero]( const OutputDestInfo &output )
+                                    { return output.dest_address == zero; } );
+    ASSERT_NE( burn, outputs.end() );
+    EXPECT_EQ( burn->encrypted_amount, maximum );
+    for ( const auto &output : outputs )
+    {
+        if ( output.dest_address != zero ) EXPECT_EQ( output.encrypted_amount, 0U );
+    }
+
+    manager_->Stop();
+    manager_ = TransactionManager::New( node_->db,
+                                        node_->io,
+                                        account_,
+                                        blockchain_,
+                                        false,
+                                        42,
+                                        std::chrono::milliseconds( 300000 ),
+                                        std::chrono::milliseconds( 0 ),
+                                        TransactionManager::BASIS_POINTS_TOTAL + 1,
+                                        nullptr );
+    ASSERT_TRUE( manager_ );
+    const auto invalid_escrow = StoreEscrow( maximum );
+    const auto transaction_count = manager_->CountTransactions();
+    const auto outgoing_count = manager_->GetOutTransactions().size();
+    const auto output_count = CountOutputDestinations();
+    auto invalid = manager_->PayEscrow( invalid_escrow, SingleSubtaskResult(), nullptr );
+    ASSERT_TRUE( invalid.has_error() );
+    EXPECT_EQ( invalid.error(), std::make_error_code( std::errc::invalid_argument ) );
+    EXPECT_EQ( manager_->CountTransactions(), transaction_count );
+    EXPECT_EQ( manager_->GetOutTransactions().size(), outgoing_count );
+    EXPECT_EQ( CountOutputDestinations(), output_count );
 }
