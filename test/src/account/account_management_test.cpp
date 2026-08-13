@@ -9,13 +9,17 @@
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
+#include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "securecrdt/SecureCrdt.hpp"
 #include "testutil/wait_condition.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/mint_source_hash.hpp"
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/offline_chainlist.hpp"
 #include "testutil/genius_node_test_access.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 
 using namespace sgns::test;
 using namespace sgns;
@@ -24,16 +28,15 @@ static sgns::TokenID TOKEN_ID = sgns::TokenID::FromBytes( { 0x00 } );
 
 namespace
 {
-    std::string WriteTrustedNodeConfig( const boost::filesystem::path &path,
-                                        const char                    *private_key,
-                                        const char                    *node_type,
-                                        bool                           is_processor )
+    std::shared_ptr<GeniusAccount> WriteTrustedNodeConfig( const boost::filesystem::path &path,
+                                                            const char                    *private_key,
+                                                            const char                    *node_type,
+                                                            bool                           is_processor )
     {
-        const bool is_full_node = std::string_view( node_type ) != "Light";
-        auto account = GeniusAccount::NewFromPrivateKey( TOKEN_ID, private_key, path, is_full_node );
+        auto account = GeniusAccount::NewFromPrivateKey( TOKEN_ID, private_key, path );
         if ( !account )
         {
-            return {};
+            return nullptr;
         }
         const auto address = account->GetAddress();
         std::ofstream config( ( path / "sgns_config.json" ).string() );
@@ -42,12 +45,15 @@ namespace
                << ",\"rpc_catchup\":false,\"trusted_peers\":[\"" << address
                << "\"],\"bootstrapper_node\":\"" << address
                << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
-        return address;
+        return account;
     }
 
-    void ConfirmConfiguredTrust( const std::shared_ptr<GeniusNode> &node )
+    void ConfirmConfiguredTrust( const std::shared_ptr<GeniusNode>    &node,
+                                 const std::shared_ptr<GeniusAccount> &authority,
+                                 const boost::filesystem::path        &path )
     {
         ASSERT_TRUE( node );
+        ASSERT_TRUE( authority );
         test::assertWaitForCondition( [&] {
                                           return node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS ||
                                                  node->GetState() == GeniusNode::NodeState::READY;
@@ -58,14 +64,58 @@ namespace
         {
             return;
         }
-        ASSERT_TRUE( GeniusNodeTestAccess::ApproveConfiguredTrustGenesis( node ).has_value() );
-        test::assertWaitForCondition( [&] { return node->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS; },
-                                      std::chrono::seconds( 5 ),
-                                      "reviewed trust genesis did not become durable" );
-        ASSERT_TRUE( GeniusNodeTestAccess::ConfirmInitialBurn( node ).has_value() );
+
+        const auto network_config = path / "reviewed-trust-network.json";
+        const auto database_path  = path / "reviewed-trust-globaldb";
+        boost::filesystem::create_directories( database_path );
+        {
+            std::ofstream config( network_config.string() );
+            ASSERT_TRUE( config.good() );
+            config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+                   << node->GetPubSub()->GetInterfaceAddress() << R"("]})";
+        }
+
+        const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+        sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
+        composition_config.network_config_path = network_config.string();
+        composition_config.database_path       = database_path.string();
+        composition_config.listen_topic        = topic;
+        composition_config.broadcast_topic     = topic;
+        auto composition_result = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
+        ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
+        auto composition = composition_result.value();
+        ASSERT_TRUE( composition->Start().has_value() );
+
+        auto secure_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
+        auto store = sgns::trustedpeer::TrustStateStore::Open( ( path / "reviewed-trust-state" ).string(), 144 );
+        ASSERT_TRUE( store.has_value() ) << store.error().message();
+
+        sgns::trustedpeer::GenesisManifest manifest;
+        manifest.network_id              = 144;
+        manifest.bootstrapper_public_key = authority->GetAddress();
+        manifest.peers                   = { authority->GetAddress() };
+        manifest.membership_threshold    = 1;
+        manifest.burn_threshold          = 1;
+        const auto canonical             = manifest.Canonicalized();
+        ASSERT_TRUE( canonical.has_value() );
+        const auto manifest_bytes = canonical->CanonicalBytes();
+        ASSERT_TRUE( manifest_bytes.has_value() );
+
+        auto registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+            secure_crdt,
+            store.value(),
+            *canonical,
+            authority->Sign( *manifest_bytes ),
+            authority->GetAddress(),
+            [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
+        ASSERT_TRUE( registry.has_value() ) << registry.error().message();
+        ASSERT_TRUE( secure_crdt->RegisterFilters() );
+        auto submitted = registry.value()->SubmitReviewedGenesisApproval();
+        ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+
         test::assertWaitForCondition( [&] { return node->GetState() == GeniusNode::NodeState::READY; },
                                       std::chrono::seconds( 50 ),
-                                      "initial burn confirmation did not unlock node" );
+                                      "reviewed trust and deterministic initial burn did not unlock node" );
     }
 } // namespace
 
@@ -92,15 +142,15 @@ public:
 
         const auto bootstrapper = WriteTrustedNodeConfig(
             path, "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa", "Full", true );
-        assert( !bootstrapper.empty() );
-        Blockchain::SetAuthorizedFullNodeAddress( bootstrapper );
+        assert( bootstrapper );
+        Blockchain::SetAuthorizedFullNodeAddress( bootstrapper->GetAddress() );
 
         node_ = sgns::GeniusNode::New(
             { "0xcafe", "0.35", "1.0", TOKEN_ID, path.generic_string() + '/' },
             sgns::FromPrivateKey{ "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa" } );
         node_->SetChainlistFetcher( sgns::test::OfflineChainlistFetcher() );
         assert( node_ != nullptr );
-        ConfirmConfiguredTrust( node_ );
+        ConfirmConfiguredTrust( node_, bootstrapper, path );
         assert( node_->GetState() == GeniusNode::NodeState::READY );
     }
 
@@ -174,22 +224,16 @@ TEST_F( AccountManagement, SetPayoutAddress )
     sgns::GeniusNode::WriteNetworkConfig( path_receiver.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    ASSERT_FALSE( WriteTrustedNodeConfig(
-                      path_receiver,
-                      "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f",
-                      "Light",
-                      false )
-                      .empty() );
+    auto receiver_authority = WriteTrustedNodeConfig(
+        path_receiver, "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f", "Light", false );
+    ASSERT_TRUE( receiver_authority );
     boost::filesystem::create_directories( path_requester );
     sgns::GeniusNode::WriteNetworkConfig( path_requester.generic_string() + '/',
                                           /*port_seed=*/0,
                                           /*auto_dht=*/false );
-    ASSERT_FALSE( WriteTrustedNodeConfig(
-                      path_requester,
-                      "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0",
-                      "Light",
-                      false )
-                      .empty() );
+    auto requester_authority = WriteTrustedNodeConfig(
+        path_requester, "55189b416eb4267bbe16391adc33d9e30c297e6b7ee72be91b0bcc7b76c437c0", "Light", false );
+    ASSERT_TRUE( requester_authority );
 
     auto node_receiver = sgns::GeniusNode::New(
         { "0xcafe", "0.35", "1.0", TOKEN_ID, path_receiver.generic_string() + '/' },
@@ -204,8 +248,8 @@ TEST_F( AccountManagement, SetPayoutAddress )
         { node_receiver->GetPubSub()->GetInterfaceAddress(), node_requester->GetPubSub()->GetInterfaceAddress() } );
     node_receiver->AddPeers( { node_requester->GetPubSub()->GetInterfaceAddress() } );
 
-    ConfirmConfiguredTrust( node_receiver );
-    ConfirmConfiguredTrust( node_requester );
+    ConfirmConfiguredTrust( node_receiver, receiver_authority, path_receiver );
+    ConfirmConfiguredTrust( node_requester, requester_authority, path_requester );
 
     test::assertWaitForCondition( [&] { return node_receiver->GetState() == GeniusNode::NodeState::READY; },
                                   std::chrono::milliseconds( 50000 ),
