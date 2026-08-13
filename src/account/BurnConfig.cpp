@@ -350,6 +350,7 @@ namespace sgns::account
 
         multisig::CollectedSignatures proof;
         for ( const auto &approval : approvals.value() ) proof.emplace_back( approval.signer, approval.signature );
+        if ( proof.size() < snapshot.value().policy.burn_threshold ) return false;
         const auto authorization_bytes = core.CanonicalBytes();
         if ( !authorization_bytes ) return outcome::failure( std::errc::invalid_argument );
         auto committed = trust_store_->CommitBurnSuccessor( *candidate, proof, *authorization_bytes );
