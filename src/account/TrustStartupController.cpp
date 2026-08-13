@@ -52,6 +52,7 @@ namespace sgns::account
         auto instance             = std::shared_ptr<TrustStartupController>( new TrustStartupController );
         instance->secure_crdt_    = std::move( secure_crdt );
         instance->trust_store_    = std::move( trust_store );
+        instance->local_signer_address_ = local_signer_address;
         instance->event_callback_ = std::move( event_callback );
         instance->state_callback_ = std::move( state_callback );
 
@@ -118,16 +119,7 @@ namespace sgns::account
                  {
                      if ( auto self = weak.lock() )
                      {
-                         auto activated = self->registry_->TryActivateReviewedGenesisCandidate( id );
-                         if ( activated.has_error() )
-                         {
-                             self->Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                                         { id.domain,
-                                           std::to_string( id.version ),
-                                           id.content_hash,
-                                           activated.error().message() } );
-                         }
-                         (void) self->Refresh();
+                         self->RequestRefresh();
                      }
                  },
                  &instance->callback_owner_token_ ) ||
@@ -146,22 +138,29 @@ namespace sgns::account
                                  self->pending_burn_candidates_.push_back( id );
                              }
                          }
-                         auto activated = self->burn_config_->TryActivateBurnCandidate( id );
-                         if ( activated.has_error() )
-                         {
-                             self->Emit( EventCode::TRUST_ACTIVATION_FAILED,
-                                         { id.domain,
-                                           std::to_string( id.version ),
-                                           id.content_hash,
-                                           activated.error().message() } );
-                         }
-                         (void) self->Refresh();
+                         self->RequestRefresh();
                      }
                  },
                  &instance->callback_owner_token_ ) )
         {
             return outcome::failure( std::errc::operation_not_permitted );
         }
+
+        auto *worker_self = instance.get();
+        instance->refresh_worker_ = std::thread( [worker_self]
+        {
+            std::unique_lock<std::mutex> lock( worker_self->refresh_worker_mutex_ );
+            while ( !worker_self->stop_refresh_worker_ )
+            {
+                worker_self->refresh_worker_condition_.wait(
+                    lock, [&] { return worker_self->stop_refresh_worker_ || worker_self->refresh_requested_; } );
+                if ( worker_self->stop_refresh_worker_ ) break;
+                worker_self->refresh_requested_ = false;
+                lock.unlock();
+                (void) worker_self->Refresh();
+                lock.lock();
+            }
+        } );
 
         BOOST_OUTCOME_TRY( instance->Refresh() );
         return instance;
@@ -174,10 +173,20 @@ namespace sgns::account
             secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", &callback_owner_token_ );
             secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", &callback_owner_token_ );
         }
+        {
+            std::lock_guard<std::mutex> lock( refresh_worker_mutex_ );
+            stop_refresh_worker_ = true;
+        }
+        refresh_worker_condition_.notify_one();
+        if ( refresh_worker_.joinable() )
+        {
+            refresh_worker_.join();
+        }
     }
 
     outcome::result<void> TrustStartupController::Refresh()
     {
+        std::lock_guard<std::mutex> refresh_lock( refresh_execution_mutex_ );
         auto snapshot = trust_store_->LoadAndVerify();
         if ( snapshot.has_error() && snapshot.error() == sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND )
         {
@@ -198,7 +207,24 @@ namespace sgns::account
             const auto                            candidate = sgns::securecrdt::CandidateId::FromCore( core );
             if ( candidate )
             {
-                (void) registry_->TryActivateReviewedGenesisCandidate( *candidate );
+                auto approvals = secure_crdt_->ReadCandidateApprovals( *candidate );
+                if ( approvals.has_error() )
+                {
+                    return approvals.error();
+                }
+                if ( !approvals.value().empty() )
+                {
+                    auto activated = registry_->TryActivateReviewedGenesisCandidate( *candidate );
+                    if ( activated.has_error() )
+                    {
+                        Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                              { candidate->domain,
+                                std::to_string( candidate->version ),
+                                candidate->content_hash,
+                                activated.error().message() } );
+                        return activated.error();
+                    }
+                }
             }
             snapshot = trust_store_->LoadAndVerify();
         }
@@ -221,14 +247,60 @@ namespace sgns::account
         }
 
         std::vector<sgns::securecrdt::CandidateId> pending;
+        if ( snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::BootstrapOnly &&
+             std::find( snapshot.value().policy.peers.begin(),
+                        snapshot.value().policy.peers.end(),
+                        local_signer_address_ ) != snapshot.value().policy.peers.end() )
+        {
+            auto initiated = burn_config_->OnTrustedPeerGenesisConfirmed();
+            if ( initiated.has_error() )
+            {
+                return initiated.error();
+            }
+            pending.push_back( initiated.value() );
+        }
+        auto discovered = burn_config_->ListPendingBurnCandidates();
+        if ( discovered.has_error() )
+        {
+            return discovered.error();
+        }
+        pending.insert( pending.end(), discovered.value().begin(), discovered.value().end() );
         {
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
-            pending = pending_burn_candidates_;
+            pending.insert( pending.end(), pending_burn_candidates_.begin(), pending_burn_candidates_.end() );
         }
+        std::sort( pending.begin(), pending.end(), []( const auto &left, const auto &right ) {
+            if ( left.domain != right.domain ) return left.domain < right.domain;
+            return left.version == right.version ? left.content_hash < right.content_hash
+                                                 : left.version < right.version;
+        } );
+        pending.erase( std::unique( pending.begin(), pending.end() ), pending.end() );
         for ( const auto &candidate : pending )
         {
             auto activated = burn_config_->TryActivateBurnCandidate( candidate );
-            if ( activated.has_value() && burn_config_->IsEconomicallyReady() )
+            if ( activated.has_error() )
+            {
+                Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                      { candidate.domain,
+                        std::to_string( candidate.version ),
+                        candidate.content_hash,
+                        activated.error().message() } );
+                return activated.error();
+            }
+            if ( activated.value() )
+            {
+                auto verified = trust_store_->LoadAndVerify();
+                if ( verified.has_error() )
+                {
+                    Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                          { candidate.domain,
+                            std::to_string( candidate.version ),
+                            candidate.content_hash,
+                            verified.error().message() } );
+                    return verified.error();
+                }
+            }
+            if ( burn_config_->IsEconomicallyReady() )
             {
                 break;
             }
@@ -310,5 +382,15 @@ namespace sgns::account
         }
         const auto fingerprint = manifest_.Fingerprint();
         event_callback_( Event{ code, std::move( fields ), fingerprint.value_or( "" ) } );
+    }
+
+    void TrustStartupController::RequestRefresh()
+    {
+        {
+            std::lock_guard<std::mutex> lock( refresh_worker_mutex_ );
+            if ( stop_refresh_worker_ ) return;
+            refresh_requested_ = true;
+        }
+        refresh_worker_condition_.notify_one();
     }
 } // namespace sgns::account
