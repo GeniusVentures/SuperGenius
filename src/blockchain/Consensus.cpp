@@ -2291,10 +2291,15 @@ namespace sgns
             {
                 return candidate.proposal_id() < current.proposal_id();
             }
-            return cand_hash < curr_hash;
+            return BestHash( curr_hash, cand_hash ) == cand_hash;
         }
 
         return candidate.proposal_id() < current.proposal_id();
+    }
+
+    const std::string &ConsensusManager::BestHash( const std::string &a, const std::string &b )
+    {
+        return ( a <= b ) ? a : b;
     }
 
     outcome::result<std::string> ConsensusManager::ComputeSubjectId( const Subject &subject )

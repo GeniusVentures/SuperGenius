@@ -1822,4 +1822,8 @@ namespace sgns
         return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
     }
 
+    const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )
+    {
+        return ConsensusManager::BestHash( a, b );
+    }
 }

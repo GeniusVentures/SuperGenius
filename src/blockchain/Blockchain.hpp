@@ -288,6 +288,14 @@ namespace sgns
         outcome::result<ConsensusManager::Certificate> GetCertificateBySubjectHash(
             const std::string &subject_hash ) const;
 
+        /**
+         * @brief Chooses the preferred hash among two candidates.
+         * @param[in] a First hash candidate.
+         * @param[in] b Second hash candidate.
+         * @return Reference to selected hash.
+         */
+        static const std::string &BestHash( const std::string &a, const std::string &b );
+
     protected:
         friend class Migration3_5_0To3_6_0;
         friend class Migration3_6_0To3_7_0;

@@ -121,16 +121,17 @@ namespace sgns
             { "escrow-hold",
               { &TransactionManager::ParseEscrowTransaction, &TransactionManager::RevertEscrowTransaction } } };
 
-    std::shared_ptr<TransactionManager> TransactionManager::New( std::shared_ptr<crdt::GlobalDB>          processing_db,
-                                                                 std::shared_ptr<boost::asio::io_context> ctx,
-                                                                 std::shared_ptr<GeniusAccount>           account,
-                                                                 std::shared_ptr<Blockchain>              blockchain,
-                                                                 bool                                     full_node,
-                                                                 uint16_t                                 subnet_id,
-                                                                 std::chrono::milliseconds timestamp_tolerance,
-                                                                 std::chrono::milliseconds mutability_window,
-                                                                 uint64_t                  initial_burn_basis_points,
-                                                                 std::shared_ptr<sgns::account::BurnConfig> burn_config )
+    std::shared_ptr<TransactionManager> TransactionManager::New(
+        std::shared_ptr<crdt::GlobalDB>            processing_db,
+        std::shared_ptr<boost::asio::io_context>   ctx,
+        std::shared_ptr<GeniusAccount>             account,
+        std::shared_ptr<Blockchain>                blockchain,
+        bool                                       full_node,
+        uint16_t                                   subnet_id,
+        std::chrono::milliseconds                  timestamp_tolerance,
+        std::chrono::milliseconds                  mutability_window,
+        uint64_t                                   initial_burn_basis_points,
+        std::shared_ptr<sgns::account::BurnConfig> burn_config )
     {
         auto instance = std::shared_ptr<TransactionManager>( new TransactionManager( std::move( processing_db ),
                                                                                      std::move( ctx ),
@@ -824,7 +825,7 @@ namespace sgns
         // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
         // taken at escrow creation.
         const auto burn_amount = ( escrow_amount * burn_basis_points_.load( std::memory_order_relaxed ) ) /
-                                  BASIS_POINTS_TOTAL;
+                                 BASIS_POINTS_TOTAL;
         const auto available   = escrow_amount - burn_amount;
 
         BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
@@ -1260,7 +1261,8 @@ namespace sgns
                 }
 
                 const auto candidate_hash = candidate->GetHash();
-                if ( selected_hash.empty() || candidate_hash < selected_hash )
+                if ( selected_hash.empty() ||
+                     Blockchain::BestHash( selected_hash, candidate->GetHash() ) == candidate->GetHash() )
                 {
                     selected_hash = candidate_hash;
                 }

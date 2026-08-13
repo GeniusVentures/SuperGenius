@@ -479,6 +479,13 @@ namespace sgns
                                                               std::string_view            subject_type,
                                                               const std::vector<uint8_t> &payload );
         /**
+         * @brief Returns the lexicographically better hash among two values.
+         * @param[in] a First hash candidate.
+         * @param[in] b Second hash candidate.
+         * @return Reference to the selected hash string.
+         */
+        static const std::string &BestHash( const std::string &a, const std::string &b );
+        /**
          * @brief Submits a proposal for local handling and broadcast.
          * @param[in] proposal Proposal to submit.
          * @param[in] self_vote Whether the local node should auto-vote for its own proposal.
