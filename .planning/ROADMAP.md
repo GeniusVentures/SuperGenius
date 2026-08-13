@@ -63,7 +63,7 @@ Full phase details: `.planning/milestones/v3.0-ROADMAP.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 18/18 plans complete
+**Plans:** 18/22 plans complete
 Plans:
 **Wave 1**
 
@@ -121,6 +121,19 @@ Plans:
 **Gap Wave 3** *(blocked on all implementation gap plans)*
 
 - [x] 13-18-PLAN.md — Exact four-blocker, 25-test, and five-repeat security closure gate
+
+**Second Gap Wave 1**
+
+- [ ] 13-19-PLAN.md — Coherent trust-state verification across durable transitions
+- [ ] 13-20-PLAN.md — Production-owned initial burn recovery and refresh error propagation
+
+**Second Gap Wave 2** *(blocked on 13-20; shared startup-controller lifecycle)*
+
+- [ ] 13-21-PLAN.md — Signer-free passive policy activation and safe callback teardown
+
+**Second Gap Wave 3** *(blocked on 13-19, 13-20, and 13-21)*
+
+- [ ] 13-22-PLAN.md — Fresh-linked production closure gate with exact focused and broad accounting
 
 ## Backlog
 
