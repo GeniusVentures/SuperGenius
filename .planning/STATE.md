@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-16-PLAN.md
-last_updated: "2026-08-13T14:20:03.901Z"
+stopped_at: Completed 13-17-PLAN.md
+last_updated: "2026-08-13T14:36:24.348Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 26
-  completed_plans: 22
+  completed_plans: 23
   percent: 29
 ---
 
@@ -68,8 +68,8 @@ Last activity: 2026-08-13
 
 ## Session
 
-**Last session:** 2026-08-13T14:20:03.897Z
-**Stopped At:** Completed 13-16-PLAN.md
+**Last session:** 2026-08-13T14:36:24.344Z
+**Stopped At:** Completed 13-17-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -103,6 +103,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P11 | 4min | 1 tasks | 4 files |
 | Phase 13 P13 | 10min | 1 tasks | 5 files |
 | Phase 13 P16 | 6min | 1 tasks | 2 files |
+| Phase 13 P17 | 13min | 2 tasks | 8 files |
 
 ## Decisions
 
@@ -139,3 +140,5 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Burn readiness is classified from the verified authorization path stored with the current burn head, never from proof count or the current policy threshold.
 - [Phase 13]: While burn v1 is BootstrapOnly, both successor APIs reject before normal validation and writes; only an identical burn-v1/value-100 canonical candidate-core with current-policy burn quorum may replace its proof.
 - [Phase 13]: PayEscrow uses validated quotient/remainder basis-point arithmetic so full-domain uint64_t financial outputs are exact without non-standard wide integers. — Validated bounds make each intermediate and the final sum fit uint64_t while preserving floor semantics.
+- [Phase 13]: One validated signer-set snapshot governs legacy membership, retained-child pruning, the storage bound, and quorum evaluation for each operation.
+- [Phase 13]: Remote legacy signatures must bind to the exact base/sig/canonical-address key before cryptographic verification or persistence.
