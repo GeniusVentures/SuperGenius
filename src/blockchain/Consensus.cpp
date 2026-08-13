@@ -501,6 +501,7 @@ namespace sgns
     {
         ConsensusManagerLogger()->trace( "{}: Checking local aggregator role for proposal", __func__ );
 
+        // We do it ordered so that it is deterministic
         std::vector<std::string> ordered;
         ordered.reserve( registry.validators_size() );
         for ( const auto &entry : registry.validators() )
@@ -625,10 +626,11 @@ namespace sgns
             }
             else
             {
-                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={} error={}",
+                ConsensusManagerLogger()->error( "{}: self-vote failed for hash {}, id={}, slot_key={}, error={}",
                                                  __func__,
                                                  GetPrintableSubjectHash( proposal.subject() ),
                                                  proposal_id.substr( 0, 8 ),
+                                                 slot_key,
                                                  vote_result.error().message() );
             }
         }
@@ -640,6 +642,11 @@ namespace sgns
                                                std::size_t                           scheduled_retry_count,
                                                std::chrono::steady_clock::time_point last_retry_at )
     {
+        ConsensusManagerLogger()->debug( "{}: Adding pending proposal for hash {} proposal_id={}",
+                                         __func__,
+                                         GetPrintableSubjectHash( proposal.subject() ),
+                                         proposal.proposal_id().substr( 0, 8 ) );
+
         std::lock_guard lock( proposals_mutex_ );
         if ( pending_entries_.find( proposal.proposal_id() ) != pending_entries_.end() )
         {
@@ -1508,6 +1515,10 @@ namespace sgns
     {
         if ( !CheckProposal( proposal ) )
         {
+            ConsensusManagerLogger()->error( "{}: rejected: Invalid proposal for hash {} proposal_id={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
@@ -1519,6 +1530,15 @@ namespace sgns
                                              __func__,
                                              GetPrintableSubjectHash( subject ),
                                              proposal_id.substr( 0, 8 ) );
+            return;
+        }
+
+        if ( proposal.registry_cid().empty() )
+        {
+            ConsensusManagerLogger()->error( "{}: rejected: proposal registry CID missing for hash {}. proposal_id={}",
+                                             __func__,
+                                             GetPrintableSubjectHash( proposal.subject() ),
+                                             proposal.proposal_id().substr( 0, 8 ) );
             return;
         }
 
@@ -2014,6 +2034,9 @@ namespace sgns
         }
         if ( !vote.approve() )
         {
+            ConsensusManagerLogger()->debug( "{}: ignored: vote not approved voter_id={}",
+                                             __func__,
+                                             vote.voter_id().substr( 0, 8 ) );
             return;
         }
 
@@ -2281,6 +2304,10 @@ namespace sgns
 
     bool ConsensusManager::IsBetterProposal( const Proposal &candidate, const Proposal &current ) const
     {
+        ConsensusManagerLogger()->trace( "{}: called candidate={} current={}",
+                                         __func__,
+                                         candidate.proposal_id(),
+                                         current.proposal_id() );
         auto candidate_nonce = DecodeNonceSubject( candidate.subject() );
         auto current_nonce   = DecodeNonceSubject( current.subject() );
         if ( candidate_nonce.has_value() && current_nonce.has_value() )
