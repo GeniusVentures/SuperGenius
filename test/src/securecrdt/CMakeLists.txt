@@ -41,6 +41,7 @@ addtest(securecrdt_quorum_gate_test
 )
 target_link_libraries(securecrdt_quorum_gate_test
     ${SECURECRDT_TEST_NODE_LIBS}
+    trustedpeer
 )
 
 addtest(securecrdt_propose_sign_quorum_test
