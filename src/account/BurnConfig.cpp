@@ -164,16 +164,10 @@ namespace sgns::account
         }
 
         auto snapshot = instance->trusted_peer_registry_->GetConfirmedSnapshot();
-        if ( snapshot.has_value() )
+        if ( snapshot.has_value() &&
+             snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum )
         {
-            const auto &proof = snapshot.value().burn_proof;
-            const bool bootstrap_only = proof.size() == 1 &&
-                proof.front().first == snapshot.value().genesis.bootstrapper_public_key &&
-                proof.front().second == snapshot.value().bootstrap_signature;
-            if ( !bootstrap_only && proof.size() >= snapshot.value().policy.burn_threshold )
-            {
-                instance->PublishConfirmedBurn( snapshot.value() );
-            }
+            instance->PublishConfirmedBurn( snapshot.value() );
         }
         return instance;
     }
