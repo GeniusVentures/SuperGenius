@@ -89,6 +89,72 @@ TEST_F( TrustRestartTest, OmittedTrustConfigRestoresIdenticalDurableAuthority )
     EXPECT_TRUE( events.empty() );
 }
 
+TEST_F( TrustRestartTest, HistoricalBurnProofRemainsReadyAfterCurrentThresholdIncrease )
+{
+    const auto policy_v1_hash = expected_.policy.Hash().value();
+    const auto burn_v1_hash   = expected_.burn.Hash().value();
+
+    auto policy_v2                       = expected_.policy;
+    policy_v2.version                    = 2;
+    policy_v2.expected_previous_hash     = policy_v1_hash;
+    policy_v2.authorizing_policy_hash    = policy_v1_hash;
+    policy_v2.burn_threshold             = 3;
+    const auto policy_core               = TrustedPeerRegistry::PolicyCandidateCore( policy_v2 ).value();
+    const auto policy_authorization      = policy_core.CanonicalBytes().value();
+    auto       policy_v2_committed       = store_->CommitPolicySuccessor(
+        policy_v2,
+        { { signers_[0].GetAddress(), signers_[0].Sign( policy_authorization ) },
+          { signers_[1].GetAddress(), signers_[1].Sign( policy_authorization ) } },
+        policy_authorization );
+    ASSERT_TRUE( policy_v2_committed.has_value() ) << policy_v2_committed.error().message();
+    ASSERT_EQ( policy_v2_committed.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
+    ASSERT_EQ( policy_v2_committed.value().burn_proof.size(), 2U );
+    ASSERT_EQ( policy_v2_committed.value().policy.burn_threshold, 3U );
+
+    expected_ = policy_v2_committed.value();
+    store_.reset();
+    store_ = TrustStateStore::Open( ( path_ / "trust" ).string(), 42 ).value();
+    const auto reopened = store_->LoadAndVerify().value();
+    ASSERT_EQ( reopened.burn_authorization, BurnAuthorizationKind::PeerQuorum );
+    ASSERT_EQ( reopened.policy.Hash().value(), expected_.policy.Hash().value() );
+    ASSERT_EQ( reopened.burn.Hash().value(), burn_v1_hash );
+
+    std::vector<TrustStartupController::Event> events;
+    auto                                       started = Start( std::nullopt, events );
+    ASSERT_TRUE( started.has_value() ) << started.error().message();
+    EXPECT_EQ( started.value()->GetState(), TrustStartupController::State::ConfirmedReady );
+    EXPECT_TRUE( started.value()->IsEconomicallyReady() );
+    EXPECT_EQ( started.value()->burn_config()->GetCachedBasisPoints(), 100U );
+    EXPECT_EQ( started.value()->registry()->GetConfirmedSnapshot().value().policy.Hash().value(),
+               expected_.policy.Hash().value() );
+    EXPECT_EQ( started.value()->registry()->GetConfirmedSnapshot().value().burn.Hash().value(), burn_v1_hash );
+    EXPECT_TRUE( events.empty() );
+}
+
+TEST_F( TrustRestartTest, BootstrapOnlyBurnRemainsUnready )
+{
+    const auto bootstrap_path  = path_ / "bootstrap-only-trust";
+    auto       bootstrap_store = TrustStateStore::Open( bootstrap_path.string(), 42 ).value();
+    const auto bootstrap_snapshot =
+        bootstrap_store->CommitGenesis( manifest_, signers_[0].Sign( manifest_.CanonicalBytes().value() ) ).value();
+    ASSERT_EQ( bootstrap_snapshot.burn_authorization, BurnAuthorizationKind::BootstrapOnly );
+
+    std::vector<TrustStartupController::Event> events;
+    auto started = TrustStartupController::New(
+        secure_,
+        bootstrap_store,
+        std::nullopt,
+        signers_[2].GetAddress(),
+        [this]( const std::vector<uint8_t> &bytes ) { return signers_[2].Sign( bytes ); },
+        [&]( const auto &event ) { events.push_back( event ); } );
+    ASSERT_TRUE( started.has_value() ) << started.error().message();
+    EXPECT_EQ( started.value()->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+    EXPECT_FALSE( started.value()->IsEconomicallyReady() );
+    EXPECT_FALSE( started.value()->burn_config()->GetConfirmedValueProvider()->IsReady() );
+    EXPECT_EQ( bootstrap_store->LoadAndVerify().value(), bootstrap_snapshot );
+    EXPECT_TRUE( events.empty() );
+}
+
 TEST_F( TrustRestartTest, ReorderedConfiguredPeersMatchCanonicalDurableAuthority )
 {
     auto reordered = manifest_;
