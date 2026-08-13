@@ -104,12 +104,21 @@ namespace
 
         void TearDown() override
         {
-            secure_crdt_->Registry().UnregisterIf( "gnus-test-secure", &token_ );
-            secure_crdt_->Registry().UnregisterIf( "gnus-test-secure-malformed", &token_ );
-            secure_crdt_.reset();
-            node_.reset();
+            if ( secure_crdt_ )
+            {
+                secure_crdt_->Registry().UnregisterIf( "gnus-test-secure", &token_ );
+                secure_crdt_->Registry().UnregisterIf( "gnus-test-secure-malformed", &token_ );
+                secure_crdt_.reset();
+            }
+            if ( node_ )
+            {
+                node_.reset();
+            }
             GeniusAccount::SetSecureStorageFactory( nullptr );
-            boost::filesystem::remove_all( path_ );
+            if ( !path_.empty() )
+            {
+                boost::filesystem::remove_all( path_ );
+            }
         }
 
         static std::vector<std::string> &signer_set_static()

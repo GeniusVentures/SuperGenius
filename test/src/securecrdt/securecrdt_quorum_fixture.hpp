@@ -88,11 +88,20 @@ namespace sgns::test::securecrdt
 
         void TearDown() override
         {
-            secure_crdt_->Registry().UnregisterIf( BASE_KEY, this );
-            secure_crdt_.reset();
-            node_.reset();
+            if ( secure_crdt_ )
+            {
+                secure_crdt_->Registry().UnregisterIf( BASE_KEY, this );
+                secure_crdt_.reset();
+            }
+            if ( node_ )
+            {
+                node_.reset();
+            }
             GeniusAccount::SetSecureStorageFactory( nullptr );
-            boost::filesystem::remove_all( path_ );
+            if ( !path_.empty() )
+            {
+                boost::filesystem::remove_all( path_ );
+            }
         }
 
         sgns::crdt::HierarchicalKey                   base_key_{ BASE_KEY };
