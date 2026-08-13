@@ -80,6 +80,30 @@ namespace
             ASSERT_TRUE( registry_->IsGenesisConfirmed() );
         }
 
+        void ConfirmInitialBurn()
+        {
+            auto snapshot         = store_->LoadAndVerify().value();
+            const auto burn_bytes = snapshot.burn.CanonicalBytes().value();
+            const securecrdt::CandidateCore core{
+                securecrdt::CandidateCore::ENCODING_VERSION,
+                "burn-config",
+                snapshot.burn.network_id,
+                securecrdt::CandidateKind::BurnConfig,
+                snapshot.burn.version,
+                snapshot.burn.expected_previous_hash,
+                snapshot.burn.authorizing_policy_hash,
+                burn_bytes,
+            };
+            const auto authorization = core.CanonicalBytes().value();
+            multisig::CollectedSignatures proof{
+                { signers_[0].GetAddress(), signers_[0].Sign( authorization ) },
+                { signers_[1].GetAddress(), signers_[1].Sign( authorization ) },
+            };
+            auto confirmed = store_->CommitBurnSuccessor( snapshot.burn, proof, authorization );
+            ASSERT_TRUE( confirmed.has_value() ) << confirmed.error().message();
+            ASSERT_EQ( confirmed.value().burn_authorization, BurnAuthorizationKind::PeerQuorum );
+        }
+
         QuorumPolicyState Successor() const
         {
             auto       current               = registry_->GetConfirmedSnapshot().value().policy;
@@ -167,6 +191,7 @@ TEST_F( OperatorApprovalTest, ProposedPeersCannotSelfAuthorizeAndWrongLinksNever
 TEST_F( OperatorApprovalTest, CurrentPolicyQuorumCommitsBeforePublishingSuccessor )
 {
     ConfirmGenesis();
+    ConfirmInitialBurn();
     auto candidate                 = Successor();
     candidate.peers                = { signers_[0].GetAddress(), signers_[3].GetAddress() };
     candidate.membership_threshold = 2;
