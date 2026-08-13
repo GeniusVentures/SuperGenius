@@ -181,13 +181,19 @@ TEST_F( SecureCrdtQuorumGateTest, LocalOutsiderSignatureNeverPersists )
     const auto outsider_signature = signers_[2]->Sign( payload );
     const auto outsider_result =
         secure_crdt_->AddSignature( base_key, signers_[2]->GetAddress(), outsider_signature );
-    EXPECT_TRUE( outsider_result.has_error() );
+    ASSERT_TRUE( outsider_result.has_error() );
+    EXPECT_EQ( outsider_result.error(), SecureCrdt::Error::UNAUTHORIZED_SIGNER );
     EXPECT_TRUE( node_->db->Get( base_key.ChildString( "sig" ).ChildString( signers_[2]->GetAddress() ) ).has_error() );
 
     std::string mixed_case = signers_[0]->GetAddress();
-    mixed_case.front()     = static_cast<char>( std::toupper( mixed_case.front() ) );
+    const auto lowercase_hex = std::find_if( mixed_case.begin(),
+                                             mixed_case.end(),
+                                             []( const char byte ) { return byte >= 'a' && byte <= 'f'; } );
+    ASSERT_NE( lowercase_hex, mixed_case.end() );
+    *lowercase_hex = static_cast<char>( std::toupper( *lowercase_hex ) );
     const auto mixed_case_result = secure_crdt_->AddSignature( base_key, mixed_case, signers_[0]->Sign( payload ) );
-    EXPECT_TRUE( mixed_case_result.has_error() );
+    ASSERT_TRUE( mixed_case_result.has_error() );
+    EXPECT_EQ( mixed_case_result.error(), SecureCrdt::Error::UNAUTHORIZED_SIGNER );
     EXPECT_TRUE( node_->db->Get( base_key.ChildString( "sig" ).ChildString( mixed_case ) ).has_error() );
 
     const auto retained = node_->db->QueryKeyValues( base_key.ChildString( "sig" ).GetKey() );
