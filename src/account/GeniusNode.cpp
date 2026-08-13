@@ -793,6 +793,9 @@ namespace sgns
                                 case sgns::account::TrustStartupController::EventCode::TRUST_CRDT_FORK:
                                     code = "TRUST_CRDT_FORK";
                                     break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED:
+                                    code = "TRUST_ACTIVATION_FAILED";
+                                    break;
                                 case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
                                     break;
                             }
