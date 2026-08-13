@@ -17,6 +17,8 @@
 #include "account/GeniusSigner.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "securecrdt/securecrdt_test_node.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
+#include "storage/rocksdb/rocksdb_batch.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
 #include "trustedpeer/TrustedPeerRegistry.hpp"
 #include "trustedpeer/genesis_tool/GenesisCeremony.hpp"
@@ -75,7 +77,25 @@ namespace
             node_ = test::securecrdt::MakeSecureCrdtTestNode( "trust_genesis_tool" );
             EXPECT_NE( node_, nullptr );
             secure_crdt_ = std::make_shared<securecrdt::SecureCrdt>( node_->db, "trust-genesis-tool-topic" );
-            store_ = TrustStateStore::Open( ( path_ / "trust" ).string(), manifest_.network_id ).value();
+            store_ = TrustStateStore::Open(
+                ( path_ / "trust" ).string(),
+                manifest_.network_id,
+                [this]( sgns::storage::rocksdb &database,
+                        const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+                {
+                    if ( fail_commits_.load() )
+                        return outcome::failure( std::errc::io_error );
+                    auto batch = database.batch();
+                    if ( !batch )
+                        return outcome::failure( std::errc::io_error );
+                    for ( const auto &[key, value] : writes )
+                    {
+                        auto put = batch->put( key, value );
+                        if ( put.has_error() )
+                            return put.error();
+                    }
+                    return batch->commit();
+                } ).value();
 
             GenesisCeremony::Network network;
             network.start = [] { return outcome::success(); };
@@ -190,6 +210,18 @@ namespace
             ASSERT_TRUE( burn_config_->IsEconomicallyReady() );
         }
 
+        securecrdt::CandidateId SubmitRemoteInitialBurnApproval()
+        {
+            const auto snapshot = store_->LoadAndVerify().value();
+            const auto core = account::BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+            const auto bytes = core.CanonicalBytes().value();
+            return secure_crdt_->SubmitCandidateApproval(
+                { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                  core,
+                  signers_[1].GetAddress(),
+                  signers_[1].Sign( bytes ) } ).value();
+        }
+
         GenesisCeremony::Error Run( GenesisCeremony &ceremony,
                                     GenesisCeremony::Network network,
                                     std::string confirmation )
@@ -214,6 +246,7 @@ namespace
         std::shared_ptr<account::BurnConfig> burn_config_;
         std::vector<GeniusSigner> signers_;
         std::atomic_uint32_t admin_sign_invocations_{ 0 };
+        std::atomic_bool fail_commits_{ false };
         std::string captured_output_;
         std::string captured_errors_;
     };
@@ -452,4 +485,54 @@ TEST_F( TrustGenesisToolTest, AdminExplicitBurnProposalContributesOneApproval )
     ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
     EXPECT_EQ( secure_crdt_->ReadCandidateApprovals( proposed.value() ).value().size(), 1U );
+}
+
+TEST_F( TrustGenesisToolTest, AdminInitialBurnGatePreservesBurnV1Approval )
+{
+    ConfirmForAdmin();
+    const auto policy = Successor();
+    const auto policy_id = SubmitRemotePolicyApproval( policy );
+    admin_sign_invocations_.store( 0 );
+
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    auto rejected_proposal = admin.ProposePolicy( policy );
+    ASSERT_TRUE( rejected_proposal.has_error() );
+    EXPECT_EQ( rejected_proposal.error(), std::make_error_code( std::errc::operation_not_permitted ) );
+    auto rejected_approval = admin.Approve( policy_id );
+    ASSERT_TRUE( rejected_approval.has_error() );
+    EXPECT_EQ( rejected_approval.error(), std::make_error_code( std::errc::operation_not_permitted ) );
+    EXPECT_EQ( admin_sign_invocations_.load(), 0U );
+
+    const auto burn_id = SubmitRemoteInitialBurnApproval();
+    auto approved_burn = admin.Approve( burn_id );
+    ASSERT_TRUE( approved_burn.has_value() ) << approved_burn.error().message();
+    EXPECT_EQ( approved_burn.value(), burn_id );
+    EXPECT_EQ( admin_sign_invocations_.load(), 1U );
+    EXPECT_TRUE( burn_config_->IsEconomicallyReady() );
+}
+
+TEST_F( TrustGenesisToolTest, AdminActivationFailureIsReturnedWhileUnderQuorumRemainsPending )
+{
+    ConfirmForAdmin();
+    ConfirmInitialBurn();
+    LocalTrustAdmin admin( registry_, burn_config_ );
+    const auto candidate = Successor( true );
+    const auto durable_before = store_->LoadAndVerify().value();
+
+    auto pending = admin.ProposePolicy( candidate );
+    ASSERT_TRUE( pending.has_value() ) << pending.error().message();
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_before );
+
+    const auto core = TrustedPeerRegistry::PolicyCandidateCore( candidate ).value();
+    const auto bytes = core.CanonicalBytes().value();
+    ASSERT_TRUE( secure_crdt_->SubmitCandidateApproval(
+        { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+          core,
+          signers_[1].GetAddress(),
+          signers_[1].Sign( bytes ) } ).has_value() );
+    fail_commits_.store( true );
+    auto failed = admin.Approve( pending.value() );
+    ASSERT_TRUE( failed.has_error() );
+    EXPECT_EQ( failed.error(), TrustStateStore::Error::COMMIT_FAILED );
+    EXPECT_EQ( store_->LoadAndVerify().value(), durable_before );
 }
