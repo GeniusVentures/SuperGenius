@@ -136,6 +136,7 @@ namespace sgns::trustedpeer
                          BatchCommitter                    committer,
                          LoadObserver                      load_observer );
 
+        outcome::result<ConfirmedTrustSnapshot> LoadAndVerifyUnlocked() const;
         outcome::result<void> CommitWrites( const std::vector<Write> &writes );
 
         std::shared_ptr<storage::rocksdb> database_;
