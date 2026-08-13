@@ -435,6 +435,7 @@ TEST_F( TrustGenesisToolTest, UnsafeKeyMetadataReturnsTypedFailuresAndRetainsSec
 TEST_F( TrustGenesisToolTest, AdminReceiptAndListNeverSignWhileExplicitProposeSignsOnce )
 {
     ConfirmForAdmin();
+    ConfirmInitialBurn();
     const auto candidate = Successor();
     const auto id = SubmitRemotePolicyApproval( candidate );
     admin_sign_invocations_.store( 0 );
@@ -451,13 +452,14 @@ TEST_F( TrustGenesisToolTest, AdminReceiptAndListNeverSignWhileExplicitProposeSi
     ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
     EXPECT_EQ( proposed.value(), id );
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
-    ASSERT_TRUE( admin.Approve( id ).has_value() );
+    EXPECT_EQ( store_->LoadAndVerify().value().policy, candidate.Canonicalized().value() );
     EXPECT_EQ( admin_sign_invocations_.load(), 1U );
 }
 
 TEST_F( TrustGenesisToolTest, AdminApproveTargetsOnlyExactCandidateId )
 {
     ConfirmForAdmin();
+    ConfirmInitialBurn();
     const auto first = SubmitRemotePolicyApproval( Successor() );
     const auto second = SubmitRemotePolicyApproval( Successor( true ) );
     admin_sign_invocations_.store( 0 );
