@@ -1308,6 +1308,11 @@ namespace sgns
             }
             burn_basis_points = confirmed_burn_provider_->GetBasisPoints();
         }
+        if ( burn_basis_points > BASIS_POINTS_TOTAL )
+        {
+            m_logger->error( "Burn basis points {} exceed maximum {}", burn_basis_points, BASIS_POINTS_TOTAL );
+            return std::errc::invalid_argument;
+        }
 
         if ( task_result.subtask_results().size() == 0 )
         {
