@@ -1,34 +1,23 @@
 ---
 phase: 13-close-v1-1-trusted-peer-genesis-quorum-policy-and-production
-reviewed: 2026-08-13T15:31:27Z
+reviewed: 2026-08-13T20:23:41Z
 depth: deep
-diff_base: 0c1679d7
-diff_head: 0db1cb7f
-files_reviewed: 23
+diff_base: 0a8f1b60
+diff_head: 63fa3afe
+files_reviewed: 12
 files_reviewed_list:
-  - src/account/BurnConfig.cpp
-  - src/account/GeniusNode.cpp
-  - src/account/TransactionManager.cpp
   - src/account/TrustStartupController.cpp
   - src/account/TrustStartupController.hpp
-  - src/securecrdt/CMakeLists.txt
-  - src/securecrdt/SecureCrdt.cpp
-  - src/securecrdt/SecureCrdt.hpp
   - src/trustedpeer/TrustStateStore.cpp
   - src/trustedpeer/TrustStateStore.hpp
-  - src/trustedpeer/TrustedPeerRegistry.cpp
-  - src/trustedpeer/genesis_tool/LocalTrustAdmin.cpp
-  - test/src/account/burnconfig_policy_e2e_test.cpp
-  - test/src/securecrdt/CMakeLists.txt
-  - test/src/securecrdt/securecrdt_candidate_race_test.cpp
-  - test/src/securecrdt/securecrdt_candidate_test.cpp
-  - test/src/securecrdt/securecrdt_quorum_fixture.hpp
-  - test/src/securecrdt/securecrdt_quorum_gate_test.cpp
+  - test/src/account/account_management_test.cpp
+  - test/src/blockchain/node_startup_test.cpp
+  - test/src/multiaccount/CMakeLists.txt
+  - test/src/multiaccount/multi_account_sync.cpp
+  - test/src/multiaccount/policy_lifetime_multi_account_test.cpp
   - test/src/startup/trust_first_boot_e2e_test.cpp
-  - test/src/startup/trust_restart_test.cpp
-  - test/src/trustedpeer/operator_approval_test.cpp
-  - test/src/trustedpeer/trust_genesis_tool_test.cpp
   - test/src/trustedpeer/trust_state_store_test.cpp
+  - test/src/trustedpeer/trustedpeerregistry_quorum_test.cpp
 findings:
   critical: 3
   warning: 1
@@ -39,60 +28,78 @@ status: issues_found
 
 # Phase 13: Code Review Report
 
-**Reviewed:** 2026-08-13T15:31:27Z
+**Reviewed:** 2026-08-13T20:23:41Z
 **Depth:** deep
-**Files Reviewed:** 23
-**Range:** `0c1679d7..0db1cb7f` (including `f3184b60`)
+**Files Reviewed:** 12 changed files, plus their production dependency call chains
 **Status:** issues_found
 
 ## Summary
 
-The gap-closure changes correctly repair the four blockers in the prior review: durable initial-burn sequencing is enforced, restart consumes historical burn authorization, `PayEscrow` uses exact overflow-safe arithmetic, and legacy SecureCrdt signatures are restricted to canonical current members with bounded retention. The pending-versus-error contract correction in `f3184b60` also matches current activation behavior, and the reviewed fixture teardown paths are null-safe.
+The second gap-closure range correctly repairs the narrow defects recorded as CR-05, CR-06, CR-07, and WR-06, but it does not close Phase 13. Three release-blocking lifecycle paths remain reachable. First, the new refresh implementation returns as soon as burn v1 is ready, making every later passive burn candidate unreachable. Second, policy activation only consumes an in-memory callback queue; an already-retained quorum is never rediscovered after controller reconstruction. Third, persisted-ready startup queues a same-state transition while the original transaction-initialization transition is still running, creating and starting two distinct `TransactionManager` instances. The historical-storage fixture that exposed the latter crash was changed to create fresh storage, so the green gate does not exercise the failing restart path.
 
-The current production composition nevertheless still has three ship-blocking lifecycle/concurrency defects. Normal nodes never create or retry the deterministic initial-burn candidate after genesis, policy quorum is never activated on passive receiving nodes, and `LoadAndVerify()` can report valid concurrently advancing state as corrupt because its multi-key read is not synchronized or snapshotted. One additional refresh path still suppresses actionable activation failures.
+The exact TrustStateStore focused cases passed 2/2. The exact three trust-first-boot cases passed 3/3 when run with listener permission. Those results validate the repaired cases but do not reach the blockers below.
 
-The two focused durable sequencing regressions passed in this review environment. The focused network-backed arithmetic test could not bind its listener under sandbox restrictions; Plan 13-18 records a prior listener-capable 25/25 gate, but that gate does not exercise the missing production calls identified below.
+### Prior finding reassessment
+
+| Prior finding | Disposition | Evidence |
+|---|---|---|
+| CR-05: initial burn not attempted | Closed for initial burn | `Refresh()` now discovers and activates pending burn candidates at `TrustStartupController.cpp:363-442`; the focused restart test passes. CR-08 below is a distinct successor-burn regression caused by the new readiness return. |
+| CR-06: passive policy activation absent | Closed for live callback delivery only | The registry callback enqueues policy candidates at `TrustStartupController.cpp:146-155`, and `Refresh()` activates them at `:260-319`. CR-09 below remains for restart/retry of retained candidates. |
+| CR-07: torn TrustStateStore reads | Closed | Public `LoadAndVerify()` takes `transition_mutex_` at `TrustStateStore.cpp:442-446`, while commit paths use the unlocked helper while already holding that mutex. The two exact concurrency cases pass. |
+| WR-06: refresh hides activation failures | Closed for activation attempts | Genesis, policy, and burn activation errors are emitted and returned at `TrustStartupController.cpp:224-243`, `:277-299`, and `:396-417`; the focused activation-failure case passes. |
 
 ## Narrative Findings (AI reviewer)
 
 ## Critical Issues
 
-### CR-05 [BLOCKER]: Production startup never initiates or retries deterministic burn v1
+### CR-08 [BLOCKER]: Burn-ready nodes return before processing passive burn successors
 
-**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:115-166,179-237` (also `/Users/henriqueklein/gnus/SGNUS/src/account/BurnConfig.cpp:256-304` and `/Users/henriqueklein/gnus/SGNUS/test/src/startup/trust_first_boot_e2e_test.cpp:181-229`)
+**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:321-325`
 
-**Issue:** After the genesis callback commits TPR genesis, the controller only calls `Refresh()`. `Refresh()` loads the new snapshot and moves to `WaitingForInitialBurn`, but it never calls `BurnConfig::OnTrustedPeerGenesisConfirmed()`. There is no production caller of that method anywhere under `src/`. The CLI is not a fallback: `LocalTrustAdmin::ProposeBurn()` delegates to `ProposeBurnCandidate()`, which rejects every proposal while `IsEconomicallyReady()` is false. Consequently, if all honest nodes follow the production path, no node writes the first deterministic burn approval and the network remains economically unavailable indefinitely. Restart is also unable to retry or activate an already stored initial candidate because the pending list is in-memory and `Refresh()` neither lists candidates nor calls the genesis-burn hook. The E2E passes only because line 211 invokes `OnTrustedPeerGenesisConfirmed()` directly from the test.
+**Issue:** `Refresh()` checks `burn_config_->IsEconomicallyReady()`, sets `ConfirmedReady`, and returns before the burn discovery/activation block at lines 327-442. Once burn v1 has committed, every subsequent registry callback requests a refresh, but every such refresh exits at this guard. A passive node can therefore retain a quorum-certified burn v2 (or later) indefinitely without committing it. This is not a theoretical ordering edge: all successor processing is structurally unreachable whenever the current burn configuration is ready. The previous callback path activated a received burn candidate directly; moving activation into `Refresh()` in this closure range introduced the regression. It violates the phase's passive successor-convergence requirement and can leave peers enforcing different economic policy.
 
-**Fix:** When `Refresh()` observes a verified `BootstrapOnly` snapshot, have each eligible current peer idempotently call `OnTrustedPeerGenesisConfirmed()`, then call `TryActivateBurnCandidate()` on the returned ID so an already-present quorum is recovered after restart. Treat a non-member local account as an expected no-sign condition, but emit/return real submission or activation failures. Add a production-composition test that performs the ceremony without directly accessing `BurnConfig`, proves the initial candidate appears, reaches peer quorum, and survives a restart between approval persistence and durable activation.
+The lifetime fixture does not cover this path. It calls `LocalTrustAdmin::ProposeBurn()` on the same node at `test/src/multiaccount/policy_lifetime_multi_account_test.cpp:285-290`; that operator path synchronously invokes activation and bypasses passive receipt.
 
-### CR-06 [BLOCKER]: Replicated policy quorum never activates on passive nodes
+**Fix:** Move discovery and activation of retained burn successors before the ready-state return. Keep automatic signing restricted to `BootstrapOnly`, but always allow verification/commit of a quorum-ready successor. Add a three-peer test in which A proposes, B approves, and passive C commits burn v2 solely from registry delivery, with no `LocalTrustAdmin` or direct activation call on C.
 
-**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:114-176` (also `/Users/henriqueklein/gnus/SGNUS/src/trustedpeer/genesis_tool/LocalTrustAdmin.cpp:35-95` and `/Users/henriqueklein/gnus/SGNUS/test/src/startup/trust_first_boot_e2e_test.cpp:237-249`)
+### CR-09 [BLOCKER]: A retained policy quorum is never replayed after controller restart
 
-**Issue:** The controller registers candidate callbacks only for `trusted-peer-genesis` and `burn-config`; there is no callback for the `trusted-peer` policy domain. `LocalTrustAdmin` activates a policy only in the process that executes `ProposePolicy()` or `Approve()`. Other nodes can receive all quorum approvals but never call `TryActivatePolicyCandidate()`, so their durable policy remains old. Those nodes then authorize different signers, reject new-policy candidates, and violate the requirement that the first candidate reaching current-policy quorum becomes effective. The E2E hides this omission by submitting the second signature directly and then calling `admin.Approve()` again solely to trigger local activation.
+**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:260-319`
 
-**Fix:** Register and unregister a `trusted-peer` callback alongside the genesis and burn callbacks. It must call `TryActivatePolicyCandidate()` without signing, treat `false` as ordinary pending quorum, emit `TRUST_ACTIVATION_FAILED` only for errors, and refresh the controller after a successful commit. Add a multi-node test where only two operators approve, while a third passive node receives the approvals and independently persists the same policy head without an extra local admin call.
+**Issue:** Policy processing consumes only `pending_policy_candidates_`, populated by live callbacks at lines 146-155. `TrustedPeerRegistry` already exposes durable discovery through `ListPendingPolicyCandidates()` (`src/trustedpeer/TrustedPeerRegistry.cpp:459-472`), but the controller never calls it. A repository-wide call-site trace found only `LocalTrustAdmin.cpp:24`, which is an operator listing action; no startup, refresh, or automatic activation path invokes it. Callback registration does not replay existing CRDT records.
 
-### CR-07 [BLOCKER]: Multi-record trust verification can observe a torn concurrent transition
+Consequently, if a passive peer retains quorum approvals and then reconstructs its controller before the TrustStateStore commit completes—or after the injected commit failure that the new tests exercise—the candidate is absent from the new in-memory queue and can remain uncommitted forever unless another write or operator action happens. The test at `test/src/startup/trust_first_boot_e2e_test.cpp:877-957` destroys the failed passive controller but never reconstructs it and retries its retained candidate, so it does not cover restart replay. This breaks restart convergence and durable retry guarantees.
 
-**File:** `/Users/henriqueklein/gnus/SGNUS/src/trustedpeer/TrustStateStore.cpp:436-656,746-813,816-920`
+**Fix:** On every startup/refresh, call `ListPendingPolicyCandidates()` for the current predecessor, merge/deduplicate those records with the callback queue, and attempt eligible candidates in deterministic order. In-process suppression may avoid a tight retry loop, but reconstruction must rediscover retained candidates. Add a test that retains quorum, injects a pre-commit/commit failure, reconstructs the controller without adding another registry write, and observes durable policy advancement.
 
-**Issue:** Writers serialize with `transition_mutex_` and atomically batch each individual transition, but public `LoadAndVerify()` takes no lock and performs many independent RocksDB reads without a database snapshot. A reader can load policy head v1 and its history, pause while a writer commits policy v2 and then burn v2 authorized by policy v2, and resume by loading burn head v2. Its in-memory policy map lacks v2, so lines 636-643 return `INVALID_BURN_PROOF` for fully valid durable state. `TrustStartupController::Refresh()` translates that transient result into `FatalMismatch`/`TRUST_LOCAL_STATE_CORRUPT`. This is a correctness and availability failure under normal callback/admin concurrency, not actual disk corruption.
+### CR-10 [BLOCKER]: Persisted-ready startup re-enters transaction initialization and starts two managers
 
-**Fix:** Give verification one consistent view. Either hold the same mutex for the entire public read or use a RocksDB snapshot/read transaction. Because commit methods already hold `transition_mutex_` and call verification, refactor an internal `LoadAndVerifyUnlocked()` (or snapshot-based helper): public `LoadAndVerify()` acquires the lock, while commit paths call the helper under their existing lock. Add a deterministic barrier test that interleaves a reader between policy-history and burn-head reads while two valid transitions commit; the reader must return either the complete old snapshot or the complete new snapshot, never a corruption error.
+**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/GeniusNode.cpp:843-862`
+
+**Related:** `/Users/henriqueklein/gnus/SGNUS/src/account/GeniusNode.cpp:946-966`, `/Users/henriqueklein/gnus/SGNUS/src/account/GeniusNode.cpp:630-633`, `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:180`, `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:321-325`, `/Users/henriqueklein/gnus/SGNUS/src/transaction/TransactionManager.cpp:398-418`
+
+**Issue:** On a persisted-ready restart, `TrustStartupController::New()` synchronously calls `Refresh()` at line 180. `Refresh()` emits `ConfirmedReady`; the GeniusNode callback posts `StateTransition(INITIALIZING_TRANSACTIONS)` even though GeniusNode is already executing that same transition to construct the controller. `StateTransition()` has no same-state/re-entry guard at lines 630-633. The original transition then constructs and starts one manager at lines 946-966; the queued same-state transition replaces it with another manager and calls `StartCore()` again.
+
+`core_started_` at `TransactionManager.cpp:398-418` is per instance, so it cannot guard two constructions. This is not merely redundant allocation. Each constructor registers GlobalDB and blockchain callbacks; duplicate GlobalDB registration return values are discarded, and destruction of the displaced first manager can unregister shared callbacks and clear account hooks now needed by the replacement. The two startup tasks can also overlap historical transaction initialization. The multi-account fixture repair encountered an LLDB crash specifically with a historical transaction database plus the trust-ready callback; the static call chain above makes that reported failure reachable, although this review did not independently reproduce the crash under LLDB.
+
+The re-entry mechanics were introduced earlier in Phase 13 (`GeniusNode.cpp` blame points to the trust callback change), not by production files in `0a8f1b60..63fa3afe`. However, persisted-trust restart is a Phase 13 requirement, and this closure range changed the failing fixture to avoid persisted storage (WR-07). It therefore remains a Phase 13 release blocker even though the second-gap production patch did not itself create or worsen the underlying re-entry.
+
+**Fix:** Do not post `INITIALIZING_TRANSACTIONS` from the controller callback while that state is already in progress. Add serialized, idempotent state transitions (or explicitly gate this callback to the waiting states), and ensure an existing transaction manager is stopped before replacement. Add a historical-database restart test that asserts exactly one manager construction/start and stable ownership of GlobalDB/account callbacks; run that test under ASan/TSan as well as the normal gate.
 
 ## Warnings
 
-### WR-06 [WARNING]: Refresh-time activation failures are still silently discarded
+### WR-07 [WARNING]: The repaired fixtures bypass both production paths that need lifecycle coverage
 
-**File:** `/Users/henriqueklein/gnus/SGNUS/src/account/TrustStartupController.cpp:179-237`
+**File:** `/Users/henriqueklein/gnus/SGNUS/test/src/multiaccount/multi_account_sync.cpp:389-405`
 
-**Issue:** Plan 13-14 established `false = valid pending` and `error = actionable failure`, but `Refresh()` discards the result of genesis activation at lines 200-202 and ignores every error from pending burn activation at lines 228-235 before returning success. A commit failure or corrupt candidate encountered during refresh can therefore be represented merely as a waiting state, with no `TRUST_ACTIVATION_FAILED` event and no error returned to startup. Callback-time reporting does not cover candidates already present before callback registration or retries after restart.
+**Related:** `/Users/henriqueklein/gnus/SGNUS/test/src/multiaccount/policy_lifetime_multi_account_test.cpp:285-290`
 
-**Fix:** Preserve the activation result contract in `Refresh()`: ignore only a typed pending/no-approval outcome, emit `TRUST_ACTIVATION_FAILED` and return actionable activation/store errors, and remove or quarantine invalid pending IDs. Add fault-injection tests that preload candidates before controller construction and force `COMMIT_FAILED` during refresh, asserting both the event and failed refresh result.
+**Issue:** The multi-account restart now resets the client and constructs a new node without the former storage path, so it boots fresh rather than reopening the historical trust/transaction database that exposed CR-10. Separately, the policy-lifetime test proposes burn on the same node through `LocalTrustAdmin`, bypassing the passive callback/refresh path broken by CR-08. These fixtures can pass while the required restart and passive-convergence behaviors are nonfunctional, so the advertised broad/lifetime gate is not reliable evidence for those requirements.
+
+**Fix:** Restore a persisted-storage restart case after fixing CR-10, and make the lifetime burn step originate on a different peer so the observed node can advance only through passive registry receipt. Retain fresh-storage coverage as a separate test rather than substituting it for restart coverage.
 
 ---
 
-_Reviewed: 2026-08-13T15:31:27Z_
+_Reviewed: 2026-08-13T20:23:41Z_
 _Reviewer: the agent (gsd-code-reviewer)_
 _Depth: deep_
