@@ -41,6 +41,7 @@ namespace sgns::account
             TRUST_CRDT_MISSING,
             TRUST_CRDT_ROLLBACK,
             TRUST_CRDT_FORK,
+            TRUST_ACTIVATION_FAILED,
         };
 
         struct Event
