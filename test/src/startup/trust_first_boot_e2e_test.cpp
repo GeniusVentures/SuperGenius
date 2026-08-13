@@ -47,7 +47,26 @@ namespace
         output << "]}";
     }
 
-    TEST( TrustFirstBootE2ETest, PolicyV2BeforeInitialBurnCannotStrandStartup )
+    outcome::result<void> CommitBatch( sgns::storage::rocksdb                         &database,
+                                       const std::vector<TrustStateStore::Write> &writes )
+    {
+        auto batch = database.batch();
+        if ( !batch )
+        {
+            return outcome::failure( std::errc::io_error );
+        }
+        for ( const auto &[key, value] : writes )
+        {
+            auto put = batch->put( key, value );
+            if ( put.has_error() )
+            {
+                return put.error();
+            }
+        }
+        return batch->commit();
+    }
+
+    TEST( TrustFirstBootE2ETest, ProductionControllerInitiatesBurnAndRestartRecoversPersistedApprovals )
     {
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
         const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
@@ -57,17 +76,22 @@ namespace
         sgns::GeniusSigner bootstrapper{ ethereum::EthereumKeyGenerator( BOOTSTRAPPER_PRIVATE_KEY ) };
         auto peer_a       = sgns::GeniusSigner::Generate();
         auto peer_b       = sgns::GeniusSigner::Generate();
+        auto non_member   = sgns::GeniusSigner::Generate();
         const std::string topic = "trust-first-boot-topic";
 
-        const auto node_config_path = path / "node-network.json";
+        const auto node_config_path = path / "peer-a-network.json";
+        const auto peer_b_config_path = path / "peer-b-network.json";
+        const auto non_member_config_path = path / "non-member-network.json";
         const auto tool_config_path = path / "tool-network.json";
-        boost::filesystem::create_directories( path / "node-globaldb" );
+        boost::filesystem::create_directories( path / "peer-a-globaldb" );
+        boost::filesystem::create_directories( path / "peer-b-globaldb" );
+        boost::filesystem::create_directories( path / "non-member-globaldb" );
         boost::filesystem::create_directories( path / "tool-globaldb" );
         WriteNetworkConfig( node_config_path );
 
         sgns::crdt::GlobalDbNetworkComposition::Config node_config;
         node_config.network_config_path = node_config_path.string();
-        node_config.database_path       = ( path / "node-globaldb" ).string();
+        node_config.database_path       = ( path / "peer-a-globaldb" ).string();
         node_config.listen_topic        = topic;
         node_config.broadcast_topic     = topic;
         auto node_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create( std::move( node_config ) );
@@ -77,10 +101,34 @@ namespace
         ASSERT_NE( node_composition->db(), nullptr );
         ASSERT_FALSE( node_composition->interface_address().empty() );
 
+        WriteNetworkConfig( peer_b_config_path, node_composition->interface_address() );
+        WriteNetworkConfig( non_member_config_path, node_composition->interface_address() );
         WriteNetworkConfig( tool_config_path, node_composition->interface_address() );
-        auto secure = std::make_shared<sgns::securecrdt::SecureCrdt>( node_composition->db(), topic );
-        auto store_result = TrustStateStore::Open( ( path / "trust-state" ).string(), 42 );
-        ASSERT_TRUE( store_result.has_value() );
+
+        auto make_composition = [&]( const boost::filesystem::path &config_path,
+                                     const boost::filesystem::path &database_path )
+        {
+            sgns::crdt::GlobalDbNetworkComposition::Config config;
+            config.network_config_path = config_path.string();
+            config.database_path       = database_path.string();
+            config.listen_topic        = topic;
+            config.broadcast_topic     = topic;
+            return sgns::crdt::GlobalDbNetworkComposition::Create( std::move( config ) );
+        };
+        auto peer_b_composition_result = make_composition( peer_b_config_path, path / "peer-b-globaldb" );
+        auto non_member_composition_result =
+            make_composition( non_member_config_path, path / "non-member-globaldb" );
+        ASSERT_TRUE( peer_b_composition_result.has_value() );
+        ASSERT_TRUE( non_member_composition_result.has_value() );
+        auto peer_b_composition = peer_b_composition_result.value();
+        auto non_member_composition = non_member_composition_result.value();
+        ASSERT_TRUE( peer_b_composition->Start().has_value() );
+        ASSERT_TRUE( non_member_composition->Start().has_value() );
+
+        auto peer_a_secure = std::make_shared<sgns::securecrdt::SecureCrdt>( node_composition->db(), topic );
+        auto peer_b_secure = std::make_shared<sgns::securecrdt::SecureCrdt>( peer_b_composition->db(), topic );
+        auto non_member_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( non_member_composition->db(), topic );
 
         GenesisManifest manifest;
         manifest.network_id              = 42;
@@ -88,20 +136,61 @@ namespace
         manifest.peers                   = { peer_a.GetAddress(), peer_b.GetAddress() };
         manifest.membership_threshold    = 2;
         manifest.burn_threshold          = 2;
+        manifest = manifest.Canonicalized().value();
 
-        auto controller_result = TrustStartupController::New( secure,
-                                                              store_result.value(),
-                                                              manifest,
-                                                              peer_a.GetAddress(),
-                                                              [&]( const std::vector<uint8_t> &bytes )
-                                                              { return peer_a.Sign( bytes ); } );
-        ASSERT_TRUE( controller_result.has_value() ) << controller_result.error().message();
-        auto controller = controller_result.value();
+        std::atomic_uint32_t peer_a_commit_count{ 0 };
+        auto peer_a_store = TrustStateStore::Open(
+            ( path / "peer-a-trust" ).string(),
+            manifest.network_id,
+            [&]( sgns::storage::rocksdb &database,
+                 const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+            {
+                if ( peer_a_commit_count.fetch_add( 1 ) == 1 )
+                {
+                    return outcome::failure( std::errc::io_error );
+                }
+                return CommitBatch( database, writes );
+            } ).value();
+        auto peer_b_store =
+            TrustStateStore::Open( ( path / "peer-b-trust" ).string(), manifest.network_id ).value();
+        auto non_member_store =
+            TrustStateStore::Open( ( path / "non-member-trust" ).string(), manifest.network_id ).value();
 
-        EXPECT_EQ( controller->GetState(), TrustStartupController::State::FreshWaitingForGenesis );
-        EXPECT_TRUE( controller->GetCurrentPeers().empty() );
-        EXPECT_FALSE( controller->CanApproveSuccessors() );
-        EXPECT_FALSE( controller->IsEconomicallyReady() );
+        std::vector<TrustStartupController::Event> peer_a_events;
+        std::vector<TrustStartupController::Event> non_member_events;
+        auto peer_a_controller_result = TrustStartupController::New(
+            peer_a_secure,
+            peer_a_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
+            [&]( const auto &event ) { peer_a_events.push_back( event ); } );
+        auto peer_b_controller_result = TrustStartupController::New(
+            peer_b_secure,
+            peer_b_store,
+            manifest,
+            peer_b.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_b.Sign( bytes ); } );
+        auto non_member_controller_result = TrustStartupController::New(
+            non_member_secure,
+            non_member_store,
+            manifest,
+            non_member.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return non_member.Sign( bytes ); },
+            [&]( const auto &event ) { non_member_events.push_back( event ); } );
+        ASSERT_TRUE( peer_a_controller_result.has_value() );
+        ASSERT_TRUE( peer_b_controller_result.has_value() );
+        ASSERT_TRUE( non_member_controller_result.has_value() );
+        auto peer_a_controller = peer_a_controller_result.value();
+        auto peer_b_controller = peer_b_controller_result.value();
+        auto non_member_controller = non_member_controller_result.value();
+        peer_a_controller_result.value().reset();
+        peer_b_controller_result.value().reset();
+        non_member_controller_result.value().reset();
+
+        EXPECT_EQ( peer_a_controller->GetState(), TrustStartupController::State::FreshWaitingForGenesis );
+        EXPECT_EQ( peer_b_controller->GetState(), TrustStartupController::State::FreshWaitingForGenesis );
+        EXPECT_EQ( non_member_controller->GetState(), TrustStartupController::State::FreshWaitingForGenesis );
 
         sgns::crdt::GlobalDbNetworkComposition::Config tool_config;
         tool_config.network_config_path = tool_config_path.string();
@@ -181,81 +270,79 @@ namespace
         sgns::test::assertWaitForCondition(
             [&]
             {
-                return controller->Refresh().has_value() &&
-                       controller->GetState() == TrustStartupController::State::WaitingForInitialBurn;
+                return peer_a_store->LoadAndVerify().has_value() && peer_b_store->LoadAndVerify().has_value() &&
+                       non_member_store->LoadAndVerify().has_value();
             },
             std::chrono::seconds( 5 ),
-            "reviewed genesis candidate did not become durable" );
+            "reviewed genesis did not become durable on every production controller" );
 
-        EXPECT_EQ( controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
-        EXPECT_NE( node_composition->db(), nullptr );
-        EXPECT_NE( tool_composition->db(), nullptr );
-        EXPECT_EQ( controller->GetCurrentPeers(), manifest.Canonicalized()->peers );
-        EXPECT_FALSE( controller->CanApproveSuccessors() );
-        EXPECT_FALSE( controller->IsEconomicallyReady() );
-        EXPECT_EQ( store_result.value()->LoadAndVerify().value().genesis_fingerprint, fingerprint );
-        EXPECT_EQ( tool_store->LoadAndVerify().value().genesis_fingerprint, fingerprint );
-
-        sgns::trustedpeer::LocalTrustAdmin admin( controller->registry(), controller->burn_config() );
-        const auto before_policy_attempt = store_result.value()->LoadAndVerify().value();
-        auto policy_v2 = before_policy_attempt.policy;
-        const auto policy_v1_hash = before_policy_attempt.policy.Hash().value();
-        ++policy_v2.version;
-        policy_v2.expected_previous_hash = policy_v1_hash;
-        policy_v2.authorizing_policy_hash = policy_v1_hash;
-        auto rejected_policy = admin.ProposePolicy( policy_v2 );
-        ASSERT_TRUE( rejected_policy.has_error() );
-        EXPECT_EQ( rejected_policy.error(), std::make_error_code( std::errc::operation_not_permitted ) );
-        EXPECT_EQ( store_result.value()->LoadAndVerify().value(), before_policy_attempt );
-
-        auto burn_candidate = controller->burn_config()->OnTrustedPeerGenesisConfirmed();
-        ASSERT_TRUE( burn_candidate.has_value() ) << burn_candidate.error().message();
-        auto approvals = secure->ReadCandidateApprovals( burn_candidate.value() ).value();
-        ASSERT_EQ( approvals.size(), 1U );
-        const auto burn_core_bytes = approvals.front().core.CanonicalBytes().value();
-        ASSERT_TRUE( secure
-                         ->SubmitCandidateApproval( { CandidateApprovalRecord::ENCODING_VERSION,
-                                                      approvals.front().core,
-                                                      peer_b.GetAddress(),
-                                                      peer_b.Sign( burn_core_bytes ) } )
-                         .has_value() );
+        const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( peer_a_store->LoadAndVerify().value().burn );
+        ASSERT_TRUE( burn_core.has_value() );
+        const auto burn_candidate = CandidateId::FromCore( *burn_core );
+        ASSERT_TRUE( burn_candidate.has_value() );
         sgns::test::assertWaitForCondition(
             [&]
             {
-                return controller->Refresh().has_value() &&
-                       controller->GetState() == TrustStartupController::State::ConfirmedReady;
+                auto approvals = peer_a_secure->ReadCandidateApprovals( *burn_candidate );
+                return approvals.has_value() && approvals.value().size() == 2U &&
+                       peer_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
             },
             std::chrono::seconds( 5 ),
-            "burn genesis candidate did not reach durable quorum" );
+            "production controllers did not publish exactly two initial-burn approvals" );
 
-        EXPECT_EQ( controller->GetState(), TrustStartupController::State::ConfirmedReady );
-        EXPECT_NE( node_composition->db(), nullptr );
-        EXPECT_TRUE( controller->IsEconomicallyReady() );
-        EXPECT_TRUE( controller->CanApproveSuccessors() );
-        EXPECT_EQ( controller->burn_config()->GetCachedBasisPoints(), 100U );
+        const auto approvals_before_restart = peer_a_secure->ReadCandidateApprovals( *burn_candidate ).value();
+        EXPECT_EQ( std::count_if( approvals_before_restart.begin(),
+                                  approvals_before_restart.end(),
+                                  [&]( const auto &approval ) { return approval.signer == peer_a.GetAddress(); } ),
+                   1 );
+        EXPECT_EQ( std::count_if( approvals_before_restart.begin(),
+                                  approvals_before_restart.end(),
+                                  [&]( const auto &approval ) { return approval.signer == peer_b.GetAddress(); } ),
+                   1 );
+        EXPECT_EQ( std::count_if( approvals_before_restart.begin(),
+                                  approvals_before_restart.end(),
+                                  [&]( const auto &approval ) { return approval.signer == non_member.GetAddress(); } ),
+                   0 );
+        EXPECT_FALSE( peer_a_controller->IsEconomicallyReady() );
+        EXPECT_TRUE( std::any_of( peer_a_events.begin(), peer_a_events.end(), []( const auto &event ) {
+            return event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED;
+        } ) );
+        EXPECT_TRUE( std::none_of( non_member_events.begin(), non_member_events.end(), []( const auto &event ) {
+            return event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED;
+        } ) );
 
-        auto policy_candidate = admin.ProposePolicy( policy_v2 );
-        ASSERT_TRUE( policy_candidate.has_value() ) << policy_candidate.error().message();
-        const auto policy_core = sgns::trustedpeer::TrustedPeerRegistry::PolicyCandidateCore( policy_v2 ).value();
-        const auto policy_core_bytes = policy_core.CanonicalBytes().value();
-        ASSERT_TRUE( secure
-                         ->SubmitCandidateApproval( { CandidateApprovalRecord::ENCODING_VERSION,
-                                                      policy_core,
-                                                      peer_b.GetAddress(),
-                                                      peer_b.Sign( policy_core_bytes ) } )
-                         .has_value() );
-        auto activated_policy = admin.Approve( policy_candidate.value() );
-        ASSERT_TRUE( activated_policy.has_value() ) << activated_policy.error().message();
-        EXPECT_EQ( store_result.value()->LoadAndVerify().value().policy, policy_v2.Canonicalized().value() );
+        peer_a_controller.reset();
+        peer_a_store.reset();
+        auto reopened_peer_a_store_result =
+            TrustStateStore::Open( ( path / "peer-a-trust" ).string(), manifest.network_id );
+        ASSERT_TRUE( reopened_peer_a_store_result.has_value() );
+        auto reopened_peer_a_store = reopened_peer_a_store_result.value();
+        auto restarted = TrustStartupController::New(
+            peer_a_secure,
+            reopened_peer_a_store,
+            manifest,
+            peer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); } );
+        ASSERT_TRUE( restarted.has_value() ) << restarted.error().message();
+        peer_a_controller = restarted.value();
+        ASSERT_TRUE( peer_a_controller->Refresh().has_value() );
+        EXPECT_EQ( peer_a_controller->GetState(), TrustStartupController::State::ConfirmedReady );
+        EXPECT_TRUE( peer_a_controller->IsEconomicallyReady() );
+        EXPECT_EQ( peer_a_controller->burn_config()->GetCachedBasisPoints(), 100U );
+        const auto approvals_after_restart = peer_a_secure->ReadCandidateApprovals( *burn_candidate ).value();
+        EXPECT_EQ( approvals_after_restart.size(), approvals_before_restart.size() );
+        EXPECT_EQ( CandidateId::FromCore( approvals_after_restart.front().core ), burn_candidate );
 
-        controller.reset();
-        secure.reset();
-        store_result.value().reset();
+        peer_a_controller.reset();
+        peer_b_controller.reset();
+        non_member_controller.reset();
         tool_burn.reset();
         tool_registry.reset();
         tool_secure.reset();
         tool_store.reset();
         tool_composition->Stop();
+        non_member_composition->Stop();
+        peer_b_composition->Stop();
         node_composition->Stop();
         cleanup();
     }
