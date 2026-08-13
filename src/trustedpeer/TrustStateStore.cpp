@@ -441,6 +441,12 @@ namespace sgns::trustedpeer
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::LoadAndVerify() const
     {
+        std::lock_guard<std::mutex> lock( transition_mutex_ );
+        return LoadAndVerifyUnlocked();
+    }
+
+    outcome::result<ConfirmedTrustSnapshot> TrustStateStore::LoadAndVerifyUnlocked() const
+    {
         auto genesis_value = database_->get( Buffer( GenesisKey( network_id_ ) ) );
         if ( genesis_value.has_error() )
         {
@@ -751,7 +757,7 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::COMMIT_FAILED );
         }
-        return LoadAndVerify();
+        return LoadAndVerifyUnlocked();
     }
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitPolicySuccessor(
@@ -760,7 +766,7 @@ namespace sgns::trustedpeer
         const std::vector<uint8_t>          &authorization_bytes )
     {
         std::lock_guard<std::mutex> lock( transition_mutex_ );
-        auto                        current_result = LoadAndVerify();
+        auto                        current_result = LoadAndVerifyUnlocked();
         if ( current_result.has_error() )
         {
             return current_result.error();
@@ -821,7 +827,7 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::COMMIT_FAILED );
         }
-        return LoadAndVerify();
+        return LoadAndVerifyUnlocked();
     }
 
     outcome::result<ConfirmedTrustSnapshot> TrustStateStore::CommitBurnSuccessor(
@@ -830,7 +836,7 @@ namespace sgns::trustedpeer
         const std::vector<uint8_t>          &authorization_bytes )
     {
         std::lock_guard<std::mutex> lock( transition_mutex_ );
-        auto                        current_result = LoadAndVerify();
+        auto                        current_result = LoadAndVerifyUnlocked();
         if ( current_result.has_error() )
         {
             return current_result.error();
@@ -891,7 +897,7 @@ namespace sgns::trustedpeer
             {
                 return outcome::failure( Error::COMMIT_FAILED );
             }
-            return LoadAndVerify();
+            return LoadAndVerifyUnlocked();
         }
         if ( current.burn.version == std::numeric_limits<uint64_t>::max() ||
              candidate.version != current.burn.version + 1 )
@@ -928,7 +934,7 @@ namespace sgns::trustedpeer
         {
             return outcome::failure( Error::COMMIT_FAILED );
         }
-        return LoadAndVerify();
+        return LoadAndVerifyUnlocked();
     }
 
     outcome::result<void> TrustStateStore::CommitWrites( const std::vector<Write> &writes )
