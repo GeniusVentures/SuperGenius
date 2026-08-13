@@ -17,6 +17,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 #include <unordered_map>
 
@@ -51,6 +52,8 @@ namespace sgns::securecrdt
             UNREGISTERED_KEY = 0,         ///< base_key has no SecureCrdtRegistry entry
             NO_VALUE_PROPOSED,            ///< AddSignature/ReadIfQuorum called before any ProposeValue
             INVALID_SIGNATURE,            ///< signature failed VerifyPayloadSignature against the current value
+            UNAUTHORIZED_SIGNER,          ///< signer is noncanonical or absent from the current signer-set snapshot
+            SIGNATURE_LIMIT_EXCEEDED,     ///< a new signature child would exceed the current authorized-set bound
             MALFORMED_VALUE,              ///< payload failed DeserializeFromBytes/Verify (codec/semantic check)
             QUORUM_THRESHOLD_BELOW_FLOOR, ///< configured quorum_threshold below ceil(0.51*signer_set_size)
             UNREGISTERED_CANDIDATE_DOMAIN,
@@ -167,16 +170,24 @@ namespace sgns::securecrdt
          *        deltas only (crdt_datastore.cpp, !created_by_self). Rejects
          *        (returns an empty vector) on parse failure or invalid
          *        signature/value, accepts (returns std::nullopt) otherwise.
-         *        Derives the concrete base key from `element.key()` so registry
-         *        patterns containing regular expressions are never used as
-         *        datastore keys.
-         * @param[in] entry Resolved SecureCrdtRegistry entry for the element.
+         * @param[in] base_key Registered base key this entry was registered under.
+         * @param[in] entry Resolved SecureCrdtRegistry entry for base_key.
          * @param[in] element Incoming CRDT element (`base_key` value or `sig/<addr>` child).
          * @return std::nullopt to accept, or an (empty) vector to reject.
          */
         std::optional<std::vector<sgns::crdt::pb::Element>> FilterSecureCrdtUpdate(
-            const SecureCrdtRegistryEntry &entry,
-            const sgns::crdt::pb::Element &element );
+            const sgns::crdt::HierarchicalKey &base_key,
+            const SecureCrdtRegistryEntry     &entry,
+            const sgns::crdt::pb::Element     &element );
+
+        outcome::result<SignerSetSnapshot> ResolveLegacySignerSnapshot(
+            const SecureCrdtRegistryEntry             &entry,
+            const sgns::crdt::HierarchicalKey         &base_key,
+            const std::optional<std::string_view>     &claimed_address = std::nullopt ) const;
+        using LegacySignatures = std::vector<std::pair<std::string, std::vector<uint8_t>>>;
+        outcome::result<LegacySignatures> RetainAuthorizedLegacySignatures(
+            const sgns::crdt::HierarchicalKey &base_key,
+            const SignerSetSnapshot           &snapshot );
 
         outcome::result<CandidateApprovalRecord> ValidateCandidateApproval( const sgns::crdt::HierarchicalKey &key,
                                                                             const std::vector<uint8_t>        &bytes,
