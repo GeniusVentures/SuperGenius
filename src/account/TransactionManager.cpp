@@ -796,6 +796,11 @@ namespace sgns
             }
             burn_basis_points = confirmed_burn_provider_->GetBasisPoints();
         }
+        if ( burn_basis_points > BASIS_POINTS_TOTAL )
+        {
+            m_logger->error( "Burn basis points {} exceed maximum {}", burn_basis_points, BASIS_POINTS_TOTAL );
+            return std::errc::invalid_argument;
+        }
 
         const auto &subtask_results = task_result.subtask_results();
         if ( subtask_results.empty() )
@@ -834,8 +839,11 @@ namespace sgns
 
         // Burn percentage taken off the top before peer/dev split, mirroring the GNUS fee
         // taken at escrow creation.
-        const auto burn_amount = ( escrow_amount * burn_basis_points ) / BASIS_POINTS_TOTAL;
-        const auto available   = escrow_amount - burn_amount;
+        const auto quotient = escrow_amount / BASIS_POINTS_TOTAL;
+        const auto basis_points_remainder = escrow_amount % BASIS_POINTS_TOTAL;
+        const auto burn_amount = quotient * burn_basis_points
+                               + ( basis_points_remainder * burn_basis_points ) / BASIS_POINTS_TOTAL;
+        const auto available = escrow_amount - burn_amount;
 
         BOOST_OUTCOME_TRY( auto available_amount_ptr, TokenAmount::New( available ) );
 
