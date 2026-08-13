@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-20-PLAN.md
-last_updated: "2026-08-13T17:41:02.046Z"
+stopped_at: Completed 13-21-PLAN.md
+last_updated: "2026-08-13T18:13:45.147Z"
 last_activity: 2026-08-13
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 30
-  completed_plans: 28
+  completed_plans: 29
   percent: 29
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (close-v1-1-trusted-peer-genesis-quorum-policy-and-production) — EXECUTING
-Plan: 21 of 22
+Plan: 22 of 22
 Status: Ready to execute
 Last activity: 2026-08-13
 
@@ -67,8 +67,8 @@ Last activity: 2026-08-13
 
 ## Session
 
-**Last session:** 2026-08-13T17:41:02.042Z
-**Stopped At:** Completed 13-20-PLAN.md
+**Last session:** 2026-08-13T18:13:45.143Z
+**Stopped At:** Completed 13-21-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -108,6 +108,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P18 | 7min | 1 tasks | 1 files |
 | Phase 13 P19 | 5 min | 1 tasks | 3 files |
 | Phase 13 P20 | 22 min | 2 tasks | 3 files |
+| Phase 13 P21 | 25 min | 1 tasks | 2 files |
 
 ## Decisions
 
@@ -155,3 +156,5 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Automatic signing is limited to a verified current member and the exact deterministic BootstrapOnly burn-v1/value-100 candidate. — This closes initial-burn liveness without broadening manual approval or successor-signing authority.
 - [Phase 13]: SecureCrdt callbacks queue serialized worker Refresh operations. — Activation writes must not reenter the GlobalDB callback thread.
 - [Phase 13]: Failed candidate IDs are suppressed only for the current controller while authoritative CRDT records remain restart-discoverable. — This prevents tight in-process retries while preserving fault recovery after reconstruction.
+- [Phase 13]: Only remotely authored trusted-peer callback records enter passive activation; explicit local admin paths retain their own activation result. — Prevents synchronous callback activation from racing the explicit administrative decision.
+- [Phase 13]: Policy candidates use the serialized callback worker; teardown joins queued work before owner-safe callback removal. — Keeps GlobalDB writes off callback delivery and queued work within controller lifetime.
