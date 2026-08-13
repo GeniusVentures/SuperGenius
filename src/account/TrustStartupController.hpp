@@ -6,11 +6,13 @@
 #define SGNS_ACCOUNT_TRUST_STARTUP_CONTROLLER_HPP
 
 #include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include "outcome/outcome.hpp"
@@ -81,16 +83,24 @@ namespace sgns::account
         TrustStartupController() = default;
         void SetState( State state );
         void Emit( EventCode code, std::vector<std::string> fields = {} ) const;
+        void RequestRefresh();
 
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
         std::shared_ptr<sgns::trustedpeer::TrustStateStore>     trust_store_;
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> registry_;
         std::shared_ptr<BurnConfig>                             burn_config_;
         sgns::trustedpeer::GenesisManifest                      manifest_;
+        std::string                                             local_signer_address_;
         EventCallback                                           event_callback_;
         StateCallback                                           state_callback_;
         std::atomic<State>                                      state_{ State::FreshWaitingForGenesis };
         int                                                     callback_owner_token_ = 0;
+        std::mutex                                              refresh_execution_mutex_;
+        std::mutex                                              refresh_worker_mutex_;
+        std::condition_variable                                 refresh_worker_condition_;
+        bool                                                    refresh_requested_ = false;
+        bool                                                    stop_refresh_worker_ = false;
+        std::thread                                             refresh_worker_;
         mutable std::mutex                                      candidate_mutex_;
         std::vector<sgns::securecrdt::CandidateId>              pending_burn_candidates_;
     };
