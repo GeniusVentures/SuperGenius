@@ -1,6 +1,7 @@
 #include "account/TrustStartupController.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 #include "account/BurnConfig.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -113,6 +114,25 @@ namespace sgns::account
         }
 
         const std::weak_ptr<TrustStartupController> weak = instance;
+        const auto enqueue_candidate = [weak]( const auto &id )
+        {
+            if ( auto self = weak.lock() )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( self->candidate_mutex_ );
+                    if ( std::find( self->failed_burn_candidates_.begin(),
+                                    self->failed_burn_candidates_.end(),
+                                    id ) == self->failed_burn_candidates_.end() &&
+                         std::find( self->pending_burn_candidates_.begin(),
+                                    self->pending_burn_candidates_.end(),
+                                    id ) == self->pending_burn_candidates_.end() )
+                    {
+                        self->pending_burn_candidates_.push_back( id );
+                    }
+                }
+                self->RequestRefresh();
+            }
+        };
         if ( !instance->secure_crdt_->RegisterCandidateCallback(
                  "trusted-peer-genesis",
                  [weak]( const auto &id, const auto & )
@@ -124,26 +144,18 @@ namespace sgns::account
                  },
                  &instance->callback_owner_token_ ) ||
              !instance->secure_crdt_->RegisterCandidateCallback(
-                 "burn-config",
-                 [weak]( const auto &id, const auto & )
+                 "trusted-peer",
+                 [weak, enqueue_candidate]( const auto &id, const auto &approval )
                  {
-                     if ( auto self = weak.lock() )
+                     if ( auto self = weak.lock(); self && approval.signer != self->local_signer_address_ )
                      {
-                         {
-                             std::lock_guard<std::mutex> lock( self->candidate_mutex_ );
-                             if ( std::find( self->failed_burn_candidates_.begin(),
-                                             self->failed_burn_candidates_.end(),
-                                             id ) == self->failed_burn_candidates_.end() &&
-                                  std::find( self->pending_burn_candidates_.begin(),
-                                             self->pending_burn_candidates_.end(),
-                                             id ) == self->pending_burn_candidates_.end() )
-                             {
-                                 self->pending_burn_candidates_.push_back( id );
-                             }
-                         }
-                         self->RequestRefresh();
+                         enqueue_candidate( id );
                      }
                  },
+                 &instance->callback_owner_token_ ) ||
+             !instance->secure_crdt_->RegisterCandidateCallback(
+                 "burn-config",
+                 [enqueue_candidate]( const auto &id, const auto & ) { enqueue_candidate( id ); },
                  &instance->callback_owner_token_ ) )
         {
             return outcome::failure( std::errc::operation_not_permitted );
@@ -171,11 +183,6 @@ namespace sgns::account
 
     TrustStartupController::~TrustStartupController()
     {
-        if ( secure_crdt_ )
-        {
-            secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", &callback_owner_token_ );
-            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", &callback_owner_token_ );
-        }
         {
             std::lock_guard<std::mutex> lock( refresh_worker_mutex_ );
             stop_refresh_worker_ = true;
@@ -184,6 +191,12 @@ namespace sgns::account
         if ( refresh_worker_.joinable() )
         {
             refresh_worker_.join();
+        }
+        if ( secure_crdt_ )
+        {
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", &callback_owner_token_ );
+            secure_crdt_->UnregisterCandidateCallbackIf( "burn-config", &callback_owner_token_ );
+            secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer-genesis", &callback_owner_token_ );
         }
     }
 
@@ -242,6 +255,67 @@ namespace sgns::account
             SetState( State::FatalMismatch );
             Emit( EventCode::TRUST_LOCAL_STATE_CORRUPT );
             return snapshot.error();
+        }
+
+        std::vector<sgns::securecrdt::CandidateId> policy_candidates;
+        {
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            std::copy_if( pending_burn_candidates_.begin(),
+                          pending_burn_candidates_.end(),
+                          std::back_inserter( policy_candidates ),
+                          []( const auto &candidate ) { return candidate.domain == "trusted-peer"; } );
+        }
+        std::sort( policy_candidates.begin(),
+                   policy_candidates.end(),
+                   []( const auto &left, const auto &right )
+                   {
+                       return left.version == right.version ? left.content_hash < right.content_hash
+                                                            : left.version < right.version;
+                   } );
+        policy_candidates.erase( std::unique( policy_candidates.begin(), policy_candidates.end() ),
+                                 policy_candidates.end() );
+        for ( const auto &candidate : policy_candidates )
+        {
+            auto activated = registry_->TryActivatePolicyCandidate( candidate );
+            if ( activated.has_error() )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_burn_candidates_.erase(
+                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
+                        pending_burn_candidates_.end() );
+                    if ( std::find( failed_burn_candidates_.begin(), failed_burn_candidates_.end(), candidate ) ==
+                         failed_burn_candidates_.end() )
+                    {
+                        failed_burn_candidates_.push_back( candidate );
+                    }
+                }
+                Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                      { candidate.domain,
+                        std::to_string( candidate.version ),
+                        candidate.content_hash,
+                        activated.error().message() } );
+                return activated.error();
+            }
+            if ( activated.value() )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( candidate_mutex_ );
+                    pending_burn_candidates_.erase(
+                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
+                        pending_burn_candidates_.end() );
+                }
+                snapshot = trust_store_->LoadAndVerify();
+                if ( snapshot.has_error() )
+                {
+                    Emit( EventCode::TRUST_ACTIVATION_FAILED,
+                          { candidate.domain,
+                            std::to_string( candidate.version ),
+                            candidate.content_hash,
+                            snapshot.error().message() } );
+                    return snapshot.error();
+                }
+            }
         }
 
         if ( burn_config_->IsEconomicallyReady() )
@@ -308,7 +382,10 @@ namespace sgns::account
         }
         {
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
-            pending = pending_burn_candidates_;
+            std::copy_if( pending_burn_candidates_.begin(),
+                          pending_burn_candidates_.end(),
+                          std::back_inserter( pending ),
+                          []( const auto &candidate ) { return candidate.domain == "burn-config"; } );
         }
         std::sort( pending.begin(), pending.end(), []( const auto &left, const auto &right ) {
             if ( left.domain != right.domain ) return left.domain < right.domain;
