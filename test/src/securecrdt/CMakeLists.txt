@@ -18,6 +18,7 @@ set(SECURECRDT_TEST_NODE_LIBS
     multisig
     sgns_genius_account
     json_secure_storage
+    trustedpeer
 )
 
 addtest(securecrdt_candidate_test
@@ -25,7 +26,6 @@ addtest(securecrdt_candidate_test
 )
 target_link_libraries(securecrdt_candidate_test
     ${SECURECRDT_TEST_NODE_LIBS}
-    trustedpeer
 )
 
 addtest(securecrdt_candidate_race_test
@@ -33,7 +33,6 @@ addtest(securecrdt_candidate_race_test
 )
 target_link_libraries(securecrdt_candidate_race_test
     ${SECURECRDT_TEST_NODE_LIBS}
-    trustedpeer
 )
 
 addtest(securecrdt_quorum_gate_test
@@ -41,7 +40,6 @@ addtest(securecrdt_quorum_gate_test
 )
 target_link_libraries(securecrdt_quorum_gate_test
     ${SECURECRDT_TEST_NODE_LIBS}
-    trustedpeer
 )
 
 addtest(securecrdt_propose_sign_quorum_test
