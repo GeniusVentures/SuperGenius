@@ -156,15 +156,19 @@ namespace
         auto non_member_store =
             TrustStateStore::Open( ( path / "non-member-trust" ).string(), manifest.network_id ).value();
 
-        std::vector<TrustStartupController::Event> peer_a_events;
-        std::vector<TrustStartupController::Event> non_member_events;
+        std::atomic_uint32_t peer_a_activation_failures{ 0 };
+        std::atomic_uint32_t non_member_activation_failures{ 0 };
         auto peer_a_controller_result = TrustStartupController::New(
             peer_a_secure,
             peer_a_store,
             manifest,
             peer_a.GetAddress(),
             [&]( const std::vector<uint8_t> &bytes ) { return peer_a.Sign( bytes ); },
-            [&]( const auto &event ) { peer_a_events.push_back( event ); } );
+            [&]( const auto &event )
+            {
+                if ( event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED )
+                    ++peer_a_activation_failures;
+            } );
         auto peer_b_controller_result = TrustStartupController::New(
             peer_b_secure,
             peer_b_store,
@@ -177,7 +181,11 @@ namespace
             manifest,
             non_member.GetAddress(),
             [&]( const std::vector<uint8_t> &bytes ) { return non_member.Sign( bytes ); },
-            [&]( const auto &event ) { non_member_events.push_back( event ); } );
+            [&]( const auto &event )
+            {
+                if ( event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED )
+                    ++non_member_activation_failures;
+            } );
         ASSERT_TRUE( peer_a_controller_result.has_value() );
         ASSERT_TRUE( peer_b_controller_result.has_value() );
         ASSERT_TRUE( non_member_controller_result.has_value() );
@@ -307,12 +315,8 @@ namespace
                                   [&]( const auto &approval ) { return approval.signer == non_member.GetAddress(); } ),
                    0 );
         EXPECT_FALSE( peer_a_controller->IsEconomicallyReady() );
-        EXPECT_TRUE( std::any_of( peer_a_events.begin(), peer_a_events.end(), []( const auto &event ) {
-            return event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED;
-        } ) );
-        EXPECT_TRUE( std::none_of( non_member_events.begin(), non_member_events.end(), []( const auto &event ) {
-            return event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED;
-        } ) );
+        EXPECT_EQ( peer_a_activation_failures.load(), 1U );
+        EXPECT_EQ( non_member_activation_failures.load(), 0U );
 
         peer_a_controller.reset();
         peer_a_store.reset();
