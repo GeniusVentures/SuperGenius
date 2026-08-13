@@ -32,6 +32,7 @@ target_include_directories(policy_lifetime_multi_account_test PRIVATE ${AsyncIOM
 target_link_libraries(policy_lifetime_multi_account_test
     genius_node_test
     json_secure_storage
+    local_trust_admin
 )
 
 if(WIN32)
