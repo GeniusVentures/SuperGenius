@@ -339,7 +339,9 @@ TEST_F( BurnConfigPolicyE2ETest, InvalidAndUnderSignedCandidatesLeavePayEscrowUn
     const auto durable = store_->LoadAndVerify().value();
 
     auto under_signed = burn_->ProposeBurnCandidate( 333 ).value();
-    EXPECT_TRUE( burn_->TryActivateBurnCandidate( under_signed ).has_error() );
+    auto pending = burn_->TryActivateBurnCandidate( under_signed );
+    ASSERT_TRUE( pending.has_value() ) << pending.error().message();
+    EXPECT_FALSE( pending.value() );
 
     auto core = secure_crdt_->ReadCandidateApprovals( under_signed ).value().front().core;
     EXPECT_TRUE( secure_crdt_->SubmitCandidateApproval( Approval( core, 3 ) ).has_error() );
