@@ -35,7 +35,7 @@ Milestone summary: `.planning/MILESTONES.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 20/22 plans executed
+**Plans:** 21/22 plans executed
 Plans:
 **Wave 1**
 
@@ -101,7 +101,7 @@ Plans:
 
 **Second Gap Wave 2** *(blocked on 13-20; shared startup-controller lifecycle)*
 
-- [ ] 13-21-PLAN.md — Signer-free passive policy activation and safe callback teardown
+- [x] 13-21-PLAN.md — Signer-free passive policy activation and safe callback teardown
 
 **Second Gap Wave 3** *(blocked on 13-19, 13-20, and 13-21)*
 
