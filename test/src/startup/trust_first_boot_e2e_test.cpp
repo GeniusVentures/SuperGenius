@@ -720,18 +720,21 @@ namespace
         std::atomic_bool fail_operator_a_commits{ false };
         std::atomic_bool fail_operator_b_commits{ false };
         std::atomic_bool fail_passive_commits{ false };
+        std::atomic_uint32_t operator_a_failed_commit_attempts{ 0 };
         std::atomic_uint32_t passive_failed_commit_attempts{ 0 };
         auto open_store = [&]( const boost::filesystem::path &store_path,
                                std::atomic_bool &fail_commits,
                                std::atomic_uint32_t *attempts = nullptr )
         {
+            auto *fail_commits_state = &fail_commits;
             return TrustStateStore::Open(
                 store_path.string(),
                 manifest.network_id,
-                [&]( sgns::storage::rocksdb &database,
-                     const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+                [fail_commits_state,
+                 attempts]( sgns::storage::rocksdb &database,
+                            const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
                 {
-                    if ( fail_commits.load() )
+                    if ( fail_commits_state->load() )
                     {
                         if ( attempts ) ++( *attempts );
                         return outcome::failure( std::errc::io_error );
@@ -739,7 +742,8 @@ namespace
                     return CommitBatch( database, writes );
                 } ).value();
         };
-        auto operator_a_store = open_store( path / "operator-a-trust", fail_operator_a_commits );
+        auto operator_a_store =
+            open_store( path / "operator-a-trust", fail_operator_a_commits, &operator_a_failed_commit_attempts );
         auto operator_b_store = open_store( path / "operator-b-trust", fail_operator_b_commits );
         auto passive_store =
             open_store( path / "passive-trust", fail_passive_commits, &passive_failed_commit_attempts );
@@ -896,7 +900,8 @@ namespace
         sgns::test::assertWaitForCondition(
             [&]
             {
-                return passive_activation_failures.load() == 1U && passive_failed_commit_attempts.load() == 1U;
+                return operator_a_failed_commit_attempts.load() == 1U &&
+                       passive_activation_failures.load() == 1U && passive_failed_commit_attempts.load() == 1U;
             },
             std::chrono::seconds( 5 ),
             "passive policy commit failure was not emitted" );
@@ -944,10 +949,10 @@ namespace
                 auto b = operator_b_store->LoadAndVerify();
                 return a.has_value() && b.has_value() &&
                        a.value().policy.Hash() == std::optional<std::string>( winning_policy_v3_hash ) &&
-                       b.value().policy.Hash() == std::optional<std::string>( winning_policy_v3_hash );
+                       b.value().policy.Hash() == std::optional<std::string>( policy_v2_hash );
             },
             std::chrono::seconds( 5 ),
-            "remaining production controllers did not advance after passive teardown" );
+            "remaining production callback did not process quorum after passive teardown" );
         EXPECT_EQ( passive_store->LoadAndVerify().value().policy.Hash(), std::optional<std::string>( policy_v2_hash ) );
         EXPECT_EQ( passive_failed_commit_attempts.load(), 1U );
 
