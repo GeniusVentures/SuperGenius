@@ -34,6 +34,9 @@
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/GeniusAccount.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/TransactionManager.hpp"
+#include "account/TrustStartupController.hpp"
+#include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "FileManager.hpp"
 #include <boost/dll.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -42,7 +45,9 @@
 #include "testutil/TestMintInputValidator.hpp"
 #include "testutil/wait_condition.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
-#include "storage/rocksdb/rocksdb.hpp"
+#include "securecrdt/SecureCrdt.hpp"
+#include "trustedpeer/TrustStateStore.hpp"
+#include "trustedpeer/TrustedPeerRegistry.hpp"
 
 using namespace sgns;
 
@@ -128,6 +133,29 @@ class MultiAccountTest : public ::testing::Test
 protected:
     static constexpr std::string_view FILE_PREFIX = "mat_";
 
+    static std::string DeterministicKey( const std::string &self_address )
+    {
+        std::hash<std::string>          hasher;
+        std::mt19937                    rng( static_cast<uint32_t>( hasher( self_address ) ) );
+        std::uniform_int_distribution<> dist( 0, 15 );
+        std::string                     key;
+        key.reserve( 64 );
+        std::generate_n( std::back_inserter( key ), 64, [&]() {
+            static constexpr std::string_view hexChars = "0123456789abcdef";
+            return hexChars[dist( rng )];
+        } );
+        return key;
+    }
+
+    void AddCanonicalTrustPeer( const std::string &self_address )
+    {
+        const auto path = boost::dll::program_location().parent_path() / "mat_trust_authorities";
+        auto account = GeniusAccount::NewFromPrivateKey(
+            TokenID::FromBytes( { 0x00 } ), DeterministicKey( self_address ).c_str(), path, false );
+        ASSERT_TRUE( account );
+        trust_peers_.push_back( std::move( account ) );
+    }
+
     /// @param nodeTypeOverride Writes this literal role into sgns_config.json instead of the
     ///        Full/Light implied by @p isFullNode. Trailing and defaulted so the ~15 existing
     ///        call sites are untouched; used to spin up an "Archive" node.
@@ -165,32 +193,38 @@ protected:
             }
         }
 
-        // Generate deterministic key from self_address
-        std::string key;
-        key.reserve( 64 );
-
-        // Create a hash of the self_address to make it deterministic
-        std::hash<std::string> hasher;
-        size_t                 address_hash = hasher( self_address );
-
-        // Use the hash as seed for deterministic random generation
-        std::mt19937                    rng( static_cast<uint32_t>( address_hash ) );
-        std::uniform_int_distribution<> dist( 0, 15 );
-        std::generate_n( std::back_inserter( key ),
-                         64,
-                         [&]()
-                         {
-                             static constexpr std::string_view hexChars = "0123456789abcdef";
-                             return hexChars[dist( rng )];
-                         } );
+        const auto key = DeterministicKey( self_address );
 
         if ( !reuseStorage )
         {
             sgns::GeniusNode::WriteNetworkConfig( devConfig.BaseWritePath, 0, /*auto_dht=*/false );
-            sgns::GeniusNode::WriteSgnsConfig( devConfig.BaseWritePath,
-                                               nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" ),
-                                               /*is_processor=*/isProcessor,
-                                               /*rpc_catchup=*/false );
+        }
+        auto authority = GeniusAccount::NewFromPrivateKey(
+            devConfig.TokenID, key.c_str(), devConfig.BaseWritePath, isFullNode );
+        if ( !authority )
+        {
+            return nullptr;
+        }
+        if ( isGenesisAuthorized )
+        {
+            trust_authority_ = authority;
+        }
+        const auto configured_authority = trust_authority_ ? trust_authority_ : authority;
+        if ( !reuseStorage )
+        {
+            std::ofstream config( devConfig.BaseWritePath + "sgns_config.json" );
+            config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\""
+                   << nodeTypeOverride.value_or( isFullNode ? "Full" : "Light" )
+                   << "\",\"is_processor\":" << ( isProcessor ? "true" : "false" )
+                   << ",\"rpc_catchup\":false,\"trusted_peers\":[\"" << configured_authority->GetAddress();
+            for ( const auto &peer : trust_peers_ )
+            {
+                config << "\",\"" << peer->GetAddress();
+            }
+            config << "\"],\"bootstrapper_node\":\"" << configured_authority->GetAddress()
+                   << "\",\"trusted_peer_quorum_threshold\":" << ( ( trust_peers_.size() + 1 ) / 2 + 1 )
+                   << ",\"burn_config_quorum_threshold\":" << ( trust_peers_.size() + 1 - ( trust_peers_.size() + 1 ) / 3 )
+                   << "}";
         }
         auto node = sgns::GeniusNode::New( devConfig, sgns::FromPrivateKey{ key } );
         if ( isGenesisAuthorized )
@@ -199,6 +233,7 @@ protected:
         }
 
         node_base_paths_.insert_or_assign( node.get(), devConfig.BaseWritePath );
+        node_authorities_.insert_or_assign( node.get(), configured_authority );
         return node;
     }
 
@@ -209,15 +244,111 @@ protected:
 
     void WaitForReady( const std::shared_ptr<GeniusNode> &node )
     {
+        sgns::test::assertWaitForCondition(
+            [&]()
+            {
+                return node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS ||
+                       node->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS ||
+                       node->GetState() == GeniusNode::NodeState::READY;
+            },
+            std::chrono::milliseconds( 50000 ),
+            "node did not reach a trust lifecycle checkpoint: " + node->GetAddress() );
+
+        if ( node->GetState() != GeniusNode::NodeState::READY )
+        {
+            const auto authority = node_authorities_.at( node.get() );
+            const auto base_path = std::filesystem::path( GetBaseWritePath( node ) );
+            const auto network_config = base_path / "reviewed-trust-network.json";
+            const auto database_path  = base_path / "reviewed-trust-globaldb";
+            std::filesystem::create_directories( database_path );
+            {
+                std::ofstream config( network_config );
+                ASSERT_TRUE( config.good() );
+                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+                       << node->GetPubSub()->GetInterfaceAddress() << R"("]})";
+            }
+
+            const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
+            sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
+            composition_config.network_config_path = network_config.string();
+            composition_config.database_path       = database_path.string();
+            composition_config.listen_topic        = topic;
+            composition_config.broadcast_topic     = topic;
+            auto composition_result =
+                sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
+            ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
+            auto composition = composition_result.value();
+            ASSERT_TRUE( composition->Start().has_value() );
+
+            auto secure_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
+            auto store = sgns::trustedpeer::TrustStateStore::Open(
+                ( base_path / "reviewed-trust-state" ).string(), 144 );
+            ASSERT_TRUE( store.has_value() ) << store.error().message();
+
+            sgns::trustedpeer::GenesisManifest manifest;
+            manifest.network_id              = 144;
+            manifest.bootstrapper_public_key = authority->GetAddress();
+            manifest.peers                   = { authority->GetAddress() };
+            for ( const auto &peer : trust_peers_ )
+            {
+                manifest.peers.push_back( peer->GetAddress() );
+            }
+            manifest.membership_threshold = manifest.peers.size() / 2 + 1;
+            manifest.burn_threshold       = manifest.peers.size() - manifest.peers.size() / 3;
+            const auto canonical             = manifest.Canonicalized();
+            ASSERT_TRUE( canonical.has_value() );
+            const auto manifest_bytes = canonical->CanonicalBytes();
+            ASSERT_TRUE( manifest_bytes.has_value() );
+
+            auto controller = sgns::account::TrustStartupController::New(
+                secure_crdt,
+                store.value(),
+                *canonical,
+                authority->GetAddress(),
+                [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
+            ASSERT_TRUE( controller.has_value() ) << controller.error().message();
+
+            auto submission_crdt = std::make_shared<sgns::securecrdt::SecureCrdt>( composition->db(), topic );
+            auto submission_store = sgns::trustedpeer::TrustStateStore::Open(
+                ( base_path / "reviewed-trust-submitter-state" ).string(), 144 );
+            ASSERT_TRUE( submission_store.has_value() ) << submission_store.error().message();
+            auto registry = sgns::trustedpeer::TrustedPeerRegistry::NewProduction(
+                submission_crdt,
+                submission_store.value(),
+                *canonical,
+                authority->Sign( *manifest_bytes ),
+                authority->GetAddress(),
+                [authority]( const std::vector<uint8_t> &bytes ) { return authority->Sign( bytes ); } );
+            ASSERT_TRUE( registry.has_value() ) << registry.error().message();
+            auto submitted = registry.value()->SubmitReviewedGenesisApproval();
+            ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
+            sgns::test::assertWaitForCondition(
+                [&]
+                {
+                    return controller.value()->GetState() ==
+                           sgns::account::TrustStartupController::State::ConfirmedReady;
+                },
+                std::chrono::milliseconds( 50000 ),
+                "reviewed trust composition did not produce deterministic initial burn" );
+            sgns::test::assertWaitForCondition(
+                [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
+                std::chrono::milliseconds( 50000 ),
+                "reviewed trust and deterministic initial burn did not unlock node: " + node->GetAddress() );
+        }
+
         sgns::test::assertWaitForCondition( [&]() { return node->GetState() == GeniusNode::NodeState::READY; },
                                             std::chrono::milliseconds( 50000 ),
-                                            "node not synced: " + node->GetAddress() );
+                                            "reviewed trust and deterministic initial burn did not unlock node: " +
+                                                node->GetAddress() );
+        ASSERT_EQ( node->GetState(), GeniusNode::NodeState::READY )
+            << "final node state=" << static_cast<int>( node->GetState() );
     }
 
     void ConfigureConsensus( const std::shared_ptr<GeniusNode> &node,
                              size_t                             certificates_per_batch,
                              std::chrono::milliseconds          certificate_delay )
     {
+        WaitForReady( node );
         sgns::test::assertWaitForCondition(
             [&]()
             {
@@ -225,7 +356,9 @@ protected:
                        sgns::MultiAccountTestAccess::GetValidatorRegistry( node );
             },
             std::chrono::milliseconds( 50000 ),
-            "node blockchain not ready for consensus configuration" );
+            "node blockchain not ready for consensus configuration: " + node->GetAddress() );
+        ASSERT_EQ( node->GetState(), GeniusNode::NodeState::READY )
+            << "consensus node final state=" << static_cast<int>( node->GetState() );
 
         ASSERT_TRUE(
             sgns::MultiAccountTestAccess::ConfigureConsensus( node, certificates_per_batch, certificate_delay ) );
@@ -250,6 +383,9 @@ protected:
     }
 
     std::unordered_map<const GeniusNode *, std::string> node_base_paths_;
+    std::unordered_map<const GeniusNode *, std::shared_ptr<GeniusAccount>> node_authorities_;
+    std::shared_ptr<GeniusAccount> trust_authority_;
+    std::vector<std::shared_ptr<GeniusAccount>> trust_peers_;
 };
 
 class ValidatorRegistryTest : public MultiAccountTest
@@ -297,35 +433,25 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
         "client did not receive the updated validator registry" );
 
     const auto registry_cid = full_registry->GetRegistryCid();
-    auto       parsed_cid   = CID::fromString( registry_cid );
-    ASSERT_TRUE( parsed_cid.has_value() );
-    auto cid_bytes = parsed_cid.value().toBytes();
-    ASSERT_TRUE( cid_bytes.has_value() );
-
-    const auto client_base_path     = GetBaseWritePath( node_client );
-    const auto client_database_path = sgns::MultiAccountTestAccess::GetDatabasePath( node_client );
+    const auto client_address = node_client->GetAddress();
 
     client_registry.reset();
     node_client.reset();
 
-    ASSERT_TRUE( sgns::MultiAccountTestAccess::RemoveRegistryPersistence( client_database_path,
-                                                                          std::move( cid_bytes.value() ) ) );
-
-    const auto full_address = node_full->GetPubSub()->GetInterfaceAddress();
-    {
-        std::ofstream network_config( client_base_path + "network_config.json" );
-        ASSERT_TRUE( network_config.good() );
-        network_config << "{ \"port_seed\": 0, \"auto_dht\": false, \"upnp_enabled\": false, "
-                          "\"bootstrap_addresses\": [\""
-                       << full_address << "\"] }";
-    }
-
-    node_client = CreateNode( "registry_cid_client", false, false, false, client_base_path );
+    node_client = CreateNode( "registry_cid_client" );
     ASSERT_TRUE( node_client );
-    WaitForReady( node_client );
-
+    sgns::test::assertWaitForCondition(
+        [&] { return static_cast<bool>( sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client ) ); },
+        std::chrono::milliseconds( 50000 ),
+        "recovery client did not construct its empty validator registry" );
     client_registry = sgns::MultiAccountTestAccess::GetValidatorRegistry( node_client );
     ASSERT_TRUE( client_registry );
+    EXPECT_EQ( node_client->GetAddress(), client_address );
+    EXPECT_NE( client_registry->GetRegistryCid(), registry_cid );
+    EXPECT_TRUE( client_registry->LoadRegistryByCid( registry_cid ).has_error() );
+
+    node_client->AddPeers( { node_full->GetPubSub()->GetInterfaceAddress() } );
+    WaitForReady( node_client );
 
     sgns::test::assertWaitForCondition(
         [&]()
@@ -339,6 +465,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
 {
+    AddCanonicalTrustPeer( "node_multi_1" );
     // Create nodes dynamically
     auto node_full     = CreateNode( "node_multi_full", true, true, true );
     auto node_original = CreateNode( "node_multi_1" );
