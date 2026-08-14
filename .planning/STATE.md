@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Completed 13-23-PLAN.md
-last_updated: "2026-08-14T14:22:22.812Z"
+stopped_at: Completed 13-25-PLAN.md
+last_updated: "2026-08-14T15:55:58.006Z"
 last_activity: 2026-08-14
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 34
-  completed_plans: 31
+  completed_plans: 32
   percent: 29
 ---
 
@@ -30,7 +30,7 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps) — EXECUTING
-Plan: 24 of 26
+Plan: 25 of 26
 Status: Ready to execute
 Last activity: 2026-08-14
 
@@ -73,8 +73,8 @@ Last activity: 2026-08-14
 
 ## Session
 
-**Last session:** 2026-08-14T14:22:22.808Z
-**Stopped At:** Completed 13-23-PLAN.md
+**Last session:** 2026-08-14T15:55:58.002Z
+**Stopped At:** Completed 13-25-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -117,6 +117,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P21 | 25 min | 1 tasks | 2 files |
 | Phase 13 P22 | 9 min | 1 tasks | 1 files |
 | Phase 13 P23 | 29 min | 1 tasks | 3 files |
+| Phase 13 P25 | 1h 31m | 1 tasks | 3 files |
 
 ## Decisions
 
@@ -167,3 +168,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Only remotely authored trusted-peer callback records enter passive activation; explicit local admin paths retain their own activation result. — Prevents synchronous callback activation from racing the explicit administrative decision.
 - [Phase 13]: Policy candidates use the serialized callback worker; teardown joins queued work before owner-safe callback removal. — Keeps GlobalDB writes off callback delivery and queued work within controller lifetime.
 - [Phase 13]: Burn-ready refresh lists and deterministically processes retained successors before ConfirmedReady; only foreign burn approvals enqueue passive activation. — This closes passive divergence while preserving explicit LocalTrustAdmin activation and preventing local callback races.
+- [Phase 13]: GeniusNode serializes complete transitions with a recursive mutex so existing same-thread nested transitions remain valid while concurrent duplicate work is excluded.
+- [Phase 13]: Posted trust transitions carry their source state and lifecycle epoch; ConfirmedReady may initialize transactions only from the two trust waiting states.
+- [Phase 13]: TransactionManager replacement stops and releases prior bridge, state, slot-hash, GlobalDB, and account callback ownership before TransactionManager::New installs a generation-owned replacement.
