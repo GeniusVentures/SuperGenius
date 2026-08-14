@@ -67,6 +67,208 @@ namespace
         return batch->commit();
     }
 
+    TEST( TrustFirstBootE2ETest, PolicyV2BeforeInitialBurnCannotStrandStartup )
+    {
+        sgns::test::securecrdt::EnsureLoggingSystemConfigured();
+        const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+        boost::filesystem::create_directories( path );
+        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+
+        auto bootstrapper = sgns::GeniusSigner::Generate();
+        auto operator_a = sgns::GeniusSigner::Generate();
+        auto operator_b = sgns::GeniusSigner::Generate();
+        const std::string topic = "initial-burn-policy-ordering-topic";
+
+        const auto operator_a_config_path = path / "operator-a-network.json";
+        const auto operator_b_config_path = path / "operator-b-network.json";
+        boost::filesystem::create_directories( path / "operator-a-globaldb" );
+        boost::filesystem::create_directories( path / "operator-b-globaldb" );
+        WriteNetworkConfig( operator_a_config_path );
+
+        auto make_config = [&]( const boost::filesystem::path &config_path,
+                                const boost::filesystem::path &database_path )
+        {
+            sgns::crdt::GlobalDbNetworkComposition::Config config;
+            config.network_config_path = config_path.string();
+            config.database_path = database_path.string();
+            config.listen_topic = topic;
+            config.broadcast_topic = topic;
+            return config;
+        };
+        auto operator_a_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create(
+            make_config( operator_a_config_path, path / "operator-a-globaldb" ) );
+        ASSERT_TRUE( operator_a_composition_result.has_value() );
+        auto operator_a_composition = operator_a_composition_result.value();
+        ASSERT_TRUE( operator_a_composition->Start().has_value() );
+        ASSERT_FALSE( operator_a_composition->interface_address().empty() );
+
+        WriteNetworkConfig( operator_b_config_path, operator_a_composition->interface_address() );
+        auto operator_b_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create(
+            make_config( operator_b_config_path, path / "operator-b-globaldb" ) );
+        ASSERT_TRUE( operator_b_composition_result.has_value() );
+        auto operator_b_composition = operator_b_composition_result.value();
+        ASSERT_TRUE( operator_b_composition->Start().has_value() );
+
+        auto operator_a_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( operator_a_composition->db(), topic );
+        auto operator_b_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( operator_b_composition->db(), topic );
+
+        GenesisManifest manifest;
+        manifest.network_id = 42;
+        manifest.bootstrapper_public_key = bootstrapper.GetAddress();
+        manifest.peers = { operator_a.GetAddress(), operator_b.GetAddress() };
+        manifest.membership_threshold = 2;
+        manifest.burn_threshold = 2;
+        manifest = manifest.Canonicalized().value();
+        const auto bootstrap_signature = bootstrapper.Sign( manifest.CanonicalBytes().value() );
+
+        auto operator_a_store =
+            TrustStateStore::Open( ( path / "operator-a-trust" ).string(), manifest.network_id ).value();
+        auto operator_b_store =
+            TrustStateStore::Open( ( path / "operator-b-trust" ).string(), manifest.network_id ).value();
+        ASSERT_TRUE( operator_a_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+        ASSERT_TRUE( operator_b_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+
+        std::atomic_uint32_t operator_a_signatures{ 0 };
+        std::atomic_uint32_t operator_b_signatures{ 0 };
+        auto operator_a_controller = TrustStartupController::New(
+            operator_a_secure,
+            operator_a_store,
+            manifest,
+            operator_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes )
+            {
+                ++operator_a_signatures;
+                return operator_a.Sign( bytes );
+            } ).value();
+
+        const auto initial_burn_core =
+            sgns::account::BurnConfig::BurnCandidateCore( operator_a_store->LoadAndVerify().value().burn );
+        ASSERT_TRUE( initial_burn_core.has_value() );
+        const auto initial_burn_candidate = CandidateId::FromCore( *initial_burn_core );
+        ASSERT_TRUE( initial_burn_candidate.has_value() );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = operator_a_secure->ReadCandidateApprovals( *initial_burn_candidate );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "first production controller did not publish its deterministic initial-burn approval" );
+
+        ASSERT_EQ( operator_a_controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+        ASSERT_FALSE( operator_a_controller->IsEconomicallyReady() );
+        ASSERT_FALSE( operator_a_controller->CanApproveSuccessors() );
+        ASSERT_EQ( operator_a_signatures.load(), 1U );
+
+        sgns::trustedpeer::LocalTrustAdmin operator_a_admin(
+            operator_a_controller->registry(), operator_a_controller->burn_config() );
+        const auto before_policy_attempt = operator_a_store->LoadAndVerify().value();
+        ASSERT_EQ( before_policy_attempt.burn_authorization,
+                   sgns::trustedpeer::BurnAuthorizationKind::BootstrapOnly );
+        const auto policy_v1_hash = before_policy_attempt.policy.Hash().value();
+        auto policy_v2 = before_policy_attempt.policy;
+        policy_v2.version += 1;
+        policy_v2.expected_previous_hash = policy_v1_hash;
+        policy_v2.authorizing_policy_hash = policy_v1_hash;
+        policy_v2 = policy_v2.Canonicalized().value();
+
+        auto rejected_policy = operator_a_admin.ProposePolicy( policy_v2 );
+        ASSERT_TRUE( rejected_policy.has_error() );
+        EXPECT_EQ( rejected_policy.error(), std::make_error_code( std::errc::operation_not_permitted ) );
+        EXPECT_EQ( operator_a_store->LoadAndVerify().value(), before_policy_attempt );
+        EXPECT_TRUE( operator_a_controller->registry()->ListPendingPolicyCandidates().value().empty() );
+        EXPECT_EQ( operator_a_signatures.load(), 1U );
+        EXPECT_EQ( operator_a_controller->GetState(), TrustStartupController::State::WaitingForInitialBurn );
+
+        auto operator_b_controller = TrustStartupController::New(
+            operator_b_secure,
+            operator_b_store,
+            manifest,
+            operator_b.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes )
+            {
+                ++operator_b_signatures;
+                return operator_b.Sign( bytes );
+            } ).value();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto durable_a = operator_a_store->LoadAndVerify();
+                auto durable_b = operator_b_store->LoadAndVerify();
+                return durable_a.has_value() && durable_b.has_value() &&
+                       durable_a.value().burn_authorization ==
+                           sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum &&
+                       durable_b.value().burn_authorization ==
+                           sgns::trustedpeer::BurnAuthorizationKind::PeerQuorum &&
+                       operator_a_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
+                       operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
+            },
+            std::chrono::seconds( 5 ),
+            "production callbacks did not complete deterministic initial burn v1" );
+        EXPECT_EQ( operator_a_signatures.load(), 1U );
+        EXPECT_EQ( operator_b_signatures.load(), 1U );
+        EXPECT_TRUE( operator_a_controller->IsEconomicallyReady() );
+        EXPECT_TRUE( operator_a_controller->CanApproveSuccessors() );
+        EXPECT_EQ( operator_a_controller->burn_config()->GetCachedBasisPoints(), 100U );
+
+        sgns::trustedpeer::LocalTrustAdmin operator_b_admin(
+            operator_b_controller->registry(), operator_b_controller->burn_config() );
+        auto proposed_policy = operator_a_admin.ProposePolicy( policy_v2 );
+        ASSERT_TRUE( proposed_policy.has_value() ) << proposed_policy.error().message();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = operator_b_secure->ReadCandidateApprovals( proposed_policy.value() );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "policy v2 proposal did not replicate before approval" );
+        EXPECT_EQ( operator_a_store->LoadAndVerify().value().policy.Hash(),
+                   std::optional<std::string>( policy_v1_hash ) );
+
+        auto approved_policy = operator_b_admin.Approve( proposed_policy.value() );
+        ASSERT_TRUE( approved_policy.has_value() ) << approved_policy.error().message();
+        const auto policy_v2_hash = policy_v2.Hash().value();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto durable_a = operator_a_store->LoadAndVerify();
+                auto durable_b = operator_b_store->LoadAndVerify();
+                return durable_a.has_value() && durable_b.has_value() &&
+                       durable_a.value().policy.Hash() == std::optional<std::string>( policy_v2_hash ) &&
+                       durable_b.value().policy.Hash() == std::optional<std::string>( policy_v2_hash ) &&
+                       operator_a_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
+                       operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady;
+            },
+            std::chrono::seconds( 5 ),
+            "policy v2 did not activate after initial-burn readiness and one peer approval" );
+
+        const auto policy_approvals = operator_a_secure->ReadCandidateApprovals( proposed_policy.value() ).value();
+        ASSERT_EQ( policy_approvals.size(), 2U );
+        EXPECT_EQ( std::count_if( policy_approvals.begin(), policy_approvals.end(), [&]( const auto &approval ) {
+                       return approval.signer == operator_a.GetAddress();
+                   } ),
+                   1 );
+        EXPECT_EQ( std::count_if( policy_approvals.begin(), policy_approvals.end(), [&]( const auto &approval ) {
+                       return approval.signer == operator_b.GetAddress();
+                   } ),
+                   1 );
+        EXPECT_EQ( operator_a_signatures.load(), 2U );
+        EXPECT_EQ( operator_b_signatures.load(), 2U );
+        EXPECT_TRUE( operator_a_controller->IsEconomicallyReady() );
+        EXPECT_TRUE( operator_b_controller->IsEconomicallyReady() );
+
+        operator_b_controller.reset();
+        operator_a_controller.reset();
+        operator_b_store.reset();
+        operator_a_store.reset();
+        operator_b_composition->Stop();
+        operator_a_composition->Stop();
+        cleanup();
+    }
+
     TEST( TrustFirstBootE2ETest, ProductionControllerInitiatesBurnAndRestartRecoversPersistedApprovals )
     {
         sgns::test::securecrdt::EnsureLoggingSystemConfigured();
