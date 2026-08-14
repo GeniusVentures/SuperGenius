@@ -35,7 +35,7 @@ Milestone summary: `.planning/MILESTONES.md`
   5. SecureCrdt, policy state, TPR, BurnConfig, registrations, and caches remain node-scoped across `SelectAccount()`, and the replacement TransactionManager observes subsequent burn updates.
   6. Automated unit, race, tamper, restart, cross-node, live-economic, and repeated account-switch tests pass with no unmitigated HIGH security finding.
 
-**Plans:** 26/29 plans complete
+**Plans:** 27/29 plans executed
 Plans:
 **Wave 1**
 
@@ -122,7 +122,7 @@ Plans:
 
 **Fourth Gap Wave 1**
 
-- [ ] 13-27-PLAN.md — Generation-safe account ownership and immutable node trust signer
+- [x] 13-27-PLAN.md — Generation-safe account ownership and immutable node trust signer
 
 **Fourth Gap Wave 2** *(blocked on 13-27; shared GeniusNode lifecycle and trust-controller construction)*
 
