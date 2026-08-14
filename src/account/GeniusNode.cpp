@@ -814,16 +814,18 @@ namespace sgns
                         configured.burn_threshold          = burn_config_quorum_threshold_;
                         manifest                           = std::move( configured );
                     }
+                    if ( !trust_signer_ )
+                    {
+                        trust_signer_ = std::make_shared<const NodeTrustSigner>(
+                            NodeTrustSigner{ account_->GetAddress(), account_ } );
+                    }
+                    const auto trust_signer = trust_signer_;
                     auto created = sgns::account::TrustStartupController::New(
                         secure_crdt_,
                         trust_state_store_,
                         std::move( manifest ),
-                        account_->GetAddress(),
-                        [weak_self = weak_from_this()]( const std::vector<uint8_t> &bytes )
-                        {
-                            auto self = weak_self.lock();
-                            return self && self->account_ ? self->account_->Sign( bytes ) : std::vector<uint8_t>{};
-                        },
+                        trust_signer->address,
+                        [trust_signer]( const std::vector<uint8_t> &bytes ) { return trust_signer->Sign( bytes ); },
                         [logger = node_logger_]( const sgns::account::TrustStartupController::Event &event )
                         {
                             const char *code = "TRUST_CONFIG_CONFLICT";
@@ -1006,9 +1008,18 @@ namespace sgns
                 }
 
                 ++transaction_manager_construction_count_;
-                const auto owner_generation = ++transaction_manager_owner_generation_;
+                if ( account_service_generation_ == 0 )
+                {
+                    account_service_generation_ = 1;
+                }
+                const auto owner_generation = account_service_generation_;
+                transaction_manager_owner_generation_.store( owner_generation );
                 account_transaction_callback_owner_generation_.store( owner_generation );
+                catchup_callback_owner_generation_.store( owner_generation );
                 auto manager = transaction_manager_;
+                // The replacement is now a complete account/manager pair.  This
+                // is the sole publication point for a switching generation.
+                account_service_switching_ = false;
 
                 transaction_manager_->RegisterStateChangeCallback(
                     [weak_self = weak_from_this(),
@@ -1018,9 +1029,9 @@ namespace sgns
                         if ( auto strong = weak_self.lock() )
                         {
                             auto callback_manager = weak_manager.lock();
-                            if ( !callback_manager ||
-                                 strong->transaction_manager_owner_generation_.load() != owner_generation ||
-                                 strong->transaction_manager_.get() != callback_manager.get() )
+                            const auto snapshot = strong->SnapshotAccountServices();
+                            if ( !callback_manager || snapshot.generation != owner_generation ||
+                                 snapshot.manager.get() != callback_manager.get() )
                             {
                                 return;
                             }
@@ -1047,9 +1058,9 @@ namespace sgns
                     {
                         auto self = weak_self.lock();
                         auto transaction_manager = weak_transaction_manager.lock();
-                        if ( !self || !transaction_manager ||
-                             self->transaction_manager_owner_generation_.load() != owner_generation ||
-                             self->transaction_manager_.get() != transaction_manager.get() )
+                        const auto snapshot = self ? self->SnapshotAccountServices() : AccountServiceSnapshot{};
+                        if ( !self || !transaction_manager || snapshot.generation != owner_generation ||
+                             snapshot.manager.get() != transaction_manager.get() )
                         {
                             return;
                         }
@@ -2496,17 +2507,35 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
-        BOOST_OUTCOME_TRY( ShutdownAccountBoundServices( true ) );
+        std::shared_ptr<evmwatcher::BridgeCatchupWatcher> previous_watcher;
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            if ( account_service_switching_ )
+            {
+                return std::errc::operation_in_progress;
+            }
+            account_service_switching_ = true;
+            ++account_service_generation_; // invalidate every captured account-service snapshot
+            ++bridge_init_generation_;
+            catchup_callback_owner_generation_.store( 0 );
+            previous_watcher = std::move( catchup_watcher_ );
+        }
 
-        if ( account_ )
+        // Watcher draining and manager/blockchain Stop may block or join threads;
+        // they deliberately run without lifecycle_mutex_.  Public and async
+        // consumers see the switching epoch as unavailable throughout the drain.
+        if ( previous_watcher )
         {
-            account_.swap( account );
+            previous_watcher->stopWatching();
+            previous_watcher.reset();
         }
-        else
+        auto shutdown_result = ShutdownAccountBoundServices( true );
+        if ( shutdown_result.has_error() )
         {
-            account_ = account;
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            account_service_switching_ = false;
+            return outcome::failure( shutdown_result.error() );
         }
-        account.reset();
 
         if ( this->tx_globaldb_ )
         {
@@ -2515,10 +2544,21 @@ namespace sgns
             // account-dependent layers. We must replicate what MIGRATING_DATABASE
             // and INITIALIZING_DATABASE do for a new account, without recreating
             // the database itself.
-            this->account_->InitMessenger( this->pubsub_ );
-            this->account_->ConfigureDatabaseDependencies( this->tx_globaldb_ );
+            account->InitMessenger( this->pubsub_ );
+            account->ConfigureDatabaseDependencies( this->tx_globaldb_ );
             this->tx_globaldb_->AddListenTopic( processing_channel_topic_ );
-            StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+            {
+                std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+                account_ = std::move( account );
+                StateTransition( NodeState::INITIALIZING_BLOCKCHAIN );
+                account_service_switching_ = false;
+            }
+        }
+        else
+        {
+            std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+            account_ = std::move( account );
+            account_service_switching_ = false;
         }
 
         return outcome::success();
@@ -2554,8 +2594,10 @@ namespace sgns
             return std::errc::address_not_available;
         }
 
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         const auto token_id = GetTokenID();
-        auto       balance  = account_->GetUTXOManager().GetBalance( token_id );
+        auto       balance  = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( balance > 0 )
         {
             BOOST_OUTCOME_TRY( auto transfer_result,
@@ -2596,7 +2638,9 @@ namespace sgns
             return outcome::failure( std::errc::bad_address );
         }
 
-        BOOST_OUTCOME_TRY( account_->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        BOOST_OUTCOME_TRY( snapshot.account->SaveInSecureStorage( "payout_address", std::string( payout_address ) ) );
 
         this->StateTransition( NodeState::INITIALIZING_PROCESSING );
 
@@ -2617,7 +2661,9 @@ namespace sgns
             return outcome::failure( Error::PROCESS_COST_ERROR );
         }
 
-        if ( account_->GetUTXOManager().GetBalance() < funds )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return outcome::failure( Error::TRANSACTIONS_NOT_READY );
+        if ( snapshot.account->GetUTXOManager().GetBalance() < funds )
         {
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
@@ -2793,18 +2839,20 @@ namespace sgns
                                                          TokenID            tokenid,
                                                          std::string        destination )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ||
+             snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction manager not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
         if ( destination.empty() )
         {
-            destination = account_->GetAddress();
+            destination = snapshot.account->GetAddress();
         }
 
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
+        BOOST_OUTCOME_TRY( auto tx_id,
+                           snapshot.manager->MintFunds( amount, transaction_hash, chainid, tokenid, destination ) );
 
         node_logger_->debug( "{}: Mint transaction {} sent ", __func__, tx_id );
         return tx_id;
@@ -2836,7 +2884,9 @@ namespace sgns
 
     std::optional<std::string> GeniusNode::GetMnemonicOfActiveAccount() const
     {
-        auto res = this->account_->LoadFromSecureStorage( "mnemonic" );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account ) return std::nullopt;
+        auto res = snapshot.account->LoadFromSecureStorage( "mnemonic" );
         if ( res.has_error() )
         {
             return std::nullopt;
@@ -2939,13 +2989,15 @@ namespace sgns
                                                             const std::string &destination,
                                                             TokenID            token_id )
     {
-        if ( GetTransactionManagerState() != TransactionManager::State::READY )
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ||
+             snapshot.manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->error( "{}: Transaction Manager is not ready", __func__ );
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
 
-        auto available_balance = account_->GetUTXOManager().GetBalance( token_id );
+        auto available_balance = snapshot.account->GetUTXOManager().GetBalance( token_id );
         if ( available_balance < amount )
         {
             node_logger_->error( "{}: insufficient local funds: requested={}, available={}",
@@ -2955,8 +3007,7 @@ namespace sgns
             return outcome::failure( Error::INSUFFICIENT_FUNDS );
         }
 
-        BOOST_OUTCOME_TRY( auto manager, GetTransactionManager() );
-        BOOST_OUTCOME_TRY( auto tx_id, manager->TransferFunds( amount, destination, token_id ) );
+        BOOST_OUTCOME_TRY( auto tx_id, snapshot.manager->TransferFunds( amount, destination, token_id ) );
 
         node_logger_->debug( "{}: transaction {} sent", __func__, tx_id );
         return tx_id;
@@ -3033,28 +3084,34 @@ namespace sgns
 
     uint64_t GeniusNode::GetBalance()
     {
-        return account_->GetUTXOManager().GetBalance();
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance() : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id )
     {
-        return account_->GetUTXOManager().GetBalance( token_id );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id ) : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const std::string &address )
     {
-        return account_->GetUTXOManager().GetBalance( address );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( address ) : 0;
     }
 
     uint64_t GeniusNode::GetBalance( const TokenID token_id, const std::string &address )
     {
-        return account_->GetUTXOManager().GetBalance( token_id, address );
+        const auto snapshot = SnapshotAccountServices();
+        return snapshot.account ? snapshot.account->GetUTXOManager().GetBalance( token_id, address ) : 0;
     }
 
     void GeniusNode::ProcessingDone( const std::string &task_id, const SGProcessing::TaskResult &taskresult )
     {
         static constexpr std::string_view FUNC        = __func__;
-        const auto                        account_tag = account_->GetAddress().substr( 0, 8 );
+        const auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.account || !snapshot.manager ) return;
+        const auto account_tag = snapshot.account->GetAddress().substr( 0, 8 );
         node_logger_->info( "[{}]{}: SUCCESS PROCESSING TASK {}", account_tag, FUNC, task_id );
 
         if ( task_queue_->IsTaskCompleted( task_id ) )
@@ -3141,8 +3198,10 @@ namespace sgns
                            {
                                if ( auto strong = weak_self.lock() )
                                {
+                                   const auto snapshot = strong->SnapshotAccountServices();
+                                   if ( !snapshot.account ) return;
                                    strong->node_logger_->error( "[ {} ] ERROR PROCESSING SUBTASK ",
-                                                                strong->account_->GetAddress().substr( 0, 8 ),
+                                                                snapshot.account->GetAddress().substr( 0, 8 ),
                                                                 task_id );
                                }
                            } );
@@ -3319,13 +3378,36 @@ namespace sgns
         return manager_result.value()->CountTransactions( tx_status );
     }
 
+    GeniusNode::AccountServiceSnapshot GeniusNode::SnapshotAccountServices() const
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( account_service_switching_ )
+        {
+            return {};
+        }
+        return { account_, transaction_manager_, account_service_generation_ };
+    }
+
+    bool GeniusNode::ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
+                                                    const std::function<void()>  &side_effect )
+    {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( account_service_switching_ || snapshot.generation != account_service_generation_ ||
+             snapshot.account.get() != account_.get() || snapshot.manager.get() != transaction_manager_.get() )
+        {
+            return false;
+        }
+        side_effect();
+        return true;
+    }
+
     std::string GeniusNode::GetAddress() const
     {
         std::string address = "UNVAILABLE";
-        auto        account = account_;
-        if ( account )
+        auto        snapshot = SnapshotAccountServices();
+        if ( snapshot.account )
         {
-            address = account->GetAddress();
+            address = snapshot.account->GetAddress();
         }
         return address;
     }
@@ -3367,11 +3449,12 @@ namespace sgns
 
     outcome::result<std::shared_ptr<TransactionManager>> GeniusNode::GetTransactionManager() const
     {
-        if ( !transaction_manager_ )
+        auto snapshot = SnapshotAccountServices();
+        if ( !snapshot.manager )
         {
             return outcome::failure( Error::TRANSACTIONS_NOT_READY );
         }
-        return transaction_manager_;
+        return snapshot.manager;
     }
 
     outcome::result<std::shared_ptr<crdt::AtomicTransaction>> GeniusNode::CreateEscrowInfoCRDTTransaction(
@@ -3466,7 +3549,7 @@ namespace sgns
 
     bool GeniusNode::ConfigureRpcEndpoint( const std::string &chain_id, std::vector<WeightedRpcEndpoint> endpoints )
     {
-        auto transaction_manager = transaction_manager_;
+        auto transaction_manager = SnapshotAccountServices().manager;
         if ( !transaction_manager || transaction_manager->GetState() != TransactionManager::State::READY )
         {
             node_logger_->warn( "ConfigureRpcEndpoint called before transaction manager is ready" );
@@ -3528,6 +3611,12 @@ namespace sgns
     void GeniusNode::InitializeAndStartBridge()
     {
         node_logger_->info( "InitializeAndStartBridge: thin orchestrator (D-01, D-03)" );
+        const auto account_services = SnapshotAccountServices();
+        if ( !account_services.account || !account_services.manager )
+        {
+            node_logger_->warn( "InitializeAndStartBridge: account services are not published" );
+            return;
+        }
 
         // 1. Resolve config path (stays in GeniusNode per D-01)
         auto config_path = ResolveBridgeChainsConfigPath();
@@ -3576,21 +3665,29 @@ namespace sgns
                 return strong->catchup_chains_;
             };
 
-            auto rpc_resolver =
-                [weak_self = weak_from_this()]( const std::string &chain_id_str ) -> std::optional<std::string>
+            auto rpc_resolver = [weak_self = weak_from_this(), account_services](
+                                    const std::string &chain_id_str ) -> std::optional<std::string>
             {
                 auto strong = weak_self.lock();
-                if ( !strong || !strong->transaction_manager_ )
+                if ( !strong )
                 {
                     return std::nullopt;
                 }
-                auto &validator = strong->transaction_manager_->GetPublicChainInputValidator();
-                return validator.GetFirstRpcUrl( chain_id_str );
+                std::optional<std::string> url;
+                strong->ApplyIfCurrentAccountServices(
+                    account_services,
+                    [&]
+                    {
+                        auto &validator = account_services.manager->GetPublicChainInputValidator();
+                        url             = validator.GetFirstRpcUrl( chain_id_str );
+                    } );
+                return url;
             };
 
-            auto burn_processor = [weak_self = weak_from_this()]( const std::vector<eth::abi::AbiValue> &decoded_values,
-                                                                  const std::string                     &tx_hash_hex,
-                                                                  const std::string &chain_id_str ) -> bool
+            auto burn_processor = [weak_self = weak_from_this(), account_services](
+                                      const std::vector<eth::abi::AbiValue> &decoded_values,
+                                      const std::string                     &tx_hash_hex,
+                                      const std::string                     &chain_id_str ) -> bool
             {
                 // Parse the ABI-decoded values into a BurnEventParams
                 auto burn = BridgeRelayer::ParseBurnEventValues( decoded_values );
@@ -3611,40 +3708,38 @@ namespace sgns
                 }
 
                 auto strong = weak_self.lock();
-                if ( !strong || !strong->account_ )
+                if ( !strong )
                 {
                     return false;
                 }
-                auto &utxo_mgr = strong->account_->GetUTXOManager();
-                if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already CONSUMED — skipping",
-                                                 tx_hash_hex );
-                    return false;
-                }
-                if ( utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: burn tx {} already RESERVED — skipping",
-                                                 tx_hash_hex );
-                    return false;
-                }
-
-                try
-                {
-                    auto result = strong->MintTokens( burn.value().amount,
-                                                      tx_hash_hex,
-                                                      chain_id_str,
-                                                      burn.value().token_id,
-                                                      burn.value().destination );
-                    return result.has_value();
-                }
-                catch ( const std::exception &e )
-                {
-                    strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
-                                                 tx_hash_hex,
-                                                 e.what() );
-                    return false;
-                }
+                bool processed = false;
+                strong->ApplyIfCurrentAccountServices(
+                    account_services,
+                    [&]
+                    {
+                        auto &utxo_mgr = account_services.account->GetUTXOManager();
+                        if ( utxo_mgr.IsOutPointConsumed( burn_tx_hash, 0 ) ||
+                             utxo_mgr.IsOutPointReserved( burn_tx_hash, 0 ) )
+                        {
+                            return;
+                        }
+                        try
+                        {
+                            auto result = strong->MintTokens( burn.value().amount,
+                                                              tx_hash_hex,
+                                                              chain_id_str,
+                                                              burn.value().token_id,
+                                                              burn.value().destination );
+                            processed = result.has_value();
+                        }
+                        catch ( const std::exception &e )
+                        {
+                            strong->node_logger_->debug( "CatchUpWatcher: MintTokens threw for tx {}: {} — skipping",
+                                                         tx_hash_hex,
+                                                         e.what() );
+                        }
+                    } );
+                return processed;
             };
 
             catchup_watcher_ = std::make_shared<evmwatcher::BridgeCatchupWatcher>(
@@ -3655,6 +3750,7 @@ namespace sgns
                 std::move( burn_processor ) );
 
             catchup_watcher_->startWatching();
+            catchup_callback_owner_generation_.store( account_services.generation );
             node_logger_->info( "InitializeAndStartBridge: catchup watcher started (poll_interval={}s)",
                                 catchup_config.poll_interval.count() );
         }
@@ -3672,8 +3768,8 @@ namespace sgns
         //    the provider's chainlist_fetcher_/observers_, and the raw
         //    bridge_relayer_ observer stays valid). The generation check still
         //    discards work posted before a completed switch.
-        const auto generation = bridge_init_generation_.load();
-        auto       tx_mgr     = transaction_manager_;   // shared_ptr copy: stable lifetime
+        const auto generation = account_services.generation;
+        auto       tx_mgr     = account_services.manager;
         auto       provider   = rpc_endpoint_provider_; // shared_ptr copy: keeps provider alive mid-Initialize()
         auto       relayer    = bridge_relayer_; // shared_ptr copy: keeps the raw observer valid during notification
         boost::asio::post( *io_,
@@ -3685,7 +3781,7 @@ namespace sgns
                             relayer  = std::move( relayer )]() mutable
                            {
                                auto strong = weak_self.lock();
-                               if ( !strong || strong->bridge_init_generation_.load() != generation )
+                               if ( !strong || strong->SnapshotAccountServices().generation != generation )
                                {
                                    return; // account switched — stale init, abort
                                }
@@ -3700,7 +3796,7 @@ namespace sgns
                                auto is_cancelled = [weak_self, generation]() -> bool
                                {
                                    auto s = weak_self.lock();
-                                   return !s || s->bridge_init_generation_.load() != generation;
+                                   return !s || s->SnapshotAccountServices().generation != generation;
                                };
                                auto &validator = tx_mgr->GetPublicChainInputValidator();
                                provider->Initialize( config_path, validator, is_cancelled );

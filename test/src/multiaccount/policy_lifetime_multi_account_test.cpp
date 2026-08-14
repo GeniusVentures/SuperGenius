@@ -83,13 +83,13 @@ namespace sgns
 
         static std::shared_ptr<TransactionManager> Manager( const std::shared_ptr<GeniusNode> &node )
         {
-            return node->transaction_manager_;
+            return node ? node->SnapshotAccountServices().manager : nullptr;
         }
 
         static std::string ManagerAccountAddress( const std::shared_ptr<GeniusNode> &node )
         {
-            return node && node->transaction_manager_ && node->transaction_manager_->account_m
-                     ? node->transaction_manager_->account_m->GetAddress()
+            const auto manager = Manager( node );
+            return manager && manager->account_m ? manager->account_m->GetAddress()
                      : std::string{};
         }
 
@@ -102,7 +102,7 @@ namespace sgns
             return { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
                      canonical_candidate,
                      pinned_trust_address,
-                     node->account_->Sign( bytes ) };
+                     node->trust_signer_->Sign( bytes ) };
         }
 
         static const void *Account( const std::shared_ptr<GeniusNode> &node )
@@ -517,6 +517,14 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
     ASSERT_TRUE( proposed.has_value() );
 
     LocalTrustAdmin operator_b_admin( MultiAccountTestAccess::Registry( node_b ), MultiAccountTestAccess::Burn( node_b ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto replicated = MultiAccountTestAccess::SecureCrdt( node_b )->ReadCandidateApprovals( candidate_id );
+            return replicated.has_value() && replicated.value().size() == 1U;
+        },
+        std::chrono::seconds( 20 ),
+        "operator B did not retain the pinned signer's exact successor approval" ) );
     ASSERT_TRUE( operator_b_admin.Approve( candidate_id ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&]

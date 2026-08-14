@@ -785,6 +785,30 @@ namespace sgns
         std::shared_ptr<GeniusAccount> account_;         ///< Active account used by node services.
 
     private:
+        /**
+         * One published account generation.  The two owners and their generation
+         * are copied together while holding lifecycle_mutex_; callers must not
+         * reconstruct this tuple from the individual member shared_ptrs.
+         */
+        struct AccountServiceSnapshot
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            uint64_t                            generation = 0;
+        };
+
+        /** Immutable address/key binding used by node-scoped trust policy. */
+        struct NodeTrustSigner
+        {
+            std::string                    address;
+            std::shared_ptr<GeniusAccount> authority;
+
+            std::vector<uint8_t> Sign( const std::vector<uint8_t> &bytes ) const
+            {
+                return authority ? authority->Sign( bytes ) : std::vector<uint8_t>{};
+            }
+        };
+
         std::shared_ptr<boost::asio::io_context> io_; ///< Shared IO context for async services.
         boost::asio::executor_work_guard<boost::asio::io_context::executor_type>
                                                      io_work_guard_;     ///< Keeps @ref io_ alive.
@@ -795,6 +819,9 @@ namespace sgns
         std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
         /// Serializes lifecycle work while permitting the existing synchronous nested transitions.
         mutable std::recursive_mutex lifecycle_mutex_;
+        /// Published account/manager epoch.  A switching epoch is intentionally unavailable.
+        uint64_t account_service_generation_ = 0;
+        bool     account_service_switching_  = false;
         /// State currently executing inside StateTransition; nested transitions temporarily replace it.
         std::optional<NodeState> transition_in_progress_;
         /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
@@ -805,6 +832,7 @@ namespace sgns
         std::atomic<uint64_t> transaction_manager_owner_generation_{ 0 };
         std::atomic<uint64_t> account_transaction_callback_owner_generation_{ 0 };
         std::atomic<uint64_t> blockchain_slot_hash_owner_generation_{ 0 };
+        std::atomic<uint64_t> catchup_callback_owner_generation_{ 0 };
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
@@ -875,6 +903,8 @@ namespace sgns
         std::shared_ptr<sgns::account::BurnConfig> burn_config_; ///< BURN-02/BURN-03: live burn-rate source.
         std::shared_ptr<sgns::account::TrustStartupController>
             trust_startup_controller_; ///< Restricted boot state machine.
+        /// Created once with the policy controller; SelectAccount never mutates it.
+        std::shared_ptr<const NodeTrustSigner> trust_signer_;
 
         std::shared_ptr<boost::asio::steady_timer> gc_timer_; ///< Periodic GC timer for result cache cleanup.
 
@@ -1019,6 +1049,13 @@ namespace sgns
          * The relayer and catch-up scan receive chains via observer callbacks.
          */
         void InitializeAndStartBridge();
+
+        /** Copy the one published account/manager generation, or an empty snapshot while switching. */
+        [[nodiscard]] AccountServiceSnapshot SnapshotAccountServices() const;
+
+        /** Recheck a captured generation under the lifecycle lock before an asynchronous side effect. */
+        bool ApplyIfCurrentAccountServices( const AccountServiceSnapshot &snapshot,
+                                            const std::function<void()>  &side_effect );
 
         /**
          * @brief IBridgeInitObserver callback — stores chain list for catch-up scan.
