@@ -1,6 +1,6 @@
 /**
  * @file       crdt_datastore.hpp
- * @brief      CRDT datastore class source file 
+ * @brief      CRDT datastore class source file
  * @date       2025-04-04
  * @author     devcareer0
  * @author     Henrique A. Klein (hklein@gnus.ai)
@@ -236,7 +236,7 @@ namespace sgns::crdt
          *   The topic name to use when filtering links. Only links whose
          *   `IPLDLinkImpl::getName()` equals this string will be processed.
          */
-        void AddTopicName( const std::string &topic );
+        void AddTopicName( std::string topic );
 
         outcome::result<CrdtHeads::CRDTListResult> GetHeadList();
         outcome::result<void>                      RemoveHead( const CID &aCid, const std::string &topic );
@@ -251,7 +251,6 @@ namespace sgns::crdt
          */
         outcome::result<void> BroadcastHeadsForTopics( const std::set<std::string> &topics );
 
-
         /**
          * @brief Query whether outgoing head broadcasts are enabled.
          * @return true when broadcasts are enabled.
@@ -260,7 +259,7 @@ namespace sgns::crdt
 
         std::unordered_set<std::string> GetTopicNames() const;
 
-        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetILPDNodeContent(
+        outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GetLocalDeltaKeyValues(
             const std::string &cid_string );
 
     protected:
@@ -361,7 +360,7 @@ namespace sgns::crdt
          * @param[in] peerInfo Optional peer info to avoid repeated GetPeerInfo calls.
          * @return outcome::success on success, or outcome::failure if an error occurs.
          */
-        outcome::result<void> Broadcast( const std::set<CID>                    &cids,
+        outcome::result<void> Broadcast( const std::unordered_set<CID>          &cids,
                                          const std::string                      &topic,
                                          boost::optional<libp2p::peer::PeerInfo> peerInfo = boost::none );
 
@@ -369,7 +368,7 @@ namespace sgns::crdt
         * @param heads list of CIDs
         * @return data encoded into Buffer data or outcome::failure on error
         */
-        outcome::result<Buffer> EncodeBroadcast( const std::set<CID> &heads );
+        outcome::result<Buffer> EncodeBroadcast( const std::unordered_set<CID> &heads );
 
         /** EncodeBroadcastStatic encodes list of CIDs to CRDT broadcast data
         * @param heads list of CIDs

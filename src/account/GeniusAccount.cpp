@@ -735,12 +735,8 @@ namespace sgns
                         {
                             return outcome::failure( std::errc::no_such_device );
                         }
-                        auto has_block = dag_syncer->HasBlock( cid_result.value() );
-                        if ( has_block.has_error() )
-                        {
-                            return outcome::failure( has_block.error() );
-                        }
-                        return has_block.value();
+                        BOOST_OUTCOME_TRY( auto has_block, dag_syncer->HasBlock( cid_result.value() ) );
+                        return has_block;
                     }
                     return outcome::failure( std::errc::owner_dead );
                 } );
