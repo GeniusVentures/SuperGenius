@@ -33,6 +33,8 @@ OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingValidationCore::Error
             return "The subtask id doesn't match the result id";
         case ValidationError::INVALID_RESULTS_BATCH:
             return "The results batch is invalid";
+        case ValidationError::CHUNK_HASH_MISMATCH_UNTOLERATED:
+            return "Chunk hash mismatch could not be resolved as a tolerant match";
     }
     return "Unknown error";
 }
@@ -43,16 +45,21 @@ namespace sgns::processing
     ProcessingValidationCore::ProcessingValidationCore() {}
 
     outcome::result<void> ProcessingValidationCore::ValidateResults(
-        const SGProcessing::SubTaskCollection                    &subTasks,
-        const std::map<std::string, SGProcessing::SubTaskResult> &results,
-        std::set<std::string>                                    &invalidSubTaskIds )
+        const SGProcessing::SubTaskCollection                                            &subTasks,
+        const std::map<std::string, SGProcessing::SubTaskResult>                         &results,
+        std::set<std::string>                                                             &invalidSubTaskIds,
+        const std::vector<sgns::Parameter>                                               *jobParameters,
+        std::function<outcome::result<std::vector<uint8_t>>( const std::string &outputUri )> fetchOutputData )
     {
 
         std::optional<std::error_code> error;
 
         // Compare result hashes for each chunk
         // If a chunk hashes didn't match each other add the all subtasks with invalid hashes to VALID ITEMS LIST
-        std::map<std::string, std::vector<uint8_t>> chunks;
+        // Keyed on chunkKey -> {subtaskId -> ChunkContribution}: each subtask's contribution stays
+        // independently addressable (fixes the old concatenation bug, which appended every contributing
+        // subtask's chunk-hash bytes onto one shared buffer instead of comparing them).
+        std::map<std::string, std::map<std::string, ChunkContribution>> chunksBySubtask;
 
         for ( int itemIdx = 0; itemIdx < subTasks.items_size(); ++itemIdx )
         {
@@ -76,12 +83,10 @@ namespace sgns::processing
                 {
                     for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
                     {
-                        auto it = chunks.insert(
-                            std::make_pair( subTask.chunkstoprocess( chunkIdx ).SerializeAsString(),
-                                            std::vector<uint8_t>() ) );
-                        const std::string &chunkHashBytes = itResult->second.chunk_hashes( chunkIdx );
-                        //it.first->second.push_back(itResult->second.chunk_hashes(chunkIdx));
-                        it.first->second.insert( it.first->second.end(), chunkHashBytes.begin(), chunkHashBytes.end() );
+                        chunksBySubtask[subTask.chunkstoprocess( chunkIdx ).SerializeAsString()][subTask.subtaskid()] =
+                            ChunkContribution{ itResult->second.chunk_hashes( chunkIdx ),
+                                               chunkIdx,
+                                               subTask.chunkstoprocess_size() };
                     }
                 }
             }
@@ -97,6 +102,48 @@ namespace sgns::processing
             }
         }
 
+        // Genuine cross-subtask comparison pass: for each chunk key contributed to by 2+ subtasks, either
+        // every contribution agrees (trivial match) or a real mismatch exists that must be resolved --
+        // via the tolerance fallback (XNODE-02) -- before being declared a genuine divergence (XNODE-01b).
+        // Runs before the per-subtask CheckSubTaskResultHashes loop below so an already-invalidated
+        // subtask (NO_RESULTS_FOR_SUBTASK/WRONG_RESULT_HASHES_LENGTH) is not double-processed there.
+        for ( const auto &[chunkKey, contributions] : chunksBySubtask )
+        {
+            if ( contributions.size() < 2 )
+            {
+                continue; // nothing to compare -- only one subtask contributed this chunk
+            }
+
+            const auto &firstHash = contributions.begin()->second.hashBytes;
+            bool        allMatch  = true;
+            for ( const auto &[subtaskId, contribution] : contributions )
+            {
+                if ( contribution.hashBytes != firstHash )
+                {
+                    allMatch = false;
+                    break;
+                }
+            }
+
+            if ( allMatch )
+            {
+                continue; // genuine match (SC2)
+            }
+
+            // Genuine hash mismatch -- the exact case the old concatenation bug silently missed.
+            if ( !AttemptToleranceFallback( contributions, results, jobParameters, fetchOutputData ) )
+            {
+                for ( const auto &[subtaskId, contribution] : contributions )
+                {
+                    invalidSubTaskIds.insert( subtaskId );
+                }
+                if ( !error )
+                {
+                    error = make_error_code( Error::CHUNK_HASH_MISMATCH_UNTOLERATED );
+                }
+            }
+        }
+
         for ( int itemIdx = 0; itemIdx < subTasks.items_size(); ++itemIdx )
         {
             const auto &subTask = subTasks.items( itemIdx );
@@ -106,7 +153,7 @@ namespace sgns::processing
                 continue;
             }
 
-            auto subtaskCheck = CheckSubTaskResultHashes( subTask, chunks );
+            auto subtaskCheck = CheckSubTaskResultHashes( subTask, chunksBySubtask );
             if ( subtaskCheck.has_failure() )
             {
                 invalidSubTaskIds.insert( subTask.subtaskid() );
@@ -171,17 +218,26 @@ namespace sgns::processing
     }
 
     outcome::result<void> ProcessingValidationCore::CheckSubTaskResultHashes(
-        const SGProcessing::SubTask                       &subTask,
-        const std::map<std::string, std::vector<uint8_t>> &chunks ) const
+        const SGProcessing::SubTask                                            &subTask,
+        const std::map<std::string, std::map<std::string, ChunkContribution>> &chunksBySubtask ) const
     {
         std::unordered_set<std::string> encounteredHashes;
         for ( int chunkIdx = 0; chunkIdx < subTask.chunkstoprocess_size(); ++chunkIdx )
         {
             const auto &chunk = subTask.chunkstoprocess( chunkIdx );
-            auto        it    = chunks.find( chunk.SerializeAsString() );
-            if ( it != chunks.end() )
+            auto        it    = chunksBySubtask.find( chunk.SerializeAsString() );
+            if ( it != chunksBySubtask.end() )
             {
-                std::string chunkHash( it->second.begin(), it->second.end() );
+                auto contributionIt = it->second.find( subTask.subtaskid() );
+                if ( contributionIt == it->second.end() )
+                {
+                    // Should not happen -- this subtask's own contribution was just inserted in the
+                    // build loop above -- but guard defensively rather than dereference blindly.
+                    m_logger->error( "NO_CHUNK_RESULT_FOUND [{}, {}]", subTask.subtaskid(), chunk.chunkid() );
+                    return outcome::failure( Error::MISSING_CHUNK_RESULT );
+                }
+
+                const std::string &chunkHash = contributionIt->second.hashBytes;
                 if ( !encounteredHashes.insert( chunkHash ).second )
                 {
                     m_logger->error( "INVALID_CHUNK_RESULT_HASH [{}, {}]", subTask.subtaskid(), chunk.chunkid() );
@@ -195,6 +251,22 @@ namespace sgns::processing
             }
         }
         return outcome::success();
+    }
+
+    bool ProcessingValidationCore::AttemptToleranceFallback(
+        const std::map<std::string, ChunkContribution>                                  &contributions,
+        const std::map<std::string, SGProcessing::SubTaskResult>                         &results,
+        const std::vector<sgns::Parameter>                                               *jobParameters,
+        const std::function<outcome::result<std::vector<uint8_t>>( const std::string & )> &fetchOutputData ) const
+    {
+        // Task 2 implements the real fetch+slice+diff logic (XNODE-02). Until then, this stub keeps
+        // Task 1 a complete, independently-correct fix for XNODE-01b: any genuine hash mismatch fails
+        // closed (matches pre-XNODE-02 behavior) even before the tolerance layer exists.
+        (void)contributions;
+        (void)results;
+        (void)jobParameters;
+        (void)fetchOutputData;
+        return false;
     }
 
 }
