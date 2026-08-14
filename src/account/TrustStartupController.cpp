@@ -120,14 +120,14 @@ namespace sgns::account
             {
                 {
                     std::lock_guard<std::mutex> lock( self->candidate_mutex_ );
-                    if ( std::find( self->failed_burn_candidates_.begin(),
-                                    self->failed_burn_candidates_.end(),
-                                    id ) == self->failed_burn_candidates_.end() &&
-                         std::find( self->pending_burn_candidates_.begin(),
-                                    self->pending_burn_candidates_.end(),
-                                    id ) == self->pending_burn_candidates_.end() )
+                    auto &failed = id.domain == "trusted-peer" ? self->failed_policy_candidates_
+                                                               : self->failed_burn_candidates_;
+                    auto &pending = id.domain == "trusted-peer" ? self->pending_policy_candidates_
+                                                                : self->pending_burn_candidates_;
+                    if ( std::find( failed.begin(), failed.end(), id ) == failed.end() &&
+                         std::find( pending.begin(), pending.end(), id ) == pending.end() )
                     {
-                        self->pending_burn_candidates_.push_back( id );
+                        pending.push_back( id );
                     }
                 }
                 self->RequestRefresh();
@@ -263,13 +263,28 @@ namespace sgns::account
             return snapshot.error();
         }
 
+        auto discovered_policies = registry_->ListPendingPolicyCandidates();
+        if ( discovered_policies.has_error() )
+        {
+            return discovered_policies.error();
+        }
+        {
+            std::lock_guard<std::mutex> lock( candidate_mutex_ );
+            for ( const auto &candidate : discovered_policies.value() )
+            {
+                if ( std::find( failed_policy_candidates_.begin(), failed_policy_candidates_.end(), candidate ) ==
+                         failed_policy_candidates_.end() &&
+                     std::find( pending_policy_candidates_.begin(), pending_policy_candidates_.end(), candidate ) ==
+                         pending_policy_candidates_.end() )
+                {
+                    pending_policy_candidates_.push_back( candidate );
+                }
+            }
+        }
         std::vector<sgns::securecrdt::CandidateId> policy_candidates;
         {
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
-            std::copy_if( pending_burn_candidates_.begin(),
-                          pending_burn_candidates_.end(),
-                          std::back_inserter( policy_candidates ),
-                          []( const auto &candidate ) { return candidate.domain == "trusted-peer"; } );
+            policy_candidates = pending_policy_candidates_;
         }
         std::sort( policy_candidates.begin(),
                    policy_candidates.end(),
@@ -287,13 +302,15 @@ namespace sgns::account
             {
                 {
                     std::lock_guard<std::mutex> lock( candidate_mutex_ );
-                    pending_burn_candidates_.erase(
-                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
-                        pending_burn_candidates_.end() );
-                    if ( std::find( failed_burn_candidates_.begin(), failed_burn_candidates_.end(), candidate ) ==
-                         failed_burn_candidates_.end() )
+                    pending_policy_candidates_.erase(
+                        std::remove( pending_policy_candidates_.begin(),
+                                     pending_policy_candidates_.end(),
+                                     candidate ),
+                        pending_policy_candidates_.end() );
+                    if ( std::find( failed_policy_candidates_.begin(), failed_policy_candidates_.end(), candidate ) ==
+                         failed_policy_candidates_.end() )
                     {
-                        failed_burn_candidates_.push_back( candidate );
+                        failed_policy_candidates_.push_back( candidate );
                     }
                 }
                 Emit( EventCode::TRUST_ACTIVATION_FAILED,
@@ -307,9 +324,7 @@ namespace sgns::account
             {
                 {
                     std::lock_guard<std::mutex> lock( candidate_mutex_ );
-                    pending_burn_candidates_.erase(
-                        std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
-                        pending_burn_candidates_.end() );
+                    pending_policy_candidates_.clear();
                 }
                 snapshot = trust_store_->LoadAndVerify();
                 if ( snapshot.has_error() )
@@ -321,6 +336,10 @@ namespace sgns::account
                             snapshot.error().message() } );
                     return snapshot.error();
                 }
+                // All candidates in this pass were authorized by the predecessor
+                // that just advanced. Rediscover against the new durable head on
+                // the next refresh rather than reporting ordinary stale losers.
+                break;
             }
         }
 
