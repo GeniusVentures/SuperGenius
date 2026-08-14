@@ -966,4 +966,262 @@ namespace
         operator_a_composition->Stop();
         cleanup();
     }
+
+    TEST( TrustFirstBootE2ETest, RetainedPolicyQuorumRetriesAfterControllerReconstructionWithoutNewWrite )
+    {
+        sgns::test::securecrdt::EnsureLoggingSystemConfigured();
+        const auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+        boost::filesystem::create_directories( path );
+        auto cleanup = [&] { boost::filesystem::remove_all( path ); };
+
+        auto bootstrapper = sgns::GeniusSigner::Generate();
+        auto operator_a = sgns::GeniusSigner::Generate();
+        auto operator_b = sgns::GeniusSigner::Generate();
+        auto passive = sgns::GeniusSigner::Generate();
+        const std::string topic = "retained-policy-reconstruction-topic";
+
+        const auto operator_a_config_path = path / "operator-a-network.json";
+        const auto operator_b_config_path = path / "operator-b-network.json";
+        const auto passive_config_path = path / "passive-network.json";
+        boost::filesystem::create_directories( path / "operator-a-globaldb" );
+        boost::filesystem::create_directories( path / "operator-b-globaldb" );
+        boost::filesystem::create_directories( path / "passive-globaldb" );
+        WriteNetworkConfig( operator_a_config_path );
+
+        auto make_config = [&]( const boost::filesystem::path &config_path,
+                                const boost::filesystem::path &database_path )
+        {
+            sgns::crdt::GlobalDbNetworkComposition::Config config;
+            config.network_config_path = config_path.string();
+            config.database_path = database_path.string();
+            config.listen_topic = topic;
+            config.broadcast_topic = topic;
+            return config;
+        };
+        auto operator_a_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create(
+            make_config( operator_a_config_path, path / "operator-a-globaldb" ) );
+        ASSERT_TRUE( operator_a_composition_result.has_value() );
+        auto operator_a_composition = operator_a_composition_result.value();
+        ASSERT_TRUE( operator_a_composition->Start().has_value() );
+        ASSERT_FALSE( operator_a_composition->interface_address().empty() );
+
+        WriteNetworkConfig( operator_b_config_path, operator_a_composition->interface_address() );
+        WriteNetworkConfig( passive_config_path, operator_a_composition->interface_address() );
+        auto operator_b_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create(
+            make_config( operator_b_config_path, path / "operator-b-globaldb" ) );
+        auto passive_composition_result = sgns::crdt::GlobalDbNetworkComposition::Create(
+            make_config( passive_config_path, path / "passive-globaldb" ) );
+        ASSERT_TRUE( operator_b_composition_result.has_value() );
+        ASSERT_TRUE( passive_composition_result.has_value() );
+        auto operator_b_composition = operator_b_composition_result.value();
+        auto passive_composition = passive_composition_result.value();
+        ASSERT_TRUE( operator_b_composition->Start().has_value() );
+        ASSERT_TRUE( passive_composition->Start().has_value() );
+
+        auto operator_a_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( operator_a_composition->db(), topic );
+        auto operator_b_secure =
+            std::make_shared<sgns::securecrdt::SecureCrdt>( operator_b_composition->db(), topic );
+        auto passive_secure = std::make_shared<sgns::securecrdt::SecureCrdt>( passive_composition->db(), topic );
+
+        GenesisManifest manifest;
+        manifest.network_id = 42;
+        manifest.bootstrapper_public_key = bootstrapper.GetAddress();
+        manifest.peers = { operator_a.GetAddress(), operator_b.GetAddress() };
+        manifest.membership_threshold = 2;
+        manifest.burn_threshold = 2;
+        manifest = manifest.Canonicalized().value();
+        const auto bootstrap_signature = bootstrapper.Sign( manifest.CanonicalBytes().value() );
+
+        std::atomic_bool fail_passive_commits{ false };
+        std::atomic_uint32_t passive_failed_commit_attempts{ 0 };
+        auto operator_a_store =
+            TrustStateStore::Open( ( path / "operator-a-trust" ).string(), manifest.network_id ).value();
+        auto operator_b_store =
+            TrustStateStore::Open( ( path / "operator-b-trust" ).string(), manifest.network_id ).value();
+        auto passive_store = TrustStateStore::Open(
+            ( path / "passive-trust" ).string(),
+            manifest.network_id,
+            [&]( sgns::storage::rocksdb &database,
+                 const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+            {
+                if ( fail_passive_commits.load() )
+                {
+                    ++passive_failed_commit_attempts;
+                    return outcome::failure( std::errc::io_error );
+                }
+                return CommitBatch( database, writes );
+            } ).value();
+        ASSERT_TRUE( operator_a_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+        ASSERT_TRUE( operator_b_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+        ASSERT_TRUE( passive_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+
+        std::atomic_uint32_t passive_signatures{ 0 };
+        std::atomic_uint32_t passive_activation_failures{ 0 };
+        std::mutex failure_mutex;
+        std::vector<std::string> failure_fields;
+        auto operator_a_controller = TrustStartupController::New(
+            operator_a_secure,
+            operator_a_store,
+            manifest,
+            operator_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return operator_a.Sign( bytes ); } ).value();
+        auto operator_b_controller = TrustStartupController::New(
+            operator_b_secure,
+            operator_b_store,
+            manifest,
+            operator_b.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return operator_b.Sign( bytes ); } ).value();
+        auto passive_controller = TrustStartupController::New(
+            passive_secure,
+            passive_store,
+            manifest,
+            passive.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes )
+            {
+                ++passive_signatures;
+                return passive.Sign( bytes );
+            },
+            [&]( const auto &event )
+            {
+                if ( event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED )
+                {
+                    std::lock_guard<std::mutex> lock( failure_mutex );
+                    failure_fields = event.fields;
+                    ++passive_activation_failures;
+                }
+            } ).value();
+
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                return operator_a_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
+                       operator_b_controller->GetState() == TrustStartupController::State::ConfirmedReady &&
+                       passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
+            },
+            std::chrono::seconds( 5 ),
+            "production controllers did not reach initial-burn readiness" );
+        EXPECT_EQ( passive_signatures.load(), 0U );
+
+        const auto durable_v1 = passive_store->LoadAndVerify().value();
+        const auto durable_v1_hash = durable_v1.policy.Hash().value();
+        auto policy_v2 = durable_v1.policy;
+        policy_v2.version += 1;
+        policy_v2.expected_previous_hash = durable_v1_hash;
+        policy_v2.authorizing_policy_hash = durable_v1_hash;
+        policy_v2.peers = { operator_a.GetAddress(), operator_b.GetAddress(), passive.GetAddress() };
+        policy_v2 = policy_v2.Canonicalized().value();
+        const auto policy_v2_hash = policy_v2.Hash().value();
+
+        sgns::trustedpeer::LocalTrustAdmin operator_a_admin(
+            operator_a_controller->registry(), operator_a_controller->burn_config() );
+        sgns::trustedpeer::LocalTrustAdmin operator_b_admin(
+            operator_b_controller->registry(), operator_b_controller->burn_config() );
+        auto proposed = operator_a_admin.ProposePolicy( policy_v2 );
+        ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = passive_secure->ReadCandidateApprovals( proposed.value() );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "passive node did not retain the first policy approval" );
+
+        fail_passive_commits.store( true );
+        auto approved = operator_b_admin.Approve( proposed.value() );
+        ASSERT_TRUE( approved.has_value() ) << approved.error().message();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                return passive_activation_failures.load() == 1U && passive_failed_commit_attempts.load() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "passive controller did not report the injected policy commit failure" );
+        {
+            std::lock_guard<std::mutex> lock( failure_mutex );
+            ASSERT_EQ( failure_fields.size(), 4U );
+            EXPECT_EQ( failure_fields.at( 0 ), proposed.value().domain );
+            EXPECT_EQ( failure_fields.at( 1 ), std::to_string( proposed.value().version ) );
+            EXPECT_EQ( failure_fields.at( 2 ), proposed.value().content_hash );
+            EXPECT_EQ( failure_fields.at( 3 ), "synchronous trust-state batch commit failed" );
+        }
+        EXPECT_EQ( passive_store->LoadAndVerify().value().policy.Hash(),
+                   std::optional<std::string>( durable_v1_hash ) );
+
+        const auto approvals_before_reconstruction =
+            passive_secure->ReadCandidateApprovals( proposed.value() ).value();
+        ASSERT_EQ( approvals_before_reconstruction.size(), 2U );
+        passive_controller.reset();
+        passive_store.reset();
+        fail_passive_commits.store( false );
+
+        outcome::result<std::shared_ptr<TrustStateStore>> reopened_passive_store_result =
+            outcome::failure( std::errc::resource_unavailable_try_again );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                reopened_passive_store_result =
+                    TrustStateStore::Open( ( path / "passive-trust" ).string(), manifest.network_id );
+                return reopened_passive_store_result.has_value();
+            },
+            std::chrono::seconds( 5 ),
+            "failed passive controller retained the trust-store lock after destruction" );
+        ASSERT_TRUE( reopened_passive_store_result.has_value() );
+        auto reopened_passive_store = reopened_passive_store_result.value();
+
+        // RECONSTRUCTION_NO_WRITE_WINDOW_BEGIN
+        auto reconstructed = TrustStartupController::New(
+            passive_secure,
+            reopened_passive_store,
+            manifest,
+            passive.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes )
+            {
+                ++passive_signatures;
+                return passive.Sign( bytes );
+            } );
+        ASSERT_TRUE( reconstructed.has_value() ) << reconstructed.error().message();
+        passive_controller = reconstructed.value();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto durable = reopened_passive_store->LoadAndVerify();
+                return durable.has_value() &&
+                       durable.value().policy.Hash() == std::optional<std::string>( policy_v2_hash ) &&
+                       passive_controller->GetState() == TrustStartupController::State::ConfirmedReady;
+            },
+            std::chrono::seconds( 5 ),
+            "reconstructed controller did not activate retained policy quorum" );
+        // RECONSTRUCTION_NO_WRITE_WINDOW_END
+
+        const auto approvals_after_reconstruction =
+            passive_secure->ReadCandidateApprovals( proposed.value() ).value();
+        EXPECT_EQ( approvals_after_reconstruction.size(), approvals_before_reconstruction.size() );
+        EXPECT_TRUE( std::equal(
+            approvals_after_reconstruction.begin(),
+            approvals_after_reconstruction.end(),
+            approvals_before_reconstruction.begin(),
+            []( const auto &left, const auto &right )
+            {
+                return left.core == right.core && left.signer == right.signer && left.signature == right.signature;
+            } ) );
+        EXPECT_EQ( reopened_passive_store->LoadAndVerify().value().policy.Hash(),
+                   std::optional<std::string>( policy_v2_hash ) );
+        EXPECT_TRUE( passive_controller->IsEconomicallyReady() );
+        EXPECT_EQ( passive_signatures.load(), 0U );
+        EXPECT_EQ( passive_activation_failures.load(), 1U );
+        EXPECT_EQ( passive_failed_commit_attempts.load(), 1U );
+
+        passive_controller.reset();
+        operator_b_controller.reset();
+        operator_a_controller.reset();
+        reopened_passive_store.reset();
+        operator_b_store.reset();
+        operator_a_store.reset();
+        passive_composition->Stop();
+        operator_b_composition->Stop();
+        operator_a_composition->Stop();
+        cleanup();
+    }
 } // namespace
