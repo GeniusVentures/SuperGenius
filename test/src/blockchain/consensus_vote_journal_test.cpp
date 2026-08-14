@@ -200,6 +200,14 @@ namespace sgns
             return manager->restored_safety_slots_.count( slot ) != 0;
         }
 
+        static bool IsApplied( const std::shared_ptr<ConsensusManager> &manager, const std::string &slot )
+        {
+            std::lock_guard lock( manager->proposals_mutex_ );
+            const auto it = manager->slot_states_.find( slot );
+            return it != manager->slot_states_.end() &&
+                   it->second.lifecycle == ConsensusManager::SlotState::Lifecycle::Applied;
+        }
+
         static void RecoverCertificates( const std::shared_ptr<ConsensusManager> &manager )
         {
             manager->RecoverPendingCertificateWork();
@@ -881,6 +889,63 @@ TEST_F( ConsensusVoteJournalHarness, RestartedVoteLockRejectsCompetingSameSlotPr
     EXPECT_EQ( unchanged.value()->outbound_envelope_bytes(), original_record.outbound_envelope_bytes() );
 }
 
+TEST_F( ConsensusVoteJournalHarness, SharedDatabaseRestoresVotesOnlyForActiveValidator )
+{
+    const ScopedReset reset_hooks( []() { sgns::ConsensusVoteJournalTestAccess::ResetStartupHooks(); } );
+    sgns::ConsensusVoteJournalTestAccess::SetClocks( kSteadyClockNow, 1'750'000'000'000ULL );
+    auto registry = MakeRegistry();
+    ASSERT_TRUE( registry );
+    auto manager_a = MakeManager( registry );
+    ASSERT_TRUE( manager_a );
+    auto record_a = MakeSignedVoteRecord( manager_a, registry );
+    sgns::ConsensusStateStore store( db_->GetDataStore() );
+    ASSERT_TRUE( store.PutActiveVote( record_a ).has_value() );
+
+    CloseManagers();
+    manager_a.reset();
+    counters_.Reset();
+
+    auto account_b = sgns::GeniusAccount::NewFromPrivateKey(
+        sgns::TokenID::FromBytes( { 0x00 } ),
+        "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f",
+        boost::filesystem::path( db_path_ ) / "vote-journal-account-b",
+        false );
+    ASSERT_TRUE( account_b );
+    ASSERT_NE( account_b->GetAddress(), record_a.validator_id() );
+
+    std::vector<std::string> publications;
+    sgns::ConsensusVoteJournalTestAccess::OverrideRawPublish(
+        [&]( std::string_view bytes ) -> outcome::result<void>
+        {
+            publications.emplace_back( bytes );
+            return outcome::success();
+        } );
+    auto manager_b = sgns::ConsensusManager::New(
+        registry,
+        db_,
+        pubs_,
+        [account_b]( std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
+        { return account_b->Sign( std::move( payload ) ); },
+        account_b->GetAddress() );
+    ASSERT_TRUE( manager_b );
+    EXPECT_TRUE( publications.empty() );
+
+    auto retained = store.GetVote( record_a.validator_id(), record_a.slot_id() );
+    ASSERT_TRUE( retained && retained.value().has_value() );
+    EXPECT_EQ( retained.value()->signed_vote_bytes(), record_a.signed_vote_bytes() );
+    EXPECT_EQ( retained.value()->outbound_envelope_bytes(), record_a.outbound_envelope_bytes() );
+    EXPECT_EQ( retained.value()->publication_count(), 0U );
+
+    manager_b->Close();
+    manager_b.reset();
+    publications.clear();
+    auto manager_a_restarted = MakeManager( registry );
+    ASSERT_TRUE( manager_a_restarted );
+    ASSERT_EQ( publications.size(), 1U );
+    EXPECT_EQ( publications.front(), record_a.outbound_envelope_bytes() );
+    EXPECT_EQ( counters_.signer.load(), 0U );
+}
+
 TEST_F( ConsensusVoteJournalHarness, FailedRawReplayKeepsExactActiveRecordRetryable )
 {
     const ScopedReset reset_hooks( []() { sgns::ConsensusVoteJournalTestAccess::ResetStartupHooks(); } );
@@ -1391,6 +1456,7 @@ TEST_F( ConsensusVoteJournalHarness, StaleProcessingRestoresPendingAndHandlerReg
     auto winner = sgns::ConsensusVoteJournalTestAccess::Winner( proposal );
     ASSERT_TRUE( winner );
     sgns::ConsensusStateStore store( db_->GetDataStore() );
+    ASSERT_TRUE( store.PutActiveVote( record ).has_value() );
     sgns::ConsensusStateStore::ProcessRecord process;
     process.set_schema_version( 2 );
     process.set_state( sgns::ConsensusStateStore::ProcessRecord::PENDING );
@@ -1415,4 +1481,11 @@ TEST_F( ConsensusVoteJournalHarness, StaleProcessingRestoresPendingAndHandlerReg
     auto complete = store.GetProcess( record.slot_id() );
     ASSERT_TRUE( complete && complete.value().has_value() );
     EXPECT_EQ( complete.value()->state(), sgns::ConsensusStateStore::ProcessRecord::COMPLETE );
+
+    CloseManagers();
+    manager.reset();
+    restarted.reset();
+    auto applied = MakeManager( registry );
+    ASSERT_TRUE( applied );
+    EXPECT_TRUE( sgns::ConsensusVoteJournalTestAccess::IsApplied( applied, record.slot_id() ) );
 }

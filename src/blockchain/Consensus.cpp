@@ -452,10 +452,10 @@ namespace sgns
                 return false;
         }
 
-        restored_votes_ = std::move( votes.value() );
-        for ( const auto &record : restored_votes_ )
+        restored_votes_.clear();
+        restored_votes_.reserve( votes.value().size() );
+        for ( auto &record : votes.value() )
         {
-            if ( record.validator_id() != account_address_ ) return false;
             Vote vote;
             Proposal proposal;
             if ( !vote.ParseFromString( record.signed_vote_bytes() ) ||
@@ -467,6 +467,12 @@ namespace sgns
             if ( !vote_bytes || !GeniusAccount::VerifySignature( vote.voter_id(), vote.signature(), vote_bytes.value() ) ||
                  !slot || slot.value() != record.slot_id() )
                 return false;
+
+            // The local RocksDB is node-scoped and can contain durable locks
+            // for multiple accounts. Validate every record fail-closed, but
+            // restore and replay only locks owned by this manager's signer.
+            if ( record.validator_id() == account_address_ )
+                restored_votes_.push_back( std::move( record ) );
         }
 
         const auto now = CurrentTimeMs();
@@ -614,30 +620,6 @@ namespace sgns
                                          ConsensusStateStore::ProcessRecord::COMPLETE
                                      ? SlotState::Lifecycle::Applied
                                      : SlotState::Lifecycle::FinalizedPendingApplication;
-            else if ( record.state() == ConsensusStateStore::VoteRecord::RETIRED )
-                slot.lifecycle = SlotState::Lifecycle::Retired;
-            else if ( now > record.acceptance_horizon_ms() )
-            {
-                if ( !state_store_->RetireVote( record.validator_id(), record.slot_id(), now ) ) return false;
-                slot.lifecycle = SlotState::Lifecycle::Retired;
-            }
-            else
-                slot.lifecycle = SlotState::Lifecycle::Voted;
-        }
-        for ( const auto &record : restored_votes_ )
-        {
-            auto &slot = slot_states_[record.slot_id()];
-            slot.generation = record.generation();
-            slot.durable_generation = record.generation();
-            slot.durable_proposal_id = record.proposal_id();
-            slot.frozen_proposal_id = record.proposal_id();
-            slot.publication_count = record.publication_count();
-            slot.last_publication_at_ms = record.last_publication_at_ms();
-            slot.last_publication_succeeded = record.last_publication_succeeded();
-            if ( restored_safety_slots_.count( record.slot_id() ) != 0 )
-                slot.lifecycle = SlotState::Lifecycle::SafetyViolation;
-            else if ( restored_final_slots_.count( record.slot_id() ) != 0 )
-                slot.lifecycle = SlotState::Lifecycle::FinalizedPendingApplication;
             else if ( record.state() == ConsensusStateStore::VoteRecord::RETIRED )
                 slot.lifecycle = SlotState::Lifecycle::Retired;
             else if ( now > record.acceptance_horizon_ms() )
