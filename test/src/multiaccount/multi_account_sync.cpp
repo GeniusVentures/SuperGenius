@@ -21,6 +21,8 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <random>
 #include <ctime>
 #include <tuple>
@@ -55,6 +57,41 @@ namespace sgns
     class MultiAccountTestAccess
     {
     public:
+        struct AccountGenerationSnapshot
+        {
+            std::shared_ptr<GeniusAccount>      account;
+            std::shared_ptr<TransactionManager> manager;
+            std::string                         account_address;
+            std::string                         manager_address;
+            uint64_t                            generation = 0;
+            uint64_t                            catchup_generation = 0;
+        };
+
+        static AccountGenerationSnapshot SnapshotAccountGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            if ( !node ) return {};
+            auto account = node->account_;
+            auto manager = node->transaction_manager_;
+            return { account,
+                     manager,
+                     account ? account->GetAddress() : std::string{},
+                     manager && manager->account_m ? manager->account_m->GetAddress() : std::string{},
+                     node->transaction_manager_owner_generation_.load(),
+                     node->bridge_init_generation_.load() };
+        }
+
+        static uint64_t InjectCatchupCallback( const std::shared_ptr<GeniusNode> &,
+                                               const AccountGenerationSnapshot  &snapshot,
+                                               std::atomic_uint64_t              &side_effects )
+        {
+            // RED models the current production callback: it owns no generation-
+            // checked snapshot and therefore executes after its account generation
+            // has been unpublished. GREEN routes this injection through the same
+            // generation gate used by BridgeCatchupWatcher callbacks.
+            if ( snapshot.account && snapshot.manager ) ++side_effects;
+            return snapshot.catchup_generation;
+        }
+
         static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )
         {
             return node && node->blockchain_ ? node->blockchain_->GetValidatorRegistry() : nullptr;
@@ -168,7 +205,8 @@ protected:
                                                   bool               isFullNode          = false,
                                                   bool               isProcessor         = false,
                                                   bool               isGenesisAuthorized = false,
-                                                  std::string        existingBasePath    = {} )
+                                                  std::string        existingBasePath    = {},
+                                                  bool               rpcCatchup          = false )
     {
         static std::atomic<int> nodeCounter{ 0 };
         const bool              reuseStorage = !existingBasePath.empty();
@@ -220,7 +258,8 @@ protected:
             config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\""
                    << ( isFullNode ? "Full" : "Light" )
                    << "\",\"is_processor\":" << ( isProcessor ? "true" : "false" )
-                   << ",\"rpc_catchup\":false,\"trusted_peers\":[\"" << configured_authority->GetAddress();
+                   << ",\"rpc_catchup\":" << ( rpcCatchup ? "true" : "false" )
+                   << ",\"trusted_peers\":[\"" << configured_authority->GetAddress();
             for ( const auto &peer : trust_peers_ )
             {
                 config << "\",\"" << peer->GetAddress();
@@ -558,6 +597,110 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
                owner_generation );
     EXPECT_EQ( sgns::MultiAccountTestAccess::GetBlockchainSlotHashOwnerGeneration( restarted_node ),
                owner_generation );
+}
+
+TEST_F( MultiAccountTest, ConcurrentSelectAccountSnapshotsAndCatchupCallbacksStayGenerationConsistent )
+{
+    auto node = CreateNode( "concurrent_account_generation", true, false, true, {}, true );
+    ASSERT_TRUE( node );
+    WaitForReady( node );
+
+    const auto original_address = node->GetAddress();
+    const auto replacement_key  = DeterministicKey( "concurrent_account_generation_replacement" );
+    ASSERT_TRUE( node->AddAccountWithKey( replacement_key.c_str() ).has_value() );
+    const auto accounts = node->GetAvailableAccounts();
+    const auto replacement = std::find_if( accounts.begin(), accounts.end(), [&]( const std::string &address )
+                                           { return address != original_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+
+    const auto stale_snapshot = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+    ASSERT_TRUE( stale_snapshot.account );
+    ASSERT_TRUE( stale_snapshot.manager );
+
+    std::mutex              selection_barrier_mutex;
+    std::condition_variable selection_barrier_condition;
+    size_t                  selection_barrier = 0;
+    bool                    selection_barrier_open = false;
+    auto arrive_at_selection_barrier = [&]
+    {
+        std::unique_lock<std::mutex> lock( selection_barrier_mutex );
+        if ( ++selection_barrier == 3 )
+        {
+            selection_barrier_open = true;
+            selection_barrier_condition.notify_all();
+        }
+        else
+        {
+            selection_barrier_condition.wait( lock, [&] { return selection_barrier_open; } );
+        }
+    };
+
+    std::mutex observed_mutex;
+    std::vector<sgns::MultiAccountTestAccess::AccountGenerationSnapshot> observed_generations;
+    std::atomic_bool selector_done{ false };
+    std::atomic_uint64_t stale_callback_side_effects{ 0 };
+
+    std::thread selector(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            for ( size_t iteration = 0; iteration < 3; ++iteration )
+            {
+                const auto &target = iteration % 2 == 0 ? *replacement : original_address;
+                ASSERT_TRUE( node->SelectAccount( target ).has_value() );
+                sgns::test::assertWaitForCondition(
+                    [&] { return node->GetState() == GeniusNode::NodeState::READY; },
+                    std::chrono::milliseconds( 50000 ),
+                    "replacement account did not return to READY" );
+            }
+            selector_done.store( true );
+        } );
+
+    std::thread reader(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            do
+            {
+                auto observed = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+                (void) node->GetAddress();
+                (void) node->GetTransactionManager();
+                (void) node->GetBalance();
+                std::lock_guard<std::mutex> lock( observed_mutex );
+                observed_generations.push_back( std::move( observed ) );
+                std::this_thread::yield();
+            } while ( !selector_done.load() );
+        } );
+
+    std::thread callback(
+        [&]
+        {
+            arrive_at_selection_barrier();
+            sgns::test::assertWaitForCondition(
+                [&] { return node->GetAddress() != original_address; },
+                std::chrono::milliseconds( 50000 ),
+                "account selection did not publish a replacement" );
+            const auto callback_generation = sgns::MultiAccountTestAccess::InjectCatchupCallback(
+                node, stale_snapshot, stale_callback_side_effects );
+            auto observed = sgns::MultiAccountTestAccess::SnapshotAccountGeneration( node );
+            observed.catchup_generation = callback_generation;
+            std::lock_guard<std::mutex> lock( observed_mutex );
+            observed_generations.push_back( std::move( observed ) );
+        } );
+
+    selector.join();
+    reader.join();
+    callback.join();
+
+    ASSERT_FALSE( observed_generations.empty() );
+    for ( const auto &observed : observed_generations )
+    {
+        if ( !observed.account || !observed.manager ) continue;
+        ASSERT_FALSE( observed.account_address.empty() );
+        ASSERT_EQ( observed.account_address, observed.manager_address ) << "CR-11 generation mismatch";
+        ASSERT_EQ( observed.generation, observed.catchup_generation ) << "CR-11 generation mismatch";
+    }
+    ASSERT_EQ( stale_callback_side_effects.load(), 0U ) << "CR-11 generation mismatch";
 }
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )

@@ -10,6 +10,7 @@
 #include <fstream>
 #include <mutex>
 #include <optional>
+#include <vector>
 
 #include "account/BurnConfig.hpp"
 #include "account/EscrowTransaction.hpp"
@@ -20,6 +21,7 @@
 #include "account/TransferTransaction.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
+#include "multisig/MultiSig.hpp"
 #include "securecrdt/SecureCrdt.hpp"
 #include "storage/rocksdb/rocksdb.hpp"
 #include "storage/rocksdb/rocksdb_batch.hpp"
@@ -82,6 +84,25 @@ namespace sgns
         static std::shared_ptr<TransactionManager> Manager( const std::shared_ptr<GeniusNode> &node )
         {
             return node->transaction_manager_;
+        }
+
+        static std::string ManagerAccountAddress( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->transaction_manager_ && node->transaction_manager_->account_m
+                     ? node->transaction_manager_->account_m->GetAddress()
+                     : std::string{};
+        }
+
+        static securecrdt::CandidateApprovalRecord AttemptedTrustApproval(
+            const std::shared_ptr<GeniusNode> &node,
+            const securecrdt::CandidateCore   &canonical_candidate,
+            const std::string                 &pinned_trust_address )
+        {
+            const auto bytes = canonical_candidate.CanonicalBytes().value();
+            return { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
+                     canonical_candidate,
+                     pinned_trust_address,
+                     node->account_->Sign( bytes ) };
         }
 
         static const void *Account( const std::shared_ptr<GeniusNode> &node )
@@ -280,9 +301,237 @@ namespace
                 "node did not reach a trust lifecycle state" ) );
         }
 
+        struct GenesisTool
+        {
+            std::shared_ptr<crdt::GlobalDbNetworkComposition> composition;
+            std::shared_ptr<securecrdt::SecureCrdt>           secure;
+            std::shared_ptr<TrustStateStore>                  store;
+            std::shared_ptr<TrustedPeerRegistry>              registry;
+            std::shared_ptr<BurnConfig>                       burn;
+
+            ~GenesisTool()
+            {
+                burn.reset();
+                registry.reset();
+                secure.reset();
+                store.reset();
+                if ( composition ) composition->Stop();
+            }
+        };
+
+        std::unique_ptr<GenesisTool> SubmitReviewedGenesis(
+            const std::string                    &name,
+            const std::string                    &bootstrap_address,
+            const GenesisManifest                &manifest,
+            const std::shared_ptr<GeniusAccount> &bootstrapper )
+        {
+            auto tool = std::make_unique<GenesisTool>();
+            const auto config_path   = path_ / ( name + "-network.json" );
+            const auto database_path = path_ / ( name + "-globaldb" );
+            boost::filesystem::create_directories( database_path );
+            {
+                std::ofstream config( config_path.string() );
+                EXPECT_TRUE( config.good() );
+                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+                       << bootstrap_address << R"("]})";
+            }
+            crdt::GlobalDbNetworkComposition::Config tool_config;
+            tool_config.network_config_path = config_path.string();
+            tool_config.database_path       = database_path.string();
+            tool_config.listen_topic        = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+            tool_config.broadcast_topic     = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+            auto composition = crdt::GlobalDbNetworkComposition::Create( std::move( tool_config ) );
+            EXPECT_TRUE( composition.has_value() );
+            if ( !composition ) return {};
+            tool->composition = composition.value();
+            EXPECT_TRUE( tool->composition->Start().has_value() );
+            tool->secure = std::make_shared<SecureCrdt>(
+                tool->composition->db(), std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+            tool->store = TrustStateStore::Open( ( path_ / ( name + "-trust" ) ).string(), manifest.network_id ).value();
+            const auto manifest_bytes = manifest.CanonicalBytes().value();
+            tool->registry = TrustedPeerRegistry::NewProduction(
+                tool->secure,
+                tool->store,
+                manifest,
+                bootstrapper->Sign( manifest_bytes ),
+                bootstrapper->GetAddress(),
+                [bootstrapper]( const std::vector<uint8_t> &bytes ) { return bootstrapper->Sign( bytes ); } ).value();
+            tool->burn = BurnConfig::NewProduction(
+                tool->secure,
+                tool->registry,
+                tool->store,
+                bootstrapper->GetAddress(),
+                [bootstrapper]( const std::vector<uint8_t> &bytes ) { return bootstrapper->Sign( bytes ); } ).value();
+            EXPECT_TRUE( tool->secure->RegisterFilters() );
+            EXPECT_TRUE( tool->registry->SubmitReviewedGenesisApproval().has_value() );
+            return tool;
+        }
+
         boost::filesystem::path path_;
     };
 } // namespace
+
+TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBeforeInitialBurnReadiness )
+{
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "before-a", true );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "before-b", true );
+    ASSERT_TRUE( operator_a_signer );
+    ASSERT_TRUE( operator_b_signer );
+    const std::vector<std::string> peers{ operator_a_signer->GetAddress(), operator_b_signer->GetAddress() };
+
+    Blockchain::SetAuthorizedFullNodeAddress( operator_a_signer->GetAddress() );
+    auto node_a = NewNode( path_ / "before-a", OPERATOR_A_KEY, peers, operator_a_signer->GetAddress() );
+    ASSERT_TRUE( node_a );
+    const auto bootstrap_address = node_a->GetPubSub()->GetInterfaceAddress();
+    auto node_b = NewNode( path_ / "before-b", OPERATOR_B_KEY, peers, operator_a_signer->GetAddress(), bootstrap_address );
+    ASSERT_TRUE( node_b );
+    WaitForTrustLifecycle( node_a );
+    WaitForTrustLifecycle( node_b );
+
+    const std::string pinned_trust_address = operator_a_signer->GetAddress();
+    ASSERT_TRUE( node_a->AddAccountWithKey( PASSIVE_C_SECONDARY_KEY ).has_value() );
+    const auto accounts = node_a->GetAvailableAccounts();
+    const auto replacement = std::find_if( accounts.begin(), accounts.end(), [&]( const std::string &address )
+                                           { return address != pinned_trust_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+    const std::string replacement_address = *replacement;
+    ASSERT_TRUE( node_a->SelectAccount( replacement_address ).has_value() );
+
+    GenesisManifest manifest;
+    manifest.network_id              = 144;
+    manifest.bootstrapper_public_key = pinned_trust_address;
+    manifest.peers                   = peers;
+    manifest.membership_threshold    = 2;
+    manifest.burn_threshold          = 2;
+    manifest                         = manifest.Canonicalized().value();
+    auto tool = SubmitReviewedGenesis( "before-tool", bootstrap_address, manifest, operator_a_signer );
+    ASSERT_TRUE( tool );
+
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return MultiAccountTestAccess::Store( node_a )->LoadAndVerify().has_value(); },
+        std::chrono::seconds( 30 ),
+        "switched active member did not persist reviewed genesis" ) );
+    const auto snapshot = MultiAccountTestAccess::Store( node_a )->LoadAndVerify().value();
+    const auto canonical_candidate = BurnConfig::BurnCandidateCore( snapshot.burn ).value();
+    const auto candidate_id = CandidateId::FromCore( canonical_candidate ).value();
+    auto approvals = MultiAccountTestAccess::SecureCrdt( node_a )->ReadCandidateApprovals( candidate_id );
+    ASSERT_TRUE( approvals.has_value() );
+    auto approval_it = std::find_if( approvals.value().begin(), approvals.value().end(), [&]( const auto &approval )
+                                    { return approval.signer == pinned_trust_address; } );
+    const auto attempted = approval_it == approvals.value().end()
+                             ? MultiAccountTestAccess::AttemptedTrustApproval(
+                                   node_a, canonical_candidate, pinned_trust_address )
+                             : *approval_it;
+    const auto canonical_bytes = canonical_candidate.CanonicalBytes().value();
+    ASSERT_TRUE( multisig::VerifyPayloadSignature(
+        pinned_trust_address, attempted.signature, canonical_bytes ) ) << "CR-12 pinned signer mismatch";
+    ASSERT_FALSE( multisig::VerifyPayloadSignature(
+        replacement_address, attempted.signature, canonical_bytes ) ) << "CR-12 pinned signer mismatch";
+
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto durable = MultiAccountTestAccess::Store( node_a )->LoadAndVerify();
+            return durable.has_value() && durable.value().burn.basis_points == 100U &&
+                   durable.value().burn_authorization == BurnAuthorizationKind::PeerQuorum;
+        },
+        std::chrono::seconds( 30 ),
+        "pinned trust signer did not reach durable initial burn value 100" ) );
+    EXPECT_EQ( node_a->GetAddress(), replacement_address );
+}
+
+TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAfterReadiness )
+{
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "after-a", true );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "after-b", true );
+    ASSERT_TRUE( operator_a_signer );
+    ASSERT_TRUE( operator_b_signer );
+    const std::vector<std::string> peers{ operator_a_signer->GetAddress(), operator_b_signer->GetAddress() };
+
+    Blockchain::SetAuthorizedFullNodeAddress( operator_a_signer->GetAddress() );
+    auto node_a = NewNode( path_ / "after-a", OPERATOR_A_KEY, peers, operator_a_signer->GetAddress() );
+    ASSERT_TRUE( node_a );
+    const auto bootstrap_address = node_a->GetPubSub()->GetInterfaceAddress();
+    auto node_b = NewNode( path_ / "after-b", OPERATOR_B_KEY, peers, operator_a_signer->GetAddress(), bootstrap_address );
+    ASSERT_TRUE( node_b );
+    WaitForTrustLifecycle( node_a );
+    WaitForTrustLifecycle( node_b );
+
+    GenesisManifest manifest;
+    manifest.network_id              = 144;
+    manifest.bootstrapper_public_key = operator_a_signer->GetAddress();
+    manifest.peers                   = peers;
+    manifest.membership_threshold    = 2;
+    manifest.burn_threshold          = 2;
+    manifest                         = manifest.Canonicalized().value();
+    auto tool = SubmitReviewedGenesis( "after-tool", bootstrap_address, manifest, operator_a_signer );
+    ASSERT_TRUE( tool );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            return node_a->GetState() == GeniusNode::NodeState::READY &&
+                   node_b->GetState() == GeniusNode::NodeState::READY;
+        },
+        std::chrono::seconds( 50 ),
+        "active members did not reach readiness" ) );
+
+    const std::string pinned_trust_address = operator_a_signer->GetAddress();
+    auto provider = MultiAccountTestAccess::Burn( node_a )->GetConfirmedValueProvider();
+    ASSERT_TRUE( node_a->AddAccountWithKey( PASSIVE_C_SECONDARY_KEY ).has_value() );
+    const auto accounts = node_a->GetAvailableAccounts();
+    const auto replacement = std::find_if( accounts.begin(), accounts.end(), [&]( const std::string &address )
+                                           { return address != pinned_trust_address; } );
+    ASSERT_NE( replacement, accounts.end() );
+    const std::string replacement_address = *replacement;
+    ASSERT_TRUE( node_a->SelectAccount( replacement_address ).has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node_a->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::seconds( 50 ),
+        "replacement transaction account did not become ready" ) );
+
+    const auto durable = MultiAccountTestAccess::Store( node_a )->LoadAndVerify().value();
+    ConfirmedBurnState successor = durable.burn;
+    successor.version += 1;
+    successor.expected_previous_hash  = durable.burn.Hash().value();
+    successor.authorizing_policy_hash = durable.policy.Hash().value();
+    successor.basis_points            = 250;
+    const auto canonical_candidate = BurnConfig::BurnCandidateCore( successor ).value();
+    const auto expected_id = CandidateId::FromCore( canonical_candidate ).value();
+
+    LocalTrustAdmin operator_a_admin( MultiAccountTestAccess::Registry( node_a ), MultiAccountTestAccess::Burn( node_a ) );
+    auto proposed = operator_a_admin.ProposeBurn( successor.basis_points );
+    const auto candidate_id = proposed.has_value() ? proposed.value() : expected_id;
+    auto approvals = MultiAccountTestAccess::SecureCrdt( node_a )->ReadCandidateApprovals( candidate_id );
+    ASSERT_TRUE( approvals.has_value() );
+    auto approval_it = std::find_if( approvals.value().begin(), approvals.value().end(), [&]( const auto &approval )
+                                    { return approval.signer == pinned_trust_address; } );
+    const auto attempted = approval_it == approvals.value().end()
+                             ? MultiAccountTestAccess::AttemptedTrustApproval(
+                                   node_a, canonical_candidate, pinned_trust_address )
+                             : *approval_it;
+    const auto canonical_bytes = canonical_candidate.CanonicalBytes().value();
+    ASSERT_TRUE( multisig::VerifyPayloadSignature(
+        pinned_trust_address, attempted.signature, canonical_bytes ) ) << "CR-12 pinned signer mismatch";
+    ASSERT_FALSE( multisig::VerifyPayloadSignature(
+        replacement_address, attempted.signature, canonical_bytes ) ) << "CR-12 pinned signer mismatch";
+    ASSERT_TRUE( proposed.has_value() );
+
+    LocalTrustAdmin operator_b_admin( MultiAccountTestAccess::Registry( node_b ), MultiAccountTestAccess::Burn( node_b ) );
+    ASSERT_TRUE( operator_b_admin.Approve( candidate_id ).has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto current = MultiAccountTestAccess::Store( node_a )->LoadAndVerify();
+            return current.has_value() && current.value().burn.version == successor.version &&
+                   current.value().burn.basis_points == successor.basis_points;
+        },
+        std::chrono::seconds( 30 ),
+        "exact successor did not activate under the pinned trust signer" ) );
+    EXPECT_EQ( node_a->GetAddress(), replacement_address );
+    EXPECT_EQ( MultiAccountTestAccess::ManagerAccountAddress( node_a ), replacement_address );
+    EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_a ) ).get(),
+               provider.get() );
+}
 
 TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWithoutReceiverAdmin )
 {
