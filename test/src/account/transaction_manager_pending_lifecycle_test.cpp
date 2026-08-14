@@ -609,12 +609,9 @@ namespace
             *certificate.add_votes()        = vote;
             *certificate.mutable_proposal() = proposal.value();
 
-            sgns::crdt::GlobalDB::Buffer certificate_data;
-            certificate_data.put( certificate.SerializeAsString() );
-            ASSERT_TRUE( db_->Put( sgns::crdt::HierarchicalKey( "/cert/" + transaction->GetHash() ),
-                                   certificate_data,
-                                   { "CRDT.Datastore.TEST.Channel" } )
-                             .has_value() );
+            auto consensus = sgns::TransactionManagerPendingLifecycleTestAccess::Consensus( blockchain_ );
+            ASSERT_TRUE( consensus );
+            ASSERT_TRUE( consensus->SubmitCertificate( certificate ).has_value() );
             ASSERT_TRUE( blockchain_->CheckCertificate( transaction->GetHash() ) );
         }
 
@@ -1458,7 +1455,10 @@ TEST_F( TransactionDeletionRecoveryTest, TransferAndEscrowDeletionRestoresConsum
     const std::string escrow_lock   = "0x" + std::string( 64, '1' );
     auto              escrow_params = account_->GetUTXOManager().CreateTxParameter( 1, escrow_lock, kTokenId );
     ASSERT_TRUE( escrow_params.has_value() );
-    auto escrow_dag = MakeDAG( account_->ReserveNextNonce(), previous_transaction->GetHash() );
+    // Deleting the replicated transaction record restores its UTXO effects, but
+    // the v2 certificate remains authoritative for its nonce slot. Continue the
+    // certified chain instead of trying to finalize a different nonce-1 winner.
+    auto escrow_dag = MakeDAG( transfer->GetNonce() + 1, transfer->GetHash() );
     escrow_dag.set_uncle_hash( escrow_lock );
     auto escrow = std::make_shared<sgns::EscrowTransaction>(
         sgns::EscrowTransaction::New( std::move( escrow_params.value() ),
