@@ -6,6 +6,7 @@
 #define SGNS_ACCOUNT_TRUST_STARTUP_CONTROLLER_HPP
 
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <memory>
@@ -44,6 +45,8 @@ namespace sgns::account
             TRUST_CRDT_ROLLBACK,
             TRUST_CRDT_FORK,
             TRUST_ACTIVATION_FAILED,
+            TRUST_REFRESH_RETRY_SCHEDULED,
+            TRUST_REFRESH_RETRY_EXHAUSTED,
         };
 
         struct Event
@@ -56,6 +59,23 @@ namespace sgns::account
         using EventCallback = std::function<void( const Event & )>;
         using StateCallback = std::function<void( State )>;
 
+        /**
+         * Narrow deterministic seam for refresh-dispatch regressions. Production
+         * callers leave this empty and use the real registry methods/timers.
+         */
+        struct RefreshTestHooks
+        {
+            using CandidateList = outcome::result<std::vector<sgns::securecrdt::CandidateId>>;
+
+            std::function<CandidateList( sgns::trustedpeer::TrustedPeerRegistry & )> list_policy_candidates;
+            std::function<CandidateList( BurnConfig & )>                            list_burn_candidates;
+            std::function<void( uint32_t )>                                         observe_attempt;
+            std::function<void( std::chrono::milliseconds, std::function<void()> )> schedule_retry;
+            std::function<void()>                                                   observe_dispatch_idle;
+            std::function<void()>                                                   observe_coalesced_request;
+            std::function<void( std::function<void()> )>                            bind_request_refresh;
+        };
+
         static outcome::result<std::shared_ptr<TrustStartupController>> New(
             std::shared_ptr<sgns::securecrdt::SecureCrdt>        secure_crdt,
             std::shared_ptr<sgns::trustedpeer::TrustStateStore>  trust_store,
@@ -63,7 +83,8 @@ namespace sgns::account
             std::string                                          local_signer_address,
             sgns::trustedpeer::TrustedPeerRegistry::SignCallback sign_callback,
             EventCallback                                        event_callback = {},
-            StateCallback                                        state_callback = {} );
+            StateCallback                                        state_callback = {},
+            std::shared_ptr<RefreshTestHooks>                     refresh_test_hooks = {} );
 
         ~TrustStartupController();
 
@@ -89,6 +110,7 @@ namespace sgns::account
         std::shared_ptr<sgns::trustedpeer::TrustStateStore>     trust_store_;
         std::shared_ptr<sgns::trustedpeer::TrustedPeerRegistry> registry_;
         std::shared_ptr<BurnConfig>                             burn_config_;
+        std::shared_ptr<RefreshTestHooks>                       refresh_test_hooks_;
         sgns::trustedpeer::GenesisManifest                      manifest_;
         std::string                                             local_signer_address_;
         EventCallback                                           event_callback_;
