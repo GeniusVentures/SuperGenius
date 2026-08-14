@@ -155,7 +155,13 @@ namespace sgns::account
                  &instance->callback_owner_token_ ) ||
              !instance->secure_crdt_->RegisterCandidateCallback(
                  "burn-config",
-                 [enqueue_candidate]( const auto &id, const auto & ) { enqueue_candidate( id ); },
+                 [weak, enqueue_candidate]( const auto &id, const auto &approval )
+                 {
+                     if ( auto self = weak.lock(); self && approval.signer != self->local_signer_address_ )
+                     {
+                         enqueue_candidate( id );
+                     }
+                 },
                  &instance->callback_owner_token_ ) )
         {
             return outcome::failure( std::errc::operation_not_permitted );
@@ -318,12 +324,6 @@ namespace sgns::account
             }
         }
 
-        if ( burn_config_->IsEconomicallyReady() )
-        {
-            SetState( State::ConfirmedReady );
-            return outcome::success();
-        }
-
         std::vector<sgns::securecrdt::CandidateId> pending;
         if ( snapshot.value().burn_authorization == sgns::trustedpeer::BurnAuthorizationKind::BootstrapOnly &&
              std::find( snapshot.value().policy.peers.begin(),
@@ -355,18 +355,12 @@ namespace sgns::account
                 }
             }
         }
-        bool discover_candidates = false;
+        auto discovered = burn_config_->ListPendingBurnCandidates();
+        if ( discovered.has_error() )
         {
-            std::lock_guard<std::mutex> lock( candidate_mutex_ );
-            discover_candidates = !burn_candidates_discovered_;
+            return discovered.error();
         }
-        if ( discover_candidates )
         {
-            auto discovered = burn_config_->ListPendingBurnCandidates();
-            if ( discovered.has_error() )
-            {
-                return discovered.error();
-            }
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
             for ( const auto &candidate : discovered.value() )
             {
@@ -378,7 +372,6 @@ namespace sgns::account
                     pending_burn_candidates_.push_back( candidate );
                 }
             }
-            burn_candidates_discovered_ = true;
         }
         {
             std::lock_guard<std::mutex> lock( candidate_mutex_ );
@@ -424,19 +417,19 @@ namespace sgns::account
                         std::remove( pending_burn_candidates_.begin(), pending_burn_candidates_.end(), candidate ),
                         pending_burn_candidates_.end() );
                 }
-                auto verified = trust_store_->LoadAndVerify();
-                if ( verified.has_error() )
+                snapshot = trust_store_->LoadAndVerify();
+                if ( snapshot.has_error() )
                 {
                     Emit( EventCode::TRUST_ACTIVATION_FAILED,
                           { candidate.domain,
                             std::to_string( candidate.version ),
                             candidate.content_hash,
-                            verified.error().message() } );
-                    return verified.error();
+                            snapshot.error().message() } );
+                    return snapshot.error();
                 }
-            }
-            if ( burn_config_->IsEconomicallyReady() )
-            {
+                // The durable predecessor changed. Any remaining IDs were eligible for
+                // the previous head, so discover again on the next refresh instead of
+                // treating them as actionable stale candidates.
                 break;
             }
         }
