@@ -72,26 +72,24 @@ namespace sgns
         static AccountGenerationSnapshot SnapshotAccountGeneration( const std::shared_ptr<GeniusNode> &node )
         {
             if ( !node ) return {};
-            auto account = node->account_;
-            auto manager = node->transaction_manager_;
-            return { account,
-                     manager,
-                     account ? account->GetAddress() : std::string{},
-                     manager && manager->account_m ? manager->account_m->GetAddress() : std::string{},
-                     node->transaction_manager_owner_generation_.load(),
-                     node->bridge_init_generation_.load() };
+            auto snapshot = node->SnapshotAccountServices();
+            return { snapshot.account,
+                     snapshot.manager,
+                     snapshot.account ? snapshot.account->GetAddress() : std::string{},
+                     snapshot.manager && snapshot.manager->account_m ? snapshot.manager->account_m->GetAddress()
+                                                                     : std::string{},
+                     snapshot.generation,
+                     node->catchup_callback_owner_generation_.load() };
         }
 
-        static uint64_t InjectCatchupCallback( const std::shared_ptr<GeniusNode> &,
+        static uint64_t InjectCatchupCallback( const std::shared_ptr<GeniusNode> &node,
                                                const AccountGenerationSnapshot  &snapshot,
                                                std::atomic_uint64_t              &side_effects )
         {
-            // RED models the current production callback: it owns no generation-
-            // checked snapshot and therefore executes after its account generation
-            // has been unpublished. GREEN routes this injection through the same
-            // generation gate used by BridgeCatchupWatcher callbacks.
-            if ( snapshot.account && snapshot.manager ) ++side_effects;
-            return snapshot.catchup_generation;
+            if ( !node ) return 0;
+            GeniusNode::AccountServiceSnapshot captured{ snapshot.account, snapshot.manager, snapshot.generation };
+            node->ApplyIfCurrentAccountServices( captured, [&] { ++side_effects; } );
+            return node->catchup_callback_owner_generation_.load();
         }
 
         static std::shared_ptr<ValidatorRegistry> GetValidatorRegistry( const std::shared_ptr<GeniusNode> &node )

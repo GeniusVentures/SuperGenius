@@ -83,13 +83,13 @@ namespace sgns
 
         static std::shared_ptr<TransactionManager> Manager( const std::shared_ptr<GeniusNode> &node )
         {
-            return node->transaction_manager_;
+            return node ? node->SnapshotAccountServices().manager : nullptr;
         }
 
         static std::string ManagerAccountAddress( const std::shared_ptr<GeniusNode> &node )
         {
-            return node && node->transaction_manager_ && node->transaction_manager_->account_m
-                     ? node->transaction_manager_->account_m->GetAddress()
+            const auto manager = Manager( node );
+            return manager && manager->account_m ? manager->account_m->GetAddress()
                      : std::string{};
         }
 
@@ -102,7 +102,7 @@ namespace sgns
             return { securecrdt::CandidateApprovalRecord::ENCODING_VERSION,
                      canonical_candidate,
                      pinned_trust_address,
-                     node->account_->Sign( bytes ) };
+                     node->trust_signer_->Sign( bytes ) };
         }
 
         static const void *Account( const std::shared_ptr<GeniusNode> &node )
@@ -373,8 +373,8 @@ namespace
 
 TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBeforeInitialBurnReadiness )
 {
-    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "before-a", true );
-    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "before-b", true );
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "before-a" );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "before-b" );
     ASSERT_TRUE( operator_a_signer );
     ASSERT_TRUE( operator_b_signer );
     const std::vector<std::string> peers{ operator_a_signer->GetAddress(), operator_b_signer->GetAddress() };
@@ -442,8 +442,8 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchBe
 
 TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAfterReadiness )
 {
-    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "after-a", true );
-    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "after-b", true );
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "after-a" );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "after-b" );
     ASSERT_TRUE( operator_a_signer );
     ASSERT_TRUE( operator_b_signer );
     const std::vector<std::string> peers{ operator_a_signer->GetAddress(), operator_b_signer->GetAddress() };
@@ -517,6 +517,14 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
     ASSERT_TRUE( proposed.has_value() );
 
     LocalTrustAdmin operator_b_admin( MultiAccountTestAccess::Registry( node_b ), MultiAccountTestAccess::Burn( node_b ) );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto replicated = MultiAccountTestAccess::SecureCrdt( node_b )->ReadCandidateApprovals( candidate_id );
+            return replicated.has_value() && replicated.value().size() == 1U;
+        },
+        std::chrono::seconds( 20 ),
+        "operator B did not retain the pinned signer's exact successor approval" ) );
     ASSERT_TRUE( operator_b_admin.Approve( candidate_id ).has_value() );
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&]
@@ -535,9 +543,9 @@ TEST_F( PolicyLifetimeMultiAccountTest, ActiveTrustSignerSurvivesAccountSwitchAf
 
 TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWithoutReceiverAdmin )
 {
-    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "operator-a", true );
-    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "operator-b", true );
-    auto passive_c_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, PASSIVE_C_KEY, path_ / "passive-c", true );
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "operator-a" );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "operator-b" );
+    auto passive_c_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, PASSIVE_C_KEY, path_ / "passive-c" );
     ASSERT_TRUE( operator_a_signer );
     ASSERT_TRUE( operator_b_signer );
     ASSERT_TRUE( passive_c_signer );
