@@ -6,6 +6,7 @@
 #include <thread>
 
 #include <google/protobuf/unknown_field_set.h>
+#include <ipfs_lite/ipld/impl/ipld_node_impl.hpp>
 
 #include "account/GeniusAccount.hpp"
 #include "blockchain/Consensus.hpp"
@@ -1198,6 +1199,21 @@ namespace sgns::test
         auto invalid = ConsensusManagerTestAccess::FilterDeltaResult( manager, delta );
         EXPECT_EQ( invalid.decision, crdt::DeltaFilterDecision::Reject );
         manager->Close();
+    }
+
+    TEST_F( ConsensusCertificateStoreTest, MissingRegistryCidUsesRetryableAbsenceError )
+    {
+        auto account  = MakeAccount( getPathString() );
+        auto registry = MakeRegistry( db_, account );
+        ASSERT_TRUE( account && registry );
+
+        const auto missing_node = ipfs_lite::ipld::IPLDNodeImpl::createFromString( "unstored-registry" );
+        ASSERT_TRUE( missing_node );
+        ASSERT_OUTCOME_SUCCESS( missing_cid, missing_node->getCID().toString() );
+
+        const auto result = registry->LoadRegistryByCid( missing_cid );
+        ASSERT_TRUE( result.has_error() );
+        EXPECT_EQ( result.error(), std::errc::no_such_file_or_directory );
     }
 
     TEST_F( ConsensusCertificateStoreTest, ExactIdCertificateTombstonesAreStrippedAndRestartSafe )

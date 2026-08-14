@@ -717,7 +717,19 @@ namespace sgns
         // A registry write stores the complete RegistryUpdate as one CRDT element
         // value. The delta at this CID therefore contains the requested snapshot;
         // ancestor deltas are not needed to reconstruct it.
-        BOOST_OUTCOME_TRY( auto delta_key_values, db_->GetLocalDeltaKeyValues( cid ) );
+        auto delta_result = db_->GetLocalDeltaKeyValues( cid );
+        if ( delta_result.has_error() )
+        {
+            // Consensus treats an unavailable registry snapshot as a retryable
+            // dependency. GraphSync reports that absence in its own error
+            // category, so normalize it at the registry lookup boundary.
+            if ( delta_result.error() == crdt::GraphsyncDAGSyncer::Error::CID_NOT_FOUND )
+            {
+                return outcome::failure( std::errc::no_such_file_or_directory );
+            }
+            return outcome::failure( delta_result.error() );
+        }
+        auto delta_key_values = std::move( delta_result.value() );
         ValidatorRegistryLogger()->trace( "{}: Got local delta with {} entries ", __func__, delta_key_values.size() );
 
         crdt::HierarchicalKey registry_key{ std::string( RegistryKey() ) };

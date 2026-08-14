@@ -107,6 +107,11 @@ TEST( NodeBalancePersistenceTest, BalancePersistsAfterRecreation )
         ASSERT_GT( afterMint, beforeMint );
     }
 
+    // A recreation must not overlap the previous node instance: both nodes use
+    // the same private key and therefore the same account identity. Destruction
+    // synchronously stops the node and joins its background threads.
+    originalNode.reset();
+
     std::cout << "****** Recovery node creation ****" << std::endl;
     auto recoveryNode = CreateNodeWithMode( "0xabcd",
                                             "1.0",
