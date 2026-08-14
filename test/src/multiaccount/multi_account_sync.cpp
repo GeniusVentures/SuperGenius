@@ -33,6 +33,7 @@
 #include <boost/asio.hpp>
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "account/GeniusAccount.hpp"
+#include "account/BurnConfig.hpp"
 #include "account/GeniusNode.hpp"
 #include "account/TransactionManager.hpp"
 #include "account/TrustStartupController.hpp"
@@ -124,6 +125,59 @@ namespace sgns
             const base::Buffer block_key( std::move( registry_block_key ) );
             return datastore->remove( block_key ).has_value() && !datastore->contains( block_key );
         }
+
+        static std::shared_ptr<TransactionManager> GetTransactionManager( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_ : nullptr;
+        }
+
+        static uint64_t GetTransactionManagerConstructionCount( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_construction_count_.load() : 0;
+        }
+
+        static uint64_t GetTransactionManagerStartCount( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_start_count_.load() : 0;
+        }
+
+        static uint64_t GetTransactionManagerOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->transaction_manager_owner_generation_.load() : 0;
+        }
+
+        static uint64_t GetAccountTransactionCallbackOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->account_transaction_callback_owner_generation_.load() : 0;
+        }
+
+        static uint64_t GetBlockchainSlotHashOwnerGeneration( const std::shared_ptr<GeniusNode> &node )
+        {
+            return node ? node->blockchain_slot_hash_owner_generation_.load() : 0;
+        }
+
+        static outcome::result<std::string> ResolveAccountTransactionCid( const std::shared_ptr<GeniusNode> &node,
+                                                                          const std::string                &tx_hash )
+        {
+            if ( !node || !node->transaction_manager_ )
+            {
+                return outcome::failure( std::errc::owner_dead );
+            }
+            return node->transaction_manager_->GetTransactionCID( tx_hash );
+        }
+
+        static std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> GetManagerBurnProvider(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->transaction_manager_ ? node->transaction_manager_->confirmed_burn_provider_ : nullptr;
+        }
+
+        static std::shared_ptr<const sgns::account::ConfirmedBurnValueProvider> GetNodeBurnProvider(
+            const std::shared_ptr<GeniusNode> &node )
+        {
+            return node && node->burn_config_ ? node->burn_config_->GetConfirmedValueProvider() : nullptr;
+        }
+
     };
 
 } // namespace sgns
@@ -461,6 +515,99 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
         },
         std::chrono::milliseconds( 30000 ),
         "missing validator registry block was not fetched from the full node" );
+}
+
+TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSingleManagerOwnership )
+{
+    auto historical_node = CreateNode( "persisted_historical_restart", true, true, true );
+    ASSERT_TRUE( historical_node );
+    WaitForReady( historical_node );
+    ConfigureConsensus( historical_node, 1, std::chrono::milliseconds( 100 ) );
+
+    const std::string historical_address   = historical_node->GetAddress();
+    const std::string historical_base_path = GetBaseWritePath( historical_node );
+    const auto        historical_mint      = historical_node->MintTokens(
+        1000,
+        sgns::test::NextMintSourceHash(),
+        "historical-restart",
+        TokenID::FromBytes( { 0x00 } ),
+        "",
+        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( historical_mint.has_value() ) << historical_mint.error().message();
+    const std::string historical_tx_hash = historical_mint.value().first;
+
+    const auto historical_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( historical_node, historical_tx_hash );
+    ASSERT_TRUE( historical_cid.has_value() ) << historical_cid.error().message();
+    ASSERT_FALSE( historical_cid.value().empty() );
+    const auto historical_confirmed_count =
+        historical_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED );
+    ASSERT_GE( historical_confirmed_count, 1U );
+
+    historical_node.reset();
+
+    // This is deliberately the fixture's existing-base-path branch. Do not replace
+    // historical_base_path with a fresh client directory: trust and transaction
+    // databases from the first lifetime are the subject of this counterexample.
+    auto restarted_node = CreateNode( "persisted_historical_restart",
+                                      true,
+                                      true,
+                                      true,
+                                      historical_base_path );
+    ASSERT_TRUE( restarted_node );
+    ASSERT_EQ( GetBaseWritePath( restarted_node ), historical_base_path );
+    ASSERT_EQ( restarted_node->GetAddress(), historical_address );
+    WaitForReady( restarted_node );
+
+    const auto restarted_manager = sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node );
+    ASSERT_TRUE( restarted_manager );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerConstructionCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerStartCount( restarted_node ), 1U );
+
+    const auto owner_generation =
+        sgns::MultiAccountTestAccess::GetTransactionManagerOwnerGeneration( restarted_node );
+    ASSERT_EQ( owner_generation, 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetAccountTransactionCallbackOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetBlockchainSlotHashOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetManagerBurnProvider( restarted_node ).get(),
+               sgns::MultiAccountTestAccess::GetNodeBurnProvider( restarted_node ).get() );
+
+    sgns::test::assertWaitForCondition(
+        [&]
+        {
+            return restarted_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED ) >=
+                   historical_confirmed_count;
+        },
+        std::chrono::milliseconds( 50000 ),
+        "persisted transaction history did not reload from historical_base_path" );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node ).get(), restarted_manager.get() );
+    const auto reopened_historical_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( restarted_node, historical_tx_hash );
+    ASSERT_TRUE( reopened_historical_cid.has_value() ) << reopened_historical_cid.error().message();
+    EXPECT_EQ( reopened_historical_cid.value(), historical_cid.value() );
+
+    const auto new_mint = restarted_node->MintTokens( 2000,
+                                                       sgns::test::NextMintSourceHash(),
+                                                       "historical-restart-new",
+                                                       TokenID::FromBytes( { 0x00 } ),
+                                                       "",
+                                                       std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
+    ASSERT_TRUE( new_mint.has_value() ) << new_mint.error().message();
+    const auto new_cid =
+        sgns::MultiAccountTestAccess::ResolveAccountTransactionCid( restarted_node, new_mint.value().first );
+    ASSERT_TRUE( new_cid.has_value() ) << new_cid.error().message();
+    ASSERT_FALSE( new_cid.value().empty() );
+    EXPECT_EQ( restarted_node->CountTransactions( TransactionManager::TransactionStatus::CONFIRMED ),
+               historical_confirmed_count + 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManager( restarted_node ).get(), restarted_manager.get() );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerConstructionCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetTransactionManagerStartCount( restarted_node ), 1U );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetAccountTransactionCallbackOwnerGeneration( restarted_node ),
+               owner_generation );
+    EXPECT_EQ( sgns::MultiAccountTestAccess::GetBlockchainSlotHashOwnerGeneration( restarted_node ),
+               owner_generation );
 }
 
 TEST_F( MultiAccountTest, SyncThroughEachOther )
