@@ -1,7 +1,13 @@
 #include "account/TrustStartupController.hpp"
 
 #include <algorithm>
+#include <array>
 #include <iterator>
+
+#include <boost/asio/post.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/strand.hpp>
+#include <boost/asio/system_executor.hpp>
 
 #include "account/BurnConfig.hpp"
 #include "securecrdt/SecureCrdt.hpp"
@@ -34,7 +40,48 @@ namespace sgns::account
             }
             return fields;
         }
+
+        constexpr std::array<std::chrono::milliseconds, 6> REFRESH_RETRY_DELAYS{
+            std::chrono::milliseconds( 100 ),
+            std::chrono::milliseconds( 200 ),
+            std::chrono::milliseconds( 400 ),
+            std::chrono::milliseconds( 800 ),
+            std::chrono::milliseconds( 1600 ),
+            std::chrono::milliseconds( 3200 ),
+        };
+
+        const char *RefreshStageName( TrustStartupController::RefreshStage stage )
+        {
+            using Stage = TrustStartupController::RefreshStage;
+            switch ( stage )
+            {
+                case Stage::DurableState: return "durable-state";
+                case Stage::GenesisDiscovery: return "genesis-discovery";
+                case Stage::PolicyDiscovery: return "policy-discovery";
+                case Stage::PolicyActivation: return "policy-activation";
+                case Stage::BurnDiscovery: return "burn-discovery";
+                case Stage::BurnActivation: return "burn-activation";
+                case Stage::Publication: return "publication";
+            }
+            return "unknown";
+        }
     } // namespace
+
+    struct TrustStartupController::RefreshDispatchState
+    {
+        std::mutex                                             mutex;
+        std::weak_ptr<TrustStartupController>                  controller;
+        boost::asio::strand<boost::asio::system_executor>      executor{
+            boost::asio::make_strand( boost::asio::system_executor{} ) };
+        std::shared_ptr<boost::asio::steady_timer>             retry_timer;
+        std::shared_ptr<RefreshTestHooks>                      test_hooks;
+        EventCallback                                          event_callback;
+        std::string                                            persisted_fingerprint;
+        bool                                                   stopped = false;
+        bool                                                   active = false;
+        bool                                                   retry_waiting = false;
+        bool                                                   coalesced_request = false;
+    };
 
     outcome::result<std::shared_ptr<TrustStartupController>> TrustStartupController::New(
         std::shared_ptr<sgns::securecrdt::SecureCrdt>        secure_crdt,
@@ -169,21 +216,22 @@ namespace sgns::account
             return outcome::failure( std::errc::operation_not_permitted );
         }
 
-        auto *worker_self = instance.get();
-        instance->refresh_worker_ = std::thread( [worker_self]
+        instance->refresh_dispatch_ = std::make_shared<RefreshDispatchState>();
+        instance->refresh_dispatch_->controller = instance;
+        instance->refresh_dispatch_->test_hooks = instance->refresh_test_hooks_;
+        instance->refresh_dispatch_->event_callback = instance->event_callback_;
+        instance->refresh_dispatch_->persisted_fingerprint = instance->manifest_.Fingerprint().value_or( "" );
+        if ( instance->refresh_test_hooks_ && instance->refresh_test_hooks_->bind_request_refresh )
         {
-            std::unique_lock<std::mutex> lock( worker_self->refresh_worker_mutex_ );
-            while ( !worker_self->stop_refresh_worker_ )
+            const std::weak_ptr<RefreshDispatchState> weak_dispatch = instance->refresh_dispatch_;
+            instance->refresh_test_hooks_->bind_request_refresh( [weak_dispatch]
             {
-                worker_self->refresh_worker_condition_.wait(
-                    lock, [&] { return worker_self->stop_refresh_worker_ || worker_self->refresh_requested_; } );
-                if ( worker_self->stop_refresh_worker_ ) break;
-                worker_self->refresh_requested_ = false;
-                lock.unlock();
-                (void) worker_self->Refresh();
-                lock.lock();
-            }
-        } );
+                if ( auto dispatch = weak_dispatch.lock() )
+                {
+                    TrustStartupController::RequestDispatch( dispatch );
+                }
+            } );
+        }
 
         BOOST_OUTCOME_TRY( instance->Refresh() );
         return instance;
@@ -191,15 +239,23 @@ namespace sgns::account
 
     TrustStartupController::~TrustStartupController()
     {
+        std::shared_ptr<boost::asio::steady_timer> timer;
+        std::shared_ptr<RefreshTestHooks> hooks;
         {
-            std::lock_guard<std::mutex> lock( refresh_worker_mutex_ );
-            stop_refresh_worker_ = true;
+            const auto dispatch = refresh_dispatch_;
+            if ( dispatch )
+            {
+                std::lock_guard<std::mutex> lock( dispatch->mutex );
+                dispatch->stopped = true;
+                dispatch->active = false;
+                dispatch->retry_waiting = false;
+                dispatch->coalesced_request = false;
+                timer = std::move( dispatch->retry_timer );
+                hooks = dispatch->test_hooks;
+            }
         }
-        refresh_worker_condition_.notify_one();
-        if ( refresh_worker_.joinable() )
-        {
-            refresh_worker_.join();
-        }
+        if ( timer ) timer->cancel();
+        if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
         if ( secure_crdt_ )
         {
             secure_crdt_->UnregisterCandidateCallbackIf( "trusted-peer", &callback_owner_token_ );
@@ -210,7 +266,14 @@ namespace sgns::account
 
     outcome::result<void> TrustStartupController::Refresh()
     {
+        RefreshStage stage = RefreshStage::DurableState;
+        return RefreshClassified( stage );
+    }
+
+    outcome::result<void> TrustStartupController::RefreshClassified( RefreshStage &stage )
+    {
         std::lock_guard<std::mutex> refresh_lock( refresh_execution_mutex_ );
+        stage = RefreshStage::DurableState;
         auto snapshot = trust_store_->LoadAndVerify();
         if ( snapshot.has_error() && snapshot.error() == sgns::trustedpeer::TrustStateStore::Error::NOT_FOUND )
         {
@@ -231,6 +294,7 @@ namespace sgns::account
             const auto                            candidate = sgns::securecrdt::CandidateId::FromCore( core );
             if ( candidate && ( !failed_genesis_candidate_ || !( *failed_genesis_candidate_ == *candidate ) ) )
             {
+                stage = RefreshStage::GenesisDiscovery;
                 auto approvals = secure_crdt_->ReadCandidateApprovals( *candidate );
                 if ( approvals.has_error() )
                 {
@@ -265,6 +329,7 @@ namespace sgns::account
             return snapshot.error();
         }
 
+        stage = RefreshStage::PolicyDiscovery;
         auto discovered_policies = refresh_test_hooks_ && refresh_test_hooks_->list_policy_candidates
                                      ? refresh_test_hooks_->list_policy_candidates( *registry_ )
                                      : registry_->ListPendingPolicyCandidates();
@@ -301,6 +366,7 @@ namespace sgns::account
                                  policy_candidates.end() );
         for ( const auto &candidate : policy_candidates )
         {
+            stage = RefreshStage::PolicyActivation;
             auto activated = registry_->TryActivatePolicyCandidate( candidate );
             if ( activated.has_error() )
             {
@@ -353,6 +419,7 @@ namespace sgns::account
                         snapshot.value().policy.peers.end(),
                         local_signer_address_ ) != snapshot.value().policy.peers.end() )
         {
+            stage = RefreshStage::Publication;
             auto initiated = burn_config_->OnTrustedPeerGenesisConfirmed();
             if ( initiated.has_error() )
             {
@@ -378,6 +445,7 @@ namespace sgns::account
                 }
             }
         }
+        stage = RefreshStage::BurnDiscovery;
         auto discovered = refresh_test_hooks_ && refresh_test_hooks_->list_burn_candidates
                             ? refresh_test_hooks_->list_burn_candidates( *burn_config_ )
                             : burn_config_->ListPendingBurnCandidates();
@@ -413,6 +481,7 @@ namespace sgns::account
         pending.erase( std::unique( pending.begin(), pending.end() ), pending.end() );
         for ( const auto &candidate : pending )
         {
+            stage = RefreshStage::BurnActivation;
             auto activated = burn_config_->TryActivateBurnCandidate( candidate );
             if ( activated.has_error() )
             {
@@ -458,6 +527,7 @@ namespace sgns::account
                 break;
             }
         }
+        stage = RefreshStage::Publication;
         SetState( burn_config_->IsEconomicallyReady() ? State::ConfirmedReady : State::WaitingForInitialBurn );
         return outcome::success();
     }
@@ -537,13 +607,195 @@ namespace sgns::account
         event_callback_( Event{ code, std::move( fields ), fingerprint.value_or( "" ) } );
     }
 
+    TrustStartupController::RetryDisposition TrustStartupController::ClassifyRefreshResult(
+        RefreshStage stage, const outcome::result<void> &result )
+    {
+        if ( result.has_value() ) return RetryDisposition::Success;
+        if ( stage == RefreshStage::PolicyDiscovery || stage == RefreshStage::BurnDiscovery )
+        {
+            return RetryDisposition::Transient;
+        }
+        if ( stage == RefreshStage::PolicyActivation || stage == RefreshStage::BurnActivation )
+        {
+            return RetryDisposition::Actionable;
+        }
+        return RetryDisposition::Fatal;
+    }
+
+    void TrustStartupController::RequestDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch )
+    {
+        std::shared_ptr<RefreshTestHooks> hooks;
+        bool                              coalesced = false;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            if ( dispatch->stopped ) return;
+            hooks = dispatch->test_hooks;
+            if ( dispatch->active || dispatch->retry_waiting )
+            {
+                dispatch->coalesced_request = true;
+                coalesced = true;
+            }
+            else
+            {
+                dispatch->active = true;
+                dispatch->coalesced_request = false;
+            }
+        }
+        if ( coalesced )
+        {
+            if ( hooks && hooks->observe_coalesced_request ) hooks->observe_coalesced_request();
+            return;
+        }
+        boost::asio::post( dispatch->executor, [dispatch] { RunDispatchAttempt( dispatch, 1 ); } );
+    }
+
+    void TrustStartupController::FinishDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch )
+    {
+        std::shared_ptr<boost::asio::steady_timer> timer;
+        std::shared_ptr<RefreshTestHooks>           hooks;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            dispatch->active = false;
+            dispatch->retry_waiting = false;
+            dispatch->coalesced_request = false;
+            timer = std::move( dispatch->retry_timer );
+            hooks = dispatch->test_hooks;
+        }
+        if ( timer ) timer->cancel();
+        if ( hooks && hooks->observe_dispatch_idle ) hooks->observe_dispatch_idle();
+    }
+
+    void TrustStartupController::RunDispatchAttempt( const std::shared_ptr<RefreshDispatchState> &dispatch,
+                                                     uint32_t                                     attempt )
+    {
+        std::shared_ptr<RefreshTestHooks> hooks;
+        bool                              stopped = false;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            if ( !stopped ) dispatch->retry_waiting = false;
+            hooks = dispatch->test_hooks;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( hooks && hooks->observe_attempt ) hooks->observe_attempt( attempt );
+
+        auto controller = dispatch->controller.lock();
+        if ( !controller )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        RefreshStage stage = RefreshStage::DurableState;
+        auto         result = controller->RefreshClassified( stage );
+        const std::error_code error = result.has_error() ? result.error() : std::error_code{};
+        controller.reset();
+
+        const auto disposition = ClassifyRefreshResult( stage, result );
+        if ( disposition == RetryDisposition::Success )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( disposition != RetryDisposition::Transient )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        EventCallback event_callback;
+        std::string   fingerprint;
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            event_callback = dispatch->event_callback;
+            fingerprint = dispatch->persisted_fingerprint;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( attempt >= 7 )
+        {
+            if ( event_callback )
+            {
+                event_callback( Event{ EventCode::TRUST_REFRESH_RETRY_EXHAUSTED,
+                                       { RefreshStageName( stage ),
+                                         error.category().name(),
+                                         error.message(),
+                                         "attempt=7",
+                                         "retry_count=6" },
+                                       fingerprint } );
+            }
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        const uint32_t next_attempt = attempt + 1;
+        const uint32_t retry = attempt;
+        const auto     delay = REFRESH_RETRY_DELAYS.at( retry - 1 );
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+            if ( !stopped ) dispatch->retry_waiting = true;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+        if ( event_callback )
+        {
+            event_callback( Event{ EventCode::TRUST_REFRESH_RETRY_SCHEDULED,
+                                   { RefreshStageName( stage ),
+                                     error.category().name(),
+                                     error.message(),
+                                     "attempt=" + std::to_string( next_attempt ),
+                                     "retry=" + std::to_string( retry ),
+                                     "delay_ms=" + std::to_string( delay.count() ) },
+                                   fingerprint } );
+        }
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            stopped = dispatch->stopped;
+        }
+        if ( stopped )
+        {
+            FinishDispatch( dispatch );
+            return;
+        }
+
+        const auto retry_callback = [dispatch, next_attempt]
+        {
+            boost::asio::post( dispatch->executor,
+                               [dispatch, next_attempt] { RunDispatchAttempt( dispatch, next_attempt ); } );
+        };
+        if ( hooks && hooks->schedule_retry )
+        {
+            hooks->schedule_retry( delay, retry_callback );
+            return;
+        }
+
+        auto timer = std::make_shared<boost::asio::steady_timer>( dispatch->executor, delay );
+        {
+            std::lock_guard<std::mutex> lock( dispatch->mutex );
+            if ( dispatch->stopped ) return;
+            dispatch->retry_timer = timer;
+        }
+        timer->async_wait( [dispatch, next_attempt]( const boost::system::error_code &timer_error )
+        {
+            if ( timer_error == boost::asio::error::operation_aborted ) return;
+            RunDispatchAttempt( dispatch, next_attempt );
+        } );
+    }
+
     void TrustStartupController::RequestRefresh()
     {
-        {
-            std::lock_guard<std::mutex> lock( refresh_worker_mutex_ );
-            if ( stop_refresh_worker_ ) return;
-            refresh_requested_ = true;
-        }
-        refresh_worker_condition_.notify_one();
+        const auto dispatch = refresh_dispatch_;
+        if ( dispatch ) RequestDispatch( dispatch );
     }
 } // namespace sgns::account

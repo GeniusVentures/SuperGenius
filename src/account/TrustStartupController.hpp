@@ -7,13 +7,11 @@
 
 #include <atomic>
 #include <chrono>
-#include <condition_variable>
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "outcome/outcome.hpp"
@@ -47,6 +45,25 @@ namespace sgns::account
             TRUST_ACTIVATION_FAILED,
             TRUST_REFRESH_RETRY_SCHEDULED,
             TRUST_REFRESH_RETRY_EXHAUSTED,
+        };
+
+        enum class RefreshStage : uint8_t
+        {
+            DurableState = 0,
+            GenesisDiscovery,
+            PolicyDiscovery,
+            PolicyActivation,
+            BurnDiscovery,
+            BurnActivation,
+            Publication,
+        };
+
+        enum class RetryDisposition : uint8_t
+        {
+            Success = 0,
+            Transient,
+            Actionable,
+            Fatal,
         };
 
         struct Event
@@ -102,9 +119,18 @@ namespace sgns::account
 
     private:
         TrustStartupController() = default;
+        struct RefreshDispatchState;
+
         void SetState( State state );
         void Emit( EventCode code, std::vector<std::string> fields = {} ) const;
         void RequestRefresh();
+        outcome::result<void> RefreshClassified( RefreshStage &stage );
+        static RetryDisposition ClassifyRefreshResult( RefreshStage                 stage,
+                                                       const outcome::result<void> &result );
+        static void RequestDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch );
+        static void RunDispatchAttempt( const std::shared_ptr<RefreshDispatchState> &dispatch,
+                                        uint32_t                                     attempt );
+        static void FinishDispatch( const std::shared_ptr<RefreshDispatchState> &dispatch );
 
         std::shared_ptr<sgns::securecrdt::SecureCrdt>           secure_crdt_;
         std::shared_ptr<sgns::trustedpeer::TrustStateStore>     trust_store_;
@@ -118,11 +144,7 @@ namespace sgns::account
         std::atomic<State>                                      state_{ State::FreshWaitingForGenesis };
         int                                                     callback_owner_token_ = 0;
         std::mutex                                              refresh_execution_mutex_;
-        std::mutex                                              refresh_worker_mutex_;
-        std::condition_variable                                 refresh_worker_condition_;
-        bool                                                    refresh_requested_ = false;
-        bool                                                    stop_refresh_worker_ = false;
-        std::thread                                             refresh_worker_;
+        std::shared_ptr<RefreshDispatchState>                   refresh_dispatch_;
         mutable std::mutex                                      candidate_mutex_;
         std::vector<sgns::securecrdt::CandidateId>              pending_policy_candidates_;
         std::vector<sgns::securecrdt::CandidateId>              failed_policy_candidates_;
