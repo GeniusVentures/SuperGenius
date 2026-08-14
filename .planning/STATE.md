@@ -4,14 +4,14 @@ milestone: v1.1
 milestone_name: trusted-peer genesis, quorum-policy, and production integration gaps
 current_phase: 13
 status: executing
-stopped_at: Planned 13-27 through 13-29; ready to execute 13-27-PLAN.md
-last_updated: "2026-08-14T20:21:55.358Z"
-last_activity: 2026-08-14 -- Phase 13 planning complete
+stopped_at: Completed 13-27-PLAN.md
+last_updated: "2026-08-14T21:36:36.672Z"
+last_activity: 2026-08-14
 progress:
   total_phases: 17
   completed_phases: 5
   total_plans: 37
-  completed_plans: 34
+  completed_plans: 35
   percent: 29
 ---
 
@@ -30,9 +30,9 @@ See: .planning/PROJECT.md (updated 2026-07-20)
 ## Current Position
 
 Phase: 13 (Close v1.1 trusted-peer genesis, quorum-policy, and production integration gaps) — EXECUTING
-Plan: 27 of 29
+Plan: 28 of 29
 Status: Ready to execute
-Last activity: 2026-08-14 -- Phase 13 planning complete
+Last activity: 2026-08-14
 
 ## Roadmap Snapshot
 
@@ -43,7 +43,7 @@ Last activity: 2026-08-14 -- Phase 13 planning complete
 | 10 | TrustedPeerRegistry | complete | TPR-01, TPR-02, TPR-03 |
 | 11 | BurnConfig Quorum Wiring | complete | BURN-01, BURN-02, BURN-03 |
 | 12 | ValidatorRegistry Migration | complete | MIG-05, MIG-06 |
-| 13 | Trusted-peer genesis, quorum policy, and production integration | ready to execute | BOOT-01..04, POLICY-01, VALID-01, TEST-01 and audited v1.1 closures |
+| 13 | Trusted-peer genesis, quorum policy, and production integration | in progress (27/29) | BOOT-01..04, POLICY-01, VALID-01, TEST-01 and audited v1.1 closures |
 
 ## Key Decisions
 
@@ -62,8 +62,8 @@ Last activity: 2026-08-14 -- Phase 13 planning complete
 
 ## Operator Next Steps
 
-- Execute the three additive Phase 13 gap-closure plans (`13-27` through `13-29`) using their three-wave dependency map in `.planning/ROADMAP.md`.
-- Run `$gsd-execute-phase 13 --gaps-only` to close CR-11 through CR-14, rerun the exact 22-case/25-target gate, and perform five passive-lifetime repetitions.
+- Execute the two remaining Phase 13 gap-closure plans (`13-28` and `13-29`) using their dependency map in `.planning/ROADMAP.md`.
+- Run `$gsd-execute-phase 13 --gaps-only` to close CR-13 and CR-14, rerun the exact 22-case/25-target gate, and perform five passive-lifetime repetitions.
 
 ### Quick Tasks Completed
 
@@ -73,8 +73,8 @@ Last activity: 2026-08-14 -- Phase 13 planning complete
 
 ## Session
 
-**Last session:** 2026-08-14T18:05:08.629Z
-**Stopped At:** Planned 13-27 through 13-29; ready to execute 13-27-PLAN.md
+**Last session:** 2026-08-14T21:36:36.668Z
+**Stopped At:** Completed 13-27-PLAN.md
 **Resume File:** None
 
 ## Accumulated Context
@@ -120,6 +120,7 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 | Phase 13 P25 | 1h 31m | 1 tasks | 3 files |
 | Phase 13 P24 | 1h 18m | 1 tasks | 3 files |
 | Phase 13 P26 | 11min | 2 tasks | 1 files |
+| Phase 13 P27 | 36min | 2 tasks | 4 files |
 
 ## Decisions
 
@@ -177,3 +178,6 @@ v1.0 (GeniusNode Construction Refactor) shipped 2026-07-03 — see `.planning/MI
 - [Phase 13]: Policy candidates use pending and failed containers distinct from burn candidates. — Their authoritative discovery APIs, retry state, and typed error contexts must not cross domains.
 - [Phase 13]: Actionable retained-policy failure suppression is scoped to one controller lifetime. — This bounds in-process retries while reconstruction can rediscover and retry the retained authenticated record.
 - [Phase 13]: Final Phase 13 closure requires exact source/XML/CTest/JUnit name equality and target-scoped sanitizer proof — Absent two-target instrumentation is NOT_RUN, never PASS.
+- [Phase 13]: Account and TransactionManager owners are copied only as one lifecycle-mutex-protected generation snapshot; a switching generation is unavailable. — This prevents mixed account/manager ownership during live selection.
+- [Phase 13]: SelectAccount invalidates publication before draining watcher/services outside the lifecycle lock, then publishes one complete replacement pair. — Blocking stop and join work must not hold the lifecycle mutex.
+- [Phase 13]: Trusted-peer approval identity is one immutable node-scoped address/signing authority captured together for the controller lifetime. — Selected transaction accounts cannot relabel or change trusted-peer signatures.
