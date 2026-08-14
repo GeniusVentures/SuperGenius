@@ -849,6 +849,12 @@ namespace sgns
                                 case sgns::account::TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED:
                                     code = "TRUST_ACTIVATION_FAILED";
                                     break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED:
+                                    code = "TRUST_REFRESH_RETRY_SCHEDULED";
+                                    break;
+                                case sgns::account::TrustStartupController::EventCode::TRUST_REFRESH_RETRY_EXHAUSTED:
+                                    code = "TRUST_REFRESH_RETRY_EXHAUSTED";
+                                    break;
                                 case sgns::account::TrustStartupController::EventCode::TRUST_CONFIG_CONFLICT:
                                     break;
                             }
