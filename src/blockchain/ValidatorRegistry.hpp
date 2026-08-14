@@ -75,6 +75,8 @@ namespace sgns
         using InitCallback                                  = std::function<void( bool )>;
         using BlockRequestMethod =
             std::function<void( const std::string &, std::function<void( outcome::result<std::string> )> )>;
+        using CertificateLookup =
+            std::function<outcome::result<sgns::ConsensusCertificate>( const std::string & )>;
 
         /**
          * @brief Weight policy used to score validators and update penalties.
@@ -340,6 +342,11 @@ namespace sgns
          */
         void SetBatchSubjectSubmitter(
             std::function<outcome::result<void>( const ConsensusSubject &subject )> submitter );
+        /**
+         * @brief Configures authoritative certificate lookup by subject hash.
+         * @param[in] lookup Callback backed by the consensus certificate store.
+         */
+        void SetCertificateLookup( CertificateLookup lookup );
         /**
          * @brief Handles a finalized consensus certificate.
          * @param[in] certificate Finalized certificate.
@@ -697,6 +704,7 @@ namespace sgns
         std::unordered_set<std::string> applying_batch_subject_ids_;  ///< Batch subject ids currently being applied.
         std::function<outcome::result<void>( const ConsensusSubject &subject )>
             submit_batch_subject_; ///< Callback used to submit batch subjects.
+        CertificateLookup certificate_lookup_; ///< Canonical consensus certificate lookup callback.
 
         std::mutex                       persistence_mutex_; ///< Guards the persistence queue and shutdown state.
         std::condition_variable          persistence_cv_;    ///< Wakes the persistence worker during work/shutdown.

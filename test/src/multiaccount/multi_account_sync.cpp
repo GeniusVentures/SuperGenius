@@ -254,7 +254,7 @@ TEST_F( ValidatorRegistryTest, MissingRegistryBlockIsFetchedFromPeerByCid )
 
     auto mint_result = node_client->MintTokens( 100,
                                                 sgns::test::NextMintSourceHash(),
-                                                "test", 0u,
+                                                sgns::test::kTestMintChainId, 0u,
                                                 TokenID::FromBytes( { 0x00 } ),
                                                 "",
                                                 std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );

@@ -2542,7 +2542,7 @@ namespace sgns
                 return outcome::failure( CertificateStoreError::InvalidCertificate );
             }
 
-            ConsensusManagerLogger()->debug( "{}: Valid voter signature for hash {}: voter_id={} approve={}",
+            ConsensusManagerLogger()->trace( "{}: Valid voter signature for hash {}: voter_id={} approve={}",
                                              __func__,
                                              GetPrintableSubjectHash( proposal.subject() ),
                                              vote.voter_id().substr( 0, 8 ),
@@ -2569,7 +2569,7 @@ namespace sgns
             }
             if ( vote.approve() )
             {
-                ConsensusManagerLogger()->debug( "{}: Adding weight for hash {}: voter_id={} weight={}",
+                ConsensusManagerLogger()->trace( "{}: Adding weight for hash {}: voter_id={} weight={}",
                                                  __func__,
                                                  GetPrintableSubjectHash( proposal.subject() ),
                                                  vote.voter_id().substr( 0, 8 ),
@@ -2595,7 +2595,7 @@ namespace sgns
         tally.has_quorum     = quorum_result.value().has_quorum;
         tally.qualified_sum  = quorum_result.value().qualified_sum;
         tally.slot_threshold = quorum_result.value().slot_threshold;
-        ConsensusManagerLogger()->debug(
+        ConsensusManagerLogger()->trace(
             "{}: Votes tallied for hash {} proposal_id={} approved_weight={} total_weight={} quorum={}",
             __func__,
             GetPrintableSubjectHash( proposal.subject() ),
@@ -4514,7 +4514,7 @@ namespace sgns
         }
 
         auto hash = sgns::crypto::sha2_256( serialized.data(), serialized.size() );
-        ConsensusManagerLogger()->debug( "{}: success", __func__ );
+        ConsensusManagerLogger()->trace( "{}: success", __func__ );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 
@@ -4724,9 +4724,9 @@ namespace sgns
             return {};
         }
 
-        auto hash        = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
         auto proposal_id = base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
-        ConsensusManagerLogger()->debug( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
+        ConsensusManagerLogger()->trace( "{}: Proposal ID {} created", __func__, proposal_id.substr( 0, 8 ) );
         return proposal_id;
     }
 

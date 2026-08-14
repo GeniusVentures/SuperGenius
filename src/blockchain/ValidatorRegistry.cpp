@@ -143,6 +143,7 @@ namespace sgns
         {
             std::lock_guard<std::mutex> lock( batch_mutex_ );
             submit_batch_subject_ = nullptr;
+            certificate_lookup_   = nullptr;
         }
         {
             std::unique_lock<std::mutex> lock( persistence_mutex_ );
@@ -403,7 +404,7 @@ namespace sgns
             }
             total_weight += entry.weight();
         }
-        ValidatorRegistryLogger()->debug( "{}: total_weight={}", __func__, total_weight );
+        ValidatorRegistryLogger()->trace( "{}: total_weight={}", __func__, total_weight );
         return total_weight;
     }
 
@@ -417,7 +418,7 @@ namespace sgns
         }
         const uint64_t numerator = total_weight * quorum_numerator_;
         const uint64_t threshold = ( numerator + quorum_denominator_ - 1 ) / quorum_denominator_;
-        ValidatorRegistryLogger()->debug( "{}: threshold={}", __func__, threshold );
+        ValidatorRegistryLogger()->trace( "{}: threshold={}", __func__, threshold );
         return threshold;
     }
 
@@ -428,7 +429,7 @@ namespace sgns
                                           accumulated_weight,
                                           total_weight );
         const bool is_quorum = accumulated_weight >= QuorumThreshold( total_weight );
-        ValidatorRegistryLogger()->debug( "{}: is_quorum={}", __func__, is_quorum );
+        ValidatorRegistryLogger()->trace( "{}: is_quorum={}", __func__, is_quorum );
         return is_quorum;
     }
 
@@ -614,7 +615,7 @@ namespace sgns
             logger_->error( "{}: parse failed", __func__ );
             return outcome::failure( std::errc::invalid_argument );
         }
-        logger_->debug( "{}: parsed validators={}", __func__, proto.registry().validators().size() );
+        logger_->trace( "{}: parsed validators={}", __func__, proto.registry().validators().size() );
         return proto;
     }
 
@@ -739,7 +740,7 @@ namespace sgns
                 continue;
             }
 
-            ValidatorRegistryLogger()->debug( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
+            ValidatorRegistryLogger()->trace( "{}: Grabbing registry from cid {} and key={}", __func__, cid, key );
             return update.value().registry();
         }
 
@@ -868,6 +869,12 @@ namespace sgns
         submit_batch_subject_ = std::move( submitter );
     }
 
+    void ValidatorRegistry::SetCertificateLookup( CertificateLookup lookup )
+    {
+        std::lock_guard<std::mutex> lock( batch_mutex_ );
+        certificate_lookup_ = std::move( lookup );
+    }
+
     outcome::result<std::string> ValidatorRegistry::ComputeBatchRoot(
         const std::vector<std::string> &subject_hashes ) const
     {
@@ -922,15 +929,16 @@ namespace sgns
     outcome::result<sgns::ConsensusCertificate> ValidatorRegistry::LoadCertificateBySubjectHash(
         const std::string &subject_hash ) const
     {
-        const auto cert_key = std::string( "/cert/" ) + subject_hash;
-        BOOST_OUTCOME_TRY( auto cert_get, db_->Get( crdt::HierarchicalKey( cert_key ) ) );
-
-        sgns::ConsensusCertificate certificate;
-        if ( !certificate.ParseFromString( cert_get.toString() ) )
+        CertificateLookup lookup;
         {
-            return outcome::failure( std::errc::invalid_argument );
+            std::lock_guard<std::mutex> lock( batch_mutex_ );
+            lookup = certificate_lookup_;
         }
-        return certificate;
+        if ( !lookup )
+        {
+            return outcome::failure( std::errc::operation_not_supported );
+        }
+        return lookup( subject_hash );
     }
 
     outcome::result<void> ValidatorRegistry::OnFinalizedCertificate( const sgns::ConsensusCertificate &certificate )
@@ -1949,11 +1957,11 @@ namespace sgns
         {
             if ( validator.validator_id() == validator_id )
             {
-                ValidatorRegistryLogger()->debug( "{}: validator found", __func__ );
+                ValidatorRegistryLogger()->trace( "{}: validator found", __func__ );
                 return &validator;
             }
         }
-        ValidatorRegistryLogger()->debug( "{}: validator not found", __func__ );
+        ValidatorRegistryLogger()->trace( "{}: validator not found", __func__ );
         return nullptr;
     }
 

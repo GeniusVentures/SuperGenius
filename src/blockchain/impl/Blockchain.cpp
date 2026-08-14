@@ -195,6 +195,17 @@ namespace sgns
             return nullptr;
         }
 
+        instance->validator_registry_->SetCertificateLookup(
+            [weak_consensus = std::weak_ptr<ConsensusManager>( instance->consensus_manager_ )](
+                const std::string &subject_hash ) -> outcome::result<ConsensusCertificate>
+            {
+                if ( auto consensus = weak_consensus.lock() )
+                {
+                    return consensus->GetCertificateBySubjectHash( subject_hash );
+                }
+                return outcome::failure( std::errc::owner_dead );
+            } );
+
         instance->validator_registry_->SetBatchSubjectSubmitter(
             [weak_instance]( const ConsensusSubject &subject ) -> outcome::result<void>
             {
