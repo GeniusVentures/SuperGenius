@@ -5,14 +5,24 @@
 #include <boost/dll/runtime_symbol_info.hpp>
 #include <boost/filesystem/operations.hpp>
 
+#include <atomic>
+#include <chrono>
 #include <fstream>
+#include <mutex>
+#include <optional>
 
 #include "account/BurnConfig.hpp"
+#include "account/EscrowTransaction.hpp"
 #include "account/GeniusNode.hpp"
+#include "account/GeniusSigner.hpp"
 #include "account/TransactionManager.hpp"
+#include "account/TrustStartupController.hpp"
+#include "account/TransferTransaction.hpp"
 #include "crdt/globaldb/GlobalDbNetworkComposition.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
 #include "securecrdt/SecureCrdt.hpp"
+#include "storage/rocksdb/rocksdb.hpp"
+#include "storage/rocksdb/rocksdb_batch.hpp"
 #include "testutil/remove_all.hpp"
 #include "testutil/wait_condition.hpp"
 #include "trustedpeer/TrustStateStore.hpp"
@@ -87,6 +97,77 @@ namespace sgns
 
         static std::shared_ptr<TransactionManager> NewPreReadyManager( const std::shared_ptr<GeniusNode> &node )
         {
+            return NewManager( node, node->burn_config_->GetConfirmedValueProvider() );
+        }
+
+        static std::shared_ptr<TransactionManager> ReplaceManager(
+            const std::shared_ptr<GeniusNode>                              &node,
+            std::shared_ptr<const account::ConfirmedBurnValueProvider> provider )
+        {
+            if ( node->transaction_manager_ )
+            {
+                node->transaction_manager_->Stop();
+                node->transaction_manager_.reset();
+            }
+            node->transaction_manager_ = NewManager( node, std::move( provider ) );
+            return node->transaction_manager_;
+        }
+
+        static std::string StoreEscrow( const std::shared_ptr<GeniusNode> &node, uint64_t amount )
+        {
+            const TokenID token_id = TokenID::FromBytes( { 0x00 } );
+            const std::string lock_id = "0x" + std::string( 64, '1' );
+            SGTransaction::DAGStruct dag;
+            dag.set_nonce( node->account_->ReserveNextNonce() );
+            dag.set_source_addr( node->account_->GetAddress() );
+            dag.set_uncle_hash( lock_id );
+            dag.set_timestamp( std::chrono::duration_cast<std::chrono::milliseconds>(
+                                   std::chrono::system_clock::now().time_since_epoch() )
+                                   .count() );
+            UTXOTxParameters params;
+            params.second.push_back( { amount, lock_id, token_id } );
+            auto escrow = std::make_shared<EscrowTransaction>(
+                EscrowTransaction::New( std::move( params ), amount, node->account_->GetAddress(), 0, std::move( dag ) ) );
+            escrow->MakeSignature( *node->account_ );
+            crdt::GlobalDB::Buffer data;
+            data.put( escrow->SerializeByteVector() );
+            const auto path = TransactionManager::GetTransactionPath( *escrow );
+            auto stored = node->tx_globaldb_->Put(
+                crdt::HierarchicalKey( path ), data, { node->account_->GetAddress() } );
+            return stored.has_value() ? path : std::string{};
+        }
+
+        static uint64_t PayEscrowAndReadBurn( const std::shared_ptr<GeniusNode> &node,
+                                              const std::string                 &escrow_path )
+        {
+            SGProcessing::TaskResult result;
+            auto *subtask = result.add_subtask_results();
+            subtask->set_node_address( node->account_->GetAddress() );
+            const auto token_id = TokenID::FromBytes( { 0x00 } );
+            const auto &bytes = token_id.bytes();
+            subtask->set_token_id( bytes.data(), bytes.size() );
+            auto paid = node->transaction_manager_->PayEscrow( escrow_path, result, nullptr );
+            if ( paid.has_error() ) return 0;
+            constexpr std::string_view zero = "0x0000000000000000000000000000000000000000";
+            for ( auto serialized : node->transaction_manager_->GetOutTransactions() )
+            {
+                auto transaction = TransactionManager::DeSerializeTransaction( base::Buffer( std::move( serialized ) ) );
+                if ( transaction.has_error() || transaction.value()->GetHash() != paid.value() ) continue;
+                auto transfer = std::dynamic_pointer_cast<TransferTransaction>( transaction.value() );
+                if ( !transfer ) return 0;
+                const auto outputs = transfer->GetDstInfos();
+                const auto burn = std::find_if( outputs.begin(), outputs.end(), [zero]( const OutputDestInfo &output )
+                                                { return output.dest_address == zero; } );
+                return burn == outputs.end() ? 0 : burn->encrypted_amount;
+            }
+            return 0;
+        }
+
+    private:
+        static std::shared_ptr<TransactionManager> NewManager(
+            const std::shared_ptr<GeniusNode>                              &node,
+            std::shared_ptr<const account::ConfirmedBurnValueProvider> provider )
+        {
             return TransactionManager::New( node->tx_globaldb_,
                                             node->io_,
                                             node->account_,
@@ -96,7 +177,7 @@ namespace sgns
                                             std::chrono::milliseconds( 300000 ),
                                             std::chrono::milliseconds( 0 ),
                                             account::BurnConfig::GENESIS_DEFAULT_BASIS_POINTS,
-                                            node->burn_config_->GetConfirmedValueProvider() );
+                                            std::move( provider ) );
         }
     };
 } // namespace sgns
@@ -105,11 +186,28 @@ namespace
 {
     using namespace sgns;
     using namespace sgns::account;
+    using namespace sgns::securecrdt;
     using namespace sgns::trustedpeer;
 
-    constexpr char PRIMARY_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
-    constexpr char SECONDARY_KEY[] = "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f";
+    constexpr char OPERATOR_A_KEY[] = "90bd26f57e3c243358666f32ff8321181545f4ddd8c981aceac163f26b05eaaa";
+    constexpr char OPERATOR_B_KEY[] = "2071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6009f";
+    constexpr char PASSIVE_C_KEY[]  = "03071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6011";
+    constexpr char PASSIVE_C_SECONDARY_KEY[] =
+        "04071868aaf52ce5451a533dc5d9050c2024183e0dcb6bb55777c4ba617c6021";
     const TokenID TOKEN_ID = TokenID::FromBytes( { 0x00 } );
+
+    outcome::result<void> CommitBatch( storage::rocksdb                         &database,
+                                       const std::vector<TrustStateStore::Write> &writes )
+    {
+        auto batch = database.batch();
+        if ( !batch ) return outcome::failure( std::errc::io_error );
+        for ( const auto &[key, value] : writes )
+        {
+            auto put = batch->put( key, value );
+            if ( put.has_error() ) return put.error();
+        }
+        return batch->commit();
+    }
 
     class PolicyLifetimeMultiAccountTest : public ::testing::Test
     {
@@ -122,173 +220,390 @@ namespace
             GeniusAccount::SetSecureStorageFactory(
                 []( const std::string &identifier ) -> std::shared_ptr<ISecureStorage>
                 { return std::make_shared<MemorySecureStorage>( identifier ); } );
-
-            bootstrap_account_ = GeniusAccount::NewFromPrivateKey( TOKEN_ID, PRIMARY_KEY, path_ );
-            ASSERT_TRUE( bootstrap_account_ );
-            ASSERT_TRUE( GeniusNode::WriteNetworkConfig( path_.generic_string() + '/', 0, false ).has_value() );
-            std::ofstream config( ( path_ / "sgns_config.json" ).string() );
-            ASSERT_TRUE( config.good() );
-            config << "{\"net_id\":144,\"subnet_id\":144,\"node_type\":\"Full\","
-                      "\"is_processor\":false,\"rpc_catchup\":false,\"trusted_peers\":[\""
-                   << bootstrap_account_->GetAddress() << "\"],\"bootstrapper_node\":\""
-                   << bootstrap_account_->GetAddress()
-                   << "\",\"trusted_peer_quorum_threshold\":1,\"burn_config_quorum_threshold\":1}";
-            config.close();
-
-            Blockchain::SetAuthorizedFullNodeAddress( bootstrap_account_->GetAddress() );
-            node_ = GeniusNode::New( { "0xcafe", "0.65", "1.0", TOKEN_ID, path_.generic_string() + '/' },
-                                     FromPrivateKey{ PRIMARY_KEY } );
-            ASSERT_TRUE( node_ );
-            Blockchain::SetAuthorizedFullNodeAddress( node_->GetAddress() );
-            test::assertWaitForCondition(
-                [&] { return node_->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS; },
-                std::chrono::seconds( 50 ),
-                "node did not enter restricted trust wait" );
         }
 
         void TearDown() override
         {
-            node_.reset();
-            bootstrap_account_.reset();
             GeniusAccount::SetSecureStorageFactory( nullptr );
             test::removeAllWithRetry( path_.string() );
         }
 
-        GenesisManifest Manifest() const
+        static void WriteNetworkConfig( const boost::filesystem::path &base_path,
+                                        const std::optional<std::string> &bootstrap = std::nullopt )
         {
-            GenesisManifest manifest;
-            manifest.network_id              = 144;
-            manifest.bootstrapper_public_key = bootstrap_account_->GetAddress();
-            manifest.peers                   = { bootstrap_account_->GetAddress() };
-            manifest.membership_threshold    = 1;
-            manifest.burn_threshold          = 1;
-            return manifest;
+            boost::filesystem::create_directories( base_path );
+            std::ofstream config( ( base_path / "network_config.json" ).string() );
+            ASSERT_TRUE( config.good() );
+            config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","upnp_enabled":false,"high_water":20,"low_water":1,"port_seed":0,"auto_dht":false,"bootstrap_addresses":[)";
+            if ( bootstrap ) config << '"' << *bootstrap << '"';
+            config << "]}";
         }
 
-        void ConfirmTrust()
+        static void WriteSgnsConfig( const boost::filesystem::path &base_path,
+                                     const std::vector<std::string> &peers,
+                                     const std::string &bootstrapper )
         {
-            const auto network_config = path_ / "reviewed-trust-network.json";
-            const auto database_path  = path_ / "reviewed-trust-globaldb";
-            boost::filesystem::create_directories( database_path );
+            std::ofstream config( ( base_path / "sgns_config.json" ).string() );
+            ASSERT_TRUE( config.good() );
+            config << R"({"net_id":144,"subnet_id":144,"node_type":"Full","is_processor":false,"rpc_catchup":false,"trusted_peers":[)";
+            for ( size_t i = 0; i < peers.size(); ++i )
             {
-                std::ofstream config( network_config.string() );
-                ASSERT_TRUE( config.good() );
-                config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
-                       << node_->GetPubSub()->GetInterfaceAddress() << R"("]})";
+                if ( i != 0 ) config << ',';
+                config << '"' << peers[i] << '"';
             }
-
-            const std::string topic( TransactionManager::GNUS_FULL_NODES_TOPIC );
-            sgns::crdt::GlobalDbNetworkComposition::Config composition_config;
-            composition_config.network_config_path = network_config.string();
-            composition_config.database_path       = database_path.string();
-            composition_config.listen_topic        = topic;
-            composition_config.broadcast_topic     = topic;
-            auto composition_result =
-                sgns::crdt::GlobalDbNetworkComposition::Create( std::move( composition_config ) );
-            ASSERT_TRUE( composition_result.has_value() ) << composition_result.error().message();
-            auto composition = composition_result.value();
-            ASSERT_TRUE( composition->Start().has_value() );
-
-            auto secure_crdt = std::make_shared<securecrdt::SecureCrdt>( composition->db(), topic );
-            auto store = TrustStateStore::Open( ( path_ / "reviewed-trust-state" ).string(), 144 );
-            ASSERT_TRUE( store.has_value() ) << store.error().message();
-            const auto manifest = Manifest().Canonicalized();
-            ASSERT_TRUE( manifest.has_value() );
-            const auto manifest_bytes = manifest->CanonicalBytes();
-            ASSERT_TRUE( manifest_bytes.has_value() );
-
-            auto registry = TrustedPeerRegistry::NewProduction(
-                secure_crdt,
-                store.value(),
-                *manifest,
-                bootstrap_account_->Sign( *manifest_bytes ),
-                bootstrap_account_->GetAddress(),
-                [account = bootstrap_account_]( const std::vector<uint8_t> &bytes ) { return account->Sign( bytes ); } );
-            ASSERT_TRUE( registry.has_value() ) << registry.error().message();
-            ASSERT_TRUE( secure_crdt->RegisterFilters() );
-            auto submitted = registry.value()->SubmitReviewedGenesisApproval();
-            ASSERT_TRUE( submitted.has_value() ) << submitted.error().message();
-
-            test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                          std::chrono::seconds( 50 ),
-                                          "reviewed trust and deterministic initial burn did not unlock transaction services" );
+            config << R"(],"bootstrapper_node":")" << bootstrapper
+                   << R"(","trusted_peer_quorum_threshold":2,"burn_config_quorum_threshold":2})";
         }
 
-        boost::filesystem::path       path_;
-        std::shared_ptr<GeniusAccount> bootstrap_account_;
-        std::shared_ptr<GeniusNode>    node_;
+        static std::shared_ptr<GeniusNode> NewNode( const boost::filesystem::path &base_path,
+                                                    const char                     *private_key,
+                                                    const std::vector<std::string> &peers,
+                                                    const std::string              &bootstrapper,
+                                                    const std::optional<std::string> &network_bootstrap = std::nullopt )
+        {
+            WriteNetworkConfig( base_path, network_bootstrap );
+            WriteSgnsConfig( base_path, peers, bootstrapper );
+            GeniusNodeConfig config{ "0xcafe", "0.65", "1.0", TOKEN_ID, base_path.generic_string() + '/' };
+            return GeniusNode::New( config, FromPrivateKey{ private_key } );
+        }
+
+        static void WaitForTrustLifecycle( const std::shared_ptr<GeniusNode> &node )
+        {
+            ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+                [&]
+                {
+                    return node->GetState() == GeniusNode::NodeState::WAITING_FOR_TRUST_GENESIS ||
+                           node->GetState() == GeniusNode::NodeState::WAITING_FOR_BURN_GENESIS ||
+                           node->GetState() == GeniusNode::NodeState::READY;
+                },
+                std::chrono::seconds( 50 ),
+                "node did not reach a trust lifecycle state" ) );
+        }
+
+        boost::filesystem::path path_;
     };
 } // namespace
 
-TEST_F( PolicyLifetimeMultiAccountTest, PolicyObjectsAndProviderSurviveRepeatedAccountSelection )
+TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWithoutReceiverAdmin )
 {
-    auto pre_ready_manager = MultiAccountTestAccess::NewPreReadyManager( node_ );
-    ASSERT_TRUE( pre_ready_manager );
-    const auto before_rejected_count = pre_ready_manager->CountTransactions();
-    const auto pre_ready = pre_ready_manager->PayEscrow( "", SGProcessing::TaskResult{}, nullptr );
-    ASSERT_TRUE( pre_ready.has_error() );
-    EXPECT_EQ( pre_ready.error(), make_error_code( TransactionManager::Error::TRUST_POLICY_NOT_READY ) );
-    EXPECT_EQ( pre_ready_manager->CountTransactions(), before_rejected_count );
-    pre_ready_manager.reset();
+    auto operator_a_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_A_KEY, path_ / "operator-a", true );
+    auto operator_b_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, OPERATOR_B_KEY, path_ / "operator-b", true );
+    auto passive_c_signer = GeniusAccount::NewFromPrivateKey( TOKEN_ID, PASSIVE_C_KEY, path_ / "passive-c", true );
+    ASSERT_TRUE( operator_a_signer );
+    ASSERT_TRUE( operator_b_signer );
+    ASSERT_TRUE( passive_c_signer );
+    const std::vector<std::string> peers{ operator_a_signer->GetAddress(), operator_b_signer->GetAddress() };
 
-    ConfirmTrust();
-    const auto initial_policy  = MultiAccountTestAccess::Snapshot( node_ );
-    const auto initial_manager = MultiAccountTestAccess::Manager( node_ );
-    const auto initial_account = MultiAccountTestAccess::Account( node_ );
-    auto provider = MultiAccountTestAccess::Burn( node_ )->GetConfirmedValueProvider();
+    Blockchain::SetAuthorizedFullNodeAddress( operator_a_signer->GetAddress() );
+    auto node_a = NewNode( path_ / "operator-a", OPERATOR_A_KEY, peers, operator_a_signer->GetAddress() );
+    ASSERT_TRUE( node_a );
+    Blockchain::SetAuthorizedFullNodeAddress( node_a->GetAddress() );
+    const auto bootstrap_address = node_a->GetPubSub()->GetInterfaceAddress();
+    ASSERT_FALSE( bootstrap_address.empty() );
+
+    auto node_b = NewNode(
+        path_ / "operator-b", OPERATOR_B_KEY, peers, operator_a_signer->GetAddress(), bootstrap_address );
+    auto node_c = NewNode(
+        path_ / "passive-c", PASSIVE_C_KEY, peers, operator_a_signer->GetAddress(), bootstrap_address );
+    ASSERT_TRUE( node_b );
+    ASSERT_TRUE( node_c );
+    WaitForTrustLifecycle( node_a );
+    WaitForTrustLifecycle( node_b );
+    WaitForTrustLifecycle( node_c );
+
+    GenesisManifest manifest;
+    manifest.network_id              = 144;
+    manifest.bootstrapper_public_key = operator_a_signer->GetAddress();
+    manifest.peers                   = peers;
+    manifest.membership_threshold    = 2;
+    manifest.burn_threshold          = 2;
+    manifest                         = manifest.Canonicalized().value();
+    const auto bootstrap_signature = operator_a_signer->Sign( manifest.CanonicalBytes().value() );
+
+    const auto tool_config_path = path_ / "genesis-tool-network.json";
+    const auto tool_database_path = path_ / "genesis-tool-globaldb";
+    boost::filesystem::create_directories( tool_database_path );
+    {
+        std::ofstream config( tool_config_path.string() );
+        ASSERT_TRUE( config.good() );
+        config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+               << bootstrap_address << R"("]})";
+    }
+    crdt::GlobalDbNetworkComposition::Config tool_config;
+    tool_config.network_config_path = tool_config_path.string();
+    tool_config.database_path       = tool_database_path.string();
+    tool_config.listen_topic        = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    tool_config.broadcast_topic     = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    auto tool_composition_result = crdt::GlobalDbNetworkComposition::Create( std::move( tool_config ) );
+    ASSERT_TRUE( tool_composition_result.has_value() );
+    auto tool_composition = tool_composition_result.value();
+    ASSERT_TRUE( tool_composition->Start().has_value() );
+    auto tool_secure = std::make_shared<securecrdt::SecureCrdt>(
+        tool_composition->db(), std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+    auto tool_store = TrustStateStore::Open( ( path_ / "genesis-tool-trust" ).string(), manifest.network_id ).value();
+    auto tool_registry = TrustedPeerRegistry::NewProduction(
+        tool_secure,
+        tool_store,
+        manifest,
+        bootstrap_signature,
+        operator_a_signer->GetAddress(),
+        [&]( const std::vector<uint8_t> &bytes ) { return operator_a_signer->Sign( bytes ); } ).value();
+    auto tool_burn = BurnConfig::NewProduction(
+        tool_secure,
+        tool_registry,
+        tool_store,
+        operator_a_signer->GetAddress(),
+        [&]( const std::vector<uint8_t> &bytes ) { return operator_a_signer->Sign( bytes ); } ).value();
+    ASSERT_TRUE( tool_secure->RegisterFilters() );
+    ASSERT_TRUE( tool_registry->SubmitReviewedGenesisApproval().has_value() );
+
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            return node_a->GetState() == GeniusNode::NodeState::READY &&
+                   node_b->GetState() == GeniusNode::NodeState::READY &&
+                   node_c->GetState() == GeniusNode::NodeState::READY;
+        },
+        std::chrono::seconds( 50 ),
+        "three production nodes did not reach durable burn-v1 readiness" ) );
+
+    const auto initial_policy = MultiAccountTestAccess::Snapshot( node_c );
+    const auto initial_manager = MultiAccountTestAccess::Manager( node_c );
+    const auto initial_account = MultiAccountTestAccess::Account( node_c );
+    auto provider = MultiAccountTestAccess::Burn( node_c )->GetConfirmedValueProvider();
     ASSERT_TRUE( provider->IsReady() );
     ASSERT_EQ( provider->GetBasisPoints(), 100U );
-    ASSERT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
-               provider.get() );
+    ASSERT_EQ( MultiAccountTestAccess::ManagerProvider( initial_manager ).get(), provider.get() );
 
-    ASSERT_TRUE( node_->AddAccountWithKey( SECONDARY_KEY ).has_value() );
-    const auto accounts = node_->GetAvailableAccounts();
+    ASSERT_TRUE( node_c->AddAccountWithKey( PASSIVE_C_SECONDARY_KEY ).has_value() );
+    const auto accounts = node_c->GetAvailableAccounts();
     const auto secondary = std::find_if(
-        accounts.begin(), accounts.end(), [&]( const std::string &address ) { return address != node_->GetAddress(); } );
+        accounts.begin(), accounts.end(), [&]( const std::string &address ) { return address != node_c->GetAddress(); } );
     ASSERT_NE( secondary, accounts.end() );
-    const auto primary = node_->GetAddress();
-
-    ASSERT_TRUE( node_->SelectAccount( *secondary ).has_value() );
-    test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::seconds( 50 ),
-                                  "secondary account transaction services did not become ready" );
-    const auto secondary_policy = MultiAccountTestAccess::Snapshot( node_ );
-    EXPECT_EQ( initial_policy.registry, secondary_policy.registry );
-    EXPECT_EQ( initial_policy.secure_crdt, secondary_policy.secure_crdt );
-    EXPECT_EQ( initial_policy.trust_store, secondary_policy.trust_store );
-    EXPECT_EQ( initial_policy.trusted_peer_registry, secondary_policy.trusted_peer_registry );
-    EXPECT_EQ( initial_policy.burn_config, secondary_policy.burn_config );
-    EXPECT_EQ( initial_policy.confirmed_provider, secondary_policy.confirmed_provider );
-    EXPECT_EQ( initial_policy.policy_registrations, secondary_policy.policy_registrations );
-    EXPECT_EQ( initial_policy.candidate_registrations, secondary_policy.candidate_registrations );
-    EXPECT_NE( initial_manager.get(), MultiAccountTestAccess::Manager( node_ ).get() );
-    EXPECT_NE( initial_account, MultiAccountTestAccess::Account( node_ ) );
-    EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
+    ASSERT_TRUE( node_c->SelectAccount( *secondary ).has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return node_c->GetState() == GeniusNode::NodeState::READY; },
+        std::chrono::seconds( 50 ),
+        "passive C replacement TransactionManager did not become ready" ) );
+    const auto switched_policy = MultiAccountTestAccess::Snapshot( node_c );
+    EXPECT_EQ( initial_policy.registry, switched_policy.registry );
+    EXPECT_EQ( initial_policy.secure_crdt, switched_policy.secure_crdt );
+    EXPECT_EQ( initial_policy.trust_store, switched_policy.trust_store );
+    EXPECT_EQ( initial_policy.trusted_peer_registry, switched_policy.trusted_peer_registry );
+    EXPECT_EQ( initial_policy.burn_config, switched_policy.burn_config );
+    EXPECT_EQ( initial_policy.confirmed_provider, switched_policy.confirmed_provider );
+    EXPECT_EQ( initial_policy.policy_registrations, switched_policy.policy_registrations );
+    EXPECT_EQ( initial_policy.candidate_registrations, switched_policy.candidate_registrations );
+    EXPECT_NE( initial_manager.get(), MultiAccountTestAccess::Manager( node_c ).get() );
+    EXPECT_NE( initial_account, MultiAccountTestAccess::Account( node_c ) );
+    EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_c ) ).get(),
                provider.get() );
 
-    const auto secondary_manager = MultiAccountTestAccess::Manager( node_ );
-    ASSERT_TRUE( node_->SelectAccount( primary ).has_value() );
-    test::assertWaitForCondition( [&] { return node_->GetState() == GeniusNode::NodeState::READY; },
-                                  std::chrono::seconds( 50 ),
-                                  "primary account transaction services did not become ready again" );
-    const auto restored_policy = MultiAccountTestAccess::Snapshot( node_ );
-    EXPECT_EQ( initial_policy.registry, restored_policy.registry );
-    EXPECT_EQ( initial_policy.secure_crdt, restored_policy.secure_crdt );
-    EXPECT_EQ( initial_policy.trust_store, restored_policy.trust_store );
-    EXPECT_EQ( initial_policy.trusted_peer_registry, restored_policy.trusted_peer_registry );
-    EXPECT_EQ( initial_policy.burn_config, restored_policy.burn_config );
-    EXPECT_EQ( initial_policy.confirmed_provider, restored_policy.confirmed_provider );
-    EXPECT_EQ( initial_policy.policy_registrations, restored_policy.policy_registrations );
-    EXPECT_EQ( initial_policy.candidate_registrations, restored_policy.candidate_registrations );
-    EXPECT_NE( secondary_manager.get(), MultiAccountTestAccess::Manager( node_ ).get() );
+    const auto escrow_path = MultiAccountTestAccess::StoreEscrow( node_c, 10000 );
+    ASSERT_FALSE( escrow_path.empty() );
+    ASSERT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 100U );
+    const auto durable_v1 = MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value();
+    const auto durable_v1_burn_hash = durable_v1.burn.Hash().value();
 
-    LocalTrustAdmin admin( MultiAccountTestAccess::Registry( node_ ), MultiAccountTestAccess::Burn( node_ ) );
-    auto proposed = admin.ProposeBurn( 250 );
+    LocalTrustAdmin operator_a_admin( MultiAccountTestAccess::Registry( node_a ), MultiAccountTestAccess::Burn( node_a ) );
+    LocalTrustAdmin operator_b_admin( MultiAccountTestAccess::Registry( node_b ), MultiAccountTestAccess::Burn( node_b ) );
+    auto proposed = operator_a_admin.ProposeBurn( 250 );
     ASSERT_TRUE( proposed.has_value() ) << proposed.error().message();
-    test::assertWaitForCondition( [&] { return provider->GetBasisPoints() == 250U; },
-                                  std::chrono::seconds( 50 ),
-                                  "post-switch burn successor was not published" );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto approvals = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( proposed.value() );
+            return approvals.has_value() && approvals.value().size() == 1U;
+        },
+        std::chrono::seconds( 20 ),
+        "passive C did not retain operator A's burn-v2 approval" ) );
+    auto approved = operator_b_admin.Approve( proposed.value() );
+    ASSERT_TRUE( approved.has_value() ) << approved.error().message();
+
+    // PASSIVE_BURN_NO_RECEIVER_ACTION_BEGIN
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto durable = MultiAccountTestAccess::Store( node_c )->LoadAndVerify();
+            return durable.has_value() && durable.value().burn.version == 2U &&
+                   durable.value().burn.basis_points == 250U && provider->GetBasisPoints() == 250U;
+        },
+        std::chrono::seconds( 20 ),
+        "passive C did not durably converge on burn v2" ) );
+    const auto passive_c_v2 = MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value();
+    EXPECT_EQ( passive_c_v2.burn.version, 2U );
+    EXPECT_EQ( passive_c_v2.burn.basis_points, 250U );
     EXPECT_EQ( provider->GetBasisPoints(), 250U );
-    EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_ ) ).get(),
+    EXPECT_EQ( MultiAccountTestAccess::ManagerProvider( MultiAccountTestAccess::Manager( node_c ) ).get(),
                provider.get() );
+    EXPECT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 250U );
+    // PASSIVE_BURN_NO_RECEIVER_ACTION_END
+
+    const auto approvals = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( proposed.value() );
+    ASSERT_TRUE( approvals.has_value() );
+    ASSERT_EQ( approvals.value().size(), 2U );
+    EXPECT_EQ( std::count_if( approvals.value().begin(), approvals.value().end(), [&]( const auto &approval )
+                             { return approval.signer == operator_a_signer->GetAddress(); } ),
+               1 );
+    EXPECT_EQ( std::count_if( approvals.value().begin(), approvals.value().end(), [&]( const auto &approval )
+                             { return approval.signer == operator_b_signer->GetAddress(); } ),
+               1 );
+    EXPECT_EQ( std::count_if( approvals.value().begin(), approvals.value().end(), [&]( const auto &approval )
+                             { return approval.signer == passive_c_signer->GetAddress(); } ),
+               0 );
+
+    ConfirmedBurnState below_quorum = passive_c_v2.burn;
+    below_quorum.version += 1;
+    below_quorum.expected_previous_hash = passive_c_v2.burn.Hash().value();
+    below_quorum.authorizing_policy_hash = passive_c_v2.policy.Hash().value();
+    below_quorum.basis_points = 333;
+    const auto below_core = BurnConfig::BurnCandidateCore( below_quorum ).value();
+    const auto below_id = CandidateId::FromCore( below_core ).value();
+    ASSERT_TRUE( MultiAccountTestAccess::SecureCrdt( node_c )->SubmitCandidateApproval(
+        { CandidateApprovalRecord::ENCODING_VERSION,
+          below_core,
+          operator_a_signer->GetAddress(),
+          operator_a_signer->Sign( below_core.CanonicalBytes().value() ) } ).has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&]
+        {
+            auto retained = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( below_id );
+            return retained.has_value() && retained.value().size() == 1U;
+        },
+        std::chrono::seconds( 5 ),
+        "passive C did not retain the authenticated below-quorum successor" ) );
+    EXPECT_EQ( MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value().burn.Hash(), passive_c_v2.burn.Hash() );
+    EXPECT_EQ( provider->GetBasisPoints(), 250U );
+    EXPECT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 250U );
+
+    ConfirmedBurnState stale = passive_c_v2.burn;
+    stale.version = 2;
+    stale.expected_previous_hash = durable_v1_burn_hash;
+    stale.authorizing_policy_hash = passive_c_v2.policy.Hash().value();
+    stale.basis_points = 444;
+    const auto stale_core = BurnConfig::BurnCandidateCore( stale ).value();
+    EXPECT_TRUE( MultiAccountTestAccess::SecureCrdt( node_c )->SubmitCandidateApproval(
+        { CandidateApprovalRecord::ENCODING_VERSION,
+          stale_core,
+          operator_a_signer->GetAddress(),
+          operator_a_signer->Sign( stale_core.CanonicalBytes().value() ) } ).has_error() );
+    EXPECT_EQ( MultiAccountTestAccess::Store( node_c )->LoadAndVerify().value().burn.Hash(), passive_c_v2.burn.Hash() );
+    EXPECT_EQ( provider->GetBasisPoints(), 250U );
+    EXPECT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 250U );
+
+    const auto failure_config_path = path_ / "passive-c-failure-network.json";
+    const auto failure_database_path = path_ / "passive-c-failure-globaldb";
+    boost::filesystem::create_directories( failure_database_path );
+    {
+        std::ofstream config( failure_config_path.string() );
+        ASSERT_TRUE( config.good() );
+        config << R"({"pubsub_port":"0","pubsub_bind_address":"0.0.0.0","high_water":20,"low_water":1,"bootstrap_addresses":[")"
+               << bootstrap_address << R"("]})";
+    }
+    crdt::GlobalDbNetworkComposition::Config failure_config;
+    failure_config.network_config_path = failure_config_path.string();
+    failure_config.database_path       = failure_database_path.string();
+    failure_config.listen_topic        = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    failure_config.broadcast_topic     = std::string( TransactionManager::GNUS_FULL_NODES_TOPIC );
+    auto failure_composition_result = crdt::GlobalDbNetworkComposition::Create( std::move( failure_config ) );
+    ASSERT_TRUE( failure_composition_result.has_value() );
+    auto failure_composition = failure_composition_result.value();
+    ASSERT_TRUE( failure_composition->Start().has_value() );
+    auto failure_secure = std::make_shared<securecrdt::SecureCrdt>(
+        failure_composition->db(), std::string( TransactionManager::GNUS_FULL_NODES_TOPIC ) );
+    std::atomic_bool fail_passive_c_commit{ false };
+    std::atomic_uint32_t failed_commit_attempts{ 0 };
+    auto failure_store = TrustStateStore::Open(
+        ( path_ / "passive-c-failure-trust" ).string(),
+        manifest.network_id,
+        [&]( storage::rocksdb &database, const std::vector<TrustStateStore::Write> &writes ) -> outcome::result<void>
+        {
+            if ( fail_passive_c_commit.load() )
+            {
+                ++failed_commit_attempts;
+                return outcome::failure( std::errc::io_error );
+            }
+            return CommitBatch( database, writes );
+        } ).value();
+    ASSERT_TRUE( failure_store->CommitGenesis( manifest, bootstrap_signature ).has_value() );
+    const auto burn_v1_core = BurnConfig::BurnCandidateCore( durable_v1.burn ).value();
+    ASSERT_TRUE( failure_store->CommitBurnSuccessor(
+        durable_v1.burn, durable_v1.burn_proof, burn_v1_core.CanonicalBytes().value() ).has_value() );
+    const auto burn_v2_core = BurnConfig::BurnCandidateCore( passive_c_v2.burn ).value();
+    ASSERT_TRUE( failure_store->CommitBurnSuccessor(
+        passive_c_v2.burn, passive_c_v2.burn_proof, burn_v2_core.CanonicalBytes().value() ).has_value() );
+    std::atomic_uint32_t failure_events{ 0 };
+    std::mutex failure_fields_mutex;
+    std::vector<std::string> failure_fields;
+    auto failure_controller = TrustStartupController::New(
+        failure_secure,
+        failure_store,
+        manifest,
+        passive_c_signer->GetAddress(),
+        [&]( const std::vector<uint8_t> &bytes ) { return passive_c_signer->Sign( bytes ); },
+        [&]( const TrustStartupController::Event &event )
+        {
+            if ( event.code == TrustStartupController::EventCode::TRUST_ACTIVATION_FAILED )
+            {
+                {
+                    std::lock_guard<std::mutex> lock( failure_fields_mutex );
+                    failure_fields = event.fields;
+                }
+                ++failure_events;
+            }
+        } ).value();
+    auto failure_provider = failure_controller->burn_config()->GetConfirmedValueProvider();
+    ASSERT_TRUE( failure_provider->IsReady() );
+    ASSERT_EQ( failure_provider->GetBasisPoints(), 250U );
+    auto failure_manager = MultiAccountTestAccess::ReplaceManager( node_c, failure_provider );
+    ASSERT_TRUE( failure_manager );
+    ASSERT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 250U );
+
+    ConfirmedBurnState failed = passive_c_v2.burn;
+    failed.version += 1;
+    failed.expected_previous_hash = passive_c_v2.burn.Hash().value();
+    failed.authorizing_policy_hash = passive_c_v2.policy.Hash().value();
+    failed.basis_points = 444;
+    const auto failed_core = BurnConfig::BurnCandidateCore( failed ).value();
+    const auto failed_id = CandidateId::FromCore( failed_core ).value();
+    const auto failed_bytes = failed_core.CanonicalBytes().value();
+    fail_passive_c_commit.store( true );
+    ASSERT_TRUE( failure_secure->SubmitCandidateApproval(
+        { CandidateApprovalRecord::ENCODING_VERSION,
+          failed_core,
+          operator_a_signer->GetAddress(),
+          operator_a_signer->Sign( failed_bytes ) } ).has_value() );
+    ASSERT_TRUE( failure_secure->SubmitCandidateApproval(
+        { CandidateApprovalRecord::ENCODING_VERSION,
+          failed_core,
+          operator_b_signer->GetAddress(),
+          operator_b_signer->Sign( failed_bytes ) } ).has_value() );
+    ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
+        [&] { return failure_events.load() == 1U && failed_commit_attempts.load() == 1U; },
+        std::chrono::seconds( 5 ),
+        "passive C commit failure was not surfaced" ) );
+    {
+        std::lock_guard<std::mutex> lock( failure_fields_mutex );
+        ASSERT_EQ( failure_fields.size(), 4U );
+        EXPECT_EQ( failure_fields.at( 0 ), failed_id.domain );
+        EXPECT_EQ( failure_fields.at( 1 ), std::to_string( failed_id.version ) );
+        EXPECT_EQ( failure_fields.at( 2 ), failed_id.content_hash );
+        EXPECT_EQ( failure_fields.at( 3 ), "synchronous trust-state batch commit failed" );
+    }
+    EXPECT_EQ( failure_store->LoadAndVerify().value().burn.Hash(), passive_c_v2.burn.Hash() );
+    EXPECT_EQ( failure_provider->GetBasisPoints(), 250U );
+    EXPECT_EQ( MultiAccountTestAccess::PayEscrowAndReadBurn( node_c, escrow_path ), 250U );
+
+    failure_controller.reset();
+    failure_store.reset();
+    failure_secure.reset();
+    failure_composition->Stop();
+    tool_burn.reset();
+    tool_registry.reset();
+    tool_secure.reset();
+    tool_store.reset();
+    tool_composition->Stop();
+    node_c.reset();
+    node_b.reset();
+    node_a.reset();
 }
