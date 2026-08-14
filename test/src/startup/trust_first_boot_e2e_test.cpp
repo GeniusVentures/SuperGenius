@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <boost/filesystem/operations.hpp>
 
 #include <fstream>
+#include <deque>
 #include <mutex>
 #include <sstream>
 
@@ -65,6 +67,147 @@ namespace
             }
         }
         return batch->commit();
+    }
+
+    struct RefreshObservations
+    {
+        std::mutex                                      mutex;
+        std::vector<uint32_t>                           attempts;
+        std::vector<uint64_t>                           delays;
+        std::deque<std::function<void()>>               timers;
+        std::vector<TrustStartupController::Event>      events;
+        std::function<void()>                           request_refresh;
+        uint32_t                                        coalesced_requests = 0;
+        bool                                            idle = false;
+
+        std::vector<uint32_t> Attempts()
+        {
+            std::lock_guard<std::mutex> lock( mutex );
+            return attempts;
+        }
+
+        std::vector<uint64_t> Delays()
+        {
+            std::lock_guard<std::mutex> lock( mutex );
+            return delays;
+        }
+
+        std::function<void()> PopTimer()
+        {
+            std::lock_guard<std::mutex> lock( mutex );
+            if ( timers.empty() ) return {};
+            auto timer = std::move( timers.front() );
+            timers.pop_front();
+            return timer;
+        }
+    };
+
+    std::shared_ptr<TrustStartupController::RefreshTestHooks> MakeRefreshHooks(
+        const std::shared_ptr<RefreshObservations> &observations )
+    {
+        auto hooks = std::make_shared<TrustStartupController::RefreshTestHooks>();
+        hooks->observe_attempt = [observations]( uint32_t attempt )
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->attempts.push_back( attempt );
+            observations->idle = false;
+        };
+        hooks->schedule_retry = [observations]( std::chrono::milliseconds delay, std::function<void()> retry )
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->delays.push_back( static_cast<uint64_t>( delay.count() ) );
+            observations->timers.push_back( std::move( retry ) );
+        };
+        hooks->observe_dispatch_idle = [observations]
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->idle = true;
+        };
+        hooks->observe_coalesced_request = [observations]
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            ++observations->coalesced_requests;
+        };
+        hooks->bind_request_refresh = [observations]( std::function<void()> request )
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->request_refresh = std::move( request );
+        };
+        return hooks;
+    }
+
+    struct RefreshHarness
+    {
+        boost::filesystem::path path;
+        std::unique_ptr<sgns::test::securecrdt::SecureCrdtTestNode> node;
+        std::shared_ptr<sgns::securecrdt::SecureCrdt> secure;
+        std::shared_ptr<TrustStateStore> store;
+        std::shared_ptr<TrustStartupController> controller;
+        std::vector<sgns::GeniusSigner> signers;
+        GenesisManifest manifest;
+
+        ~RefreshHarness()
+        {
+            controller.reset();
+            store.reset();
+            secure.reset();
+            node.reset();
+            boost::filesystem::remove_all( path );
+        }
+    };
+
+    std::unique_ptr<RefreshHarness> MakeReadyRefreshHarness(
+        const std::string &name,
+        const std::shared_ptr<TrustStartupController::RefreshTestHooks> &hooks,
+        TrustStartupController::EventCallback event_callback = {} )
+    {
+        auto harness = std::make_unique<RefreshHarness>();
+        harness->path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+        boost::filesystem::create_directories( harness->path );
+        harness->node = sgns::test::securecrdt::MakeSecureCrdtTestNode( name );
+        if ( !harness->node ) return nullptr;
+        harness->secure = std::make_shared<sgns::securecrdt::SecureCrdt>( harness->node->db, name + "-topic" );
+        harness->signers = { sgns::GeniusSigner::Generate(),
+                             sgns::GeniusSigner::Generate(),
+                             sgns::GeniusSigner::Generate() };
+        harness->manifest.network_id = 42;
+        harness->manifest.bootstrapper_public_key = harness->signers[0].GetAddress();
+        harness->manifest.peers = { harness->signers[0].GetAddress(),
+                                    harness->signers[1].GetAddress(),
+                                    harness->signers[2].GetAddress() };
+        harness->manifest.membership_threshold = 2;
+        harness->manifest.burn_threshold = 2;
+        harness->manifest = harness->manifest.Canonicalized().value();
+        auto opened = TrustStateStore::Open( ( harness->path / "trust" ).string(), harness->manifest.network_id );
+        if ( opened.has_error() ) return nullptr;
+        harness->store = opened.value();
+        auto initial = harness->store->CommitGenesis(
+            harness->manifest,
+            harness->signers[0].Sign( harness->manifest.CanonicalBytes().value() ) );
+        if ( initial.has_error() ) return nullptr;
+        const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( initial.value().burn );
+        if ( !burn_core ) return nullptr;
+        const auto burn_bytes = burn_core->CanonicalBytes();
+        if ( !burn_bytes ) return nullptr;
+        auto ready = harness->store->CommitBurnSuccessor(
+            initial.value().burn,
+            { { harness->signers[0].GetAddress(), harness->signers[0].Sign( *burn_bytes ) },
+              { harness->signers[1].GetAddress(), harness->signers[1].Sign( *burn_bytes ) } },
+            *burn_bytes );
+        if ( ready.has_error() ) return nullptr;
+        auto created = TrustStartupController::New(
+            harness->secure,
+            harness->store,
+            harness->manifest,
+            harness->signers[2].GetAddress(),
+            [signer = harness->signers[2]]( const std::vector<uint8_t> &bytes ) mutable
+            { return signer.Sign( bytes ); },
+            std::move( event_callback ),
+            {},
+            hooks );
+        if ( created.has_error() ) return nullptr;
+        harness->controller = created.value();
+        return harness;
     }
 
     TEST( TrustFirstBootE2ETest, PolicyV2BeforeInitialBurnCannotStrandStartup )
@@ -1425,5 +1568,451 @@ namespace
         operator_b_composition->Stop();
         operator_a_composition->Stop();
         cleanup();
+    }
+
+    TEST( TrustFirstBootE2ETest, TransientPolicyListingRetriesWithoutNewWrite )
+    {
+        auto observations = std::make_shared<RefreshObservations>();
+        auto hooks = MakeRefreshHooks( observations );
+        std::atomic_uint32_t policy_list_calls{ 0 };
+        std::atomic_uint32_t burn_list_calls{ 0 };
+        std::atomic_uint32_t failures_remaining{ 0 };
+        std::shared_ptr<std::optional<CandidateId>> target =
+            std::make_shared<std::optional<CandidateId>>();
+        hooks->list_policy_candidates = [&, target]( auto &registry )
+        {
+            ++policy_list_calls;
+            auto listed = registry.ListPendingPolicyCandidates();
+            if ( listed.has_value() && *target &&
+                 std::find( listed.value().begin(), listed.value().end(), **target ) != listed.value().end() &&
+                 failures_remaining.load() > 0 )
+            {
+                --failures_remaining;
+                return TrustStartupController::RefreshTestHooks::CandidateList(
+                    outcome::failure( std::errc::resource_unavailable_try_again ) );
+            }
+            return listed;
+        };
+        hooks->list_burn_candidates = [&]( auto &burn )
+        {
+            ++burn_list_calls;
+            return burn.ListPendingBurnCandidates();
+        };
+        auto harness = MakeReadyRefreshHarness(
+            "transient_policy_retry",
+            hooks,
+            [observations]( const auto &event )
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                observations->events.push_back( event );
+            } );
+        ASSERT_NE( harness, nullptr );
+
+        auto current = harness->store->LoadAndVerify().value();
+        const auto current_hash = current.policy.Hash().value();
+        auto successor = current.policy;
+        successor.version += 1;
+        successor.expected_previous_hash = current_hash;
+        successor.authorizing_policy_hash = current_hash;
+        successor = successor.Canonicalized().value();
+        const auto expected_successor_hash = successor.Hash().value();
+        const auto core = sgns::trustedpeer::TrustedPeerRegistry::PolicyCandidateCore( successor ).value();
+        const auto bytes = core.CanonicalBytes().value();
+        *target = CandidateId::FromCore( core ).value();
+
+        const auto burn_calls_before_first = burn_list_calls.load();
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[0].GetAddress(),
+              harness->signers[0].Sign( bytes ) } ).has_value() );
+        sgns::test::assertWaitForCondition(
+            [&] { return burn_list_calls.load() > burn_calls_before_first; },
+            std::chrono::seconds( 5 ),
+            "first below-quorum policy refresh did not complete" );
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->attempts.clear();
+            observations->delays.clear();
+            observations->timers.clear();
+            observations->events.clear();
+            observations->idle = false;
+        }
+        failures_remaining.store( 1 );
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[1].GetAddress(),
+              harness->signers[1].Sign( bytes ) } ).has_value() );
+
+        // TRANSIENT_POLICY_NO_WRITE_BEGIN
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return !observations->timers.empty() || observations->attempts.size() >= 2;
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 policy transient retry missing" );
+        if ( auto retry = observations->PopTimer() ) retry();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto durable = harness->store->LoadAndVerify();
+                return durable.has_value() &&
+                       durable.value().policy.Hash() == std::optional<std::string>( expected_successor_hash );
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 policy transient retry missing" );
+        // TRANSIENT_POLICY_NO_WRITE_END
+
+        const std::vector<uint32_t> expected_attempts{ 1, 2 };
+        const std::vector<uint64_t> expected_delays{ 100 };
+        const auto observed_attempts = observations->Attempts();
+        const auto observed_delays = observations->Delays();
+        EXPECT_EQ( observed_attempts, expected_attempts ) << "CR-13 policy transient retry missing";
+        EXPECT_EQ( observed_delays, expected_delays ) << "CR-13 policy transient retry missing";
+        EXPECT_EQ( harness->store->LoadAndVerify().value().policy.Hash(),
+                   std::optional<std::string>( expected_successor_hash ) );
+    }
+
+    TEST( TrustFirstBootE2ETest, TransientBurnListingRetriesWithoutNewWrite )
+    {
+        auto observations = std::make_shared<RefreshObservations>();
+        auto hooks = MakeRefreshHooks( observations );
+        std::atomic_uint32_t policy_list_calls{ 0 };
+        std::atomic_uint32_t burn_list_calls{ 0 };
+        std::atomic_uint32_t failures_remaining{ 0 };
+        std::shared_ptr<std::optional<CandidateId>> target =
+            std::make_shared<std::optional<CandidateId>>();
+        hooks->list_policy_candidates = [&]( auto &registry )
+        {
+            ++policy_list_calls;
+            return registry.ListPendingPolicyCandidates();
+        };
+        hooks->list_burn_candidates = [&, target]( auto &burn )
+        {
+            ++burn_list_calls;
+            auto listed = burn.ListPendingBurnCandidates();
+            if ( listed.has_value() && *target &&
+                 std::find( listed.value().begin(), listed.value().end(), **target ) != listed.value().end() &&
+                 failures_remaining.load() > 0 )
+            {
+                --failures_remaining;
+                return TrustStartupController::RefreshTestHooks::CandidateList(
+                    outcome::failure( std::errc::resource_unavailable_try_again ) );
+            }
+            return listed;
+        };
+        auto harness = MakeReadyRefreshHarness(
+            "transient_burn_retry",
+            hooks,
+            [observations]( const auto &event )
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                observations->events.push_back( event );
+            } );
+        ASSERT_NE( harness, nullptr );
+
+        auto current = harness->store->LoadAndVerify().value();
+        sgns::trustedpeer::ConfirmedBurnState successor;
+        successor.network_id = current.burn.network_id;
+        successor.version = current.burn.version + 1;
+        successor.expected_previous_hash = current.burn.Hash().value();
+        successor.authorizing_policy_hash = current.policy.Hash().value();
+        successor.basis_points = current.burn.basis_points + 1;
+        const auto expected_successor_hash = successor.Hash().value();
+        const auto core = sgns::account::BurnConfig::BurnCandidateCore( successor ).value();
+        const auto bytes = core.CanonicalBytes().value();
+        *target = CandidateId::FromCore( core ).value();
+
+        const auto burn_calls_before_first = burn_list_calls.load();
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[0].GetAddress(),
+              harness->signers[0].Sign( bytes ) } ).has_value() );
+        sgns::test::assertWaitForCondition(
+            [&] { return burn_list_calls.load() > burn_calls_before_first; },
+            std::chrono::seconds( 5 ),
+            "first below-quorum burn refresh did not complete" );
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->attempts.clear();
+            observations->delays.clear();
+            observations->timers.clear();
+            observations->events.clear();
+            observations->idle = false;
+        }
+        failures_remaining.store( 1 );
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[1].GetAddress(),
+              harness->signers[1].Sign( bytes ) } ).has_value() );
+
+        // TRANSIENT_BURN_NO_WRITE_BEGIN
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return !observations->timers.empty() || observations->attempts.size() >= 2;
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 burn transient retry missing" );
+        if ( auto retry = observations->PopTimer() ) retry();
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto durable = harness->store->LoadAndVerify();
+                return durable.has_value() &&
+                       durable.value().burn.Hash() == std::optional<std::string>( expected_successor_hash ) &&
+                       harness->controller->burn_config()->GetConfirmedValueProvider()->IsReady();
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 burn transient retry missing" );
+        // TRANSIENT_BURN_NO_WRITE_END
+
+        const std::vector<uint32_t> expected_attempts{ 1, 2 };
+        const std::vector<uint64_t> expected_delays{ 100 };
+        const auto observed_attempts = observations->Attempts();
+        const auto observed_delays = observations->Delays();
+        EXPECT_EQ( observed_attempts, expected_attempts ) << "CR-13 burn transient retry missing";
+        EXPECT_EQ( observed_delays, expected_delays ) << "CR-13 burn transient retry missing";
+        EXPECT_EQ( harness->store->LoadAndVerify().value().burn.Hash(),
+                   std::optional<std::string>( expected_successor_hash ) );
+    }
+
+    TEST( TrustFirstBootE2ETest, TransientRefreshRetryExhaustionIsCappedCoalescedAndIdle )
+    {
+        auto observations = std::make_shared<RefreshObservations>();
+        auto hooks = MakeRefreshHooks( observations );
+        std::atomic_bool fail_policy_listing{ false };
+        std::atomic_uint32_t burn_list_calls{ 0 };
+        hooks->list_policy_candidates = [&]( auto &registry )
+        {
+            if ( fail_policy_listing.load() )
+            {
+                return TrustStartupController::RefreshTestHooks::CandidateList(
+                    outcome::failure( std::errc::resource_unavailable_try_again ) );
+            }
+            return registry.ListPendingPolicyCandidates();
+        };
+        hooks->list_burn_candidates = [&]( auto &burn )
+        {
+            ++burn_list_calls;
+            return burn.ListPendingBurnCandidates();
+        };
+        auto harness = MakeReadyRefreshHarness(
+            "transient_retry_exhaustion",
+            hooks,
+            [observations]( const auto &event )
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                observations->events.push_back( event );
+            } );
+        ASSERT_NE( harness, nullptr );
+
+        auto current = harness->store->LoadAndVerify().value();
+        const auto current_hash = current.policy.Hash().value();
+        auto successor = current.policy;
+        successor.version += 1;
+        successor.expected_previous_hash = current_hash;
+        successor.authorizing_policy_hash = current_hash;
+        successor = successor.Canonicalized().value();
+        const auto core = sgns::trustedpeer::TrustedPeerRegistry::PolicyCandidateCore( successor ).value();
+        const auto id = CandidateId::FromCore( core ).value();
+        const auto bytes = core.CanonicalBytes().value();
+
+        const auto burn_calls_before_first = burn_list_calls.load();
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[0].GetAddress(),
+              harness->signers[0].Sign( bytes ) } ).has_value() );
+        sgns::test::assertWaitForCondition(
+            [&] { return burn_list_calls.load() > burn_calls_before_first; },
+            std::chrono::seconds( 5 ),
+            "first below-quorum exhaustion refresh did not complete" );
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            observations->attempts.clear();
+            observations->delays.clear();
+            observations->timers.clear();
+            observations->events.clear();
+            observations->idle = false;
+            observations->coalesced_requests = 0;
+        }
+        fail_policy_listing.store( true );
+        ASSERT_TRUE( harness->secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              core,
+              harness->signers[1].GetAddress(),
+              harness->signers[1].Sign( bytes ) } ).has_value() );
+
+        // TRANSIENT_EXHAUSTION_NO_WRITE_BEGIN
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return !observations->timers.empty();
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 retry exhaustion cap missing" );
+        std::function<void()> request_refresh;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            request_refresh = observations->request_refresh;
+        }
+        ASSERT_TRUE( static_cast<bool>( request_refresh ) ) << "CR-13 retry exhaustion cap missing";
+        request_refresh();
+        request_refresh();
+        for ( size_t retry = 0; retry < 6; ++retry )
+        {
+            sgns::test::assertWaitForCondition(
+                [&]
+                {
+                    std::lock_guard<std::mutex> lock( observations->mutex );
+                    return !observations->timers.empty();
+                },
+                std::chrono::seconds( 5 ),
+                "CR-13 retry exhaustion cap missing" );
+            auto timer = observations->PopTimer();
+            ASSERT_TRUE( static_cast<bool>( timer ) ) << "CR-13 retry exhaustion cap missing";
+            timer();
+        }
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return observations->idle && observations->attempts.size() == 7U;
+            },
+            std::chrono::seconds( 5 ),
+            "CR-13 retry exhaustion cap missing" );
+        // TRANSIENT_EXHAUSTION_NO_WRITE_END
+
+        const std::vector<uint32_t> expected_attempts{ 1, 2, 3, 4, 5, 6, 7 };
+        const std::vector<uint64_t> expected_delays{ 100, 200, 400, 800, 1600, 3200 };
+        const auto observed_attempts = observations->Attempts();
+        const auto observed_delays = observations->Delays();
+        uint32_t retry_scheduled_events = 0;
+        uint32_t retry_exhausted_events = 0;
+        uint32_t coalesced_request_count = 0;
+        bool dispatcher_idle = false;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            retry_scheduled_events = static_cast<uint32_t>( std::count_if(
+                observations->events.begin(), observations->events.end(), []( const auto &event )
+                { return event.code == TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED; } ) );
+            retry_exhausted_events = static_cast<uint32_t>( std::count_if(
+                observations->events.begin(), observations->events.end(), []( const auto &event )
+                { return event.code == TrustStartupController::EventCode::TRUST_REFRESH_RETRY_EXHAUSTED; } ) );
+            coalesced_request_count = observations->coalesced_requests;
+            dispatcher_idle = observations->idle;
+        }
+        const auto attempt_count_after_idle = observations->Attempts().size();
+        const auto write_count_after_exhaustion =
+            harness->secure->ReadCandidateApprovals( id ).value().size() - 2U;
+        EXPECT_EQ( observed_attempts, expected_attempts ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( observed_delays, expected_delays ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( retry_scheduled_events, 6U ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( retry_exhausted_events, 1U ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( coalesced_request_count, 2U ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_TRUE( dispatcher_idle ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( attempt_count_after_idle, 7U ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( write_count_after_exhaustion, 0U ) << "CR-13 retry exhaustion cap missing";
+        EXPECT_EQ( harness->store->LoadAndVerify().value().policy.Hash(),
+                   std::optional<std::string>( current_hash ) );
+    }
+
+    void RunWorkerCallbackLastOwnerChild()
+    {
+        auto observations = std::make_shared<RefreshObservations>();
+        auto hooks = MakeRefreshHooks( observations );
+        auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+        boost::filesystem::create_directories( path );
+        auto node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "callback_last_owner" );
+        if ( !node ) _exit( 10 );
+        auto secure = std::make_shared<sgns::securecrdt::SecureCrdt>( node->db, "callback-last-owner-topic" );
+        auto signer_a = sgns::GeniusSigner::Generate();
+        auto signer_b = sgns::GeniusSigner::Generate();
+        GenesisManifest manifest;
+        manifest.network_id = 42;
+        manifest.bootstrapper_public_key = signer_a.GetAddress();
+        manifest.peers = { signer_a.GetAddress(), signer_b.GetAddress() };
+        manifest.membership_threshold = 2;
+        manifest.burn_threshold = 2;
+        manifest = manifest.Canonicalized().value();
+        auto store_result = TrustStateStore::Open( ( path / "trust" ).string(), manifest.network_id );
+        if ( store_result.has_error() ) _exit( 11 );
+        auto store = store_result.value();
+        auto initial = store->CommitGenesis( manifest, signer_a.Sign( manifest.CanonicalBytes().value() ) );
+        if ( initial.has_error() ) _exit( 12 );
+
+        std::shared_ptr<TrustStartupController> owner;
+        std::weak_ptr<TrustStartupController> weak;
+        std::atomic_bool callback_released_owner{ false };
+        auto created = TrustStartupController::New(
+            secure,
+            store,
+            manifest,
+            signer_a.GetAddress(),
+            [&]( const std::vector<uint8_t> &bytes ) { return signer_a.Sign( bytes ); },
+            {},
+            [&]( TrustStartupController::State state )
+            {
+                if ( state == TrustStartupController::State::ConfirmedReady && owner )
+                {
+                    // DISPATCHED_LAST_OWNER_CALLBACK_BEGIN
+                    owner.reset();
+                    callback_released_owner.store( true );
+                    // DISPATCHED_LAST_OWNER_CALLBACK_END
+                }
+            },
+            hooks );
+        if ( created.has_error() ) _exit( 13 );
+        owner = created.value();
+        created.value().reset();
+        weak = owner;
+        const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( initial.value().burn );
+        if ( !burn_core ) _exit( 14 );
+        const auto burn_id = CandidateId::FromCore( *burn_core );
+        const auto burn_bytes = burn_core->CanonicalBytes();
+        if ( !burn_id || !burn_bytes ) _exit( 15 );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                auto approvals = secure->ReadCandidateApprovals( *burn_id );
+                return approvals.has_value() && approvals.value().size() == 1U;
+            },
+            std::chrono::seconds( 5 ),
+            "initial burn approval missing before owner release" );
+        auto submitted = secure->SubmitCandidateApproval(
+            { CandidateApprovalRecord::ENCODING_VERSION,
+              *burn_core,
+              signer_b.GetAddress(),
+              signer_b.Sign( *burn_bytes ) } );
+        if ( submitted.has_error() ) _exit( 16 );
+        sgns::test::assertWaitForCondition(
+            [&]
+            {
+                std::lock_guard<std::mutex> lock( observations->mutex );
+                return callback_released_owner.load() && weak.expired() && observations->idle;
+            },
+            std::chrono::seconds( 5 ),
+            "callback owner did not expire and drain" );
+        const bool dispatch_drained = [&]
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            return observations->idle;
+        }();
+        if ( !weak.expired() || !dispatch_drained ) _exit( 17 );
+        _exit( 0 );
+    }
+
+    TEST( TrustFirstBootE2ETest, WorkerCallbackCanReleaseLastControllerOwnerSafely )
+    {
+        EXPECT_EXIT( RunWorkerCallbackLastOwnerChild(), ::testing::ExitedWithCode( 0 ), "" )
+            << "CR-14 callback owner unsafe";
     }
 } // namespace
