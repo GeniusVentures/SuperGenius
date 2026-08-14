@@ -1773,6 +1773,11 @@ namespace sgns
         return consensus_manager_->RegisterResourceAdmissionHandler( subject_type, std::move( handler ) );
     }
 
+    void Blockchain::UnregisterResourceAdmissionHandler( std::string_view subject_type )
+    {
+        consensus_manager_->UnregisterResourceAdmissionHandler( subject_type );
+    }
+
     outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>>
     Blockchain::GetBurnReservation( const ConsensusStateStore::BurnOutpoint &outpoint ) const
     {

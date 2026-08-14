@@ -592,6 +592,10 @@ namespace sgns
         std::unordered_map<std::string, ConsensusManager::Proposal> pending_proposals_;
         std::function<void()>                                       task_m;
         std::atomic<bool>                                           stopped_{ false };
+        bool                                                        certificate_handlers_registered_{ false };
+        bool                                                        subject_handler_registered_{ false };
+        bool                                                        resource_admission_handler_registered_{ false };
+        bool                                                        proposal_cleanup_handler_registered_{ false };
         std::mutex                                                  payout_submission_mutex_;
         std::mutex                                                  transaction_waits_mutex_;
         std::unordered_map<std::string, std::vector<std::shared_ptr<PendingTransactionWait>>> transaction_waits_;

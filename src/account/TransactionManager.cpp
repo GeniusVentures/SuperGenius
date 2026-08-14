@@ -195,7 +195,8 @@ namespace sgns
                 return outcome::failure( std::errc::owner_dead );
             } );
         if ( !resource_application_registered ) return nullptr;
-        instance->blockchain_->RegisterCertificateHandler(
+        instance->certificate_handlers_registered_ = true;
+        if ( !instance->blockchain_->RegisterCertificateHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const std::string &subject_hash,
@@ -212,8 +213,9 @@ namespace sgns
                                : ConsensusManager::Check::Pending;
                 }
                 return outcome::failure( std::errc::owner_dead );
-            } );
-        instance->blockchain_->RegisterSubjectHandler(
+            } ) )
+            return nullptr;
+        if ( !instance->blockchain_->RegisterSubjectHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
@@ -223,8 +225,10 @@ namespace sgns
                     return strong->HandleNonceConsensusSubject( subject );
                 }
                 return outcome::failure( std::errc::owner_dead );
-            } );
-        instance->blockchain_->RegisterResourceAdmissionHandler(
+            } ) )
+            return nullptr;
+        instance->subject_handler_registered_ = true;
+        if ( !instance->blockchain_->RegisterResourceAdmissionHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )](
                 const ConsensusManager::Subject &subject,
@@ -234,8 +238,10 @@ namespace sgns
                 if ( auto strong = weak_ptr.lock() )
                     return strong->DescribeConsensusResource( subject, slot_id );
                 return outcome::failure( std::errc::owner_dead );
-            } );
-        instance->blockchain_->RegisterProposalCleanupHandler(
+            } ) )
+            return nullptr;
+        instance->resource_admission_handler_registered_ = true;
+        if ( !instance->blockchain_->RegisterProposalCleanupHandler(
             NONCE_SUBJECT_TYPE,
             [weak_ptr( std::weak_ptr<TransactionManager>( instance ) )]( const std::string &tx_hash )
             {
@@ -243,7 +249,9 @@ namespace sgns
                 {
                     strong->OnProposalTimeoutCleanup( tx_hash );
                 }
-            } );
+            } ) )
+            return nullptr;
+        instance->proposal_cleanup_handler_registered_ = true;
 
         instance->blockchain_->RegisterSlotKeyHandler(
             NONCE_SUBJECT_TYPE,
@@ -448,22 +456,35 @@ namespace sgns
             }
         }
 
-        // Detach from consensus. All four are keyed on NONCE_SUBJECT_TYPE.
-        if ( blockchain_ )
-        {
-            blockchain_->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
-            blockchain_->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
-            blockchain_->UnregisterProposalCleanupHandler( NONCE_SUBJECT_TYPE );
-            blockchain_->UnregisterSlotKeyHandler( NONCE_SUBJECT_TYPE );
-        }
-
         // Detach from the account while it is still guaranteed alive: GeniusNode calls
         // Stop() before DeconfigureDatabaseDependencies() and before releasing account_.
         if ( account_m )
         {
             account_m->ClearGetTransactionCIDMethod();
         }
-
+        if ( blockchain_ )
+        {
+            if ( proposal_cleanup_handler_registered_ )
+            {
+                blockchain_->UnregisterProposalCleanupHandler( NONCE_SUBJECT_TYPE );
+                proposal_cleanup_handler_registered_ = false;
+            }
+            if ( resource_admission_handler_registered_ )
+            {
+                blockchain_->UnregisterResourceAdmissionHandler( NONCE_SUBJECT_TYPE );
+                resource_admission_handler_registered_ = false;
+            }
+            if ( subject_handler_registered_ )
+            {
+                blockchain_->UnregisterSubjectHandler( NONCE_SUBJECT_TYPE );
+                subject_handler_registered_ = false;
+            }
+            if ( certificate_handlers_registered_ )
+            {
+                blockchain_->UnregisterCertificateHandler( NONCE_SUBJECT_TYPE );
+                certificate_handlers_registered_ = false;
+            }
+        }
         CancelPendingTransactionWaits();
         cv_.notify_all();
     }

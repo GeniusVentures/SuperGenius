@@ -198,9 +198,11 @@ namespace sgns
          */
         bool RegisterProposalCleanupHandler( std::string_view                         subject_type,
                                              ConsensusManager::ProposalCleanupHandler handler );
+        void UnregisterProposalCleanupHandler( std::string_view subject_type );
 
         bool RegisterResourceAdmissionHandler( std::string_view                         subject_type,
                                                ConsensusManager::ResourceAdmissionHandler handler );
+        void UnregisterResourceAdmissionHandler( std::string_view subject_type );
 
         outcome::result<std::optional<ConsensusStateStore::BurnReservationRecord>> GetBurnReservation(
             const ConsensusStateStore::BurnOutpoint &outpoint ) const;

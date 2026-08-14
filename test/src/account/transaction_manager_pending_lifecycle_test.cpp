@@ -1372,6 +1372,12 @@ TEST_F( TransactionManagerRecoveryTest, AsyncOutgoingWaitTimesOutWithoutPollingT
     EXPECT_EQ( completion->error, boost::system::errc::make_error_code( boost::system::errc::timed_out ) );
 }
 
+TEST_F( TransactionManagerRecoveryTest, RecreatesManagerUsingSameBlockchain )
+{
+    ASSERT_NO_FATAL_FAILURE( RecreateManager() );
+    ASSERT_TRUE( manager_ );
+}
+
 TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPreviousTransactionIsNotTracked )
 {
     auto previous_transaction = MakeTransaction( 0 );
@@ -1380,7 +1386,7 @@ TEST_F( TransactionManagerPreviousHashTest, UsesPersistedConfirmedHeadWhenPrevio
     ASSERT_TRUE( persisted_hash.has_value() );
     ASSERT_EQ( persisted_hash.value(), previous_transaction->GetHash() );
 
-    RecreateManager();
+    ASSERT_NO_FATAL_FAILURE( RecreateManager() );
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::INVALID );
 
@@ -1402,7 +1408,7 @@ TEST_F( TransactionManagerPreviousHashTest, FallsBackToCrdtWhenConfirmedHeadHist
     StoreTransaction( previous_transaction );
     ASSERT_TRUE( account_->GetLocalConfirmedTxHash( 0 ).has_error() );
 
-    RecreateManager();
+    ASSERT_NO_FATAL_FAILURE( RecreateManager() );
     ASSERT_EQ( manager_->GetTransactionStatusByTxId( previous_transaction->GetHash() ),
                sgns::TransactionManager::TransactionStatus::INVALID );
 
@@ -2380,4 +2386,3 @@ TEST_F( TransactionManagerPendingLifecycleTest,
         blockchain_ ) );
     UseRealCertificateReader();
 }
-
