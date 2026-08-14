@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <regex>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -101,7 +102,7 @@ namespace sgns::crdt
          * @param[in] key_pattern Optional regex applied to logical keys.
          * @return Vector with all matching unfinished entries.
          */
-        std::vector<Entry> ListUnfinished( std::string_view key_pattern = {} ) const;
+        std::vector<Entry> ListUnfinished( std::optional<std::regex> pattern = std::nullopt ) const;
 
         /**
          * @brief Converts stale processing entries to stalled.
@@ -109,7 +110,7 @@ namespace sgns::crdt
          * @param[in] stale Extra grace period in milliseconds before recovery.
          * @return Number of recovered entries.
          */
-        size_t RecoverStaleProcessing( std::string_view          key_pattern,
+        size_t RecoverStaleProcessing( std::optional<std::regex> pattern,
                                        std::chrono::milliseconds stale = std::chrono::milliseconds( 0 ) );
 
     private:

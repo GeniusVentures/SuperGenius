@@ -649,7 +649,7 @@ namespace sgns::crdt
         return broadcaster->AddBroadcastTopic( topicName );
     }
 
-    void GlobalDB::AddTopicName( const std::string &topicName )
+    void GlobalDB::AddTopicName( std::string topicName )
     {
         if ( auto crdt_datastore = ActiveCRDTDataStore() )
         {
@@ -657,14 +657,14 @@ namespace sgns::crdt
         }
     }
 
-    void GlobalDB::AddListenTopic( const std::string &topicName )
+    void GlobalDB::AddListenTopic( std::string topicName )
     {
         auto broadcaster    = ActiveBroadcaster();
         auto crdt_datastore = ActiveCRDTDataStore();
         if ( broadcaster && crdt_datastore )
         {
             broadcaster->AddListenTopic( topicName );
-            crdt_datastore->AddTopicName( topicName );
+            crdt_datastore->AddTopicName( std::move(topicName) );
         }
     }
 
@@ -826,7 +826,7 @@ namespace sgns::crdt
         return ActiveCRDTDataStore();
     }
 
-    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GlobalDB::GetCIDContent(
+    outcome::result<std::vector<std::pair<std::string, base::Buffer>>> GlobalDB::GetLocalDeltaKeyValues(
         const std::string &cid_string )
     {
         auto crdt_datastore = ActiveCRDTDataStore();
@@ -835,7 +835,7 @@ namespace sgns::crdt
             m_logger->error( "{}: CRDT datastore not initialized", __func__ );
             return outcome::failure( Error::CRDT_DATASTORE_NOT_CREATED );
         }
-        return crdt_datastore->GetILPDNodeContent( cid_string );
+        return crdt_datastore->GetLocalDeltaKeyValues( cid_string );
     }
 
 }

@@ -259,10 +259,9 @@ namespace sgns
         TransactionStatus GetOutgoingStatusByTxId( const std::string &txId ) const;
 
         /**
-         * @brief Finds a tracked transaction that shares the same nonce and source address as @p element.
-         * @return The conflicting transaction, or failure if none exists.
+         * @brief Finds every tracked transaction in @p element's nonce slot except @p element itself.
          */
-        outcome::result<std::shared_ptr<GeniusTransaction>> GetConflictingTransaction(
+        std::vector<std::shared_ptr<GeniusTransaction>> GetConflictingTransactions(
             const GeniusTransaction &element ) const;
 
         /**
@@ -519,8 +518,6 @@ namespace sgns
         /// @brief Same as GetTransactionByHash but assumes tx_mutex_m is already held.
         std::shared_ptr<GeniusTransaction> GetTransactionByHashNoLock( const std::string &tx_hash ) const;
 
-        std::shared_ptr<GeniusTransaction> GetTransactionByNonceAndAddress( uint64_t           nonce,
-                                                                            const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByNonceAndAddress( uint64_t nonce, const std::string &address ) const;
         std::optional<TrackedTx> GetTrackedTxByHash( const std::string &tx_hash ) const;
 
@@ -654,10 +651,8 @@ namespace sgns
          * @brief CRDT element filter for incoming transactions.
          *
          * Deserializes the element, verifies its signature,
-         * and checks for nonce conflicts. When a conflict exists, applies
-         * ShouldReplaceTransaction to decide whether the new or existing
-         * transaction survives. Rejected elements are returned as tombstones
-         * together with their associated proof key.
+         * and checks for nonce conflicts. Rejected elements are returned as
+         * tombstones together with their associated proof key.
          *
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
@@ -673,16 +668,6 @@ namespace sgns
          * @return nullopt to accept, or a vector of tombstone elements to reject.
          */
         std::optional<std::vector<crdt::pb::Element>> FilterProof( const crdt::pb::Element &element );
-
-        /**
-         * @brief Decides whether @p new_tx should replace @p existing_tx.
-         *
-         * Rejects replacement when the hashes are identical or when the existing
-         * transaction is immutable. Otherwise, replaces when the new transaction
-         * has an earlier timestamp within tolerance (or unconditionally
-         * if disabled).
-         */
-        bool ShouldReplaceTransaction( const GeniusTransaction &existing_tx, const GeniusTransaction &new_tx ) const;
 
         static uint64_t GetCurrentTimestamp();
 

@@ -64,28 +64,6 @@ namespace sgns
     }
 
     /**
-     * @brief Builds canonical bytes used to sign a consensus vote bundle.
-     *
-     * The signature field is cleared before serialization so signatures are
-     * never part of their own signing payload.
-     *
-     * @param[in] bundle Vote bundle to serialize for signing.
-     * @return Serialized signing bytes on success, or `std::errc::invalid_argument`
-     * when protobuf serialization fails.
-     */
-    inline outcome::result<std::vector<uint8_t>> VoteBundleSigningBytes( const ConsensusVoteBundle &bundle )
-    {
-        ConsensusVoteBundle copy = bundle;
-        copy.clear_signature();
-        std::string serialized;
-        if ( !copy.SerializeToString( &serialized ) )
-        {
-            return outcome::failure( std::errc::invalid_argument );
-        }
-        return std::vector<uint8_t>( serialized.begin(), serialized.end() );
-    }
-
-    /**
      * @brief Computes deterministic proposal id from proposal content.
      *
      * The proposal id field is cleared before hashing to guarantee stable id
@@ -99,13 +77,9 @@ namespace sgns
     {
         ConsensusProposal copy = proposal;
         copy.clear_proposal_id();
-        auto signing_bytes = ProposalSigningBytes( copy );
-        if ( signing_bytes.has_error() )
-        {
-            return outcome::failure( signing_bytes.error() );
-        }
+        BOOST_OUTCOME_TRY( auto signing_bytes, ProposalSigningBytes( copy ) );
 
-        auto hash = sgns::crypto::sha2_256( signing_bytes.value().data(), signing_bytes.value().size() );
+        auto hash = sgns::crypto::sha2_256( signing_bytes.data(), signing_bytes.size() );
         return base::hex_lower( gsl::span<const uint8_t>( hash.data(), hash.size() ) );
     }
 

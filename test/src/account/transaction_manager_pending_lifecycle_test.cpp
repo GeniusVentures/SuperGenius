@@ -15,6 +15,7 @@
 #include "account/TransferTransaction.hpp"
 #include "blockchain/Blockchain.hpp"
 #include "blockchain/Consensus.hpp"
+#include "blockchain/ConsensusAuth.hpp"
 #include "blockchain/ValidatorRegistry.hpp"
 #include "crdt/atomic_transaction.hpp"
 #include "local_secure_storage/impl/MemorySecureStorage.hpp"
@@ -220,7 +221,7 @@ namespace
             vote.set_voter_id( account_->GetAddress() );
             vote.set_approve( true );
             vote.set_timestamp( proposal.value().timestamp() );
-            auto vote_bytes = sgns::ConsensusManager::VoteSigningBytes( vote );
+            auto vote_bytes = sgns::VoteSigningBytes( vote );
             ASSERT_TRUE( vote_bytes.has_value() );
             const auto vote_signature = account_->Sign( std::move( vote_bytes.value() ) );
             vote.set_signature( vote_signature.data(), vote_signature.size() );

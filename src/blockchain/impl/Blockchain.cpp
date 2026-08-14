@@ -84,62 +84,39 @@ namespace sgns
     {
         auto instance = std::shared_ptr<Blockchain>(
             new Blockchain( std::move( global_db ), std::move( account ), std::move( callback ) ) );
-        auto request_validator_registry = []( const std::shared_ptr<Blockchain> &self )
-        {
-            if ( !self )
-            {
-                return;
-            }
-            auto request_result = self->account_->RequestValidatorRegistry(
-                TIMEOUT_GENESIS_BLOCK_MS,
-                [weak_ptr( std::weak_ptr<Blockchain>( self ) )]( outcome::result<std::string> registry_cid_res )
-                {
-                    if ( auto strong = weak_ptr.lock() )
-                    {
-                        if ( registry_cid_res.has_error() )
-                        {
-                            strong->logger_->warn( "[{}] Validator registry request finished with error",
-                                                   strong->account_->GetAddress().substr( 0, 8 ) );
-                            return;
-                        }
-                        strong->logger_->debug( "[{}] Validator registry request finished with CID {}",
-                                                strong->account_->GetAddress().substr( 0, 8 ),
-                                                registry_cid_res.value().substr( 0, 8 ) );
-                    }
-                } );
-            if ( request_result.has_error() )
-            {
-                self->logger_->warn( "[{}] Failed to request validator registry during blockchain init",
-                                     self->account_->GetAddress().substr( 0, 8 ) );
-            }
-        };
+        const auto weak_instance            = instance->weak_from_this();
+        const auto genesis_pattern          = fmt::format( "/?{}", GENESIS_KEY );
+        const auto account_creation_pattern = fmt::format( "/?{}.*", ACCOUNT_CREATION_KEY_PREFIX );
 
         instance->logger_->info( "[{}] Blockchain instance created with authorized full node: {}",
                                  instance->account_->GetAddress().substr( 0, 8 ),
                                  GetAuthorizedFullNodeAddress().substr( 0, 8 ) );
 
-        const bool genesis_filter_initialized = instance->db_->RegisterElementFilter(
-            "/?" + std::string( GENESIS_KEY ),
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->FilterGenesis( element );
-                }
-                return std::nullopt;
-            } );
-        const bool account_creation_filter_initialized = instance->db_->RegisterElementFilter(
-            "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    return strong->FilterAccountCreation( element );
-                }
-                return std::nullopt;
-            } );
+        if ( !instance->db_->RegisterElementFilter(
+                 genesis_pattern,
+                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 {
+                     if ( auto strong = weak_instance.lock() )
+                     {
+                         return strong->FilterGenesis( element );
+                     }
+                     return std::nullopt;
+                 } ) ||
+             !instance->db_->RegisterElementFilter(
+                 account_creation_pattern,
+                 [weak_instance]( const crdt::pb::Element &element ) -> std::optional<std::vector<crdt::pb::Element>>
+                 {
+                     if ( auto strong = weak_instance.lock() )
+                     {
+                         return strong->FilterAccountCreation( element );
+                     }
+                     return std::nullopt;
+                 } ) )
+        {
+            instance->logger_->error( "[{}] Failed to register blockchain filters",
+                                      instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
+        }
 
         instance->validator_registry_ = ValidatorRegistry::New(
             instance->db_,
@@ -148,34 +125,32 @@ namespace sgns
             ValidatorRegistry::WeightConfig{},
             GetAuthorizedFullNodeAddress(),
 
-            [weak_ptr( std::weak_ptr<Blockchain>(
-                instance ) )]( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )
+            [weak_instance]( const std::string &cid, std::function<void( outcome::result<std::string> )> callback )
             {
-                if ( auto strong = weak_ptr.lock() )
+                if ( auto strong = weak_instance.lock() )
                 {
                     (void) strong->account_->RequestRegularBlock( 8000, cid, std::move( callback ) );
                 }
             },
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) ), request_validator_registry]( bool initialized )
+            [weak_instance]( bool initialized )
             {
-                if ( auto strong = weak_ptr.lock() )
+                if ( auto strong = weak_instance.lock() )
                 {
                     strong->validator_registry_initialized_.store( initialized );
                     if ( !initialized )
                     {
                         strong->logger_->error( "[{}] Validator registry not initialized yet",
                                                 strong->account_->GetAddress().substr( 0, 8 ) );
-                        request_validator_registry( strong );
+                        strong->RequestValidatorRegistry();
                     }
                     else if ( strong->start_deferred_.load() )
                     {
                         // Registry became ready after Start() deferred. Retry immediately
                         // instead of waiting for GeniusNode's ScheduleBlockchainRetry timer
                         // (default 5s), which would otherwise idle here until it fires.
-                        strong->logger_->info(
-                            "[{}] Validator registry ready — retrying deferred blockchain start",
-                            strong->account_->GetAddress().substr( 0, 8 ) );
-                        (void)strong->Start();
+                        strong->logger_->info( "[{}] Validator registry ready — retrying deferred blockchain start",
+                                               strong->account_->GetAddress().substr( 0, 8 ) );
+                        (void) strong->Start();
                     }
                 }
             } );
@@ -191,205 +166,171 @@ namespace sgns
             instance->validator_registry_,
             instance->db_,
             std::move( pubsub ),
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                std::vector<uint8_t> payload ) -> outcome::result<std::vector<uint8_t>>
+            [weak_instance]( const std::vector<uint8_t> &payload ) -> outcome::result<std::vector<uint8_t>>
             {
-                if ( auto strong = weak_ptr.lock() )
+                if ( auto strong = weak_instance.lock() )
                 {
-                    return strong->account_->Sign( std::move( payload ) );
+                    return strong->account_->Sign( payload );
                 }
                 return outcome::failure( std::errc::owner_dead );
             },
             instance->account_->GetAddress() );
+        if ( !instance->consensus_manager_ )
+        {
+            return nullptr;
+        }
 
         instance->validator_registry_->SetBatchSubjectSubmitter(
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const ConsensusSubject &subject ) -> outcome::result<void>
+            [weak_instance]( const ConsensusSubject &subject ) -> outcome::result<void>
             {
-                if ( auto strong = weak_ptr.lock() )
+                auto strong = weak_instance.lock();
+                if ( !strong )
                 {
-                    auto weight_result = strong->validator_registry_->GetValidatorWeight(
-                        strong->account_->GetAddress() );
-                    if ( weight_result.has_error() )
-                    {
-                        return outcome::failure( weight_result.error() );
-                    }
-                    if ( !weight_result.value().has_value() )
-                    {
-                        return outcome::success();
-                    }
-                    std::string registry_cid   = strong->validator_registry_->GetRegistryCid();
-                    uint64_t    registry_epoch = strong->validator_registry_->GetRegistryEpoch();
-                    auto        batch_payload  = ConsensusManager::DecodeRegistryBatchSubject( subject );
-                    // In case the batch has already started, use the current CID and epoch
-                    if ( batch_payload.has_value() )
-                    {
-                        registry_cid   = batch_payload.value().base_registry_cid();
-                        registry_epoch = batch_payload.value().base_registry_epoch();
-                    }
-                    auto proposal_result = strong->consensus_manager_->CreateProposal( subject,
-                                                                                       strong->account_->GetAddress(),
-                                                                                       registry_cid,
-                                                                                       registry_epoch );
-                    if ( proposal_result.has_error() )
-                    {
-                        return outcome::failure( proposal_result.error() );
-                    }
-                    return strong->consensus_manager_->SubmitProposal( proposal_result.value(), true );
+                    return outcome::failure( std::errc::owner_dead );
                 }
-                return outcome::failure( std::errc::owner_dead );
+                if ( !strong->validator_registry_->IsActiveValidator( strong->account_->GetAddress() ) )
+                {
+                    return outcome::success();
+                }
+                std::string registry_cid   = strong->validator_registry_->GetRegistryCid();
+                uint64_t    registry_epoch = strong->validator_registry_->GetRegistryEpoch();
+                auto        batch_payload  = ConsensusManager::DecodeRegistryBatchSubject( subject );
+                // In case the batch has already started, use the current CID and epoch
+                if ( batch_payload.has_value() )
+                {
+                    registry_cid   = batch_payload.value().base_registry_cid();
+                    registry_epoch = batch_payload.value().base_registry_epoch();
+                }
+                BOOST_OUTCOME_TRY( auto proposal,
+                                   strong->consensus_manager_->CreateProposal( subject,
+                                                                               strong->account_->GetAddress(),
+                                                                               registry_cid,
+                                                                               registry_epoch ) );
+                return strong->consensus_manager_->SubmitProposal( proposal, true );
             } );
 
         instance->consensus_manager_->RegisterSubjectHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
+            [weak_instance](
                 const ConsensusManager::Subject &subject ) -> outcome::result<ConsensusManager::ValidationResult>
             {
-                if ( auto strong = weak_ptr.lock() )
+                auto strong = weak_instance.lock();
+                if ( !strong )
                 {
-                    auto decision_result = strong->validator_registry_->EvaluateBatchSubject( subject );
-                    if ( decision_result.has_error() )
-                    {
-                        return outcome::failure( decision_result.error() );
-                    }
-                    switch ( decision_result.value() )
-                    {
-                        case ValidatorRegistry::BatchSubjectDecision::Approve:
-                            return ConsensusManager::ValidationResult::Approve();
-                        case ValidatorRegistry::BatchSubjectDecision::Pending:
-                            return ConsensusManager::ValidationResult::Pending();
-                        case ValidatorRegistry::BatchSubjectDecision::Reject:
-                        default:
-                            return ConsensusManager::ValidationResult::Reject();
-                    }
+                    return outcome::failure( std::errc::owner_dead );
                 }
-                return outcome::failure( std::errc::owner_dead );
+                switch ( strong->validator_registry_->EvaluateBatchSubject( subject ) )
+                {
+                    case ValidatorRegistry::BatchSubjectDecision::Approve:
+                        return ConsensusManager::ValidationResult::Approve();
+                    case ValidatorRegistry::BatchSubjectDecision::Pending:
+                        return ConsensusManager::ValidationResult::Pending();
+                    case ValidatorRegistry::BatchSubjectDecision::Reject:
+                        return ConsensusManager::ValidationResult::Reject();
+                }
             } );
 
         instance->consensus_manager_->RegisterCertificateHandler(
             REGISTRY_BATCH_SUBJECT_TYPE,
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const std::string          &subject_hash,
-                const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
+            [weak_instance]( const std::string          &subject_hash,
+                             const ConsensusCertificate &certificate ) -> outcome::result<ConsensusManager::Check>
             {
-                if ( auto strong = weak_ptr.lock() )
+                auto strong = weak_instance.lock();
+                if ( !strong )
                 {
-                    auto decision = strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate );
-                    if ( decision.has_error() )
-                    {
-                        return outcome::failure( decision.error() );
-                    }
-                    switch ( decision.value() )
-                    {
-                        case ValidatorRegistry::BatchCertificateDecision::Approve:
-                            return ConsensusManager::Check::Approve;
-                        case ValidatorRegistry::BatchCertificateDecision::Pending:
-                            return ConsensusManager::Check::Pending;
-                        case ValidatorRegistry::BatchCertificateDecision::Stalled:
-                            return ConsensusManager::Check::Stalled;
-                        case ValidatorRegistry::BatchCertificateDecision::Reject:
-                        default:
-                            return ConsensusManager::Check::Reject;
-                    }
+                    return outcome::failure( std::errc::owner_dead );
                 }
-                return outcome::failure( std::errc::owner_dead );
+                switch ( strong->validator_registry_->HandleBatchCertificate( subject_hash, certificate ) )
+                {
+                    case ValidatorRegistry::BatchCertificateDecision::Approve:
+                        return ConsensusManager::Check::Approve;
+                    case ValidatorRegistry::BatchCertificateDecision::Stalled:
+                        return ConsensusManager::Check::Stalled;
+                    case ValidatorRegistry::BatchCertificateDecision::Reject:
+                        return ConsensusManager::Check::Reject;
+                }
             } );
 
-        auto ensure_registry_result = instance->EnsureValidatorRegistry();
-        if ( ensure_registry_result.has_error() )
+        if ( instance->EnsureValidatorRegistry().has_error() )
         {
             instance->logger_->error( "[{}] Failed to ensure validator registry during init",
                                       instance->account_->GetAddress().substr( 0, 8 ) );
         }
         if ( !instance->validator_registry_initialized_.load() )
         {
-            request_validator_registry( instance );
+            instance->RequestValidatorRegistry();
         }
 
-        if ( !genesis_filter_initialized )
+        if ( !instance->db_->RegisterNewElementCallback(
+                 genesis_pattern,
+                 [weak_instance]( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid )
+                 {
+                     if ( auto strong = weak_instance.lock() )
+                     {
+                         (void) strong->GenesisReceivedCallback( new_data, cid );
+                     }
+                 } ) ||
+             !instance->db_->RegisterNewElementCallback(
+                 account_creation_pattern,
+                 [weak_instance]( const crdt::CRDTCallbackManager::NewDataPair &new_data, const std::string &cid )
+                 {
+                     if ( auto strong = weak_instance.lock() )
+                     {
+                         (void) strong->AccountCreationReceivedCallback( new_data, cid );
+                     }
+                 } ) )
         {
-            instance->logger_->error( "[{}] Failed to initialize genesis filter",
+            instance->logger_->error( "[{}] Failed to register blockchain callbacks",
                                       instance->account_->GetAddress().substr( 0, 8 ) );
-        }
-        if ( !account_creation_filter_initialized )
-        {
-            instance->logger_->error( "[{}] Failed to initialize account creation filter",
-                                      instance->account_->GetAddress().substr( 0, 8 ) );
+            return nullptr;
         }
 
-        const bool genesis_callback_registered = instance->db_->RegisterNewElementCallback(
-            "/?" + std::string( GENESIS_KEY ),
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                                 const std::string                     &cid )
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    strong->GenesisReceivedCallback( std::move( new_data ), cid );
-                }
-            } );
-
-        const bool account_creation_callback_registered = instance->db_->RegisterNewElementCallback(
-            "/?" + std::string( ACCOUNT_CREATION_KEY_PREFIX ) + ".*",
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )]( crdt::CRDTCallbackManager::NewDataPair new_data,
-                                                                 const std::string                     &cid )
-            {
-                if ( auto strong = weak_ptr.lock() )
-                {
-                    strong->AccountCreationReceivedCallback( std::move( new_data ), cid );
-                }
-            } );
-
-        instance->filters_registered_   = genesis_filter_initialized && account_creation_filter_initialized;
-        instance->callbacks_registered_ = genesis_callback_registered && account_creation_callback_registered;
-        instance->created_successfully_ = instance->filters_registered_ && instance->callbacks_registered_ &&
-                                          instance->validator_registry_;
         instance->account_->SetGetBlockChainCIDMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>(
-                instance ) )]( uint8_t block_index, const std::string &address ) -> outcome::result<std::string>
+            [weak_instance]( uint8_t block_index, const std::string &address ) -> outcome::result<std::string>
             {
-                if ( auto strong = weak_ptr.lock() )
+                auto strong = weak_instance.lock();
+                if ( !strong )
                 {
-                    switch ( block_index )
-                    {
-                        case 0:
-                            if ( strong->cids_.hasGenesis() )
-                            {
-                                return strong->cids_.genesis_.value();
-                            }
-                            break;
-                        case 1:
-                        {
-                            auto cid_it = strong->cids_.account_creation_.find( address );
-                            if ( cid_it != strong->cids_.account_creation_.end() )
-                            {
-                                return cid_it->second;
-                            }
-                            break;
-                        }
-                        case 2:
-                        {
-                            sgns::crdt::GlobalDB::Buffer registry_cid_key;
-                            registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
-                            auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
-                            if ( registry_cid.has_value() )
-                            {
-                                return std::string( registry_cid.value().toString() );
-                            }
-                            break;
-                        }
-                        default:
-                            break;
-                    }
-                    return outcome::failure( std::errc::invalid_argument );
+                    return outcome::failure( std::errc::owner_dead );
                 }
-                return outcome::failure( std::errc::owner_dead );
+                switch ( block_index )
+                {
+                    case 0:
+                        if ( strong->cids_.hasGenesis() )
+                        {
+                            return strong->cids_.genesis_.value();
+                        }
+                        break;
+                    case 1:
+                    {
+                        auto cid_it = strong->cids_.account_creation_.find( address );
+                        if ( cid_it != strong->cids_.account_creation_.end() )
+                        {
+                            return cid_it->second;
+                        }
+                        break;
+                    }
+                    case 2:
+                    {
+                        sgns::crdt::GlobalDB::Buffer registry_cid_key;
+                        registry_cid_key.put( std::string( ValidatorRegistry::RegistryCidKey() ) );
+                        auto registry_cid = strong->db_->GetDataStore()->get( registry_cid_key );
+                        if ( registry_cid.has_value() )
+                        {
+                            return std::string( registry_cid.value().toString() );
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                return outcome::failure( std::errc::invalid_argument );
             } );
 
         instance->account_->SetGetValidatorWeightMethod(
-            [weak_ptr( std::weak_ptr<Blockchain>( instance ) )](
-                const std::string &address ) -> outcome::result<std::optional<uint64_t>>
+            [weak_instance]( const std::string &address ) -> outcome::result<std::optional<uint64_t>>
             {
-                if ( auto strong = weak_ptr.lock() )
+                if ( auto strong = weak_instance.lock() )
                 {
                     return strong->validator_registry_->GetValidatorWeight( address );
                 }
@@ -478,7 +419,6 @@ namespace sgns
         return outcome::success();
     }
 
-    // Private constructor
     Blockchain::Blockchain( std::shared_ptr<crdt::GlobalDB> global_db,
                             std::shared_ptr<GeniusAccount>  account,
                             BlockchainCallback              callback ) :
@@ -492,16 +432,16 @@ namespace sgns
     Blockchain::~Blockchain()
     {
         logger_->debug( "[{}] ~Blockchain destructor called", account_->GetAddress().substr( 0, 8 ) );
-        (void)Stop();
+        (void) Stop();
         account_->ClearGetBlockChainCIDMethod();
         account_->ClearGetValidatorWeightMethod();
     }
 
     void Blockchain::SetAuthorizedFullNodeAddress( const std::string &pub_address )
     {
-        auto  logger  = base::createLogger( "Blockchain" );
+        auto                        logger = base::createLogger( "Blockchain" );
         std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
-        auto &address = AuthorizedFullNodeAddressStorage();
+        auto                       &address = AuthorizedFullNodeAddressStorage();
         logger->info( "Setting authorized full node address from {} to {}",
                       address.substr( 0, 8 ),
                       pub_address.substr( 0, 8 ) );
@@ -517,8 +457,8 @@ namespace sgns
     void Blockchain::SetAdditionalGenesisValidatorAddresses( const std::vector<std::string> &addresses )
     {
         std::lock_guard<std::mutex> lock( GenesisConfigMutex() );
-        auto &storage = AdditionalGenesisValidatorAddressesStorage();
-        storage       = addresses;
+        auto                       &storage = AdditionalGenesisValidatorAddressesStorage();
+        storage                             = addresses;
     }
 
     std::vector<std::string> Blockchain::GetAdditionalGenesisValidatorAddresses()
@@ -529,30 +469,13 @@ namespace sgns
 
     outcome::result<void> Blockchain::Start()
     {
-        if ( !created_successfully_ || !filters_registered_ || !callbacks_registered_ ||
-             !validator_registry_initialized_.load() )
+        if ( !validator_registry_initialized_.load() )
         {
             start_deferred_.store( true );
-            logger_->warn(
-                "[{}] Blockchain start deferred (created: {}, filters: {}, callbacks: {}, validator_registry: {})",
-                account_->GetAddress().substr( 0, 8 ),
-                created_successfully_,
-                filters_registered_,
-                callbacks_registered_,
-                validator_registry_initialized_.load() );
+            logger_->warn( "[{}] Blockchain start deferred: validator registry not initialized",
+                           account_->GetAddress().substr( 0, 8 ) );
 
-            // Bug fix (2-of-11-nodes-start-bridge): ValidatorRegistry::InitializeCache()
-            // only ever attempts genesis-registry discovery once, synchronously, at
-            // construction time, and otherwise depends entirely on a passive CRDT
-            // broadcast (RegistryUpdateReceived) that may never reach every node in a
-            // large concurrent cluster. Actively re-attempt head-CID discovery on every
-            // deferred-start retry so a missed/delayed broadcast does not permanently
-            // strand this node.
-            if ( validator_registry_ && !validator_registry_initialized_.load() )
-            {
-                validator_registry_->RetryInitializationIfNeeded();
-            }
-
+            validator_registry_->RetryInitializationIfNeeded();
             return InformBlockchainResult( outcome::failure( Error::BLOCKCHAIN_NOT_INITIALIZED ) );
         }
         start_deferred_.store( false );
@@ -730,6 +653,15 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    void Blockchain::RequestValidatorRegistry()
+    {
+        if ( account_->RequestValidatorRegistry( TIMEOUT_GENESIS_BLOCK_MS, {} ).has_error() )
+        {
+            logger_->warn( "[{}] Failed to request validator registry during blockchain init",
+                           account_->GetAddress().substr( 0, 8 ) );
+        }
     }
 
     outcome::result<void> Blockchain::InitAccountCreationCID( const std::string &address )
@@ -1000,7 +932,7 @@ namespace sgns
                     {
                         // Empty/error result => no peer supplied a CID => fall back
                         // to creating the account-creation block locally.
-                        (void)s->InformAccountCreationResponse(
+                        (void) s->InformAccountCreationResponse(
                             outcome::failure( Error::ACCOUNT_CREATION_BLOCK_MISSING ) );
                     }
                 } )
@@ -1890,9 +1822,8 @@ namespace sgns
         return consensus_manager_->GetCertificateBySubjectHash( subject_hash );
     }
 
-    const std::string &Blockchain::BestHash( const std::string &a, const std::string &b ) const
+    const std::string &Blockchain::BestHash( const std::string &a, const std::string &b )
     {
-        return consensus_manager_->BestHash( a, b );
+        return ConsensusManager::BestHash( a, b );
     }
-
 }
