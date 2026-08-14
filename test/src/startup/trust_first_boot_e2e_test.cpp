@@ -78,6 +78,7 @@ namespace
         std::vector<TrustStartupController::Event>      events;
         std::function<void()>                           request_refresh;
         uint32_t                                        coalesced_requests = 0;
+        uint32_t                                        idle_notifications = 0;
         bool                                            idle = false;
 
         std::vector<uint32_t> Attempts()
@@ -122,6 +123,7 @@ namespace
         {
             std::lock_guard<std::mutex> lock( observations->mutex );
             observations->idle = true;
+            ++observations->idle_notifications;
         };
         hooks->observe_coalesced_request = [observations]
         {
@@ -1670,8 +1672,26 @@ namespace
         const std::vector<uint64_t> expected_delays{ 100 };
         const auto observed_attempts = observations->Attempts();
         const auto observed_delays = observations->Delays();
+        std::vector<TrustStartupController::Event> retry_events;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            std::copy_if( observations->events.begin(),
+                          observations->events.end(),
+                          std::back_inserter( retry_events ),
+                          []( const auto &event )
+                          {
+                              return event.code ==
+                                     TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED;
+                          } );
+        }
         EXPECT_EQ( observed_attempts, expected_attempts ) << "CR-13 policy transient retry missing";
         EXPECT_EQ( observed_delays, expected_delays ) << "CR-13 policy transient retry missing";
+        ASSERT_EQ( retry_events.size(), 1U ) << "CR-13 policy transient retry missing";
+        ASSERT_EQ( retry_events.front().fields.size(), 6U );
+        EXPECT_EQ( retry_events.front().fields.at( 0 ), "policy-discovery" );
+        EXPECT_EQ( retry_events.front().fields.at( 3 ), "attempt=2" );
+        EXPECT_EQ( retry_events.front().fields.at( 4 ), "retry=1" );
+        EXPECT_EQ( retry_events.front().fields.at( 5 ), "delay_ms=100" );
         EXPECT_EQ( harness->store->LoadAndVerify().value().policy.Hash(),
                    std::optional<std::string>( expected_successor_hash ) );
     }
@@ -1777,8 +1797,26 @@ namespace
         const std::vector<uint64_t> expected_delays{ 100 };
         const auto observed_attempts = observations->Attempts();
         const auto observed_delays = observations->Delays();
+        std::vector<TrustStartupController::Event> retry_events;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            std::copy_if( observations->events.begin(),
+                          observations->events.end(),
+                          std::back_inserter( retry_events ),
+                          []( const auto &event )
+                          {
+                              return event.code ==
+                                     TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED;
+                          } );
+        }
         EXPECT_EQ( observed_attempts, expected_attempts ) << "CR-13 burn transient retry missing";
         EXPECT_EQ( observed_delays, expected_delays ) << "CR-13 burn transient retry missing";
+        ASSERT_EQ( retry_events.size(), 1U ) << "CR-13 burn transient retry missing";
+        ASSERT_EQ( retry_events.front().fields.size(), 6U );
+        EXPECT_EQ( retry_events.front().fields.at( 0 ), "burn-discovery" );
+        EXPECT_EQ( retry_events.front().fields.at( 3 ), "attempt=2" );
+        EXPECT_EQ( retry_events.front().fields.at( 4 ), "retry=1" );
+        EXPECT_EQ( retry_events.front().fields.at( 5 ), "delay_ms=100" );
         EXPECT_EQ( harness->store->LoadAndVerify().value().burn.Hash(),
                    std::optional<std::string>( expected_successor_hash ) );
     }
@@ -1929,6 +1967,16 @@ namespace
     {
         auto observations = std::make_shared<RefreshObservations>();
         auto hooks = MakeRefreshHooks( observations );
+        std::atomic_bool fail_policy_listing{ false };
+        hooks->list_policy_candidates = [&]( auto &registry )
+        {
+            if ( fail_policy_listing.exchange( false ) )
+            {
+                return TrustStartupController::RefreshTestHooks::CandidateList(
+                    outcome::failure( std::errc::resource_unavailable_try_again ) );
+            }
+            return registry.ListPendingPolicyCandidates();
+        };
         auto path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
         boost::filesystem::create_directories( path );
         auto node = sgns::test::securecrdt::MakeSecureCrdtTestNode( "callback_last_owner" );
@@ -1958,10 +2006,9 @@ namespace
             manifest,
             signer_a.GetAddress(),
             [&]( const std::vector<uint8_t> &bytes ) { return signer_a.Sign( bytes ); },
-            {},
-            [&]( TrustStartupController::State state )
+            [&]( const TrustStartupController::Event &event )
             {
-                if ( state == TrustStartupController::State::ConfirmedReady && owner )
+                if ( event.code == TrustStartupController::EventCode::TRUST_REFRESH_RETRY_SCHEDULED && owner )
                 {
                     // DISPATCHED_LAST_OWNER_CALLBACK_BEGIN
                     owner.reset();
@@ -1969,49 +2016,43 @@ namespace
                     // DISPATCHED_LAST_OWNER_CALLBACK_END
                 }
             },
+            {},
             hooks );
         if ( created.has_error() ) _exit( 13 );
         owner = created.value();
         created.value().reset();
         weak = owner;
-        const auto burn_core = sgns::account::BurnConfig::BurnCandidateCore( initial.value().burn );
-        if ( !burn_core ) _exit( 14 );
-        const auto burn_id = CandidateId::FromCore( *burn_core );
-        const auto burn_bytes = burn_core->CanonicalBytes();
-        if ( !burn_id || !burn_bytes ) _exit( 15 );
-        sgns::test::assertWaitForCondition(
-            [&]
-            {
-                auto approvals = secure->ReadCandidateApprovals( *burn_id );
-                return approvals.has_value() && approvals.value().size() == 1U;
-            },
-            std::chrono::seconds( 5 ),
-            "initial burn approval missing before owner release" );
-        auto submitted = secure->SubmitCandidateApproval(
-            { CandidateApprovalRecord::ENCODING_VERSION,
-              *burn_core,
-              signer_b.GetAddress(),
-              signer_b.Sign( *burn_bytes ) } );
-        if ( submitted.has_error() ) _exit( 16 );
+        std::function<void()> request_refresh;
+        {
+            std::lock_guard<std::mutex> lock( observations->mutex );
+            request_refresh = observations->request_refresh;
+        }
+        if ( !request_refresh ) _exit( 14 );
+        fail_policy_listing.store( true );
+        request_refresh();
         sgns::test::assertWaitForCondition(
             [&]
             {
                 std::lock_guard<std::mutex> lock( observations->mutex );
-                return callback_released_owner.load() && weak.expired() && observations->idle;
+                return callback_released_owner.load() && weak.expired() && observations->idle &&
+                       observations->idle_notifications >= 2U && observations->timers.empty();
             },
             std::chrono::seconds( 5 ),
             "callback owner did not expire and drain" );
         const bool dispatch_drained = [&]
         {
             std::lock_guard<std::mutex> lock( observations->mutex );
-            return observations->idle;
+            return observations->idle && observations->idle_notifications >= 2U && observations->timers.empty();
         }();
-        if ( !weak.expired() || !dispatch_drained ) _exit( 17 );
+        if ( !callback_released_owner.load() ) _exit( 17 );
+        if ( !weak.expired() ) _exit( 18 );
+        if ( !dispatch_drained ) _exit( 19 );
         _exit( 0 );
     }
 
     TEST( TrustFirstBootE2ETest, WorkerCallbackCanReleaseLastControllerOwnerSafely )
     {
+        ::testing::FLAGS_gtest_death_test_style = "threadsafe";
         EXPECT_EXIT( RunWorkerCallbackLastOwnerChild(), ::testing::ExitedWithCode( 0 ), "" )
             << "CR-14 callback owner unsafe";
     }
