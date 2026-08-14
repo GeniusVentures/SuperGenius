@@ -102,6 +102,8 @@ namespace sgns::account
         bool                                                    stop_refresh_worker_ = false;
         std::thread                                             refresh_worker_;
         mutable std::mutex                                      candidate_mutex_;
+        std::vector<sgns::securecrdt::CandidateId>              pending_policy_candidates_;
+        std::vector<sgns::securecrdt::CandidateId>              failed_policy_candidates_;
         std::vector<sgns::securecrdt::CandidateId>              pending_burn_candidates_;
         std::vector<sgns::securecrdt::CandidateId>              failed_burn_candidates_;
         std::optional<sgns::securecrdt::CandidateId>            failed_genesis_candidate_;
