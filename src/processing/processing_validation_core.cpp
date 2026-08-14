@@ -11,6 +11,7 @@
 #include "processing_validation_core.hpp"
 #include "processing/processing_subtask_queue.hpp"
 #include "processing/processing_subtask_queue_channel.hpp"
+#include "util/diff_utils.hpp"
 
 OUTCOME_CPP_DEFINE_CATEGORY_3( sgns::processing, ProcessingValidationCore::Error, e )
 {
@@ -259,14 +260,98 @@ namespace sgns::processing
         const std::vector<sgns::Parameter>                                               *jobParameters,
         const std::function<outcome::result<std::vector<uint8_t>>( const std::string & )> &fetchOutputData ) const
     {
-        // Task 2 implements the real fetch+slice+diff logic (XNODE-02). Until then, this stub keeps
-        // Task 1 a complete, independently-correct fix for XNODE-01b: any genuine hash mismatch fails
-        // closed (matches pre-XNODE-02 behavior) even before the tolerance layer exists.
-        (void)contributions;
-        (void)results;
-        (void)jobParameters;
-        (void)fetchOutputData;
-        return false;
+        // D-02: fail closed when no fetch mechanism is available -- no fetch attempted at all.
+        if ( !fetchOutputData )
+        {
+            return false;
+        }
+
+        // Fetch and slice out this chunk's byte range from each contributing subtask's output blob.
+        std::vector<std::vector<uint8_t>> slicedChunks;
+        slicedChunks.reserve( contributions.size() );
+
+        for ( const auto &[subtaskId, contribution] : contributions )
+        {
+            auto resultIt = results.find( subtaskId );
+            if ( resultIt == results.end() )
+            {
+                // Should not happen -- contributions are only built from results actually present --
+                // but fail closed rather than dereference blindly.
+                return false;
+            }
+
+            const std::string &outputUri = resultIt->second.ipfs_results_data_id();
+            if ( outputUri.empty() )
+            {
+                // Pitfall 2: no fetchable data for this subtask -- fail closed, not a crash.
+                return false;
+            }
+
+            auto fetchResult = fetchOutputData( outputUri );
+            if ( !fetchResult )
+            {
+                m_logger->debug( "AttemptToleranceFallback: fetch failed for {}: {}",
+                                  outputUri,
+                                  fetchResult.error().message() );
+                return false;
+            }
+
+            const std::vector<uint8_t> &blob = fetchResult.value();
+
+            if ( contribution.totalChunksForSubtask <= 1 )
+            {
+                // The entire blob IS the chunk -- exact/primary case.
+                slicedChunks.push_back( blob );
+            }
+            else if ( blob.size() % static_cast<size_t>( contribution.totalChunksForSubtask ) == 0 )
+            {
+                // Uniform-division slicing -- single-channel-only case. Multi-channel outputs are NOT
+                // exactly sliceable this way (channel-major layout); that case is a documented, accepted
+                // scope limit, not attempted here.
+                const size_t sliceSize  = blob.size() / static_cast<size_t>( contribution.totalChunksForSubtask );
+                const size_t sliceStart = static_cast<size_t>( contribution.chunkIdx ) * sliceSize;
+                slicedChunks.emplace_back( blob.begin() + static_cast<long>( sliceStart ),
+                                           blob.begin() + static_cast<long>( sliceStart + sliceSize ) );
+            }
+            else
+            {
+                // Cannot slice safely (e.g. overlapping-window subtask) -- fail closed rather than
+                // attempt an inexact slice that could silently compare the wrong bytes (Pitfall 3).
+                return false;
+            }
+        }
+
+        // Determine comparison mode and diff every subsequent sliced buffer against the first one's.
+        const auto elementType = sgprocmanagerdiff::ResolveChunkElementTypeHint( jobParameters );
+
+        for ( size_t idx = 1; idx < slicedChunks.size(); ++idx )
+        {
+            sgprocmanagerdiff::ElementDiffStats stats;
+            bool                                withinTolerance = false;
+
+            if ( elementType == sgprocmanagerdiff::ChunkElementType::UINT8 )
+            {
+                withinTolerance =
+                    sgprocmanagerdiff::IsByteChunkWithinTolerance( slicedChunks[0], slicedChunks[idx], jobParameters, stats );
+            }
+            else
+            {
+                withinTolerance =
+                    sgprocmanagerdiff::IsFloatChunkWithinTolerance( slicedChunks[0], slicedChunks[idx], jobParameters, stats );
+            }
+
+            m_logger->debug( "AttemptToleranceFallback: maxAbsDelta={} maxRelDelta={} withinTolerance={}",
+                              stats.maxAbsDelta,
+                              stats.maxRelDelta,
+                              withinTolerance );
+
+            if ( !withinTolerance )
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 }
