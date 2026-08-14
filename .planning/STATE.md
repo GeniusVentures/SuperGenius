@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Slot-Scoped Consensus Finality
 current_phase: 12
 status: executing
-last_updated: "2026-07-30T19:49:00.000Z"
-last_activity: 2026-07-30 -- Completed Plan 12-04 eleven-validator bridge race verification
+last_updated: "2026-08-14T17:47:19.000Z"
+last_activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager recreation segfault fix
 progress:
   total_phases: 4
   completed_phases: 3
@@ -32,7 +32,7 @@ See: `.planning/PROJECT.md` (updated 2026-07-27)
 Phase: 12 (consensus-race-and-compatibility-verification) — EXECUTING
 Plan: 5 of 5
 Status: Ready to execute
-Last activity: 2026-07-30 -- Completed Plan 12-04 eleven-validator bridge race verification
+Last activity: 2026-08-14 -- Completed quick task 260814-kez TransactionManager recreation segfault fix
 
 ## Roadmap Snapshot
 
@@ -68,6 +68,12 @@ Last activity: 2026-07-30 -- Completed Plan 12-04 eleven-validator bridge race v
 - Existing planning artifacts were archived under `.planning/milestones/pre-v2.0-phases/`.
 - External research was skipped; requirements derive from the repository-level investigation.
 - Broader Phase 8 fault injection and fuzzing remain deferred future work.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260814-kez | Fix TransactionManager recreation segfault by cleaning up owned consensus handlers and hardening restart tests | 2026-08-14 | 6bb99959 | [260814-kez-fix-transactionmanager-recreation-segfau](./quick/260814-kez-fix-transactionmanager-recreation-segfau/) |
 
 ## Operator Next Steps
 
