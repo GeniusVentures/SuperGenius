@@ -412,11 +412,13 @@ TEST_F( PolicyLifetimeMultiAccountTest, PassiveBurnSuccessorChangesPayEscrowWith
     ASSERT_NO_FATAL_FAILURE( test::assertWaitForCondition(
         [&]
         {
-            auto approvals = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( proposed.value() );
-            return approvals.has_value() && approvals.value().size() == 1U;
+            auto b_approvals = MultiAccountTestAccess::SecureCrdt( node_b )->ReadCandidateApprovals( proposed.value() );
+            auto c_approvals = MultiAccountTestAccess::SecureCrdt( node_c )->ReadCandidateApprovals( proposed.value() );
+            return b_approvals.has_value() && b_approvals.value().size() == 1U &&
+                   c_approvals.has_value() && c_approvals.value().size() == 1U;
         },
         std::chrono::seconds( 20 ),
-        "passive C did not retain operator A's burn-v2 approval" ) );
+        "operator B and passive C did not retain operator A's burn-v2 approval" ) );
     auto approved = operator_b_admin.Approve( proposed.value() );
     ASSERT_TRUE( approved.has_value() ) << approved.error().message();
 
