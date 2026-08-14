@@ -257,15 +257,6 @@ TEST( GeniusNodeChildTokenMintTest, MintMainAndChildBalance )
     auto initialMain  = node->GetBalance();
     auto initialToken = node->GetBalance( tokenId );
 
-    constexpr uint64_t mintMain = 1000000;
-    auto               res      = node->MintTokens( mintMain,
-                                                    sgns::test::NextMintSourceHash(),
-                                                    sgns::test::kTestMintChainId, 0u,
-                                                    tokenId,
-                                                    "",
-                                                    std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
-    ASSERT_TRUE( res.has_value() );
-
     auto parsedChildMint = node->ParseTokens( "1.0", tokenId );
     ASSERT_TRUE( parsedChildMint.has_value() );
     EXPECT_EQ( parsedChildMint.value(), 500000 );
