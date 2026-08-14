@@ -576,7 +576,7 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
     const auto        historical_mint      = historical_node->MintTokens(
         1000,
         sgns::test::NextMintSourceHash(),
-        "historical-restart",
+        "test",
         TokenID::FromBytes( { 0x00 } ),
         "",
         std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
@@ -637,7 +637,7 @@ TEST_F( MultiAccountTest, PersistedHistoricalTrustAndTransactionsRestartWithSing
 
     const auto new_mint = restarted_node->MintTokens( 2000,
                                                        sgns::test::NextMintSourceHash(),
-                                                       "historical-restart-new",
+                                                       "test",
                                                        TokenID::FromBytes( { 0x00 } ),
                                                        "",
                                                        std::chrono::milliseconds( GeniusNode::TIMEOUT_MINT ) );
