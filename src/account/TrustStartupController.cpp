@@ -43,7 +43,8 @@ namespace sgns::account
         std::string                                          local_signer_address,
         sgns::trustedpeer::TrustedPeerRegistry::SignCallback sign_callback,
         EventCallback                                        event_callback,
-        StateCallback                                        state_callback )
+        StateCallback                                        state_callback,
+        std::shared_ptr<RefreshTestHooks>                     refresh_test_hooks )
     {
         if ( !secure_crdt || !trust_store )
         {
@@ -56,6 +57,7 @@ namespace sgns::account
         instance->local_signer_address_ = local_signer_address;
         instance->event_callback_ = std::move( event_callback );
         instance->state_callback_ = std::move( state_callback );
+        instance->refresh_test_hooks_ = std::move( refresh_test_hooks );
 
         auto persisted = instance->trust_store_->LoadAndVerify();
         if ( persisted.has_value() )
@@ -263,7 +265,9 @@ namespace sgns::account
             return snapshot.error();
         }
 
-        auto discovered_policies = registry_->ListPendingPolicyCandidates();
+        auto discovered_policies = refresh_test_hooks_ && refresh_test_hooks_->list_policy_candidates
+                                     ? refresh_test_hooks_->list_policy_candidates( *registry_ )
+                                     : registry_->ListPendingPolicyCandidates();
         if ( discovered_policies.has_error() )
         {
             return discovered_policies.error();
@@ -374,7 +378,9 @@ namespace sgns::account
                 }
             }
         }
-        auto discovered = burn_config_->ListPendingBurnCandidates();
+        auto discovered = refresh_test_hooks_ && refresh_test_hooks_->list_burn_candidates
+                            ? refresh_test_hooks_->list_burn_candidates( *burn_config_ )
+                            : burn_config_->ListPendingBurnCandidates();
         if ( discovered.has_error() )
         {
             return discovered.error();
