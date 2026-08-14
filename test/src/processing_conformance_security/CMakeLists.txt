@@ -1,6 +1,7 @@
 addtest(processing_conformance_security_test
     secv01_counter_test.cpp
     secv01_tex3d_counter_test.cpp
+    secv02_counter_test.cpp
 )
 
 target_include_directories(processing_conformance_security_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
@@ -8,6 +9,12 @@ target_include_directories(processing_conformance_security_test PRIVATE ${AsyncI
 target_link_libraries(processing_conformance_security_test
     nlohmann_json
     ProcessingBase
+    processing_service
+    ipfs-bitswap-cpp
+    logger
+    Boost::headers
+    p2p::p2p_logger
+    ipfs-pubsub
 )
 
 # This suite's JSON job definitions are all inline string literals (not
