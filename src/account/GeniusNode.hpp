@@ -793,6 +793,18 @@ namespace sgns
         std::shared_ptr<libp2p::event::Bus>          bitswap_event_bus_; ///< Event bus for bitswap.
         std::shared_ptr<sgns::ipfs_bitswap::Bitswap> bitswap_; ///< IPFS bitswap service for content-addressed data.
         std::shared_ptr<TransactionManager>          transaction_manager_; ///< Transaction service.
+        /// Serializes lifecycle work while permitting the existing synchronous nested transitions.
+        mutable std::recursive_mutex lifecycle_mutex_;
+        /// State currently executing inside StateTransition; nested transitions temporarily replace it.
+        std::optional<NodeState> transition_in_progress_;
+        /// Monotonic accepted-transition epoch used to invalidate stale posted lifecycle callbacks.
+        uint64_t transition_epoch_ = 0;
+        /// Per-node diagnostics and callback ownership generation for TransactionManager lifetimes.
+        std::atomic<uint64_t> transaction_manager_construction_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_start_count_{ 0 };
+        std::atomic<uint64_t> transaction_manager_owner_generation_{ 0 };
+        std::atomic<uint64_t> account_transaction_callback_owner_generation_{ 0 };
+        std::atomic<uint64_t> blockchain_slot_hash_owner_generation_{ 0 };
         std::shared_ptr<MigrationManager> migration_manager_; ///< Migration engine (valid during MIGRATING_DATABASE).
         mutable std::mutex                migration_mutex_;   ///< Guards migration_manager_ reads from const methods.
         std::shared_ptr<eth::EthWatchService>            eth_watch_service_; ///< Shared EVM event watcher.
@@ -1026,6 +1038,14 @@ namespace sgns
          * @param[in] release_members Whether to release service owners immediately after stopping them.
          */
         outcome::result<void> ShutdownAccountBoundServices( bool deconfigure_account, bool release_members = true );
+
+        /**
+         * @brief Stops and releases the current TransactionManager and every callback owner it installed.
+         *
+         * Must complete before TransactionManager::New registers replacement callbacks on the shared
+         * GlobalDB, account, or blockchain objects.
+         */
+        void ReleaseTransactionManagerOwnership();
 
         /**
          * @brief Unregisters and releases node-scoped policy services during full shutdown only.

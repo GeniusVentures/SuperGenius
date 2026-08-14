@@ -629,11 +629,26 @@ namespace sgns
 
     void GeniusNode::StateTransition( NodeState next_state )
     {
+        std::lock_guard<std::recursive_mutex> lifecycle_lock( lifecycle_mutex_ );
+        if ( transition_in_progress_.has_value() && transition_in_progress_.value() == next_state )
+        {
+            node_logger_->debug( "Suppressing re-entrant transition to state {}",
+                                 NodeStateToString( next_state ) );
+            return;
+        }
+
+        const auto previous_transition = transition_in_progress_;
+        transition_in_progress_        = next_state;
+        ++transition_epoch_;
         state_.store( next_state );
         node_logger_->debug( "Transitioning to state {}", NodeStateToString( next_state ) );
 
-        switch ( next_state )
+        try
         {
+            [&]
+            {
+                switch ( next_state )
+                {
             case NodeState::MIGRATING_DATABASE:
             {
                 if ( !bootstrap_fullnodes_.empty() )
@@ -847,39 +862,67 @@ namespace sgns
                             {
                                 return;
                             }
+
+                            NodeState target_state = NodeState::FATAL_TRUST_MISMATCH;
+                            if ( state == sgns::account::TrustStartupController::State::ConfirmedReady )
+                            {
+                                target_state = NodeState::INITIALIZING_TRANSACTIONS;
+                            }
+                            else if ( state ==
+                                      sgns::account::TrustStartupController::State::WaitingForInitialBurn )
+                            {
+                                target_state = NodeState::WAITING_FOR_BURN_GENESIS;
+                            }
+                            else if ( state ==
+                                      sgns::account::TrustStartupController::State::FreshWaitingForGenesis )
+                            {
+                                target_state = NodeState::WAITING_FOR_TRUST_GENESIS;
+                            }
+
+                            uint64_t  captured_epoch;
+                            NodeState source_state;
+                            {
+                                std::lock_guard<std::recursive_mutex> lifecycle_lock( self->lifecycle_mutex_ );
+                                source_state = self->state_.load();
+                                if ( target_state == NodeState::INITIALIZING_TRANSACTIONS &&
+                                     source_state != NodeState::WAITING_FOR_TRUST_GENESIS &&
+                                     source_state != NodeState::WAITING_FOR_BURN_GENESIS )
+                                {
+                                    self->node_logger_->debug(
+                                        "Ignoring trust-ready transaction initialization from state {}",
+                                        NodeStateToString( source_state ) );
+                                    return;
+                                }
+                                captured_epoch = self->transition_epoch_;
+                            }
+
                             boost::asio::post(
                                 *self->io_,
-                                [weak_self, state]
+                                [weak_self, captured_epoch, source_state, target_state]
                                 {
                                     auto node = weak_self.lock();
                                     if ( !node )
                                     {
                                         return;
                                     }
-                                    if ( state == sgns::account::TrustStartupController::State::ConfirmedReady )
+
+                                    std::lock_guard<std::recursive_mutex> lifecycle_lock( node->lifecycle_mutex_ );
+                                    if ( node->transition_epoch_ != captured_epoch ||
+                                         node->state_.load() != source_state )
                                     {
-                                        node->StateTransition( NodeState::INITIALIZING_TRANSACTIONS );
+                                        node->node_logger_->debug(
+                                            "Suppressing stale trust transition from {} to {}",
+                                            NodeStateToString( source_state ),
+                                            NodeStateToString( target_state ) );
+                                        return;
                                     }
-                                    else if ( state ==
-                                              sgns::account::TrustStartupController::State::WaitingForInitialBurn )
-                                    {
-                                        node->state_.store( NodeState::WAITING_FOR_BURN_GENESIS );
-                                    }
-                                    else if ( state ==
-                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis )
-                                    {
-                                        node->state_.store( NodeState::WAITING_FOR_TRUST_GENESIS );
-                                    }
-                                    else
-                                    {
-                                        node->state_.store( NodeState::FATAL_TRUST_MISMATCH );
-                                    }
+                                    node->StateTransition( target_state );
                                 } );
                         } );
                     if ( created.has_error() )
                     {
                         node_logger_->critical( "Trust startup failed closed: {}", created.error().message() );
-                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                         return;
                     }
                     trust_startup_controller_ = created.value();
@@ -892,15 +935,15 @@ namespace sgns
                     auto refreshed = trust_startup_controller_->Refresh();
                     if ( refreshed.has_error() )
                     {
-                        state_.store( NodeState::FATAL_TRUST_MISMATCH );
+                        StateTransition( NodeState::FATAL_TRUST_MISMATCH );
                         return;
                     }
                     if ( !trust_startup_controller_->IsEconomicallyReady() )
                     {
-                        state_.store( trust_startup_controller_->GetState() ==
-                                              sgns::account::TrustStartupController::State::FreshWaitingForGenesis
-                                          ? NodeState::WAITING_FOR_TRUST_GENESIS
-                                          : NodeState::WAITING_FOR_BURN_GENESIS );
+                        StateTransition( trust_startup_controller_->GetState() ==
+                                                 sgns::account::TrustStartupController::State::FreshWaitingForGenesis
+                                             ? NodeState::WAITING_FOR_TRUST_GENESIS
+                                             : NodeState::WAITING_FOR_BURN_GENESIS );
                         return;
                     }
                 }
@@ -943,6 +986,9 @@ namespace sgns
                     }
                 }
 
+                // A replacement must not register the same GlobalDB/account patterns until the
+                // previous owner has stopped and its destructor has removed those callbacks.
+                ReleaseTransactionManagerOwnership();
                 transaction_manager_ = TransactionManager::New( tx_globaldb_,
                                                                 io_,
                                                                 account_,
@@ -953,17 +999,36 @@ namespace sgns
                                                                 std::chrono::milliseconds( 0 ),
                                                                 burn_config_->GetCachedBasisPoints(),
                                                                 burn_config_->GetConfirmedValueProvider() );
+                if ( !transaction_manager_ )
+                {
+                    node_logger_->error( "TransactionManager construction failed" );
+                    return;
+                }
+
+                ++transaction_manager_construction_count_;
+                const auto owner_generation = ++transaction_manager_owner_generation_;
+                account_transaction_callback_owner_generation_.store( owner_generation );
+                auto manager = transaction_manager_;
 
                 transaction_manager_->RegisterStateChangeCallback(
-                    [weak_self = weak_from_this()]( TransactionManager::State old_state,
-                                                    TransactionManager::State new_state )
+                    [weak_self = weak_from_this(),
+                     weak_manager = std::weak_ptr<TransactionManager>( manager ),
+                     owner_generation]( TransactionManager::State old_state, TransactionManager::State new_state )
                     {
                         if ( auto strong = weak_self.lock() )
                         {
+                            auto callback_manager = weak_manager.lock();
+                            if ( !callback_manager ||
+                                 strong->transaction_manager_owner_generation_.load() != owner_generation ||
+                                 strong->transaction_manager_.get() != callback_manager.get() )
+                            {
+                                return;
+                            }
                             strong->TransactionStateChanged( old_state, new_state );
                         }
                     } );
                 transaction_manager_->Start();
+                ++transaction_manager_start_count_;
                 // TS-01: Wire configurable timestamp tolerance from GeniusNodeConfig
                 // to TransactionManager's CheckTransactionTimestamp via SetTimeFrameToleranceMs.
                 // Default: 300000ms (±5 minutes), overridable via GeniusNodeConfig aggregate init.
@@ -976,10 +1041,15 @@ namespace sgns
 
                 blockchain_->SetSlotHashPopulator(
                     [weak_transaction_manager = std::weak_ptr<TransactionManager>( transaction_manager_ ),
+                     weak_self                = weak_from_this(),
+                     owner_generation,
                      logger                   = node_logger_]( sgns::ConsensusVote &vote )
                     {
+                        auto self = weak_self.lock();
                         auto transaction_manager = weak_transaction_manager.lock();
-                        if ( !transaction_manager )
+                        if ( !self || !transaction_manager ||
+                             self->transaction_manager_owner_generation_.load() != owner_generation ||
+                             self->transaction_manager_.get() != transaction_manager.get() )
                         {
                             return;
                         }
@@ -1012,6 +1082,7 @@ namespace sgns
                                        !slot1.empty(),
                                        !slot2.empty() );
                     } );
+                blockchain_slot_hash_owner_generation_.store( owner_generation );
 
                 // Initialize shared EthWatchService for EVM event detection
                 eth_watch_service_ = std::make_shared<eth::EthWatchService>();
@@ -1182,10 +1253,18 @@ namespace sgns
             case NodeState::WAITING_FOR_BURN_GENESIS:
             case NodeState::FATAL_TRUST_MISMATCH:
                 break;
-            case NodeState::CREATING:
-            default:
-                break;
+                    case NodeState::CREATING:
+                    default:
+                        break;
+                }
+            }();
         }
+        catch ( ... )
+        {
+            transition_in_progress_ = previous_transition;
+            throw;
+        }
+        transition_in_progress_ = previous_transition;
     }
 
     bool GeniusNode::IsTrustEconomicallyReady() const
@@ -1895,18 +1974,15 @@ namespace sgns
             BOOST_OUTCOME_TRY( blockchain_->Stop() );
         }
 
-        if ( transaction_manager_ )
-        {
-            transaction_manager_->Stop();
-        }
-
         if ( release_members )
         {
             ResetProcessingMembers();
-            transaction_manager_.reset();
-            bridge_relayer_.reset();
-            eth_watch_service_.reset();
+            ReleaseTransactionManagerOwnership();
             blockchain_.reset();
+        }
+        else if ( transaction_manager_ )
+        {
+            transaction_manager_->Stop();
         }
 
         if ( deconfigure_account && account_ )
@@ -1915,6 +1991,37 @@ namespace sgns
         }
 
         return outcome::success();
+    }
+
+    void GeniusNode::ReleaseTransactionManagerOwnership()
+    {
+        // Invalidate posted bridge initialization before releasing its observer and
+        // weak TransactionManager target.
+        ++bridge_init_generation_;
+        rpc_endpoint_provider_.reset();
+        bridge_relayer_.reset();
+        eth_watch_service_.reset();
+
+        auto previous_manager = std::move( transaction_manager_ );
+        if ( !previous_manager )
+        {
+            account_transaction_callback_owner_generation_.store( 0 );
+            blockchain_slot_hash_owner_generation_.store( 0 );
+            return;
+        }
+
+        // These callbacks can re-enter GeniusNode or borrow the manager. Remove them
+        // before Stop and before the manager destructor unregisters its GlobalDB and
+        // account transaction-CID callbacks.
+        previous_manager->UnregisterStateChangeCallback();
+        if ( blockchain_ )
+        {
+            blockchain_->SetSlotHashPopulator( {} );
+        }
+        account_transaction_callback_owner_generation_.store( 0 );
+        blockchain_slot_hash_owner_generation_.store( 0 );
+        previous_manager->Stop();
+        previous_manager.reset();
     }
 
     void GeniusNode::ShutdownNodePolicyServices()
