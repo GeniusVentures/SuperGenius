@@ -1,5 +1,6 @@
 addtest(processing_conformance_security_test
     secv01_counter_test.cpp
+    secv01_tex3d_counter_test.cpp
 )
 
 target_include_directories(processing_conformance_security_test PRIVATE ${AsyncIOManager_INCLUDE_DIR})
